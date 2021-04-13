@@ -2,13 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Extensions.Logging;
+using Microsoft.Diagnostics.Tracing;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,7 +23,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _processor = new Lazy<DiagnosticsEventPipeProcessor>(CreateProcessor);
         }
 
-        internal abstract DiagnosticsEventPipeProcessor CreateProcessor();
+        protected abstract MonitoringSourceConfiguration CreateConfiguration();
+
+        private DiagnosticsEventPipeProcessor CreateProcessor()
+        {
+            return new DiagnosticsEventPipeProcessor(
+                configuration: CreateConfiguration(),
+                onEventSourceAvailable: OnEventSourceAvailable);
+        }
 
         protected override Task OnRun(CancellationToken token)
         {
@@ -60,6 +63,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 using IDisposable registration = token.Register(() => taskCompletionSource.SetCanceled());
                 await Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap();
             }
+        }
+
+        protected virtual Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
+        {
+            return Task.CompletedTask;
         }
     }
 }

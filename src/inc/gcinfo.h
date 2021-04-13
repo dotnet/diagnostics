@@ -5,7 +5,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcinfo.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfo.h
 // ******************************************************************************
 
 /*****************************************************************************/

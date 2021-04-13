@@ -54,15 +54,19 @@ ENDIF:LIVE
 CONTINUE
 
 SOSCOMMAND:SetSymbolServer -ms
+
 !IFDEF:DOTNETDUMP
+IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
+ENDIF:WINDOWS
+!IFDEF:WINDOWS
+COMMAND:sethostruntime
+ENDIF:WINDOWS
 ENDIF:DOTNETDUMP
 
+SOSCOMMAND:SOSStatus
+
 # Verify that ClrStack with no options works
-SOSCOMMAND:SetSymbolServer -ms
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:SetHostRuntime
-ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
@@ -70,7 +74,16 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
-SOSCOMMAND:SetSymbolServer -disable
+
+SOSCOMMAND:runtimes
+!IFDEF:DESKTOP
+VERIFY:.*\.NET Core .*runtime at.*\s+
+ENDIF:DESKTOP
+IFDEF:DESKTOP
+VERIFY:.*\Desktop .NET Framework.*runtime at.*\s+
+ENDIF:DESKTOP
+
+SOSCOMMAND:SOSStatus
 
 # Issue: https://github.com/dotnet/diagnostics/issues/1567
 !IFDEF:ALPINE
@@ -87,6 +100,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
+SOSCOMMAND:SetSymbolServer -disable
 
 # Verify that ClrStack all option works (locals/params)
 SOSCOMMAND:ClrStack -a

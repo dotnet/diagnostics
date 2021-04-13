@@ -140,6 +140,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                       throw new UnsupportedCommandException("The target runtime does not support profiler attach");
                     }
+                    if (hr == (uint)DiagnosticsIpcError.ProfilerAlreadyActive)
+                    {
+                        throw new ProfilerAlreadyActiveException("The request to attach a profiler was denied because a profiler is already loaded");
+                    }
                     throw new ServerErrorException($"Profiler attach failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
                     return;

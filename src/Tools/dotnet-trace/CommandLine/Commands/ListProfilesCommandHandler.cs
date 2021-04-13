@@ -70,6 +70,44 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     )
                 },
                 "Tracks GC collections only at very low overhead."),
+            new Profile(
+                "database",
+                new EventPipeProvider[] {
+                    new EventPipeProvider(
+                        name: "System.Threading.Tasks.TplEventSource",
+                        eventLevel: EventLevel.Informational,
+                        keywords: (long)TplEtwProviderTraceEventParser.Keywords.TasksFlowActivityIds
+                    ),
+                    new EventPipeProvider(
+                        name: "Microsoft-Diagnostics-DiagnosticSource",
+                        eventLevel: EventLevel.Verbose,
+                        keywords:   (long)DiagnosticSourceKeywords.Messages |
+                                    (long)DiagnosticSourceKeywords.Events,
+                        arguments: new Dictionary<string, string> {
+                            {
+                                "FilterAndPayloadSpecs",
+                                    "SqlClientDiagnosticListener/System.Data.SqlClient.WriteCommandBefore@Activity1Start:-Command;Command.CommandText;ConnectionId;Operation;Command.Connection.ServerVersion;Command.CommandTimeout;Command.CommandType;Command.Connection.ConnectionString;Command.Connection.Database;Command.Connection.DataSource;Command.Connection.PacketSize\r\n" + 
+                                    "SqlClientDiagnosticListener/System.Data.SqlClient.WriteCommandAfter@Activity1Stop:\r\n" + 
+                                    "Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuting@Activity2Start:-Command.CommandText;Command;ConnectionId;IsAsync;Command.Connection.ClientConnectionId;Command.Connection.ServerVersion;Command.CommandTimeout;Command.CommandType;Command.Connection.ConnectionString;Command.Connection.Database;Command.Connection.DataSource;Command.Connection.PacketSize\r\n" + 
+                                    "Microsoft.EntityFrameworkCore/Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted@Activity2Stop:"
+                            }
+                        }
+                    )
+                },
+                "Captures ADO.NET and Entity Framework database commands")
         };
+
+        /// <summary>
+        /// Keywords for DiagnosticSourceEventSource provider
+        /// </summary>
+        /// <remarks>See https://github.com/dotnet/corefx/blob/master/src/System.Diagnostics.DiagnosticSource/src/System/Diagnostics/DiagnosticSourceEventSource.cs</remarks>
+        private enum DiagnosticSourceKeywords : long
+        {
+            Messages = 0x1,
+            Events = 0x2,
+            IgnoreShortCutKeywords = 0x0800,
+            AspNetCoreHosting = 0x1000,
+            EntityFrameworkCoreCommands = 0x2000
+        }
     }
 }

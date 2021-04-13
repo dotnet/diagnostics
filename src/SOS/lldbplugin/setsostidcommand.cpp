@@ -21,6 +21,8 @@ public:
         char** arguments,
         lldb::SBCommandReturnObject &result)
     {
+        result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+
         if (arguments == nullptr || arguments[0] == nullptr)
         {
             if (g_currentThreadSystemId == (ULONG)-1 || g_currentThreadIndex == (ULONG)-1)
@@ -58,7 +60,6 @@ public:
 bool
 setsostidCommandInitialize(lldb::SBDebugger debugger)
 {
-    lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    lldb::SBCommand command = interpreter.AddCommand("setsostid", new setsostidCommand(), "Set the current os tid/thread index instead of using the one lldb provides. setsostid <tid> <index>");
+    g_services->AddCommand("setsostid", new setsostidCommand(), "Set the current os tid/thread index instead of using the one lldb provides. setsostid <tid> <index>");
     return true;
 }

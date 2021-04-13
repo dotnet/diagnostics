@@ -8,7 +8,7 @@ Toolchain Setup
 
 The following instructions will install the required packages. This only needs to be done once per machine. These instructions assume that you already have "sudo" installed. It is also recommended to create a github fork of the diagnostics repo and cloning that instead of https://github.com/dotnet/diagnostics.git directly.
 
-To build or cross build for ARM on Windows or Linux see the instructions [here](https://github.com/dotnet/runtime/blob/master/docs/workflow/building/coreclr/cross-building.md#generating-the-rootfs) in the runtime repo. You will need to clone the runtime [repo](https://github.com/dotnet/runtime.git) and build the appropriate "rootfs" for arm or arm64 using these instructions. You only need to do this once.
+To build or cross build for ARM on Windows or Linux see the instructions [here](https://github.com/dotnet/runtime/blob/main/docs/workflow/building/coreclr/cross-building.md#generating-the-rootfs) in the runtime repo. You will need to clone the runtime [repo](https://github.com/dotnet/runtime.git) and build the appropriate "rootfs" for arm or arm64 using these instructions. You only need to do this once.
 
 #### Ubuntu 14.04 ####
 

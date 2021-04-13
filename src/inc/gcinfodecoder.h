@@ -10,7 +10,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/gcinfodecoder.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfodecoder.h
 // ******************************************************************************
 
 #ifndef _GC_INFO_DECODER_
@@ -702,4 +702,3 @@ private:
 
 
 #endif // _GC_INFO_DECODER_
-

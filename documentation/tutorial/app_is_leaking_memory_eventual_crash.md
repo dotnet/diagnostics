@@ -56,7 +56,7 @@ Now that we have a core dump generated, what options do we have to analyze the c
 
 In both cases, you have to be careful to roughly match the environment up with the production server. For example, if I am running .net core preview 5 on Ubuntu 16.04 the core dump must be analyzed on the same architecture and environment. 
 
-For the LLDB/SOS experience, please see - https://github.com/dotnet/runtime/blob/master/docs/workflow/building/coreclr/debugging-instructions.md.
+For the LLDB/SOS experience, please see - https://github.com/dotnet/runtime/blob/main/docs/workflow/building/coreclr/debugging-instructions.md.
 
 To use the dotnet-dump tool to analyze the dump please run:
 

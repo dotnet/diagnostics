@@ -8,14 +8,14 @@ using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Architecture = System.Runtime.InteropServices.Architecture;
 
-namespace SOS
+namespace SOS.Hosting
 {
     /// <summary>
     /// Helper code to hosting SOS under ClrMD
@@ -29,38 +29,27 @@ namespace SOS
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSInitializeDelegate(
-            [In, MarshalAs(UnmanagedType.Struct)] ref SymbolReader.SOSNetCoreCallbacks callbacks,
-            int callbacksSize,
-            [In, MarshalAs(UnmanagedType.LPStr)] string tempDirectory,
-            [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModulePath,
-            bool isDesktop,
-            [In, MarshalAs(UnmanagedType.LPStr)] string dacFilePath,
-            [In, MarshalAs(UnmanagedType.LPStr)] string dbiFilePath,
-            bool symbolStoreEnabled);
+            IntPtr IHost);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate void SOSUninitializeDelegate();
 
         private const string SOSInitialize = "SOSInitializeByHost";
+        private const string SOSUninitialize = "SOSUninitializeByHost";
 
-        const string DesktopRuntimeModuleName = "clr";
+        // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
+        internal const uint InvalidTimeStamp = 0xFFFFFFFE;
+        internal const uint InvalidChecksum = 0xFFFFFFFF;
 
-        internal readonly IDataReader DataReader;
-        internal readonly AnalyzeContext AnalyzeContext;
-
-        private readonly IThreadService _threadService;
-        private readonly MemoryService _memoryService;
-        private readonly IConsoleService _console;
-        private readonly COMCallableIUnknown _ccw;  
+        internal readonly ITarget Target;
+        internal readonly IConsoleService ConsoleService;
+        internal readonly IModuleService ModuleService;
+        internal readonly IThreadService ThreadService;
+        internal readonly IMemoryService MemoryService;
         private readonly IntPtr _interface;
-        private readonly ReadVirtualCache _versionCache;
+        private readonly HostWrapper _hostWrapper;
+        private readonly ulong _ignoreAddressBitsMask;
         private IntPtr _sosLibrary = IntPtr.Zero;
-
-        /// <summary>
-        /// Enable the assembly resolver to get the right SOS.NETCore version (the one
-        /// in the same directory as SOS.Hosting).
-        /// </summary>
-        static SOSHost()
-        {
-            AssemblyResolver.Enable();
-        }
 
         /// <summary>
         /// The native SOS binaries path. Default is OS/architecture (RID) named directory in the same directory as this assembly.
@@ -70,40 +59,37 @@ namespace SOS
         /// <summary>
         /// Create an instance of the hosting class
         /// </summary>
-        /// <param name="serviceProvider">Service provider</param>
-        public SOSHost(IServiceProvider serviceProvider)
+        /// <param name="target">target instance</param>
+        public SOSHost(ITarget target)
         {
-            DataReader = serviceProvider.GetService<IDataReader>();
-            _console = serviceProvider.GetService<IConsoleService>();
-            AnalyzeContext = serviceProvider.GetService<AnalyzeContext>();
-            _memoryService = serviceProvider.GetService<MemoryService>();
-            _threadService = serviceProvider.GetService<IThreadService>();
-            _versionCache = new ReadVirtualCache(_memoryService);
+            Target = target;
+            ConsoleService = target.Services.GetService<IConsoleService>();
+            ModuleService = target.Services.GetService<IModuleService>();
+            ThreadService = target.Services.GetService<IThreadService>();
+            MemoryService = target.Services.GetService<IMemoryService>();
+            _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
 
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var debugClient = new DebugClient(this);
-                _ccw = debugClient;
                 _interface = debugClient.IDebugClient;
             }
             else
             {
                 var lldbServices = new LLDBServices(this);
-                _ccw = lldbServices;
                 _interface = lldbServices.ILLDBServices;
             }
+            _hostWrapper = new HostWrapper(target.Host);
+            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(target.Host));
         }
 
         /// <summary>
         /// Loads and initializes the SOS module.
         /// </summary>
-        /// <param name="tempDirectory">Temporary directory created to download DAC module</param>
-        /// <param name="isDesktop">if true, desktop runtime, else .NET Core runtime</param>
-        /// <param name="dacFilePath">The path to DAC that CLRMD loaded or downloaded or null</param>
-        /// <param name="dbiFilePath">The path to DBI (for future use) or null</param>
-        public void InitializeSOSHost(string tempDirectory, bool isDesktop, string dacFilePath, string dbiFilePath)
+        public void InitializeSOSHost()
         {
             if (_sosLibrary == IntPtr.Zero)
             {
@@ -123,7 +109,7 @@ namespace SOS
                 string sosPath = Path.Combine(SOSPath, sos);
                 try
                 {
-                    _sosLibrary = DataTarget.PlatformFunctions.LoadLibrary(sosPath);
+                    _sosLibrary = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.LoadLibrary(sosPath);
                 }
                 catch (DllNotFoundException ex)
                 {
@@ -141,35 +127,29 @@ namespace SOS
                 {
                     throw new FileNotFoundException($"SOS module {sosPath} not found");
                 }
-                IntPtr initializeAddress = DataTarget.PlatformFunctions.GetLibraryExport(_sosLibrary, SOSInitialize);
-                if (initializeAddress == IntPtr.Zero)
+                var initializeFunc = GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
+                if (initializeFunc == null)
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
                 }
-                var initializeFunc = (SOSInitializeDelegate)Marshal.GetDelegateForFunctionPointer(initializeAddress, typeof(SOSInitializeDelegate));
-
-                // SOS depends on that the temp directory ends with "/".
-                if (!string.IsNullOrEmpty(tempDirectory) && tempDirectory[tempDirectory.Length - 1] != Path.DirectorySeparatorChar)
-                {
-                    tempDirectory += Path.DirectorySeparatorChar;
-                }
-
-                int result = initializeFunc(
-                    ref SymbolReader.SymbolCallbacks,
-                    Marshal.SizeOf<SymbolReader.SOSNetCoreCallbacks>(),
-                    tempDirectory,
-                    AnalyzeContext.RuntimeModuleDirectory,
-                    isDesktop,
-                    dacFilePath,
-                    dbiFilePath,
-                    SymbolReader.IsSymbolStoreEnabled());
-
+                Target.DisposeOnClose(Target.Host.OnShutdownEvent.Register(OnShutdownEvent));
+                int result = initializeFunc(_hostWrapper.IHost);
                 if (result != 0)
                 {
                     throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
                 }
-                Trace.TraceInformation("SOS initialized: tempDirectory '{0}' dacFilePath '{1}' sosPath '{2}'", tempDirectory, dacFilePath, sosPath);
+                Trace.TraceInformation("SOS initialized: sosPath '{0}'", sosPath);
             }
+        }
+
+        /// <summary>
+        /// Shutdown/clean up the native SOS.
+        /// </summary>
+        private void OnShutdownEvent()
+        {
+            Trace.TraceInformation("SOSHost: OnShutdownEvent");
+            var uninitializeFunc = GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
+            uninitializeFunc?.Invoke();
         }
 
         /// <summary>
@@ -199,15 +179,13 @@ namespace SOS
         {
             Debug.Assert(_sosLibrary != null);
 
-            IntPtr commandAddress = DataTarget.PlatformFunctions.GetLibraryExport(_sosLibrary, command);
-            if (commandAddress == IntPtr.Zero)
+            var commandFunc = GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
+            if (commandFunc == null)
             {
                 throw new EntryPointNotFoundException($"Can not find SOS command: {command}");
             }
-            var commandFunc = (SOSCommandDelegate)Marshal.GetDelegateForFunctionPointer(commandAddress, typeof(SOSCommandDelegate));
-
             int result = commandFunc(_interface, arguments ?? "");
-            if (result != 0)
+            if (result != HResult.S_OK)
             {
                 Trace.TraceError($"SOS command FAILED 0x{result:X8}");
             }
@@ -215,23 +193,10 @@ namespace SOS
 
         #region Reverse PInvoke Implementations
 
-        internal static UIntPtr GetExpression(
-            string expression)
-        {
-            if (expression != null)
-            {
-                if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
-                {
-                    return new UIntPtr(result);
-                }
-            }
-            return UIntPtr.Zero;
-        }
-
         internal int GetInterrupt(
             IntPtr self)
         {
-            return AnalyzeContext.CancellationToken.IsCancellationRequested ? HResult.S_OK : HResult.E_FAIL;
+            return ConsoleService.CancellationToken.IsCancellationRequested ? HResult.S_OK : HResult.E_FAIL;
         }
 
         internal int OutputVaList(
@@ -243,7 +208,7 @@ namespace SOS
             try
             {
                 // The text has already been formated by sos
-                _console.Write(format);
+                ConsoleService.Write(format);
             }
             catch (OperationCanceledException)
             {
@@ -282,18 +247,18 @@ namespace SOS
             IntPtr self,
             IMAGE_FILE_MACHINE* type)
         {
-            switch (DataReader.Architecture)
+            switch (Target.Architecture)
             {
-                case Microsoft.Diagnostics.Runtime.Architecture.Amd64:
+                case Architecture.X64:
                     *type = IMAGE_FILE_MACHINE.AMD64;
                     break;
-                case Microsoft.Diagnostics.Runtime.Architecture.X86:
+                case Architecture.X86:
                     *type = IMAGE_FILE_MACHINE.I386;
                     break;
-                case Microsoft.Diagnostics.Runtime.Architecture.Arm:
+                case Architecture.Arm:
                     *type = IMAGE_FILE_MACHINE.THUMB2;
                     break;
-                case Microsoft.Diagnostics.Runtime.Architecture.Arm64:
+                case Architecture.Arm64:
                     *type = IMAGE_FILE_MACHINE.ARM64;
                     break;
                 default:
@@ -350,7 +315,8 @@ namespace SOS
             uint bytesRequested,
             uint* pbytesRead)
         {
-            if (_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
+            address &= _ignoreAddressBitsMask;
+            if (MemoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
             {
                 Write(pbytesRead, (uint)bytesRead);
                 return HResult.S_OK;
@@ -365,9 +331,13 @@ namespace SOS
             uint bytesRequested,
             uint* pbytesWritten)
         {
-            // This gets used by MemoryBarrier() calls in the dac, which really shouldn't matter what we do here.
-            Write(pbytesWritten, bytesRequested);
-            return HResult.S_OK;
+            address &= _ignoreAddressBitsMask;
+            if (MemoryService.WriteMemory(address, new Span<byte>(buffer.ToPointer(), unchecked((int)bytesRequested)), out int bytesWritten))
+            {
+                Write(pbytesWritten, (uint)bytesWritten);
+                return HResult.S_OK;
+            }
+            return HResult.E_FAIL;
         }
 
         internal int GetSymbolOptions(
@@ -397,7 +367,7 @@ namespace SOS
             out uint loaded,
             out uint unloaded)
         {
-            loaded = (uint)DataReader.EnumerateModules().Count();
+            loaded = (uint)ModuleService.EnumerateModules().Count();
             unloaded = 0;
             return HResult.S_OK;
         }
@@ -410,14 +380,9 @@ namespace SOS
             baseAddress = 0;
             try
             {
-                ModuleInfo module = DataReader.EnumerateModules().ElementAt((int)index);
-                if (module == null)
-                {
-                    return HResult.E_FAIL;
-                }
-                baseAddress = module.ImageBase;
+                baseAddress = ModuleService.GetModuleFromIndex((int)index).ImageBase;
             }
-            catch (ArgumentOutOfRangeException)
+            catch (DiagnosticsException)
             {
                 return HResult.E_FAIL;
             }
@@ -431,20 +396,23 @@ namespace SOS
             uint* index,
             ulong* baseAddress)
         {
-            Debug.Assert(startIndex == 0);
             Write(index);
             Write(baseAddress);
 
-            uint i = 0;
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            if (startIndex != 0)
             {
-                if (IsModuleEqual(module, name))
-                {
-                    Write(index, i);
-                    Write(baseAddress, module.ImageBase);
-                    return HResult.S_OK;
-                }
-                i++;
+                return HResult.E_INVALIDARG;
+            }
+            if (Target.OperatingSystem == OSPlatform.Windows)
+            {
+                name = Path.GetFileNameWithoutExtension(name) + ".dll";
+            }
+            IModule module = ModuleService.GetModuleFromModuleName(name).FirstOrDefault();
+            if (module != null)
+            {
+                Write(index, (uint)module.ModuleIndex);
+                Write(baseAddress, module.ImageBase);
+                return HResult.S_OK;
             }
             return HResult.E_FAIL;
         }
@@ -456,25 +424,19 @@ namespace SOS
             uint* index,
             ulong* baseAddress)
         {
-            Debug.Assert(startIndex == 0);
+            Write(index);
+            Write(baseAddress);
 
-            // This causes way too many problems on Linux because of various
-            // bugs in the CLRMD ELF dump reader module enumeration and isn't
-            // necessary on linux anyway.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (startIndex != 0)
             {
-                // Find the module that contains the offset.
-                uint i = 0;
-                foreach (ModuleInfo module in DataReader.EnumerateModules())
-                {
-                    if (offset >= module.ImageBase && offset < (module.ImageBase + (ulong)module.IndexFileSize))
-                    {
-                        Write(index, i);
-                        Write(baseAddress, module.ImageBase);
-                        return HResult.S_OK;
-                    }
-                    i++;
-                }
+                return HResult.E_INVALIDARG;
+            }
+            IModule module = ModuleService.GetModuleFromAddress(offset);
+            if (module != null)
+            {
+                Write(index, (uint)module.ModuleIndex);
+                Write(baseAddress, module.ImageBase);
+                return HResult.S_OK;
             }
             return HResult.E_FAIL;
         }
@@ -496,23 +458,30 @@ namespace SOS
             Write(imageNameSize);
             Write(moduleNameSize);
             Write(loadedImageNameSize);
-
-            uint i = 0;
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
-            {
-                if ((index != uint.MaxValue && i == index) || (index == uint.MaxValue && baseAddress == module.ImageBase))
+ 
+            IModule module;
+            try 
+            { 
+                if (index != uint.MaxValue) 
                 {
-                    imageNameBuffer?.Append(module.FileName);
-                    Write(imageNameSize, (uint)module.FileName.Length + 1);
-
-                    string moduleName = GetModuleName(module);
-                    moduleNameBuffer?.Append(moduleName);
-                    Write(moduleNameSize, (uint)moduleName.Length + 1);
-                    return HResult.S_OK;
+                    module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
-                i++;
+                else
+                {
+                    module = ModuleService.GetModuleFromBaseAddress(baseAddress);
+                }
             }
-            return HResult.E_FAIL;
+            catch (DiagnosticsException)
+            {
+                return HResult.E_FAIL;
+            }
+            imageNameBuffer?.Append(module.FileName);
+            Write(imageNameSize, (uint)module.FileName.Length + 1);
+
+            string moduleName = GetFileName(module.FileName);
+            moduleNameBuffer?.Append(moduleName);
+            Write(moduleNameSize, (uint)moduleName.Length + 1);
+            return HResult.S_OK;
         }
 
         internal unsafe int GetModuleParameters(
@@ -522,26 +491,27 @@ namespace SOS
             uint start,
             DEBUG_MODULE_PARAMETERS* moduleParams)
         {
-            Debug.Assert(bases != null);
-            Debug.Assert(start == 0);
-
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            if (start != 0 || bases == null)
+            {
+                return HResult.E_INVALIDARG;
+            }
+            foreach (IModule module in ModuleService.EnumerateModules())
             {
                 for (int i = 0; i < count; i++)
                 {
                     if (bases[i] == module.ImageBase)
                     {
                         moduleParams[i].Base = module.ImageBase;
-                        moduleParams[i].Size = (uint)module.IndexFileSize;
-                        moduleParams[i].TimeDateStamp = (uint)module.IndexTimeStamp;
-                        moduleParams[i].Checksum = 0;
+                        moduleParams[i].Size = (uint)module.ImageSize;
+                        moduleParams[i].TimeDateStamp = module.IndexTimeStamp.GetValueOrDefault(InvalidTimeStamp);
+                        moduleParams[i].Checksum = InvalidChecksum;
                         moduleParams[i].Flags = DEBUG_MODULE.LOADED;
                         moduleParams[i].SymbolType = DEBUG_SYMTYPE.PDB;
 
                         uint imageNameSize = (uint)module.FileName.Length + 1;
                         moduleParams[i].ImageNameSize = imageNameSize;
 
-                        string moduleName = GetModuleName(module);
+                        string moduleName = GetFileName(module.FileName);
                         uint moduleNameSize = (uint)moduleName.Length + 1;
                         moduleParams[i].ModuleNameSize = moduleNameSize;
 
@@ -563,147 +533,71 @@ namespace SOS
             uint bufferSize,
             uint* verInfoSize)
         {
-            Debug.Assert(buffer != null);
-            Debug.Assert(verInfoSize == null);
-
-            uint i = 0;
-            foreach (ModuleInfo module in DataReader.EnumerateModules())
+            if (item == null || buffer == null || bufferSize == 0)
             {
-                if ((index != uint.MaxValue && i == index) || (index == uint.MaxValue && baseAddress == module.ImageBase))
-                {
-                    if (item == "\\")
-                    {
-                        uint versionSize = (uint)Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
-                        Write(verInfoSize, versionSize);
-                        if (bufferSize < versionSize)
-                        {
-                            return HResult.E_INVALIDARG;
-                        }
-                        VS_FIXEDFILEINFO* fileInfo = (VS_FIXEDFILEINFO*)buffer;
-                        fileInfo->dwSignature = 0;
-                        fileInfo->dwStrucVersion = 0;
-                        fileInfo->dwFileFlagsMask = 0;
-                        fileInfo->dwFileFlags = 0;
-
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            VersionInfo versionInfo = module.Version;
-                            fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
-                            fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
-                            return HResult.S_OK;
-                        }
-                        else
-                        {
-                            if (SearchVersionString(module, out string versionString))
-                            {
-                                int spaceIndex = versionString.IndexOf(' ');
-                                if (spaceIndex > 0)
-                                {
-                                    if (versionString[spaceIndex - 1] == '.')
-                                    {
-                                        spaceIndex--;
-                                    }
-                                    string versionToParse = versionString.Substring(0, spaceIndex);
-                                    try
-                                    {
-                                        Version versionInfo = Version.Parse(versionToParse);
-                                        fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
-                                        fileInfo->dwFileVersionLS = (uint)versionInfo.Revision | (uint)versionInfo.Build << 16;
-                                        return HResult.S_OK;
-                                    }
-                                    catch (ArgumentException ex)
-                                    {
-                                        Trace.TraceError($"GetModuleVersion FAILURE: '{versionToParse}' '{versionString}' {ex.ToString()}");
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                    else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
-                    {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        {
-                            return HResult.E_INVALIDARG;
-                        }
-                        else
-                        {
-                            if (SearchVersionString(module, out string versionString))
-                            {
-                                byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
-                                Marshal.Copy(source, 0, new IntPtr(buffer), Math.Min(source.Length, (int)bufferSize));
-                                return HResult.S_OK;
-                            }
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        return HResult.E_INVALIDARG;
-                    }
-                }
-                i++;
+                return HResult.E_INVALIDARG;
             }
-
-            return HResult.E_FAIL;
-        }
-
-        private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
-        private static readonly int s_versionLength = s_versionString.Length;
-
-        private bool SearchVersionString(ModuleInfo moduleInfo, out string fileVersion)
-        {
-            byte[] buffer = new byte[s_versionString.Length];
-            ulong address = moduleInfo.ImageBase;
-            int size = moduleInfo.IndexFileSize;
-
-            _versionCache.Clear();
-
-            while (size > 0) {
-                bool result = _versionCache.Read(address, buffer, s_versionString.Length, out int cbBytesRead);
-                if (result && cbBytesRead >= s_versionLength)
+            IModule module;
+            try 
+            { 
+                if (index != uint.MaxValue) 
                 {
-                    if (s_versionString.SequenceEqual(buffer))
-                    {
-                        address += (ulong)s_versionLength;
-                        size -= s_versionLength;
-
-                        var sb = new StringBuilder();
-                        byte[] ch = new byte[1];
-                        while (true)
-                        {
-                            // Now read the version string a char/byte at a time
-                            result = _versionCache.Read(address, ch, ch.Length, out cbBytesRead);
-
-                            // Return not found if there are any failures or problems while reading the version string.
-                            if (!result || cbBytesRead < ch.Length || size <= 0) {
-                                break;
-                            }
-
-                            // Found the end of the string
-                            if (ch[0] == '\0') {
-                                fileVersion = sb.ToString();
-                                return true;
-                            }
-                            sb.Append(Encoding.ASCII.GetChars(ch));
-                            address++;
-                            size--;
-                        }
-                        // Return not found if overflowed the fileVersionBuffer (not finding a null).
-                        break;
-                    }
-                    address++;
-                    size--;
+                    module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
                 else
                 {
-                    address += (ulong)s_versionLength;
-                    size -= s_versionLength;
+                    module = ModuleService.GetModuleFromBaseAddress(baseAddress);
                 }
             }
+            catch (DiagnosticsException)
+            {
+                return HResult.E_FAIL;
+            }
+            if (item == "\\")
+            {
+                int versionSize = Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+                Write(verInfoSize, (uint)versionSize);
+                if (bufferSize < versionSize)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+                if (!module.Version.HasValue)
+                {
+                    return HResult.E_FAIL;
+                }
+                VS_FIXEDFILEINFO* fileInfo = (VS_FIXEDFILEINFO*)buffer;
+                fileInfo->dwSignature = 0;
+                fileInfo->dwStrucVersion = 0;
+                fileInfo->dwFileFlagsMask = 0;
+                fileInfo->dwFileFlags = 0;
 
-            fileVersion = null;
-            return false;
+                VersionInfo versionInfo = module.Version.Value;
+                fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
+                fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
+            }
+            else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
+            {
+                *buffer = 0;
+                string versionString = module.VersionString;
+                if (versionString == null)
+                {
+                    return HResult.E_FAIL;
+                }
+                try
+                {
+                    byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
+                    Marshal.Copy(source, 0, new IntPtr(buffer), Math.Min(source.Length, (int)bufferSize));
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+            }
+            else
+            {
+                return HResult.E_INVALIDARG;
+            }
+            return HResult.S_OK;
         }
 
         internal unsafe int GetLineByOffset(
@@ -765,14 +659,14 @@ namespace SOS
             IntPtr context,
             uint contextSize)
         {
-            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            if (!ThreadService.CurrentThreadId.HasValue)
             {
                 return HResult.E_FAIL;
             }
-            return GetThreadContextById(self, AnalyzeContext.CurrentThreadId.Value, 0, contextSize, context);
+            return GetThreadContextBySystemId(self, ThreadService.CurrentThreadId.Value, 0, contextSize, context);
         }
 
-        internal int GetThreadContextById(
+        internal int GetThreadContextBySystemId(
             IntPtr self,
             uint threadId,
             uint contextFlags,
@@ -782,7 +676,7 @@ namespace SOS
             byte[] registerContext;
             try
             {
-                registerContext = _threadService.GetThreadContext(threadId);
+                registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
             }
             catch (DiagnosticsException)
             {
@@ -811,7 +705,7 @@ namespace SOS
             IntPtr self,
             out uint number)
         {
-            number = (uint)_threadService.EnumerateThreads().Count();
+            number = (uint)ThreadService.EnumerateThreads().Count();
             return HResult.S_OK;
         }
 
@@ -820,16 +714,20 @@ namespace SOS
             out uint total,
             out uint largestProcess)
         {
-            total = (uint)_threadService.EnumerateThreads().Count();
+            total = (uint)ThreadService.EnumerateThreads().Count();
             largestProcess = total;
             return HResult.S_OK;
         }
 
-        internal int GetCurrentProcessId(
+        internal int GetCurrentProcessSystemId(
             IntPtr self,
             out uint id)
         {
-            id = (uint)DataReader.ProcessId;
+            if (!Target.ProcessId.HasValue) {
+                id = 0;
+                return HResult.E_FAIL;
+            }
+            id = Target.ProcessId.Value;
             return HResult.S_OK;
         }
 
@@ -837,12 +735,11 @@ namespace SOS
             IntPtr self,
             out uint id)
         {
-            if (!AnalyzeContext.CurrentThreadId.HasValue)
-            {
+            if (!ThreadService.CurrentThreadId.HasValue) {
                 id = 0;
                 return HResult.E_FAIL;
             }
-            return GetThreadIdBySystemId(self, AnalyzeContext.CurrentThreadId.Value, out id);
+            return GetThreadIdBySystemId(self, ThreadService.CurrentThreadId.Value, out id);
         }
 
         internal int SetCurrentThreadId(
@@ -851,8 +748,7 @@ namespace SOS
         {
             try
             {
-                ThreadInfo threadInfo = _threadService.GetThreadInfoFromIndex(unchecked((int)id));
-                AnalyzeContext.CurrentThreadId = threadInfo.ThreadId;
+                ThreadService.CurrentThreadId = ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId;
             }
             catch (DiagnosticsException)
             {
@@ -865,13 +761,14 @@ namespace SOS
             IntPtr self,
             out uint sysId)
         {
-            if (!AnalyzeContext.CurrentThreadId.HasValue)
+            uint? id = ThreadService.CurrentThreadId;
+            if (id.HasValue)
             {
-                sysId = 0;
-                return HResult.E_FAIL;
+                sysId = id.Value;
+                return HResult.S_OK;
             }
-            sysId = AnalyzeContext.CurrentThreadId.Value;
-            return HResult.S_OK;
+            sysId = 0;
+            return HResult.E_FAIL;
         }
 
         internal unsafe int GetThreadIdsByIndex(
@@ -881,13 +778,13 @@ namespace SOS
             uint* ids,
             uint* sysIds)
         {
-            int number = _threadService.EnumerateThreads().Count();
+            int number = ThreadService.EnumerateThreads().Count();
             if (start >= number || start + count > number)
             {
                 return HResult.E_INVALIDARG;
             }
             int index = 0;
-            foreach (ThreadInfo threadInfo in _threadService.EnumerateThreads())
+            foreach (IThread threadInfo in ThreadService.EnumerateThreads())
             {
                 if (index >= start && index < start + count)
                 {
@@ -912,7 +809,7 @@ namespace SOS
             {
                 try
                 {
-                    ThreadInfo threadInfo = _threadService.GetThreadInfoFromId(sysId);
+                    IThread threadInfo = ThreadService.GetThreadFromId(sysId);
                     id = (uint)threadInfo.ThreadIndex;
                     return HResult.S_OK;
                 }
@@ -928,12 +825,12 @@ namespace SOS
             IntPtr self,
             ulong* offset)
         {
-            if (AnalyzeContext.CurrentThreadId.HasValue)
+            if (ThreadService.CurrentThreadId.HasValue)
             {
-                uint threadId = AnalyzeContext.CurrentThreadId.Value;
+                uint threadId = ThreadService.CurrentThreadId.Value;
                 try
                 {
-                    ulong teb = _threadService.GetThreadInfoFromId(threadId).ThreadTeb;
+                    ulong teb = ThreadService.GetThreadFromId(threadId).GetThreadTeb();
                     Write(offset, teb);
                     return HResult.S_OK;
                 }
@@ -949,21 +846,21 @@ namespace SOS
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_threadService.InstructionPointerIndex, out offset);
+            return GetRegister(ThreadService.InstructionPointerIndex, out offset);
         }
 
         internal int GetStackOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_threadService.StackPointerIndex, out offset);
+            return GetRegister(ThreadService.StackPointerIndex, out offset);
         }
 
         internal int GetFrameOffset(
             IntPtr self,
             out ulong offset)
         {
-            return GetRegister(_threadService.FramePointerIndex, out offset);
+            return GetRegister(ThreadService.FramePointerIndex, out offset);
         }
 
         internal int GetIndexByName(
@@ -971,7 +868,7 @@ namespace SOS
             string name,
             out uint index)
         {
-            if (!_threadService.GetRegisterIndexByName(name, out int value)) {
+            if (!ThreadService.TryGetRegisterIndexByName(name, out int value)) {
                 index = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -988,7 +885,7 @@ namespace SOS
 
             // SOS expects the DEBUG_VALUE field to be set based on the 
             // processor architecture instead of the register size.
-            switch (DataReader.PointerSize)
+            switch (MemoryService.PointerSize)
             {
                 case 8:
                     value = new DEBUG_VALUE {
@@ -1016,7 +913,7 @@ namespace SOS
             string register,
             out ulong value)
         {
-            if (!_threadService.GetRegisterIndexByName(register, out int index)) {
+            if (!ThreadService.TryGetRegisterIndexByName(register, out int index)) {
                 value = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -1027,58 +924,41 @@ namespace SOS
             int index, 
             out ulong value)
         {
-            if (AnalyzeContext.CurrentThreadId.HasValue)
+            if (ThreadService.CurrentThreadId.HasValue)
             {
-                uint threadId = AnalyzeContext.CurrentThreadId.Value;
-                if (_threadService.GetRegisterValue(threadId, index, out value)) {
-                    return HResult.S_OK;
+                IThread thread = ThreadService.GetThreadFromId(ThreadService.CurrentThreadId.Value);
+                if (thread != null)
+                {
+                    if (thread.TryGetRegisterValue(index, out value))
+                    {
+                        return HResult.S_OK;
+                    }
                 }
             }
             value = 0;
             return HResult.E_FAIL;
         }
 
-        internal static bool IsCoreClrRuntimeModule(ModuleInfo module)
+        #endregion
+
+        /// <summary>
+        /// Helper function to get pinvoke entries into native modules
+        /// </summary>
+        /// <typeparam name="T">function delegate</typeparam>
+        /// <param name="library">module name</param>
+        /// <param name="functionName">name of function</param>
+        /// <returns>delegate instance or null</returns>
+        public static T GetDelegateFunction<T>(IntPtr library, string functionName)
+            where T : Delegate
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return IsModuleEqual(module, "coreclr") || IsModuleEqual(module, "libcoreclr");
+            IntPtr functionAddress = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.GetLibraryExport(library, functionName);
+            if (functionAddress == IntPtr.Zero) {
+                return default;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return IsModuleEqual(module, "libcoreclr.so");
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                return IsModuleEqual(module, "libcoreclr.dylib");
-            }
-            return false;
+            return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
         }
 
-        internal static bool IsDesktopRuntimeModule(ModuleInfo module)
-        {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsModuleEqual(module, DesktopRuntimeModuleName);
-        }
-
-        internal static bool IsModuleEqual(ModuleInfo module, string moduleName)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                return StringComparer.OrdinalIgnoreCase.Equals(GetModuleName(module), moduleName);
-            }
-            else {
-                return string.Equals(GetModuleName(module), moduleName);
-            }
-        }
-
-        internal static string GetModuleName(ModuleInfo module)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                return Path.GetFileNameWithoutExtension(module.FileName);
-            }
-            else {
-                return Path.GetFileName(module.FileName);
-            }
-        }
+        private string GetFileName(string fileName) => Target.OperatingSystem == OSPlatform.Windows ? Path.GetFileNameWithoutExtension(fileName) : Path.GetFileName(fileName);
 
         internal unsafe static void Write(uint* pointer, uint value = 0)
         {
@@ -1092,62 +972,6 @@ namespace SOS
             if (pointer != null) {
                 *pointer = value;
             }
-        }
-
-        #endregion
-    }
-
-    class ReadVirtualCache
-    {
-        private const int CACHE_SIZE = 4096;
-
-        private readonly MemoryService _memoryService;
-        private readonly byte[] _cache = new byte[CACHE_SIZE];
-        private ulong _startCache;
-        private bool _cacheValid;
-        private int _cacheSize;
-
-        internal ReadVirtualCache(MemoryService memoryService)
-        {
-            _memoryService = memoryService;
-            Clear();
-        }
-
-        internal bool Read(ulong address, byte[] buffer, int bufferSize, out int bytesRead)
-        {
-            bytesRead = 0;
-
-            if (bufferSize == 0) {
-                return true;
-            }
-
-            if (bufferSize > CACHE_SIZE) 
-            {
-                // Don't even try with the cache
-                return _memoryService.ReadMemory(address, buffer, bufferSize, out bytesRead);
-            }
-
-            if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)(_cacheSize - bufferSize))))
-            {
-                _cacheValid = false;
-                _startCache = address;
-                if (!_memoryService.ReadMemory(_startCache, _cache, _cache.Length, out int cbBytesRead)) {
-                    return false;
-                }
-                _cacheSize = cbBytesRead;
-                _cacheValid = true;
-            }
-
-            int size = Math.Min(bufferSize, _cacheSize);
-            Array.Copy(_cache, (int)(address - _startCache), buffer, 0, size);
-            bytesRead = size;
-            return true;
-        }
-
-        internal void Clear() 
-        { 
-            _cacheValid = false;
-            _cacheSize = CACHE_SIZE;
         }
     }
 }

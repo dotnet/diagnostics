@@ -16,7 +16,7 @@ This signs and publishes the following packages to the tools feed (https://pkgs.
 
 To release the latest tools:
 
-1) Merge all the commits for this release from the master branch to the release/stable branch.
+1) Merge all the commits for this release from the main branch to the release/stable branch.
 2) Kick off an official build from the release/stable branch.
 3) Change all the package version references in the documentation folder to this official build's package version to maintain the docs up to date.
 4) Download the above packages from the successful official build under "Artifacts" -> "PackageArtifacts".
