@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.Repl
 
         private string m_clearLine;
         private bool m_interactiveConsole;
+        private bool m_outputRedirected;
         private bool m_refreshingLine;
         private StringBuilder m_activeLine;
 
@@ -74,6 +75,7 @@ namespace Microsoft.Diagnostics.Repl
         {
             m_lastCommandLine = null;
             m_interactiveConsole = !Console.IsInputRedirected;
+            m_outputRedirected = Console.IsOutputRedirected;
             RefreshLine();
 
             // The special prompts for the test runner are built into this
@@ -269,7 +271,10 @@ namespace Microsoft.Diagnostics.Repl
             }
 
             Console.Write(m_clearLine);
-            Console.CursorLeft = 0;
+
+            if (!m_outputRedirected) {
+                Console.CursorLeft = 0;
+            }
         }
 
         private void PrintActiveLine()
@@ -312,7 +317,10 @@ namespace Microsoft.Diagnostics.Repl
             string text = m_activeLine.ToString(m_scrollPosition, max);
 
             Console.Write("{0}{1}", prompt, text);
-            Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
+
+            if (!m_outputRedirected) {
+                Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
+            }
         }
 
         private void RefreshLine()
