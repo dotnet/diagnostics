@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="active-timer-count", Description="Number of timers that are currently active", SupportedVersions=new[] { net30, net31, net50 } },
                     new CounterProfile{ Name="il-bytes-jitted", Description="Total IL bytes jitted", SupportedVersions=new[] { net50 } },
                     new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted", SupportedVersions=new[] { net50 } },
-                    new CounterProfile{ Name="gc-committed", Description="Size of committed memory by the GC", SupportedVersions=new[] { net60 } }
+                    new CounterProfile{ Name="gc-committed", Description="Size of committed memory by the GC (MB)", SupportedVersions=new[] { net60 } }
                 },
                 runtimeVersion // RuntimeVersion
             );
