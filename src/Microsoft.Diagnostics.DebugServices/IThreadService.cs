@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="name">register name</param>
         /// <param name="registerIndex">returns register index or -1</param>
         /// <returns>true if name found</returns>
-        bool GetRegisterIndexByName(string name, out int registerIndex);
+        bool TryGetRegisterIndexByName(string name, out int registerIndex);
 
         /// <summary>
         /// Returns the register info (name, offset, size, etc).
@@ -46,32 +46,18 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="registerIndex">register index</param>
         /// <param name="info">RegisterInfo</param>
         /// <returns>true if index found</returns>
-        bool GetRegisterInfo(int registerIndex, out RegisterInfo info);
+        bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info);
 
         /// <summary>
-        /// Returns the register value for the thread and register index. This function
-        /// can only return register values that are 64 bits or less and currently the
-        /// clrmd data targets don't return any floating point or larger registers.
+        /// Current OS thread Id
         /// </summary>
-        /// <param name="threadId">thread id</param>
-        /// <param name="registerIndex">register index</param>
-        /// <param name="value">value returned</param>
-        /// <returns>true if value found</returns>
-        bool GetRegisterValue(uint threadId, int registerIndex, out ulong value);
-
-        /// <summary>
-        /// Returns the raw context buffer bytes for the specified thread.
-        /// </summary>
-        /// <param name="threadId">thread id</param>
-        /// <returns>register context</returns>
-        /// <exception cref="DiagnosticsException">invalid thread id</exception>
-        byte[] GetThreadContext(uint threadId);
+        uint? CurrentThreadId { get; set; }
 
         /// <summary>
         /// Enumerate all the native threads
         /// </summary>
-        /// <returns>ThreadInfos for all the threads</returns>
-        IEnumerable<ThreadInfo> EnumerateThreads();
+        /// <returns>Get info for all the threads</returns>
+        IEnumerable<IThread> EnumerateThreads();
 
         /// <summary>
         /// Get the thread info from the thread index
@@ -79,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="threadIndex">index</param>
         /// <returns>thread info</returns>
         /// <exception cref="DiagnosticsException">invalid thread index</exception>
-        ThreadInfo GetThreadInfoFromIndex(int threadIndex);
+        IThread GetThreadFromIndex(int threadIndex);
 
         /// <summary>
         /// Get the thread info from the OS thread id
@@ -87,6 +73,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="threadId">os id</param>
         /// <returns>thread info</returns>
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
-        ThreadInfo GetThreadInfoFromId(uint threadId);
+        IThread GetThreadFromId(uint threadId);
     }
 }

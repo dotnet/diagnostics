@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private CounterFilter filter;
         private string _output;
         private bool pauseCmdSet;
+        private ManualResetEvent shouldExit;
         private bool shouldResumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
@@ -92,14 +93,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, diagnosticPort, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
                 return 0;
             }
+            shouldExit = new ManualResetEvent(false);
+            _ct.Register(() => shouldExit.Set());
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
             {
+                if (holder == null)
+                {
+                    return 1;
+                }
                 try
                 {
                     InitializeCounterList(counters, counter_list);
@@ -130,13 +137,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArguments(processId, name, diagnosticPort, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
                 return 0;
             }
+
+            shouldExit = new ManualResetEvent(false);
+            _ct.Register(() => shouldExit.Set());
+
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
             {
+                if (holder == null)
+                {
+                    return 1;
+                }
+
                 try
                 {
                     InitializeCounterList(counters, counter_list);
@@ -260,7 +276,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (_counterList.Count == 0)
             {
                 CounterProvider defaultProvider = null;
-                _console.Out.WriteLine($"counter_list is unspecified. Monitoring all counters by default.");
+                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
 
                 // Enable the default profile if nothing is specified
                 if (!KnownData.TryGetProvider("System.Runtime", out defaultProvider))
@@ -321,8 +337,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             _renderer.Initialize();
 
-            ManualResetEvent shouldExit = new ManualResetEvent(false);
-            _ct.Register(() => shouldExit.Set());
             Task monitorTask = new Task(() => {
                 try
                 {
@@ -342,7 +356,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERROR] {ex.ToString()}");
+                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
                 }
                 finally
                 {

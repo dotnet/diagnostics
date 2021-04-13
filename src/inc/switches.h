@@ -86,7 +86,7 @@
 #define ALLOW_SXS_JIT
 #define ALLOW_SXS_JIT_NGEN
 
-//master switch for gc suspension not based on hijacking
+//main switch for gc suspension not based on hijacking
 #define FEATURE_ENABLE_GCPOLL
 
 #if defined(_TARGET_X86_)

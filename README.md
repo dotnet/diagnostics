@@ -42,7 +42,7 @@ To install the platform's prerequisites and build:
 * [FAQ](documentation/FAQ.md) - Frequently asked questions.
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
 * [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
-* [Debugging CoreCLR](https://github.com/dotnet/runtime/blob/master/docs/workflow/debugging/coreclr/debugging.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
+* [Debugging CoreCLR](https://github.com/dotnet/runtime/blob/main/docs/workflow/debugging/coreclr/debugging.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
 * [dotnet/runtime](https://github.com/dotnet/runtime) - Source for the .NET Core runtime.
 * [Official Build Instructions](documentation/building/official-build-instructions.md) - Internal official build instructions.
 
@@ -50,7 +50,7 @@ To install the platform's prerequisites and build:
 
 ## Build Status
 
-[![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/diagnostics/diagnostics-public-ci?branchName=master)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=72&branchName=master)
+[![Build Status](https://dnceng.visualstudio.com/public/_apis/build/status/dotnet/diagnostics/diagnostics-public-ci?branchName=main)](https://dnceng.visualstudio.com/public/_build/latest?definitionId=72&branchName=main)
 
 [//]: # (End current test results)
 

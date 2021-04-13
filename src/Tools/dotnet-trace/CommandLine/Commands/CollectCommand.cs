@@ -21,10 +21,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio);
 
         /// <summary>
-        /// Collects a diagnostic trace from a currently running process.
+        /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
+        /// Append -- to the collect command to instruct the tool to run a command and trace it immediately. By default the IO from this process is hidden, but the --show-child-io option may be used to show the child process IO.
         /// </summary>
         /// <param name="ct">The cancellation token</param>
         /// <param name="console"></param>
@@ -39,18 +40,48 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
         /// <param name="port">Path to the diagnostic port to be created.</param>
+        /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio)
         {
             int ret = 0;
+            bool collectionStopped = false;
+            bool cancelOnEnter = true;
+            bool cancelOnCtrlC = true;
+            bool printStatusOverTime = true;
+
             try
             {
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
+                if (ProcessLauncher.Launcher.HasChildProc && showchildio)
+                {
+                    // If showing IO, then all IO (including CtrlC) behavior is delegated to the child process
+                    cancelOnCtrlC = false;
+                    cancelOnEnter = false;
+                    printStatusOverTime = false;
+                }
+                else
+                {
+                    cancelOnCtrlC = true;
+                    cancelOnEnter = !Console.IsInputRedirected;
+                    printStatusOverTime = !Console.IsInputRedirected;
+                }
+
+                if (!cancelOnCtrlC)
+                {
+                    ct = CancellationToken.None;
+                }
+
                 if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    if (CommandUtils.ValidateArguments(processId, name, diagnosticPort, out int resolvedProcessId))
+                    if (showchildio)
+                    {
+                        Console.WriteLine("--show-child-io must not be specified when attaching to a process");
+                        return ErrorCodes.ArgumentError;
+                    }
+                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -58,6 +89,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         return ErrorCodes.ArgumentError;
                     }
+                }
+                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                {
+                    return ErrorCodes.ArgumentError;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -116,9 +151,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Process process;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+                var shouldExit = new ManualResetEvent(false);
+                ct.Register(() => shouldExit.Set());
 
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
+                    // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
+                    if (holder == null)
+                    {
+                        return await Task.FromResult(ret);
+                    }
                     diagnosticsClient = holder.Client;
                     if (shouldResumeRuntime)
                     {
@@ -128,14 +170,41 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         process = Process.GetProcessById(processId);
                     }
-                    var shouldExit = new ManualResetEvent(false);
+                    string processMainModuleFileName = "";
+
+                    // Reading the process MainModule filename can fail if the target process closes
+                    // or isn't fully setup. Retry a few times to attempt to address the issue
+                    for (int attempts = 0; true; attempts++)
+                    {
+                        try
+                        {
+                            processMainModuleFileName = process.MainModule.FileName;
+                            break;
+                        }
+                        catch
+                        {
+                            if (attempts > 10)
+                            {
+                                Console.Error.WriteLine("Unable to examine process.");
+                                return ErrorCodes.SessionCreationError;
+                            }
+                            Thread.Sleep(200);
+                        }
+                    }
+
+                    if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        DateTime now = DateTime.Now;
+                        var processMainModuleFileInfo = new FileInfo(processMainModuleFileName);
+                        output = new FileInfo($"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
+                    }
+
                     var shouldStopAfterDuration = duration != default(TimeSpan);
                     var rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
 
-                    ct.Register(() => shouldExit.Set());
 
-                    using (VirtualTerminalMode vTermMode = VirtualTerminalMode.TryEnable())
+                    using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
                         EventPipeSession session = null;
                         try
@@ -172,16 +241,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                         {
-                            Console.Out.WriteLine($"Process        : {process.MainModule.FileName}");
+                            Console.Out.WriteLine($"Process        : {processMainModuleFileName}");
                             Console.Out.WriteLine($"Output File    : {fs.Name}");
                             if (shouldStopAfterDuration)
                                 Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
                             Console.Out.WriteLine("\n\n");
 
                             var fileInfo = new FileInfo(output.FullName);
-                            Task copyTask = session.EventStream.CopyToAsync(fs).ContinueWith((task) => shouldExit.Set());
+                            Task copyTask = session.EventStream.CopyToAsync(fs);
+                            Task shouldExitTask = copyTask.ContinueWith((task) => shouldExit.Set());
 
-                            if (!Console.IsOutputRedirected)
+                            if (printStatusOverTime)
                             {
                                 rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
                                 Console.CursorVisible = false;
@@ -189,7 +259,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             Action printStatus = () =>
                             {
-                                if (!Console.IsOutputRedirected)
+                                if (printStatusOverTime)
                                 {
                                     rewriter?.RewriteConsoleLine();
                                     fileInfo.Refresh();
@@ -201,7 +271,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                             };
 
-                            while (!shouldExit.WaitOne(100) && !(!Console.IsInputRedirected && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                            while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                                 printStatus();
 
                             // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
@@ -210,12 +280,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
                                 // is different between Console/Terminals on Windows and Mac/Linux
                                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                                    !Console.IsOutputRedirected &&
+                                    printStatusOverTime &&
                                     rewriter != null &&
                                     Math.Abs(Console.CursorTop - Console.BufferHeight) == 1)
                                 {
                                     rewriter.LineToClear--;
                                 }
+                                collectionStopped = true;
                                 durationTimer?.Stop();
                                 rundownRequested = true;
                                 session.Stop();
@@ -225,12 +296,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     printStatus();
                                 } while (!copyTask.Wait(100));
                             }
+                            // At this point the copyTask will have finished, so wait on the shouldExitTask in case it threw
+                            // an exception or had some other interesting behavior
+                            shouldExitTask.Wait();
                         }
 
-                        Console.Out.WriteLine("\nTrace completed.");
+                        Console.Out.WriteLine($"\nTrace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
                             TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                    }
+
+                    if (!collectionStopped && !ct.IsCancellationRequested)
+                    {
+                        // If the process is shutting down by itself print the return code from the process.
+                        // Capture this before leaving the using, as the Dispose of the DiagnosticsClientHolder
+                        // may terminate the target process causing it to have the wrong error code
+                        if (ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
+                        {
+                            ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
+                            Console.WriteLine($"Process exited with code '{ret}'.");
+                            collectionStopped = true;
+                        }
                     }
                 }
             }
@@ -238,16 +325,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 ret = ErrorCodes.TracingError;
+                collectionStopped = true;
             }
             finally
             {
-                if (console.GetTerminal() != null)
-                    Console.CursorVisible = true;
-                
-                // If we launched a child proc that hasn't exited yet, terminate it before we exit.
-                if (ProcessLauncher.Launcher.HasChildProc && !ProcessLauncher.Launcher.ChildProc.HasExited)
+                if (printStatusOverTime)
                 {
-                    ProcessLauncher.Launcher.ChildProc.Kill();
+                    if (console.GetTerminal() != null)
+                        Console.CursorVisible = true;
+                }
+                
+                if (ProcessLauncher.Launcher.HasChildProc)
+                {
+                    if (!collectionStopped || ct.IsCancellationRequested)
+                    {
+                        ret = ErrorCodes.TracingError;
+                    }
+
+                    // If we launched a child proc that hasn't exited yet, terminate it before we exit.
+                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                    {
+                        ProcessLauncher.Launcher.ChildProc.Kill();
+                    }
                 }
             }
             return await Task.FromResult(ret);
@@ -284,7 +383,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process") 
+                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.") 
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
@@ -300,6 +399,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CLREventLevelOption(),
                 CommonOptions.NameOption(),
                 DiagnosticPortOption(),
+                ShowChildIOOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -312,12 +412,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
             };
 
-        public static string DefaultTraceName => "trace.nettrace";
+        public static string DefaultTraceName => "default";
 
         private static Option OutputPathOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '{DefaultTraceName}'.")
+                description: $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.")
             {
                 Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
             };
@@ -325,7 +425,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option ProvidersOption() =>
             new Option(
                 alias: "--providers",
-                description: @"A list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]', where Provider is in the form: 'KnownProviderName[:Flags[:Level][:KeyValueArgs]]', and KeyValueArgs is in the form: '[key1=value1][;key2=value2]'. These providers are in addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the configuration here takes precedence over the implicit configuration from the profile.")
+                description: @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
+                             @"where Provider is in the form: 'KnownProviderName[:[Flags][:[Level][:[KeyValueArgs]]]]', and KeyValueArgs is in the form: " +
+                             @"'[key1=value1][;key2=value2]'.  Values in KeyValueArgs that contain ';' or '=' characters need to be surrounded by '""', " +
+                             @"e.g., FilterAndPayloadSpecs=""MyProvider/MyEvent:-Prop1=Prop1;Prop2=Prop2.A.B;"".  Depending on your shell, you may need to " +
+                             @"escape the '""' characters and/or surround the entire provider specification in quotes, e.g., " +
+                             @"--providers 'KnownProviderName:0x1:1:FilterSpec=\""KnownProviderName/EventName:-Prop1=Prop1;Prop2=Prop2.A.B;\""'. These providers are in " +
+                             @"addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the " +
+                             @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples.")
             {
                 Argument = new Argument<string>(name: "list-of-comma-separated-providers", getDefaultValue: () => string.Empty) // TODO: Can we specify an actual type?
             };
@@ -367,6 +474,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"The path to a diagnostic port to be created.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
+            };
+        private static Option ShowChildIOOption() =>
+            new Option(
+                alias: "--show-child-io",
+                description: @"Shows the input and output streams of a launched child process in the current console.")
+            {
+                Argument = new Argument<bool>(name: "show-child-io", getDefaultValue: () => false)
             };
     }
 }

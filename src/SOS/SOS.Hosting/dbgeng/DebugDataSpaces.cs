@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Runtime.InteropServices;
 
-namespace SOS
+namespace SOS.Hosting
 {
     internal unsafe class DebugDataSpaces
     {

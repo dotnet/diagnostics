@@ -123,15 +123,25 @@ namespace Microsoft.Diagnostics.Monitoring
             try
             {
                 // Check the transport for each endpoint info and remove it if the check fails.
-                var endpointInfos = _endpointInfos.ToList();
-
-                var pruneTasks = new List<Task>();
-                foreach (EndpointInfo info in endpointInfos)
+                IDictionary<EndpointInfo, Task<bool>> checkMap = new Dictionary<EndpointInfo, Task<bool>>();
+                foreach (EndpointInfo info in _endpointInfos)
                 {
-                    pruneTasks.Add(Task.Run(() => PruneIfNotViable(info, linkedToken), linkedToken));
+                    checkMap.Add(info, Task.Run(() => CheckNotViable(info, linkedToken), linkedToken));
                 }
 
-                await Task.WhenAll(pruneTasks).ConfigureAwait(false);
+                // Wait for all checks to complete
+                await Task.WhenAll(checkMap.Values).ConfigureAwait(false);
+
+                // Remove connections for failed checks
+                foreach (KeyValuePair<EndpointInfo, Task<bool>> entry in checkMap)
+                {
+                    if (entry.Value.Result)
+                    {
+                        _endpointInfos.Remove(entry.Key);
+                        OnRemovedEndpointInfo(entry.Key);
+                        _server?.RemoveConnection(entry.Key.RuntimeInstanceCookie);
+                    }
+                }
 
                 return _endpointInfos.ToList();
             }
@@ -141,7 +151,10 @@ namespace Microsoft.Diagnostics.Monitoring
             }
         }
 
-        private async Task PruneIfNotViable(EndpointInfo info, CancellationToken token)
+        /// <summary>
+        /// Returns true if the connection is not longer viable.
+        /// </summary>
+        private static async Task<bool> CheckNotViable(EndpointInfo info, CancellationToken token)
         {
             using var timeoutSource = new CancellationTokenSource();
             using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutSource.Token);
@@ -154,15 +167,14 @@ namespace Microsoft.Diagnostics.Monitoring
             }
             catch
             {
-                // Only remove the endpoint info if due to some exception
-                // other than cancelling the pruning operation.
+                // Only report not viable if check was not cancelled.
                 if (!token.IsCancellationRequested)
                 {
-                    _endpointInfos.Remove(info);
-                    OnRemovedEndpointInfo(info);
-                    _server?.RemoveConnection(info.RuntimeInstanceCookie);
+                    return true;
                 }
             }
+
+            return false;
         }
 
         /// <summary>

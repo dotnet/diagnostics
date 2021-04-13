@@ -1,0 +1,12 @@
+<Project>
+
+  <PropertyGroup>
+    <GitHubRepositoryName>diagnostics</GitHubRepositoryName>
+    <SourceBuildManagedOnly>true</SourceBuildManagedOnly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
+</Project>

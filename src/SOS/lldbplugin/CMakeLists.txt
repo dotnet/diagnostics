@@ -130,22 +130,29 @@ message(STATUS "LLDB_H: ${LLDB_H}")
 
 add_compile_options(-Wno-delete-non-virtual-dtor)
 
-include_directories(inc)
+include_directories(${ROOT_DIR}/src/SOS/inc)
+include_directories(${ROOT_DIR}/src/SOS/extensions)
 include_directories("${LLDB_H}")
 
 set(SOURCES
     sosplugin.cpp
     soscommand.cpp
-    setclrpathcommand.cpp
+    sethostruntimecommand.cpp
     setsostidcommand.cpp
     services.cpp
 )
 
-add_library_clr(sosplugin SHARED ${SOURCES})
+set(LIBRARIES
+    extensions
+)
 
 if(NOT ${LLDB_LIB} STREQUAL "")
-   target_link_libraries(sosplugin ${LLDB_LIB})
+    list(APPEND LIBRARIES ${LLDB_LIB})
 endif()
+
+add_library_clr(sosplugin SHARED ${SOURCES})
+
+target_link_libraries(sosplugin ${LIBRARIES})
 
 # add the install targets
 install_clr(sosplugin)

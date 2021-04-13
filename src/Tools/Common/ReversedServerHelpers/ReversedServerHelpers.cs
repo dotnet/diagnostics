@@ -19,7 +19,8 @@ namespace Microsoft.Internal.Common.Utils
     internal class ProcessLauncher
     {
         private Process _childProc = null;
-
+        private Task _stdOutTask = Task.CompletedTask;
+        private Task _stdErrTask = Task.CompletedTask;
         internal static ProcessLauncher Launcher = new ProcessLauncher();
 
         public void PrepareChildProcess(string[] args)
@@ -59,6 +60,14 @@ namespace Microsoft.Internal.Common.Utils
             return -1;
         }
 
+        private async Task ReadAndIgnoreAllStreamAsync(StreamReader streamToIgnore, CancellationToken cancelToken)
+        {
+            Memory<char> memory = new char[4096];
+            while (await streamToIgnore.ReadAsync(memory, cancelToken) != 0)
+            {
+            }
+        }
+
         public bool HasChildProc
         {
             get
@@ -74,15 +83,19 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start(string diagnosticTransportName)
+        public bool Start( string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
         {
             _childProc.StartInfo.UseShellExecute = false;
-            _childProc.StartInfo.RedirectStandardOutput = true;
-            _childProc.StartInfo.RedirectStandardError = true;
-            _childProc.StartInfo.RedirectStandardInput = true;
+            _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
+            _childProc.StartInfo.RedirectStandardError = !showChildIO;
+            _childProc.StartInfo.RedirectStandardInput = !showChildIO;
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
             try
             {
+                if (printLaunchCommand)
+                {
+                    Console.WriteLine($"Launching: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
+                }
                 _childProc.Start();
             }
             catch (Exception e)
@@ -91,6 +104,12 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine(e.ToString());
                 return false;
             }
+            if (!showChildIO)
+            {
+                _stdOutTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardOutput, ct);
+                _stdErrTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardError, ct);
+            }
+
             return true;
         }
 
@@ -104,6 +123,8 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 // if process exited while we were trying to kill it, it can throw IOE 
                 catch (InvalidOperationException) { }
+                _stdOutTask.Wait();
+                _stdErrTask.Wait();
             }
         }
     }
@@ -169,7 +190,7 @@ namespace Microsoft.Internal.Common.Utils
             _timeoutInSec = timeoutInSec;
         }
 
-        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName)
+        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName, bool showChildIO, bool printLaunchCommand)
         {
             if (ProcessLauncher.Launcher.HasChildProc)
             {
@@ -179,9 +200,9 @@ namespace Microsoft.Internal.Common.Utils
                 server.Start();
 
                 // Start the child proc
-                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName))
+                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, showChildIO, printLaunchCommand))
                 {
-                    throw new InvalidOperationException($"Failed to start {ProcessLauncher.Launcher.ChildProc.ProcessName}.");
+                    throw new InvalidOperationException($"Failed to start '{ProcessLauncher.Launcher.ChildProc.StartInfo.FileName} {ProcessLauncher.Launcher.ChildProc.StartInfo.Arguments}'.");
                 }
                 IpcEndpointInfo endpointInfo;
                 try
@@ -204,14 +225,25 @@ namespace Microsoft.Internal.Common.Utils
             }
             else if (!string.IsNullOrEmpty(portName))
             {
-                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(portName);
-                server.Start();
                 string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portName : Path.GetFullPath(portName);
+                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(fullPort);
+                server.Start();
                 Console.WriteLine($"Waiting for connection on {fullPort}");
                 Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={fullPort}");
 
-                IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
-                return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort, server);
+                try
+                {
+                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
+                    return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort, server);
+                }
+                catch (TaskCanceledException)
+                {
+                    if (!ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    return null;
+                }
             }
             else
             {

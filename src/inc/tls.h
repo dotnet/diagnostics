@@ -10,7 +10,7 @@
 
 // ******************************************************************************
 // WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/master/src/coreclr/src/inc/tls.h
+// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/tls.h
 // ******************************************************************************
 
 #ifndef __tls_h__

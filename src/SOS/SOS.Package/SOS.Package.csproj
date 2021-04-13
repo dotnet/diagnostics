@@ -13,18 +13,21 @@
     <BeforePack>GenerateGalleryZip;GenerateSymbolsZip</BeforePack>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="$(GalleryManifestName)" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
-    </None>
-  </ItemGroup>
-
+    
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 
   <Target Name="Build" />
+
+  <ItemGroup>
+    <None Include="$(GalleryManifestName)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
+    </None>
+    <None Include="$(SOSExtensionsBinaries)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+    </None>
+  </ItemGroup>
 
   <Target Name="GenerateGalleryManifest" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
     <PropertyGroup>
@@ -77,7 +80,6 @@
     <PropertyGroup>
       <GalleryDir>$(ArtifactsBinDir)\gallery</GalleryDir>
       <GallerySubDir>$(GalleryDir)\$(FileVersion)</GallerySubDir>
-      <SOSNETCorePath>$(ArtifactsBinDir)\SOS.NETCore\$(Configuration)\netstandard2.0\publish</SOSNETCorePath>
     </PropertyGroup>
 
     <ItemGroup>
@@ -91,7 +93,7 @@
       <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll">
          <TargetPath>$(GallerySubDir)\win-x64</TargetPath>
       </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSNETCorePath)\*.dll">
+      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
          <TargetPath>$(GallerySubDir)\win-x64</TargetPath>
       </ZipSourceFiles>
 
@@ -101,7 +103,7 @@
       <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll">
          <TargetPath>$(GallerySubDir)\win-x86</TargetPath>
       </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSNETCorePath)\*.dll">
+      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
          <TargetPath>$(GallerySubDir)\win-x86</TargetPath>
       </ZipSourceFiles>
 
@@ -111,7 +113,7 @@
       <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\Microsoft.DiaSymReader.Native.arm.dll">
          <TargetPath>$(GallerySubDir)\win-arm</TargetPath>
       </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSNETCorePath)\*.dll">
+      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
          <TargetPath>$(GallerySubDir)\win-arm</TargetPath>
       </ZipSourceFiles>
 
@@ -123,7 +125,7 @@
          <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
       </ZipSourceFiles>
        -->
-      <ZipSourceFiles Include="$(SOSNETCorePath)\*.dll">
+      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
          <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
       </ZipSourceFiles>
     </ItemGroup>
@@ -139,7 +141,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.NETCore\netstandard2.0\*.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.Extensions\netstandard2.0\publish\*.pdb">
          <TargetPath>$(SymbolsDir)</TargetPath>
       </ZipSymbolFiles>
 

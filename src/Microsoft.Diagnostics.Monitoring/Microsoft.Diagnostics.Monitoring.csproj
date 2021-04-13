@@ -13,6 +13,8 @@
     <!-- Do not ship this package until ready to be consumed. -->
     <IsShipping>false</IsShipping>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Version information -->
+    <VersionPrefix>5.0.0</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,9 +28,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
     <!-- This is temporary until IEndpointInfoSourceInternal becomes public-->
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
-    <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
   </ItemGroup>
 </Project>

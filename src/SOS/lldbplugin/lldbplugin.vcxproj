@@ -54,16 +54,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(ArtifactsBinDir)Linux.$(Platform).$(Configuration)\</OutDir>
     <IntDir>$(ArtifactsObjDir)Linux.$(Platform).$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)src\SOS\lldbplugin;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\SOS\lldbplugin\swift-4.0;$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\inc;$(SolutionDir)src\pal\inc\rt;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="services.cpp" />
-    <ClCompile Include="setclrpathcommand.cpp" />
+    <ClCompile Include="sethostruntimecommand.cpp" />
     <ClCompile Include="setsostidcommand.cpp" />
     <ClCompile Include="soscommand.cpp" />
     <ClCompile Include="sosplugin.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="inc\lldbservices.h" />
     <ClInclude Include="mstypes.h" />
     <ClInclude Include="services.h" />
     <ClInclude Include="sosplugin.h" />
@@ -166,9 +166,13 @@
     <ClInclude Include="swift-4.0\lldb\Utility\Timeout.h" />
     <ClInclude Include="swift-4.0\lldb\Utility\Utils.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\inc;$(SolutionDir)src\pal\inc\rt;$(SolutionDir)src\SOS\lldbplugin\inc;$(SolutionDir)src\SOS\lldbplugin\swift-4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\inc;$(SolutionDir)src\pal\inc;$(SolutionDir)src\pal\inc\rt;$(SolutionDir)src\pal\inc\rt\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_AMD64_;_WIN64;AMD64;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;DBG_TARGET_AMD64_UNIX;BIT64=1;PAL_STDCPP_COMPAT;_SECURE_SCL=0;LINUX64;PLATFORM_UNIX=1;FEATURE_PAL;FEATURE_PAL_ANSI;UNIX_AMD64_ABI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

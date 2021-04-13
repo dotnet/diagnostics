@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Threading;
+
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
@@ -16,14 +18,20 @@ namespace Microsoft.Diagnostics.DebugServices
         void Write(string value);
 
         /// <summary>
-        /// Write text to console's standard error
+        /// Write warning text to console
+        /// </summary>
+        /// <param name="value"></param>
+        void WriteWarning(string value);
+
+        /// <summary>
+        /// Write error text to console
         /// </summary>
         /// <param name="value"></param>
         void WriteError(string value);
 
         /// <summary>
-        /// Exit the interactive console 
+        /// Cancellation token for current command
         /// </summary>
-        void Exit();
+        CancellationToken CancellationToken { get; set; }
     }
 }

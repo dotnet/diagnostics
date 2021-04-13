@@ -2,7 +2,7 @@
 
 This document is written for people who need to use the bleeding edge SOS freshly built from the enlistment. You may need to do it because you want the latest feature, or you are developing your own SOS command and you want to try it out. Regardless of the reason, here is how you can do it.
 
-Before we can use the private build, of course, we must build it first. [Here](https://github.com/dotnet/diagnostics/tree/master/documentation/building) is the documentation on how to do that.
+Before we can use the private build, of course, we must build it first. [Here](https://github.com/dotnet/diagnostics/tree/main/documentation/building) is the documentation on how to do that.
 
 ## Windows
 
@@ -30,4 +30,3 @@ On Linux, we have to manually load `libsosplugin.so`, so we can simply load it f
 ```
 
 Then we are using our own sos and we can do whatever we want with it!
-

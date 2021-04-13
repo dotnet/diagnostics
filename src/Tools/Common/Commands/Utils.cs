@@ -42,18 +42,48 @@ namespace Microsoft.Internal.Common.Utils
         }
 
         /// <summary>
-        /// A helper method for validating --process-id, --name, --diagnostic-port options for collect and monitor commands.
+        /// A helper method for validating --process-id, --name, --diagnostic-port options for collect with child process commands.
+        /// None of these options can be specified, so it checks for them and prints the appropriate error message.
+        /// </summary>
+        /// <param name="processId">process ID</param>
+        /// <param name="name">name</param>
+        /// <param name="port">port</param>
+        /// <returns></returns>
+        public static bool ValidateArgumentsForChildProcess(int processId, string name, string port)
+        {
+            if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
+            {
+                Console.WriteLine("None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// A helper method for validating --process-id, --name, --diagnostic-port options for collect commands.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
         /// such duplication, it prints the appropriate error message.
         /// </summary>
         /// <param name="processId">process ID</param>
         /// <param name="name">name</param>
         /// <param name="port">port</param>
+        /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <returns></returns>
-        public static bool ValidateArguments(int processId, string name, string port, out int resolvedProcessId)
+        public static bool ValidateArgumentsForAttach(int processId, string name, string port, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
-            if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
+            if (processId == 0 && name == null && string.IsNullOrEmpty(port))
+            {
+                Console.WriteLine("Must specify either --process-id, --name, or --diagnostic-port.");
+                return false;
+            }
+            else if (processId < 0)
+            {
+                Console.WriteLine($"{processId} is not a valid process ID");
+                return false;
+            }
+            else if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("Only one of the --name, --process-id, or --diagnostic-port options may be specified.");
                 return false;
@@ -86,6 +116,11 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     return false;
                 }
+            }
+            else if (processId == 0)
+            {
+                Console.WriteLine("One of the --name, --process-id, or --diagnostic-port options must be specified when attaching to a process.");
+                return false;
             }
             resolvedProcessId = processId;
             return true;
