@@ -78,7 +78,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         protected ReversedDiagnosticsServer _tcpServer;
         protected IpcEndpointInfo _tcpServerEndpointInfo;
 
-        public int TcpServerTimeoutMs { get; set; } = 60000;
+        protected bool _auto_shutdown;
+
+        protected int RuntimeTimeoutMs { get; set; } = 60000;
+        protected int TcpServerTimeoutMs { get; set; } = 5000;
+        protected int IsStreamConnectedTimeoutMs { get; set; } = 500;
 
         public Guid RuntimeInstanceId
         {
@@ -99,7 +103,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             : base(logger)
         {
             _tcpServerAddress = IpcTcpSocketEndPoint.NormalizeTcpIpEndPoint(string.IsNullOrEmpty(tcpServer) ? "127.0.0.1:0" : tcpServer);
-            TcpServerTimeoutMs = runtimeTimeoutMs;
+
+            _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
+            if (runtimeTimeoutMs != Timeout.Infinite)
+                RuntimeTimeoutMs = runtimeTimeoutMs;
 
             _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, enableTcpIpProtocol : true);
             _tcpServerEndpointInfo = new IpcEndpointInfo();
@@ -138,16 +145,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 try
                 {
                     // If no new runtime instance connects, timeout.
-                    acceptTimeoutTokenSource.CancelAfter(TcpServerTimeoutMs);
+                    acceptTimeoutTokenSource.CancelAfter(RuntimeTimeoutMs);
                     _tcpServerEndpointInfo = await _tcpServer.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
                     if (acceptTimeoutTokenSource.IsCancellationRequested)
                     {
-                        Logger.LogDebug("No runtime instance connected, timing out.");
+                        Logger.LogDebug("No runtime instance connected before timeout.");
 
-                        throw new RuntimeTimeoutException(TcpServerTimeoutMs);
+                        if (_auto_shutdown)
+                            throw new RuntimeTimeoutException(RuntimeTimeoutMs);
                     }
 
                     throw;
@@ -168,7 +176,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
-                    Logger.LogDebug("No tcp stream connected, timing out.");
+                    Logger.LogDebug("No tcp stream connected before timeout.");
 
                     throw new BackendStreamTimeoutException(TcpServerTimeoutMs);
                 }
@@ -240,7 +248,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 try
                 {
-                    await Task.Delay(TcpServerTimeoutMs, token).ConfigureAwait(false);
+                    // Wait before rechecking connection.
+                    await Task.Delay(IsStreamConnectedTimeoutMs, token).ConfigureAwait(false);
                 }
                 catch { }
             }
@@ -266,7 +275,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         IpcServerTransport _ipcServer;
 
-        public int IpcServerTimeoutMs { get; set; } = Timeout.Infinite;
+        protected int IpcServerTimeoutMs { get; set; } = Timeout.Infinite;
 
         public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger)
             : base(tcpServer, runtimeTimeoutMs, logger)
@@ -338,7 +347,37 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 else if (IsCompletedSuccessfully(ipcServerStreamTask))
                 {
                     ipcServerStream = ipcServerStreamTask.Result;
-                    tcpServerStream = await tcpServerStreamTask.ConfigureAwait(false);
+
+                    // We have a valid ipc stream and a pending tcp accept. Wait for completion
+                    // or disconnect of ipc stream.
+                    using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
+
+                    // Wait for at least completion of one task.
+                    await Task.WhenAny(tcpServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
+
+                    // Cancel out any pending tasks not yet completed.
+                    cancelRouter.Cancel();
+
+                    try
+                    {
+                        await Task.WhenAll(tcpServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        // Check if we have an accepted tcp stream.
+                        if (IsCompletedSuccessfully(tcpServerStreamTask))
+                            tcpServerStreamTask.Result?.Dispose();
+
+                        if (checkIpcStreamTask.IsFaulted)
+                        {
+                            Logger.LogInformation("Broken ipc connection detected, aborting tcp connection.");
+                            checkIpcStreamTask.GetAwaiter().GetResult();
+                        }
+
+                        throw;
+                    }
+
+                    tcpServerStream = tcpServerStreamTask.Result;
                 }
                 else if (IsCompletedSuccessfully(tcpServerStreamTask))
                 {
@@ -459,9 +498,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         readonly string _ipcClientPath;
 
-        public int IpcClientTimeoutMs { get; set; } = Timeout.Infinite;
+        protected int IpcClientTimeoutMs { get; set; } = Timeout.Infinite;
 
-        public int IpcClientRetryTimeoutMs { get; set; } = 500;
+        protected int IpcClientRetryTimeoutMs { get; set; } = 500;
 
         public IpcClientTcpServerRouterFactory(string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger)
             : base(tcpServer, runtimeTimeoutMs, logger)
