@@ -212,12 +212,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 bool blockingState = networkStream.Socket.Blocking;
                 try
                 {
-                    // Check connection by peek one byte. Will return 0 in case connection is closed.
+                    // Check connection read state by peek one byte. Will return 0 in case connection is closed.
                     // A closed connection could also raise exception, but then socket connected state should
                     // be set to false.
                     networkStream.Socket.Blocking = false;
                     if (networkStream.Socket.Receive(new byte[1], 0, 1, System.Net.Sockets.SocketFlags.Peek) == 0)
                         connected = false;
+
+                    // Check connection write state by sending non-blocking zero-byte data.
+                    // A closed connection should raise exception, but then socket connected state should
+                    // be set to false.
+                    if (connected)
+                        networkStream.Socket.Send(Array.Empty<byte>(), 0, System.Net.Sockets.SocketFlags.None);
                 }
                 catch (Exception)
                 {
