@@ -17,8 +17,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
     internal class Program
     {
-        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, bool verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, bool verbose);
+        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -89,9 +89,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] { "--verbose", "-v" },
-                description:    "Enable verbose logging.")
+                description:    "Enable verbose logging (debug|trace)")
             {
-                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+                Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "")
             };
 
         private static int Main(string[] args)

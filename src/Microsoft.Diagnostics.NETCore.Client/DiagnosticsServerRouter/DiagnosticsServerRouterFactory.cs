@@ -177,7 +177,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
                     Logger.LogDebug("No tcp stream connected before timeout.");
-
                     throw new BackendStreamTimeoutException(TcpServerTimeoutMs);
                 }
 
@@ -476,7 +475,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
                     Logger.LogDebug("No ipc stream connected, timing out.");
-
                     throw new TimeoutException();
                 }
 
@@ -641,11 +639,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         if (connectTimeoutTokenSource.IsCancellationRequested)
                         {
                             Logger.LogDebug("No ipc stream connected, timing out.");
-
                             throw new TimeoutException();
                         }
 
-                        Logger.LogDebug($"Failed connecting {_ipcClientPath}, wait {IpcClientRetryTimeoutMs} ms before retrying.");
+                        Logger.LogTrace($"Failed connecting {_ipcClientPath}, wait {IpcClientRetryTimeoutMs} ms before retrying.");
 
                         // If we get an error (without hitting timeout above), most likely due to unavailable listener.
                         // Delay execution to prevent to rapid retry attempts.
@@ -785,8 +782,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 Interlocked.Decrement(ref s_routerInstanceCount);
 
-                _logger.LogDebug($"Diposed stats: Backend->Frontend {_backendToFrontendByteTransfer} bytes, Frontend->Backend {_frontendToBackendByteTransfer} bytes.");
-                _logger.LogDebug($"Active instances: {s_routerInstanceCount}");
+                _logger.LogTrace($"Diposed stats: Backend->Frontend {_backendToFrontendByteTransfer} bytes, Frontend->Backend {_frontendToBackendByteTransfer} bytes.");
+                _logger.LogTrace($"Active instances: {s_routerInstanceCount}");
             }
         }
 
@@ -797,27 +794,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-                    _logger.LogDebug("Start reading bytes from backend.");
+                    _logger.LogTrace("Start reading bytes from backend.");
 
                     int bytesRead = await _backendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                    _logger.LogDebug($"Read {bytesRead} bytes from backend.");
+                    _logger.LogTrace($"Read {bytesRead} bytes from backend.");
 
                     // Check for end of stream indicating that remote end hung-up.
                     if (bytesRead == 0)
                     {
-                        _logger.LogDebug("Backend hung up.");
+                        _logger.LogTrace("Backend hung up.");
                         break;
                     }
 
                     _backendToFrontendByteTransfer += (ulong)bytesRead;
 
-                    _logger.LogDebug($"Start writing {bytesRead} bytes to frontend.");
+                    _logger.LogTrace($"Start writing {bytesRead} bytes to frontend.");
 
                     await _frontendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     await _frontendStream.FlushAsync().ConfigureAwait(false);
 
-                    _logger.LogDebug($"Wrote {bytesRead} bytes to frontend.");
+                    _logger.LogTrace($"Wrote {bytesRead} bytes to frontend.");
                 }
             }
             catch (Exception)
@@ -825,7 +822,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Completing task will trigger dispose of instance and cleanup.
                 // Faliure mainly consists of closed/disposed streams and cancelation requests.
                 // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
-                _logger.LogDebug("Failed stream operation. Completing task.");
+                _logger.LogTrace("Failed stream operation. Completing task.");
             }
 
             RouterTaskCompleted?.TrySetResult(true);
@@ -838,27 +835,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-                    _logger.LogDebug("Start reading bytes from frotend.");
+                    _logger.LogTrace("Start reading bytes from frotend.");
 
                     int bytesRead = await _frontendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                    _logger.LogDebug($"Read {bytesRead} bytes from frontend.");
+                    _logger.LogTrace($"Read {bytesRead} bytes from frontend.");
 
                     // Check for end of stream indicating that remote end hung-up.
                     if (bytesRead == 0)
                     {
-                        _logger.LogDebug("Frontend hung up.");
+                        _logger.LogTrace("Frontend hung up.");
                         break;
                     }
 
                     _frontendToBackendByteTransfer += (ulong)bytesRead;
 
-                    _logger.LogDebug($"Start writing {bytesRead} bytes to backend.");
+                    _logger.LogTrace($"Start writing {bytesRead} bytes to backend.");
 
                     await _backendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     await _backendStream.FlushAsync().ConfigureAwait(false);
 
-                    _logger.LogDebug($"Wrote {bytesRead} bytes to backend.");
+                    _logger.LogTrace($"Wrote {bytesRead} bytes to backend.");
                 }
             }
             catch (Exception)
@@ -866,7 +863,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Completing task will trigger dispose of instance and cleanup.
                 // Faliure mainly consists of closed/disposed streams and cancelation requests.
                 // Just make sure task gets complete, nothing more needs to be in response to these exceptions.
-                _logger.LogDebug("Failed stream operation. Completing task.");
+                _logger.LogTrace("Failed stream operation. Completing task.");
             }
 
             RouterTaskCompleted?.TrySetResult(true);
