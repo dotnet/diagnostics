@@ -253,7 +253,7 @@ public class SOSRunner : IDisposable
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
                     WithEnvironmentVariable("COMPlus_DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
-                    WithTimeout(TimeSpan.FromMinutes(5));
+                    WithTimeout(TimeSpan.FromMinutes(10));
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
@@ -320,7 +320,7 @@ public class SOSRunner : IDisposable
                         }
                         ProcessRunner dotnetDumpRunner = new ProcessRunner(config.DotNetDumpHost(), ReplaceVariables(variables, dotnetDumpArguments.ToString())).
                             WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
-                            WithTimeout(TimeSpan.FromMinutes(5)).
+                            WithTimeout(TimeSpan.FromMinutes(10)).
                             WithExpectedExitCode(0);
 
                         dotnetDumpRunner.Start();

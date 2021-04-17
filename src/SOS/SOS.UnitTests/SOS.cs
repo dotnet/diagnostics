@@ -69,7 +69,7 @@ public class SOS
                 // Test against a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
                 {
-                    if (!SOSRunner.IsAlpine() && OS.Kind != OSKind.OSX)
+                    if (!SOSRunner.IsAlpine())
                     {
                         // With cdb (Windows) or lldb (Linux)
                         using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
@@ -79,7 +79,8 @@ public class SOS
                     }
 
                     // Using the dotnet-dump analyze tool if the path exists in the config file.
-                    if (information.TestConfiguration.DotNetDumpPath() != null)
+                    // TODO: dotnet-dump currently doesn't support macho core dumps that the MacOS createdump generates
+                    if (information.TestConfiguration.DotNetDumpPath() != null && OS.Kind != OSKind.OSX)
                     {
                         // Don't test dotnet-dump on triage dumps when running on desktop CLR.
                         if (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage)
