@@ -26,6 +26,7 @@ public:
         if (arguments == nullptr || arguments[0] == nullptr)
         {
             int index = 1;
+            result.Printf("OS TID -> lldb index\n");
             for (const SpecialThreadInfoEntry& entry: g_services->ThreadInfos())
             {
                 if (entry.tid != 0)

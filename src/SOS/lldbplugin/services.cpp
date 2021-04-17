@@ -2300,7 +2300,6 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
     size_t read = process.ReadMemory(SpecialThreadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
     if (error.Fail() || read != sizeof(header))
     {
-        Output(DEBUG_OUTPUT_WARNING, "Could not read special thread info\n");
         return;
     }
     if (strncmp(header.signature, SPECIAL_THREADINFO_SIGNATURE, sizeof(SPECIAL_THREADINFO_SIGNATURE)) != 0)
@@ -2311,7 +2310,7 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
     uint32_t number = process.GetNumThreads();
     if (number != header.numThreads)
     {
-        Output(DEBUG_OUTPUT_WARNING, "Special thread info number threads mismatched %d %d\n", number, header.numThreads);
+        Output(DEBUG_OUTPUT_WARNING, "Special thread info number of threads mismatched - lldb: %d header: %d\n", number, header.numThreads);
         return;
     }
     m_processId = header.pid;
