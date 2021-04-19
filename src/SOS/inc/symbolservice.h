@@ -60,7 +60,7 @@ public:
         const unsigned char* moduleIndex) = 0;
 
     virtual PVOID STDMETHODCALLTYPE LoadSymbolsForModule(
-        const char*,
+        LPCWSTR,
         BOOL,
         ULONG64,
         int,
