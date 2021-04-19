@@ -30,8 +30,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteLine("    IsPEImage:       {0}", module.IsPEImage);
                     WriteLine("    IsManaged:       {0}", module.IsManaged);
                     WriteLine("    IsFileLayout:    {0}", module.IsFileLayout?.ToString() ?? "<unknown>");
-                    WriteLine("    IndexFileSize:   {0:X8}", module.IndexFileSize?.ToString() ?? "<none>");
-                    WriteLine("    IndexTimeStamp:  {0:X8}", module.IndexTimeStamp?.ToString() ?? "<none>");
+                    WriteLine("    IndexFileSize:   {0}", module.IndexFileSize?.ToString("X8") ?? "<none>");
+                    WriteLine("    IndexTimeStamp:  {0}", module.IndexTimeStamp?.ToString("X8") ?? "<none>");
                     WriteLine("    Version:         {0}", module.Version?.ToString() ?? "<none>");
                     string versionString = module.VersionString;
                     if (!string.IsNullOrEmpty(versionString)) {
