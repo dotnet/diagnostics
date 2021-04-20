@@ -1530,7 +1530,7 @@ void should_check_bgc_mark(const GCHeapDetails &heap,
         {
             *consider_bgc_mark_p = TRUE;
 
-            if (seg.segmentAddr == heap.saved_sweep_ephemeral_seg)
+            if ((heap.saved_sweep_ephemeral_seg != -1) && (seg.segmentAddr == heap.saved_sweep_ephemeral_seg))
             {
                 *check_saved_sweep_p = TRUE;
             }
@@ -1659,19 +1659,18 @@ BOOL FindSegment(const GCHeapDetails &heap, DacpHeapSegmentData &seg, CLRDATA_AD
                 if (addr >= TO_TADDR(seg.mem) &&
                     addr < (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
                 {
-                    break;
+                    return TRUE;
                 }
                 dwAddrSeg = (DWORD_PTR)seg.next;
             }
-            if (dwAddrSeg != 0)
-                break;
         }
+        return FALSE;
     }
     else
     {
         CLRDATA_ADDRESS dwAddrSeg = heap.generation_table[GetMaxGeneration()].start_segment;
 
-        // Request the inital segment.
+        // Request the initial segment.
         if (seg.Request(g_sos, dwAddrSeg, heap.original_heap_details) != S_OK)
         {
             ExtOut("Error requesting heap segment %p.\n", SOS_PTR(dwAddrSeg));
