@@ -32,13 +32,13 @@
       <Sha>7f13798e5f567b72ffe63205bf49839245f0f8c1</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.0-preview.5.21219.18">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.0-preview.5.21220.16">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>8ec4eda4eccd9fbff22ac3b48b88d71a08baadb6</Sha>
+      <Sha>7af95b42681e6808a3944168dcf54a7c4adbf0f8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="6.0.0-preview.5.21219.18">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="6.0.0-preview.5.21220.16">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>8ec4eda4eccd9fbff22ac3b48b88d71a08baadb6</Sha>
+      <Sha>7af95b42681e6808a3944168dcf54a7c4adbf0f8</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="6.0.0-preview.5.21219.10">
       <Uri>https://github.com/dotnet/runtime</Uri>
