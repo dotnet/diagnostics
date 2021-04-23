@@ -516,19 +516,8 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     HRESULT Status = S_OK;
     IfFailRet(InitializeSymbolService());
 
-    // The module name needs to be null for in-memory PE's.
-    ArrayHolder<char> szModuleName = nullptr;
-    if (!isInMemory && pModuleName != nullptr)
-    {
-        szModuleName = new char[MAX_LONGPATH];
-        if (WideCharToMultiByte(CP_ACP, 0, pModuleName, (int)(_wcslen(pModuleName) + 1), szModuleName, MAX_LONGPATH, NULL, NULL) == 0)
-        {
-            return E_FAIL;
-        }
-    }
-
     m_symbolReaderHandle = GetSymbolService()->LoadSymbolsForModule(
-        szModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
+        pModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
 
     if (m_symbolReaderHandle == 0)
     {

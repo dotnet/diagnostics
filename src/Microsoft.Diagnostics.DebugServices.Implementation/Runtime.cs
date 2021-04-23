@@ -133,15 +133,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetDacFileName()
         {
-            Debug.Assert(!string.IsNullOrEmpty(_clrInfo.DacInfo.PlatformSpecificFileName));
-            string name = _clrInfo.DacInfo.PlatformSpecificFileName;
-
-            // If this is the Linux runtime module name, but we are running on Windows return the cross-OS DAC name.
-            if (_target.OperatingSystem == OSPlatform.Linux && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                name = "mscordaccore.dll";
-            }
-            return name;
+            return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, _target.OperatingSystem);
         }
 
         private string GetLocalDacPath(string dacFileName)
