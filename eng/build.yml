@@ -23,8 +23,12 @@ parameters:
   # Optional: test only job if true
   testOnly: false
 
+  buildAndSkipTest: false
+
   # Depends on 
   dependsOn: ''
+
+  artifactsTargetPath: ''
 
 jobs:
 - template: /eng/common/templates/job/job.yml
@@ -75,14 +79,19 @@ jobs:
 
     variables: 
     - ${{ insert }}: ${{ parameters.variables }}
-    - _PortableLinuxBuild: CentOS_7_$(_BuildArch)_$(_BuildConfig)
     - _DockerImageName: ${{ parameters.dockerImage }}
     - _PhaseName : ${{ parameters.name }}
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
     - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
-    - _InternalInstallArgs: ''
+   
+    - _TestArgs: '-test'
+    - ${{ if eq(parameters.testOnly, 'true') }}:
+      - _TestArgs: '-test -skipnative'
+    - ${{ if eq(parameters.buildAndSkipTest, 'true') }}:
+      - _TestArgs: ''
  
+    - _InternalInstallArgs: ''
     # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - _InternalInstallArgs:
@@ -121,12 +130,19 @@ jobs:
 
     - ${{ if eq(parameters.osGroup, 'Linux') }}:
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - task: DownloadPipelineArtifact@2
-          displayName: Download Linux Artifacts
+        - task: DownloadBuildArtifacts@0
+          displayName: 'Download release builds'
           inputs:
-            artifactName: $(_PortableLinuxBuild)
-            targetPath: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
-          condition: succeeded()
+            downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
+            downloadType: specific 
+            itemPattern: |
+              Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)/**
+            checkDownloadedFiles: true
+        - task: CopyFiles@2
+          displayName: 'Binplace Product'
+          inputs:
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)
+            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
 
       - script: $(Build.SourcesDirectory)/eng/docker-build.sh 
           --docker-image $(_DockerImageName)
@@ -167,11 +183,18 @@ jobs:
         condition: succeeded()
 
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - task: CopyFiles@2
+        displayName: Gather binaries for publish to artifacts
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+          Contents: '**'
+          TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/${{ coalesce(parameters.artifactsTargetPath, '$(_PublishArtifacts)') }}
+        condition:  ne(variables['_PublishArtifacts'], '')
       - task: PublishBuildArtifacts@1
         displayName: Publish Build Artifacts
         inputs:
-          pathtoPublish: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-          artifactName: $(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
+          pathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
+          artifactName: Build_$(_BuildConfig)
         condition: ne(variables['_PublishArtifacts'], '')
 
     - task: PublishBuildArtifacts@1
