@@ -16,6 +16,7 @@ namespace EventPipeTracee
         private static void TestBody(string loggerCategory)
         {
             Console.Error.WriteLine("Starting remote test process");
+            Console.Error.Flush();
 
             ServiceCollection serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(builder =>
@@ -27,25 +28,25 @@ namespace EventPipeTracee
             var logger = loggerFactory.CreateLogger(loggerCategory);
 
             Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting start");
+            Console.Error.Flush();
             if (Console.Read() == -1)
             {
                 throw new InvalidOperationException("Unable to receive start signal");
             }
 
             Console.Error.WriteLine($"{DateTime.UtcNow} Starting test body");
+            Console.Error.Flush();
             TestBodyCore(logger);
 
             //Signal end of test data
             Console.WriteLine("1");
 
             Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting end");
+            Console.Error.Flush();
             if (Console.Read() == -1)
             {
                 throw new InvalidOperationException("Unable to receive end signal");
             }
-
-            
-
 
             Console.Error.WriteLine($"{DateTime.UtcNow} Ending remote test process");
         }
