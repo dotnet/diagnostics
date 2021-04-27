@@ -10,9 +10,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     internal static class PipelineTestUtilities
     {
-        public static async Task ExecutePipelineWithDebugee(Pipeline pipeline, RemoteTestExecution testExecution)
+        public static async Task ExecutePipelineWithDebugee(Pipeline pipeline, RemoteTestExecution testExecution, CancellationToken token = default)
         {
-            Task processingTask = pipeline.RunAsync(CancellationToken.None);
+            Task processingTask = pipeline.RunAsync(token);
 
             //Begin event production
             testExecution.SendSignal();
@@ -20,15 +20,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             //Wait for event production to be done
             testExecution.WaitForSignal();
 
-            //Signal for the pipeline to stop
-            await pipeline.StopAsync();
+            try
+            {
+                //Signal for the pipeline to stop
+                await pipeline.StopAsync(token);
 
-            //After a pipeline is stopped, we should expect the RunTask to eventually finish
-            await processingTask;
-
-            //Signal for debugee that's ok to end/move on.
-            testExecution.SendSignal();
-
+                //After a pipeline is stopped, we should expect the RunTask to eventually finish
+                await processingTask;
+            }
+            finally
+            {
+                //Signal for debugee that's ok to end/move on.
+                testExecution.SendSignal();
+            }
         }
     }
 }
