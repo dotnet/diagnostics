@@ -106,11 +106,6 @@ jobs:
     - ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
       - _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
 
-    - ${{ if eq(parameters.testOnly, 'true') }}:
-      - _LinuxScript: $(Build.SourcesDirectory)/eng/citest.sh
-    - ${{ if ne(parameters.testOnly, 'true') }}:
-      - _LinuxScript: $(Build.SourcesDirectory)/eng/cibuild.sh
-
     # This is only required for cross builds.
     - ${{ if eq(parameters.crossrootfsDir, '') }}:
       - _RootFs: ''
@@ -122,9 +117,9 @@ jobs:
       - script: $(Build.SourcesDirectory)\eng\cibuild.cmd
           -configuration $(_BuildConfig) 
           -architecture $(_BuildArch)
-          -prepareMachine 
+          $(_TestArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-          $(_InternalInstallArgs)
+          $(_InternalInstallArgs) 
         displayName: Build / Test
         condition: succeeded()
 
@@ -148,35 +143,23 @@ jobs:
           --docker-image $(_DockerImageName)
           --source-directory $(Build.SourcesDirectory)
           --container-name diagnostics-$(Build.BuildId)
-          $(_LinuxScript) $(_RootFs)
-          --configuration $(_BuildConfig) 
-          --architecture $(_BuildArch)
-          --prepareMachine 
+          $(Build.SourcesDirectory)/eng/cibuild.sh $(_RootFs)
+          -configuration $(_BuildConfig) 
+          -architecture $(_BuildArch)
+          $(_TestArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-          /p:BUILD_BUILDNUMBER=$(BUILD.BUILDNUMBER)
           $(_InternalInstallArgs)
         displayName: Docker Build / Test
         condition: succeeded()
 
-    - ${{ if eq(parameters.osGroup, 'MacOS') }}:
+    - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
+      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
+
+    - ${{ if in(parameters.osGroup, 'MacOS', 'MacOS_cross') }}:
       - script: $(Build.SourcesDirectory)/eng/cibuild.sh
           --configuration $(_BuildConfig) 
           --architecture $(_BuildArch)
-          --prepareMachine
-          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-          $(_InternalInstallArgs)
-        displayName: Build / Test
-        condition: succeeded()
-
-    - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
-      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
-      - script: $(Build.SourcesDirectory)/eng/build.sh
-          --restore
-          --ci
-          --stripsymbols
-          --configuration $(_BuildConfig)
-          --architecture $(_BuildArch)
-          --prepareMachine
+          $(_TestArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           $(_InternalInstallArgs)
         displayName: Build / Test
@@ -241,17 +224,18 @@ jobs:
         ArtifactName: Logs_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
       continueOnError: true
       condition: always()
-    
-    # Publish test results to Azure Pipelines
-    - task: PublishTestResults@2
-      inputs:
-        testResultsFormat: xUnit
-        testResultsFiles: '**/*UnitTests*.xml' 
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
-        failTaskOnFailedTests: true
-        testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
-        publishRunAttachments: true
-        mergeTestResults: true
-        buildConfiguration: ${{ parameters.name }}
-      continueOnError: true
-      condition: ne(variables['_BuildOnly'], 'true')
+
+    - ${{ if eq(parameters.buildAndSkipTest, 'false') }}:
+      # Publish test results to Azure Pipelines
+      - task: PublishTestResults@2
+        inputs:
+          testResultsFormat: xUnit
+          testResultsFiles: '**/*UnitTests*.xml' 
+          searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+          failTaskOnFailedTests: true
+          testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
+          publishRunAttachments: true
+          mergeTestResults: true
+          buildConfiguration: ${{ parameters.name }}
+        continueOnError: true
+        condition: ne(variables['_BuildOnly'], 'true')

@@ -162,17 +162,15 @@ stages:
       parameters:
         name: MacOS_cross
         osGroup: MacOS_cross
-        buildAndSkipTest: false
+        buildAndSkipTest: true
         strategy:
           matrix:
             Build_Release:
-              _BuildOnly: true
               _BuildConfig: Release
               _BuildArch: arm64
               _PublishArtifacts: bin/OSX.arm64.Release
             ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               Build_Debug:
-                _BuildOnly: true
                 _BuildConfig: Debug
                 _BuildArch: arm64
 
@@ -183,11 +181,10 @@ stages:
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-14.04-cross-1735d26-20190521133857
           crossrootfsDir: '/crossrootfs/arm'
-          buildAndSkipTest: false
+          buildAndSkipTest: true
           strategy:
             matrix:
               Build_Release:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm
                 _PublishArtifacts: bin/Linux.arm.Release
@@ -198,11 +195,10 @@ stages:
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-a3ae44b-20180315221921
           crossrootfsDir: '/crossrootfs/arm64'
-          buildAndSkipTest: false
+          buildAndSkipTest: true
           strategy:
             matrix:
               Build_Release:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Linux.arm64.Release
@@ -214,11 +210,10 @@ stages:
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-406629a-20200127195039
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
-          buildAndSkipTest: false
+          buildAndSkipTest: true
           strategy:
             matrix:
               Build_Release:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Linux.arm64.Release
