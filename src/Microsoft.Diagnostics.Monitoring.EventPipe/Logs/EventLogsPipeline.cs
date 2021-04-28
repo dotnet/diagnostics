@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal class EventLogsPipeline : EventSourcePipeline<EventLogsPipelineSettings>
     {
         private readonly ILoggerFactory _factory;
+        private static readonly Func<object, Exception, string> _messageFormatter = MessageFormatter;
         public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory) 
             : base(client, settings)
         {
@@ -128,11 +129,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             args[i] = message.GetProperty(formatter.ValueNames[i]).GetString();
                         }
 
-                        logger.Log(logLevel, new EventId(eventId, eventName), exception, formatString, args);
+                        //We want to propagate the timestamp to the underlying logger, but that's not part of the ILogger interface.
+                        //We replicate LoggerExtensions.Log, but add an interface capability to the object
+                        //CONSIDER FormattedLogValues maintains a cache of formatters. We are effectively duplicating this cache.
+                        var logValues = new FormattedLogValues(traceEvent.TimeStamp, formatString, args);
+                        logger.Log(logLevel, eventId, logValues, exception, _messageFormatter);
                     }
                     else
                     {
-                        var obj = new LogObject(message, lastFormattedMessage);
+                        var obj = new LogObject(message, lastFormattedMessage) { Timestamp = traceEvent.TimeStamp };
                         logger.Log(logLevel, new EventId(eventId, eventName), obj, exception, LogObject.Callback);
                     }
                 }
@@ -165,6 +170,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             });
 
             return Task.CompletedTask;
+        }
+
+        private static string MessageFormatter(object state, Exception error)
+        {
+            return state.ToString();
         }
 
         private class LogActivityItem
