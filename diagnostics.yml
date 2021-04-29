@@ -245,6 +245,7 @@ stages:
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-28-09ca40b-20190508143249
           dependsOn: CentOS_7
           testOnly: true
+          requiresCapPtraceContainer: true
           strategy:
             matrix:
               Build_Debug:
@@ -258,6 +259,7 @@ stages:
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-29-09ca40b-20190508143249
           dependsOn: CentOS_7
           testOnly: true
+          requiresCapPtraceContainer: true
           strategy:
             matrix:
               Build_Debug:

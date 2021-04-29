@@ -1,34 +1,25 @@
 parameters:
   # Job name
   name: ''
-
   # Agent OS (Windows_NT, Linux, MacOS, FreeBSD)
   osGroup: Windows_NT
-
   # Additional variables
   variables: {}
-
   # Build strategy - matrix
   strategy: ''
-
   # Optional: Job timeout
   timeoutInMinutes: 180
-
   # Optional: Docker image to use
   dockerImage: ''
-
   # Optional: ROOTFS_DIR to use
   crossrootfsDir: ''
-
   # Optional: test only job if true
   testOnly: false
-
   buildAndSkipTest: false
-
   # Depends on 
   dependsOn: ''
-
   artifactsTargetPath: ''
+  requiresCapPtraceContainer: false
 
 jobs:
 - template: /eng/common/templates/job/job.yml
@@ -68,7 +59,7 @@ jobs:
         name: NetCorePublic-Pool
         queue: BuildPool.Windows.10.Amd64.VS2019.Open
 
-    ${{ if ne(parameters.dockerImage, '') }}:
+    ${{ if and(ne(parameters.dockerImage, ''), ne(parameters.requiresCapPtraceContainer, 'true')) }}:
       container: ${{ parameters.dockerImage }}
 
     ${{ if ne(parameters.strategy, '') }}:
@@ -94,8 +85,16 @@ jobs:
       - _buildScript: $(Build.SourcesDirectory)/eng/cibuild.sh
 
     - _TestArgs: '-test'
+    - _dockerEnv: ''
+
     - ${{ if eq(parameters.testOnly, 'true') }}:
       - _TestArgs: '-test -skipnative'
+    - ${{ if eq(parameters.requiresCapPtraceContainer, 'true') }}:
+      - _dockerEnv: $(Build.SourcesDirectory)/eng/docker-build.sh 
+            --docker-image $(_DockerImageName)
+            --source-directory $(Build.SourcesDirectory)
+            --container-name diagnostics-$(Build.BuildId)
+
     - ${{ if eq(parameters.buildAndSkipTest, 'true') }}:
       - _TestArgs: ''
 
@@ -140,7 +139,7 @@ jobs:
     - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
       - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
 
-    - script: $(_buildScript)
+    - script: $(_dockerEnv) $(_buildScript)
         -configuration $(_BuildConfig) 
         -architecture $(_BuildArch)
         $(_TestArgs)
