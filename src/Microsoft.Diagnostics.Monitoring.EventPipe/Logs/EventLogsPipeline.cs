@@ -66,8 +66,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 var factoryId = (int)traceEvent.PayloadByName("FactoryID");
                 var categoryName = (string)traceEvent.PayloadByName("LoggerName");
 
-                stack.Pop();
-                logActivities.Remove(traceEvent.ActivityID);
+                //If we begin collection in the middle of a request, we can receive a stop without having a start.
+                if (stack.Count > 0)
+                {
+                    stack.Pop();
+                    logActivities.Remove(traceEvent.ActivityID);
+                }
             });
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) =>
