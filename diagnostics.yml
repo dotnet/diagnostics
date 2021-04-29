@@ -334,7 +334,7 @@ stages:
             condition: succeeded()
             pool:
               name: NetCoreInternal-Pool
-              queue: BuildPool.Windows.10.Amd64.VS2017
+              queue: BuildPool.Windows.10.Amd64.VS2019
             enablePublishUsingPipelines: true
             enableMicrobuild: true
             artifacts:
@@ -387,7 +387,7 @@ stages:
             publishUsingPipelines: true
             pool:
               name: NetCoreInternal-Pool
-              queue: buildpool.windows.10.amd64.vs2017
+              queue: buildpool.windows.10.amd64.vs2019
 
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - template: /eng/common/templates/post-build/post-build.yml
