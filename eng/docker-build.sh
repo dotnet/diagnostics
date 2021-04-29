@@ -29,7 +29,13 @@ while [ $# -ne 0 ]; do
 done
 
 echo "Initialize Docker Container"
-docker_bin=$(which docker)
+if command -v docker > /dev/null; then
+    docker_bin=$(command -v docker)
+else
+    echo "Unable to find docker"
+    exit 1
+fi
+
 $docker_bin --version
 
 # Get user id
