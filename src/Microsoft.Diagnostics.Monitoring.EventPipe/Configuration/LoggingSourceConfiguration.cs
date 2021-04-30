@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Text;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 
@@ -12,44 +13,109 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public class LoggingSourceConfiguration : MonitoringSourceConfiguration
     {
-        private const string UseAppFilters = "UseAppFilters";
-
-        private readonly LogLevel _level;
-        private readonly bool _useAppFilters;
+        private readonly string _filterSpecs;
+        private readonly long _keywords;
+        private readonly EventLevel _level;
 
         /// <summary>
         /// Creates a new logging source configuration.
         /// </summary>
-        /// <param name="level">The logging level. Log messages at or above the log level will be included.</param>
-        /// <param name="useAppFilters">Use the UseAppFilters filterspec. This supersedes the log level and generates
-        /// log messages with the same levels per category as specified by the application configuration.</param>
-        public LoggingSourceConfiguration(LogLevel level = LogLevel.Debug, bool useAppFilters = false)
+        public LoggingSourceConfiguration(LogLevel level, LogMessageType messageType, IDictionary<string, LogLevel?> filterSpecs, bool useAppFilters)
         {
-            _level = level;
-            _useAppFilters = useAppFilters;
+            _filterSpecs = ToFilterSpecsString(filterSpecs, useAppFilters);
+            _keywords = (long)ToKeywords(messageType);
+            _level = ToEventLevel(level);
         }
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            string filterSpec = _useAppFilters ? UseAppFilters : FormattableString.Invariant($"*:{_level:G}");
-
-            var providers = new List<EventPipeProvider>()
+            return new List<EventPipeProvider>()
             {
-
-                // Logging
                 new EventPipeProvider(
                     MicrosoftExtensionsLoggingProviderName,
-                    EventLevel.LogAlways,
-                    (long)(LoggingEventSource.Keywords.JsonMessage | LoggingEventSource.Keywords.FormattedMessage),
+                    _level,
+                    _keywords,
                     arguments: new Dictionary<string,string>
                         {
-
-                            { "FilterSpecs", filterSpec }
+                            { "FilterSpecs", _filterSpecs }
                         }
                 )
             };
+        }
 
-            return providers;
+        private static string ToFilterSpecsString(IDictionary<string, LogLevel?> filterSpecs, bool useAppFilters)
+        {
+            if (!useAppFilters && (filterSpecs?.Count).GetValueOrDefault(0) == 0)
+            {
+                return String.Empty;
+            }
+
+            StringBuilder filterSpecsBuilder = new StringBuilder();
+
+            if (useAppFilters)
+            {
+                filterSpecsBuilder.Append("UseAppFilters");
+            }
+
+            if (null != filterSpecs)
+            {
+                foreach (KeyValuePair<string, LogLevel?> filterSpec in filterSpecs)
+                {
+                    if (!string.IsNullOrEmpty(filterSpec.Key))
+                    {
+                        if (filterSpecsBuilder.Length > 0)
+                        {
+                            filterSpecsBuilder.Append(";");
+                        }
+                        filterSpecsBuilder.Append(filterSpec.Key);
+                        if (filterSpec.Value.HasValue)
+                        {
+                            filterSpecsBuilder.Append(":");
+                            filterSpecsBuilder.Append(filterSpec.Value.Value.ToString("G"));
+                        }
+                    }
+                }
+            }
+
+            return filterSpecsBuilder.ToString();
+        }
+
+        private static EventLevel ToEventLevel(LogLevel logLevel)
+        {
+            switch (logLevel)
+            {
+                case LogLevel.Trace:
+                    return EventLevel.LogAlways;
+                case LogLevel.Debug:
+                    return EventLevel.Verbose;
+                case LogLevel.Information:
+                    return EventLevel.Informational;
+                case LogLevel.Warning:
+                    return EventLevel.Warning;
+                case LogLevel.Error:
+                    return EventLevel.Error;
+                case LogLevel.Critical:
+                    return EventLevel.Critical;
+            }
+            throw new InvalidOperationException($"Unable to convert {logLevel:G} to EventLevel.");
+        }
+
+        private static EventKeywords ToKeywords(LogMessageType messageType)
+        {
+            EventKeywords keywords = 0;
+            if (messageType.HasFlag(LogMessageType.FormattedMessage))
+            {
+                keywords |= LoggingEventSource.Keywords.FormattedMessage;
+            }
+            if (messageType.HasFlag(LogMessageType.JsonMessage))
+            {
+                keywords |= LoggingEventSource.Keywords.JsonMessage;
+            }
+            if (messageType.HasFlag(LogMessageType.Message))
+            {
+                keywords |= LoggingEventSource.Keywords.Message;
+            }
+            return keywords;
         }
 
         private sealed class LoggingEventSource

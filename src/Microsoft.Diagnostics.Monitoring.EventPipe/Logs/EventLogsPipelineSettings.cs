@@ -3,17 +3,19 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventLogsPipelineSettings : EventSourcePipelineSettings
     {
-        public LogLevel LogLevel { get; set; }
+        // The default log level for all categories
+        public LogLevel LogLevel { get; set; } = LogLevel.Trace;
 
-        //This setting will set the levels to application default.
-        public bool UseAppFilters { get; set; }
+        // The logger categories and levels at which log entries are collected.
+        public IDictionary<string, LogLevel?> FilterSpecs { get; set; }
+
+        // This setting will collect logs for the application-defined categories and levels.
+        public bool UseAppFilters { get; set; } = false;
     }
 }
