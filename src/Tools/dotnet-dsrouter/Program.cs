@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
     {
         delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose);
         delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -41,9 +42,22 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
                 // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter).GetCommandHandler(),
+                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter).GetCommandHandler(),
                 // Options
                 IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+            };
+
+        private static Command IpcServerTcpClientRouterCommand() =>
+            new Command(
+                name: "server-client",
+                description: "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP server. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                "and a TCP/IP client (connecting runtime TCP server).")
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter).GetCommandHandler(),
+                // Options
+                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -64,6 +78,16 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "router will use default ipc diagnostics server path.")
             {
                 Argument = new Argument<string>(name: "ipcServer", getDefaultValue: () => "")
+            };
+
+        private static Option TcpClientAddressOption() =>
+            new Option(
+                aliases: new[] { "--tcp-client", "-tcpc" },
+                description: "The runtime TCP/IP address using format [host]:[port]. " +
+                                "Router can can connect 127.0.0.1, [::1], ipv4 address, ipv6 address, hostname addresses." +
+                                "Launch runtime using DOTNET_DiagnosticPorts environment variable to setup listener")
+            {
+                Argument = new Argument<string>(name: "tcpClient", getDefaultValue: () => "")
             };
 
         private static Option TcpServerAddressOption() =>
@@ -106,6 +130,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             var parser = new CommandLineBuilder()
                 .AddCommand(IpcClientTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpServerRouterCommand())
+                .AddCommand(IpcServerTcpClientRouterCommand())
                 .UseDefaults()
                 .Build();
 
