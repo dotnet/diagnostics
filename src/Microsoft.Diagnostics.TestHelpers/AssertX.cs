@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.TestHelpers
@@ -74,6 +75,16 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
                 throw new FileNotFoundException(errorMessage);
             }
+        }
+
+        public static void Equal(string expected, string actual, string userMessage)
+        {
+            Assert.True(string.Equals(expected, actual, StringComparison.Ordinal), $"Expected String: {expected}{Environment.NewLine}Actual String: {actual}{Environment.NewLine}{userMessage}");
+        }
+
+        public static void NotNull(object value, string userMessage)
+        {
+            Assert.True(null != value, userMessage);
         }
     }
 }

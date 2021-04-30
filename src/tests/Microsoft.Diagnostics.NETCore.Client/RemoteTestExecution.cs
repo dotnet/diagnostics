@@ -3,10 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.NETCore.Client;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
@@ -16,17 +16,25 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
     /// </summary>
     public sealed class RemoteTestExecution : IAsyncDisposable
     {
+        private readonly object _sync = new object();
+        private readonly List<string> _standardOutputLines = new List<string>();
+        private readonly List<string> _standardErrorLines = new List<string>();
+
+        private TaskCompletionSource<string> _standardOutputLineSource = null;
+
         private Task IoReadingTask { get; }
 
         private ITestOutputHelper OutputHelper { get; }
 
         public TestRunner TestRunner { get; }
 
-        private RemoteTestExecution(TestRunner runner, Task ioReadingTask, ITestOutputHelper outputHelper)
+        private RemoteTestExecution(TestRunner runner, ITestOutputHelper outputHelper)
         {
             TestRunner = runner;
-            IoReadingTask = ioReadingTask;
             OutputHelper = outputHelper;
+            IoReadingTask = Task.WhenAll(
+                ReadLinesAsync(runner.StandardOutput, _standardOutputLines, OnStandardOutputLine),
+                ReadLinesAsync(runner.StandardError, _standardErrorLines, null));
         }
 
         //Very simple signals that synchronize execution between the test process and the debuggee process.
@@ -39,13 +47,16 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             TestRunner.StandardInput.Flush();
         }
 
-        public void WaitForSignal()
+        public async Task WaitForSignalAsync()
         {
-            var result = TestRunner.StandardOutput.ReadLine();
-            if (string.Equals(result, "1"))
+            TaskCompletionSource<string> standardOutputLineSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
+            lock (_sync)
             {
-                return;
+                _standardOutputLineSource = standardOutputLineSource;
             }
+
+            await standardOutputLineSource.Task;
         }
 
         public static RemoteTestExecution StartProcess(string commandLine, ITestOutputHelper outputHelper, string reversedServerTransportName = null)
@@ -57,54 +68,81 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             }
             runner.Start(testProcessTimeout: 60_000);
 
-            Task readingTask = ReadAllOutput(runner.StandardOutput, runner.StandardError, outputHelper);
-
-            return new RemoteTestExecution(runner, readingTask, outputHelper);
+            return new RemoteTestExecution(runner, outputHelper);
         }
 
-        private static Task ReadAllOutput(StreamReader output, StreamReader error, ITestOutputHelper outputHelper)
+        private static async Task ReadLinesAsync(StreamReader reader, List<string> lines, Action<string> callback)
         {
-            return Task.Run(async () =>
+            try
             {
-                try
+                while (true)
                 {
-                    Task<string> stdErrorTask = error.ReadToEndAsync();
+                    // ReadLineAsync does not have cancellation
+                    string line = await reader.ReadLineAsync().ConfigureAwait(false);
 
-                    try
-                    {
-                        string result = await stdErrorTask;
-                        outputHelper.WriteLine("Stderr:");
-                        if (result != null)
-                        {
-                            outputHelper.WriteLine(result);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        outputHelper.WriteLine("Error reading standard error from child process: " + e.ToString());
-                    }
+                    if (null == line)
+                        break;
+
+                    lines.Add(line);
+                    callback?.Invoke(line);
                 }
-                catch (ObjectDisposedException)
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private void OnStandardOutputLine(string line)
+        {
+            lock (_sync)
+            {
+                if (null != _standardOutputLineSource)
                 {
-                    outputHelper.WriteLine("Failed to collect remote process's output");
+                    _standardOutputLineSource.TrySetResult(line);
+                    _standardOutputLineSource = null;
                 }
-            });
+            }
         }
 
         public async ValueTask DisposeAsync()
         {
-            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
             try
             {
-                await TestRunner.WaitForExitAsync(timeoutSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                OutputHelper.WriteLine("Remote process did not exit within timeout period. Forcefully stopping process.");
-                TestRunner.Stop();
-            }
+                using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                try
+                {
+                    await TestRunner.WaitForExitAsync(timeoutSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    OutputHelper.WriteLine($"[Test][P:{TestRunner.Pid}] Remote process did not exit within timeout period. Forcefully stopping process.");
+                    TestRunner.Stop();
+                }
+                finally
+                {
+                    TestRunner.PrintStatus();
+                }
 
-            await IoReadingTask;
+                await IoReadingTask;
+
+                OutputHelper.WriteLine($"Begin standard output:");
+                foreach (string line in _standardOutputLines)
+                {
+                    OutputHelper.WriteLine($"[Test][P:{TestRunner.Pid}] {line}");
+                }
+                OutputHelper.WriteLine($"End standard output.");
+
+                OutputHelper.WriteLine($"Begin standard error:");
+                foreach (string line in _standardErrorLines)
+                {
+                    OutputHelper.WriteLine($"[Test][P:{TestRunner.Pid}] {line}");
+                }
+                OutputHelper.WriteLine($"End standard error.");
+            }
+            finally
+            {
+                TestRunner.Dispose();
+            }
         }
     }
 }

@@ -2,20 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.NETCore.Client.UnitTests;
+using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.NETCore.Client.UnitTests;
-using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -34,10 +29,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableFact]
         public async Task TestLogs()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2234");
-            }
 
             var outputStream = new MemoryStream();
 
@@ -48,7 +39,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 using var loggerFactory = new LoggerFactory(new[] { new TestStreamingLoggerProvider(outputStream) });
                 var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
 
-                var logSettings = new EventLogsPipelineSettings { Duration = Timeout.InfiniteTimeSpan};
+                var logSettings = new EventLogsPipelineSettings { Duration = Timeout.InfiniteTimeSpan };
                 await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
 
                 await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution);
@@ -61,6 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             using var reader = new StreamReader(outputStream);
 
             string firstMessage = reader.ReadLine();
+            _output.WriteLine("[Test] First message: {0}", firstMessage);
             Assert.NotNull(firstMessage);
 
             LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(firstMessage);
@@ -68,10 +60,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("LoggerRemoteTest", result.Category);
             Assert.Equal("Warning", result.LogLevel);
             Assert.Equal("0", result.EventId);
-            Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
-            Validate(result.Arguments, ("arg", "6"));
+            ValidateScopes(result, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
+            ValidateArguments(result, ("arg", "6"));
 
             string secondMessage = reader.ReadLine();
+            _output.WriteLine("[Test] Second message: {0}", secondMessage);
             Assert.NotNull(secondMessage);
 
             result = JsonSerializer.Deserialize<LoggerTestResult>(secondMessage);
@@ -84,14 +77,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(1, result.Arguments.Count);
         }
 
-        private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
+        private static void ValidateScopes(LoggerTestResult result, params (string key, string value)[] expectedValues)
         {
-            Assert.NotNull(values);
+            Validate(nameof(LoggerTestResult.Scopes), result.Scopes, expectedValues);
+        }
+
+        private static void ValidateArguments(LoggerTestResult result, params (string key, string value)[] expectedValues)
+        {
+            Validate(nameof(LoggerTestResult.Arguments), result.Arguments, expectedValues);
+        }
+
+        private static void Validate(string sourceName, IDictionary<string, JsonElement> values, params (string key, string value)[] expectedValues)
+        {
+            AssertX.NotNull(values, $"Expected {sourceName} to not be null.");
             foreach(var expectedValue in expectedValues)
             {
-                Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
+                Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value), $"Unable to find {expectedValue.key} key in {sourceName}.");
                 //TODO For now this will always be a string
-                Assert.Equal(expectedValue.value, value.GetString());
+                AssertX.Equal(expectedValue.value, value.GetString(), $"Expected {expectedValue.key} key to have different value in {sourceName}.");
             }
         }
 

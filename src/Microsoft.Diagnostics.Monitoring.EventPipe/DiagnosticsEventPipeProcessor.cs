@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private TaskCompletionSource<bool> _sessionStarted;
         private EventPipeEventSource _eventSource;
-        private Func<Task> _stopFunc;
+        private EventPipeStreamProvider _streamProvider;
         private bool _disposed;
 
         public DiagnosticsEventPipeProcessor(
@@ -40,25 +40,27 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             IDisposable registration = token.Register(() => _sessionStarted.TrySetCanceled());
             await await Task.Factory.StartNew(async () =>
             {
-                EventPipeEventSource source = null;
-                EventPipeStreamProvider streamProvider = null;
                 Task handleEventsTask = Task.CompletedTask;
                 try
                 {
-                    streamProvider = new EventPipeStreamProvider(_configuration);
+                    EventPipeStreamProvider streamProvider = new EventPipeStreamProvider(_configuration);
+                    lock (_lock)
+                    {
+                        _streamProvider = streamProvider;
+                    }
+
                     // Allows the event handling routines to stop processing before the duration expires.
                     Func<Task> stopFunc = () => Task.Run(() => { streamProvider.StopProcessing(); });
 
                     Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token);
 
-                    source = new EventPipeEventSource(sessionStream);
+                    EventPipeEventSource source = new EventPipeEventSource(sessionStream);
 
                     handleEventsTask = _onEventSourceAvailable(source, stopFunc, token);
 
                     lock (_lock)
                     {
                         _eventSource = source;
-                        _stopFunc = stopFunc;
                     }
                     registration.Dispose();
                     if (!_sessionStarted.TrySetResult(true))
@@ -76,15 +78,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 finally
                 {
                     registration.Dispose();
+
                     EventPipeEventSource eventSource = null;
+                    EventPipeStreamProvider streamProvider = null;
+
                     lock (_lock)
                     {
                         eventSource = _eventSource;
                         _eventSource = null;
+
+                        streamProvider = _streamProvider;
+                        _streamProvider = null;
                     }
 
-                    eventSource?.Dispose();
-                    if (streamProvider != null)
+                    if (null != eventSource)
+                    {
+                        eventSource.Dispose();
+                    }
+
+                    if (null != streamProvider)
                     {
                         await streamProvider.DisposeAsync();
                     }
@@ -103,21 +115,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             await _sessionStarted.Task;
 
-            EventPipeEventSource session = null;
-            Func<Task> stopFunc = null;
+            EventPipeEventSource eventSource = null;
+            EventPipeStreamProvider streamProvider = null;
+
             lock (_lock)
             {
-                session = _eventSource;
-                stopFunc = _stopFunc;
+                eventSource = _eventSource;
+                streamProvider = _streamProvider;
             }
-            if (session != null)
+
+            if (eventSource != null)
             {
-                //TODO This API is not sufficient to stop data flow.
-                session.StopProcessing();
+                eventSource.StopProcessing();
             }
-            if (stopFunc != null)
+
+            if (streamProvider != null)
             {
-                await stopFunc();
+                streamProvider.StopProcessing();
             }
         }
 
@@ -141,7 +155,27 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
             }
 
-            _eventSource?.Dispose();
+            EventPipeEventSource eventSource = null;
+            EventPipeStreamProvider streamProvider = null;
+
+            lock (_lock)
+            {
+                eventSource = _eventSource;
+                _eventSource = null;
+
+                streamProvider = _streamProvider;
+                _streamProvider = null;
+            }
+
+            if (null != eventSource)
+            {
+                eventSource.Dispose();
+            }
+
+            if (null != streamProvider)
+            {
+                await streamProvider.DisposeAsync();
+            }
         }
     }
 }
