@@ -29,7 +29,13 @@ while [ $# -ne 0 ]; do
 done
 
 echo "Initialize Docker Container"
-docker_bin=$(which docker)
+if command -v docker > /dev/null; then
+    docker_bin=$(command -v docker)
+else
+    echo "Unable to find docker"
+    exit 1
+fi
+
 $docker_bin --version
 
 # Get user id
@@ -45,7 +51,7 @@ $docker_bin pull $docker_image
 $docker_bin network create vsts_network_$docker_container_name
 
 # Create and start container
-docker_id="$($docker_bin create -it --rm --privileged --ulimit core=-1 \
+docker_id="$($docker_bin create -it --rm --security-opt seccomp=unconfined --ulimit core=-1 \
   --name vsts_container_$docker_container_name \
   --network=vsts_network_$docker_container_name \
   --volume $source_directory:$source_directory \
@@ -71,4 +77,3 @@ $docker_bin container stop $docker_id
 $docker_bin network rm vsts_network_$docker_container_name
 
 exit $lasterrorcode
-
