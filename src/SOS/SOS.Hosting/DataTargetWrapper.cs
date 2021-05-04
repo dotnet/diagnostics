@@ -92,6 +92,11 @@ namespace SOS.Hosting
             builder.AddMethod(new FreeVirtualDelegate(FreeVirtual));
         }
 
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("DataTargetWrapper.Destroy");
+        }
+
         #region ICLRDataTarget
 
         private HResult GetMachineType(

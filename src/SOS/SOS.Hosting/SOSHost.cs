@@ -20,7 +20,7 @@ namespace SOS.Hosting
     /// <summary>
     /// Helper code to hosting SOS under ClrMD
     /// </summary>
-    public sealed class SOSHost
+    public sealed class SOSHost : IDisposable
     {
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
@@ -50,6 +50,7 @@ namespace SOS.Hosting
         private readonly HostWrapper _hostWrapper;
         private readonly ulong _ignoreAddressBitsMask;
         private IntPtr _sosLibrary = IntPtr.Zero;
+        private bool _disposed;
 
         /// <summary>
         /// The native SOS binaries path. Default is OS/architecture (RID) named directory in the same directory as this assembly.
@@ -139,6 +140,27 @@ namespace SOS.Hosting
                     throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
                 }
                 Trace.TraceInformation("SOS initialized: sosPath '{0}'", sosPath);
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~SOSHost()
+        {
+            Dispose(false);
+        }
+
+        private void Dispose(bool _)
+        {
+            if (!_disposed)
+            {
+                Trace.TraceInformation("SOSHost.Dispose");
+                _disposed = true;
+                COMHelper.Release(_interface);
             }
         }
 
