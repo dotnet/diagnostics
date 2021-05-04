@@ -1072,7 +1072,7 @@ GCRootImpl::RootNode *GCRootImpl::GetGCRefs(RootNode *path, RootNode *node)
     return refs;
 }
 
-DWORD GCRootImpl::GetComponents(TADDR obj, TADDR mt)
+size_t GCRootImpl::GetComponents(TADDR obj, TADDR mt)
 {
     // Get the number of components in the object (for arrays and such).
     DWORD Value = 0;
@@ -1099,7 +1099,7 @@ size_t GCRootImpl::GetSizeOfObject(TADDR obj, MTInfo *info)
     {
         // this is an array, so the size has to include the size of the components. We read the number
         // of components from the target and multiply by the component size to get the size.
-        DWORD components = GetComponents(obj, info->MethodTable);
+        size_t components = GetComponents(obj, info->MethodTable);
         res += info->ComponentSize * components;
     }
 
