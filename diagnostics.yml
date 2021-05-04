@@ -77,6 +77,18 @@ stages:
 
     ############################
     #                          #
+    #    Source Build legs     #
+    #                          #
+    ############################
+
+    - template: /eng/common/templates/job/source-build.yml
+      parameters:
+        platform:
+          name: Complete
+          buildScript: ./eng/common/build.sh
+
+    ############################
+    #                          #
     #        Build legs        #
     #                          #
     ############################
