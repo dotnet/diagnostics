@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -86,6 +87,11 @@ namespace SOS.Hosting
             builder.Complete();
 
             AddRef();
+        }
+
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("LLDBServices.Destroy");
         }
 
         #region ILLDBServices

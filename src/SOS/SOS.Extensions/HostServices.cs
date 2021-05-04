@@ -120,6 +120,11 @@ namespace SOS.Extensions
             AddRef();
         }
 
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("HostServices.Destroy");
+        }
+
         #region IHost
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();

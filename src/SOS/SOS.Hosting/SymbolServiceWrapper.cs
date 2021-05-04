@@ -103,6 +103,12 @@ namespace SOS.Hosting
             builder.AddMethod(new GetMetadataLocatorDelegate(GetMetadataLocator));
             builder.AddMethod(new GetICorDebugMetadataLocatorDelegate(GetICorDebugMetadataLocator));
             builder.Complete();
+            AddRef();
+        }
+
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("SymbolServiceWrapper.Destroy");
         }
 
         /// <summary>

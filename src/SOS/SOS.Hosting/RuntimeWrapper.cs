@@ -14,7 +14,7 @@ using System.Text;
 
 namespace SOS.Hosting
 {
-    internal sealed unsafe class RuntimeWrapper : COMCallableIUnknown, IDisposable
+    internal sealed unsafe class RuntimeWrapper : COMCallableIUnknown
     {
         /// <summary>
         /// The runtime OS and type. Must match IRuntime::RuntimeConfiguration in runtime.h.
@@ -120,20 +120,10 @@ namespace SOS.Hosting
             AddRef();
         }
 
-        public void Dispose()
+        protected override void Destroy()
         {
+            Trace.TraceInformation("RuntimeWrapper.Destroy");
             _onFlushEvent.Dispose();
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        ~RuntimeWrapper()
-        {
-            Dispose(false);
-        }
-
-        private void Dispose(bool _)
-        {
             if (_dacHandle != IntPtr.Zero)
             {
                 DataTarget.PlatformFunctions.FreeLibrary(_dacHandle);

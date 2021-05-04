@@ -48,11 +48,11 @@ namespace SOS.Hosting
             AddRef();
         }
 
-        public void Destroy()
+        protected override void Destroy()
         {
+            Trace.TraceInformation("TargetWrapper.Destroy");
             foreach (RuntimeWrapper wrapper in _wrappers.Values)
             {
-                wrapper.Dispose();
                 wrapper.Release();
             }
             _wrappers.Clear();

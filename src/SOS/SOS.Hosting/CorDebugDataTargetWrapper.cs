@@ -58,6 +58,11 @@ namespace SOS.Hosting
             builder.Complete();
         }
 
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("CorDebugDataTargetWrapper.Destroy");
+        }
+
         #region ICorDebugDataTarget
 
         private int GetPlatform(

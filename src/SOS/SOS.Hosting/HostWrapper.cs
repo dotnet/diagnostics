@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace SOS.Hosting
@@ -33,6 +34,11 @@ namespace SOS.Hosting
             IHost = builder.Complete();
 
             AddRef();
+        }
+
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("HostWrapper.Destroy");
         }
 
         /// <summary>
@@ -80,7 +86,6 @@ namespace SOS.Hosting
         {
             if (_targetWrapper != null)
             {
-                _targetWrapper.Destroy();
                 _targetWrapper.Release();
                 _targetWrapper = null;
             }
