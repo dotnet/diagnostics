@@ -22,15 +22,34 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             if (Enable) {
-                if (Trace.Listeners[ListenerName] == null) {
-                    Trace.Listeners.Add(new LoggingListener());
-                    Trace.AutoFlush = true;
-                }
+                EnableLogging();
             }
             else if (Disable) {
-                Trace.Listeners.Remove(ListenerName);
+                DisableLogging();
             }
             WriteLine("Logging is {0}", Trace.Listeners[ListenerName] != null ? "enabled" : "disabled");
+        }
+
+        public static void Initialize()
+        {
+            if (Environment.GetEnvironmentVariable("DOTNET_ENABLED_SOS_LOGGING") == "1")
+            {
+                EnableLogging();
+            }
+        }
+
+        public static void EnableLogging()
+        {
+            if (Trace.Listeners[ListenerName] == null)
+            {
+                Trace.Listeners.Add(new LoggingListener());
+                Trace.AutoFlush = true;
+            }
+        }
+
+        public static void DisableLogging()
+        {
+            Trace.Listeners.Remove(ListenerName);
         }
 
         class LoggingListener : TraceListener

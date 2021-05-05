@@ -18,7 +18,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
+        public IThread CurrentThread { get; set; }
+
         public IThreadService ThreadService { get; set; }
+
+        public IContextService ContextService { get; set; }
 
         public override void Invoke()
         {
@@ -33,11 +37,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     thread = ThreadService.GetThreadFromIndex(unchecked((int)Thread.Value));
                 }
-                ThreadService.CurrentThreadId = thread.ThreadId;
+                ContextService.SetCurrentThread(thread.ThreadId);
             }
             else
             {
-                uint currentThreadId = ThreadService.CurrentThreadId.GetValueOrDefault(uint.MaxValue);
+                uint currentThreadId = CurrentThread != null ? CurrentThread.ThreadId : uint.MaxValue;
                 foreach (IThread thread in ThreadService.EnumerateThreads())
                 {
                     WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == currentThreadId ? "*" : " ", thread.ThreadIndex, thread.ThreadId);

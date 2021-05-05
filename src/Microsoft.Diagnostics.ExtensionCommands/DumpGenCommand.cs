@@ -27,6 +27,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
+            if (Helper == null) 
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
             var generation = ParseGenerationArgument(Generation);
             if (generation != GCGeneration.NotSet)
             {

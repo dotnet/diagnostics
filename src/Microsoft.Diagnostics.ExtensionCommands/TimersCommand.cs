@@ -14,6 +14,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         public override void Invoke()
         {
+            if (Helper == null) 
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
             try
             {
                 var stats = new Dictionary<string, TimerStat>(64);
@@ -73,7 +77,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 WriteLine(x.Message);
             }
-
         }
 
         static string GetTimerString(TimerInfo timer)

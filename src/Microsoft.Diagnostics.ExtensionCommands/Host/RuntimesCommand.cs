@@ -10,7 +10,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "runtimes", Help = "List the runtimes in the target or change the default runtime.")]
     public class RuntimesCommand: CommandBase
     {
+        public IRuntime CurrentRuntime { get; set; }
+
         public IRuntimeService RuntimeService { get; set; }
+
+        public IContextService ContextService { get; set; }
 
         [Option(Name = "-netfx", Help = "Switches to the desktop .NET Framework if exists.")]
         public bool NetFx { get; set; }
@@ -32,7 +36,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (NetFx && runtime.RuntimeType == RuntimeType.Desktop ||
                         NetCore && runtime.RuntimeType  == RuntimeType.NetCore)
                     {
-                        RuntimeService.SetCurrentRuntime(runtime.Id);
+                        ContextService.SetCurrentRuntime(runtime.Id);
                         WriteLine("Switched to {0} runtime successfully", name);
                         return;
                     }
@@ -46,7 +50,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
-                    string current = displayStar ? (runtime == RuntimeService.CurrentRuntime ? "*" : " ") : "";
+                    string current = displayStar ? (runtime == ContextService.GetCurrentRuntime() ? "*" : " ") : "";
                     Write(current);
                     Write(runtime.ToString());
                 }

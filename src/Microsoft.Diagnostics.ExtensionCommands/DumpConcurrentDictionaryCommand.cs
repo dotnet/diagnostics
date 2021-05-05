@@ -18,6 +18,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
+            if (Helper == null) 
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
+
             if (string.IsNullOrEmpty(Address))
             {
                 WriteLine("Missing ConcurrentDictionary address...");

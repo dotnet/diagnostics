@@ -14,6 +14,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         public override void Invoke()
         {
+            if (Helper == null)
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
             var workItems = new Dictionary<string, WorkInfo>();
             int workItemCount = 0;
             var tasks = new Dictionary<string, WorkInfo>();

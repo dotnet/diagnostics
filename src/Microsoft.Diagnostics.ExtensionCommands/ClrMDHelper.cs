@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -17,7 +18,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ClrMDHelper(ClrRuntime clr)
         {
-            _clr = clr ?? throw new DiagnosticsException("No CLR runtime set");
+            Debug.Assert(clr != null);
+            _clr = clr;
             _heap = _clr.Heap;
         }
 
