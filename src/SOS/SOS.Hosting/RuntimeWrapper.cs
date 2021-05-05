@@ -21,11 +21,11 @@ namespace SOS.Hosting
         /// </summary>
         enum RuntimeConfiguration
         {
-            WindowsDesktop      = 0,
-            WindowsCore         = 1,
-            UnixCore            = 2,
-            OSXCore             = 3,
-            Unknown             = 4
+            WindowsDesktop = 0,
+            WindowsCore = 1,
+            UnixCore = 2,
+            OSXCore = 3,
+            Unknown = 4
         }
 
         private static readonly Guid IID_IRuntime = new Guid("A5F152B9-BA78-4512-9228-5091A4CB7E35");
@@ -97,21 +97,7 @@ namespace SOS.Hosting
             Debug.Assert(runtime != null);
             _services = services;
             _runtime = runtime;
-
-            _onFlushEvent = runtime.Target.OnFlushEvent.Register(() => {
-                // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
-                if (_corDebugProcess == IntPtr.Zero)
-                {
-                    COMHelper.Release(_corDebugProcess);
-                    _corDebugProcess = IntPtr.Zero;
-                }
-                // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
-                if (_clrDataProcess == IntPtr.Zero)
-                {
-                    COMHelper.Release(_clrDataProcess);
-                    _clrDataProcess = IntPtr.Zero;
-                }
-            });
+            _onFlushEvent = runtime.Target.OnFlushEvent.Register(Flush);
 
             VTableBuilder builder = AddInterface(IID_IRuntime, validate: false);
 
@@ -132,6 +118,7 @@ namespace SOS.Hosting
         {
             Trace.TraceInformation("RuntimeWrapper.Destroy");
             _onFlushEvent.Dispose();
+            Flush();
             if (_dacHandle != IntPtr.Zero)
             {
                 DataTarget.PlatformFunctions.FreeLibrary(_dacHandle);
@@ -141,6 +128,22 @@ namespace SOS.Hosting
             {
                 DataTarget.PlatformFunctions.FreeLibrary(_dbiHandle);
                 _dbiHandle = IntPtr.Zero;
+            }
+        }
+
+        private void Flush()
+        {
+            // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
+            if (_corDebugProcess == IntPtr.Zero)
+            {
+                COMHelper.Release(_corDebugProcess);
+                _corDebugProcess = IntPtr.Zero;
+            }
+            // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
+            if (_clrDataProcess == IntPtr.Zero)
+            {
+                COMHelper.Release(_clrDataProcess);
+                _clrDataProcess = IntPtr.Zero;
             }
         }
 

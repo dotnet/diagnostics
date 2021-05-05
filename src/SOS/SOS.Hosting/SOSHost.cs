@@ -32,11 +32,10 @@ namespace SOS.Hosting
         internal readonly IModuleService ModuleService;
         internal readonly IThreadService ThreadService;
         internal readonly IMemoryService MemoryService;
+        private readonly SOSLibrary _sosLibrary;
         private readonly IntPtr _interface;
         private readonly ulong _ignoreAddressBitsMask;
         private bool _disposed;
-
-        private static SOSLibrary _sosLibrary;
 
         /// <summary>
         /// Create an instance of the hosting class
@@ -51,6 +50,7 @@ namespace SOS.Hosting
             ThreadService = services.GetService<IThreadService>();
             MemoryService = services.GetService<IMemoryService>();
             _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
+            _sosLibrary = services.GetService<SOSLibrary>();
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -64,12 +64,6 @@ namespace SOS.Hosting
             }
             TargetWrapper = new TargetWrapper(services);
             Target.OnDestroyEvent.Register(Dispose);
-
-            // Loads and initializes the SOS module.
-            if (_sosLibrary == null)
-            {
-                _sosLibrary = SOSLibrary.Create(Target.Host);
-            }
         }
 
         public void Dispose()

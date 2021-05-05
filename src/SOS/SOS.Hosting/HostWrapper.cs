@@ -39,6 +39,11 @@ namespace SOS.Hosting
         protected override void Destroy()
         {
             Trace.TraceInformation("HostWrapper.Destroy");
+            foreach (var wrapper in _wrappers.Values)
+            {
+                wrapper.Release();
+            }
+            _wrappers.Clear();
         }
 
         /// <summary>
@@ -59,6 +64,16 @@ namespace SOS.Hosting
         public void AddServiceWrapper(in Guid serviceId, COMCallableIUnknown service)
         {
             _wrappers.Add(serviceId, service);
+        }
+
+        /// <summary>
+        /// Remove the service instance
+        /// </summary>
+        /// <param name="serviceId">guid</param>
+        public void RemoveServiceWrapper(in Guid serviceId)
+        {
+            _factories.Remove(serviceId);
+            _wrappers.Remove(serviceId);
         }
 
         /// <summary>

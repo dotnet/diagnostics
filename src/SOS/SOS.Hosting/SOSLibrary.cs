@@ -146,6 +146,7 @@ namespace SOS.Hosting
                 Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.FreeLibrary(_sosLibrary);
                 _sosLibrary = IntPtr.Zero;
             }
+            _hostWrapper.Release();
         }
 
         /// <summary>

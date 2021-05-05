@@ -128,6 +128,8 @@ namespace SOS.Extensions
         protected override void Destroy()
         {
             Trace.TraceInformation("HostServices.Destroy");
+            _hostWrapper.RemoveServiceWrapper(IID_IHostServices);
+            _hostWrapper.Release();
         }
 
         #region IHost
@@ -357,6 +359,9 @@ namespace SOS.Extensions
 
             // Send shutdown event on exit
             OnShutdownEvent.Fire();
+
+            // Release the host services wrapper
+            Release();
         }
 
         #endregion

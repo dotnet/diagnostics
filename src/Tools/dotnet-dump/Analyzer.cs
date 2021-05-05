@@ -45,6 +45,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider.AddService<ICommandService>(_commandProcessor);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
             _serviceProvider.AddService<IContextService>(_contextService);
+            _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
 
             _contextService.ServiceProvider.AddServiceFactory<SOSHost>(() => _target != null ? new SOSHost(_contextService.Services) : null);
             _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
