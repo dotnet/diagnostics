@@ -23,14 +23,19 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IRuntime
     {
         /// <summary>
-        /// The per target services like clrmd's ClrInfo and ClrRuntime.
-        /// </summary>
-        IServiceProvider Services { get; }
-
-        /// <summary>
         /// Runtime id
         /// </summary>
         int Id { get; }
+
+        /// <summary>
+        /// The target for this runtime.
+        /// </summary>
+        ITarget Target { get; }
+
+        /// <summary>
+        /// The per target services like clrmd's ClrInfo and ClrRuntime.
+        /// </summary>
+        IServiceProvider Services { get; }
 
         /// <summary>
         /// Returns the runtime OS and type

@@ -27,7 +27,35 @@ Target::Target() :
 
 Target::~Target()
 {
-    Close();
+    // Clean up the temporary directory files and DAC symlink.
+    LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&m_tmpPath, nullptr);
+    if (tmpPath != nullptr)
+    {
+        std::string directory(tmpPath);
+        directory.append("*");
+
+        WIN32_FIND_DATAA data;
+        HANDLE findHandle = FindFirstFileA(directory.c_str(), &data);
+
+        if (findHandle != INVALID_HANDLE_VALUE) 
+        {
+            do
+            {
+                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+                {
+                    std::string file(tmpPath);
+                    file.append(data.cFileName);
+                    DeleteFileA(file.c_str());
+                }
+            } 
+            while (0 != FindNextFileA(findHandle, &data));
+
+            FindClose(findHandle);
+        }
+
+        RemoveDirectoryA(tmpPath);
+        free((void*)tmpPath);
+    }
     if (m_runtimeModulePath != nullptr)
     {
         free((void*)m_runtimeModulePath);
@@ -281,39 +309,6 @@ void Target::Flush()
         m_desktop->Flush();
     }
 #endif
-}
-
-void Target::Close()
-{
-    // Clean up the temporary directory files and DAC symlink.
-    LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&m_tmpPath, nullptr);
-    if (tmpPath != nullptr)
-    {
-        std::string directory(tmpPath);
-        directory.append("*");
-
-        WIN32_FIND_DATAA data;
-        HANDLE findHandle = FindFirstFileA(directory.c_str(), &data);
-
-        if (findHandle != INVALID_HANDLE_VALUE) 
-        {
-            do
-            {
-                if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-                {
-                    std::string file(tmpPath);
-                    file.append(data.cFileName);
-                    DeleteFileA(file.c_str());
-                }
-            } 
-            while (0 != FindNextFileA(findHandle, &data));
-
-            FindClose(findHandle);
-        }
-
-        RemoveDirectoryA(tmpPath);
-        free((void*)tmpPath);
-    }
 }
 
 bool IsWindowsTarget()

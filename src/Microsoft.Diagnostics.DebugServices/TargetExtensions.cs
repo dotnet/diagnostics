@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>platform module name</returns>
         public static string GetPlatformModuleName(this ITarget target, string moduleName)
         {
-            if (target.OperatingSystem == OSPlatform.Windows) 
+            if (target.OperatingSystem == OSPlatform.Windows)
             {
                 return moduleName + ".dll";
             }
@@ -31,6 +31,16 @@ namespace Microsoft.Diagnostics.DebugServices
                 return "lib" + moduleName + ".dylib";
             }
             else throw new PlatformNotSupportedException(target.OperatingSystem.ToString());
+        }
+
+        /// <summary>
+        /// Registers an object to be disposed when target is destroyed.
+        /// </summary>
+        /// <param name="target">target instance</param>
+        /// <param name="disposable">object to be disposed or null</param>
+        public static void DisposeOnDestroy(this ITarget target, IDisposable disposable)
+        {
+            target.OnDestroyEvent.Register(() => disposable.Dispose());
         }
     }
 }

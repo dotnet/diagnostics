@@ -60,11 +60,6 @@ public:
     /// Flushes any internal caching or state 
     /// </summary>
     virtual void STDMETHODCALLTYPE Flush() = 0;
-
-    /// <summary>
-    /// Cleans up any internal resources 
-    /// </summary>
-    virtual void STDMETHODCALLTYPE Close() = 0;
 };
 
 #ifdef __cplusplus

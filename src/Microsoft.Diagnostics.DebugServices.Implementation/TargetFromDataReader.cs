@@ -22,9 +22,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="dataReader">IDataReader</param>
         /// <param name="targetOS">target operating system</param>
         /// <param name="host">the host instance</param>
+        /// <param name="id">target id</param>
         /// <param name="dumpPath">path of dump for this target</param>
-        public TargetFromDataReader(IDataReader dataReader, OSPlatform targetOS, IHost host, string dumpPath)
-            : base(host, dumpPath)
+        public TargetFromDataReader(IDataReader dataReader, OSPlatform targetOS, IHost host, int id, string dumpPath)
+            : base(host, id, dumpPath)
         {
             _dataReader = dataReader;
 

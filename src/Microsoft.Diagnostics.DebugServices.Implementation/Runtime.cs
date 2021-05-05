@@ -20,7 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class Runtime : IRuntime
     {
-        private readonly ITarget _target;
         private readonly IRuntimeService _runtimeService;
         private readonly ClrInfo _clrInfo;
         private ISymbolService _symbolService;
@@ -30,13 +29,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public readonly ServiceProvider ServiceProvider;
 
-        public Runtime(ITarget target, IRuntimeService runtimeService, ClrInfo clrInfo, int id)
+        public Runtime(ITarget target, int id, IRuntimeService runtimeService, ClrInfo clrInfo)
         {
             Trace.TraceInformation($"Creating runtime #{id} {clrInfo.Flavor} {clrInfo}");
-            _target = target;
+            Target = target;
+            Id = id;
             _runtimeService = runtimeService;
             _clrInfo = clrInfo;
-            Id = id;
 
             RuntimeType = RuntimeType.Unknown;
             if (clrInfo.Flavor == ClrFlavor.Core) {
@@ -51,16 +50,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider.AddService<ClrInfo>(clrInfo);
             ServiceProvider.AddServiceFactoryWithNoCaching<ClrRuntime>(() => CreateRuntime());
 
-            target.OnFlushEvent.Register(() => {
-                _clrRuntime?.DacLibrary.DacPrivateInterface.Flush();
-            });
+            target.OnFlushEvent.Register(() => _clrRuntime?.FlushCachedData());
         }
 
         #region IRuntime
 
-        public IServiceProvider Services => ServiceProvider;
-
         public int Id { get; }
+
+        public ITarget Target { get; }
+
+        public IServiceProvider Services => ServiceProvider;
 
         public RuntimeType RuntimeType { get; }
 
@@ -133,7 +132,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetDacFileName()
         {
-            return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, _target.OperatingSystem);
+            return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, Target.OperatingSystem);
         }
 
         private string GetLocalDacPath(string dacFileName)
@@ -162,10 +161,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetDbiFileName()
         {
-            string name = _target.GetPlatformModuleName("mscordbi");
+            string name = Target.GetPlatformModuleName("mscordbi");
 
             // If this is the Linux runtime module name, but we are running on Windows return the cross-OS DBI name.
-            if (_target.OperatingSystem == OSPlatform.Linux && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (Target.OperatingSystem == OSPlatform.Linux && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 name = "mscordbi.dll";
             }
@@ -192,7 +191,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string DownloadFile(string fileName)
         {
-            OSPlatform platform = _target.OperatingSystem;
+            OSPlatform platform = Target.OperatingSystem;
             string filePath = null;
 
             if (SymbolService.IsSymbolStoreEnabled)
@@ -253,16 +252,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return filePath;
         }
 
-        private ISymbolService SymbolService => _symbolService ??= _target.Services.GetService<ISymbolService>(); 
+        private ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         public override bool Equals(object obj)
         {
-            return Id == ((Runtime)obj).Id;
+            IRuntime runtime = (IRuntime)obj;
+            return Target == runtime.Target && Id == runtime.Id;
         }
 
         public override int GetHashCode()
         {
-            return Id.GetHashCode();
+            return Target.GetHashCode() + Id.GetHashCode();
         }
 
         private static readonly string[] s_runtimeTypeNames = {

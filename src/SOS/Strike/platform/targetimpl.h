@@ -102,7 +102,5 @@ public:
     HRESULT STDMETHODCALLTYPE GetRuntime(IRuntime** pRuntime);
 
     void STDMETHODCALLTYPE Flush();
-
-    void STDMETHODCALLTYPE Close();
 };
 
