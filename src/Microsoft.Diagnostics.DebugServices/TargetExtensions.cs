@@ -40,7 +40,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="disposable">object to be disposed or null</param>
         public static void DisposeOnDestroy(this ITarget target, IDisposable disposable)
         {
-            target.OnDestroyEvent.Register(() => disposable.Dispose());
+            if (disposable != null)
+            {
+                target.OnDestroyEvent.Register(() => disposable.Dispose());
+            }
         }
     }
 }

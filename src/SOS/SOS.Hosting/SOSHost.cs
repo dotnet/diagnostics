@@ -33,6 +33,7 @@ namespace SOS.Hosting
         internal readonly IThreadService ThreadService;
         internal readonly IMemoryService MemoryService;
         private readonly SOSLibrary _sosLibrary;
+        private readonly IDisposable _onDestroyEvent;
         private readonly IntPtr _interface;
         private readonly ulong _ignoreAddressBitsMask;
         private bool _disposed;
@@ -45,12 +46,14 @@ namespace SOS.Hosting
         {
             Services = services;
             Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("No target");
+            TargetWrapper = new TargetWrapper(services);
             ConsoleService = services.GetService<IConsoleService>();
             ModuleService = services.GetService<IModuleService>();
             ThreadService = services.GetService<IThreadService>();
             MemoryService = services.GetService<IMemoryService>();
             _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
             _sosLibrary = services.GetService<SOSLibrary>();
+            _onDestroyEvent = Target.OnDestroyEvent.Register(Dispose);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -62,8 +65,6 @@ namespace SOS.Hosting
                 var lldbServices = new LLDBServices(this);
                 _interface = lldbServices.ILLDBServices;
             }
-            TargetWrapper = new TargetWrapper(services);
-            Target.OnDestroyEvent.Register(Dispose);
         }
 
         public void Dispose()
@@ -72,6 +73,7 @@ namespace SOS.Hosting
             if (!_disposed)
             {
                 _disposed = true;
+                _onDestroyEvent.Dispose();
                 TargetWrapper.Release();
                 COMHelper.Release(_interface);
             }

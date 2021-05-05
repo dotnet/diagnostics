@@ -47,7 +47,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider.AddService<IContextService>(_contextService);
             _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
 
-            _contextService.ServiceProvider.AddServiceFactory<SOSHost>(() => _target != null ? new SOSHost(_contextService.Services) : null);
+            _contextService.ServiceProvider.AddServiceFactory<SOSHost>(() => {
+                if (_target == null) {
+                    return null;
+                }
+                var soshost = new SOSHost(_contextService.Services);
+                _contextService.OnContextChange.RegisterOneShot(soshost.Dispose);
+                return soshost;
+            });
             _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
                 ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
                 return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
