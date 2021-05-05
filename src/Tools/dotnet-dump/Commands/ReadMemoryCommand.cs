@@ -20,9 +20,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     public sealed class ReadMemoryCommand : CommandBase
     {
         [Argument(Name = "address", Help = "Address to dump.")]
+        public string AddressValue
+        {
+            get => Address?.ToString();
+            set => Address = ParseAddress(value);
+        }
+
         public ulong? Address { get; set; }
 
         [Option(Name = "--end", Aliases = new string[] { "-e" }, Help = "Ending address to dump.")]
+        public string EndAddressValue
+        {
+            get => EndAddress?.ToString();
+            set => EndAddress = ParseAddress(value);
+        }
+
         public ulong? EndAddress { get; set; }
 
         // ****************************************************************************************
