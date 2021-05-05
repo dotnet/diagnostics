@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public abstract class ThreadService : IThreadService
     {
-        protected readonly ITarget Target;
+        internal protected readonly ITarget Target;
         private readonly int _contextSize;
         private readonly uint _contextFlags;
         private readonly Dictionary<string, RegisterInfo> _lookupByName;
@@ -153,11 +153,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             return _lookupByIndex.TryGetValue(index, out info);
         }
-
-        /// <summary>
-        /// Current OS thread Id
-        /// </summary>
-        public virtual uint? CurrentThreadId { get; set; }
 
         /// <summary>
         /// Enumerate all the native threads

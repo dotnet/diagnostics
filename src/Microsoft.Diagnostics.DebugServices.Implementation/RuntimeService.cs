@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private DataTarget _dataTarget;
         private string _runtimeModuleDirectory;
         private List<Runtime> _runtimes;
-        private Runtime _currentRuntime;
+        private IContextService _contextService;
         private IModuleService _moduleService;
         private IThreadService _threadService;
         private IMemoryService _memoryService;
@@ -45,11 +45,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader 
             // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a 
             // stack overflow.
-            target.DisposeOnClose(new UnregisterCallback(() => {
+            target.OnDestroyEvent.Register(() => {
                 _dataTarget?.Dispose();
                 _dataTarget = null;
                 _onFlushEvent.Dispose();
-            }));
+            });
         }
 
         #region IRuntimeService
@@ -64,39 +64,33 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 _runtimeModuleDirectory = value;
                 _runtimes = null;
-                _currentRuntime = null;
+                ContextService.ClearCurrentRuntime();
             }
         }
 
         /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
-        public IEnumerable<IRuntime> EnumerateRuntimes() => BuildRuntimes();
-
-        /// <summary>
-        /// Returns the current runtime
-        /// </summary>
-        public IRuntime CurrentRuntime
+        public IEnumerable<IRuntime> EnumerateRuntimes()
         {
-            get
+            if (_runtimes is null)
             {
-                if (_currentRuntime is null) {
-                    _currentRuntime = FindRuntime();
+                _runtimes = new List<Runtime>();
+                if (_dataTarget is null)
+                {
+                    _dataTarget = new DataTarget(new CustomDataTarget(this)) {
+                        BinaryLocator = null
+                    };
                 }
-                return _currentRuntime;
+                if (_dataTarget is not null)
+                {
+                    for (int i = 0; i < _dataTarget.ClrVersions.Length; i++)
+                    {
+                        _runtimes.Add(new Runtime(_target, i, this, _dataTarget.ClrVersions[i]));
+                    }
+                }
             }
-        }
-
-        /// <summary>
-        /// Set the current runtime 
-        /// </summary>
-        /// <param name="runtimeId">runtime id</param>
-        public void SetCurrentRuntime(int runtimeId)
-        {
-            if (_runtimes is null || runtimeId >= _runtimes.Count) {
-                throw new DiagnosticsException($"Invalid runtime id {runtimeId}");
-            }
-            _currentRuntime = _runtimes[runtimeId];
+            return _runtimes;
         }
 
         #endregion
@@ -126,15 +120,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         int IDataReader.ProcessId => unchecked((int)_target.ProcessId.GetValueOrDefault());
 
-        IEnumerable<ModuleInfo> IDataReader.EnumerateModules() => 
+        IEnumerable<ModuleInfo> IDataReader.EnumerateModules() =>
             ModuleService.EnumerateModules().Select((module) => CreateModuleInfo(module)).ToList();
 
         private ModuleInfo CreateModuleInfo(IModule module) =>
             new ModuleInfo(
                 this,
-                module.ImageBase, 
+                module.ImageBase,
                 module.FileName,
-                isVirtual:true,
+                isVirtual: true,
                 unchecked((int)module.IndexFileSize.GetValueOrDefault(0)),
                 unchecked((int)module.IndexTimeStamp.GetValueOrDefault(0)),
                 new ImmutableArray<byte>());
@@ -186,7 +180,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return false;
         }
 
-        void IDataReader.FlushCachedData() => _target.Flush();
+        void IDataReader.FlushCachedData()
+        {
+        }
 
         #endregion
 
@@ -252,61 +248,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
-        /// <summary>
-        /// Find the runtime
-        /// </summary>
-        private Runtime FindRuntime()
-        {
-            IEnumerable<Runtime> runtimes = BuildRuntimes();
-            Runtime runtime = null;
+        private IRuntime CurrentRuntime => ContextService.Services.GetService<IRuntime>();
 
-            // First check if there is a .NET Core runtime loaded
-            foreach (Runtime r in runtimes)
-            {
-                if (r.RuntimeType == RuntimeType.NetCore || r.RuntimeType == RuntimeType.SingleFile)
-                {
-                    runtime = r;
-                    break;
-                }
-            }
-            // If no .NET Core runtime, then check for desktop runtime
-            if (runtime is null)
-            {
-                foreach (Runtime r in runtimes)
-                {
-                    if (r.RuntimeType == RuntimeType.Desktop)
-                    {
-                        runtime = r;
-                        break;
-                    }
-                }
-            }
-            return runtime;
-        }
-
-        private IEnumerable<Runtime> BuildRuntimes()
-        {
-            if (_runtimes is null)
-            {
-                _runtimes = new List<Runtime>();
-                if (_dataTarget is null)
-                {
-                    // Don't use the default binary locator or provide one. clrmd uses it to download the DAC, download assemblies
-                    // to get metadata in its data target or for invalid memory region mapping and we already do all of that.
-                    _dataTarget = new DataTarget(new CustomDataTarget(this)) {
-                        BinaryLocator = null
-                    };
-                }
-                if (_dataTarget is not null)
-                {
-                    for (int i = 0; i < _dataTarget.ClrVersions.Length; i++)
-                    {
-                        _runtimes.Add(new Runtime(_target, this, _dataTarget.ClrVersions[i], i));
-                    }
-                }
-            }
-            return _runtimes;
-        }
+        private IContextService ContextService => _contextService ??= _target.Services.GetService<IContextService>();
 
         private IModuleService ModuleService => _moduleService ??= _target.Services.GetService<IModuleService>();
 
@@ -324,7 +268,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 foreach (IRuntime runtime in _runtimes)
                 {
-                    string current = _runtimes.Count > 1 ? runtime == _currentRuntime ? "*" : " " : "";
+                    string current = _runtimes.Count > 1 ? runtime == CurrentRuntime ? "*" : " " : "";
                     sb.Append(current);
                     sb.AppendLine(runtime.ToString());
                 }
