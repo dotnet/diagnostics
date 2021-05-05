@@ -81,7 +81,7 @@ namespace SOS.Hosting
 
         #endregion
 
-        private readonly ITarget _target;
+        private readonly IServiceProvider _services;
         private readonly IRuntime _runtime;
         private readonly IDisposable _onFlushEvent;
         private IntPtr _clrDataProcess = IntPtr.Zero;
@@ -91,18 +91,26 @@ namespace SOS.Hosting
 
         public IntPtr IRuntime { get; }
 
-        internal RuntimeWrapper(ITarget target, IRuntime runtime)
+        internal RuntimeWrapper(IServiceProvider services, IRuntime runtime)
         {
-            Debug.Assert(target != null);
+            Debug.Assert(services != null);
             Debug.Assert(runtime != null);
-            _target = target;
+            _services = services;
             _runtime = runtime;
 
-            _onFlushEvent = target.OnFlushEvent.Register(() => {
+            _onFlushEvent = runtime.Target.OnFlushEvent.Register(() => {
                 // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
-                _corDebugProcess = IntPtr.Zero;
+                if (_corDebugProcess == IntPtr.Zero)
+                {
+                    COMHelper.Release(_corDebugProcess);
+                    _corDebugProcess = IntPtr.Zero;
+                }
                 // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
-                _clrDataProcess = IntPtr.Zero;
+                if (_clrDataProcess == IntPtr.Zero)
+                {
+                    COMHelper.Release(_clrDataProcess);
+                    _clrDataProcess = IntPtr.Zero;
+                }
             });
 
             VTableBuilder builder = AddInterface(IID_IRuntime, validate: false);
@@ -148,11 +156,11 @@ namespace SOS.Hosting
 
                 case RuntimeType.NetCore:
                 case RuntimeType.SingleFile:
-                    if (_target.OperatingSystem == OSPlatform.Windows)
+                    if (_runtime.Target.OperatingSystem == OSPlatform.Windows)
                     {
                         return RuntimeConfiguration.WindowsCore;
                     }
-                    else if (_target.OperatingSystem == OSPlatform.Linux || _target.OperatingSystem == OSPlatform.OSX)
+                    else if (_runtime.Target.OperatingSystem == OSPlatform.Linux || _runtime.Target.OperatingSystem == OSPlatform.OSX)
                     {
                         return RuntimeConfiguration.UnixCore;
                     }
@@ -219,7 +227,7 @@ namespace SOS.Hosting
             byte* fileVersionBuffer,
             int fileVersionBufferSizeInBytes)
         {
-            IModuleService moduleService = _target.Services.GetService<IModuleService>();
+            IModuleService moduleService = _services.GetService<IModuleService>();
             IModule module;
             try
             {
@@ -282,7 +290,7 @@ namespace SOS.Hosting
                 Trace.TraceError("Failed to obtain DAC CLRDataCreateInstance");
                 return IntPtr.Zero;
             }
-            var dataTarget = new DataTargetWrapper(_target, _runtime);
+            var dataTarget = new DataTargetWrapper(_services, _runtime);
             int hr = createInstance(IID_IXCLRDataProcess, dataTarget.IDataTarget, out IntPtr unk);
             if (hr != 0)
             {
@@ -317,7 +325,7 @@ namespace SOS.Hosting
                 Build = 0,
                 Revision = 0,
             };
-            var dataTarget = new CorDebugDataTargetWrapper(_target,  _runtime);
+            var dataTarget = new CorDebugDataTargetWrapper(_services);
             ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
             int hresult = 0;
 
