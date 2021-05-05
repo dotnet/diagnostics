@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using VersionInfo = Microsoft.Diagnostics.DebugServices.VersionInfo;
 
 namespace SOS.Extensions
 {
@@ -64,7 +65,7 @@ namespace SOS.Extensions
 
             public override uint? IndexTimeStamp { get; }
 
-            public override VersionInfo? Version
+            public override VersionInfo Version
             {
                 get
                 {

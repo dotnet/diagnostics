@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private Flags _flags;
         private PdbInfo _pdbInfo;
         private ImmutableArray<byte> _buildId;
-        private VersionInfo? _version;
+        private VersionInfo _version;
         private PEImage _peImage;
 
         public readonly ServiceProvider ServiceProvider;
@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public virtual VersionInfo? Version
+        public virtual VersionInfo Version
         {
             get { return _version; }
             set { _version = value; }
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             GetPEInfo();
 
             // If we can't get the version from the PE, search for version string embedded in the module data
-            if (!_version.HasValue && !IsPEImage)
+            if (_version is null && !IsPEImage)
             {
                 string versionString = VersionString;
                 if (versionString != null)

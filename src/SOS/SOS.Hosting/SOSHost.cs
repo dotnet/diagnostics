@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Architecture = System.Runtime.InteropServices.Architecture;
+using VersionInfo = Microsoft.Diagnostics.DebugServices.VersionInfo;
 
 namespace SOS.Hosting
 {
@@ -479,7 +480,7 @@ namespace SOS.Hosting
                 {
                     return HResult.E_INVALIDARG;
                 }
-                if (!module.Version.HasValue)
+                if (module.Version is null)
                 {
                     return HResult.E_FAIL;
                 }
@@ -489,7 +490,7 @@ namespace SOS.Hosting
                 fileInfo->dwFileFlagsMask = 0;
                 fileInfo->dwFileFlags = 0;
 
-                VersionInfo versionInfo = module.Version.Value;
+                VersionInfo versionInfo = module.Version;
                 fileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
                 fileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
             }

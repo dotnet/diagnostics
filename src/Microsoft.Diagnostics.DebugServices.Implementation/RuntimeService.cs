@@ -134,14 +134,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return ImmutableArray<byte>.Empty;
         }
 
-        bool IDataReader.GetVersionInfo(ulong baseAddress, out VersionInfo version)
+        bool IDataReader.GetVersionInfo(ulong baseAddress, out Microsoft.Diagnostics.Runtime.VersionInfo version)
         {
             try
             {
-                VersionInfo? v = ModuleService.GetModuleFromBaseAddress(baseAddress).Version;
-                if (v.HasValue)
+                VersionInfo v = ModuleService.GetModuleFromBaseAddress(baseAddress).Version;
+                if (v is not null)
                 {
-                    version = v.Value;
+                    version = v.ToVersionInfo();
                     return true;
                 }
             }

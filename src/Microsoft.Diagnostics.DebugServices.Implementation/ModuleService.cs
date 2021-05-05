@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="version">the PE version or null</param>
         /// <param name="flags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbInfo pdbInfo, ref VersionInfo? version, ref Module.Flags flags)
+        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbInfo pdbInfo, ref VersionInfo version, ref Module.Flags flags)
         {
             PEImage peImage = null;
 
@@ -238,7 +238,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="version">the PE version or null</param>
         /// <param name="flags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbInfo pdbInfo, ref VersionInfo? version, ref Module.Flags flags)
+        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbInfo pdbInfo, ref VersionInfo version, ref Module.Flags flags)
         {
             Stream stream = MemoryService.CreateMemoryStream(address, size);
             try
@@ -249,13 +249,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     flags |= Module.Flags.IsPEImage;
                     flags |= peImage.IsManaged ? Module.Flags.IsManaged : Module.Flags.None;
-                    pdbInfo = peImage.DefaultPdb;
-                    if (!version.HasValue)
+                    pdbInfo = peImage.DefaultPdb.ToPdbInfo();
+                    if (version is null)
                     {
                         FileVersionInfo fileVersionInfo = peImage.GetFileVersionInfo();
                         if (fileVersionInfo != null)
                         {
-                            version = fileVersionInfo.VersionInfo;
+                            version = fileVersionInfo.VersionInfo.ToVersionInfo();
                         }
                     }
                     flags &= ~(Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
