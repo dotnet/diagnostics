@@ -116,8 +116,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (!IsTargetEqual(target, _currentTarget))
             {
                 _currentTarget = target;
-                SetCurrentThread(null);
-                SetCurrentRuntime(null);
+                _currentThread = null;
+                _currentRuntime = null;
                 ServiceProvider.FlushServices();
                 OnContextChange.Fire();
             }
