@@ -90,7 +90,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // If session being disposed hasn't been stopped, attempt to stop it first
             if (!_stopped)
             {
-                Stop();
+                try
+                {
+                    Stop();
+                }
+                catch {} // swallow any exceptions that may be thrown from Stop.
             }
 
             if (!_disposedValue)
