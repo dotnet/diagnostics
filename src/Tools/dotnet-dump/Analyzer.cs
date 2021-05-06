@@ -47,14 +47,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider.AddService<IContextService>(_contextService);
             _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
 
-            _contextService.ServiceProvider.AddServiceFactory<SOSHost>(() => {
-                if (_target == null) {
-                    return null;
-                }
-                var soshost = new SOSHost(_contextService.Services);
-                _contextService.OnContextChange.RegisterOneShot(soshost.Dispose);
-                return soshost;
-            });
             _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
                 ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
                 return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
@@ -103,6 +95,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
                 _contextService.SetCurrentTarget(_target);
+
+                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => new SOSHost(_contextService.Services));
 
                 // Automatically enable symbol server support
                 _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
