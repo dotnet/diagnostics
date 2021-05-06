@@ -10,7 +10,7 @@ using System.Text.Json;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class LogObject : IReadOnlyList<KeyValuePair<string, object>>
+    public class LogObject : IReadOnlyList<KeyValuePair<string, object>>, IStateWithTimestamp
     {
         public static readonly Func<object, Exception, string> Callback = (state, exception) => ((LogObject)state).ToString();
 
@@ -53,6 +53,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public KeyValuePair<string, object> this[int index] => _items[index];
 
         public int Count => _items.Count;
+
+        public DateTime Timestamp { get; internal set; }
 
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
