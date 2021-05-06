@@ -4003,8 +4003,8 @@ public:
             {"-verify", &mVerify, COBOOL, FALSE},    // verify heap objects (!heapverify)
             {"-thinlock", &mThinlock, COBOOL, FALSE},// list only thinlocks
             {"-short", &mShort, COBOOL, FALSE},      // list only addresses
-            {"-min", &mMinSize, COHEX, TRUE},        // min size of objects to display
-            {"-max", &mMaxSize, COHEX, TRUE},        // max size of objects to display
+            {"-min", &mMinSize, COHEX, TRUE},        // min size of objects to display (hex)
+            {"-max", &mMaxSize, COHEX, TRUE},        // max size of objects to display (hex)
             {"-live", &mLive, COHEX, FALSE},         // only print live objects
             {"-dead", &mDead, COHEX, FALSE},         // only print dead objects
             {"/d", &mDML, COBOOL, FALSE},            // Debugger Markup Language
