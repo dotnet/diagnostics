@@ -31,9 +31,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             _output = output;
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task TestLogs()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2234");
+            }
+
             var outputStream = new MemoryStream();
 
             await using (var testExecution = StartTraceeProcess("LoggerRemoteTest"))
