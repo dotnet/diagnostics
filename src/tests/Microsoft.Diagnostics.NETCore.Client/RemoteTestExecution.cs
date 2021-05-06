@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
                 }
                 catch (OperationCanceledException)
                 {
-                    OutputHelper.WriteLine($"[Test][P:{TestRunner.Pid}] Remote process did not exit within timeout period. Forcefully stopping process.");
+                    OutputHelper.WriteLine("Remote process did not exit within timeout period. Forcefully stopping process.");
                     TestRunner.Stop();
                 }
                 finally
@@ -128,14 +128,14 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
                 OutputHelper.WriteLine($"Begin standard output:");
                 foreach (string line in _standardOutputLines)
                 {
-                    OutputHelper.WriteLine($"[Test][P:{TestRunner.Pid}] {line}");
+                    OutputHelper.WriteLine(line);
                 }
                 OutputHelper.WriteLine($"End standard output.");
 
                 OutputHelper.WriteLine($"Begin standard error:");
                 foreach (string line in _standardErrorLines)
                 {
-                    OutputHelper.WriteLine($"[Test][P:{TestRunner.Pid}] {line}");
+                    OutputHelper.WriteLine(line);
                 }
                 OutputHelper.WriteLine($"End standard error.");
             }

@@ -79,27 +79,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     registration.Dispose();
 
-                    EventPipeEventSource eventSource = null;
-                    EventPipeStreamProvider streamProvider = null;
-
-                    lock (_lock)
-                    {
-                        eventSource = _eventSource;
-                        _eventSource = null;
-
-                        streamProvider = _streamProvider;
-                        _streamProvider = null;
-                    }
-
-                    if (null != eventSource)
-                    {
-                        eventSource.Dispose();
-                    }
-
-                    if (null != streamProvider)
-                    {
-                        await streamProvider.DisposeAsync();
-                    }
+                    await DisposeSourceAndProviderAsync();
                 }
 
                 // Await the task returned by the event handling method AFTER the EventPipeEventSource is disposed.
@@ -121,9 +101,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             lock (_lock)
             {
                 eventSource = _eventSource;
+
                 streamProvider = _streamProvider;
+                _streamProvider = null;
             }
 
+            // Calling StopProcessing will not stop have the call to the Process method return until another
+            // event comes in. If no more events are going to come in, the thread that called the Process method
+            // will block until the EventPipeSession is disposed, which is owned by the EventPipeStreamProvider.
+            // Thus, dispose the stream provider in order to stop the session and event source in real time.
             if (eventSource != null)
             {
                 eventSource.StopProcessing();
@@ -131,7 +117,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (streamProvider != null)
             {
-                streamProvider.StopProcessing();
+                // Calling DisposeAsync will stop the underlying EventPipeSession.
+                await streamProvider.DisposeAsync();
             }
         }
 
@@ -155,6 +142,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
             }
 
+            await DisposeSourceAndProviderAsync();
+        }
+
+        private async Task DisposeSourceAndProviderAsync()
+        {
             EventPipeEventSource eventSource = null;
             EventPipeStreamProvider streamProvider = null;
 

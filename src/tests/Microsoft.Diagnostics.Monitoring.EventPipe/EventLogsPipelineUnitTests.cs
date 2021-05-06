@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             using var reader = new StreamReader(outputStream);
 
             string firstMessage = reader.ReadLine();
-            _output.WriteLine("[Test] First message: {0}", firstMessage);
+            _output.WriteLine("First message: {0}", firstMessage);
             Assert.NotNull(firstMessage);
 
             LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(firstMessage);
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateArguments(result, ("arg", "6"));
 
             string secondMessage = reader.ReadLine();
-            _output.WriteLine("[Test] Second message: {0}", secondMessage);
+            _output.WriteLine("Second message: {0}", secondMessage);
             Assert.NotNull(secondMessage);
 
             result = JsonSerializer.Deserialize<LoggerTestResult>(secondMessage);
