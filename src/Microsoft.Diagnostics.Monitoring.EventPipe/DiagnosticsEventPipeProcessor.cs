@@ -108,8 +108,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             // Calling StopProcessing will not have the call to the Process method return until another
             // event comes in. If no more events are going to come in, the thread that called the Process method
-            // will block until the EventPipeSession is disposed, which is owned by the EventPipeStreamProvider.
-            // Thus, dispose the stream provider in order to stop the session and event source in real time.
+            // will block indefinitely. Call EventPipeStreamProvider.DisposeAsync to stop the underlying
+            // EventPipeSession and wait for event production to finish.
             if (eventSource != null)
             {
                 eventSource.StopProcessing();
@@ -117,7 +117,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (streamProvider != null)
             {
-                // Calling DisposeAsync will stop the underlying EventPipeSession and wait for processing to finish.
                 await streamProvider.DisposeAsync();
             }
         }
