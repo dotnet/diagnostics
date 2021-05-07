@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -26,10 +25,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             _output = output;
         }
 
-        [SkippableFact]
+        [Fact]
         public async Task TestLogs()
         {
-
             var outputStream = new MemoryStream();
 
             await using (var testExecution = StartTraceeProcess("LoggerRemoteTest"))

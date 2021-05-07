@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
         }
 
-        [Fact(Skip = "temp")]
+        [Fact]
         public async Task TestCounterEventPipeline()
         {
             var logger = new TestMetricsLogger(_output);

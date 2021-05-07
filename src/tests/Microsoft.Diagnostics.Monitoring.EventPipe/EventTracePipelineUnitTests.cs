@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             _output = output;
         }
 
-        [Fact(Skip = "temp")]
+        [Fact]
         public async Task TestTraceStopAsync()
         {
             using var buffer = new MemoryStream();
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.True(foundCpuProvider);
         }
 
-        [SkippableFact(Skip = "temp")]
+        [SkippableFact]
         public async Task TestEventStreamCleanup()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
