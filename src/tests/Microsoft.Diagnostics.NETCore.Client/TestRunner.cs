@@ -40,9 +40,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected virtual void Dispose(bool disposing)
         {
-            Stop();
+            try
+            {
+                // Make a good will attempt to end the tracee process
+                // and its process tree
+                testProcess?.Kill(entireProcessTree: true);
+            }
+            catch {}
 
-            if (disposing)
+            if(disposing)
             {
                 testProcess?.Dispose();
             }
@@ -126,13 +132,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Stop()
         {
-            try
-            {
-                // Make a good will attempt to end the tracee process
-                // and its process tree
-                testProcess?.Kill(entireProcessTree: true);
-            }
-            catch { }
+            this.Dispose();
         }
 
         public int Pid {

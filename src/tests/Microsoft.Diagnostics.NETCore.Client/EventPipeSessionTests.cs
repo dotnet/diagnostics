@@ -2,13 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -46,7 +54,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void EventPipeSessionStreamTest()
         {
-            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
             runner.PrintStatus();
