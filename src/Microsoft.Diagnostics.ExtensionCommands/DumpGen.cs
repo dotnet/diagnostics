@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-
     public class DumpGen
     {
         private readonly ClrMDHelper _helper;
@@ -48,12 +47,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 .Where(obj => obj.Type.MethodTable == methodTableAddress);
         }
 
-
         private static bool IsTypeNameMatching(string typeName, string typeNameFilter)
         {
-            return typeName.ToLower().Contains(typeNameFilter.ToLower());
+            return typeName.IndexOf(typeNameFilter, StringComparison.OrdinalIgnoreCase) >= 0;
         }
-
     }
-
 }

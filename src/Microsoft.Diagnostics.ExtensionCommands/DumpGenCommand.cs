@@ -107,8 +107,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return GCGeneration.Generation2;
                 case "loh":
                     return GCGeneration.LargeObjectHeap;
+                case "poh":
+                    return GCGeneration.PinnedObjectHeap;
                 default:
-                    WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh)");
+                    WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh)");
                     return GCGeneration.NotSet;
             }
         }
@@ -131,6 +133,7 @@ Generation number can take the following values (case insensitive):
 - gen1
 - gen2
 - loh
+- poh
 
 > dumpgen gen0
 Statistics:

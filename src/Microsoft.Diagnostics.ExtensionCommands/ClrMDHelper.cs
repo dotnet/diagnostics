@@ -746,6 +746,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         end = segment.End;
                     }
                     return start != end;
+                case GCGeneration.PinnedObjectHeap:
+                    if (segment.IsPinnedObjectSegment)
+                    {
+                        start = segment.Start;
+                        end = segment.End;
+                    }
+                    return start != end;
                 default:
                     return false;
             }

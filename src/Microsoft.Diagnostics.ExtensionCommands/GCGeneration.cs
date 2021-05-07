@@ -10,6 +10,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         Generation0 = 1,
         Generation1 = 2,
         Generation2 = 3,
-        LargeObjectHeap = 4
+        LargeObjectHeap = 4,
+        PinnedObjectHeap = 5
     }
 }
