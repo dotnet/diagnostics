@@ -44,6 +44,7 @@ VERIFY: ^<HEXVAL>\s+3\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
 COMMAND: dumpgen gen2
 VERIFY: ^<HEXVAL>\s+5\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
+!VERIFY: ^<HEXVAL>\s+1\s+10024\s+System.Byte\[\]
 
 COMMAND: dumpgen loh
 VERIFY: ^<HEXVAL>\s+1\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass\[\]

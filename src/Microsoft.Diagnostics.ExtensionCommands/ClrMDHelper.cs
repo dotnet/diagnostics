@@ -733,7 +733,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     return start != end;
                 case GCGeneration.Generation2:
-                    if (!segment.IsLargeObjectSegment)
+                    if (!(segment.IsLargeObjectSegment || segment.IsPinnedObjectSegment))
                     {
                         start = segment.Generation2.Start;
                         end = segment.Generation2.End;
