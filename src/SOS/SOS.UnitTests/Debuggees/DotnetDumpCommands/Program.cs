@@ -127,6 +127,11 @@ namespace DotnetDumpCommands
             // This object should go into LOH
             yield return new DumpSampleClass[50000];
 
+#if NET5_0_OR_GREATER
+            // This object should go into POH
+            yield return GC.AllocateUninitializedArray<byte>(10000, pinned: true);
+#endif
+
             for (var i = 0; i < 5; i++)
             {
                 yield return new DumpSampleClass();
@@ -151,7 +156,6 @@ namespace DotnetDumpCommands
             public string Value2 { get; set; }
             public DateTime Date { get; set; }
         }
-
 
         public struct DumpSampleStruct
         {
