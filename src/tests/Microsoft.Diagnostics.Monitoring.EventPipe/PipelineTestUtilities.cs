@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             testExecution.SendSignal();
 
             //Wait for event production to be done
-            await testExecution.WaitForSignalAsync();
+            await testExecution.WaitForSignalAsync(token);
 
             try
             {

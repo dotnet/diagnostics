@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             TestRunner.StandardInput.Flush();
         }
 
-        public async Task WaitForSignalAsync()
+        public async Task WaitForSignalAsync(CancellationToken token)
         {
             TaskCompletionSource<string> standardOutputLineSource = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -55,6 +55,8 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             {
                 _standardOutputLineSource = standardOutputLineSource;
             }
+
+            using var _ = token.Register(() => standardOutputLineSource.TrySetCanceled(token));
 
             await standardOutputLineSource.Task;
         }
