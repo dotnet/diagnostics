@@ -16,9 +16,9 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>957981f36eeccb6e9d266407df6522ca5cfbd899</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.100-preview.5.21252.3">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.100-preview.5.21260.2">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>eceded1fb7842e3460dbb1d613e20d635706a0f9</Sha>
+      <Sha>c1feef4a98dfc1bd2913b876e620d2ed2a01b90b</Sha>
     </Dependency>
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="5.0.0-alpha.1.20473.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
