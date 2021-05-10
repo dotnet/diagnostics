@@ -14,6 +14,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             Task processingTask = pipeline.RunAsync(token);
 
+            // Wait for event session to be established before telling target app to produce events.
+            if (pipeline is IEventSourcePipelineInternal eventSourcePipeline)
+            {
+                await eventSourcePipeline.SessionStarted;
+            }
+
             //Begin event production
             testExecution.SendSignal();
 

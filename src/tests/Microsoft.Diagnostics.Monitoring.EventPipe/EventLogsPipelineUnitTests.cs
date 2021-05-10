@@ -34,10 +34,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableFact]
         public async Task TestLogs()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2234");
-            }
+            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //{
+            //    throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2234");
+            //}
 
             var outputStream = new MemoryStream();
 
