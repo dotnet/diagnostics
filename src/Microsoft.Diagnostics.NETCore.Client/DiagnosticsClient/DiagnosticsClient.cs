@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -156,7 +157,48 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // runtime timeout or respect attachTimeout as one total duration.
         }
 
-        internal void ResumeRuntime()
+        /// <summary>
+        /// Set a profiler as the startup profiler. It is only valid to issue this command
+        /// while the runtime is paused in the "reverse server" mode.
+        /// </summary>
+        /// <param name="profilerGuid">Guid for the profiler to be attached</param>
+        /// <param name="profilerPath">Path to the profiler to be attached</param>
+        public void StartupProfiler(Guid profilerGuid, string profilerPath)
+        {
+            if (profilerGuid == null || profilerGuid == Guid.Empty)
+            {
+                throw new ArgumentException($"{nameof(profilerGuid)} must be a valid Guid");
+            }
+
+            if (String.IsNullOrEmpty(profilerPath))
+            {
+                throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
+            }
+
+            byte[] serializedConfiguration = SerializeProfilerStartup(profilerGuid, profilerPath);
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.StartupProfiler, serializedConfiguration);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                      throw new UnsupportedCommandException("The target runtime does not support the ProfilerStartup command.");
+                    }
+
+                    throw new ServerErrorException($"Profiler startup failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"Profiler startup failed - server responded with unknown command");
+            }
+        }
+
+        /// <summary>
+        /// Tell the runtime to resume execution after being paused for "reverse server" mode.
+        /// </summary>
+        public void ResumeRuntime()
         {
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ResumeRuntime);
             var response = IpcClient.SendMessage(_endpoint, message);
@@ -175,36 +217,64 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        // Fallback command for .NET 5 Preview 7 and Preview 8
-        internal void ResumeRuntimeFallback()
+        /// <summary>
+        /// Gets the value of the environment variable from the target process.
+        /// </summary>
+        /// <param name="name">The name of the environment variable to get from the target process.</param>
+        public string GetEnvironmentVariable(string name)
         {
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticServerCommandId.ResumeRuntime);
+            if (String.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException($"{nameof(name)} must be non-null.");
+            }
+
+            byte[] serializedConfiguration = SerializeGetEnvironmentVariable(name);
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetEnvironmentVariable, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
-                    throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                      throw new UnsupportedCommandException("The target runtime does not support the GetEnvironmentVariable command.");
+                    }
+
+                    throw new ServerErrorException($"GetEnvironmentVariable failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
-                    return;
+                    int index = 0;
+                    string value = IpcHelpers.ReadString(response.Payload, ref index);
+
+                    return value;
                 default:
-                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
+                    throw new ServerErrorException($"GetEnvironmentVariable failed - server responded with unknown command");
             }
         }
 
-        internal ProcessInfo GetProcessInfo()
+        public void SetEnvironmentVariable(string name, string value)
         {
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
+            if (String.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException($"{nameof(name)} must be non-null.");
+            }
+
+            byte[] serializedConfiguration = SerializeSetEnvironmentVariable(name, value);
+            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.SetEnvironmentVariable, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
-                    throw new ServerErrorException($"Get process info failed (HRESULT: 0x{hr:X8})");
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                        throw new UnsupportedCommandException("The target runtime does not support the SetEnvironmentVariable command.");
+                    }
+
+                    throw new ServerErrorException($"SetEnvironmentVariable failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
-                    return ProcessInfo.Parse(response.Payload);
+                    return;
                 default:
-                    throw new ServerErrorException($"Get process info failed - server responded with unknown command");
+                    throw new ServerErrorException($"SetEnvironmentVariable failed - server responded with unknown command");
             }
         }
 
@@ -253,6 +323,40 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return GetAllPublishedProcesses().Distinct();
         }
 
+
+        // Fallback command for .NET 5 Preview 7 and Preview 8
+        internal void ResumeRuntimeFallback()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticServerCommandId.ResumeRuntime);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
+            }
+        }
+
+        internal ProcessInfo GetProcessInfo()
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    throw new ServerErrorException($"Get process info failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return ProcessInfo.Parse(response.Payload);
+                default:
+                    throw new ServerErrorException($"Get process info failed - server responded with unknown command");
+            }
+        }
+
         private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)
         {
             using (var stream = new MemoryStream())
@@ -285,6 +389,44 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     writer.Write(additionalData.Length);
                     writer.Write(additionalData);
                 }
+
+                writer.Flush();
+                return stream.ToArray();
+            }
+        }
+
+        private byte[] SerializeProfilerStartup(Guid profilerGuid, string profilerPath)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(profilerGuid.ToByteArray());
+                writer.WriteString(profilerPath);
+
+                writer.Flush();
+                return stream.ToArray();
+            }
+        }
+
+        private byte[] SerializeGetEnvironmentVariable(string name)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.WriteString(name);
+
+                writer.Flush();
+                return stream.ToArray();
+            }
+        }
+
+        private byte[] SerializeSetEnvironmentVariable(string name, string value)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.WriteString(name);
+                writer.WriteString(value);
 
                 writer.Flush();
                 return stream.ToArray();
