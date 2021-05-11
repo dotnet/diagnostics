@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -32,7 +33,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public async Task TestTraceStopAsync()
         {
-            using var buffer = new MemoryStream();
             Stream eventStream = null;
             await using (var testExecution = StartTraceeProcess("TraceStopTest"))
             {
@@ -45,32 +45,42 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     Configuration = new CpuProfileConfiguration()
                 };
 
+                var foundProviderSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
                 await using var pipeline = new EventTracePipeline(client, settings, async (s, token) =>
                 {
-                    await s.CopyToAsync(buffer);
                     eventStream = s;
+
+                    using var eventSource = new EventPipeEventSource(s);
+                    
+                    // Dispose event source when cancelled.
+                    using var _ = token.Register(() => eventSource.Dispose());
+
+                    eventSource.Dynamic.All += (TraceEvent obj) =>
+                    {
+                        if (string.Equals(obj.ProviderName, MonitoringSourceConfiguration.SampleProfilerProviderName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            foundProviderSource.TrySetResult(null);
+                        }
+                    };
+
+                    await Task.Run(() => Assert.True(eventSource.Process()), token);
                 });
 
-                await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution);
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                    pipeline,
+                    testExecution,
+                    async token => {
+                        using var _ = token.Register(() => {
+                            _output.WriteLine("Did not receive expected events within timeout period.");
+                            foundProviderSource.TrySetCanceled(token);
+                        });
+                        await foundProviderSource.Task;
+                    });
             }
 
             //Validate that the stream is only valid for the lifetime of the callback in the trace pipeline.
-            Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));
-
-            Assert.True(buffer.Length > 0);
-
-            var eventSource = new EventPipeEventSource(buffer);
-            bool foundCpuProvider = false;
-
-            eventSource.Dynamic.All += (TraceEvent obj) =>
-            {
-                if (string.Equals(obj.ProviderName, MonitoringSourceConfiguration.SampleProfilerProviderName, StringComparison.OrdinalIgnoreCase))
-                {
-                    foundCpuProvider = true;
-                }
-            };
-            Assert.True(eventSource.Process());
-            Assert.True(foundCpuProvider);
+            Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));   
         }
 
         [SkippableFact]
@@ -102,7 +112,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     return Task.CompletedTask;
                 });
 
-                await Assert.ThrowsAsync<OperationCanceledException>(async () => await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution, cancellationTokenSource.Token));
+                await Assert.ThrowsAsync<OperationCanceledException>(
+                    async () => await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                        pipeline,
+                        testExecution,
+                        cancellationTokenSource.Token));
             }
 
             //Validate that the stream is only valid for the lifetime of the callback in the trace pipeline.
