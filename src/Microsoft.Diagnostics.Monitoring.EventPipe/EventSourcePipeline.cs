@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public DiagnosticsClient Client { get; }
         public T Settings { get; }
 
-        public Task SessionStarted => _processor.Value.SessionStarted;
+        Task IEventSourcePipelineInternal.SessionStarted => _processor.Value.SessionStarted;
 
         protected EventSourcePipeline(DiagnosticsClient client, T settings)
         {
