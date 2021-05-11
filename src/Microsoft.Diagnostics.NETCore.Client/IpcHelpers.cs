@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc
+namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal static class IpcHelpers
     {

@@ -19,7 +19,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         BadEncoding           = 0x80131384,
         UnknownCommand        = 0x80131385,
         UnknownMagic          = 0x80131386,
-        UnknownError          = 0x80131387
+        UnknownError          = 0x80131387,
+        EnvVarNotFound        = 0x800700CB,
     }
 
     /// <summary>

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client.DiagnosticsIpc;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -62,7 +61,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
-        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
+        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown = true, int circularBufferMB = 256)
         {
             return new EventPipeSession(_endpoint, providers, requestRundown, circularBufferMB);
         }
@@ -76,7 +75,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns> 
-        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
+        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown = true, int circularBufferMB = 256)
         {
             return new EventPipeSession(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
         }
@@ -87,12 +86,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="dumpType">Type of the dump to be generated</param>
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
-        public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
+        public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration = false)
         {
             if (string.IsNullOrEmpty(dumpPath))
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
 
-            byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
+            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, logDumpGeneration);
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
             IpcMessage response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -118,7 +117,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="profilerGuid">Guid for the profiler to be attached</param>
         /// <param name="profilerPath">Path to the profiler to be attached</param>
         /// <param name="additionalData">Additional data to be passed to the profiler</param>
-        public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData=null)
+        public void AttachProfiler(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData = null)
         {
             if (profilerGuid == null || profilerGuid == Guid.Empty)
             {
@@ -130,7 +129,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
             }
 
-            byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
+            byte[] serializedConfiguration = SerializePayload((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -139,7 +138,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
                     {
-                      throw new UnsupportedCommandException("The target runtime does not support profiler attach");
+                        throw new UnsupportedCommandException("The target runtime does not support profiler attach");
                     }
                     if (hr == (uint)DiagnosticsIpcError.ProfilerAlreadyActive)
                     {
@@ -175,7 +174,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
             }
 
-            byte[] serializedConfiguration = SerializeProfilerStartup(profilerGuid, profilerPath);
+            byte[] serializedConfiguration = SerializePayload(profilerGuid, profilerPath);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.StartupProfiler, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -184,7 +183,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
                     {
-                      throw new UnsupportedCommandException("The target runtime does not support the ProfilerStartup command.");
+                        throw new UnsupportedCommandException("The target runtime does not support the ProfilerStartup command.");
                     }
 
                     throw new ServerErrorException($"Profiler startup failed (HRESULT: 0x{hr:X8})");
@@ -228,7 +227,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(name)} must be non-null.");
             }
 
-            byte[] serializedConfiguration = SerializeGetEnvironmentVariable(name);
+            byte[] serializedConfiguration = SerializePayload(name);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetEnvironmentVariable, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -237,7 +236,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
                     {
-                      throw new UnsupportedCommandException("The target runtime does not support the GetEnvironmentVariable command.");
+                        throw new UnsupportedCommandException("The target runtime does not support the GetEnvironmentVariable command.");
+                    }
+                    else if (hr == (uint)DiagnosticsIpcError.EnvVarNotFound)
+                    {
+                        return null;
                     }
 
                     throw new ServerErrorException($"GetEnvironmentVariable failed (HRESULT: 0x{hr:X8})");
@@ -258,7 +261,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(name)} must be non-null.");
             }
 
-            byte[] serializedConfiguration = SerializeSetEnvironmentVariable(name, value);
+            byte[] serializedConfiguration = SerializePayload(name, value);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.SetEnvironmentVariable, serializedConfiguration);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -278,7 +281,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public Dictionary<string,string> GetProcessEnvironment()
+        public Dictionary<string, string> GetProcessEnvironment()
         {
             var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
             Stream continuation = IpcClient.SendMessage(_endpoint, message, out IpcMessage response);
@@ -289,7 +292,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     throw new ServerErrorException($"Get process environment failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
                     ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Payload);
-                    Task<Dictionary<string,string>> envTask = helper.ReadEnvironmentAsync(continuation);
+                    Task<Dictionary<string, string>> envTask = helper.ReadEnvironmentAsync(continuation);
                     envTask.Wait();
                     return envTask.Result;
                 default:
@@ -357,80 +360,87 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        private static byte[] SerializeCoreDump(string dumpName, DumpType dumpType, bool diagnostics)
+        private static byte[] SerializePayload<T>(T arg)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.WriteString(dumpName);
-                writer.Write((uint)dumpType);
-                writer.Write((uint)(diagnostics ? 1 : 0));
+                SerializePayloadArgument(arg, writer);
 
                 writer.Flush();
                 return stream.ToArray();
             }
         }
 
-        private static byte[] SerializeProfilerAttach(uint attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
+        private static byte[] SerializePayload<T1, T2>(T1 arg1, T2 arg2)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.Write(attachTimeout);
-                writer.Write(profilerGuid.ToByteArray());
-                writer.WriteString(profilerPath);
-
-                if (additionalData == null)
-                {
-                    writer.Write(0);
-                }
-                else
-                {
-                    writer.Write(additionalData.Length);
-                    writer.Write(additionalData);
-                }
+                SerializePayloadArgument(arg1, writer);
+                SerializePayloadArgument(arg2, writer);
 
                 writer.Flush();
                 return stream.ToArray();
             }
         }
 
-        private byte[] SerializeProfilerStartup(Guid profilerGuid, string profilerPath)
+        private static byte[] SerializePayload<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.Write(profilerGuid.ToByteArray());
-                writer.WriteString(profilerPath);
+                SerializePayloadArgument(arg1, writer);
+                SerializePayloadArgument(arg2, writer);
+                SerializePayloadArgument(arg3, writer);
 
                 writer.Flush();
                 return stream.ToArray();
             }
         }
 
-        private byte[] SerializeGetEnvironmentVariable(string name)
+        private static byte[] SerializePayload<T1, T2, T3, T4>(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.WriteString(name);
+                SerializePayloadArgument(arg1, writer);
+                SerializePayloadArgument(arg2, writer);
+                SerializePayloadArgument(arg3, writer);
+                SerializePayloadArgument(arg4, writer);
 
                 writer.Flush();
                 return stream.ToArray();
             }
         }
 
-        private byte[] SerializeSetEnvironmentVariable(string name, string value)
+        private static void SerializePayloadArgument<T>(T obj, BinaryWriter writer)
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            if (typeof(T) == typeof(string))
             {
-                writer.WriteString(name);
-                writer.WriteString(value);
-
-                writer.Flush();
-                return stream.ToArray();
+                writer.WriteString((string)((object)obj));
+            }
+            else if (typeof(T) == typeof(int))
+            {
+                writer.Write((int)((object)obj));
+            }
+            else if (typeof(T) == typeof(uint))
+            {
+                writer.Write((uint)((object)obj));
+            }
+            else if (typeof(T) == typeof(bool))
+            {
+                writer.Write((bool)((object)obj));
+            }
+            else
+            {
+                throw new ArgumentException($"Type {obj.GetType()} is not supported in SerializePayloadArgument, please add it.");
             }
         }
+        private static void SerializePayloadArgument(string str, BinaryWriter writer)
+        {
+            writer.WriteString(str);
+        }
+
     }
 }
