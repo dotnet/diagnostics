@@ -1,8 +1,8 @@
-﻿using Microsoft.Diagnostics.NETCore.Client;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +13,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         public static async Task ExecutePipelineWithDebugee(Pipeline pipeline, RemoteTestExecution testExecution, CancellationToken token = default)
         {
             Task processingTask = pipeline.RunAsync(token);
+
+            // Wait for event session to be established before telling target app to produce events.
+            if (pipeline is IEventSourcePipelineInternal eventSourcePipeline)
+            {
+                await eventSourcePipeline.SessionStarted;
+            }
 
             //Begin event production
             testExecution.SendSignal();
