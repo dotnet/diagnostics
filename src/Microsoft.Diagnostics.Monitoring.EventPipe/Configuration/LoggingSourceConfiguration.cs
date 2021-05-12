@@ -84,6 +84,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             switch (logLevel)
             {
+                case LogLevel.None:
+                    throw new NotSupportedException($"{nameof(LogLevel)} {nameof(LogLevel.None)} is not supported as the default log level.");
                 case LogLevel.Trace:
                     return EventLevel.LogAlways;
                 case LogLevel.Debug:

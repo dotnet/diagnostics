@@ -105,6 +105,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         }
 
         /// <summary>
+        /// Test that LogLevel.None is not supported as the default log level.
+        /// </summary>
+        [Fact]
+        public Task TestLogsAllCategoriesDefaultLevelNoneNotSupported()
+        {
+            return Assert.ThrowsAsync<NotSupportedException>(() => GetLogsAsync(settings =>
+            {
+                settings.UseAppFilters = false;
+                settings.LogLevel = LogLevel.None;
+            }));
+        }
+
+        /// <summary>
         /// Test that log events are collected for the categories and levels specified by the application.
         /// </summary>
         [Fact]
