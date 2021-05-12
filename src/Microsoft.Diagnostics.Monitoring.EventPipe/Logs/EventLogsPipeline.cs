@@ -25,7 +25,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            return new LoggingSourceConfiguration(Settings.LogLevel, Settings.UseAppFilters);
+            return new LoggingSourceConfiguration(
+                Settings.LogLevel,
+                LogMessageType.FormattedMessage | LogMessageType.JsonMessage,
+                Settings.FilterSpecs,
+                Settings.UseAppFilters);
         }
 
         protected override Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
