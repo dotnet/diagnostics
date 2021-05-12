@@ -307,10 +307,10 @@ vDoOut(BOOL bToConsole, FILE* file, PCSTR Format, ...)
     va_end(Args);
 }
 
-static TADDR GetFormatAddr(StressLog& inProcLog, uint32_t formatOffset)
+static TADDR GetFormatAddr(StressLog& inProcLog, uint32_t formatOffset, BOOL bHasModuleTable)
 {
-    // does the module table look valid?
-    if (inProcLog.moduleOffset == (size_t)inProcLog.modules[0].baseAddress &&
+    // do we have a module table, and does it look valid?
+    if (bHasModuleTable && inProcLog.moduleOffset == (size_t)inProcLog.modules[0].baseAddress &&
         1024 * 1024 <= inProcLog.modules[0].size && inProcLog.modules[0].size < StressMsg::maxOffset)
     {
         // yes: search it for a module containing this offset
@@ -487,6 +487,9 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
     void** args;
     unsigned msgCtr;
     msgCtr = 0;
+    int version = 0;
+    CheckBreakingRuntimeChange(&version);
+    BOOL bHasModuleTable = (version >= 3);
     for (;;) 
     {
         ThreadStressLog* latestLog = logs->FindLatestThreadLog();
@@ -505,7 +508,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
         StressMsg* latestMsg = latestLog->readPtr;
         if (latestMsg->formatOffset != 0 && !latestLog->CompletedDump()) 
         {
-            TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->formatOffset);
+            TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->formatOffset, bHasModuleTable);
             hr = memCallBack->ReadVirtual(TO_CDADDR(taFmt), format, 256, 0);
             if (hr != S_OK) 
                 strcpy_s(format, _countof(format), "Could not read address of format string");
