@@ -16,6 +16,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public IDictionary<string, LogLevel?> FilterSpecs { get; set; }
 
         // This setting will collect logs for the application-defined categories and levels.
-        public bool UseAppFilters { get; set; } = false;
+        public bool UseAppFilters { get; set; } = true;
     }
 }

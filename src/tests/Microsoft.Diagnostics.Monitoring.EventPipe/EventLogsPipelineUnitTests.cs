@@ -35,7 +35,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public async Task TestLogsAllCategoriesAllLevels()
         {
-            using Stream outputStream = await GetLogsAsync();
+            using Stream outputStream = await GetLogsAsync(settings =>
+            {
+                settings.UseAppFilters = false;
+            });
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
@@ -58,6 +61,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             using Stream outputStream = await GetLogsAsync(settings =>
             {
+                settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Warning;
             });
 
@@ -80,6 +84,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             using Stream outputStream = await GetLogsAsync(settings =>
             {
+                settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
@@ -105,10 +110,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public async Task TestLogsUseAppFilters()
         {
-            using Stream outputStream = await GetLogsAsync(settings =>
-            {
-                settings.UseAppFilters = true;
-            });
+            using Stream outputStream = await GetLogsAsync();
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
@@ -129,7 +131,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             using Stream outputStream = await GetLogsAsync(settings =>
             {
-                settings.UseAppFilters = true;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
                     { LoggerRemoteTestName, LogLevel.Warning }
@@ -155,6 +156,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             using Stream outputStream = await GetLogsAsync(settings =>
             {
+                settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
