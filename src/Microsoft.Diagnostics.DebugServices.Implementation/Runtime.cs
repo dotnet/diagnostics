@@ -132,7 +132,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetDacFileName()
         {
-            return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, Target.OperatingSystem);
+            if (_clrInfo.SingleFileRuntimeInfo.HasValue)
+            {
+                return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, Target.OperatingSystem);
+            }
+            Debug.Assert(!string.IsNullOrEmpty(_clrInfo.DacInfo.PlatformSpecificFileName));
+            return _clrInfo.DacInfo.PlatformSpecificFileName;
         }
 
         private string GetLocalDacPath(string dacFileName)
