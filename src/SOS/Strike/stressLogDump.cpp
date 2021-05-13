@@ -487,10 +487,12 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
     void** args;
     unsigned msgCtr;
     msgCtr = 0;
-    int version = 0;
+    int version;
+    version = 0;
     CheckBreakingRuntimeChange(&version);
-    BOOL bHasModuleTable = (version >= 3);
-    for (;;) 
+    BOOL bHasModuleTable;
+    bHasModuleTable = (version >= 3);
+    for (;;)
     {
         ThreadStressLog* latestLog = logs->FindLatestThreadLog();
 
