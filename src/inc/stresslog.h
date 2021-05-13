@@ -310,6 +310,13 @@ public:
     unsigned __int64 startTimeStamp;        // start time from when tick counter started
     FILETIME startTime;                     // time the application started
     SIZE_T   moduleOffset;                  // Used to compute format strings.
+    struct ModuleDesc
+    {
+        uint8_t* baseAddress;
+        size_t        size;
+    };
+    static const size_t MAX_MODULES = 5;
+    ModuleDesc    modules[MAX_MODULES];     // descriptor of the modules images
 
 // private:
     static void Enter(CRITSEC_COOKIE dummy = NULL);
@@ -414,10 +421,12 @@ typedef USHORT
 // And make sure the timeStamp field is naturally alligned, so we don't waste 
 // space on 32-bit platforms
 struct StressMsg {
+    static const size_t formatOffsetBits = 26;
     union {
         struct {
-            uint32_t numberOfArgs  : 3;     // at most 7 arguments
-            uint32_t formatOffset  : 29;    // offset of string in mscorwks
+            uint32_t numberOfArgs : 3;                   // at most 7 arguments here
+            uint32_t formatOffset : formatOffsetBits;    // offset of string in coreclr/clrgc
+            uint32_t numberOfArgsX : 3;                  // extend number of args in a backward compat way
         };
         uint32_t fmtOffsCArgs;    // for optimized access
     };
@@ -425,9 +434,9 @@ struct StressMsg {
     uint64_t timeStamp;                     // time when mssg was logged
     void*     args[0];                      // size given by numberOfArgs
 
-    static const size_t maxArgCnt = 7;
-    static const size_t maxOffset = 0x20000000;
-    static size_t maxMsgSize () 
+    static const size_t maxArgCnt = 63;
+    static const size_t maxOffset = 1 << formatOffsetBits;
+    static size_t maxMsgSize ()
     { return sizeof(StressMsg) + maxArgCnt*sizeof(void*); }
 
     friend class ThreadStressLog;
@@ -507,8 +516,8 @@ class ThreadStressLog {
     ThreadStressLog* next;      // we keep a linked list of these
     uint64_t   threadId;        // the id for the thread using this buffer
     uint8_t    isDead;          // Is this thread dead 
-    uint8_t    readHasWrapped;  // set when read ptr has passed chunListTail
-    uint8_t    writeHasWrapped; // set when write ptr has passed chunListHead
+    uint8_t    readHasWrapped;  // set when read ptr has passed chunkListTail
+    uint8_t    writeHasWrapped; // set when write ptr has passed chunkListHead
     StressMsg* curPtr;          // where packets are being put on the queue
     StressMsg* readPtr;         // where we are reading off the queue (used during dumping)
     StressLogChunk * chunkListHead; //head of a list of stress log chunks
@@ -712,8 +721,9 @@ public:
 // For convenience it returns the new value of readPtr
 inline StressMsg* ThreadStressLog::AdvanceRead() {
     STATIC_CONTRACT_LEAF;
+    unsigned numberOfArgs = (readPtr->numberOfArgsX << 3) + readPtr->numberOfArgs;
     // advance the marker
-    readPtr = (StressMsg*)((char*)readPtr + sizeof(StressMsg) + readPtr->numberOfArgs*sizeof(void*));
+    readPtr = (StressMsg*)((char*)readPtr + sizeof(StressMsg) + numberOfArgs*sizeof(void*));
     // wrap around if we need to
     if (readPtr >= (StressMsg *)curReadChunk->EndPtr ())
     {
