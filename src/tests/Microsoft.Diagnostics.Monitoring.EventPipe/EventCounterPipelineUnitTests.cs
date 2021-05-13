@@ -27,11 +27,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             private readonly List<string> _expectedCounters = new List<string>();
             private Dictionary<string, ICounterPayload> _metrics = new Dictionary<string, ICounterPayload>();
-            private readonly TaskCompletionSource<object> _foundAllCountersSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private readonly TaskCompletionSource<object> _foundExpectedCountersSource;
 
-            public TestMetricsLogger(IDictionary<string, IEnumerable<string>> expectedCounters = null)
+            public TestMetricsLogger(IDictionary<string, IEnumerable<string>> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource)
             {
-                if (null != expectedCounters && expectedCounters.Count > 0)
+                _foundExpectedCountersSource = foundExpectedCountersSource;
+
+                if (expectedCounters.Count > 0)
                 {
                     foreach (string providerName in expectedCounters.Keys)
                     {
@@ -43,18 +45,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }
                 else
                 {
-                    _foundAllCountersSource.SetResult(null);
+                    foundExpectedCountersSource.SetResult(null);
                 }
             }
 
-            public Task FoundAllCountersTask => _foundAllCountersSource.Task;
-
             public IEnumerable<ICounterPayload> Metrics => _metrics.Values;
-
-            public void Cancel(CancellationToken token)
-            {
-                _foundAllCountersSource.TrySetCanceled(token);
-            }
 
             public void Log(ICounterPayload metric)
             {
@@ -65,7 +60,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 // Complete the task source if the last expected key was removed.
                 if (_expectedCounters.Remove(key) && _expectedCounters.Count == 0)
                 {
-                    _foundAllCountersSource.TrySetResult(null);
+                    _foundExpectedCountersSource.TrySetResult(null);
                 }
             }
 
@@ -97,7 +92,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             IDictionary<string, IEnumerable<string>> expectedMap = new Dictionary<string, IEnumerable<string>>();
             expectedMap.Add(expectedProvider, expectedCounters);
 
-            var logger = new TestMetricsLogger(expectedMap);
+            var foundExpectedCountersSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
 
             await using (var testExecution = StartTraceeProcess("CounterRemoteTest"))
             {
@@ -120,15 +117,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }, new[] { logger });
 
                 await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                    _output,
                     pipeline,
                     testExecution,
-                    async token => {
-                        using var _ = token.Register(() => {
-                            _output.WriteLine("Did not receive expected events within timeout period.");
-                            logger.Cancel(token);
-                        });
-                        await logger.FoundAllCountersTask;
-                        });
+                    foundExpectedCountersSource);
             }
 
             Assert.True(logger.Metrics.Any());

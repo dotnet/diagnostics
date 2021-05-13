@@ -68,15 +68,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 });
 
                 await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                    _output,
                     pipeline,
                     testExecution,
-                    async token => {
-                        using var _ = token.Register(() => {
-                            _output.WriteLine("Did not receive expected events within timeout period.");
-                            foundProviderSource.TrySetCanceled(token);
-                        });
-                        await foundProviderSource.Task;
-                    });
+                    foundProviderSource);
             }
 
             //Validate that the stream is only valid for the lifetime of the callback in the trace pipeline.
@@ -114,6 +109,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 await Assert.ThrowsAsync<OperationCanceledException>(
                     async () => await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                        _output,
                         pipeline,
                         testExecution,
                         cancellationTokenSource.Token));

@@ -6,19 +6,20 @@ using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     internal static class PipelineTestUtilities
     {
-        public static async Task ExecutePipelineWithDebugee(Pipeline pipeline, RemoteTestExecution testExecution, Func<CancellationToken, Task> waitCallback = null)
+        public static async Task ExecutePipelineWithDebugee(ITestOutputHelper outputHelper, Pipeline pipeline, RemoteTestExecution testExecution, TaskCompletionSource<object> waitTaskSource = null)
         {
             using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(1));
 
-            await ExecutePipelineWithDebugee(pipeline, testExecution, cancellation.Token, waitCallback);
+            await ExecutePipelineWithDebugee(outputHelper, pipeline, testExecution, cancellation.Token, waitTaskSource);
         }
 
-        public static async Task ExecutePipelineWithDebugee(Pipeline pipeline, RemoteTestExecution testExecution, CancellationToken token, Func<CancellationToken, Task> waitCallback = null)
+        public static async Task ExecutePipelineWithDebugee(ITestOutputHelper outputHelper, Pipeline pipeline, RemoteTestExecution testExecution, CancellationToken token, TaskCompletionSource<object> waitTaskSource = null)
         {
             Task processingTask = pipeline.RunAsync(token);
 
@@ -36,9 +37,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             try
             {
-                if (null != waitCallback)
+                // Optionally wait on caller before allowing the pipeline to stop.
+                if (null != waitTaskSource)
                 {
-                    await waitCallback(token);
+                    using var _ = token.Register(() =>
+                    {
+                        outputHelper.WriteLine("Did not receive completion signal before cancellation.");
+                        waitTaskSource.TrySetCanceled(token);
+                    });
+
+                    await waitTaskSource.Task;
                 }
 
                 //Signal for the pipeline to stop
