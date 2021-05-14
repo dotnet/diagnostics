@@ -206,7 +206,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }
                 await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
 
-                await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution);
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(_output, pipeline, testExecution);
             }
 
             outputStream.Position = 0L;
