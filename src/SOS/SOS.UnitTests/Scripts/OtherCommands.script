@@ -71,8 +71,6 @@ VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
 EXTCOMMAND:registers
 VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
 
-# Issue: https://github.com/dotnet/diagnostics/issues/503
-!IFDEF:ALPINE
 SOSCOMMAND:DumpHeap
 VERIFY:\s+Address\s+MT\s+Size\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>.*
@@ -80,7 +78,6 @@ VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-ENDIF:ALPINE
 
 SOSCOMMAND:DumpDomain
 VERIFY:\s*System Domain:\s+<HEXVAL>\s+

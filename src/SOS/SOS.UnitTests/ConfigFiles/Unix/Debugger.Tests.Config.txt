@@ -59,10 +59,10 @@
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
-    <!-- <Option Condition="'$(RuntimeVersion50)' != ''">
+    <Option Condition="'$(RuntimeVersion50)' != ''">
       <BuildProjectFramework>net5.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-    </Option> -->
+    </Option>
     <Option Condition="'$(RuntimeVersion31)' != ''">
       <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
@@ -89,10 +89,10 @@
             </Option>
           </Options>
         </Option>
-        <!-- <Option Condition="'$(RuntimeVersion50)' != ''">
+        <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-        </Option> -->
+        </Option>
         <Option Condition="'$(RuntimeVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
@@ -114,11 +114,11 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
         </Option>
-        <!--  <Option Condition="'$(AspNetCoreVersion50)' != ''">
+        <Option Condition="'$(AspNetCoreVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion50)</FrameworkVersion>
-        </Option> -->
+        </Option>
         <Option Condition="'$(AspNetCoreVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
@@ -141,10 +141,10 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <!-- <Option Condition="'$(RuntimeVersion50)' != ''">
+        <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-        </Option> -->
+        </Option>
         <Option Condition="'$(RuntimeVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
