@@ -16,7 +16,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private int _circularBufferMB;
         private long _sessionId;
         private IpcEndpoint _endpoint;
-        private bool disposedValue = false; // To detect redundant calls
+        private bool _disposedValue = false; // To detect redundant calls
+        private bool _stopped = false; // To detect redundant calls
 
         internal EventPipeSession(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
@@ -49,6 +50,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void Stop()
         {
             Debug.Assert(_sessionId > 0);
+            
+            // Do not issue another Stop command if it has already been issued for this session instance.
+            if (_stopped)
+            {
+                return;
+            }
+            else
+            {
+                _stopped = true;
+            }
 
             byte[] payload = BitConverter.GetBytes(_sessionId);
             IpcMessage response;
@@ -76,13 +87,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            // If session being disposed hasn't been stopped, attempt to stop it first
+            if (!_stopped)
+            {
+                try
+                {
+                    Stop();
+                }
+                catch {} // swallow any exceptions that may be thrown from Stop.
+            }
+
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
                     EventStream?.Dispose();
                 }
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 

@@ -2,20 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
-using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -30,19 +25,43 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private sealed class TestMetricsLogger : ICountersLogger
         {
-            private readonly ITestOutputHelper _output;
+            private readonly List<string> _expectedCounters = new List<string>();
             private Dictionary<string, ICounterPayload> _metrics = new Dictionary<string, ICounterPayload>();
+            private readonly TaskCompletionSource<object> _foundExpectedCountersSource;
 
-            public TestMetricsLogger(ITestOutputHelper output)
+            public TestMetricsLogger(IDictionary<string, IEnumerable<string>> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource)
             {
-                _output = output;
+                _foundExpectedCountersSource = foundExpectedCountersSource;
+
+                if (expectedCounters.Count > 0)
+                {
+                    foreach (string providerName in expectedCounters.Keys)
+                    {
+                        foreach (string counterName in expectedCounters[providerName])
+                        {
+                            _expectedCounters.Add(CreateKey(providerName, counterName));
+                        }
+                    }
+                }
+                else
+                {
+                    foundExpectedCountersSource.SetResult(null);
+                }
             }
 
             public IEnumerable<ICounterPayload> Metrics => _metrics.Values;
 
             public void Log(ICounterPayload metric)
             {
-                _metrics[string.Concat(metric.Provider, "_", metric.Name)] = metric;
+                string key = CreateKey(metric);
+
+                _metrics[key] = metric;
+
+                // Complete the task source if the last expected key was removed.
+                if (_expectedCounters.Remove(key) && _expectedCounters.Count == 0)
+                {
+                    _foundExpectedCountersSource.TrySetResult(null);
+                }
             }
 
             public void PipelineStarted()
@@ -52,14 +71,30 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             public void PipelineStopped()
             {
             }
+
+            private static string CreateKey(ICounterPayload payload)
+            {
+                return CreateKey(payload.Provider, payload.Name);
+            }
+
+            private static string CreateKey(string providerName, string counterName)
+            {
+                return $"{providerName}_{counterName}";
+            }
         }
 
         [Fact]
         public async Task TestCounterEventPipeline()
         {
-            var logger = new TestMetricsLogger(_output);
             var expectedCounters = new[] { "cpu-usage", "working-set" };
             string expectedProvider = "System.Runtime";
+
+            IDictionary<string, IEnumerable<string>> expectedMap = new Dictionary<string, IEnumerable<string>>();
+            expectedMap.Add(expectedProvider, expectedCounters);
+
+            var foundExpectedCountersSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
 
             await using (var testExecution = StartTraceeProcess("CounterRemoteTest"))
             {
@@ -81,7 +116,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     RefreshInterval = TimeSpan.FromSeconds(1)
                 }, new[] { logger });
 
-                await PipelineTestUtilities.ExecutePipelineWithDebugee(pipeline, testExecution);
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                    _output,
+                    pipeline,
+                    testExecution,
+                    foundExpectedCountersSource);
             }
 
             Assert.True(logger.Metrics.Any());

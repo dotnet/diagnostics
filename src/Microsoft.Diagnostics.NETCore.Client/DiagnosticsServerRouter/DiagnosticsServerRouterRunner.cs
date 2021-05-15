@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         internal interface Callbacks
         {
-            void OnRouterStarted(string boundTcpServerAddress);
+            void OnRouterStarted(string tcpAddress);
             void OnRouterStopped();
         }
 
@@ -30,6 +30,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger, Callbacks callbacks)
         {
             return await runRouter(token, new IpcServerTcpServerRouterFactory(ipcServer, tcpServer, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
+        }
+
+        public static async Task<int> runIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeoutMs, ILogger logger, Callbacks callbacks)
+        {
+            return await runRouter(token, new IpcServerTcpClientRouterFactory(ipcServer, tcpClient, runtimeTimeoutMs, logger), callbacks).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)
@@ -46,7 +51,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runRouter(CancellationToken token, TcpServerRouterFactory routerFactory, Callbacks callbacks)
+        async static Task<int> runRouter(CancellationToken token, DiagnosticsServerRouterFactory routerFactory, Callbacks callbacks)
         {
             List<Task> runningTasks = new List<Task>();
             List<Router> runningRouters = new List<Router>();
@@ -54,7 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             try
             {
                 routerFactory.Start();
-                callbacks?.OnRouterStarted(routerFactory.TcpServerAddress);
+                callbacks?.OnRouterStarted(routerFactory.TcpAddress);
 
                 while (!token.IsCancellationRequested)
                 {
@@ -110,7 +115,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // reconnect using same or different runtime instance.
                         if (ex is BackendStreamTimeoutException && runningRouters.Count == 0)
                         {
-                            routerFactory.Logger.LogDebug("No backend stream available before timeout.");
+                            routerFactory.Logger?.LogDebug("No backend stream available before timeout.");
                             routerFactory.Reset();
                         }
 
@@ -118,8 +123,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // Shutdown router to prevent instances to outlive runtime process (if auto shutdown is enabled).
                         if (ex is RuntimeTimeoutException)
                         {
-                            routerFactory.Logger.LogInformation("No runtime connected before timeout.");
-                            routerFactory.Logger.LogInformation("Starting automatic shutdown.");
+                            routerFactory.Logger?.LogInformation("No runtime connected before timeout.");
+                            routerFactory.Logger?.LogInformation("Starting automatic shutdown.");
                             throw;
                         }
                     }
@@ -127,12 +132,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception ex)
             {
-                routerFactory.Logger.LogInformation($"Shutting down due to error: {ex.Message}");
+                routerFactory.Logger?.LogInformation($"Shutting down due to error: {ex.Message}");
             }
             finally
             {
                 if (token.IsCancellationRequested)
-                    routerFactory.Logger.LogInformation("Shutting down due to cancelation request.");
+                    routerFactory.Logger?.LogInformation("Shutting down due to cancelation request.");
 
                 runningRouters.RemoveAll(IsRouterDead);
                 runningRouters.Clear();
@@ -140,7 +145,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 await routerFactory?.Stop();
                 callbacks?.OnRouterStopped();
 
-                routerFactory.Logger.LogInformation("Router stopped.");
+                routerFactory.Logger?.LogInformation("Router stopped.");
             }
             return 0;
         }

@@ -307,6 +307,30 @@ vDoOut(BOOL bToConsole, FILE* file, PCSTR Format, ...)
     va_end(Args);
 }
 
+static TADDR GetFormatAddr(StressLog& inProcLog, uint32_t formatOffset, BOOL bHasModuleTable)
+{
+    // do we have a module table, and does it look valid?
+    if (bHasModuleTable && inProcLog.moduleOffset == (size_t)inProcLog.modules[0].baseAddress &&
+        1024 * 1024 <= inProcLog.modules[0].size && inProcLog.modules[0].size < StressMsg::maxOffset)
+    {
+        // yes: search it for a module containing this offset
+        size_t moduleOffset = 0;
+        for (int moduleIndex = 0; moduleIndex < StressLog::MAX_MODULES; moduleIndex++)
+        {
+            if (inProcLog.modules[moduleIndex].baseAddress == nullptr)
+                break;
+            size_t relativeOffset = formatOffset - moduleOffset;
+            if (relativeOffset < inProcLog.modules[moduleIndex].size)
+            {
+                return relativeOffset + TO_TADDR(inProcLog.modules[moduleIndex].baseAddress);
+            }
+            moduleOffset += inProcLog.modules[moduleIndex].size;
+        }
+    }
+    // not found or invalid module table
+    // just assume it's an old style stress log
+    return formatOffset + TO_TADDR(inProcLog.moduleOffset);
+}
 
 /*********************************************************************************/
 HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugDataSpaces* memCallBack) 
@@ -463,7 +487,12 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
     void** args;
     unsigned msgCtr;
     msgCtr = 0;
-    for (;;) 
+    int version;
+    version = 0;
+    CheckBreakingRuntimeChange(&version);
+    BOOL bHasModuleTable;
+    bHasModuleTable = (version >= 3);
+    for (;;)
     {
         ThreadStressLog* latestLog = logs->FindLatestThreadLog();
 
@@ -481,7 +510,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
         StressMsg* latestMsg = latestLog->readPtr;
         if (latestMsg->formatOffset != 0 && !latestLog->CompletedDump()) 
         {
-            TADDR taFmt = (latestMsg->formatOffset) + TO_TADDR(g_hThisInst);
+            TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->formatOffset, bHasModuleTable);
             hr = memCallBack->ReadVirtual(TO_CDADDR(taFmt), format, 256, 0);
             if (hr != S_OK) 
                 strcpy_s(format, _countof(format), "Could not read address of format string");
