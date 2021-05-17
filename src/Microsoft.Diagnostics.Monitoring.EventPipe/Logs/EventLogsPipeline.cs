@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         //We replicate LoggerExtensions.Log, but add an interface capability to the object
                         //CONSIDER FormattedLogValues maintains a cache of formatters. We are effectively duplicating this cache.
                         var logValues = new FormattedLogValues(traceEvent.TimeStamp, formatString, args);
-                        logger.Log(logLevel, eventId, logValues, exception, _messageFormatter);
+                        logger.Log(logLevel, new EventId(eventId, eventName), logValues, exception, _messageFormatter);
                     }
                     else
                     {
