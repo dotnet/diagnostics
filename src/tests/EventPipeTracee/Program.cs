@@ -73,10 +73,10 @@ namespace EventPipeTracee
                 customCategoryLogger.LogInformation("Some warning message with {arg}", 6);
             }
 
-            customCategoryLogger.LogWarning("Another message");
+            customCategoryLogger.LogWarning(new EventId(7, "AnotherEventId"), "Another message");
 
             appCategoryLogger.LogInformation("Information message.");
-            appCategoryLogger.LogWarning("Warning message.");
+            appCategoryLogger.LogWarning(new EventId(5, "WarningEventId"), "Warning message.");
             appCategoryLogger.LogError("Error message.");
         }
     }

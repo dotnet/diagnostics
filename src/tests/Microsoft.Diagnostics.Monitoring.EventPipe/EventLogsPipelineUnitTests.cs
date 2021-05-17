@@ -223,7 +223,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Some warning message with 6", result.Message);
             Assert.Equal(LoggerRemoteTestName, result.Category);
             Assert.Equal("Information", result.LogLevel);
-            Assert.Equal("0", result.EventId);
+            Assert.Equal(0, result.EventId);
+            Assert.Equal(string.Empty, result.EventName);
             Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
             Validate(result.Arguments, ("arg", "6"));
         }
@@ -237,7 +238,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Another message", result.Message);
             Assert.Equal(LoggerRemoteTestName, result.Category);
             Assert.Equal("Warning", result.LogLevel);
-            Assert.Equal("0", result.EventId);
+            Assert.Equal(7, result.EventId);
+            Assert.Equal("AnotherEventId", result.EventName);
             Assert.Equal(0, result.Scopes.Count);
             //We are expecting only the original format
             Assert.Equal(1, result.Arguments.Count);
@@ -252,7 +254,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Information message.", result.Message);
             Assert.Equal(AppLoggerCategoryName, result.Category);
             Assert.Equal("Information", result.LogLevel);
-            Assert.Equal("0", result.EventId);
+            Assert.Equal(0, result.EventId);
+            Assert.Equal(string.Empty, result.EventName);
             Assert.Equal(0, result.Scopes.Count);
             //We are expecting only the original format
             Assert.Equal(1, result.Arguments.Count);
@@ -267,7 +270,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Warning message.", result.Message);
             Assert.Equal(AppLoggerCategoryName, result.Category);
             Assert.Equal("Warning", result.LogLevel);
-            Assert.Equal("0", result.EventId);
+            Assert.Equal(5, result.EventId);
+            Assert.Equal("WarningEventId", result.EventName);
             Assert.Equal(0, result.Scopes.Count);
             //We are expecting only the original format
             Assert.Equal(1, result.Arguments.Count);
@@ -282,7 +286,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Error message.", result.Message);
             Assert.Equal(AppLoggerCategoryName, result.Category);
             Assert.Equal("Error", result.LogLevel);
-            Assert.Equal("0", result.EventId);
+            Assert.Equal(0, result.EventId);
+            Assert.Equal(string.Empty, result.EventName);
             Assert.Equal(0, result.Scopes.Count);
             //We are expecting only the original format
             Assert.Equal(1, result.Arguments.Count);
@@ -308,7 +313,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             public string Category { get; set; }
             public string LogLevel { get; set; }
-            public string EventId { get; set; }
+            public int EventId { get; set; }
+            public string EventName { get; set; }
             public string Message { get; set; }
             public IDictionary<string, JsonElement> Arguments { get; set; }
             public IDictionary<string, JsonElement> Scopes { get; set; }
