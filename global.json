@@ -1,6 +1,6 @@
 {
   "tools": {
-    "dotnet": "6.0.100-preview.1.21103.13",
+    "dotnet": "6.0.100-preview.3.21202.5",
     "runtimes": {
       "dotnet/x64": [
         "$(MicrosoftNETCoreApp31Version)",
@@ -16,6 +16,6 @@
   },
   "msbuild-sdks": {
     "Microsoft.Build.NoTargets": "2.0.1",
-    "Microsoft.DotNet.Arcade.Sdk": "6.0.0-beta.21160.7"
+    "Microsoft.DotNet.Arcade.Sdk": "6.0.0-beta.21264.2"
   }
 }
