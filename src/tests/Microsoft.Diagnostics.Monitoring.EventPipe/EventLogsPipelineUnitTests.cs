@@ -108,13 +108,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Test that LogLevel.None is not supported as the default log level.
         /// </summary>
         [Fact]
-        public Task TestLogsAllCategoriesDefaultLevelNoneNotSupported()
+        public async Task TestLogsAllCategoriesDefaultLevelNoneNotSupported()
         {
-            return Assert.ThrowsAsync<NotSupportedException>(() => GetLogsAsync(settings =>
-            {
-                settings.UseAppFilters = false;
-                settings.LogLevel = LogLevel.None;
-            }));
+            // Pipeline should throw PipelineException with inner exception of NotSupportedException.
+            PipelineException exception = await Assert.ThrowsAsync<PipelineException>(
+                () => GetLogsAsync(
+                    settings =>
+                    {
+                        settings.UseAppFilters = false;
+                        settings.LogLevel = LogLevel.None;
+                    }));
+
+            Assert.IsType<NotSupportedException>(exception.InnerException);
         }
 
         /// <summary>
