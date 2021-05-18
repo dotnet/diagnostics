@@ -18,9 +18,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm.$(Configuration)\Microsoft.DiaSymReader.Native.arm.dll" TargetRid="win-arm" />
     
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
-    <!-- Commented out until issue https://github.com/dotnet/diagnostics/issues/324 is addressed
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
-    -->
 
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so" TargetRid="linux-x64" />
