@@ -138,7 +138,6 @@ public class SOS
         {
             throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
         }
-
         await RunTest(config, "GCPOH", "GCPOH.script", testName: "SOS.GCPOHTests", testDump: false);
     }
 
@@ -214,6 +213,7 @@ public class SOS
                 TestName = "SOS.StackAndOtherTests",
                 DebuggeeName = "SymbolTestApp",
                 DebuggeeArguments = "%DEBUG_ROOT%",
+                DumpNameSuffix = currentConfig.DebugType
             });
 
             // This tests using regular Windows PDBs with no managed hosting. SOS should fallback 
@@ -228,6 +228,7 @@ public class SOS
                     TestName = "SOS.StackAndOtherTests",
                     DebuggeeName = "SymbolTestApp",
                     DebuggeeArguments = "%DEBUG_ROOT%",
+                    DumpNameSuffix = currentConfig.DebugType
                 });
             }
         }
@@ -271,7 +272,7 @@ public class SOS
             DebuggeeArguments = desktopTestParameters,
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
-        }); ;
+        });
     }
 
     [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "DotnetDumpCommands")]
@@ -282,9 +283,10 @@ public class SOS
             TestConfiguration = config,
             DebuggeeName = "DotnetDumpCommands",
             DebuggeeArguments = "dcd",
+            DumpNameSuffix = "dcd",
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-        }); ;
+        });
     }
 
     [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "DotnetDumpCommands")]
@@ -295,9 +297,10 @@ public class SOS
             TestConfiguration = config,
             DebuggeeName = "DotnetDumpCommands",
             DebuggeeArguments = "dumpgen",
+            DumpNameSuffix = "dumpgen",
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-        }); ;
+        });
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]

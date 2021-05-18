@@ -90,6 +90,8 @@ public class SOSRunner : IDisposable
 
         public bool DumpDiagnostics { get; set; } = true;
 
+        public string DumpNameSuffix { get; set; }
+
         public bool IsValid()
         {
             return TestConfiguration != null && OutputHelper != null && DebuggeeName != null;
@@ -973,7 +975,17 @@ public class SOSRunner : IDisposable
         TestConfiguration config = information.TestConfiguration;
         string dumpRoot = action == DebuggerAction.GenerateDump ? config.DebuggeeDumpOutputRootDir() : config.DebuggeeDumpInputRootDir();
         if (!string.IsNullOrEmpty(dumpRoot)) {
-            return Path.Combine(dumpRoot, information.TestName + "." + information.DumpType.ToString() + ".dmp");
+            var sb = new StringBuilder();
+            sb.Append(information.TestName);
+            sb.Append(".");
+            sb.Append(information.DumpType.ToString());
+            if (information.DumpNameSuffix != null)
+            {
+                sb.Append(".");
+                sb.Append(information.DumpNameSuffix);
+            }
+            sb.Append(".dmp");
+            return Path.Combine(dumpRoot, sb.ToString());
         }
         return null;
     }
