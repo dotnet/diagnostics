@@ -22,7 +22,7 @@ VERIFY: Hexadecimal address expected for -mt option
 
 COMMAND: dumpgen gen0
 VERIFY: ^\s+MT\s+Count\s+TotalSize\s+Class Name
-VERIFY:^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
+VERIFY: ^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
 COMMAND: dumpgen gen0 -type DotnetDumpCommands
 VERIFY: ^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
@@ -44,9 +44,15 @@ VERIFY: ^<HEXVAL>\s+3\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
 COMMAND: dumpgen gen2
 VERIFY: ^<HEXVAL>\s+5\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
+!VERIFY: ^<HEXVAL>\s+1\s+100<DECVAL>\s+System.Byte\[\]
 
 COMMAND: dumpgen loh
 VERIFY: ^<HEXVAL>\s+1\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass\[\]
+
+IFDEF:MAJOR_RUNTIME_VERSION_GE_5
+COMMAND: dumpgen poh
+VERIFY: ^<HEXVAL>\s+1\s+100<DECVAL>\s+System.Byte\[\]
+ENDIF:MAJOR_RUNTIME_VERSION_GE_5
 
 SOSCOMMAND: dumpheap -stat
 
