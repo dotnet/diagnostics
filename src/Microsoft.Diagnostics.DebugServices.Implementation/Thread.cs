@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override int GetHashCode()
         {
-            return Target.GetHashCode() + ThreadId.GetHashCode();
+            return Utilities.CombineHashCodes(Target.GetHashCode(), ThreadId.GetHashCode());
         }
 
         public override string ToString()

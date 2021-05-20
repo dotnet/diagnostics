@@ -217,7 +217,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override int GetHashCode()
         {
-            return Target.GetHashCode() + ImageBase.GetHashCode();
+            return Utilities.CombineHashCodes(Target.GetHashCode(), ImageBase.GetHashCode());
         }
 
         public override string ToString()

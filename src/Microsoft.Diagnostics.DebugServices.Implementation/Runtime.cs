@@ -268,7 +268,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override int GetHashCode()
         {
-            return Target.GetHashCode() + Id.GetHashCode();
+            return Utilities.CombineHashCodes(Target.GetHashCode(), Id.GetHashCode());
         }
 
         private static readonly string[] s_runtimeTypeNames = {
