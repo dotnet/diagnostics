@@ -13,11 +13,6 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IRuntimeService
     {
         /// <summary>
-        /// Directory of the runtime module (coreclr.dll, libcoreclr.so, etc.)
-        /// </summary>
-        string RuntimeModuleDirectory { get; set; }
-
-        /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
         IEnumerable<IRuntime> EnumerateRuntimes();

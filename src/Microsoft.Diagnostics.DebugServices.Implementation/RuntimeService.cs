@@ -24,7 +24,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly bool _exportReaderEnabled;
         private readonly IDisposable _onFlushEvent;
         private DataTarget _dataTarget;
-        private string _runtimeModuleDirectory;
         private List<Runtime> _runtimes;
         private IContextService _contextService;
         private IModuleService _moduleService;
@@ -58,20 +57,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #region IRuntimeService
 
         /// <summary>
-        /// Directory of the runtime module (coreclr.dll, libcoreclr.so, etc.)
-        /// </summary>
-        public string RuntimeModuleDirectory
-        {
-            get { return _runtimeModuleDirectory; }
-            set
-            {
-                _runtimeModuleDirectory = value;
-                _runtimes = null;
-                ContextService.ClearCurrentRuntime();
-            }
-        }
-
-        /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
         public IEnumerable<IRuntime> EnumerateRuntimes()
@@ -89,7 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     for (int i = 0; i < _dataTarget.ClrVersions.Length; i++)
                     {
-                        _runtimes.Add(new Runtime(_target, i, this, _dataTarget.ClrVersions[i]));
+                        _runtimes.Add(new Runtime(_target, i, _dataTarget.ClrVersions[i]));
                     }
                 }
             }
@@ -267,9 +252,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             var sb = new StringBuilder();
-            if (_runtimeModuleDirectory is not null) {
-                sb.AppendLine($"Runtime module path: {_runtimeModuleDirectory}");
-            }
             if (_runtimes is not null)
             {
                 foreach (IRuntime runtime in _runtimes)

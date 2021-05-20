@@ -17,7 +17,6 @@ Target* Target::s_target = nullptr;
 Target::Target() :
     m_ref(1),
     m_tmpPath(nullptr),
-    m_runtimeModulePath(nullptr),
 #ifndef FEATURE_PAL
     m_desktop(nullptr),
 #endif
@@ -55,11 +54,6 @@ Target::~Target()
 
         RemoveDirectoryA(tmpPath);
         free((void*)tmpPath);
-    }
-    if (m_runtimeModulePath != nullptr)
-    {
-        free((void*)m_runtimeModulePath);
-        m_runtimeModulePath = nullptr;
     }
     if (m_netcore != nullptr)
     {
@@ -153,17 +147,6 @@ bool Target::SwitchRuntimeInstance(bool desktop)
 #endif
 
 /**********************************************************************\
- * Set the runtime directory path
-\**********************************************************************/
-void Target::SetRuntimeDirectoryInstance(LPCSTR runtimeModulePath)
-{
-    if (m_runtimeModulePath != nullptr) {
-        free((void*)m_runtimeModulePath);
-    }
-    m_runtimeModulePath = _strdup(runtimeModulePath);
-}
-
-/**********************************************************************\
  * Display the internal target and runtime status
 \**********************************************************************/
 void Target::DisplayStatusInstance()
@@ -179,9 +162,6 @@ void Target::DisplayStatusInstance()
     }
     if (m_tmpPath != nullptr) {
         ExtOut("Temp path: %s\n", m_tmpPath);
-    }
-    if (m_runtimeModulePath != nullptr) {
-        ExtOut("Runtime module path: %s\n", m_runtimeModulePath);
     }
     if (m_netcore != nullptr) {
         m_netcore->DisplayStatus();
@@ -287,11 +267,6 @@ LPCSTR Target::GetTempDirectory()
         m_tmpPath = _strdup(tmpPath);
     }
     return m_tmpPath;
-}
-
-LPCSTR Target::GetRuntimeDirectory()
-{
-    return m_runtimeModulePath;
 }
 
 HRESULT Target::GetRuntime(IRuntime** ppRuntime)

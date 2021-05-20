@@ -20,7 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class Runtime : IRuntime
     {
-        private readonly IRuntimeService _runtimeService;
         private readonly ClrInfo _clrInfo;
         private ISymbolService _symbolService;
         private ClrRuntime _clrRuntime;
@@ -29,13 +28,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public readonly ServiceProvider ServiceProvider;
 
-        public Runtime(ITarget target, int id, IRuntimeService runtimeService, ClrInfo clrInfo)
+        public Runtime(ITarget target, int id, ClrInfo clrInfo)
         {
-            Trace.TraceInformation($"Creating runtime #{id} {clrInfo.Flavor} {clrInfo}");
-            Target = target;
+            Target = target ?? throw new ArgumentNullException(nameof(target));
             Id = id;
-            _runtimeService = runtimeService;
-            _clrInfo = clrInfo;
+            _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
 
             RuntimeType = RuntimeType.Unknown;
             if (clrInfo.Flavor == ClrFlavor.Core) {
@@ -51,6 +48,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider.AddServiceFactoryWithNoCaching<ClrRuntime>(() => CreateRuntime());
 
             target.OnFlushEvent.Register(() => _clrRuntime?.FlushCachedData());
+
+            Trace.TraceInformation($"Created runtime #{id} {clrInfo.Flavor} {clrInfo}");
         }
 
         #region IRuntime
@@ -64,6 +63,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public RuntimeType RuntimeType { get; }
 
         public IModule RuntimeModule { get; }
+
+        public string RuntimeModuleDirectory { get; set; }
 
         public string GetDacFilePath()
         {
@@ -143,9 +144,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string GetLocalDacPath(string dacFileName)
         {
             string dacFilePath;
-            if (!string.IsNullOrEmpty(_runtimeService.RuntimeModuleDirectory))
+            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
-                dacFilePath = Path.Combine(_runtimeService.RuntimeModuleDirectory, dacFileName);
+                dacFilePath = Path.Combine(RuntimeModuleDirectory, dacFileName);
             }
             else
             {
@@ -179,9 +180,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string GetLocalPath(string fileName)
         {
             string localFilePath;
-            if (!string.IsNullOrEmpty(_runtimeService.RuntimeModuleDirectory))
+            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
-                localFilePath = Path.Combine(_runtimeService.RuntimeModuleDirectory, fileName);
+                localFilePath = Path.Combine(RuntimeModuleDirectory, fileName);
             }
             else
             {
@@ -287,6 +288,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else {
                 sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
+            }
+            if (RuntimeModuleDirectory is not null) {
+                sb.AppendLine($"    Runtime module directory: {RuntimeModuleDirectory}");
             }
             if (_dacFilePath is not null) {
                 sb.AppendLine($"    DAC: {_dacFilePath}");

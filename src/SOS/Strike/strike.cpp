@@ -16719,10 +16719,12 @@ DECLARE_API(SetClrPath)
     {
         std::string command("setclrpath ");
         command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
+        return hostServices->DispatchCommand(command.c_str());
     }
     else
     {
+        INIT_API_EE();
+
         StringHolder runtimeModulePath;
         CMDValue arg[] =
         {
@@ -16735,22 +16737,20 @@ DECLARE_API(SetClrPath)
         }
         if (narg > 0)
         {
-            if (!Target::SetRuntimeDirectory(runtimeModulePath.data))
+            std::string fullPath;
+            if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
             {
-                ExtErr("Invalid runtime path %s\n", runtimeModulePath.data);
+                ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
                 return E_FAIL;
             }
+            g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
         }
-        ITarget* target = GetTarget();
-        if (target != nullptr)
-        {
-            const char* runtimeDirectory = target->GetRuntimeDirectory();
-            if (runtimeDirectory != nullptr) {
-                ExtOut("Runtime module path: %s\n", runtimeDirectory);
-            }
+        const char* runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+        if (runtimeDirectory != nullptr) {
+            ExtOut("Runtime module directory: %s\n", runtimeDirectory);
         }
     }
-    return Status;
+    return S_OK;
 }
 
 //

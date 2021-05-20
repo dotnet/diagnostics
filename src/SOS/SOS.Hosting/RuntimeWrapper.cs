@@ -104,6 +104,7 @@ namespace SOS.Hosting
             builder.AddMethod(new GetRuntimeConfigurationDelegate(GetRuntimeConfiguration));
             builder.AddMethod(new GetModuleAddressDelegate(GetModuleAddress));
             builder.AddMethod(new GetModuleSizeDelegate(GetModuleSize));
+            builder.AddMethod(new SetRuntimeDirectoryDelegate(SetRuntimeDirectory));
             builder.AddMethod(new GetRuntimeDirectoryDelegate(GetRuntimeDirectory));
             builder.AddMethod(new GetClrDataProcessDelegate(GetClrDataProcess));
             builder.AddMethod(new GetCorDebugInterfaceDelegate(GetCorDebugInterface));
@@ -184,9 +185,20 @@ namespace SOS.Hosting
             return _runtime.RuntimeModule.ImageSize;
         }
 
+        private void SetRuntimeDirectory(
+            IntPtr self,
+            string runtimeModuleDirectory)
+        { 
+            _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
+        }
+
         private string GetRuntimeDirectory(
             IntPtr self)
         {
+            if (_runtime.RuntimeModuleDirectory is not null)
+            {
+                return _runtime.RuntimeModuleDirectory;
+            }
             return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
         }
 
@@ -461,6 +473,11 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate ulong GetModuleSizeDelegate(
             [In] IntPtr self);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate void SetRuntimeDirectoryDelegate(
+            [In] IntPtr self,
+            [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModuleDirectory);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         [return: MarshalAs(UnmanagedType.LPStr)]

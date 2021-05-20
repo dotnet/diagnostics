@@ -364,33 +364,41 @@ ULONG Runtime::Release()
 //----------------------------------------------------------------------------
 
 /**********************************************************************\
- * Returns the runtime directory of the target
+ * Set the runtime module directory to search for DAC/DBI
+\**********************************************************************/
+void Runtime::SetRuntimeDirectory(LPCSTR runtimeModuleDirectory)
+{
+    if (m_runtimeDirectory != nullptr)
+    {
+        free((void*)m_runtimeDirectory);
+        m_runtimeDirectory = nullptr;
+    }
+    if (runtimeModuleDirectory != nullptr)
+    {
+        m_runtimeDirectory = _strdup(runtimeModuleDirectory);
+    }
+}
+
+/**********************************************************************\
+ * Returns the runtime directory
 \**********************************************************************/
 LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
     {
-        LPCSTR runtimeDirectory = m_target->GetRuntimeDirectory();
-        if (runtimeDirectory != nullptr)
+        if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
         {
-            m_runtimeDirectory = _strdup(runtimeDirectory);
+            ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
+            return nullptr;
         }
-        else 
+        // Parse off the file name
+        char* runtimeDirectory = _strdup(m_name);
+        char* lastSlash = strrchr(runtimeDirectory, GetTargetDirectorySeparatorW());
+        if (lastSlash != nullptr)
         {
-            if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
-            {
-                ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
-                return nullptr;
-            }
-            // Parse off the file name
-            char* runtimeDirectory = _strdup(m_name);
-            char* lastSlash = strrchr(runtimeDirectory, GetTargetDirectorySeparatorW());
-            if (lastSlash != nullptr)
-            {
-                *lastSlash = '\0';
-            }
-            m_runtimeDirectory = runtimeDirectory;
+            *lastSlash = '\0';
         }
+        m_runtimeDirectory = runtimeDirectory;
     }
     return m_runtimeDirectory;
 }
@@ -581,7 +589,7 @@ void Runtime::DisplayStatus()
         ExtOut("    Runtime module path: %s\n", m_name);
     }
     if (m_runtimeDirectory != nullptr) {
-        ExtOut("    Runtime directory: %s\n", m_runtimeDirectory);
+        ExtOut("    Runtime module directory: %s\n", m_runtimeDirectory);
     }
     if (m_dacFilePath != nullptr) {
         ExtOut("    DAC file path: %s\n", m_dacFilePath);

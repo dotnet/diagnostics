@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "setclrpath", Help = "Set the path to load coreclr DAC/DBI files.")]
     public class SetClrPath: CommandBase
     {
-        public IRuntimeService RuntimeService { get; set; }
+        public IRuntime Runtime { get; set; }
 
         [Argument(Name = "path", Help = "Runtime directory path.")]
         public string Argument { get; set; }
@@ -20,22 +20,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (RuntimeService == null)
+            if (Runtime == null)
             {
-                throw new DiagnosticsException("Runtime service required");
+                throw new DiagnosticsException("Runtime required");
             }
             if (Clear)
             {
-                RuntimeService.RuntimeModuleDirectory = null;
+                Runtime.RuntimeModuleDirectory = null;
             }
             else if (Argument == null)
             {
-                WriteLine("Load path for DAC/DBI: '{0}'", RuntimeService.RuntimeModuleDirectory ?? "<none>");
+                WriteLine("Load path for DAC/DBI: '{0}'", Runtime.RuntimeModuleDirectory ?? "<none>");
             }
             else
             {
-                RuntimeService.RuntimeModuleDirectory = Path.GetFullPath(Argument);
-                WriteLine("Set load path for DAC/DBI to '{0}'", RuntimeService.RuntimeModuleDirectory);
+                Runtime.RuntimeModuleDirectory = Path.GetFullPath(Argument);
+                WriteLine("Set load path for DAC/DBI to '{0}'", Runtime.RuntimeModuleDirectory);
             }
         }
     }

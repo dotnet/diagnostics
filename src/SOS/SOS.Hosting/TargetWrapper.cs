@@ -39,7 +39,6 @@ namespace SOS.Hosting
 
             builder.AddMethod(new GetOperatingSystemDelegate(GetOperatingSystem));
             builder.AddMethod(new GetTempDirectoryDelegate(GetTempDirectory));
-            builder.AddMethod(new GetRuntimeDirectoryDelegate(GetRuntimeDirectory));
             builder.AddMethod(new GetRuntimeDelegate(GetRuntime));
             builder.AddMethod(new FlushDelegate(Flush));
 
@@ -79,12 +78,6 @@ namespace SOS.Hosting
             return _target.GetTempDirectory();
         }
 
-        private string GetRuntimeDirectory(
-            IntPtr self)
-        {
-            return _services.GetService<IRuntimeService>()?.RuntimeModuleDirectory;
-        }
-
         private HResult GetRuntime(
             IntPtr self,
             IntPtr* ppRuntime)
@@ -120,11 +113,6 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         [return: MarshalAs(UnmanagedType.LPStr)]
         private delegate string GetTempDirectoryDelegate(
-            [In] IntPtr self);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        [return: MarshalAs(UnmanagedType.LPStr)]
-        private delegate string GetRuntimeDirectoryDelegate(
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

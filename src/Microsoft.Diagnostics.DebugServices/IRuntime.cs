@@ -48,6 +48,11 @@ namespace Microsoft.Diagnostics.DebugServices
         IModule RuntimeModule { get; }
 
         /// <summary>
+        /// Directory of the runtime module (coreclr.dll, libcoreclr.so, etc.)
+        /// </summary>
+        string RuntimeModuleDirectory { get; set; }
+
+        /// <summary>
         /// Returns the DAC file path
         /// </summary>
         string GetDacFilePath();

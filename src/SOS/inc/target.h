@@ -44,12 +44,6 @@ public:
     virtual LPCSTR STDMETHODCALLTYPE GetTempDirectory() = 0;
 
     /// <summary>
-    /// Returns the directory of the runtime file
-    /// </summary>
-    /// <returns>runtime directory or null if none set</returns>
-    virtual LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory() = 0;
-
-    /// <summary>
     /// Returns the current runtime instance
     /// </summary>
     /// <param name="ppRuntime">pointer to return IRuntime instance</param>
