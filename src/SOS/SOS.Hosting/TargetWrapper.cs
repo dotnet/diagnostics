@@ -82,12 +82,7 @@ namespace SOS.Hosting
         private string GetRuntimeDirectory(
             IntPtr self)
         {
-            var runtimeService = _services.GetService<IRuntimeService>();
-            if (runtimeService == null)
-            {
-                return null;
-            }
-            return runtimeService.RuntimeModuleDirectory;
+            return _services.GetService<IRuntimeService>()?.RuntimeModuleDirectory;
         }
 
         private HResult GetRuntime(

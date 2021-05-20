@@ -12,12 +12,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Display running timers details.")]
     public class TimersCommand : ExtensionCommandBase
     {
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
-            if (Helper == null) 
-            {
-                throw new DiagnosticsException("No CLR runtime set");
-            }
             try
             {
                 var stats = new Dictionary<string, TimerStat>(64);

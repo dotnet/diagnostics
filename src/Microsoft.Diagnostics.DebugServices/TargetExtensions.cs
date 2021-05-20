@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.DebugServices
             {
                 return "lib" + moduleName + ".dylib";
             }
-            else throw new PlatformNotSupportedException(target.OperatingSystem.ToString());
+            throw new PlatformNotSupportedException(target.OperatingSystem.ToString());
         }
 
         /// <summary>
@@ -38,12 +38,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <param name="target">target instance</param>
         /// <param name="disposable">object to be disposed or null</param>
-        public static void DisposeOnDestroy(this ITarget target, IDisposable disposable)
+        /// <returns>IDisposable to unregister this event or null</returns>
+        public static IDisposable DisposeOnDestroy(this ITarget target, IDisposable disposable)
         {
-            if (disposable != null)
-            {
-                target.OnDestroyEvent.Register(() => disposable.Dispose());
-            }
+            return disposable != null ? target.OnDestroyEvent.Register(() => disposable.Dispose()) : null;
         }
     }
 }

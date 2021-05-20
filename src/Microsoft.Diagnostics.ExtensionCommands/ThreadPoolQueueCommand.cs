@@ -12,12 +12,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "threadpoolqueue", Aliases = new string[] { "tpq" }, Help = "Display queued ThreadPool work items.")]
     public class ThreadPoolQueueCommand : ExtensionCommandBase
     {
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
-            if (Helper == null)
-            {
-                throw new DiagnosticsException("No CLR runtime set");
-            }
             var workItems = new Dictionary<string, WorkInfo>();
             int workItemCount = 0;
             var tasks = new Dictionary<string, WorkInfo>();

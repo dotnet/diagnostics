@@ -10,8 +10,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "runtimes", Help = "List the runtimes in the target or change the default runtime.")]
     public class RuntimesCommand: CommandBase
     {
-        public IRuntime CurrentRuntime { get; set; }
-
         public IRuntimeService RuntimeService { get; set; }
 
         public IContextService ContextService { get; set; }
