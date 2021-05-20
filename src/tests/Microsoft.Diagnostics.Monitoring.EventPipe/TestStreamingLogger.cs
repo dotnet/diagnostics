@@ -86,7 +86,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 jsonWriter.WriteStartObject();
                 jsonWriter.WriteString("LogLevel", logLevel.ToString());
-                jsonWriter.WriteString("EventId", eventId.ToString());
+                jsonWriter.WriteNumber("EventId", eventId.Id);
+                jsonWriter.WriteString("EventName", eventId.Name ?? string.Empty);
                 jsonWriter.WriteString("Category", _categoryName);
                 if (exception != null)
                 {
