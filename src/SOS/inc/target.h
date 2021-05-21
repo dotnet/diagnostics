@@ -44,12 +44,6 @@ public:
     virtual LPCSTR STDMETHODCALLTYPE GetTempDirectory() = 0;
 
     /// <summary>
-    /// Returns the directory of the runtime file
-    /// </summary>
-    /// <returns>runtime directory or null if none set</returns>
-    virtual LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory() = 0;
-
-    /// <summary>
     /// Returns the current runtime instance
     /// </summary>
     /// <param name="ppRuntime">pointer to return IRuntime instance</param>
@@ -60,11 +54,6 @@ public:
     /// Flushes any internal caching or state 
     /// </summary>
     virtual void STDMETHODCALLTYPE Flush() = 0;
-
-    /// <summary>
-    /// Cleans up any internal resources 
-    /// </summary>
-    virtual void STDMETHODCALLTYPE Close() = 0;
 };
 
 #ifdef __cplusplus

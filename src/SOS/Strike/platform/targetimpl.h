@@ -17,7 +17,6 @@ class Target : public ITarget
 private:
     LONG m_ref;
     LPCSTR m_tmpPath;
-    LPCSTR m_runtimeModulePath;
 #ifndef FEATURE_PAL
     Runtime* m_desktop;
 #endif
@@ -28,7 +27,6 @@ private:
 #ifndef FEATURE_PAL
     bool SwitchRuntimeInstance(bool desktop);
 #endif
-    void SetRuntimeDirectoryInstance(LPCSTR runtimeModulePath);
     void DisplayStatusInstance();
 
     Target();
@@ -38,19 +36,6 @@ public:
     static ITarget* GetInstance();
 
     HRESULT CreateInstance(IRuntime** ppRuntime);
-
-    static bool SetRuntimeDirectory(LPCSTR runtimeModulePath)
-    {
-        std::string fullPath;
-        if (!GetAbsolutePath(runtimeModulePath, fullPath))
-        {
-            return false;
-        }
-        GetInstance();
-        _ASSERTE(s_target != nullptr);
-        s_target->SetRuntimeDirectoryInstance(fullPath.c_str());
-        return true;
-    }
 
 #ifndef FEATURE_PAL
     static bool SwitchRuntime(bool desktop)
@@ -97,12 +82,8 @@ public:
 
     LPCSTR STDMETHODCALLTYPE GetTempDirectory();
 
-    LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory();
-    
     HRESULT STDMETHODCALLTYPE GetRuntime(IRuntime** pRuntime);
 
     void STDMETHODCALLTYPE Flush();
-
-    void STDMETHODCALLTYPE Close();
 };
 

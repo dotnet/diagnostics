@@ -7,6 +7,7 @@ EXPORTS
     AnalyzeOOM
     analyzeoom=AnalyzeOOM
     ao=AnalyzeOOM
+    clrmodules
     ClrStack
     clrstack=ClrStack
     CLRStack=ClrStack
@@ -73,6 +74,7 @@ EXPORTS
     EHInfo
     ehinfo=EHInfo
     Ehinfo=EHInfo
+    ext
     FinalizeQueue
     finalizequeue=FinalizeQueue
     fq=FinalizeQueue
@@ -243,7 +245,6 @@ EXPORTS
     tracetocode=TraceToCode
 #endif
 
-    ext
     SOSInitializeByHost
     SOSUninitializeByHost
     InitializeHostServices

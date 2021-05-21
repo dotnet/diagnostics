@@ -9,15 +9,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public class ServiceProvider : IServiceProvider
     {
-        readonly IServiceProvider _parent;
-        readonly Dictionary<Type, Func<object>> _factories;
-        readonly Dictionary<Type, object> _services;
+        private readonly Func<IServiceProvider>[] _parents;
+        private readonly Dictionary<Type, Func<object>> _factories;
+        private readonly Dictionary<Type, object> _services;
 
         /// <summary>
         /// Create a service provider instance
         /// </summary>
         public ServiceProvider()
-            : this(null, null)
+            : this(Array.Empty<Func<IServiceProvider>>())
         {
         }
 
@@ -26,19 +26,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="parent">search this provider if service isn't found in this instance</param>
         public ServiceProvider(IServiceProvider parent)
-            : this(parent, null)
+            : this(new Func<IServiceProvider>[] { () => parent })
         {
         }
 
         /// <summary>
         /// Create a service provider with parent provider and service factories
         /// </summary>
-        /// <param name="parent">search this provider if service isn't found in this instance or null</param>
-        /// <param name="factories">a dictionary of the factories to create the services</param>
-        public ServiceProvider(IServiceProvider parent, Dictionary<Type, Func<object>> factories)
+        /// <param name="parents">an array of functions to return the next provider to search if service isn't found in this instance</param>
+        public ServiceProvider(Func<IServiceProvider>[] parents) 
         {
-            _parent = parent;
-            _factories = factories ?? new Dictionary<Type, Func<object>>();
+            _parents = parents;
+            _factories = new Dictionary<Type, Func<object>>();
             _services = new Dictionary<Type, object>();
         }
 
@@ -78,10 +77,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void AddService(Type type, object service) => _services.Add(type, service);
 
         /// <summary>
-        /// Remove the service instance for the type.
+        /// Flushes the cached service instance for the specified type. Does not remove the service factory registered for the type.
         /// </summary>
         /// <param name="type">service type</param>
         public void RemoveService(Type type) => _services.Remove(type);
+
+        /// <summary>
+        /// Flushes all the cached instances of the services. Does not remove any of the service factories registered.
+        /// </summary>
+        public void FlushServices() => _services.Clear();
 
         /// <summary>
         /// Returns the instance of the service or returns null if service doesn't exist
@@ -97,9 +101,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     service = factory();
                 }
             }
-            if (service == null && _parent != null)
+            if (service == null)
             {
-                service = _parent.GetService(type);
+                foreach (Func<IServiceProvider> parent in _parents)
+                {
+                    service = parent()?.GetService(type);
+                    if (service != null)
+                    {
+                        break;
+                    }
+                }
             }
             return service;
         }

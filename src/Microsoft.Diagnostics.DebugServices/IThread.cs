@@ -12,11 +12,6 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IThread
     {
         /// <summary>
-        /// The per thread services.
-        /// </summary>
-        IServiceProvider Services { get; }
-
-        /// <summary>
         /// Debugger specific thread index.
         /// </summary>
         int ThreadIndex { get; }
@@ -25,6 +20,16 @@ namespace Microsoft.Diagnostics.DebugServices
         /// OS thread id.
         /// </summary>
         uint ThreadId { get; }
+
+        /// <summary>
+        /// The target for this target.
+        /// </summary>
+        ITarget Target { get; }
+
+        /// <summary>
+        /// The per thread services.
+        /// </summary>
+        IServiceProvider Services { get; }
 
         /// <summary>
         /// Returns the register value for the thread and register index. This function

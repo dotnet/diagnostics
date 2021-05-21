@@ -26,22 +26,21 @@ namespace SOS.Hosting
 
         public static readonly Guid IID_ITarget = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
+        private readonly IServiceProvider _services;
         private readonly ITarget _target;
         private readonly Dictionary<IRuntime, RuntimeWrapper> _wrappers = new Dictionary<IRuntime, RuntimeWrapper>();
 
-        public TargetWrapper(ITarget target)
+        public TargetWrapper(IServiceProvider services)
         {
-            Debug.Assert(target != null);
-            _target = target;
+            _services = services;
+            _target = services.GetService<ITarget>() ?? throw new DiagnosticsException("No target");
 
             VTableBuilder builder = AddInterface(IID_ITarget, validate: false);
 
             builder.AddMethod(new GetOperatingSystemDelegate(GetOperatingSystem));
             builder.AddMethod(new GetTempDirectoryDelegate(GetTempDirectory));
-            builder.AddMethod(new GetRuntimeDirectoryDelegate(GetRuntimeDirectory));
             builder.AddMethod(new GetRuntimeDelegate(GetRuntime));
             builder.AddMethod(new FlushDelegate(Flush));
-            builder.AddMethod(new CloseDelegate(Close));
 
             ITarget = builder.Complete();
 
@@ -79,31 +78,20 @@ namespace SOS.Hosting
             return _target.GetTempDirectory();
         }
 
-        private string GetRuntimeDirectory(
-            IntPtr self)
-        {
-            var runtimeService = _target.Services.GetService<IRuntimeService>();
-            if (runtimeService == null)
-            {
-                return null;
-            }
-            return runtimeService.RuntimeModuleDirectory;
-        }
-
-        private int GetRuntime(
+        private HResult GetRuntime(
             IntPtr self,
             IntPtr* ppRuntime)
         {
             if (ppRuntime == null) {
                 return HResult.E_INVALIDARG;
             }
-            IRuntime runtime = _target.Services.GetService<IRuntimeService>()?.CurrentRuntime;
+            IRuntime runtime = _services.GetService<IRuntime>();
             if (runtime == null) {
                 return HResult.E_NOINTERFACE;
             }
             if (!_wrappers.TryGetValue(runtime, out RuntimeWrapper wrapper))
             {
-                wrapper = new RuntimeWrapper(_target, runtime);
+                wrapper = new RuntimeWrapper(_services, runtime);
                 _wrappers.Add(runtime, wrapper);
             }
             *ppRuntime = wrapper.IRuntime;
@@ -114,12 +102,6 @@ namespace SOS.Hosting
             IntPtr self)
         {
             _target.Flush();
-        }
-
-        private void Close(
-            IntPtr self)
-        {
-            _target.Close();
         }
 
         #region ITarget delegates
@@ -134,21 +116,12 @@ namespace SOS.Hosting
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        [return: MarshalAs(UnmanagedType.LPStr)]
-        private delegate string GetRuntimeDirectoryDelegate(
-            [In] IntPtr self);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetRuntimeDelegate(
+        private delegate HResult GetRuntimeDelegate(
             [In] IntPtr self,
             [Out] IntPtr* ppRuntime);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate void FlushDelegate(
-            [In] IntPtr self);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate void CloseDelegate(
             [In] IntPtr self);
 
         #endregion

@@ -20,8 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class Runtime : IRuntime
     {
-        private readonly ITarget _target;
-        private readonly IRuntimeService _runtimeService;
         private readonly ClrInfo _clrInfo;
         private ISymbolService _symbolService;
         private ClrRuntime _clrRuntime;
@@ -30,13 +28,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public readonly ServiceProvider ServiceProvider;
 
-        public Runtime(ITarget target, IRuntimeService runtimeService, ClrInfo clrInfo, int id)
+        public Runtime(ITarget target, int id, ClrInfo clrInfo)
         {
-            Trace.TraceInformation($"Creating runtime #{id} {clrInfo.Flavor} {clrInfo}");
-            _target = target;
-            _runtimeService = runtimeService;
-            _clrInfo = clrInfo;
+            Target = target ?? throw new ArgumentNullException(nameof(target));
             Id = id;
+            _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
 
             RuntimeType = RuntimeType.Unknown;
             if (clrInfo.Flavor == ClrFlavor.Core) {
@@ -51,20 +47,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider.AddService<ClrInfo>(clrInfo);
             ServiceProvider.AddServiceFactoryWithNoCaching<ClrRuntime>(() => CreateRuntime());
 
-            target.OnFlushEvent.Register(() => {
-                _clrRuntime?.DacLibrary.DacPrivateInterface.Flush();
-            });
+            target.OnFlushEvent.Register(() => _clrRuntime?.FlushCachedData());
+
+            Trace.TraceInformation($"Created runtime #{id} {clrInfo.Flavor} {clrInfo}");
         }
 
         #region IRuntime
 
-        public IServiceProvider Services => ServiceProvider;
-
         public int Id { get; }
+
+        public ITarget Target { get; }
+
+        public IServiceProvider Services => ServiceProvider;
 
         public RuntimeType RuntimeType { get; }
 
         public IModule RuntimeModule { get; }
+
+        public string RuntimeModuleDirectory { get; set; }
 
         public string GetDacFilePath()
         {
@@ -133,15 +133,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetDacFileName()
         {
-            return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, _target.OperatingSystem);
+            if (_clrInfo.SingleFileRuntimeInfo.HasValue)
+            {
+                return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, Target.OperatingSystem);
+            }
+            Debug.Assert(!string.IsNullOrEmpty(_clrInfo.DacInfo.PlatformSpecificFileName));
+            return _clrInfo.DacInfo.PlatformSpecificFileName;
         }
 
         private string GetLocalDacPath(string dacFileName)
         {
             string dacFilePath;
-            if (!string.IsNullOrEmpty(_runtimeService.RuntimeModuleDirectory))
+            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
-                dacFilePath = Path.Combine(_runtimeService.RuntimeModuleDirectory, dacFileName);
+                dacFilePath = Path.Combine(RuntimeModuleDirectory, dacFileName);
             }
             else
             {
@@ -162,10 +167,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetDbiFileName()
         {
-            string name = _target.GetPlatformModuleName("mscordbi");
+            string name = Target.GetPlatformModuleName("mscordbi");
 
             // If this is the Linux runtime module name, but we are running on Windows return the cross-OS DBI name.
-            if (_target.OperatingSystem == OSPlatform.Linux && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (Target.OperatingSystem == OSPlatform.Linux && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 name = "mscordbi.dll";
             }
@@ -175,9 +180,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string GetLocalPath(string fileName)
         {
             string localFilePath;
-            if (!string.IsNullOrEmpty(_runtimeService.RuntimeModuleDirectory))
+            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
-                localFilePath = Path.Combine(_runtimeService.RuntimeModuleDirectory, fileName);
+                localFilePath = Path.Combine(RuntimeModuleDirectory, fileName);
             }
             else
             {
@@ -192,7 +197,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string DownloadFile(string fileName)
         {
-            OSPlatform platform = _target.OperatingSystem;
+            OSPlatform platform = Target.OperatingSystem;
             string filePath = null;
 
             if (SymbolService.IsSymbolStoreEnabled)
@@ -253,16 +258,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return filePath;
         }
 
-        private ISymbolService SymbolService => _symbolService ??= _target.Services.GetService<ISymbolService>(); 
+        private ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         public override bool Equals(object obj)
         {
-            return Id == ((Runtime)obj).Id;
+            IRuntime runtime = (IRuntime)obj;
+            return Target == runtime.Target && Id == runtime.Id;
         }
 
         public override int GetHashCode()
         {
-            return Id.GetHashCode();
+            return Utilities.CombineHashCodes(Target.GetHashCode(), Id.GetHashCode());
         }
 
         private static readonly string[] s_runtimeTypeNames = {
@@ -282,6 +288,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else {
                 sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
+            }
+            if (RuntimeModuleDirectory is not null) {
+                sb.AppendLine($"    Runtime module directory: {RuntimeModuleDirectory}");
             }
             if (_dacFilePath is not null) {
                 sb.AppendLine($"    DAC: {_dacFilePath}");

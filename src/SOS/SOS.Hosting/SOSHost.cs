@@ -10,7 +10,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Architecture = System.Runtime.InteropServices.Architecture;
@@ -18,60 +17,43 @@ using Architecture = System.Runtime.InteropServices.Architecture;
 namespace SOS.Hosting
 {
     /// <summary>
-    /// Helper code to hosting SOS under ClrMD
+    /// Helper code to hosting the native SOS code
     /// </summary>
     public sealed class SOSHost : IDisposable
     {
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int SOSCommandDelegate(
-            IntPtr ILLDBServices,
-            [In, MarshalAs(UnmanagedType.LPStr)] string args);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int SOSInitializeDelegate(
-            IntPtr IHost);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate void SOSUninitializeDelegate();
-
-        private const string SOSInitialize = "SOSInitializeByHost";
-        private const string SOSUninitialize = "SOSUninitializeByHost";
-
         // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
         internal const uint InvalidTimeStamp = 0xFFFFFFFE;
         internal const uint InvalidChecksum = 0xFFFFFFFF;
 
+        internal readonly IServiceProvider Services;
         internal readonly ITarget Target;
+        internal readonly TargetWrapper TargetWrapper;
         internal readonly IConsoleService ConsoleService;
         internal readonly IModuleService ModuleService;
         internal readonly IThreadService ThreadService;
         internal readonly IMemoryService MemoryService;
+        private readonly SOSLibrary _sosLibrary;
         private readonly IntPtr _interface;
-        private readonly HostWrapper _hostWrapper;
         private readonly ulong _ignoreAddressBitsMask;
-        private IntPtr _sosLibrary = IntPtr.Zero;
         private bool _disposed;
 
         /// <summary>
-        /// The native SOS binaries path. Default is OS/architecture (RID) named directory in the same directory as this assembly.
+        /// Create an instance of the hosting class. Has the lifetime of the target. Depends on the
+        /// context service for the current thread and runtime.
         /// </summary>
-        public string SOSPath { get; set; }
-
-        /// <summary>
-        /// Create an instance of the hosting class
-        /// </summary>
-        /// <param name="target">target instance</param>
-        public SOSHost(ITarget target)
+        /// <param name="services">service provider</param>
+        public SOSHost(IServiceProvider services)
         {
-            Target = target;
-            ConsoleService = target.Services.GetService<IConsoleService>();
-            ModuleService = target.Services.GetService<IModuleService>();
-            ThreadService = target.Services.GetService<IThreadService>();
-            MemoryService = target.Services.GetService<IMemoryService>();
+            Services = services;
+            Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("No target");
+            TargetWrapper = new TargetWrapper(services);
+            Target.DisposeOnDestroy(this);
+            ConsoleService = services.GetService<IConsoleService>();
+            ModuleService = services.GetService<IModuleService>();
+            ThreadService = services.GetService<IThreadService>();
+            MemoryService = services.GetService<IMemoryService>();
             _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
-
-            string rid = InstallHelper.GetRid();
-            SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+            _sosLibrary = services.GetService<SOSLibrary>();
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -83,95 +65,17 @@ namespace SOS.Hosting
                 var lldbServices = new LLDBServices(this);
                 _interface = lldbServices.ILLDBServices;
             }
-            _hostWrapper = new HostWrapper(target.Host);
-            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(target.Host));
         }
 
-        /// <summary>
-        /// Loads and initializes the SOS module.
-        /// </summary>
-        public void InitializeSOSHost()
+        void IDisposable.Dispose()
         {
-            if (_sosLibrary == IntPtr.Zero)
-            {
-                string sos;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                    sos = "sos.dll";
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-                    sos = "libsos.so";
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-                    sos = "libsos.dylib";
-                }
-                else {
-                    throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-                }
-                string sosPath = Path.Combine(SOSPath, sos);
-                try
-                {
-                    _sosLibrary = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.LoadLibrary(sosPath);
-                }
-                catch (DllNotFoundException ex)
-                {
-                    // This is a workaround for the Microsoft SDK docker images. Can fail when LoadLibrary uses libdl.so to load the SOS module.
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    {
-                        throw new DllNotFoundException("Problem loading SOS module. Try installing libc6-dev (apt-get install libc6-dev) to work around this problem.", ex);
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                if (_sosLibrary == IntPtr.Zero)
-                {
-                    throw new FileNotFoundException($"SOS module {sosPath} not found");
-                }
-                var initializeFunc = GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
-                if (initializeFunc == null)
-                {
-                    throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
-                }
-                Target.DisposeOnClose(Target.Host.OnShutdownEvent.Register(OnShutdownEvent));
-                int result = initializeFunc(_hostWrapper.IHost);
-                if (result != 0)
-                {
-                    throw new InvalidOperationException($"SOS initialization FAILED 0x{result:X8}");
-                }
-                Trace.TraceInformation("SOS initialized: sosPath '{0}'", sosPath);
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        ~SOSHost()
-        {
-            Dispose(false);
-        }
-
-        private void Dispose(bool _)
-        {
+            Trace.TraceInformation($"SOSHost.Dispose {_disposed}");
             if (!_disposed)
             {
-                Trace.TraceInformation("SOSHost.Dispose");
                 _disposed = true;
+                TargetWrapper.Release();
                 COMHelper.Release(_interface);
             }
-        }
-
-        /// <summary>
-        /// Shutdown/clean up the native SOS.
-        /// </summary>
-        private void OnShutdownEvent()
-        {
-            Trace.TraceInformation("SOSHost: OnShutdownEvent");
-            var uninitializeFunc = GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
-            uninitializeFunc?.Invoke();
         }
 
         /// <summary>
@@ -198,19 +102,11 @@ namespace SOS.Hosting
         /// <param name="command">just the command name</param>
         /// <param name="arguments">the command arguments and options</param>
         public void ExecuteCommand(string command, string arguments)
-        {
-            Debug.Assert(_sosLibrary != null);
-
-            var commandFunc = GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
-            if (commandFunc == null)
-            {
-                throw new EntryPointNotFoundException($"Can not find SOS command: {command}");
+        { 
+            if (_disposed) {
+                throw new ObjectDisposedException("SOSHost instance disposed");
             }
-            int result = commandFunc(_interface, arguments ?? "");
-            if (result != HResult.S_OK)
-            {
-                Trace.TraceError($"SOS command FAILED 0x{result:X8}");
-            }
+            _sosLibrary.ExecuteCommand(_interface, command, arguments);
         }
 
         #region Reverse PInvoke Implementations
@@ -681,11 +577,12 @@ namespace SOS.Hosting
             IntPtr context,
             uint contextSize)
         {
-            if (!ThreadService.CurrentThreadId.HasValue)
+            IThread thread = Services.GetService<IThread>();
+            if (thread is not null)
             {
-                return HResult.E_FAIL;
+                return GetThreadContextBySystemId(self, thread.ThreadId, 0, contextSize, context);
             }
-            return GetThreadContextBySystemId(self, ThreadService.CurrentThreadId.Value, 0, contextSize, context);
+            return HResult.E_FAIL;
         }
 
         internal int GetThreadContextBySystemId(
@@ -757,11 +654,12 @@ namespace SOS.Hosting
             IntPtr self,
             out uint id)
         {
-            if (!ThreadService.CurrentThreadId.HasValue) {
-                id = 0;
-                return HResult.E_FAIL;
+            IThread thread = Services.GetService<IThread>();
+            if (thread is not null) { 
+                return GetThreadIdBySystemId(self, thread.ThreadId, out id);
             }
-            return GetThreadIdBySystemId(self, ThreadService.CurrentThreadId.Value, out id);
+            id = 0;
+            return HResult.E_FAIL;
         }
 
         internal int SetCurrentThreadId(
@@ -770,7 +668,11 @@ namespace SOS.Hosting
         {
             try
             {
-                ThreadService.CurrentThreadId = ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId;
+                var contextService = Services.GetService<IContextService>();
+                if (contextService is null) {
+                    return HResult.E_FAIL;
+                }
+                contextService.SetCurrentThread(ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId);
             }
             catch (DiagnosticsException)
             {
@@ -783,10 +685,10 @@ namespace SOS.Hosting
             IntPtr self,
             out uint sysId)
         {
-            uint? id = ThreadService.CurrentThreadId;
-            if (id.HasValue)
-            {
-                sysId = id.Value;
+            IThread thread = Services.GetService<IThread>();
+            if (thread is not null)
+            { 
+                sysId = thread.ThreadId;
                 return HResult.S_OK;
             }
             sysId = 0;
@@ -847,12 +749,12 @@ namespace SOS.Hosting
             IntPtr self,
             ulong* offset)
         {
-            if (ThreadService.CurrentThreadId.HasValue)
-            {
-                uint threadId = ThreadService.CurrentThreadId.Value;
+            IThread thread = Services.GetService<IThread>();
+            if (thread is not null)
+            { 
                 try
                 {
-                    ulong teb = ThreadService.GetThreadFromId(threadId).GetThreadTeb();
+                    ulong teb = thread.GetThreadTeb();
                     Write(offset, teb);
                     return HResult.S_OK;
                 }
@@ -946,15 +848,12 @@ namespace SOS.Hosting
             int index, 
             out ulong value)
         {
-            if (ThreadService.CurrentThreadId.HasValue)
-            {
-                IThread thread = ThreadService.GetThreadFromId(ThreadService.CurrentThreadId.Value);
-                if (thread != null)
+            IThread thread = Services.GetService<IThread>();
+            if (thread is not null)
+            { 
+                if (thread.TryGetRegisterValue(index, out value))
                 {
-                    if (thread.TryGetRegisterValue(index, out value))
-                    {
-                        return HResult.S_OK;
-                    }
+                    return HResult.S_OK;
                 }
             }
             value = 0;

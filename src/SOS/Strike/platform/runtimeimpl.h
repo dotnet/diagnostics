@@ -186,6 +186,8 @@ public:
 
     ULONG64 STDMETHODCALLTYPE GetModuleSize() const { return m_size; }
 
+    void STDMETHODCALLTYPE SetRuntimeDirectory(LPCSTR runtimeModuleDirectory);
+
     LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory();
 
     HRESULT STDMETHODCALLTYPE GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess);

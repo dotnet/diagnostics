@@ -16719,10 +16719,12 @@ DECLARE_API(SetClrPath)
     {
         std::string command("setclrpath ");
         command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
+        return hostServices->DispatchCommand(command.c_str());
     }
     else
     {
+        INIT_API_EE();
+
         StringHolder runtimeModulePath;
         CMDValue arg[] =
         {
@@ -16735,22 +16737,20 @@ DECLARE_API(SetClrPath)
         }
         if (narg > 0)
         {
-            if (!Target::SetRuntimeDirectory(runtimeModulePath.data))
+            std::string fullPath;
+            if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
             {
-                ExtErr("Invalid runtime path %s\n", runtimeModulePath.data);
+                ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
                 return E_FAIL;
             }
+            g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
         }
-        ITarget* target = GetTarget();
-        if (target != nullptr)
-        {
-            const char* runtimeDirectory = target->GetRuntimeDirectory();
-            if (runtimeDirectory != nullptr) {
-                ExtOut("Runtime module path: %s\n", runtimeDirectory);
-            }
+        const char* runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+        if (runtimeDirectory != nullptr) {
+            ExtOut("Runtime module directory: %s\n", runtimeDirectory);
         }
     }
-    return Status;
+    return S_OK;
 }
 
 //
@@ -16809,25 +16809,48 @@ DECLARE_API(runtimes)
 }
 
 //
+// Executes managed extension commands
+//
+HRESULT ExecuteCommand(PCSTR command, PCSTR args)
+{
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        std::string commandLine(command);
+        if (args != nullptr && strlen(args) > 0)
+        {
+            commandLine.append(" ");
+            commandLine.append(args);
+        }
+        if (!commandLine.empty())
+        {
+            return hostServices->DispatchCommand(commandLine.c_str());
+        }
+    }
+    else
+    {
+        ExtErr("Command not loaded\n");
+        return E_FAIL;
+    }
+    return S_OK;
+}
+
+//
+// Dumps the managed assemblies 
+//
+DECLARE_API(clrmodules)
+{
+    INIT_API_EXT();
+    return ExecuteCommand("clrmodules", args);
+}
+
+//
 // Enables and disables managed extension logging
 //
 DECLARE_API(logging)
 {
-    INIT_API_NOEE();
-
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
-    {
-        std::string command("logging ");
-        command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
-    }
-    else 
-    {
-        ExtErr("Command not loaded\n");
-    }
-
-    return Status;
+    INIT_API_EXT();
+    return ExecuteCommand("logging", args);
 }
 
 //
@@ -16835,25 +16858,8 @@ DECLARE_API(logging)
 //
 DECLARE_API(ext)
 {
-    INIT_API_NOEE();
-
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
-    {
-        // Just load the managed infrastructure if no command. This is useful in lldb
-        // where the managed extension commands are not added until a command does 
-        // GetHostServices() like soshelp, logging, sosstatus, setsymbolserver and ext.
-        if (args != nullptr && strlen(args) > 0)
-        {
-            Status = hostServices->DispatchCommand(args);
-        }
-    }
-    else 
-    {
-        ExtErr("Command not loaded\n");
-    }
-
-    return Status;
+    INIT_API_EXT();
+    return ExecuteCommand("", args);
 }
 
 void PrintHelp (__in_z LPCSTR pszCmdName)

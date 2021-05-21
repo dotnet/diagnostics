@@ -23,30 +23,30 @@ namespace SOS.Hosting
         // For ClrMD's magic hand shake
         private const ulong MagicCallbackConstant = 0x43;
 
-        private readonly ITarget _target;
+        private readonly IServiceProvider _services;
         private readonly ulong _runtimeBaseAddress;
+        private readonly ISymbolService _symbolService;
         private readonly IMemoryService _memoryService;
         private readonly IThreadService _threadService;
         private readonly IModuleService _moduleService;
         private readonly IThreadUnwindService _threadUnwindService;
         private readonly IRemoteMemoryService _remoteMemoryService;
-        private readonly SymbolServiceWrapper _symbolServiceWrapper;
         private readonly ulong _ignoreAddressBitsMask;
 
         public IntPtr IDataTarget { get; }
 
-        public DataTargetWrapper(ITarget target, IRuntime runtime)
+        public DataTargetWrapper(IServiceProvider services, IRuntime runtime)
         {
-            Debug.Assert(target != null);
+            Debug.Assert(services != null);
             Debug.Assert(runtime != null);
-            _target = target;
+            _services = services;
             _runtimeBaseAddress = runtime.RuntimeModule.ImageBase;
-            _memoryService = target.Services.GetService<IMemoryService>();
-            _threadService = target.Services.GetService<IThreadService>();
-            _threadUnwindService = target.Services.GetService<IThreadUnwindService>();
-            _moduleService = target.Services.GetService<IModuleService>();
-            _remoteMemoryService = target.Services.GetService<IRemoteMemoryService>();
-            _symbolServiceWrapper = new SymbolServiceWrapper(target.Host);
+            _symbolService = services.GetService<ISymbolService>();
+            _memoryService = services.GetService<IMemoryService>();
+            _threadService = services.GetService<IThreadService>();
+            _threadUnwindService = services.GetService<IThreadUnwindService>();
+            _moduleService = services.GetService<IModuleService>();
+            _remoteMemoryService = services.GetService<IRemoteMemoryService>();
             _ignoreAddressBitsMask = _memoryService.SignExtensionMask();
 
             VTableBuilder builder = AddInterface(IID_ICLRDataTarget, false);
@@ -103,7 +103,12 @@ namespace SOS.Hosting
             IntPtr self,
             out IMAGE_FILE_MACHINE machineType)
         {
-            machineType = _target.Architecture switch
+            ITarget target = _services.GetService<ITarget>();
+            if (target == null) {
+                machineType = IMAGE_FILE_MACHINE.UNKNOWN;
+                return HResult.E_FAIL;
+            }
+            machineType = target.Architecture switch
             {
                 Architecture.X64 => IMAGE_FILE_MACHINE.AMD64,
                 Architecture.X86 => IMAGE_FILE_MACHINE.I386,
@@ -195,7 +200,7 @@ namespace SOS.Hosting
             IntPtr self,
             out uint threadId)
         {
-            uint? id = _threadService.CurrentThreadId;
+            uint? id = _services.GetService<IThread>()?.ThreadId;
             if (id.HasValue)
             {
                 threadId = id.Value;
@@ -330,8 +335,7 @@ namespace SOS.Hosting
             IntPtr buffer,
             IntPtr dataSize)
         {
-            return _symbolServiceWrapper.GetMetadataLocator(
-                IntPtr.Zero, fileName, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+            return _symbolService.GetMetadataLocator(fileName, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
         }
 
         #endregion

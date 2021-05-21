@@ -42,7 +42,11 @@ namespace SOS.Extensions
         private readonly CommandProcessor _commandProcessor;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private ContextServiceFromDebuggerServices _contextService;
+        private int _targetIdFactory;
         private ITarget _target;
+        private TargetWrapper _targetWrapper;
+        private IMemoryService _memoryService;
 
         /// <summary>
         /// Enable the assembly resolver to get the right versions in the same directory as this assembly.
@@ -52,6 +56,7 @@ namespace SOS.Extensions
             if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
                 AssemblyResolver.Enable();
             }
+            LoggingCommand.Initialize();
         }
 
         /// <summary>
@@ -101,9 +106,9 @@ namespace SOS.Extensions
             _serviceProvider.AddService<ICommandService>(_commandProcessor);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
 
-            _hostWrapper = new HostWrapper(this);
+            _hostWrapper = new HostWrapper(this, () => _targetWrapper);
             _hostWrapper.AddServiceWrapper(IID_IHostServices, this);
-            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(this));
+            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(this, () => _memoryService));
 
             VTableBuilder builder = AddInterface(IID_IHostServices, validate: false);
             builder.AddMethod(new GetHostDelegate(GetHost));
@@ -123,6 +128,8 @@ namespace SOS.Extensions
         protected override void Destroy()
         {
             Trace.TraceInformation("HostServices.Destroy");
+            _hostWrapper.RemoveServiceWrapper(IID_IHostServices);
+            _hostWrapper.Release();
         }
 
         #region IHost
@@ -135,9 +142,27 @@ namespace SOS.Extensions
 
         IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
-        ITarget IHost.CurrentTarget => _target;
-
-        void IHost.SetCurrentTarget(int targetid) => throw new NotImplementedException();
+        public void DestroyTarget(ITarget target)
+        {
+            if (target == null) {
+                throw new ArgumentNullException(nameof(target));
+            }
+            Trace.TraceInformation("IHost.DestroyTarget #{0}", target.Id);
+            if (target == _target)
+            {
+                _target = null;
+                _memoryService = null;
+                if (_targetWrapper != null)
+                {
+                    _targetWrapper.Release();
+                    _targetWrapper = null;
+                }
+                _contextService.ClearCurrentTarget();
+                if (target is IDisposable disposable) {
+                    disposable.Dispose();
+                }
+            }
+        }
 
         #endregion
 
@@ -156,6 +181,7 @@ namespace SOS.Extensions
             IntPtr self,
             IntPtr iunk)
         {
+            Trace.TraceInformation("HostServices.RegisterDebuggerServices");
             if (iunk == IntPtr.Zero || DebuggerServices != null) {
                 return HResult.E_FAIL;
             }
@@ -182,8 +208,15 @@ namespace SOS.Extensions
             {
                 var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
                 _serviceProvider.AddService<IConsoleService>(consoleService);
+
+                _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
+                _serviceProvider.AddService<IContextService>(_contextService);
                 _serviceProvider.AddServiceFactory<IThreadUnwindService>(() => new ThreadUnwindServiceFromDebuggerServices(DebuggerServices));
-                Trace.TraceInformation("HostServices.RegisterDebuggerServices");
+
+                _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
+                    ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
+                    return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
+                });
 
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandProcessor.Commands)
@@ -219,13 +252,15 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
-            if (_target != null) {
+            if (_target != null || DebuggerServices == null) {
                 return HResult.E_FAIL;
             }
             try
             {
-                _target = new TargetFromDebuggerServices(DebuggerServices, this);
-                _serviceProvider.AddService<ITarget>(_target);
+                _target = new TargetFromDebuggerServices(DebuggerServices, this, _targetIdFactory++);
+                _contextService.SetCurrentTarget(_target);
+                _targetWrapper = new TargetWrapper(_contextService.Services);
+                _memoryService = _contextService.Services.GetService<IMemoryService>();
             }
             catch (Exception ex)
             {
@@ -239,7 +274,7 @@ namespace SOS.Extensions
             IntPtr self,
             uint processId)
         {
-            Trace.TraceInformation($"HostServices.UpdateTarget {processId}");
+            Trace.TraceInformation("HostServices.UpdateTarget {0} #{1}", processId, _target != null ? _target.Id : "<none>");
             if (_target == null)
             {
                 return CreateTarget(self);
@@ -265,13 +300,10 @@ namespace SOS.Extensions
         private void DestroyTarget(
             IntPtr self)
         {
-            Trace.TraceInformation("HostServices.DestroyTarget {0}", _target != null ? _target.Id : "<none>");
-            _hostWrapper.DestroyTarget();
+            Trace.TraceInformation("HostServices.DestroyTarget #{0}", _target != null ? _target.Id : "<none>");
             if (_target != null)
             {
-                _serviceProvider.RemoveService(typeof(ITarget));
-                _target.Close();
-                _target = null;
+                DestroyTarget(_target);
             }
         }
 
@@ -285,7 +317,7 @@ namespace SOS.Extensions
             }
             try
             {
-                return _commandProcessor.Execute(commandLine, GetServices());
+                return _commandProcessor.Execute(commandLine, _contextService.Services);
             }
             catch (Exception ex)
             {
@@ -300,7 +332,7 @@ namespace SOS.Extensions
         {
             try
             {
-                if (!_commandProcessor.DisplayHelp(command, GetServices()))
+                if (!_commandProcessor.DisplayHelp(command, _contextService.Services))
                 {
                     return HResult.E_INVALIDARG;
                 }
@@ -317,51 +349,22 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.Uninitialize");
-            _hostWrapper.DestroyTarget();
-            if (_target != null)
+            DestroyTarget(self);
+
+            if (DebuggerServices != null)
             {
-                _target.Close();
-                _target = null;
+                DebuggerServices.Release();
+                DebuggerServices = null;
             }
-            DebuggerServices.Release();
-            DebuggerServices = null;
 
             // Send shutdown event on exit
             OnShutdownEvent.Fire();
+
+            // Release the host services wrapper
+            Release();
         }
 
         #endregion
-
-        private IServiceProvider GetServices()
-        {
-            // If there is no target, then provide just the global services
-            ServiceProvider services = _serviceProvider;
-            if (_target != null)
-            {
-                // Create a per command invocation service provider. These services may change between each command invocation.
-                services = new ServiceProvider(_target.Services);
-
-                // Add the current thread if any
-                services.AddServiceFactory<IThread>(() =>
-                {
-                    IThreadService threadService = _target.Services.GetService<IThreadService>();
-                    if (threadService != null && threadService.CurrentThreadId.HasValue) {
-                        return threadService.GetThreadFromId(threadService.CurrentThreadId.Value);
-                    }
-                    return null;
-                });
-
-                // Add the current runtime and related services
-                var runtimeService = _target.Services.GetService<IRuntimeService>();
-                if (runtimeService != null)
-                {
-                    services.AddServiceFactory<IRuntime>(() => runtimeService.CurrentRuntime);
-                    services.AddServiceFactory<ClrRuntime>(() => services.GetService<IRuntime>()?.Services.GetService<ClrRuntime>());
-                    services.AddServiceFactory<ClrMDHelper>(() => new ClrMDHelper(services.GetService<ClrRuntime>()));
-                }
-            }
-            return services;
-        }
         
         #region IHostServices delegates
 

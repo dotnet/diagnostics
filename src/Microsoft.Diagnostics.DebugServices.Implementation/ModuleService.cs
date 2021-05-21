@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         // MachO writable segment attribute
         const uint VmProtWrite = 0x02;
 
-        protected readonly ITarget Target;
+        internal protected readonly ITarget Target;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -60,8 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     foreach (IModule module in _modules.Values)
                     {
-                        if (module is IDisposable disposable)
-                        {
+                        if (module is IDisposable disposable) {
                             disposable.Dispose();
                         }
                     }

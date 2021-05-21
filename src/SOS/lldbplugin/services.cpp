@@ -504,6 +504,7 @@ LLDBServices::GetLastEventInformation(
     {
         return E_FAIL;
     }
+    InitializeThreadInfo(process);
 
     *processId = GetProcessId(process);
     *threadId = GetThreadId(thread);
@@ -1380,6 +1381,8 @@ LLDBServices::GetCurrentProcessSystemId(
         *sysId = 0;
         return E_FAIL;
     }
+
+    InitializeThreadInfo(process);
 
     *sysId = GetProcessId(process);
     return S_OK;

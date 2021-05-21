@@ -73,18 +73,16 @@ namespace SOS.Hosting
 
         public static readonly Guid IID_ISymbolService = new Guid("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1");
 
-        // HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) 
-        const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
-
-        private readonly IHost _host;
+        private readonly Func<IMemoryService> _getMemoryService;
         private readonly ISymbolService _symbolService;
-        private IMemoryService _memoryService;
 
-        public SymbolServiceWrapper(IHost host)
+        public SymbolServiceWrapper(IHost host, Func<IMemoryService> getMemoryService)
         {
             Debug.Assert(host != null);
-            _host = host;
+            Debug.Assert(getMemoryService != null);
+            _getMemoryService = getMemoryService;
             _symbolService = host.Services.GetService<ISymbolService>();
+            Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
             builder.AddMethod(new IsSymbolStoreEnabledDelegate((IntPtr self) => _symbolService.IsSymbolStoreEnabled));
@@ -103,6 +101,7 @@ namespace SOS.Hosting
             builder.AddMethod(new GetMetadataLocatorDelegate(GetMetadataLocator));
             builder.AddMethod(new GetICorDebugMetadataLocatorDelegate(GetICorDebugMetadataLocator));
             builder.Complete();
+
             AddRef();
         }
 
@@ -695,50 +694,7 @@ namespace SOS.Hosting
             IntPtr pPathBufferSize,
             IntPtr pwszPathBuffer)
         {
-            int hr = HResult.S_OK;
-            int actualSize = 0;
-
-            Debug.Assert(pwszPathBuffer != IntPtr.Zero);
-            try
-            {
-                if (_symbolService.IsSymbolStoreEnabled)
-                {
-                    SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
-                    string localFilePath = _symbolService.DownloadFile(key);
-                    localFilePath += "\0";              // null terminate the string
-                    actualSize = localFilePath.Length;
-
-                    if (pathBufferSize > actualSize)
-                    {
-                        Trace.TraceInformation($"GetICorDebugMetadataLocator: SUCCEEDED {localFilePath}");
-                        Marshal.Copy(localFilePath.ToCharArray(), 0, pwszPathBuffer, actualSize);
-                    }
-                    else
-                    {
-                        Trace.TraceError("GetICorDebugMetadataLocator: E_INSUFFICIENT_BUFFER");
-                        hr = E_INSUFFICIENT_BUFFER;
-                    }
-                }
-                else
-                {
-                    Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} symbol store not enabled");
-                    hr = HResult.E_FAIL;
-                }
-            }
-            catch (Exception ex) when
-                (ex is UnauthorizedAccessException ||
-                 ex is BadImageFormatException ||
-                 ex is InvalidVirtualAddressException ||
-                 ex is IOException)
-            {
-                Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} ERROR {ex.Message}");
-                hr = HResult.E_FAIL;
-            }
-            if (pPathBufferSize != IntPtr.Zero)
-            {
-                Marshal.WriteInt32(pPathBufferSize, actualSize);
-            }
-            return hr;
+            return _symbolService.GetICorDebugMetadataLocator(imagePath, imageTimestamp, imageSize, pathBufferSize, pPathBufferSize, pwszPathBuffer);
         }
 
         /// <summary>
@@ -996,21 +952,7 @@ namespace SOS.Hosting
             return pathName.Substring(pos + 1);
         }
 
-        private IMemoryService MemoryService
-        {
-            get
-            {
-                if (_memoryService == null)
-                {
-                    ITarget target = _host.CurrentTarget;
-                    if (target == null) {
-                        throw new DiagnosticsException("SymbolService: no current target");
-                    }
-                    _memoryService = target.Services.GetService<IMemoryService>();
-                }
-                return _memoryService;
-            }
-        }
+        private IMemoryService MemoryService => _getMemoryService() ?? throw new DiagnosticsException("SymbolServiceWrapper: no current target");
 
         #region Symbol service delegates
 

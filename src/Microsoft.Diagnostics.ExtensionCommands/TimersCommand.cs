@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Display running timers details.")]
     public class TimersCommand : ExtensionCommandBase
     {
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             try
             {
@@ -73,7 +73,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 WriteLine(x.Message);
             }
-
         }
 
         static string GetTimerString(TimerInfo timer)

@@ -21,11 +21,11 @@ namespace SOS.Hosting
         /// </summary>
         enum RuntimeConfiguration
         {
-            WindowsDesktop      = 0,
-            WindowsCore         = 1,
-            UnixCore            = 2,
-            OSXCore             = 3,
-            Unknown             = 4
+            WindowsDesktop = 0,
+            WindowsCore = 1,
+            UnixCore = 2,
+            OSXCore = 3,
+            Unknown = 4
         }
 
         private static readonly Guid IID_IRuntime = new Guid("A5F152B9-BA78-4512-9228-5091A4CB7E35");
@@ -81,7 +81,7 @@ namespace SOS.Hosting
 
         #endregion
 
-        private readonly ITarget _target;
+        private readonly IServiceProvider _services;
         private readonly IRuntime _runtime;
         private readonly IDisposable _onFlushEvent;
         private IntPtr _clrDataProcess = IntPtr.Zero;
@@ -91,25 +91,20 @@ namespace SOS.Hosting
 
         public IntPtr IRuntime { get; }
 
-        internal RuntimeWrapper(ITarget target, IRuntime runtime)
+        internal RuntimeWrapper(IServiceProvider services, IRuntime runtime)
         {
-            Debug.Assert(target != null);
+            Debug.Assert(services != null);
             Debug.Assert(runtime != null);
-            _target = target;
+            _services = services;
             _runtime = runtime;
-
-            _onFlushEvent = target.OnFlushEvent.Register(() => {
-                // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
-                _corDebugProcess = IntPtr.Zero;
-                // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
-                _clrDataProcess = IntPtr.Zero;
-            });
+            _onFlushEvent = runtime.Target.OnFlushEvent.Register(Flush);
 
             VTableBuilder builder = AddInterface(IID_IRuntime, validate: false);
 
             builder.AddMethod(new GetRuntimeConfigurationDelegate(GetRuntimeConfiguration));
             builder.AddMethod(new GetModuleAddressDelegate(GetModuleAddress));
             builder.AddMethod(new GetModuleSizeDelegate(GetModuleSize));
+            builder.AddMethod(new SetRuntimeDirectoryDelegate(SetRuntimeDirectory));
             builder.AddMethod(new GetRuntimeDirectoryDelegate(GetRuntimeDirectory));
             builder.AddMethod(new GetClrDataProcessDelegate(GetClrDataProcess));
             builder.AddMethod(new GetCorDebugInterfaceDelegate(GetCorDebugInterface));
@@ -124,6 +119,7 @@ namespace SOS.Hosting
         {
             Trace.TraceInformation("RuntimeWrapper.Destroy");
             _onFlushEvent.Dispose();
+            Flush();
             if (_dacHandle != IntPtr.Zero)
             {
                 DataTarget.PlatformFunctions.FreeLibrary(_dacHandle);
@@ -133,6 +129,22 @@ namespace SOS.Hosting
             {
                 DataTarget.PlatformFunctions.FreeLibrary(_dbiHandle);
                 _dbiHandle = IntPtr.Zero;
+            }
+        }
+
+        private void Flush()
+        {
+            // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
+            if (_corDebugProcess == IntPtr.Zero)
+            {
+                COMHelper.Release(_corDebugProcess);
+                _corDebugProcess = IntPtr.Zero;
+            }
+            // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
+            if (_clrDataProcess == IntPtr.Zero)
+            {
+                COMHelper.Release(_clrDataProcess);
+                _clrDataProcess = IntPtr.Zero;
             }
         }
 
@@ -148,11 +160,11 @@ namespace SOS.Hosting
 
                 case RuntimeType.NetCore:
                 case RuntimeType.SingleFile:
-                    if (_target.OperatingSystem == OSPlatform.Windows)
+                    if (_runtime.Target.OperatingSystem == OSPlatform.Windows)
                     {
                         return RuntimeConfiguration.WindowsCore;
                     }
-                    else if (_target.OperatingSystem == OSPlatform.Linux || _target.OperatingSystem == OSPlatform.OSX)
+                    else if (_runtime.Target.OperatingSystem == OSPlatform.Linux || _runtime.Target.OperatingSystem == OSPlatform.OSX)
                     {
                         return RuntimeConfiguration.UnixCore;
                     }
@@ -173,9 +185,20 @@ namespace SOS.Hosting
             return _runtime.RuntimeModule.ImageSize;
         }
 
+        private void SetRuntimeDirectory(
+            IntPtr self,
+            string runtimeModuleDirectory)
+        { 
+            _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
+        }
+
         private string GetRuntimeDirectory(
             IntPtr self)
         {
+            if (_runtime.RuntimeModuleDirectory is not null)
+            {
+                return _runtime.RuntimeModuleDirectory;
+            }
             return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
         }
 
@@ -219,7 +242,7 @@ namespace SOS.Hosting
             byte* fileVersionBuffer,
             int fileVersionBufferSizeInBytes)
         {
-            IModuleService moduleService = _target.Services.GetService<IModuleService>();
+            IModuleService moduleService = _services.GetService<IModuleService>();
             IModule module;
             try
             {
@@ -282,7 +305,7 @@ namespace SOS.Hosting
                 Trace.TraceError("Failed to obtain DAC CLRDataCreateInstance");
                 return IntPtr.Zero;
             }
-            var dataTarget = new DataTargetWrapper(_target, _runtime);
+            var dataTarget = new DataTargetWrapper(_services, _runtime);
             int hr = createInstance(IID_IXCLRDataProcess, dataTarget.IDataTarget, out IntPtr unk);
             if (hr != 0)
             {
@@ -317,7 +340,7 @@ namespace SOS.Hosting
                 Build = 0,
                 Revision = 0,
             };
-            var dataTarget = new CorDebugDataTargetWrapper(_target,  _runtime);
+            var dataTarget = new CorDebugDataTargetWrapper(_services);
             ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
             int hresult = 0;
 
@@ -450,6 +473,11 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate ulong GetModuleSizeDelegate(
             [In] IntPtr self);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate void SetRuntimeDirectoryDelegate(
+            [In] IntPtr self,
+            [In, MarshalAs(UnmanagedType.LPStr)] string runtimeModuleDirectory);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         [return: MarshalAs(UnmanagedType.LPStr)]

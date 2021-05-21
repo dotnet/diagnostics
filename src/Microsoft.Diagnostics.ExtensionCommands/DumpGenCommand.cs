@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-mt", Help = "The address pointing on a Method table.")]
         public string MethodTableAddress { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             var generation = ParseGenerationArgument(Generation);
             if (generation != GCGeneration.NotSet)

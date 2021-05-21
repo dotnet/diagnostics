@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "threadpoolqueue", Aliases = new string[] { "tpq" }, Help = "Display queued ThreadPool work items.")]
     public class ThreadPoolQueueCommand : ExtensionCommandBase
     {
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             var workItems = new Dictionary<string, WorkInfo>();
             int workItemCount = 0;

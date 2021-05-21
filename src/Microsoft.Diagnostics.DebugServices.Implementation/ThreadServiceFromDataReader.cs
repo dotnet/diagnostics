@@ -25,19 +25,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _dataReader = dataReader;
             _threadReader = (IThreadReader)dataReader;
-
-            if (dataReader is IThreadReader threadReader)
-            {
-                // Initialize the current thread
-                IEnumerable<uint> threads = threadReader.EnumerateOSThreadIds();
-                if (threads.Any()) {
-                    CurrentThreadId = threads.First();
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException("IThreadReader not implemented");
-            }
         }
 
         protected override bool GetThreadContext(uint threadId, uint contextFlags, uint contextSize, byte[] context)

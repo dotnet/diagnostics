@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--value", Aliases = new string[] { "-v" }, Help = "<value> is the value of a Task m_stateFlags field.")]
         public ulong? Value { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             if (string.IsNullOrEmpty(Address) && !Value.HasValue)
             {

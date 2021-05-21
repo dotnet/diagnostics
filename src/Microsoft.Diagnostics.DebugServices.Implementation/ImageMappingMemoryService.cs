@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
             _recursionProtection = new HashSet<ulong>();
             target.OnFlushEvent.Register(_memoryCache.FlushCache);
-            target.DisposeOnClose(target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(_memoryCache.FlushCache));
+            target.DisposeOnDestroy(target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(_memoryCache.FlushCache));
         }
 
         #region IMemoryService

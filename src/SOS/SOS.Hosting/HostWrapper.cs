@@ -16,16 +16,16 @@ namespace SOS.Hosting
         private static readonly Guid IID_IHost = new Guid("E0CD8534-A88B-40D7-91BA-1B4C925761E9");
 
         private readonly IHost _host;
+        private readonly Func<TargetWrapper> _getTarget;
         private readonly Dictionary<Guid, Func<COMCallableIUnknown>> _factories = new Dictionary<Guid, Func<COMCallableIUnknown>>();
         private readonly Dictionary<Guid, COMCallableIUnknown> _wrappers = new Dictionary<Guid, COMCallableIUnknown>();
 
-        private TargetWrapper _targetWrapper;
-
         public IntPtr IHost { get; }
 
-        public HostWrapper(IHost host)
+        public HostWrapper(IHost host, Func<TargetWrapper> getTarget)
         {
             _host = host;
+            _getTarget = getTarget;
 
             VTableBuilder builder = AddInterface(IID_IHost, validate: false);
             builder.AddMethod(new GetHostTypeDelegate(GetHostType));
@@ -39,6 +39,11 @@ namespace SOS.Hosting
         protected override void Destroy()
         {
             Trace.TraceInformation("HostWrapper.Destroy");
+            foreach (var wrapper in _wrappers.Values)
+            {
+                wrapper.Release();
+            }
+            _wrappers.Clear();
         }
 
         /// <summary>
@@ -62,6 +67,16 @@ namespace SOS.Hosting
         }
 
         /// <summary>
+        /// Remove the service instance
+        /// </summary>
+        /// <param name="serviceId">guid</param>
+        public void RemoveServiceWrapper(in Guid serviceId)
+        {
+            _factories.Remove(serviceId);
+            _wrappers.Remove(serviceId);
+        }
+
+        /// <summary>
         /// Returns the wrapper instance for the guid
         /// </summary>
         /// <param name="serviceId">service guid</param>
@@ -80,15 +95,6 @@ namespace SOS.Hosting
                 }
             }
             return service;
-        }
-
-        public void DestroyTarget()
-        {
-            if (_targetWrapper != null)
-            {
-                _targetWrapper.Release();
-                _targetWrapper = null;
-            }
         }
 
         #region IHost
@@ -111,8 +117,7 @@ namespace SOS.Hosting
             ptr = IntPtr.Zero;
 
             COMCallableIUnknown wrapper = GetServiceWrapper(guid);
-            if (wrapper == null)
-            {
+            if (wrapper == null) {
                 return HResult.E_NOINTERFACE;
             }
             wrapper.AddRef();
@@ -122,22 +127,18 @@ namespace SOS.Hosting
         /// <summary>
         /// Returns the current target wrapper or null
         /// </summary>
-        /// <param name="target">target wrapper address returned</param>
+        /// <param name="targetWrapper">target wrapper address returned</param>
         /// <returns>S_OK</returns>
-        private HResult GetCurrentTarget(IntPtr self, out IntPtr target)
+        private HResult GetCurrentTarget(IntPtr self, out IntPtr targetWrapper)
         {
-            target = IntPtr.Zero;
-
-            if (_host.CurrentTarget == null) {
+            TargetWrapper wrapper = _getTarget();
+            if (wrapper == null)
+            {
+                targetWrapper = IntPtr.Zero;
                 return HResult.E_NOINTERFACE;
             }
-            // TODO: this only supports one target instance. Need to add a dictionary lookup for multi-target support.
-            if (_targetWrapper == null) {
-                _targetWrapper = new TargetWrapper(_host.CurrentTarget);
-            }
-            _targetWrapper.AddRef();
-            target = _targetWrapper.ITarget;
-
+            wrapper.AddRef();
+            targetWrapper = wrapper.ITarget;
             return HResult.S_OK;
         }
 

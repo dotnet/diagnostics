@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _target = target;
             _memoryService = memoryService;
             target.OnFlushEvent.Register(Flush);
-            target.DisposeOnClose(SymbolService?.OnChangeEvent.Register(Flush));
+            target.DisposeOnDestroy(SymbolService?.OnChangeEvent.Register(Flush));
         }
 
         /// <summary>

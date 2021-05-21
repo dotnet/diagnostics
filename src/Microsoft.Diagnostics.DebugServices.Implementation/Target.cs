@@ -15,23 +15,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ITarget base implementation
     /// </summary>
-    public abstract class Target : ITarget
+    public abstract class Target : ITarget, IDisposable
     {
-        private static int _targetIdFactory;
         private readonly string _dumpPath;
-        private readonly List<IDisposable> _disposables;
         private string _tempDirectory;
 
         public readonly ServiceProvider ServiceProvider;
 
-        public Target(IHost host, string dumpPath)
+        public Target(IHost host, int id, string dumpPath)
         {
             Trace.TraceInformation($"Creating target #{Id}");
             Host = host;
+            Id = id;
             _dumpPath = dumpPath;
-            _disposables = new List<IDisposable>();
 
             OnFlushEvent = new ServiceEvent();
+            OnDestroyEvent = new ServiceEvent();
 
             // Initialize the per-target services
             ServiceProvider = new ServiceProvider(host.Services);
@@ -49,14 +48,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public IHost Host { get; }
 
         /// <summary>
-        /// Invoked when this target is flushed (via the Flush() call).
-        /// </summary>
-        public IServiceEvent OnFlushEvent { get; }
-
-        /// <summary>
         /// The target id
         /// </summary>
-        public int Id { get; } = _targetIdFactory++;
+        public int Id { get; }
 
         /// <summary>
         /// Returns the target OS (which may be different from the OS this is running on)
@@ -101,6 +95,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public IServiceProvider Services => ServiceProvider;
 
         /// <summary>
+        /// Invoked when this target is flushed (via the Flush() call).
+        /// </summary>
+        public IServiceEvent OnFlushEvent { get; }
+
+        /// <summary>
         /// Flushes any cached state in the target.
         /// </summary>
         public void Flush()
@@ -110,35 +109,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Registers an object to be disposed when ITarget.Close() is called.
+        /// Invoked when the target is closed.
         /// </summary>
-        /// <param name="disposable">object to be disposed on Close() or null</param>
-        public void DisposeOnClose(IDisposable disposable)
-        {
-            if (disposable != null)
-            {
-                _disposables.Add(disposable);
-            }
-        }
+        public IServiceEvent OnDestroyEvent { get; }
+
+        #endregion
 
         /// <summary>
         /// Releases the target and the target's resources.
         /// </summary>
-        public void Close()
+        public void Dispose()
         {
-            Trace.TraceInformation($"Closing target #{Id}");
-            Flush();
-
-            foreach (var disposable in _disposables)
-            {
-                disposable.Dispose();
-            }
-            _disposables.Clear();
-
+            Trace.TraceInformation($"Disposing target #{Id}");
+            OnDestroyEvent.Fire();
             CleanupTempDirectory();
         }
-
-        #endregion
 
         private void CleanupTempDirectory()
         {
@@ -161,7 +146,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override bool Equals(object obj)
         {
-            return Id == ((Target)obj).Id;
+            return Id == ((ITarget)obj).Id;
         }
 
         public override int GetHashCode()

@@ -18,23 +18,22 @@ namespace SOS.Hosting
         private static readonly Guid IID_ICorDebugMetaDataLocator = new Guid("7cef8ba9-2ef7-42bf-973f-4171474f87d9");
 
         private readonly ITarget _target;
+        private readonly ISymbolService _symbolService;
         private readonly IMemoryService _memoryService;
         private readonly IThreadService _threadService;
         private readonly IThreadUnwindService _threadUnwindService;
-        private readonly SymbolServiceWrapper _symbolServiceWrapper;
         private readonly ulong _ignoreAddressBitsMask;
 
         public IntPtr ICorDebugDataTarget { get; }
 
-        internal CorDebugDataTargetWrapper(ITarget target, IRuntime runtime)
+        internal CorDebugDataTargetWrapper(IServiceProvider services)
         {
-            Debug.Assert(target != null);
-            Debug.Assert(runtime != null);
-            _target = target;
-            _memoryService = target.Services.GetService<IMemoryService>();
-            _threadService = target.Services.GetService<IThreadService>();
-            _threadUnwindService = target.Services.GetService<IThreadUnwindService>();
-            _symbolServiceWrapper = new SymbolServiceWrapper(target.Host);
+            Debug.Assert(services != null);
+            _target = services.GetService<ITarget>();
+            _symbolService = services.GetService<ISymbolService>();
+            _memoryService = services.GetService<IMemoryService>();
+            _threadService = services.GetService<IThreadService>();
+            _threadUnwindService = services.GetService<IThreadUnwindService>();
             _ignoreAddressBitsMask = _memoryService.SignExtensionMask();
 
             VTableBuilder builder = AddInterface(IID_ICorDebugDataTarget, validate: false);
@@ -215,8 +214,7 @@ namespace SOS.Hosting
             IntPtr pPathBufferSize,
             IntPtr pPathBuffer)
         {
-            return _symbolServiceWrapper.GetICorDebugMetadataLocator(
-                IntPtr.Zero, imagePath, imageTimestamp, imageSize, pathBufferSize, pPathBufferSize, pPathBuffer);
+            return _symbolService.GetICorDebugMetadataLocator(imagePath, imageTimestamp, imageSize, pathBufferSize, pPathBufferSize, pPathBuffer);
         }
 
         #endregion

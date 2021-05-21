@@ -21,8 +21,8 @@ namespace SOS.Extensions
         /// <summary>
         /// Create a target instance from IDataReader
         /// </summary>
-        internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host)
-            : base(host, dumpPath: null)
+        internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host, int id)
+            : base(host, id, dumpPath: null)
         {
             Debug.Assert(debuggerServices != null);
 

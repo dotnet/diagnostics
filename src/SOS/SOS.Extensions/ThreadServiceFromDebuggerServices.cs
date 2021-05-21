@@ -24,32 +24,6 @@ namespace SOS.Extensions
             _debuggerServices = debuggerServices;
         }
 
-        #region IThreadService
-
-        public override uint? CurrentThreadId 
-        { 
-            get
-            {
-                HResult hr = _debuggerServices.GetCurrentThreadId(out uint threadId);
-                if (hr != HResult.S_OK)
-                {
-                    Trace.TraceError("GetCurrentThreadId() FAILED {0:X8}", hr);
-                    return null;
-                }
-                return threadId;
-            }
-            set
-            {
-                HResult hr = _debuggerServices.SetCurrentThreadId(value.Value);
-                if (hr != HResult.S_OK)
-                {
-                    Trace.TraceError("SetCurrentThreadId() FAILED {0:X8}", hr);
-                }
-            }
-        }
-
-        #endregion
-
         protected override bool GetThreadContext(uint threadId, uint contextFlags, uint contextSize, byte[] context)
         {
             return _debuggerServices.GetThreadContext(threadId, contextFlags, contextSize, context) == HResult.S_OK;
