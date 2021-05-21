@@ -79,8 +79,10 @@ namespace SOS.Hosting
         public SymbolServiceWrapper(IHost host, Func<IMemoryService> getMemoryService)
         {
             Debug.Assert(host != null);
+            Debug.Assert(getMemoryService != null);
             _getMemoryService = getMemoryService;
             _symbolService = host.Services.GetService<ISymbolService>();
+            Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
             builder.AddMethod(new IsSymbolStoreEnabledDelegate((IntPtr self) => _symbolService.IsSymbolStoreEnabled));
