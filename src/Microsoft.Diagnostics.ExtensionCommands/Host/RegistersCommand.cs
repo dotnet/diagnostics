@@ -10,8 +10,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "registers", Aliases = new string[] { "r" }, Help = "Displays the thread's registers.")]
     public class RegistersCommand : CommandBase
     {
+        [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
+        [ServiceImport]
         public IThread CurrentThread { get; set; }
 
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]

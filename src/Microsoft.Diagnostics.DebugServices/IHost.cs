@@ -25,9 +25,14 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IHost
     {
         /// <summary>
-        /// Invoked on hosting debugger or dotnet-dump shutdown
+        /// Fires on hosting debugger or dotnet-dump shutdown
         /// </summary>
         IServiceEvent OnShutdownEvent { get; }
+
+        /// <summary>
+        /// Fires when an new target is created.
+        /// </summary>
+        IServiceEvent<ITarget> OnTargetCreate { get; }
 
         /// <summary>
         /// Returns the hosting debugger type
@@ -43,11 +48,5 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Enumerates all the targets
         /// </summary>
         IEnumerable<ITarget> EnumerateTargets();
-
-        /// <summary>
-        /// Destroys/closes the specified target instance
-        /// </summary>
-        /// <param name="target">target instance</param>
-        void DestroyTarget(ITarget target);
     }
 }

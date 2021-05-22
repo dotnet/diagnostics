@@ -14,7 +14,8 @@ using System.Text;
 
 namespace SOS.Hosting
 {
-    public sealed unsafe class RuntimeWrapper : COMCallableIUnknown
+    [ServiceExport(Scope = ServiceScope.Runtime)]
+    public sealed unsafe class RuntimeWrapper : COMCallableIUnknown, IDisposable
     {
         /// <summary>
         /// The runtime OS and type. Must match IRuntime::RuntimeConfiguration in runtime.h.
@@ -115,6 +116,12 @@ namespace SOS.Hosting
             AddRef();
         }
 
+        void IDisposable.Dispose()
+        {
+            Trace.TraceInformation("RuntimeWrapper.Dispose");
+            this.ReleaseWithCheck();
+        }
+
         protected override void Destroy()
         {
             Trace.TraceInformation("RuntimeWrapper.Destroy");
@@ -137,13 +144,13 @@ namespace SOS.Hosting
             // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
             if (_corDebugProcess != IntPtr.Zero)
             {
-                COMHelper.Release(_corDebugProcess);
+                ComWrapper.ReleaseWithCheck(_corDebugProcess);
                 _corDebugProcess = IntPtr.Zero;
             }
             // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
             if (_clrDataProcess != IntPtr.Zero)
             {
-                COMHelper.Release(_clrDataProcess);
+                ComWrapper.ReleaseWithCheck(_clrDataProcess);
                 _clrDataProcess = IntPtr.Zero;
             }
         }
@@ -209,8 +216,16 @@ namespace SOS.Hosting
             if (ppClrDataProcess == null) {
                 return HResult.E_INVALIDARG;
             }
-            if (_clrDataProcess == IntPtr.Zero) {
-                _clrDataProcess = CreateClrDataProcess();
+            if (_clrDataProcess == IntPtr.Zero) 
+            {
+                try
+                {
+                    _clrDataProcess = CreateClrDataProcess();
+                }
+                catch (Exception)
+                {
+                    return HResult.E_NOINTERFACE;
+                }
             }
             *ppClrDataProcess = _clrDataProcess;
             if (*ppClrDataProcess == IntPtr.Zero) {
@@ -317,7 +332,7 @@ namespace SOS.Hosting
             }
             finally
             {
-                dataTarget.Release();
+                dataTarget.ReleaseWithCheck();
             }
         }
 
@@ -350,7 +365,7 @@ namespace SOS.Hosting
                 Build = 0,
                 Revision = 0,
             };
-            var dataTarget = new CorDebugDataTargetWrapper(_services);
+            var dataTarget = new CorDebugDataTargetWrapper(_services, _runtime);
             ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
             int hresult = 0;
             try
@@ -446,7 +461,7 @@ namespace SOS.Hosting
             }
             finally
             {
-                dataTarget.Release();
+                dataTarget.ReleaseWithCheck();
             }
         }
 

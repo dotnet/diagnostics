@@ -18,8 +18,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         Flags = CommandFlags.Global)]
     public class SetSymbolServerCommand : CommandBase
     {
+        [ServiceImport]
         public ISymbolService SymbolService { get; set; }
 
+        [ServiceImport(Optional = true)]
         public IModuleService ModuleService { get; set; }
 
         [Option(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
@@ -89,7 +91,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 SymbolService.AddDirectoryPath(Directory);
             }
-            if (LoadSymbols)
+            if (LoadSymbols && ModuleService is not null)
             {
                 foreach (IModule module in ModuleService.EnumerateModules())
                 {

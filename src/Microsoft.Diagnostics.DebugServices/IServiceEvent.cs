@@ -31,4 +31,30 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         void Fire();
     }
+
+    /// <summary>
+    /// An event interface with one parameter.
+    /// </summary>
+    public interface IServiceEvent<T>
+    {
+        /// <summary>
+        /// Register for the event callback. Puts the new callback at the end of the list.
+        /// </summary>
+        /// <param name="callback">callback delegate</param>
+        /// <returns>An opaque IDisposable that will unregister the callback when disposed</returns>
+        IDisposable Register(Action<T> callback);
+
+        /// <summary>
+        /// Register for the event callback. Puts the new callback at the end of the list. Automatically 
+        /// removed from the event list when fired.
+        /// </summary>
+        /// <param name="callback">callback delegate</param>
+        /// <returns>An opaque IDisposable that will unregister the callback when disposed</returns>
+        IDisposable RegisterOneShot(Action<T> callback);
+
+        /// <summary>
+        /// Fires the event
+        /// </summary>
+        void Fire(T parameter);
+    }
 }

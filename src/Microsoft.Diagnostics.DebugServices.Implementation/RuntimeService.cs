@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -10,36 +9,35 @@ using System.Text;
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// ClrMD runtime service implementation
+    /// Runtime service implementation
     /// </summary>
-    public class RuntimeService : IRuntimeService
+    [ServiceExport(Type = typeof(IRuntimeService), Scope = ServiceScope.Target)]
+    public class RuntimeService : IRuntimeService, IDisposable
     {
-        private readonly ITarget _target;
-        private readonly IDisposable _onFlushEvent;
-        private DataTarget _dataTarget;
-        private List<Runtime> _runtimes;
-        private IContextService _contextService;
+        private readonly IServiceProvider _services;
+        private List<IRuntime> _runtimes;
 
-        public RuntimeService(ITarget target)
+        public RuntimeService(IServiceProvider services, ITarget target)
         {
-            _target = target;
-            _onFlushEvent = target.OnFlushEvent.Register(() => {
-                if (_runtimes is not null && _runtimes.Count == 0)
+            _services = services;
+            target.OnFlushEvent.Register(Flush);
+        }
+
+        void IDisposable.Dispose() => Flush();
+
+        private void Flush()
+        {
+            if (_runtimes is not null)
+            {
+                foreach (IRuntime runtime in _runtimes)
                 {
-                    // If there are no runtimes, try find them again when the target stops
-                    _runtimes = null;
-                    _dataTarget?.Dispose();
-                    _dataTarget = null;
+                    if (runtime is IDisposable disposable) {
+                        disposable.Dispose();
+                    }
                 }
-            });
-            // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader 
-            // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a 
-            // stack overflow.
-            target.OnDestroyEvent.Register(() => {
-                _dataTarget?.Dispose();
-                _dataTarget = null;
-                _onFlushEvent.Dispose();
-            });
+                _runtimes.Clear();
+                _runtimes = null;
+            }
         }
 
         #region IRuntimeService
@@ -51,18 +49,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_runtimes is null)
             {
-                _runtimes = new List<Runtime>();
-                if (_dataTarget is null)
+                _runtimes = new List<IRuntime>();
+
+                IEnumerable<IRuntimeProvider> providers = _services.GetServices<IRuntimeProvider>();
+                if (providers is not null)
                 {
-                    _dataTarget = new DataTarget(new CustomDataTarget(_target.Services.GetService<DataReader>())) {
-                        FileLocator = null
-                    };
-                }
-                if (_dataTarget is not null)
-                {
-                    for (int i = 0; i < _dataTarget.ClrVersions.Length; i++)
+                    foreach (IRuntimeProvider provider in providers)
                     {
-                        _runtimes.Add(new Runtime(_target, i, _dataTarget.ClrVersions[i]));
+                        _runtimes.AddRange(provider.EnumerateRuntimes(_runtimes.Count));
                     }
                 }
             }
@@ -70,19 +64,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
-
-        private IRuntime CurrentRuntime => ContextService.Services.GetService<IRuntime>();
-
-        private IContextService ContextService => _contextService ??= _target.Services.GetService<IContextService>();
-
+    
         public override string ToString()
         {
             var sb = new StringBuilder();
             if (_runtimes is not null)
             {
+                IRuntime currentRuntime = _services.GetService<IContextService>()?.GetCurrentRuntime();
                 foreach (IRuntime runtime in _runtimes)
                 {
-                    string current = _runtimes.Count > 1 ? runtime == CurrentRuntime ? "*" : " " : "";
+                    string current = _runtimes.Count > 1 ? runtime == currentRuntime ? "*" : " " : "";
                     sb.Append(current);
                     sb.AppendLine(runtime.ToString());
                 }

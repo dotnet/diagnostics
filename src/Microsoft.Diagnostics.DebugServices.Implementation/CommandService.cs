@@ -166,6 +166,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Add the commands and aliases attributes found in the type.
         /// </summary>
         /// <param name="type">Command type to search</param>
+        public void AddCommands(Type type) => AddCommands(type, factory: null);
+
+        /// <summary>
+        /// Add the commands and aliases attributes found in the type.
+        /// </summary>
+        /// <param name="type">Command type to search</param>
         /// <param name="factory">function to create command instance</param>
         public void AddCommands(Type type, Func<IServiceProvider, object> factory)
         {
@@ -184,7 +190,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             if (factory == null)
                             {
-                                factory = (services) => Utilities.InvokeConstructor(type, services, optional: true);
+                                factory = (services) => Utilities.CreateInstance(type, services);
                             }
                             CreateCommand(baseType, commandAttribute, factory);
                         }
@@ -238,11 +244,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             option.AddAlias(alias);
                         }
-                    }
-                    else
-                    {
-                        // If not an option, add as just a settable properties
-                        properties.Add((property, null));
                     }
                 }
             }
@@ -373,11 +374,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private void Invoke(MethodInfo methodInfo, InvocationContext context, Parser parser, IServiceProvider services)
             {
                 object instance = _factory(services);
-                SetProperties(context, parser, services, instance);
-                Utilities.Invoke(methodInfo, instance, services, optional: true);
+                SetProperties(context, parser, instance);
+                Utilities.Invoke(methodInfo, instance, services, optional: false);
             }
 
-            private void SetProperties(InvocationContext context, Parser parser, IServiceProvider services, object instance)
+            private void SetProperties(InvocationContext context, Parser parser, object instance)
             {
                 ParseResult defaultParseResult = null;
 
@@ -407,14 +408,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             if (optionResult != null) {
                                 value = optionResult.GetValueOrDefault();
                             }
-                        }
-                    }
-                    else
-                    { 
-                        Type propertyType = property.Property.PropertyType;
-                        object service = services.GetService(propertyType);
-                        if (service != null) {
-                            value = service;
                         }
                     }
 
@@ -510,8 +503,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             public LocalConsole(IServiceProvider services)
             {
                 Services = services;
-                Out = new StandardStreamWriter((text) => ConsoleService.Write(text));
-                Error = new StandardStreamWriter((text) => ConsoleService.WriteError(text));
+                Out = new StandardStreamWriter(ConsoleService.Write);
+                Error = new StandardStreamWriter(ConsoleService.WriteError);
             }
 
             internal readonly IServiceProvider Services;

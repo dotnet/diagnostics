@@ -38,19 +38,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="types">list of types to search</param>
         public static void AddCommands(this ICommandService commandService, IEnumerable<Type> types)
         {
-            foreach (Type type in types) {
+            foreach (Type type in types)
+            {
                 commandService.AddCommands(type);
             }
-        }
-
-        /// <summary>
-        /// Add the commands and aliases attributes found in the type.
-        /// </summary>
-        /// <param name="commandService">command service instance</param>
-        /// <param name="type">Command type to search</param>
-        public static void AddCommands(this ICommandService commandService, Type type)
-        {
-            commandService.AddCommands(type, factory: null);
         }
     }
 }

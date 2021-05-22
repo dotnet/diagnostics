@@ -439,6 +439,44 @@ DbgEngServices::GetOffsetBySymbol(
     return m_symbols->GetOffsetByName(symbolName.c_str(), offset);
 }
 
+HRESULT
+DbgEngServices::GetTypeId(
+    ULONG moduleIndex,
+    PCSTR typeName,
+    PULONG64 typeId)
+{
+    ULONG64 moduleBase;
+    HRESULT hr = m_symbols->GetModuleByIndex(moduleIndex, &moduleBase);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    ULONG typeIdTemp = 0;
+    hr = m_symbols->GetTypeId(moduleBase, typeName, &typeIdTemp);
+    // typeId is 64 bit for compatibility across platforms, can't pass it in to GetTypeId
+    // that expects a 32 bit ULONG.
+    *typeId = typeIdTemp;
+
+    return hr;
+}
+
+HRESULT 
+DbgEngServices::GetFieldOffset(
+    ULONG moduleIndex,
+    PCSTR typeName, // Unused on windbg
+    ULONG64 typeId,
+    PCSTR fieldName,
+    PULONG offset)
+{
+    ULONG64 moduleBase;
+    HRESULT hr = m_symbols->GetModuleByIndex(moduleIndex, &moduleBase);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    return m_symbols->GetFieldOffset(moduleBase, (ULONG)typeId, fieldName, offset);
+}
+
 ULONG
 DbgEngServices::GetOutputWidth()
 {

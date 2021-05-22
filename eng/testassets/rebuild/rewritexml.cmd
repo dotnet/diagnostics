@@ -1,5 +1,5 @@
 setlocal
-set ORIGINAL_VERSION=1.0.246501
+set ORIGINAL_VERSION=1.0.257801
 call ..\writexml.cmd %USERPROFILE%\.nuget\packages\testassets.linux.arm64.3.1\%ORIGINAL_VERSION%\content\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp %USERPROFILE%\.nuget\packages\testassets.linux.arm64.3.1\%ORIGINAL_VERSION%\content\SymbolTestApp
 call ..\writexml.cmd %USERPROFILE%\.nuget\packages\testassets.linux.arm64.5.0\%ORIGINAL_VERSION%\content\LineNums\SOS.LineNums.Heap.dmp %USERPROFILE%\.nuget\packages\testassets.linux.arm64.5.0\%ORIGINAL_VERSION%\content\LineNums
 call ..\writexml.cmd %USERPROFILE%\.nuget\packages\testassets.linux.arm64.5.0\%ORIGINAL_VERSION%\content\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp %USERPROFILE%\.nuget\packages\testassets.linux.arm64.5.0\%ORIGINAL_VERSION%\content\SymbolTestApp

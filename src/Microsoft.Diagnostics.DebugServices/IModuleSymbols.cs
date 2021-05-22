@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -27,5 +26,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="address">address of symbol</param>
         /// <returns>true if found</returns>
         bool TryGetSymbolAddress(string name, out ulong address);
+
+        /// <summary>
+        /// Searches for a type by name
+        /// </summary>
+        /// <param name="typeName">type name to find</param>
+        /// <param name="type">returned type if found</param>
+        /// <returns>true if type found</returns>
+        bool TryGetType(string typeName, out IType type);
     }
 }

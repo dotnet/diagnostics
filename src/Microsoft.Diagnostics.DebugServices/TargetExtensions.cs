@@ -32,16 +32,5 @@ namespace Microsoft.Diagnostics.DebugServices
             }
             throw new PlatformNotSupportedException(target.OperatingSystem.ToString());
         }
-
-        /// <summary>
-        /// Registers an object to be disposed when target is destroyed.
-        /// </summary>
-        /// <param name="target">target instance</param>
-        /// <param name="disposable">object to be disposed or null</param>
-        /// <returns>IDisposable to unregister this event or null</returns>
-        public static IDisposable DisposeOnDestroy(this ITarget target, IDisposable disposable)
-        {
-            return disposable != null ? target.OnDestroyEvent.Register(() => disposable.Dispose()) : null;
-        }
     }
 }

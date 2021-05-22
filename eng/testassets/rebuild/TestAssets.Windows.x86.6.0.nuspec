@@ -20,7 +20,7 @@
     <copyright>Copyright 2021</copyright>
   </metadata>
   <files>
-    <file src="TestAssets.Windows.x86.6.0\1.0.246501\content\DivZero\*.*" target="content/DivZero" />
-    <file src="TestAssets.Windows.x86.6.0\1.0.246501\content\WebApp3\*.*" target="content/WebApp3" />
+    <file src="TestAssets.Windows.x86.6.0\1.0.257801\content\DivZero\*.*" target="content/DivZero" />
+    <file src="TestAssets.Windows.x86.6.0\1.0.257801\content\WebApp3\*.*" target="content/WebApp3" />
   </files>
 </package>

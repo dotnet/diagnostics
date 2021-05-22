@@ -62,7 +62,6 @@ namespace SOS.Hosting
             _symbolService = symbolService;
             _memoryService = memoryService;
             _ignoreAddressBitsMask = memoryService.SignExtensionMask();
-            Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
             builder.AddMethod(new ParseSymbolPathDelegate(ParseSymbolPath));

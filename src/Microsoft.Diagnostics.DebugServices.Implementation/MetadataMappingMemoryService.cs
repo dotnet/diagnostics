@@ -20,26 +20,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// that older (less than 5.0) createdumps generate  so it needs this special 
     /// metadata  mapping memory service.
     /// </summary>
-    public class MetadataMappingMemoryService : IMemoryService
+    public class MetadataMappingMemoryService : IMemoryService, IDisposable
     {
-        private readonly ITarget _target;
+        private readonly IServiceContainer _container;
         private readonly IMemoryService _memoryService;
+        private readonly IRuntimeService _runtimeService;
+        private readonly ISymbolService _symbolService;
         private bool _regionInitialized;
         private ImmutableArray<MetadataRegion> _regions;
-        private IRuntimeService _runtimeService;
-        private ISymbolService _symbolService;
 
         /// <summary>
         /// Memory service constructor
         /// </summary>
-        /// <param name="target">target instance</param>
+        /// <param name="container">service container to clone</param>
         /// <param name="memoryService">memory service to wrap</param>
-        public MetadataMappingMemoryService(ITarget target, IMemoryService memoryService)
+        public MetadataMappingMemoryService(IServiceContainer container, IMemoryService memoryService)
         {
-            _target = target;
+            _container = container.Clone();
+            _container.AddService(memoryService);
             _memoryService = memoryService;
+            _runtimeService = _container.Services.GetService<IRuntimeService>();
+            _symbolService = _container.Services.GetService<ISymbolService>();    
+
+            ITarget target = _container.Services.GetService<ITarget>();
             target.OnFlushEvent.Register(Flush);
-            target.DisposeOnDestroy(SymbolService?.OnChangeEvent.Register(Flush));
+
+            IDisposable onChangeEvent = _container.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(Flush);
+            target.OnDestroyEvent.Register(() => onChangeEvent?.Dispose());
+        }
+
+        public void Dispose()
+        {
+            Flush();
+            _container.DisposeServices(this);
         }
 
         /// <summary>
@@ -103,16 +116,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                var runtimes = RuntimeService.EnumerateRuntimes();
+                var runtimes = _runtimeService.EnumerateRuntimes();
                 if (runtimes.Any())
                 {
                     foreach (IRuntime runtime in runtimes)
                     {
                         Trace.TraceInformation($"FindRegion: initializing regions for runtime #{runtime.Id}");
                         ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
-                        if (clrRuntime != null)
+                        if (clrRuntime is not null)
                         {
-                            Trace.TraceInformation($"FindRegion: initializing regions for CLR runtime #{runtime.Id}");
+                            Trace.TraceInformation($"FindRegion: initializing regions for ClrRuntime #{runtime.Id}");
                             _regions = clrRuntime.EnumerateModules()
                                 .Where((module) => module.MetadataAddress != 0 && module.IsPEFile && !module.IsDynamic)
                                 .Select((module) => new MetadataRegion(this, module))
@@ -167,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
                 if (peFile.IsValid())
                 {
-                    metadata = SymbolService.GetMetadata(module.Name, peFile.Timestamp, peFile.SizeOfImage);
+                    metadata = _symbolService.GetMetadata(module.Name, peFile.Timestamp, peFile.SizeOfImage);
                 }
                 else
                 {
@@ -180,10 +193,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             return metadata;
         }
-
-        private IRuntimeService RuntimeService => _runtimeService ??= _target.Services.GetService<IRuntimeService>();
-
-        private ISymbolService SymbolService => _symbolService ??= _target.Services.GetService<ISymbolService>();
 
         class MetadataRegion : IComparable<MetadataRegion>
         {

@@ -182,6 +182,18 @@ public:
         ULONG moduleIndex,
         PCSTR name,
         PULONG64 offset);
+        
+    HRESULT STDMETHODCALLTYPE GetTypeId(
+        ULONG moduleIndex,
+        PCSTR typeName,
+        PULONG64 typeId); 
+
+    HRESULT STDMETHODCALLTYPE GetFieldOffset(
+        ULONG moduleIndex,
+        PCSTR typeName,
+        ULONG64 typeId,
+        PCSTR fieldName,
+        PULONG offset);
 
     ULONG STDMETHODCALLTYPE GetOutputWidth();
 

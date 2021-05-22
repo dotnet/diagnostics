@@ -133,7 +133,7 @@ ISymbolService* Extensions::GetSymbolService()
 {
     if (m_pSymbolService == nullptr)
     {
-	    ITarget* target = GetTarget();
+        ITarget* target = GetTarget();
         if (target != nullptr)
         {
             target->GetService(__uuidof(ISymbolService), (void**)&m_pSymbolService);

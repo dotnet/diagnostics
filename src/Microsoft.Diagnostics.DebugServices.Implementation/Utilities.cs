@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -60,34 +61,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Opens and returns an PEReader instance from the local file path
-        /// </summary>
-        /// <param name="filePath">PE file to open</param>
-        /// <returns>PEReader instance or null</returns>
-        public static PEReader OpenPEReader(string filePath)
-        {
-            Stream stream = TryOpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    var reader = new PEReader(stream);
-                    if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
-                    {
-                        Trace.TraceWarning($"OpenPEReader: PEReader invalid headers");
-                        return null;
-                    }
-                    return reader;
-                }
-                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
         /// Attempt to open a file stream.
         /// </summary>
         /// <param name="path">file path</param>
@@ -107,6 +80,108 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Returns the .NET user directory
+        /// </summary>
+        public static string GetDotNetHomeDirectory()
+        {
+            string dotnetHome;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE") ?? throw new ArgumentNullException("USERPROFILE environment variable not found"), ".dotnet");
+            }
+            else { 
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? throw new ArgumentNullException("HOME environment variable not found"), ".dotnet");
+            }
+            return dotnetHome;
+        }
+
+        /// <summary>
+        /// Create the type instance and fill in any service imports
+        /// </summary>
+        /// <param name="type">type to create</param>
+        /// <param name="provider">service provider</param>
+        /// <returns>new instance</returns>
+        public static object CreateInstance(Type type, IServiceProvider provider)
+        {
+            object instance = InvokeConstructor(type, provider, optional: false);
+            if (instance is not null)
+            {
+                ImportServices(instance, provider);
+            }
+            return instance;
+        }
+
+        /// <summary>
+        /// Call the static method (constructor) to create the instance and fill in any service imports
+        /// </summary>
+        /// <param name="method">static method (constructor) to use to create instance</param>
+        /// <param name="provider">service provider</param>
+        /// <returns>new instance</returns>
+        public static object CreateInstance(MethodBase method, IServiceProvider provider)
+        {
+            object instance = Invoke(method, null, provider, optional: false);
+            if (instance is not null)
+            {
+                ImportServices(instance, provider);
+            }
+            return instance;
+        }
+
+        /// <summary>
+        /// Set any fields, property or method marked with the ServiceImportAttribute to the service requested.
+        /// </summary>
+        /// <param name="instance">object instance to process</param>
+        /// <param name="provider">service provider</param>
+        public static void ImportServices(object instance, IServiceProvider provider)
+        {
+            if (instance == null) throw new ArgumentNullException(nameof(instance));
+
+            for (Type currentType = instance.GetType(); currentType is not null; currentType = currentType.BaseType)
+            {
+                if (currentType == typeof(object) || currentType == typeof(ValueType))
+                {
+                    break;
+                }
+                FieldInfo[] fields = currentType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (FieldInfo field in fields)
+                {
+                    ServiceImportAttribute attribute = field.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                    if (attribute is not null)
+                    {
+                        object serviceInstance = provider.GetService(field.FieldType);
+                        if (serviceInstance is null && !attribute.Optional)
+                        {
+                            throw new DiagnosticsException($"The {field.FieldType.Name} service is required by the {field.Name} field");
+                        }
+                        field.SetValue(instance, serviceInstance);
+                    }
+                }
+                PropertyInfo[] properties = currentType.GetProperties(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (PropertyInfo property in properties)
+                {
+                    ServiceImportAttribute attribute = property.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                    if (attribute is not null)
+                    {
+                        object serviceInstance = provider.GetService(property.PropertyType);
+                        if (serviceInstance is null && !attribute.Optional)
+                        {
+                            throw new DiagnosticsException($"The {property.PropertyType.Name} service is required by the {property.Name} property");
+                        }
+                        property.SetValue(instance, serviceInstance);
+                    }
+                }
+                MethodInfo[] methods = currentType.GetMethods(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (MethodInfo method in methods)
+                {
+                    ServiceImportAttribute attribute = method.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                    if (attribute is not null)
+                    {
+                        Utilities.Invoke(method, instance, provider, attribute.Optional);
+                    }
+                }
+            }
         }
 
         /// <summary>

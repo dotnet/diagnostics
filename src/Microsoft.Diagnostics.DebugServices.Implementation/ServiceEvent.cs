@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private readonly LinkedListNode _events = new LinkedListNode();
+        private readonly LinkedListNode _events = new();
 
         public ServiceEvent()
         {
@@ -64,6 +64,68 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             foreach (EventNode node in _events.GetValues<EventNode>())
             {
                 node.Fire();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The service event with one parameter implementation
+    /// </summary>
+    public class ServiceEvent<T> : IServiceEvent<T>
+    {
+        private class EventNode : LinkedListNode, IDisposable
+        {
+            private readonly Action<T> _callback;
+
+            internal EventNode(bool oneshot, Action<T> callback)
+            {
+                if (oneshot)
+                {
+                    _callback = (T parameter) => {
+                        callback(parameter);
+                        Remove();
+                    };
+                }
+                else
+                {
+                    _callback = callback;
+                }
+            }
+
+            internal void Fire(T parameter)
+            {
+                _callback(parameter);
+            }
+
+            void IDisposable.Dispose()
+            {
+                Remove();
+            }
+        }
+
+        private readonly LinkedListNode _events = new();
+
+        public ServiceEvent()
+        {
+        }
+
+        public IDisposable Register(Action<T> callback) => Register(oneshot: false, callback);
+
+        public IDisposable RegisterOneShot(Action<T> callback) => Register(oneshot: true, callback);
+
+        private IDisposable Register(bool oneshot, Action<T> callback)
+        {
+            // Insert at the end of the list
+            var node = new EventNode(oneshot, callback);
+            _events.InsertBefore(node);
+            return node;
+        }
+
+        public void Fire(T parameter)
+        {
+            foreach (EventNode node in _events.GetValues<EventNode>())
+            {
+                node.Fire(parameter);
             }
         }
     }

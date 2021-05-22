@@ -144,6 +144,18 @@ public:
         PCSTR name,
         PULONG64 offset) = 0;
 
+    virtual HRESULT STDMETHODCALLTYPE GetTypeId(
+        ULONG moduleIndex,
+        PCSTR typeName,
+        PULONG64 typeId) = 0; 
+
+    virtual HRESULT STDMETHODCALLTYPE GetFieldOffset(
+        ULONG moduleIndex,
+        PCSTR typeName,
+        ULONG64 typeId,
+        PCSTR fieldName,
+        PULONG offset) = 0;
+
     virtual ULONG STDMETHODCALLTYPE GetOutputWidth() = 0;
 
     virtual HRESULT STDMETHODCALLTYPE SupportsDml(PULONG supported) = 0;

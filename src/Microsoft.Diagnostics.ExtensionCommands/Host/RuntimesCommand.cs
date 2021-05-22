@@ -12,10 +12,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "runtimes", Help = "Lists the runtimes in the target or changes the default runtime.")]
     public class RuntimesCommand : CommandBase
     {
+        [ServiceImport]
         public IRuntimeService RuntimeService { get; set; }
 
+        [ServiceImport]
         public IContextService ContextService { get; set; }
 
+        [ServiceImport]
         public ITarget Target { get; set; }
 
         [Option(Name = "--netfx", Aliases = new string[] { "-netfx", "-f" }, Help = "Switches to the desktop .NET Framework if exists.")]
@@ -47,14 +50,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                // Display the current runtime star ("*") only if there is more than one runtime
+                // Display the current runtime star ("*") only if there is more than one runtime and it is the current one
                 bool displayStar = RuntimeService.EnumerateRuntimes().Count() > 1;
+                IRuntime currentRuntime = ContextService.GetCurrentRuntime();
 
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
-                    string current = displayStar ? (runtime == ContextService.GetCurrentRuntime() ? "*" : " ") : "";
+                    string current = displayStar ? (runtime == currentRuntime ? "*" : " ") : "";
                     Write(current);
-                    Write(runtime.ToString());
+                    WriteLine(runtime.ToString());
                     ClrInfo clrInfo = runtime.Services.GetService<ClrInfo>();
                     if (clrInfo is not null)
                     {
@@ -70,7 +74,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
     }
 
-    public static class Utilities
+    public static class CommandUtilities
     {
         public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
     }

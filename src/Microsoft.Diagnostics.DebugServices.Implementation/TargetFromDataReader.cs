@@ -40,25 +40,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnFlushEvent.Register(dataReader.FlushCachedData);
 
             // Add the thread, memory, and module services
-            IMemoryService rawMemoryService = new MemoryServiceFromDataReader(_dataReader);
-            ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDataReader(this, _dataReader));
-            ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, rawMemoryService, _dataReader));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
-                IMemoryService memoryService = rawMemoryService;
+            ServiceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, _dataReader));
+            ServiceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, _dataReader));
+            ServiceContainer.AddServiceFactory<IMemoryService>((_) => {
+                IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
                 if (IsDump)
                 {
-                    memoryService = new ImageMappingMemoryService(this, memoryService);
-                    // Any dump created for a MacOS target does not have managed assemblies in the module service so
-                    // we need to use the metadata mapping memory service to make sure the metadata is available and
-                    // 7.0 Linux builds have an extra System.Private.CoreLib module mapping that causes the image
-                    // mapper not to be able to map in the metadata.
+                    // The underlying host (dotnet-dump usually) doesn't map native modules into the address space
+                    memoryService = new ImageMappingMemoryService(ServiceContainer, memoryService, managed: false);
+
+                    // Any dump created for a MacOS target does not have managed assemblies in the native module service so
+                    // we need to use this managed mapping memory service to make sure the metadata is available and 7.0 Linux
+                    // builds have an extra System.Private.CoreLib module mapping that causes the native image mapper not to
+                    // be able to map in the metadata.
                     if (targetOS == OSPlatform.OSX || targetOS == OSPlatform.Linux)
                     {
-                        memoryService = new MetadataMappingMemoryService(this, memoryService);
+                        memoryService = new ImageMappingMemoryService(ServiceContainer, memoryService, managed: true);
                     }
                 }
                 return memoryService;
             });
+
+            // Now the that the target is completely initialized, fire event
+            Host.OnTargetCreate.Fire(this);
         }
     }
 }

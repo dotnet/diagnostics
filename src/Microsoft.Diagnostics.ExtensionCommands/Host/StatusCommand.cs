@@ -10,8 +10,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "sosstatus", Help = "Displays internal status or resets the internal cached state.")]
     public class StatusCommand : CommandBase
     {
+        [ServiceImport]
         public ITarget Target { get; set; }
 
+        [ServiceImport]
         public ISymbolService SymbolService { get; set; }
 
         [Option(Name = "-reset", Help = "Reset all the cached internal state.")]

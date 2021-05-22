@@ -14,6 +14,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Console service
         /// </summary>
+        [ServiceImport]
         public IConsoleService Console { get; set; }
 
         /// <summary>
@@ -29,6 +30,15 @@ namespace Microsoft.Diagnostics.DebugServices
         protected void Write(string message)
         {
             Console.Write(message);
+        }
+
+        /// <summary>
+        /// Display a blank line
+        /// </summary>
+        protected void WriteLine()
+        {
+            Console.WriteLine();
+            Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
         /// <summary>

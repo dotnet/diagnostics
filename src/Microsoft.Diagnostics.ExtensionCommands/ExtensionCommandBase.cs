@@ -11,6 +11,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <summary>
         /// Helper bound to the current ClrRuntime that provides high level services on top of ClrMD.
         /// </summary>
+        [ServiceImport(Optional = true)]
         public ClrMDHelper Helper { get; set; }
 
         public override void Invoke()

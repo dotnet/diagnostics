@@ -22,47 +22,68 @@ namespace Microsoft.Diagnostics.Tools.Dump
 {
     public class Analyzer : IHost
     {
-        private readonly ServiceProvider _serviceProvider;
+        private readonly ServiceManager _serviceManager;
+        private readonly IServiceContainer _serviceContainer;
         private readonly ConsoleService _consoleService;
         private readonly FileLoggingConsoleService _fileLoggingConsoleService;
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly ContextService _contextService;
+        private readonly List<ITarget> _targets = new();
         private int _targetIdFactory;
-        private Target _target;
 
         public Analyzer()
         {
             DiagnosticLoggingService.Initialize();
 
-            _serviceProvider = new ServiceProvider();
+            _serviceManager = new ServiceManager();
+            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global);
+            _serviceContainer.AddService<IServiceManager>(_serviceManager);
+            _serviceContainer.AddService<IHost>(this);
+
             _consoleService = new ConsoleService();
-            _fileLoggingConsoleService  = new FileLoggingConsoleService(_consoleService);
-            _commandService = new CommandService();
-            _symbolService = new SymbolService(this);
-            _contextService = new ContextService(this);
+            _fileLoggingConsoleService = new FileLoggingConsoleService(_consoleService);
+            _serviceContainer.AddService<IConsoleService>(_fileLoggingConsoleService);
+            _serviceContainer.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
+
             DiagnosticLoggingService.Instance.SetConsole(_fileLoggingConsoleService, _fileLoggingConsoleService);
+            _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
 
-            _serviceProvider.AddService<IHost>(this);
-            _serviceProvider.AddService<IConsoleService>(_fileLoggingConsoleService);
-            _serviceProvider.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
-            _serviceProvider.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
-            _serviceProvider.AddService<ICommandService>(_commandService);
-            _serviceProvider.AddService<ISymbolService>(_symbolService);
-            _serviceProvider.AddService<IContextService>(_contextService);
-            _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
+            _commandService = new CommandService();
+            _serviceContainer.AddService<ICommandService>(_commandService);
+            _serviceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
-            _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
-                ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
-                return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
-            });
+            _symbolService = new SymbolService(this);
+            _serviceContainer.AddService<ISymbolService>(_symbolService);
 
-            _commandService.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
-            _commandService.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
-            _commandService.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
-            _commandService.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandService, services));
+            _contextService = new ContextService(this);
+            _serviceContainer.AddService<IContextService>(_contextService);
+
+            // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
+            _serviceManager.LoadExtension(typeof(Target).Assembly);
+
+            // Register all the services and commands in the dotnet-dump (this) assembly
+            _serviceManager.LoadExtension(typeof(Analyzer).Assembly);
+
+            // Register all the services and commands in the SOS.Hosting assembly
+            _serviceManager.LoadExtension(typeof(SOSHost).Assembly);
+
+            // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
+            _serviceManager.LoadExtension(typeof(ClrMDHelper).Assembly);
+
+            // Add the specially handled exit command
             _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));
+
+            // Add "sos" command manually
             _commandService.AddCommands(typeof(SOSCommand), (services) => new SOSCommand(_commandService, services));
+
+            // Add and remove targets from the host
+            OnTargetCreate.Register((target) => {
+                _targets.Add(target);
+                target.OnDestroyEvent.Register(() => {
+                    _targets.Remove(target);
+                });
+            });
         }
 
         public Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -70,8 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _fileLoggingConsoleService.WriteLine($"Loading core dump: {dump_path} ...");
 
             // Attempt to load the persisted command history
-            string dotnetHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
-            string historyFileName = Path.Combine(dotnetHome, "dotnet-dump.history");
+            string historyFileName = Path.Combine(Utilities.GetDotNetHomeDirectory(), "dotnet-dump.history");
             try
             {
                 string[] history = File.ReadAllLines(historyFileName);
@@ -85,22 +105,25 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
             }
 
+            // Display any extension assembly loads on console
+            _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => _fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
+
             // Load any extra extensions
-            LoadExtensions();
+            _serviceManager.LoadExtensions();
 
             try
             {
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
 
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib"))
+                if (targetPlatform != OSPlatform.OSX &&
+                    (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ||
+                     dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")))
                 {
                     targetPlatform = OSPlatform.OSX;
                 }
-                _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
-                _contextService.SetCurrentTarget(_target);
-
-                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => new SOSHost(_contextService.Services));
+                var target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
+                _contextService.SetCurrentTarget(target);
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
                 _symbolService.AddSymbolServer(msdl: true, symweb: false, retryCount: 3);
@@ -147,10 +170,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             finally
             {
-                if (_target != null)
+                foreach (ITarget target in _targets.ToArray())
                 {
-                    DestroyTarget(_target);
+                    target.Destroy();
                 }
+                _targets.Clear();
+
                 // Persist the current command history
                 try
                 {
@@ -165,6 +190,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 // Send shutdown event on exit
                 OnShutdownEvent.Fire();
+
+                // Dispose of the global services
+                _serviceContainer.DisposeServices(this);
             }
             return Task.FromResult(0);
         }
@@ -173,69 +201,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
-        HostType IHost.HostType => HostType.DotnetDump;
+        public IServiceEvent<ITarget> OnTargetCreate { get; } = new ServiceEvent<ITarget>();
 
-        IServiceProvider IHost.Services => _serviceProvider;
+        public HostType HostType => HostType.DotnetDump;
 
-        IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
+        public IServiceProvider Services => _serviceContainer.Services;
 
-        public void DestroyTarget(ITarget target)
-        {
-            if (target == null)
-            {
-                throw new ArgumentNullException(nameof(target));
-            }
-            if (target == _target)
-            {
-                _target = null;
-                _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
-        }
+        public IEnumerable<ITarget> EnumerateTargets() => _targets.ToArray();
 
         #endregion
-
-        /// <summary>
-        /// Load any extra extensions in the search path
-        /// </summary>
-        /// <param name="commandService">Used to add the commands</param>
-        private void LoadExtensions()
-        {
-            string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
-            if (!string.IsNullOrEmpty(diagnosticExtensions))
-            {
-                string[] paths = diagnosticExtensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (string extensionPath in paths)
-                {
-                    LoadExtension(extensionPath);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Load any extra extensions in the search path
-        /// </summary>
-        /// <param name="commandService">Used to add the commands</param>
-        /// <param name="extensionPath">Extension assembly path</param>
-        private void LoadExtension(string extensionPath)
-        {
-            Assembly assembly = null;
-            try
-            {
-                assembly = Assembly.LoadFrom(extensionPath);
-            }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is BadImageFormatException || ex is System.Security.SecurityException)
-            {
-                _fileLoggingConsoleService.WriteLineError($"Extension load {extensionPath} FAILED {ex.Message}");
-            }
-            if (assembly is not null)
-            {
-                _commandService.AddCommands(assembly);
-                _fileLoggingConsoleService.WriteLine($"Extension loaded {extensionPath}");
-            }
-        }
     }
 }

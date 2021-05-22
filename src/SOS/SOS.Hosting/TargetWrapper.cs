@@ -5,13 +5,13 @@
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace SOS.Hosting
 {
-    public sealed unsafe class TargetWrapper : COMCallableIUnknown
+    [ServiceExport(Scope = ServiceScope.Target)]
+    public sealed unsafe class TargetWrapper : COMCallableIUnknown, IDisposable
     {
         // Must be the same as ITarget::OperatingSystem
         enum OperatingSystem
@@ -28,14 +28,18 @@ namespace SOS.Hosting
 
         public IntPtr ITarget { get; }
 
-        private readonly IServiceProvider _services;
         private readonly ITarget _target;
-        private readonly Dictionary<IRuntime, RuntimeWrapper> _wrappers = new Dictionary<IRuntime, RuntimeWrapper>();
+        private readonly IContextService _contextService;
 
-        public TargetWrapper(IServiceProvider services)
+        public TargetWrapper(ITarget target, IContextService contextService, ISymbolService symbolService, IMemoryService memoryService)
         {
-            _services = services;
-            _target = services.GetService<ITarget>() ?? throw new DiagnosticsException("No target");
+            Debug.Assert(target != null);
+            Debug.Assert(contextService != null);
+            Debug.Assert(symbolService != null);
+            _target = target;
+            _contextService = contextService;
+
+            ServiceWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(symbolService, memoryService));
 
             VTableBuilder builder = AddInterface(IID_ITarget, validate: false);
 
@@ -50,15 +54,17 @@ namespace SOS.Hosting
             AddRef();
         }
 
+        void IDisposable.Dispose()
+        {
+            Trace.TraceInformation("TargetWrapper.Dispose");
+            this.ReleaseWithCheck();
+        }
+
         protected override void Destroy()
         {
             Trace.TraceInformation("TargetWrapper.Destroy");
+            ServiceWrapper.RemoveServiceWrapper(SymbolServiceWrapper.IID_ISymbolService);
             ServiceWrapper.Dispose();
-            foreach (RuntimeWrapper wrapper in _wrappers.Values)
-            {
-                wrapper.Release();
-            }
-            _wrappers.Clear();
         }
 
         private OperatingSystem GetOperatingSystem(
@@ -89,14 +95,13 @@ namespace SOS.Hosting
             if (ppRuntime == null) {
                 return HResult.E_INVALIDARG;
             }
-            IRuntime runtime = _services.GetService<IRuntime>();
-            if (runtime == null) {
+            IRuntime runtime = _contextService.GetCurrentRuntime();
+            if (runtime is null) {
                 return HResult.E_NOINTERFACE;
             }
-            if (!_wrappers.TryGetValue(runtime, out RuntimeWrapper wrapper))
-            {
-                wrapper = new RuntimeWrapper(_services, runtime);
-                _wrappers.Add(runtime, wrapper);
+            RuntimeWrapper wrapper = runtime.Services.GetService<RuntimeWrapper>();
+            if (wrapper is null) {
+                return HResult.E_NOINTERFACE;
             }
             *ppRuntime = wrapper.IRuntime;
             return HResult.S_OK;

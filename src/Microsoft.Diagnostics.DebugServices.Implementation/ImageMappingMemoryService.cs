@@ -15,29 +15,45 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Memory service wrapper that maps and fixes up PE module on read memory errors.
     /// </summary>
-    internal class ImageMappingMemoryService : IMemoryService
+    public class ImageMappingMemoryService : IMemoryService, IDisposable
     {
+        private readonly IServiceContainer _container;
         private readonly IMemoryService _memoryService;
         private readonly IModuleService _moduleService;
         private readonly MemoryCache _memoryCache;
         private readonly HashSet<ulong> _recursionProtection;
 
         /// <summary>
-        /// The PE and ELF image mapping memory service. This service assumes that the managed PE 
-        /// assemblies are in the module service's list. This is true for dbgeng, dotnet-dump but not
-        /// true for lldb (only native modules are provided).
+        /// The PE, ELF and MacOS image mapping memory service. For the dotnet-dump linux dump reader and
+        /// dbgeng the native module service providers managed and modules, but under lldb only native 
+        /// modules are provided. The "managed" flag is for those later cases.
         /// </summary>
-        /// <param name="target">target instance</param>
+        /// <param name="container">service container</param>
         /// <param name="memoryService">memory service to wrap</param>
-        internal ImageMappingMemoryService(ITarget target, IMemoryService memoryService)
+        /// <param name="managed">if true, map managed modules, else native</param>
+        public ImageMappingMemoryService(IServiceContainer container, IMemoryService memoryService, bool managed)
         {
+            _container = container.Clone();
+            _container.AddService(memoryService);
             _memoryService = memoryService;
-            _moduleService = target.Services.GetService<IModuleService>();
+            _moduleService = managed ? new ManagedImageMappingModuleService(_container.Services) : _container.Services.GetService<IModuleService>();
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
             _recursionProtection = new HashSet<ulong>();
-            target.OnFlushEvent.Register(_memoryCache.FlushCache);
-            target.DisposeOnDestroy(target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(_memoryCache.FlushCache));
+
+            ITarget target = _container.Services.GetService<ITarget>();
+            target.OnFlushEvent.Register(Flush);
+
+            IDisposable onChangeEvent = _container.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(Flush);
+            target.OnDestroyEvent.Register(() => onChangeEvent?.Dispose());
         }
+
+        public void Dispose() 
+        {
+            Flush();
+            _container.DisposeServices(this); 
+        } 
+
+        protected void Flush() => _memoryCache.FlushCache();
 
         #region IMemoryService
 
@@ -95,18 +111,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
             Debug.Assert((address & ~_memoryService.SignExtensionMask()) == 0);
-            IModule module = _moduleService.GetModuleFromAddress(address);
-            if (module != null)
+
+            // Default is to cache errors
+            byte[] data = Array.Empty<byte>();
+
+            // Recursion can happen in the case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
+            // used to get the timestamp/filesize or build id are not in the dump.
+            if (!_recursionProtection.Contains(address))
             {
-                // Recursion can happen in the case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
-                // used to get the timestamp/filesize or build id are not in the dump.
-                if (!_recursionProtection.Contains(address))
+                _recursionProtection.Add(address);
+                try
                 {
-                    _recursionProtection.Add(address);
-                    try
+                    IModule module = _moduleService.GetModuleFromAddress(address);
+                    if (module != null)
                     {
                         // We found a module that contains the memory requested. Now find or download the PE image.
-                        PEReader reader = module.Services.GetService<PEReader>();
+                        PEReader reader = module.Services.GetService<PEModule>()?.Reader;
                         if (reader is not null)
                         {
                             int rva = (int)(address - module.ImageBase);
@@ -137,8 +157,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                             try
                             {
-                                byte[] data = null;
-
                                 // Read the memory from the PE image found/downloaded above
                                 PEMemoryBlock block = reader.GetEntireImage();
                                 if (rva < block.Length)
@@ -154,8 +172,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X8} {module.FileName}");
                                     }
                                 }
-                                
-                                return data;
                             }
                             catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
                             {
@@ -181,14 +197,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 #if TRACE_VERBOSE
                                     Trace.TraceInformation($"ReadMemoryFromModule: address {address:X16} rva {rva:X16} size {bytesRequested:X8} in ELF or MachO file {module.FileName}");
 #endif
-                                    byte[] data = new byte[bytesRequested];
+                                    data = new byte[bytesRequested];
                                     uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
                                     if (read == 0)
                                     {
                                         Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X16} {module.FileName}");
-                                        data = null;
+                                        data = Array.Empty<byte>();
                                     }
-                                    return data;
                                 }
                                 catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
                                 {
@@ -197,17 +212,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             }
                         }
                     }
-                    finally
-                    {
-                        _recursionProtection.Remove(address);
-                    }
                 }
-                else
+                finally
                 {
-                    Trace.TraceError($"ReadMemoryFromModule: recursion: address {address:X16} size {bytesRequested:X8} {module.FileName}");
+                    _recursionProtection.Remove(address);
                 }
             }
-            return null;
+            else
+            {
+                throw new InvalidOperationException($"ReadMemoryFromModule: recursion: address {address:X16} size {bytesRequested:X8}");
+            }
+            return data;
         }
 
         enum BaseRelocationType
@@ -235,7 +250,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // Read IMAGE_BASE_RELOCATION struct
                     int virtualAddress = blob.ReadInt32();
                     int sizeOfBlock = blob.ReadInt32();
-
+                    if (sizeOfBlock <= 0) {
+                        break;
+                    }
                     // Each relocation block covers 4K
                     if (dataVA >= virtualAddress && dataVA < (virtualAddress + 4096))
                     {

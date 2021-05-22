@@ -62,7 +62,7 @@ VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 #
 
 SOSCOMMAND:SOSStatus
-VERIFY:.*\.NET Core .*runtime at.*\s+
+VERIFY:.*\.NET Core .*runtime.*at.*\s+
 
 IFDEF:TRIAGE_DUMP
 SOSCOMMAND:setclrpath %DESKTOP_RUNTIME_PATH%

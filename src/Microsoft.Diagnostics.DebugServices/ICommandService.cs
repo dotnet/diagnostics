@@ -21,8 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Add the commands and aliases attributes found in the type.
         /// </summary>
         /// <param name="type">Command type to search</param>
-        /// <param name="factory">function to create command instance</param>
-        void AddCommands(Type type, Func<IServiceProvider, object> factory);
+        void AddCommands(Type type);
 
         /// <summary>
         /// Displays the help for a command

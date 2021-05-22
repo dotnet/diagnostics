@@ -18,10 +18,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
+        [ServiceImport(Optional = true)]
         public IThread CurrentThread { get; set; }
 
+        [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
+        [ServiceImport]
         public IContextService ContextService { get; set; }
 
         public override void Invoke()

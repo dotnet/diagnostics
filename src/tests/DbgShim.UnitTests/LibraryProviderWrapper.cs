@@ -456,13 +456,13 @@ namespace SOS.Hosting
 
         IServiceEvent IHost.OnShutdownEvent => throw new NotImplementedException();
 
+        IServiceEvent<ITarget> IHost.OnTargetCreate => throw new NotImplementedException();
+
         HostType IHost.HostType => HostType.DotnetDump;
 
         IServiceProvider IHost.Services => throw new NotImplementedException();
 
         IEnumerable<ITarget> IHost.EnumerateTargets() => throw new NotImplementedException();
-
-        void IHost.DestroyTarget(ITarget target) => throw new NotImplementedException();
 
         #endregion
 
