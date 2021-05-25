@@ -1144,10 +1144,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     _logger?.LogTrace($"Read {bytesRead} bytes from backend.");
 
-                    // Check for end of stream indicating that remote end hung-up.
+                    // Check for end of stream indicating that remote end disconnected.
                     if (bytesRead == 0)
                     {
-                        _logger?.LogTrace("Backend hung up.");
+                        _logger?.LogTrace("Backend disconnected.");
                         break;
                     }
 
@@ -1179,16 +1179,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-                    _logger?.LogTrace("Start reading bytes from frotend.");
+                    _logger?.LogTrace("Start reading bytes from frontend.");
 
                     int bytesRead = await _frontendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
                     _logger?.LogTrace($"Read {bytesRead} bytes from frontend.");
 
-                    // Check for end of stream indicating that remote end hung-up.
+                    // Check for end of stream indicating that remote end disconnected.
                     if (bytesRead == 0)
                     {
-                        _logger?.LogTrace("Frontend hung up.");
+                        _logger?.LogTrace("Frontend disconnected.");
                         break;
                     }
 
