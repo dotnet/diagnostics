@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class BackendStreamTimeoutException : TimeoutException
     {
         public BackendStreamTimeoutException(int TimeoutMs)
-            : base(string.Format("No new backend streams available, waited {0} ms", TimeoutMs))
+            : base(string.Format("No new back end streams available, waited {0} ms", TimeoutMs))
         { }
     }
 
@@ -1126,7 +1126,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 Interlocked.Decrement(ref s_routerInstanceCount);
 
-                _logger?.LogTrace($"Diposed stats: Backend->Frontend {_backendToFrontendByteTransfer} bytes, Frontend->Backend {_frontendToBackendByteTransfer} bytes.");
+                _logger?.LogTrace($"Diposed stats: Back End->Front End {_backendToFrontendByteTransfer} bytes, Front End->Back End {_frontendToBackendByteTransfer} bytes.");
                 _logger?.LogTrace($"Active instances: {s_routerInstanceCount}");
             }
         }
@@ -1138,27 +1138,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-                    _logger?.LogTrace("Start reading bytes from backend.");
+                    _logger?.LogTrace("Start reading bytes from back end.");
 
                     int bytesRead = await _backendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                    _logger?.LogTrace($"Read {bytesRead} bytes from backend.");
+                    _logger?.LogTrace($"Read {bytesRead} bytes from back end.");
 
-                    // Check for end of stream indicating that remote end hung-up.
+                    // Check for end of stream indicating that remote end disconnected.
                     if (bytesRead == 0)
                     {
-                        _logger?.LogTrace("Backend hung up.");
+                        _logger?.LogTrace("Back end disconnected.");
                         break;
                     }
 
                     _backendToFrontendByteTransfer += (ulong)bytesRead;
 
-                    _logger?.LogTrace($"Start writing {bytesRead} bytes to frontend.");
+                    _logger?.LogTrace($"Start writing {bytesRead} bytes to front end.");
 
                     await _frontendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     await _frontendStream.FlushAsync().ConfigureAwait(false);
 
-                    _logger?.LogTrace($"Wrote {bytesRead} bytes to frontend.");
+                    _logger?.LogTrace($"Wrote {bytesRead} bytes to front end.");
                 }
             }
             catch (Exception)
@@ -1179,27 +1179,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 byte[] buffer = new byte[1024];
                 while (!token.IsCancellationRequested)
                 {
-                    _logger?.LogTrace("Start reading bytes from frotend.");
+                    _logger?.LogTrace("Start reading bytes from front end.");
 
                     int bytesRead = await _frontendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                    _logger?.LogTrace($"Read {bytesRead} bytes from frontend.");
+                    _logger?.LogTrace($"Read {bytesRead} bytes from front end.");
 
-                    // Check for end of stream indicating that remote end hung-up.
+                    // Check for end of stream indicating that remote end disconnected.
                     if (bytesRead == 0)
                     {
-                        _logger?.LogTrace("Frontend hung up.");
+                        _logger?.LogTrace("Front end disconnected.");
                         break;
                     }
 
                     _frontendToBackendByteTransfer += (ulong)bytesRead;
 
-                    _logger?.LogTrace($"Start writing {bytesRead} bytes to backend.");
+                    _logger?.LogTrace($"Start writing {bytesRead} bytes to back end.");
 
                     await _backendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
                     await _backendStream.FlushAsync().ConfigureAwait(false);
 
-                    _logger?.LogTrace($"Wrote {bytesRead} bytes to backend.");
+                    _logger?.LogTrace($"Wrote {bytesRead} bytes to back end.");
                 }
             }
             catch (Exception)
