@@ -1147,7 +1147,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // Check for end of stream indicating that remote end disconnected.
                     if (bytesRead == 0)
                     {
-                        _logger?.LogTrace("back end disconnected.");
+                        _logger?.LogTrace("Back end disconnected.");
                         break;
                     }
 
