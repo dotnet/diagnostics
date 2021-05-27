@@ -4,7 +4,7 @@
 
 #include "sos.h"
 #include "disasm.h"
-#include <dbghelp.h>
+#include "dbghelp.h"
 
 #include "corhdr.h"
 #include "cor.h"
@@ -297,6 +297,75 @@ HRESULT CreateInstanceFromPath(REFCLSID clsid, REFIID iid, LPCSTR path, HMODULE*
     return hr;
 }
 
+#define PORTABLE_PDB_MINOR_VERSION              20557
+#define IMAGE_DEBUG_TYPE_EMBEDDED_PORTABLE_PDB  17
+
+/**********************************************************************\
+ * Returns true if the PE image debug directory has a portable PDB
+\**********************************************************************/
+bool HasPortablePDB(ULONG64 baseAddress)
+{
+    IMAGE_DOS_HEADER dosHeader;
+    if (g_ExtData->ReadVirtual(baseAddress, &dosHeader, sizeof(dosHeader), nullptr) != S_OK) {
+        return false;
+    }
+    WORD magic;
+    if (g_ExtData->ReadVirtual((baseAddress + dosHeader.e_lfanew + offsetof(IMAGE_NT_HEADERS, OptionalHeader.Magic)), &magic, sizeof(magic), nullptr) != S_OK) {
+        return false;
+    }
+    ULONG64 debugDirAddr = 0;
+    DWORD nSize = 0;
+    if (magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+    {
+        IMAGE_NT_HEADERS32 header32;
+        if (g_ExtData->ReadVirtual(baseAddress + dosHeader.e_lfanew, &header32, sizeof(header32), nullptr) != S_OK) {
+            return false;
+        }
+        // If there is no comheader, this can not be managed code so no portable PDB
+        if (header32.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER].VirtualAddress == 0) {
+            return false;
+        }
+        // If there is no debug directory, don't know if it is a portable PDB
+        if (header32.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress == 0) {
+            return false;
+        }
+        debugDirAddr = baseAddress + header32.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress;
+        nSize = header32.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
+    }
+    else if (magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+    {
+        IMAGE_NT_HEADERS64 header64;
+        if (g_ExtData->ReadVirtual(baseAddress + dosHeader.e_lfanew, &header64, sizeof(header64), nullptr) != S_OK) {
+            return false;
+        }
+        // If there is no comheader, this can not be managed code so no portable PDB
+        if (header64.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER].VirtualAddress == 0) {
+            return false;
+        }
+        // If there is no debug directory, don't know if it is a portable PDB
+        if (header64.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress == 0) {
+            return false;
+        }
+        debugDirAddr = baseAddress + header64.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress;
+        nSize = header64.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size;
+    }
+    else {
+        return false;
+    }
+    IMAGE_DEBUG_DIRECTORY debugDir;
+    size_t nbytes = 0;
+    while (nbytes < nSize) {
+        if (g_ExtData->ReadVirtual(debugDirAddr + nbytes, &debugDir, sizeof(debugDir), NULL) != S_OK) {
+            return false;
+        }
+        if ((debugDir.Type == IMAGE_DEBUG_TYPE_CODEVIEW && debugDir.MinorVersion == PORTABLE_PDB_MINOR_VERSION ) || (debugDir.Type == IMAGE_DEBUG_TYPE_EMBEDDED_PORTABLE_PDB)) {
+            return true;
+        }
+        nbytes += sizeof(debugDir);
+    }
+    return false;
+}
+
 #endif // FEATURE_PAL
 
 /**********************************************************************\
@@ -368,10 +437,13 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
             ExtOut("LoadSymbols GetClrModuleImages FAILED 0x%08x\n", hr);
             return hr;
         }
-        hr = LoadSymbolsForWindowsPDB(pMD, moduleBase, pModuleName, FALSE);
-        if (SUCCEEDED(hr))
+        if (!HasPortablePDB(moduleBase))
         {
-            return hr;
+            hr = LoadSymbolsForWindowsPDB(pMD, moduleBase, pModuleName, FALSE);
+            if (SUCCEEDED(hr))
+            {
+                return hr;
+            }
         }
         moduleData.LoadedPEAddress = moduleBase;
         moduleData.LoadedPESize = moduleSize;
@@ -381,10 +453,13 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 
 #ifndef FEATURE_PAL
     // TODO: in-memory windows PDB not supported
-    hr = LoadSymbolsForWindowsPDB(pMD, moduleData.LoadedPEAddress, pModuleName, moduleData.IsFileLayout);
-    if (SUCCEEDED(hr))
+    if (!HasPortablePDB(moduleData.LoadedPEAddress))
     {
-        return hr;
+        hr = LoadSymbolsForWindowsPDB(pMD, moduleData.LoadedPEAddress, pModuleName, moduleData.IsFileLayout);
+        if (SUCCEEDED(hr))
+        {
+            return hr;
+        }
     }
 #endif // FEATURE_PAL
 
@@ -516,19 +591,8 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     HRESULT Status = S_OK;
     IfFailRet(InitializeSymbolService());
 
-    // The module name needs to be null for in-memory PE's.
-    ArrayHolder<char> szModuleName = nullptr;
-    if (!isInMemory && pModuleName != nullptr)
-    {
-        szModuleName = new char[MAX_LONGPATH];
-        if (WideCharToMultiByte(CP_ACP, 0, pModuleName, (int)(_wcslen(pModuleName) + 1), szModuleName, MAX_LONGPATH, NULL, NULL) == 0)
-        {
-            return E_FAIL;
-        }
-    }
-
     m_symbolReaderHandle = GetSymbolService()->LoadSymbolsForModule(
-        szModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
+        pModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
 
     if (m_symbolReaderHandle == 0)
     {

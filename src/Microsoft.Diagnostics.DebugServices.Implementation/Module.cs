@@ -67,6 +67,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #region IModule
 
+        public ITarget Target => ModuleService.Target;
+
         public IServiceProvider Services => ServiceProvider;
 
         public abstract int ModuleIndex { get; }
@@ -206,6 +208,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         protected abstract ModuleService ModuleService { get; }
+
+        public override bool Equals(object obj)
+        {
+            IModule module = (IModule)obj;
+            return Target == module.Target && ImageBase == module.ImageBase;
+        }
+
+        public override int GetHashCode()
+        {
+            return Utilities.CombineHashCodes(Target.GetHashCode(), ImageBase.GetHashCode());
+        }
 
         public override string ToString()
         {

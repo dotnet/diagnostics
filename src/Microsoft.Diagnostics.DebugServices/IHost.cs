@@ -45,14 +45,9 @@ namespace Microsoft.Diagnostics.DebugServices
         IEnumerable<ITarget> EnumerateTargets();
 
         /// <summary>
-        /// Current target instances or null
+        /// Destroys/closes the specified target instance
         /// </summary>
-        ITarget CurrentTarget { get; }
-
-        /// <summary>
-        /// Sets the current target.
-        /// </summary>
-        /// <param name="targetid">target id</param>
-        void SetCurrentTarget(int targetid);
+        /// <param name="target">target instance</param>
+        void DestroyTarget(ITarget target);
     }
 }

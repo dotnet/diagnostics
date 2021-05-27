@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -101,7 +102,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (_exportReader is not null)
                 {
-                    return _exportReader.TryGetSymbolAddress(ImageBase, name, out address);
+                    // Some exceptions are escaping from the clrmd ELF dump reader. This will be
+                    // fixed in a clrmd update.
+                    try
+                    {
+                        return _exportReader.TryGetSymbolAddress(ImageBase, name, out address);
+                    }
+                    catch (IOException)
+                    {
+                    }
                 }
                 address = 0;
                 return false;

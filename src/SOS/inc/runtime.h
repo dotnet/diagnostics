@@ -55,7 +55,12 @@ public:
     virtual ULONG64 STDMETHODCALLTYPE GetModuleSize() const = 0;
 
     /// <summary>
-    /// Returns the directory of the runtime file
+    /// Set the runtime module directory to search for DAC/DBI
+    /// </summary>
+    virtual void STDMETHODCALLTYPE SetRuntimeDirectory(LPCSTR runtimeModuleDirectory) = 0;
+
+    /// <summary>
+    /// Returns the directory of the runtime module
     /// </summary>
     virtual LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory() = 0;
 

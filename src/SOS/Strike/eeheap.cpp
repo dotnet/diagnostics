@@ -1079,7 +1079,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
     return TRUE;
 }
 
-DWORD GetNumComponents(TADDR obj)
+size_t GetNumComponents(TADDR obj)
 {
     // The number of components is always the second pointer in the object.
     DWORD Value = NULL;

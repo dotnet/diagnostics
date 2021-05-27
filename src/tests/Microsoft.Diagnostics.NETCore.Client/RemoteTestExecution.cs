@@ -81,8 +81,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
                     }
                     catch (Exception e)
                     {
-                        outputHelper.WriteLine(e.ToString());
-                        throw;
+                        outputHelper.WriteLine("Error reading standard error from child process: " + e.ToString());
                     }
                 }
                 catch (ObjectDisposedException)

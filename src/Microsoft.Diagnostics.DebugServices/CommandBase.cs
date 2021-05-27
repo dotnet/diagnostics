@@ -78,12 +78,28 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns></returns>
         protected bool TryParseAddress(string addressInHexa, out ulong address)
         {
+            if (addressInHexa == null)
+            {
+                address = 0;
+                return false;
+            }
+
             // skip 0x or leading 0000 if needed
             if (addressInHexa.StartsWith("0x"))
                 addressInHexa = addressInHexa.Substring(2);
             addressInHexa = addressInHexa.TrimStart('0');
 
             return ulong.TryParse(addressInHexa, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out address);
+        }
+
+        /// <summary>
+        /// Convert hexadecimal string address into ulong or <c>null</c>
+        /// </summary>
+        /// <param name="addressInHexa">0x12345678 or 000012345670 format are supported</param>
+        /// <returns></returns>
+        protected ulong? ParseAddress(string addressInHexa)
+        {
+            return TryParseAddress(addressInHexa, out ulong address) ? address : null;
         }
     }
 }

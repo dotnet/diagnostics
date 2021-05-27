@@ -14,11 +14,6 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface ITarget
     {
         /// <summary>
-        /// Invoked when this target is flushed (via the Flush() call).
-        /// </summary>
-        IServiceEvent OnFlushEvent { get; }
-
-        /// <summary>
         /// Returns the host interface instance
         /// </summary>
         IHost Host { get; }
@@ -60,19 +55,18 @@ namespace Microsoft.Diagnostics.DebugServices
         IServiceProvider Services { get; }
 
         /// <summary>
+        /// Invoked when this target is flushed (via the Flush() call).
+        /// </summary>
+        IServiceEvent OnFlushEvent { get; }
+
+        /// <summary>
         /// Flushes any cached state in the target.
         /// </summary>
         void Flush();
 
         /// <summary>
-        /// Registers an object to be disposed when ITarget.Close() is called.
+        /// Invoked when the target is destroyed.
         /// </summary>
-        /// <param name="disposable">object to be disposed on Close() or null</param>
-        void DisposeOnClose(IDisposable disposable);
-
-        /// <summary>
-        /// Releases the target and the target's resources.
-        /// </summary>
-        void Close();
+        IServiceEvent OnDestroyEvent { get; }
     }
 }

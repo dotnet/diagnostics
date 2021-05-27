@@ -120,11 +120,9 @@
       <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\sos.dll">
          <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
       </ZipSourceFiles>
-      <!-- Commented out until issue https://github.com/dotnet/diagnostics/issues/324 is addressed
       <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll">
          <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
       </ZipSourceFiles>
-       -->
       <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
          <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
       </ZipSourceFiles>

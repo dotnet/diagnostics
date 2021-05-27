@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -88,14 +89,18 @@ namespace SOS.Hosting
             AddRef();
         }
 
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("LLDBServices.Destroy");
+        }
+
         #region ILLDBServices
 
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            IRuntime currentRuntime = _soshost.Target.Services.GetService<IRuntimeService>()?.CurrentRuntime;
-            if (currentRuntime != null)
-            {
+            IRuntime currentRuntime = _soshost.Services.GetService<IRuntime>();
+            if (currentRuntime is not null) {
                 return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }
             return null;

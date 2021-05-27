@@ -9,10 +9,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     public abstract class ExtensionCommandBase : CommandBase
     {
         /// <summary>
-        /// Helper bound to the current ClrRuntime that provides
-        /// high level services on top of ClrMD.
+        /// Helper bound to the current ClrRuntime that provides high level services on top of ClrMD.
         /// </summary>
         public ClrMDHelper Helper { get; set; }
+
+        public override void Invoke()
+        {
+            if (Helper == null)
+            {
+                throw new DiagnosticsException("No CLR runtime set");
+            }
+            ExtensionInvoke();
+        }
+
+        public abstract void ExtensionInvoke();
 
         [HelpInvoke]
         public void InvokeHelp()

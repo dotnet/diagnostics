@@ -27,23 +27,46 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
         private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new HandleableCollection<IpcEndpointInfo>();
         private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
-        private readonly string _transportPath;
+        private readonly string _address;
 
         private bool _disposed = false;
         private Task _listenTask;
+        private bool _enableTcpIpProtocol = false;
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
-        /// to the location specified by <paramref name="transportPath"/>.
+        /// to the location specified by <paramref name="address"/>.
         /// </summary>
-        /// <param name="transportPath">
-        /// The path of the server endpoint.
+        /// <param name="address">
+        /// The server endpoint.
         /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
         /// On all other systems, this must be the full file path of the socket.
         /// </param>
-        public ReversedDiagnosticsServer(string transportPath)
+        public ReversedDiagnosticsServer(string address)
         {
-            _transportPath = transportPath;
+            _address = address;
+        }
+
+        /// <summary>
+        /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
+        /// to the location specified by <paramref name="address"/>.
+        /// </summary>
+        /// <param name="address">
+        /// The server endpoint.
+        /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
+        /// On all other systems, this must be the full file path of the socket.
+        /// When TcpIp is enabled, this can also be host:port of the listening socket.
+        /// </param>
+        /// <param name="enableTcpIpProtocol">
+        /// Add TcpIp as a supported protocol for ReversedDiagnosticServer. When enabled, address will
+        /// be analyzed and if on format host:port, ReversedDiagnosticServer will try to bind
+        /// a TcpIp listener to host and port.
+        ///
+        /// </param>
+        public ReversedDiagnosticsServer(string address, bool enableTcpIpProtocol)
+        {
+            _address = address;
+            _enableTcpIpProtocol = enableTcpIpProtocol;
         }
 
         public async ValueTask DisposeAsync()
@@ -80,7 +103,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Starts listening at the transport path for new connections.
+        /// Starts listening at the address for new connections.
         /// </summary>
         public void Start()
         {
@@ -88,7 +111,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Starts listening at the transport path for new connections.
+        /// Starts listening at the address for new connections.
         /// </summary>
         /// <param name="maxConnections">The maximum number of connections the server will support.</param>
         public void Start(int maxConnections)
@@ -101,6 +124,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             _listenTask = ListenAsync(maxConnections, _disposalSource.Token);
+            if (_listenTask.IsFaulted)
+                _listenTask.Wait(); // Rethrow aggregated exception.
         }
 
         /// <summary>
@@ -164,17 +189,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Listens at the transport path for new connections.
+        /// Listens at the address for new connections.
         /// </summary>
         /// <param name="maxConnections">The maximum number of connections the server will support.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        /// <returns>A task that completes when the server is no longer listening at the transport path.</returns>
+        /// <returns>A task that completes when the server is no longer listening at the address.</returns>
         private async Task ListenAsync(int maxConnections, CancellationToken token)
         {
             // This disposal shuts down the transport in case an exception is thrown.
-            using var transport = IpcServerTransport.Create(_transportPath, maxConnections);
-            // Set transport callback for testing purposes.
-            transport.SetCallback(TransportCallback);
+            using var transport = IpcServerTransport.Create(_address, maxConnections, _enableTcpIpProtocol, TransportCallback);
             // This disposal shuts down the transport in case of cancellation; causes the transport
             // to not recreate the server stream before the AcceptAsync call observes the cancellation.
             using var _ = token.Register(() => transport.Dispose());

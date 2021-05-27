@@ -14,6 +14,11 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IModule
     {
         /// <summary>
+        /// Target for this module.
+        /// </summary>
+        ITarget Target { get; }
+
+        /// <summary>
         /// The per module services like an optional clrmd's PEImage or PEReader instances if a PE module.
         /// </summary>
         IServiceProvider Services { get; }

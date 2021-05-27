@@ -16,18 +16,18 @@
 #define InvalidTimeStamp    0xFFFFFFFE;
 #define InvalidChecksum     0xFFFFFFFF;
 
-ULONG g_currentThreadIndex = (ULONG)-1;
-ULONG g_currentThreadSystemId = (ULONG)-1;
 char *g_coreclrDirectory = nullptr;
 char *g_pluginModuleDirectory = nullptr;
 
-LLDBServices::LLDBServices(lldb::SBDebugger debugger) : 
+LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_ref(1),
     m_debugger(debugger),
     m_interpreter(debugger.GetCommandInterpreter()),
     m_currentProcess(nullptr),
     m_currentThread(nullptr),
-    m_currentStopId(0)
+    m_currentStopId(0),
+    m_processId(0),
+    m_threadInfoInitialized(false)
 {
     ClearCache();
 
@@ -504,9 +504,10 @@ LLDBServices::GetLastEventInformation(
     {
         return E_FAIL;
     }
+    InitializeThreadInfo(process);
 
-    *processId = process.GetProcessID();
-    *threadId = thread.GetThreadID();
+    *processId = GetProcessId(process);
+    *threadId = GetThreadId(thread);
 
     // Enumerate each stack frame at the special "throw"
     // breakpoint and find the raise exception function 
@@ -1381,7 +1382,9 @@ LLDBServices::GetCurrentProcessSystemId(
         return E_FAIL;
     }
 
-    *sysId = process.GetProcessID();
+    InitializeThreadInfo(process);
+
+    *sysId = GetProcessId(process);
     return S_OK;
 }
 
@@ -1399,14 +1402,6 @@ LLDBServices::GetCurrentThreadId(
     {
         *id = 0;
         return E_FAIL;
-    }
-
-    // This is allow the a valid current TID to be returned to 
-    // workaround a bug in lldb on core dumps.
-    if (g_currentThreadIndex != (ULONG)-1)
-    {
-        *id = g_currentThreadIndex;
-        return S_OK;
     }
 
     *id = thread.GetIndexID();
@@ -1447,15 +1442,7 @@ LLDBServices::GetCurrentThreadSystemId(
         return E_FAIL;
     }
 
-    // This is allow the a valid current TID to be returned to 
-    // workaround a bug in lldb on core dumps.
-    if (g_currentThreadSystemId != (ULONG)-1)
-    {
-        *sysId = g_currentThreadSystemId;
-        return S_OK;
-    }
-
-    *sysId = thread.GetThreadID();
+    *sysId = GetThreadId(thread);
     return S_OK;
 }
 
@@ -1464,44 +1451,21 @@ LLDBServices::GetThreadIdBySystemId(
     ULONG sysId,
     PULONG threadId)
 {
-    HRESULT hr = E_FAIL;
-    ULONG id = 0;
-
-    lldb::SBProcess process;
-    lldb::SBThread thread;
 
     if (threadId == NULL)  
     {
         return E_INVALIDARG;
     }
 
-    process = GetCurrentProcess();
-    if (!process.IsValid())
+    lldb::SBThread thread = GetThreadBySystemId(sysId);
+    if (!thread.IsValid())
     {
-        goto exit;
+        *threadId = 0;
+        return E_FAIL;
     }
 
-    // If we have a "fake" thread OS (system) id and a fake thread index,
-    // we need to return fake thread index.
-    if (g_currentThreadSystemId == sysId && g_currentThreadIndex != (ULONG)-1)
-    {
-        id = g_currentThreadIndex;
-    }
-    else
-    {
-        thread = process.GetThreadByID(sysId);
-        if (!thread.IsValid())
-        {
-            goto exit;
-        }
-
-        id = thread.GetIndexID();
-    }
-    hr = S_OK;
-
-exit:
-    *threadId = id;
-    return hr;
+    *threadId = thread.GetIndexID();
+    return S_OK;
 }
 
 HRESULT 
@@ -1523,23 +1487,7 @@ LLDBServices::GetThreadContextBySystemId(
     }
     memset(context, 0, contextSize);
 
-    process = GetCurrentProcess();
-    if (!process.IsValid())
-    {
-        goto exit;
-    }
-
-    // If we have a "fake" thread OS (system) id and a fake thread index,
-    // use the fake thread index to get the context.
-    if (g_currentThreadSystemId == sysId && g_currentThreadIndex != (ULONG)-1)
-    {
-        thread = process.GetThreadByIndexID(g_currentThreadIndex);
-    }
-    else
-    {
-        thread = process.GetThreadByID(sysId);
-    }
-    
+    thread = GetThreadBySystemId(sysId);
     if (!thread.IsValid())
     {
         goto exit;
@@ -2234,7 +2182,7 @@ LLDBServices::GetThreadIdsByIndex(
         }
         if (sysIds != nullptr)
         {
-            sysIds[index] = thread.GetThreadID();
+            sysIds[index] = GetThreadId(thread);
         }
     }
     return S_OK;
@@ -2244,12 +2192,12 @@ HRESULT
 LLDBServices::SetCurrentThreadSystemId(
     ULONG sysId)
 {
-    lldb::SBProcess process = GetCurrentProcess();
-    if (!process.IsValid())
+    lldb::SBThread thread = GetThreadBySystemId(sysId);
+    if (!thread.IsValid())
     {
-        return E_UNEXPECTED;
+        return E_FAIL;
     }
-    if (!process.SetSelectedThreadByID(sysId))
+    if (!thread.GetProcess().SetSelectedThread(thread))
     {
         return E_FAIL;
     }
@@ -2333,6 +2281,150 @@ exit:
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------
+
+void
+LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
+{
+#ifdef __APPLE__
+    if (m_threadInfoInitialized)
+    {
+        return;
+    }
+    m_threadInfoInitialized = true;
+
+    // Only attempt to read the special thread info block if MacOS core dump
+    const char* pluginName = process.GetPluginName();
+    if (strcmp(pluginName, "mach-o-core") != 0)
+    {
+        return;
+    }
+    SpecialThreadInfoHeader header;
+    lldb::SBError error;
+    size_t read = process.ReadMemory(SpecialThreadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    if (error.Fail() || read != sizeof(header))
+    {
+        return;
+    }
+    if (strncmp(header.signature, SPECIAL_THREADINFO_SIGNATURE, sizeof(SPECIAL_THREADINFO_SIGNATURE)) != 0)
+    {
+        Output(DEBUG_OUTPUT_WARNING, "Special thread info signature invalid\n");
+        return;
+    }
+    uint32_t number = process.GetNumThreads();
+    if (number != header.numThreads)
+    {
+        Output(DEBUG_OUTPUT_WARNING, "Special thread info number of threads mismatched - lldb: %d header: %d\n", number, header.numThreads);
+        return;
+    }
+    m_processId = header.pid;
+    m_threadInfos.clear();
+
+    uint64_t address = SpecialThreadInfoAddress + sizeof(header);
+    for (int index = 0; index < number; index++)
+    {
+        SpecialThreadInfoEntry entry;
+        read = process.ReadMemory(address, &entry, sizeof(SpecialThreadInfoEntry), error);
+        if (error.Fail() || read != sizeof(entry)) {
+            Output(DEBUG_OUTPUT_WARNING, "Special thread info entry %d read failed\n", index);
+            break;
+        }
+        m_threadInfos.push_back(entry);
+        address += sizeof(SpecialThreadInfoEntry);
+
+        // Validate that the thread stack pointer matches the thread info's.
+        lldb::SBThread thread = process.GetThreadAtIndex(index);
+        if (thread.IsValid())
+        {
+            lldb::SBFrame frame = thread.GetFrameAtIndex(0);
+            if (frame.IsValid())
+            {
+                if (frame.GetSP() != entry.sp)
+                {
+                    Output(DEBUG_OUTPUT_WARNING, "Special thread info SP (%p) doesn't match %p\n", (void*)entry.sp, (void*)frame.GetSP());
+                }
+            }
+            else
+            {
+                Output(DEBUG_OUTPUT_WARNING, "Invalid stack frame for thread %d\n", index);
+            }
+        }
+        else
+        {
+            Output(DEBUG_OUTPUT_WARNING, "Invalid thread %d\n", index);
+        }
+    }
+#endif
+}
+
+lldb::SBThread 
+LLDBServices::GetThreadBySystemId(
+    ULONG sysId)
+{
+    lldb::SBProcess process;
+    lldb::SBThread thread;
+
+    if (sysId == 0)
+    {
+        goto exit;
+    }
+
+    process = GetCurrentProcess();
+    if (!process.IsValid())
+    {
+        goto exit;
+    }
+
+    for (int index = 0; index < process.GetNumThreads(); index++)
+    {
+        if (m_threadInfos.size() <= index)
+        {
+            break;
+        }
+        if (sysId == m_threadInfos[index].tid)
+        {
+            thread = process.GetThreadAtIndex(index);
+            goto exit;
+        }
+    }
+
+    thread = process.GetThreadByID(sysId);
+
+exit:
+    return thread;
+}
+
+void 
+LLDBServices::AddThreadInfoEntry(uint32_t tid, uint32_t index)
+{
+    // Make sure there is room in the thread infos vector
+    if (m_threadInfos.empty())
+    {
+        uint32_t number;
+        GetNumberThreads(&number);
+        m_threadInfos.assign(number, SpecialThreadInfoEntry{ 0, 0 });
+    }
+    m_threadInfos[index - 1] = SpecialThreadInfoEntry{ tid, 0 };
+}
+
+uint32_t 
+LLDBServices::GetProcessId(lldb::SBProcess process)
+{
+    return m_processId != 0 ? m_processId : process.GetProcessID();
+}
+
+uint32_t 
+LLDBServices::GetThreadId(lldb::SBThread thread)
+{
+    uint32_t index = thread.GetIndexID() - 1;
+    if (m_threadInfos.size() > index && m_threadInfos[index].tid != 0)
+    {
+        return m_threadInfos[index].tid;
+    }
+    else
+    {
+        return thread.GetThreadID();
+    }
+}
 
 lldb::SBProcess
 LLDBServices::GetCurrentProcess()
@@ -2565,8 +2657,10 @@ LLDBServices::FlushCheck()
     lldb::SBProcess process = GetCurrentProcess();
     if (process.IsValid())
     {
+        InitializeThreadInfo(process);
+
         // Has the process changed since the last commmand?
-        Extensions::GetInstance()->UpdateTarget(process.GetProcessID());
+        Extensions::GetInstance()->UpdateTarget(GetProcessId(process));
 
         // Has the target "moved" (been continued) since the last command? Flush the target.
         uint32_t stopId = process.GetStopID();
@@ -2579,6 +2673,8 @@ LLDBServices::FlushCheck()
     else 
     {
         Extensions::GetInstance()->DestroyTarget();
+        m_threadInfoInitialized = false;
+        m_processId = 0;
     }
 }
 

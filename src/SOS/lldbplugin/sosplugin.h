@@ -10,6 +10,7 @@
 #include "lldbservices.h"
 #include "extensions.h"
 #include "dbgtargetcontext.h"
+#include "specialthreadinfo.h"
 #include "services.h"
 
 #define SOSInitialize "SOSInitializeByHost"
@@ -18,8 +19,6 @@ typedef HRESULT (*CommandFunc)(ILLDBServices* services, const char* args);
 typedef HRESULT (*InitializeFunc)(IUnknown* punk);
 
 extern char *g_coreclrDirectory;
-extern ULONG g_currentThreadIndex;
-extern ULONG g_currentThreadSystemId;
 extern LLDBServices* g_services;
 
 bool 

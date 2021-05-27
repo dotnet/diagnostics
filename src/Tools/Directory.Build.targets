@@ -36,18 +36,4 @@
     </ItemGroup>
     <Message Importance="Low" Text="@(FilesInBundleToSign)"/>
   </Target>
-
-  <Target Name="PrepareForBundling"
-          BeforeTargets="GenerateSingleFileBundle"
-          AfterTargets="_ComputeFilesToBundle"
-          DependsOnTargets="RemoveDupeAssemblies" />
-
-  <!-- Workaround for https://github.com/microsoft/perfview/issues/1002 -->
-  <Target Name="RemoveDupeAssemblies">
-    <ItemGroup>
-      <_FilesToBundle Remove="$(PkgMicrosoft_Diagnostics_Tracing_TraceEvent)\lib\netstandard1.6\Dia2Lib.dll" />
-      <_FilesToBundle Remove="$(PkgMicrosoft_Diagnostics_Tracing_TraceEvent)\lib\netstandard1.6\OSExtensions.dll" />
-      <_FilesToBundle Remove="$(PkgMicrosoft_Diagnostics_Tracing_TraceEvent)\lib\netstandard1.6\TraceReloggerLib.dll" />
-    </ItemGroup>
-  </Target>
 </Project>

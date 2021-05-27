@@ -3,6 +3,7 @@
 ; See the LICENSE file in the project root for more information.
 
 bpmd
+clrmodules
 ClrStack
 dbgout
 DumpALC
@@ -31,6 +32,7 @@ EEVersion
 GCWhere
 EEStack
 EHInfo
+ext
 FinalizeQueue
 FindAppDomain
 GCInfo
@@ -62,6 +64,5 @@ Token2EE
 u
 VerifyHeap
 
-ext
 SOSInitializeByHost
 SOSUninitializeByHost

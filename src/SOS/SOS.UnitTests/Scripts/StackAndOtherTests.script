@@ -192,7 +192,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 
-ENDIF:NETCORE_OR_DOTNETDUMP
 
 # Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
@@ -208,6 +207,7 @@ VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 
+ENDIF:NETCORE_OR_DOTNETDUMP
 ENDIF:ALPINE
 
 !IFDEF:DOTNETDUMP

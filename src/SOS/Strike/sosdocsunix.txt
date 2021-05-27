@@ -340,8 +340,8 @@ The arguments in detail:
 -short    Limits output to just the address of each object. This allows you
           to easily pipe output from the command to another debugger 
           command for automation.
--min      Ignore objects less than the size given in bytes
--max      Ignore objects larger than the size given in bytes
+-min      Ignore objects less than the size given in bytes (hex)
+-max      Ignore objects larger than the size given in bytes (hex)
 -live     Only print live objects
 -dead     Only print dead objects (objects which will be collected in the
           next full GC)

@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ClrRuntime Runtime { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             if (string.IsNullOrEmpty(Address))
             {

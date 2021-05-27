@@ -18,10 +18,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private readonly object _lock = new object();
 
+        private TaskCompletionSource<bool> _initialized;
         private TaskCompletionSource<bool> _sessionStarted;
         private EventPipeEventSource _eventSource;
         private Func<Task> _stopFunc;
         private bool _disposed;
+
+        // Allows tests to know when the event pipe session has started so that the
+        // target application can start producing events.
+        internal Task SessionStarted => _sessionStarted.Task;
 
         public DiagnosticsEventPipeProcessor(
             MonitoringSourceConfiguration configuration,
@@ -31,13 +36,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _onEventSourceAvailable = onEventSourceAvailable ?? throw new ArgumentNullException(nameof(onEventSourceAvailable));
 
+            _initialized = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         public async Task Process(DiagnosticsClient client, TimeSpan duration, CancellationToken token)
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
-            IDisposable registration = token.Register(() => _sessionStarted.TrySetCanceled());
+            IDisposable registration = token.Register(() => _initialized.TrySetCanceled());
             await await Task.Factory.StartNew(async () =>
             {
                 EventPipeEventSource source = null;
@@ -51,6 +57,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                     Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token);
 
+                    if (!_sessionStarted.TrySetResult(true))
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
+
                     source = new EventPipeEventSource(sessionStream);
 
                     handleEventsTask = _onEventSourceAvailable(source, stopFunc, token);
@@ -61,7 +72,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         _stopFunc = stopFunc;
                     }
                     registration.Dispose();
-                    if (!_sessionStarted.TrySetResult(true))
+                    if (!_initialized.TrySetResult(true))
                     {
                         token.ThrowIfCancellationRequested();
                     }
@@ -101,7 +112,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public async Task StopProcessing(CancellationToken token)
         {
-            await _sessionStarted.Task;
+            await _initialized.Task;
 
             EventPipeEventSource session = null;
             Func<Task> stopFunc = null;
@@ -132,14 +143,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 _disposed = true;
             }
 
-            _sessionStarted.TrySetCanceled();
+            _initialized.TrySetCanceled();
             try
             {
-                await _sessionStarted.Task;
+                await _initialized.Task;
             }
             catch
             {
             }
+
+            _sessionStarted.TrySetCanceled();
 
             _eventSource?.Dispose();
         }

@@ -26,19 +26,31 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private readonly ConsoleProvider _consoleProvider;
         private readonly CommandProcessor _commandProcessor;
         private readonly SymbolService _symbolService;
+        private readonly ContextService _contextService;
+        private int _targetIdFactory;
         private Target _target;
 
         public Analyzer()
         {
+            LoggingCommand.Initialize();
+
             _serviceProvider = new ServiceProvider();
             _consoleProvider = new ConsoleProvider();
             _commandProcessor = new CommandProcessor();
             _symbolService = new SymbolService(this);
+            _contextService = new ContextService(this);
 
             _serviceProvider.AddService<IHost>(this);
             _serviceProvider.AddService<IConsoleService>(_consoleProvider);
             _serviceProvider.AddService<ICommandService>(_commandProcessor);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
+            _serviceProvider.AddService<IContextService>(_contextService);
+            _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
+
+            _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
+                ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
+                return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
+            });
 
             _commandProcessor.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
             _commandProcessor.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
@@ -81,13 +93,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")) {
                     targetPlatform = OSPlatform.OSX;
                 }
-                _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, dump_path.FullName);
+                _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
+                _contextService.SetCurrentTarget(_target);
 
-                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => {
-                    var sosHost = new SOSHost(_target);
-                    sosHost.InitializeSOSHost();
-                    return sosHost;
-                });
+                _target.ServiceProvider.AddServiceFactory<SOSHost>(() => new SOSHost(_contextService.Services));
 
                 // Automatically enable symbol server support
                 _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
@@ -98,8 +107,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     foreach (string cmd in command)
                     {
-                        Parse(cmd);
-
+                        _commandProcessor.Execute(cmd, _contextService.Services);
                         if (_consoleProvider.Shutdown) {
                             break;
                         }
@@ -112,7 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
                     _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
-                        Parse(commandLine);
+                        _commandProcessor.Execute(commandLine, _contextService.Services);
                     });
                 }
             }
@@ -133,8 +141,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 if (_target != null)
                 {
-                    _target.Close();
-                    _target = null;
+                    DestroyTarget(_target);
                 }
                 // Persist the current command history
                 try
@@ -154,36 +161,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             return Task.FromResult(0);
         }
 
-        private void Parse(string commandLine)
-        {
-            // If there is no target, then provide just the global services
-            ServiceProvider services = _serviceProvider;
-            if (_target != null)
-            {
-                // Create a per command invocation service provider. These services may change between each command invocation.
-                services = new ServiceProvider(_target.Services);
-
-                // Add the current thread if any
-                services.AddServiceFactory<IThread>(() => {
-                    IThreadService threadService = _target.Services.GetService<IThreadService>();
-                    if (threadService != null && threadService.CurrentThreadId.HasValue) {
-                        return threadService.GetThreadFromId(threadService.CurrentThreadId.Value);
-                    }
-                    return null;
-                });
-
-                // Add the current runtime and related services
-                var runtimeService = _target.Services.GetService<IRuntimeService>();
-                if (runtimeService != null)
-                {
-                    services.AddServiceFactory<IRuntime>(() => runtimeService.CurrentRuntime);
-                    services.AddServiceFactory<ClrRuntime>(() => services.GetService<IRuntime>()?.Services.GetService<ClrRuntime>());
-                    services.AddServiceFactory<ClrMDHelper>(() => new ClrMDHelper(services.GetService<ClrRuntime>()));
-                }
-            }
-            _commandProcessor.Execute(commandLine, services);
-        }
-
         #region IHost
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
@@ -194,9 +171,20 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
-        ITarget IHost.CurrentTarget => _target;
-
-        void IHost.SetCurrentTarget(int targetid) => throw new NotImplementedException();
+        public void DestroyTarget(ITarget target)
+        {
+            if (target == null) {
+                throw new ArgumentNullException(nameof(target));
+            }
+            if (target == _target)
+            {
+                _target = null;
+                _contextService.ClearCurrentTarget();
+                if (target is IDisposable disposable) {
+                    disposable.Dispose();
+                }
+            }
+        }
 
         #endregion
     }

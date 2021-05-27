@@ -49,18 +49,13 @@ namespace Microsoft.Diagnostics.DebugServices
         bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info);
 
         /// <summary>
-        /// Current OS thread Id
-        /// </summary>
-        uint? CurrentThreadId { get; set; }
-
-        /// <summary>
         /// Enumerate all the native threads
         /// </summary>
         /// <returns>Get info for all the threads</returns>
         IEnumerable<IThread> EnumerateThreads();
 
         /// <summary>
-        /// Get the thread info from the thread index
+        /// Get the thread from the thread index
         /// </summary>
         /// <param name="threadIndex">index</param>
         /// <returns>thread info</returns>
@@ -68,7 +63,7 @@ namespace Microsoft.Diagnostics.DebugServices
         IThread GetThreadFromIndex(int threadIndex);
 
         /// <summary>
-        /// Get the thread info from the OS thread id
+        /// Get the thread from the OS thread id
         /// </summary>
         /// <param name="threadId">os id</param>
         /// <returns>thread info</returns>

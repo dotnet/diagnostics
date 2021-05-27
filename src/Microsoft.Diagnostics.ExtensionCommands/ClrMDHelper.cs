@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -17,7 +18,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ClrMDHelper(ClrRuntime clr)
         {
-            _clr = clr ?? throw new DiagnosticsException("No CLR runtime set");
+            Debug.Assert(clr != null);
+            _clr = clr;
             _heap = _clr.Heap;
         }
 
@@ -733,7 +735,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     return start != end;
                 case GCGeneration.Generation2:
-                    if (!segment.IsLargeObjectSegment)
+                    if (!(segment.IsLargeObjectSegment || segment.IsPinnedObjectSegment))
                     {
                         start = segment.Generation2.Start;
                         end = segment.Generation2.End;
@@ -741,6 +743,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return start != end;
                 case GCGeneration.LargeObjectHeap:
                     if (segment.IsLargeObjectSegment)
+                    {
+                        start = segment.Start;
+                        end = segment.End;
+                    }
+                    return start != end;
+                case GCGeneration.PinnedObjectHeap:
+                    if (segment.IsPinnedObjectSegment)
                     {
                         start = segment.Start;
                         end = segment.End;

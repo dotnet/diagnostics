@@ -9,12 +9,15 @@ using System.Linq;
 using System.Globalization;
 using System.Text;
 
+//WARNING
+//This class is sourced from https://github.com/dotnet/extensions/blob/v3.1.14/src/Logging/Logging.Abstractions/src/LogValuesFormatter.cs
+//with monitor modifications.
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     /// <summary>
     /// Formatter to convert the named format items like {NamedformatItem} to <see cref="M:string.Format"/> format.
     /// </summary>
-    public class LogValuesFormatter
+    internal class LogValuesFormatter
     {
         private const string NullValue = "(null)";
         private static readonly object[] EmptyArray = Array.Empty<object>();

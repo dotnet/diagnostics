@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -39,6 +40,11 @@ namespace SOS.Hosting
             _debugSystemObjects = new DebugSystemObjects(this, soshost);
 
             AddRef();
+        }
+
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("DebugClient.Destroy");
         }
 
         private static void AddDebugClient(VTableBuilder builder, SOSHost soshost)

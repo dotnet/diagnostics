@@ -26,11 +26,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #region IThread
 
-        public IServiceProvider Services => ServiceProvider;
-
         public int ThreadIndex { get; }
 
         public uint ThreadId { get; }
+
+        public ITarget Target => _threadService.Target;
+
+        public IServiceProvider Services => ServiceProvider;
 
         public bool TryGetRegisterValue(int index, out ulong value)
         {
@@ -87,6 +89,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
+
+        public override bool Equals(object obj)
+        {
+            IThread thread = (IThread)obj;
+            return Target == thread.Target && ThreadId == thread.ThreadId;
+        }
+
+        public override int GetHashCode()
+        {
+            return Utilities.CombineHashCodes(Target.GetHashCode(), ThreadId.GetHashCode());
+        }
 
         public override string ToString()
         {

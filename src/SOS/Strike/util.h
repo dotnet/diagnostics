@@ -1806,7 +1806,7 @@ DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, DWORD_PTR *wasted = 0)
 DWORD_PTR JitHeapInfo();
 DWORD_PTR VSDHeapInfo(CLRDATA_ADDRESS appDomain, DWORD_PTR *wasted = 0);
 
-DWORD GetNumComponents(TADDR obj);
+size_t GetNumComponents(TADDR obj);
 
 struct GenUsageStat
 {
@@ -3183,7 +3183,7 @@ private:
 
     // Object/MT data:
     MTInfo *GetMTInfo(TADDR mt);
-    DWORD GetComponents(TADDR obj, TADDR mt);
+    size_t GetComponents(TADDR obj, TADDR mt);
     size_t GetSizeOfObject(TADDR obj, MTInfo *info);
 
     // RootNode management:

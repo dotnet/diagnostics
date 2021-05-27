@@ -15,9 +15,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             private readonly Action _callback;
 
-            internal EventNode(Action callback)
+            internal EventNode(bool oneshot, Action callback)
             {
-                _callback = callback;
+                if (oneshot)
+                {
+                    _callback = () => {
+                        callback();
+                        Remove();
+                    };
+                }
+                else
+                {
+                    _callback = callback;
+                }
             }
 
             internal void Fire()
@@ -37,10 +47,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
         }
 
-        public IDisposable Register(Action callback)
+        public IDisposable Register(Action callback) => Register(oneshot: false, callback);
+
+        public IDisposable RegisterOneShot(Action callback) => Register(oneshot: true, callback);
+
+        private IDisposable Register(bool oneshot, Action callback)
         {
             // Insert at the end of the list
-            var node = new EventNode(callback);
+            var node = new EventNode(oneshot, callback);
             _events.InsertBefore(node);
             return node;
         }

@@ -25,33 +25,44 @@ public:
 
         if (arguments == nullptr || arguments[0] == nullptr)
         {
-            if (g_currentThreadSystemId == (ULONG)-1 || g_currentThreadIndex == (ULONG)-1)
+            int index = 1;
+            result.Printf("OS TID -> lldb index\n");
+            for (const SpecialThreadInfoEntry& entry: g_services->ThreadInfos())
             {
-                result.Printf("sos OS tid not mapped\n");
+                if (entry.tid != 0)
+                {
+                    result.Printf("0x%08x -> %d\n", entry.tid, index);
+                }
+                index++;
             }
-            else {
-                result.Printf("sos OS tid 0x%x mapped to lldb thread index %d\n",
-                    g_currentThreadSystemId, g_currentThreadIndex);
-            }
-        }
-        else if (strcmp(arguments[0], "-clear") == 0) {
-            g_currentThreadIndex = (ULONG)-1;
-            g_currentThreadSystemId = (ULONG)-1;
-            result.Printf("Cleared sos OS tid/index\n");
-        }
+        }   
         else if (arguments[1] == nullptr)
         {
             result.Printf("Need thread index parameter that maps to the OS tid. setsostid <tid> <index>\n");
         }
         else
         {
-            ULONG tid = strtoul(arguments[0], nullptr, 16);
-            g_currentThreadSystemId = tid;
-
-            ULONG index = strtoul(arguments[1], nullptr, 16);
-            g_currentThreadIndex = index;
-
-            result.Printf("Mapped sos OS tid 0x%x to lldb thread index %d\n", tid, index);
+            ULONG tid = 0;
+            if (strcmp(arguments[0], "-c") != 0 && strcmp(arguments[0], "--clear") != 0) 
+            {
+                tid = strtoul(arguments[0], nullptr, 16);
+            }
+            ULONG index = strtoul(arguments[1], nullptr, 10);
+            if (index <= 0)
+            {
+                result.Printf("Invalid thread index parameter\n");
+            }
+            else
+            {
+                g_services->AddThreadInfoEntry(tid, index);
+                if (tid == 0)
+                {
+                    result.Printf("Cleared lldb thread index %d\n", index);
+                }
+                else {
+                    result.Printf("Mapped SOS OS tid 0x%x to lldb thread index %d\n", tid, index);
+                }
+            }
         }
         return result.Succeeded();
     }

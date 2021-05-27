@@ -11,10 +11,7 @@ if(NOT ${NUGET_PACKAGES} STREQUAL "")
         set(DIASYMREADER_ARCH amd64)
     endif()
 
-    # Until issue https://github.com/dotnet/diagnostics/issues/324 is done there is no arm64 version of the diasymreader in this package
-    if(NOT CLR_CMAKE_TARGET_ARCH_ARM64)
-        install(FILES ${NUGET_PACKAGES}/microsoft.diasymreader.native/1.7.0/runtimes/win/native/Microsoft.DiaSymReader.Native.${DIASYMREADER_ARCH}.dll DESTINATION . )
-    endif()
+    install(FILES ${NUGET_PACKAGES}/microsoft.diasymreader.native/16.9.0-beta1.21055.5/runtimes/win/native/Microsoft.DiaSymReader.Native.${DIASYMREADER_ARCH}.dll DESTINATION . )
 endif()
 
 if(NOT ${CLR_MANAGED_BINARY_DIR} STREQUAL "")

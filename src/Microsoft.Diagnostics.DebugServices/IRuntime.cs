@@ -23,14 +23,19 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IRuntime
     {
         /// <summary>
-        /// The per target services like clrmd's ClrInfo and ClrRuntime.
-        /// </summary>
-        IServiceProvider Services { get; }
-
-        /// <summary>
         /// Runtime id
         /// </summary>
         int Id { get; }
+
+        /// <summary>
+        /// The target for this runtime.
+        /// </summary>
+        ITarget Target { get; }
+
+        /// <summary>
+        /// The per target services like clrmd's ClrInfo and ClrRuntime.
+        /// </summary>
+        IServiceProvider Services { get; }
 
         /// <summary>
         /// Returns the runtime OS and type
@@ -41,6 +46,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Returns the runtime module
         /// </summary>
         IModule RuntimeModule { get; }
+
+        /// <summary>
+        /// Directory of the runtime module (coreclr.dll, libcoreclr.so, etc.)
+        /// </summary>
+        string RuntimeModuleDirectory { get; set; }
 
         /// <summary>
         /// Returns the DAC file path

@@ -49,7 +49,7 @@ For analyzing CPU usage, IO, lock contention, allocation rate, etc the investiga
 
 **Convert a trace to use with speedscope**
 
-    > dotnet trace convert ~/trace.nettrace --to-speedscope
+    > dotnet trace convert ~/trace.nettrace --format Speedscope
     Writing:     ~/trace.speedscope.json
     Conversion complete
 
