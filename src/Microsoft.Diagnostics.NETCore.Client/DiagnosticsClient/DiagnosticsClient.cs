@@ -216,6 +216,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        /// <summary>
+        /// Set an environment variable in the target process.
+        /// </summary>
+        /// <param name="name">The name of the environment variable to set.</param>
+        /// <param name="value">The value of the environment variable to set.</param>
         public void SetEnvironmentVariable(string name, string value)
         {
             if (String.IsNullOrEmpty(name))
@@ -243,6 +248,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        /// <summary>
+        /// Gets all environement variables and their values from the target process.
+        /// </summary>
+        /// <returns>A dictionary containing all of the environment variables defined in the target process.</returns>
         public Dictionary<string, string> GetProcessEnvironment()
         {
             var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
@@ -399,10 +408,5 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"Type {obj.GetType()} is not supported in SerializePayloadArgument, please add it.");
             }
         }
-        private static void SerializePayloadArgument(string str, BinaryWriter writer)
-        {
-            writer.WriteString(str);
-        }
-
     }
 }
