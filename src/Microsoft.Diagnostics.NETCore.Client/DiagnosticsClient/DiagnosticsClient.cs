@@ -216,44 +216,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        /// <summary>
-        /// Gets the value of the environment variable from the target process.
-        /// </summary>
-        /// <param name="name">The name of the environment variable to get from the target process.</param>
-        public string GetEnvironmentVariable(string name)
-        {
-            if (String.IsNullOrEmpty(name))
-            {
-                throw new ArgumentException($"{nameof(name)} must be non-null.");
-            }
-
-            byte[] serializedConfiguration = SerializePayload(name);
-            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetEnvironmentVariable, serializedConfiguration);
-            var response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.Error:
-                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
-                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
-                    {
-                        throw new UnsupportedCommandException("The target runtime does not support the GetEnvironmentVariable command.");
-                    }
-                    else if (hr == (uint)DiagnosticsIpcError.EnvVarNotFound)
-                    {
-                        return null;
-                    }
-
-                    throw new ServerErrorException($"GetEnvironmentVariable failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerResponseId.OK:
-                    int index = 0;
-                    string value = IpcHelpers.ReadString(response.Payload, ref index);
-
-                    return value;
-                default:
-                    throw new ServerErrorException($"GetEnvironmentVariable failed - server responded with unknown command");
-            }
-        }
-
         public void SetEnvironmentVariable(string name, string value)
         {
             if (String.IsNullOrEmpty(name))
