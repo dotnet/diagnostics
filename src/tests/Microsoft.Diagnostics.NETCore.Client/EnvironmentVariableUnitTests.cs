@@ -6,6 +6,15 @@ using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
 {
+    internal static class DiagnosticClientExtensions
+    {
+        public static string GetEnvironmentVariable(this DiagnosticsClient client, string name)
+        {
+            Dictionary<string, string> allEnvs = client.GetProcessEnvironment();
+            return allEnvs[name];
+        }
+    }
+
     public class EnvironmentVariableUnitTests
     {
         private readonly ITestOutputHelper output;
@@ -13,25 +22,6 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
         public EnvironmentVariableUnitTests(ITestOutputHelper outputHelper)
         {
             output = outputHelper;
-        }
-
-        [Fact]
-        public void GetEnvironmentVariable()
-        {
-            Dictionary<string, string> envVars = new Dictionary<string, string>
-            {
-                { "TestEmpty", "" },
-                { "TestExists", "Hi!" }
-            };
-            using TestRunner runner = new TestRunner(testExePath: CommonHelper.GetTraceePathWithArgs(), 
-                                                     _outputHelper: output,
-                                                     envVars: envVars);
-            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
-            DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
-
-            Assert.Null(client.GetEnvironmentVariable("TestNotExists"));
-            Assert.Null(client.GetEnvironmentVariable("TestEmpty"));
-            Assert.Equal(envVars["TestExists"], client.GetEnvironmentVariable("TestExists"));
         }
 
         [Fact]
