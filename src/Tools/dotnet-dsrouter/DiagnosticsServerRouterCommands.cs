@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
         }
 
-        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, bool shutdownOnChildExit, string verbose)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -70,28 +70,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.CommandToken = token;
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
+            await checkKeepRunning(linkedCancelToken, cancelRouterTask, routerTask, shutdownOnChildExit).ConfigureAwait(false);
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, bool shutdownOnChildExit, string verbose)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -113,28 +96,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.CommandToken = token;
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
+            await checkKeepRunning(linkedCancelToken, cancelRouterTask, routerTask, shutdownOnChildExit).ConfigureAwait(false);
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, bool shutdownOnChildExit, string verbose)
         {
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
@@ -154,7 +120,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.CommandToken = token;
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            await checkKeepRunning (linkedCancelToken, cancelRouterTask, routerTask, shutdownOnChildExit).ConfigureAwait (false);
+            return routerTask.Result;
+        }
 
+        static async Task<int> checkKeepRunning(CancellationTokenSource linkedCancelToken, CancellationTokenSource cancelRouterTask, Task<int> routerTask, bool shutdownOnChildExit)
+        {
             while (!linkedCancelToken.IsCancellationRequested)
             {
                 await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
@@ -169,6 +140,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         cancelRouterTask.Cancel();
                         break;
                     }
+                }
+
+                if (shutdownOnChildExit && ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.ChildProc.HasExited)
+                {
+                    cancelRouterTask.Cancel();
+                    break;
                 }
             }
 

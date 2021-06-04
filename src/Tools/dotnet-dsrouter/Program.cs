@@ -17,9 +17,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
     internal class Program
     {
-        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose);
+        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, bool shutdownOnChildExit, string verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, bool shutdownOnChildExit, string verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, bool shutdownOnChildExit, string verbose);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpServerRouter).GetCommandHandler(),
                 // Options
-                IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+                IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), ShutdownOnChildExit(), VerboseOption()
             };
 
         private static Command IpcServerTcpServerRouterCommand() =>
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter).GetCommandHandler(),
                 // Options
-                IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+                IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), ShutdownOnChildExit(), VerboseOption()
             };
 
         private static Command IpcServerTcpClientRouterCommand() =>
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter).GetCommandHandler(),
                 // Options
-                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(),ShutdownOnChildExit(), VerboseOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -108,6 +108,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "If not specified, router won't trigger an automatic shutdown.")
             {
                 Argument = new Argument<int>(name: "runtimeTimeout", getDefaultValue: () => Timeout.Infinite)
+            };
+
+        private static Option ShutdownOnChildExit() =>
+            new Option(
+                aliases: new[] { "--shutdown-on-child-exit" },
+                description: "Autmoatically shutdown router when any child process exits." +
+                                "If not specified or no child process is executed, router won't trigger an automatic shutdown.")
+            {
+                Argument = new Argument<bool>(name: "shutdownOnChildExit", getDefaultValue: () => false)
             };
 
         private static Option VerboseOption() =>
