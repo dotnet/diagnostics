@@ -634,6 +634,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _ipcServerRouterFactory.Start();
 
             _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
+            _logger?.LogInformation($"Use --process-id {Process.GetCurrentProcess().Id} to connect diagnostics tooling against this router instance.");
         }
 
         public override Task Stop()
@@ -821,6 +822,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _ipcServerRouterFactory.Start();
             _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP client ({_tcpClientRouterFactory.TcpClientAddress}) router.");
+            _logger?.LogInformation($"Use --process-id {Process.GetCurrentProcess().Id} to connect diagnostics tooling against this router instance.");
         }
 
         public override Task Stop()
