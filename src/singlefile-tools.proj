@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-monitor/**/*.csproj;$(RepoRoot)src/Tools/dotnet-analyze/**/*.csproj" />
+    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-dsrouter/**/*.csproj" />
     <SupportedRids Include="$(SupportedRids)"/>
   </ItemGroup>
 
