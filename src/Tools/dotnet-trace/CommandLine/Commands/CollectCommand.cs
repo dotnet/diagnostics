@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return await Task.FromResult(ret);
                     }
                     diagnosticsClient = holder.Client;
-                    if (shouldResumeRuntime)
+                    if (ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort))
                     {
                         process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
                     }
