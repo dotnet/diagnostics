@@ -3,20 +3,19 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Counters.Exporters;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Internal.Common.Utils;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.IO;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Diagnostics.Tracing;
 using System.IO;
-using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tools.Counters.Exporters;
-using Microsoft.Internal.Common.Utils;
-using System.CommandLine.IO;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -24,11 +23,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private int _processId;
         private int _interval;
-        private List<string> _counterList;
+        private CounterSet _counterList;
         private CancellationToken _ct;
         private IConsole _console;
         private ICounterRenderer _renderer;
-        private CounterFilter filter;
         private string _output;
         private bool pauseCmdSet;
         private ManualResetEvent shouldExit;
@@ -38,7 +36,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public CounterMonitor()
         {
-            filter = new CounterFilter();
             pauseCmdSet = false;
         }
 
@@ -54,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
 
                 // If it's not a counter we asked for, ignore it.
-                if (!filter.Filter(obj.ProviderName, payloadFields["Name"].ToString())) return;
+                if (!_counterList.Contains(obj.ProviderName, payloadFields["Name"].ToString())) return;
 
                 ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
                 _renderer.CounterPayloadReceived(obj.ProviderName, payload, pauseCmdSet);
@@ -93,254 +90,292 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort, bool resumeRuntime)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+            try
             {
-                return ReturnCode.ArgumentError;
-            }
-            shouldExit = new ManualResetEvent(false);
-            _ct.Register(() => shouldExit.Set());
+                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+                {
+                    return ReturnCode.ArgumentError;
+                }
+                shouldExit = new ManualResetEvent(false);
+                _ct.Register(() => shouldExit.Set());
 
-            DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
-            {
-                if (holder == null)
+                DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
                 {
-                    return ReturnCode.Ok;
-                }
-                try
-                {
-                    InitializeCounterList(counters, counter_list);
-                    _ct = ct;
-                    _console = console;
-                    _interval = refreshInterval;
-                    _renderer = new ConsoleWriter();
-                    _diagnosticsClient = holder.Client;
-                    _resumeRuntime = resumeRuntime;
-                    int ret = await Start();
-                    ProcessLauncher.Launcher.Cleanup();
-                    return ret;
-                }
-                catch (OperationCanceledException)
-                {
+                    if (holder == null)
+                    {
+                        return ReturnCode.Ok;
+                    }
                     try
                     {
-                        _session.Stop();
+                        _console = console;
+                        // the launch command may misinterpret app arguments as the old space separated
+                        // provider list so we need to ignore it in that case
+                        _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
+                        _ct = ct;
+                        _interval = refreshInterval;
+                        _renderer = new ConsoleWriter();
+                        _diagnosticsClient = holder.Client;
+                        _resumeRuntime = resumeRuntime;
+                        int ret = await Start();
+                        ProcessLauncher.Launcher.Cleanup();
+                        return ret;
                     }
-                    catch (Exception) { } // Swallow all exceptions for now.
+                    catch (OperationCanceledException)
+                    {
+                        try
+                        {
+                            _session.Stop();
+                        }
+                        catch (Exception) { } // Swallow all exceptions for now.
 
-                    console.Out.WriteLine($"Complete");
-                    return ReturnCode.Ok;
+                        console.Out.WriteLine($"Complete");
+                        return ReturnCode.Ok;
+                    }
                 }
+            }
+            catch(CommandLineErrorException e)
+            {
+                console.Error.WriteLine(e.Message);
+                return ReturnCode.ArgumentError;
             }
         }
 
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort, bool resumeRuntime)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+            try
             {
-                return ReturnCode.ArgumentError;
-            }
-
-            shouldExit = new ManualResetEvent(false);
-            _ct.Register(() => shouldExit.Set());
-
-            DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
-            {
-                if (holder == null)
+                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return ReturnCode.Ok;
+                    return ReturnCode.ArgumentError;
                 }
 
-                try
+                shouldExit = new ManualResetEvent(false);
+                _ct.Register(() => shouldExit.Set());
+
+                DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
                 {
-                    InitializeCounterList(counters, counter_list);
-                    _ct = ct;
-                    _console = console;
-                    _interval = refreshInterval;
-                    _output = output;
-                    _diagnosticsClient = holder.Client;
-                    if (_output.Length == 0)
+                    if (holder == null)
                     {
-                        _console.Error.WriteLine("Output cannot be an empty string");
-                        return ReturnCode.ArgumentError;
+                        return ReturnCode.Ok;
                     }
-                    if (format == CountersExportFormat.csv)
-                    {
-                        _renderer = new CSVExporter(output);
-                    }
-                    else if (format == CountersExportFormat.json)
-                    {
-                        // Try getting the process name.
-                        string processName = "";
-                        try
-                        {
-                            if (ProcessLauncher.Launcher.HasChildProc)
-                            {
-                                _processId = ProcessLauncher.Launcher.ChildProc.Id;
-                            }
-                            processName = Process.GetProcessById(_processId).ProcessName;
-                        }
-                        catch (Exception) { }
-                        _renderer = new JSONExporter(output, processName);
-                    }
-                    else
-                    {
-                        _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                        return ReturnCode.ArgumentError;
-                    }
-                    _resumeRuntime = resumeRuntime;
-                    int ret = await Start();
-                    return ret;
-                }
-                catch (OperationCanceledException)
-                {
+
                     try
                     {
-                        _session.Stop();
+                        _console = console;
+                        // the launch command may misinterpret app arguments as the old space separated
+                        // provider list so we need to ignore it in that case
+                        _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
+                        _ct = ct;
+                        _interval = refreshInterval;
+                        _output = output;
+                        _diagnosticsClient = holder.Client;
+                        if (_output.Length == 0)
+                        {
+                            _console.Error.WriteLine("Output cannot be an empty string");
+                            return ReturnCode.ArgumentError;
+                        }
+                        if (format == CountersExportFormat.csv)
+                        {
+                            _renderer = new CSVExporter(output);
+                        }
+                        else if (format == CountersExportFormat.json)
+                        {
+                            // Try getting the process name.
+                            string processName = "";
+                            try
+                            {
+                                if (ProcessLauncher.Launcher.HasChildProc)
+                                {
+                                    _processId = ProcessLauncher.Launcher.ChildProc.Id;
+                                }
+                                processName = Process.GetProcessById(_processId).ProcessName;
+                            }
+                            catch (Exception) { }
+                            _renderer = new JSONExporter(output, processName);
+                        }
+                        else
+                        {
+                            _console.Error.WriteLine($"The output format {format} is not a valid output format.");
+                            return ReturnCode.ArgumentError;
+                        }
+                        _resumeRuntime = resumeRuntime;
+                        int ret = await Start();
+                        return ret;
                     }
-                    catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
-                    return ReturnCode.Ok;
+                    catch (OperationCanceledException)
+                    {
+                        try
+                        {
+                            _session.Stop();
+                        }
+                        catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
+                        return ReturnCode.Ok;
+                    }
                 }
             }
-        }
-
-        private void InitializeCounterList(string counters, List<string> counterList)
-        {
-            if (_processId != 0)
+            catch(CommandLineErrorException e)
             {
-                GenerateCounterList(counters, counterList);
-                _counterList = counterList;
-            }
-            else
-            {
-                _counterList = GenerateCounterList(counters);
+                console.Error.WriteLine(e.Message);
+                return ReturnCode.ArgumentError;
             }
         }
 
-        internal List<string> GenerateCounterList(string counters)
+        internal CounterSet ConfigureCounters(string commaSeparatedProviderListText, List<string> providerList)
         {
-            List<string> counterList = new List<string>();
+            CounterSet counters = new CounterSet();
+            try
+            {
+                if(commaSeparatedProviderListText != null)
+                {
+                    ParseProviderList(commaSeparatedProviderListText, counters);
+                }
+            }
+            catch(FormatException e)
+            {
+                // the FormatException message strings thrown by ParseProviderList are controlled
+                // by us and anticipate being integrated into the command-line error text.
+                throw new CommandLineErrorException("Error parsing --counters argument: " + e.Message);
+            }
+
+            if (providerList != null)
+            {
+                try
+                {
+                    foreach (string providerText in providerList)
+                    {
+                        ParseCounterProvider(providerText, counters);
+                    }
+                }
+                catch (FormatException e)
+                {
+                    // the FormatException message strings thrown by ParseCounterProvider are controlled
+                    // by us and anticipate being integrated into the command-line error text.
+                    throw new CommandLineErrorException("Error parsing counter_list: " + e.Message);
+                }
+            }
+
+            if (counters.IsEmpty)
+            {
+                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
+                counters.AddAllProviderCounters("System.Runtime");
+            }
+            return counters;
+        }
+
+        // parses a comma separated list of providers
+        internal CounterSet ParseProviderList(string providerListText)
+        {
+            CounterSet set = new CounterSet();
+            ParseProviderList(providerListText, set);
+            return set;
+        }
+
+        // parses a comma separated list of providers
+        internal void ParseProviderList(string providerListText, CounterSet counters)
+        {
             bool inParen = false;
             int startIdx = -1;
-            for (int i = 0; i < counters.Length; i++)
+            int i = 0;
+            for (; i < providerListText.Length; i++)
             {
                 if (!inParen)
                 {
-                    if (counters[i] == '[')
+                    if (providerListText[i] == '[')
                     {
                         inParen = true;
                         continue;
                     }
-                    else if (counters[i] == ',')
+                    else if (providerListText[i] == ',')
                     {
-                        counterList.Add(counters.Substring(startIdx, i - startIdx));
+                        if (startIdx < 0)
+                        {
+                            throw new FormatException("Expected non-empty counter_provider");
+                        }
+                        ParseCounterProvider(providerListText.Substring(startIdx, i - startIdx), counters);
                         startIdx = -1;
                     }
-                    else if (startIdx == -1 && counters[i] != ' ')
+                    else if (startIdx == -1 && providerListText[i] != ' ')
                     {
                         startIdx = i;
                     }
                 }
-                else if (inParen && counters[i] == ']')
+                else if (inParen && providerListText[i] == ']')
                 {
                     inParen = false;
                 }
             }
-            counterList.Add(counters.Substring(startIdx, counters.Length - startIdx));
-            return counterList;
-        }
-
-        /// <summary>
-        /// This gets invoked by Collect/Monitor when user specifies target process (instead of launching at startup)
-        /// The user may specify --counters option as well as the default list of counters, so we try to merge it here.
-        /// </summary>
-        /// <param name="counters"></param>
-        /// <param name="counter_list"></param>
-        internal void GenerateCounterList(string counters, List<string> counter_list)
-        {
-            List<string> counterOptionList = GenerateCounterList(counters);
-            foreach (string counter in counterOptionList)
+            if(inParen)
             {
-                if (!counter_list.Contains(counter))
-                {
-                    counter_list.Add(counter);
-                }
+                throw new FormatException("Expected to find closing ']' in counter_provider");
             }
+            if (startIdx < 0)
+            {
+                throw new FormatException("Expected non-empty counter_provider");
+            }
+            ParseCounterProvider(providerListText.Substring(startIdx, i - startIdx), counters);
         }
 
-        private string BuildProviderString()
+        // Parses a string in the format:
+        // provider := <provider_name><optional_counter_list>
+        // provider_name := string not containing '['
+        // optional_counter_list := [<comma_separated_counter_names>]
+        // For example:
+        //   System.Runtime
+        //   System.Runtime[exception-count]
+        //   System.Runtime[exception-count,cpu-usage]
+        void ParseCounterProvider(string providerText, CounterSet counters)
         {
-            string providerString;
-            if (_counterList.Count == 0)
+            string[] tokens = providerText.Split('[');
+            if(tokens.Length == 0)
             {
-                CounterProvider defaultProvider = null;
-                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
-
-                // Enable the default profile if nothing is specified
-                if (!KnownData.TryGetProvider("System.Runtime", out defaultProvider))
-                {
-                    _console.Error.WriteLine("No providers or profiles were specified and there is no default profile available.");
-                    return "";
-                }
-                providerString = defaultProvider.ToProviderString(_interval);
-                filter.AddFilter("System.Runtime");
+                throw new FormatException("Expected non-empty counter_provider");
+            }
+            if(tokens.Length > 2)
+            {
+                throw new FormatException("Expected at most one '[' in counter_provider");
+            }
+            string providerName = tokens[0];
+            if (tokens.Length == 1)
+            {
+                counters.AddAllProviderCounters(providerName); // Only a provider name was specified
             }
             else
             {
-                CounterProvider provider = null;
-                StringBuilder sb = new StringBuilder("");
-                for (var i = 0; i < _counterList.Count; i++)
+                string counterNames = tokens[1];
+                if(!counterNames.EndsWith(']'))
                 {
-                    string counterSpecifier = _counterList[i];
-                    string[] tokens = counterSpecifier.Split('[');
-                    string providerName = tokens[0];
-                    if (!KnownData.TryGetProvider(providerName, out provider))
+                    if(counterNames.IndexOf(']') == -1)
                     {
-                        sb.Append(CounterProvider.SerializeUnknownProviderName(providerName, _interval));
+                        throw new FormatException("Expected to find closing ']' in counter_provider");
                     }
                     else
                     {
-                        sb.Append(provider.ToProviderString(_interval));    
-                    }
-                    
-                    if (i != _counterList.Count - 1)
-                    {
-                        sb.Append(",");
-                    }
-
-                    if (tokens.Length == 1)
-                    {
-                        filter.AddFilter(providerName); // This means no counter filter was specified.
-                    }
-                    else
-                    {
-                        string counterNames = tokens[1];
-                        string[] enabledCounters = counterNames.Substring(0, counterNames.Length-1).Split(',');
-                        
-                        filter.AddFilter(providerName, enabledCounters);
+                        throw new FormatException("Unexpected characters after closing ']' in counter_provider");
                     }
                 }
-                providerString = sb.ToString();
+                string[] enabledCounters = counterNames.Substring(0, counterNames.Length - 1).Split(',', StringSplitOptions.RemoveEmptyEntries);
+                counters.AddProviderCounters(providerName, enabledCounters);
             }
-            return providerString;
+        }
+
+        private EventPipeProvider[] GetEventPipeProviders()
+        {
+            return _counterList.Providers.Select(providerName => new EventPipeProvider(providerName, EventLevel.Error, 0, new Dictionary<string, string>()
+                {{ "EventCounterIntervalSec", _interval.ToString() }})).ToArray();
         }
 
         private async Task<int> Start()
         {
-            string providerString = BuildProviderString();
-            if (providerString.Length == 0)
-            {
-                return ReturnCode.ArgumentError;
-            }
-
+            EventPipeProvider[] providers = GetEventPipeProviders();
             _renderer.Initialize();
 
             Task monitorTask = new Task(() => {
                 try
                 {
-                    _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
+                    _session = _diagnosticsClient.StartEventPipeSession(providers, false, 10);
                     if (_resumeRuntime)
                     {
                         try
