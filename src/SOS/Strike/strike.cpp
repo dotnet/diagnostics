@@ -6169,13 +6169,40 @@ enum {
     // These are the values set in m_dwTransientFlags.
     // Note that none of these flags survive a prejit save/restore.
 
-    M_CRST_NOTINITIALIZED       = 0x00000001,   // Used to prevent destruction of garbage m_crst
-    M_LOOKUPCRST_NOTINITIALIZED = 0x00000002,
+    MODULE_IS_TENURED           = 0x00000001,   // Set once we know for sure the Module will not be freed until the appdomain itself exits
+    // unused                   = 0x00000002,
+    CLASSES_FREED               = 0x00000004,
+    IS_EDIT_AND_CONTINUE        = 0x00000008,   // is EnC Enabled for this module
 
-    SUPPORTS_UPDATEABLE_METHODS = 0x00000020,
-    CLASSES_FREED               = 0x00000040,
-    HAS_PHONY_IL_RVAS           = 0x00000080,
-    IS_EDIT_AND_CONTINUE        = 0x00000200,
+    IS_PROFILER_NOTIFIED        = 0x00000010,
+    IS_ETW_NOTIFIED             = 0x00000020,
+
+    //
+    // Note: the order of these must match the order defined in
+    // cordbpriv.h for DebuggerAssemblyControlFlags. The three
+    // values below should match the values defined in
+    // DebuggerAssemblyControlFlags when shifted right
+    // DEBUGGER_INFO_SHIFT bits.
+    //
+    DEBUGGER_USER_OVERRIDE_PRIV = 0x00000400,
+    DEBUGGER_ALLOW_JIT_OPTS_PRIV= 0x00000800,
+    DEBUGGER_TRACK_JIT_INFO_PRIV= 0x00001000,
+    DEBUGGER_ENC_ENABLED_PRIV   = 0x00002000,   // this is what was attempted to be set.  IS_EDIT_AND_CONTINUE is actual result.
+    DEBUGGER_PDBS_COPIED        = 0x00004000,
+    DEBUGGER_IGNORE_PDBS        = 0x00008000,
+    DEBUGGER_INFO_MASK_PRIV     = 0x0000Fc00,
+    DEBUGGER_INFO_SHIFT_PRIV    = 10,
+
+    // Used to indicate that this module has had it's IJW fixups properly installed.
+    IS_IJW_FIXED_UP             = 0x00080000,
+    IS_BEING_UNLOADED           = 0x00100000,
+
+    // Used to indicate that the module is loaded sufficiently for generic candidate instantiations to work
+    MODULE_READY_FOR_TYPELOAD  = 0x00200000,
+
+    // Used during NGen only
+    TYPESPECS_TRIAGED           = 0x40000000,
+    MODULE_SAVED                = 0x80000000,
 };
 
 void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
@@ -6245,8 +6272,6 @@ DECLARE_API(DumpModule)
         ExtOut("PEFile ");
     if (module.bIsReflection)
         ExtOut("Reflection ");
-    if (module.dwTransientFlags & SUPPORTS_UPDATEABLE_METHODS)
-        ExtOut("SupportsUpdateableMethods ");
 
     ToRelease<IXCLRDataModule> dataModule;
     if (SUCCEEDED(g_sos->GetModule(TO_CDADDR(p_ModuleAddr), &dataModule)))
@@ -6262,6 +6287,11 @@ DECLARE_API(DumpModule)
                 ExtOut("IsFileLayout ");
         }
     }
+    ExtOut("\n");
+
+    ExtOut("TransientFlags:          %08x ", module.dwTransientFlags);
+    if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
+        ExtOut("IS_EDIT_AND_CONTINUE");
     ExtOut("\n");
 
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
