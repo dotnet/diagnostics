@@ -19,6 +19,7 @@ namespace Microsoft.Internal.Common.Utils
     internal class ProcessLauncher
     {
         private Process _childProc = null;
+        private bool _started = false;
         private Task _stdOutTask = Task.CompletedTask;
         private Task _stdErrTask = Task.CompletedTask;
         internal static ProcessLauncher Launcher = new ProcessLauncher();
@@ -76,6 +77,15 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
+        public bool HasStarted
+        {
+            get
+            {
+                return _started;
+            }
+
+        }
+
         public Process ChildProc
         {
             get
@@ -110,12 +120,14 @@ namespace Microsoft.Internal.Common.Utils
                 _stdErrTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardError, ct);
             }
 
+            _started = true;
+
             return true;
         }
 
         public void Cleanup()
         {
-            if (_childProc != null && !_childProc.HasExited)
+            if (_childProc != null && _started && !_childProc.HasExited)
             {
                 try
                 {
