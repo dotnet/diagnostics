@@ -312,7 +312,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         // If the process is shutting down by itself print the return code from the process.
                         // Capture this before leaving the using, as the Dispose of the DiagnosticsClientHolder
                         // may terminate the target process causing it to have the wrong error code
-                        if (ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
+                        if (ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
                         {
                             ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
                             Console.WriteLine($"Process exited with code '{ret}'.");
