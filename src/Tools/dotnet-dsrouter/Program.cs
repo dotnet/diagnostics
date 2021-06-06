@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
     {
         delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, bool shutdownOnChildExit, string verbose);
         delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, bool shutdownOnChildExit, string verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, bool shutdownOnChildExit, string verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, bool shutdownOnChildExit, bool suspend, string verbose);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter).GetCommandHandler(),
                 // Options
-                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(),ShutdownOnChildExit(), VerboseOption()
+                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), ShutdownOnChildExit(), Suspend(), VerboseOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -113,10 +113,18 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option ShutdownOnChildExit() =>
             new Option(
                 aliases: new[] { "--shutdown-on-child-exit" },
-                description: "Autmoatically shutdown router when any child process exits." +
+                description: "Autmatically shutdown router when any child process exits." +
                                 "If not specified or no child process is executed, router won't trigger an automatic shutdown.")
             {
                 Argument = new Argument<bool>(name: "shutdownOnChildExit", getDefaultValue: () => false)
+            };
+
+        private static Option Suspend() =>
+            new Option(
+                aliases: new[] { "--suspend" },
+                description: "Runtime is in suspend mode and needs to be resumed on connect.")
+            {
+                Argument = new Argument<bool>(name: "suspend", getDefaultValue: () => false)
             };
 
         private static Option VerboseOption() =>

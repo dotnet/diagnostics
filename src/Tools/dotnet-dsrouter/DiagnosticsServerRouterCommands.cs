@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, bool shutdownOnChildExit, string verbose)
+        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, bool shutdownOnChildExit, bool suspend, string verbose)
         {
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using var factory = new LoggerFactory();
             factory.AddConsole(logLevel, false);
 
-            Launcher.SuspendProcess = false;
+            Launcher.SuspendProcess = suspend;
             Launcher.ConnectMode = false;
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
