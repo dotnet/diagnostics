@@ -90,15 +90,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option CounterOption() =>
             new Option(
                 alias: "--counters",
-                description: "A comma-separated list of counter providers. Counter providers can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.")
+                description: "A comma-separated list of counter providers. Counter providers can be specified as <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without qualifying counter_names then all counters will be shown. For example \"System.Runtime[cpu-usage,working-set],Microsoft.AspNetCore.Hosting\" includes the cpu-usage and working-set counters from the System.Runtime provider and all the counters from the Microsoft.AspNetCore.Hosting provider. To discover provider and counter names, use the list command.")
             {
-                Argument = new Argument<string>(name: "counters", getDefaultValue: () => "System.Runtime")
+                Argument = new Argument<string>(name: "counters")
             };
 
         private static Argument CounterList() =>
             new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>())
             {
-                Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
+                Description = @"A space separated list of counter providers. Counters can be specified <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without a qualifying counter_names then all counters will be shown. To discover provider and counter names, use the list command.",
                 IsHidden = true
             };
 

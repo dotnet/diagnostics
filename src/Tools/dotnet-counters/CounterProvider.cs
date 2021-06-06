@@ -37,11 +37,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return $"{Name}:{Keywords}:{Level}:EventCounterIntervalSec={interval}";
         }
 
-        public static string SerializeUnknownProviderName(string unknownCounterProviderName, int interval)
-        {
-            return $"{unknownCounterProviderName}:ffffffff:4:EventCounterIntervalSec={interval}";
-        }
-
         public IReadOnlyList<CounterProfile> GetAllCounters() => Counters.Values.ToList();
     }
 
