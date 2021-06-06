@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option ShutdownOnChildExit() =>
             new Option(
                 aliases: new[] { "--shutdown-on-child-exit" },
-                description: "Autmatically shutdown router when any child process exits." +
+                description: "Automatically shutdown router when any child process exits." +
                                 "If not specified or no child process is executed, router won't trigger an automatic shutdown.")
             {
                 Argument = new Argument<bool>(name: "shutdownOnChildExit", getDefaultValue: () => false)
