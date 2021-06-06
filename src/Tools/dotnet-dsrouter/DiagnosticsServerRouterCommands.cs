@@ -30,13 +30,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     diagnosticPorts = "";
                 }
 
-                ProcessLauncher.Launcher.Start(diagnosticPorts, CommandToken, Verbose, Verbose);
+                if (!ProcessLauncher.Launcher.Start(diagnosticPorts, CommandToken, Verbose, Verbose))
+                    throw new Exception($"Failed to launch command.");
             }
         }
 
         public void OnRouterStopped()
         {
-            ProcessLauncher.Launcher.Cleanup();
+            if (ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.HasStarted)
+                ProcessLauncher.Launcher.Cleanup();
         }
     }
 
@@ -142,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     }
                 }
 
-                if (shutdownOnChildExit && ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.ChildProc.HasExited)
+                if (shutdownOnChildExit && ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.HasStarted && ProcessLauncher.Launcher.ChildProc.HasExited)
                 {
                     cancelRouterTask.Cancel();
                     break;
