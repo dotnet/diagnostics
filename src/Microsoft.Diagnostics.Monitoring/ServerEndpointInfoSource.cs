@@ -213,14 +213,14 @@ namespace Microsoft.Diagnostics.Monitoring
                 var client = new DiagnosticsClient(info.Endpoint);
                 try
                 {
-                    client.ResumeRuntime();
+                    await client.ResumeRuntimeAsync(token).ConfigureAwait(false);
                 }
                 catch (ServerErrorException)
                 {
                     // The runtime likely doesn't understand the ResumeRuntime command.
                 }
 
-                EndpointInfo endpointInfo = EndpointInfo.FromIpcEndpointInfo(info);
+                EndpointInfo endpointInfo = await EndpointInfo.FromIpcEndpointInfoAsync(info, token).ConfigureAwait(false);
 
                 await _endpointInfosSemaphore.WaitAsync(token).ConfigureAwait(false);
                 try

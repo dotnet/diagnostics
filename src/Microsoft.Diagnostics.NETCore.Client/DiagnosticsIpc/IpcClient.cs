@@ -5,6 +5,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -19,30 +20,43 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
-        /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
-        public static IpcMessage SendMessage(IpcEndpoint endpoint, IpcMessage message)
+        /// <returns>An <see cref="IpcResponse"/> containing the response message and optional continuation stream.</returns>
+        public static IpcResponse SendMessage(IpcEndpoint endpoint, IpcMessage message)
         {
-            using (var stream = endpoint.Connect(ConnectTimeout))
+            Stream stream = null;
+            try
             {
+                stream = endpoint.Connect(ConnectTimeout);
+
                 Write(stream, message);
-                return Read(stream);
+
+                IpcMessage response = Read(stream);
+
+                return new IpcResponse(response, Exchange(ref stream, null));
+            }
+            finally
+            {
+                stream?.Dispose();
             }
         }
 
-        /// <summary>
-        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId
-        /// and returns the Stream for reuse in Optional Continuations.
-        /// </summary>
-        /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
-        /// <param name="message">The DiagnosticsIpc Message to be sent</param>
-        /// <param name="response">out var for response message</param>
-        /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
-        public static Stream SendMessage(IpcEndpoint endpoint, IpcMessage message, out IpcMessage response)
+        public static async Task<IpcResponse> SendMessageAsync(IpcEndpoint endpoint, IpcMessage message, CancellationToken cancellationToken)
         {
-            var stream = endpoint.Connect(ConnectTimeout);
-            Write(stream, message);
-            response = Read(stream);
-            return stream;
+            Stream stream = null;
+            try
+            {
+                stream = await endpoint.ConnectAsync(cancellationToken).ConfigureAwait(false);
+
+                await WriteAsync(stream, message, cancellationToken).ConfigureAwait(false);
+
+                IpcMessage response = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+
+                return new IpcResponse(response, Exchange(ref stream, null));
+            }
+            finally
+            {
+                stream?.Dispose();
+            }
         }
 
         private static void Write(Stream stream, byte[] buffer)
@@ -55,9 +69,31 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Write(stream, message.Serialize());
         }
 
+        private static Task WriteAsync(Stream stream, byte[] buffer, CancellationToken cancellationToken)
+        {
+            return stream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
+        }
+
+        private static Task WriteAsync(Stream stream, IpcMessage message, CancellationToken cancellationToken)
+        {
+            return WriteAsync(stream, message.Serialize(), cancellationToken);
+        }
+
         private static IpcMessage Read(Stream stream)
         {
             return IpcMessage.Parse(stream);
+        }
+
+        private static Task<IpcMessage> ReadAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            return IpcMessage.ParseAsync(stream, cancellationToken);
+        }
+
+        private static Stream Exchange(ref Stream stream1, Stream stream2)
+        {
+            Stream intermediate = stream1;
+            stream1 = stream2;
+            return intermediate;
         }
     }
 }
