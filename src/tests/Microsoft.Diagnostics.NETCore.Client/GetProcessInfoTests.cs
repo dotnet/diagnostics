@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,16 +19,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [Fact]
-        public void BasicProcessInfoTest()
+        public Task BasicProcessInfoTest()
+        {
+            return BasicProcessInfoTestCore(useAsync: false);
+        }
+
+        [Fact]
+        public Task BasicProcessInfoTestAsync()
+        {
+            return BasicProcessInfoTestCore(useAsync: true);
+        }
+
+        private async Task BasicProcessInfoTestCore(bool useAsync)
         {
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), output);
             runner.Start();
 
             try
             {
-                DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
+                DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
 
-                ProcessInfo processInfo = client.GetProcessInfo();
+                ProcessInfo processInfo = await clientShim.GetProcessInfo();
 
                 Assert.NotNull(processInfo);
                 Assert.Equal(runner.Pid, (int)processInfo.ProcessId);

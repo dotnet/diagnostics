@@ -22,14 +22,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _stopProcessingSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        public Task<Stream> ProcessEvents(DiagnosticsClient client, TimeSpan duration, CancellationToken cancellationToken)
+        public async Task<Stream> ProcessEvents(DiagnosticsClient client, TimeSpan duration, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             EventPipeSession session = null;
             try
             {
-                session = client.StartEventPipeSession(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB);
+                session = await client.StartEventPipeSessionAsync(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB, cancellationToken).ConfigureAwait(false);
             }
             catch (EndOfStreamException e)
             {
@@ -49,10 +49,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // Use TaskCompletionSource instead of Task.Delay with cancellation to avoid
                 // using exceptions for normal termination of event stream.
                 await _stopProcessingSource.Task.ConfigureAwait(false);
-                StopSession(session);
+
+                await StopSessionAsync(session).ConfigureAwait(false);
             });
 
-            return Task.FromResult(session.EventStream);
+            return session.EventStream;
         }
 
         public void StopProcessing()
@@ -60,11 +61,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _stopProcessingSource.TrySetResult(null);
         }
 
-        private static void StopSession(EventPipeSession session)
+        private static async Task StopSessionAsync(EventPipeSession session)
         {
             try
             {
-                session.Stop();
+                await session.StopAsync(CancellationToken.None).ConfigureAwait(false);
             }
             catch (EndOfStreamException)
             {

@@ -5,6 +5,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -19,45 +20,104 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
-        /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
+        /// <returns>An <see cref="IpcMessage"/> that is the response message.</returns>
         public static IpcMessage SendMessage(IpcEndpoint endpoint, IpcMessage message)
         {
-            using (var stream = endpoint.Connect(ConnectTimeout))
+            using IpcResponse response = SendMessageGetContinuation(endpoint, message);
+            return response.Message;
+        }
+
+        /// <summary>
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// </summary>
+        /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
+        /// <param name="message">The DiagnosticsIpc Message to be sent</param>
+        /// <returns>An <see cref="IpcResponse"/> containing the response message and continuation stream.</returns>
+        public static IpcResponse SendMessageGetContinuation(IpcEndpoint endpoint, IpcMessage message)
+        {
+            Stream stream = null;
+            try
             {
+                stream = endpoint.Connect(ConnectTimeout);
+
                 Write(stream, message);
-                return Read(stream);
+
+                IpcMessage response = Read(stream);
+
+                return new IpcResponse(response, Exchange(ref stream, null));
+            }
+            finally
+            {
+                stream?.Dispose();
             }
         }
 
         /// <summary>
-        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId
-        /// and returns the Stream for reuse in Optional Continuations.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
-        /// <param name="response">out var for response message</param>
-        /// <returns>The response DiagnosticsIpc Message from the dotnet process</returns>
-        public static Stream SendMessage(IpcEndpoint endpoint, IpcMessage message, out IpcMessage response)
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>An <see cref="IpcMessage"/> that is the response message.</returns>
+        public static async Task<IpcMessage> SendMessageAsync(IpcEndpoint endpoint, IpcMessage message, CancellationToken cancellationToken)
         {
-            var stream = endpoint.Connect(ConnectTimeout);
-            Write(stream, message);
-            response = Read(stream);
-            return stream;
+            using IpcResponse response = await SendMessageGetContinuationAsync(endpoint, message, cancellationToken).ConfigureAwait(false);
+            return response.Message;
         }
 
-        private static void Write(Stream stream, byte[] buffer)
+        /// <summary>
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// </summary>
+        /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
+        /// <param name="message">The DiagnosticsIpc Message to be sent</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>An <see cref="IpcResponse"/> containing the response message and continuation stream.</returns>
+        public static async Task<IpcResponse> SendMessageGetContinuationAsync(IpcEndpoint endpoint, IpcMessage message, CancellationToken cancellationToken)
         {
-            stream.Write(buffer, 0, buffer.Length);
+            Stream stream = null;
+            try
+            {
+                stream = await endpoint.ConnectAsync(cancellationToken).ConfigureAwait(false);
+
+                await WriteAsync(stream, message, cancellationToken).ConfigureAwait(false);
+
+                IpcMessage response = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+
+                return new IpcResponse(response, Exchange(ref stream, null));
+            }
+            finally
+            {
+                stream?.Dispose();
+            }
         }
 
         private static void Write(Stream stream, IpcMessage message)
         {
-            Write(stream, message.Serialize());
+            byte[] buffer = message.Serialize();
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+        private static Task WriteAsync(Stream stream, IpcMessage message, CancellationToken cancellationToken)
+        {
+            byte[] buffer = message.Serialize();
+            return stream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
         }
 
         private static IpcMessage Read(Stream stream)
         {
             return IpcMessage.Parse(stream);
+        }
+
+        private static Task<IpcMessage> ReadAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            return IpcMessage.ParseAsync(stream, cancellationToken);
+        }
+
+        private static Stream Exchange(ref Stream stream1, Stream stream2)
+        {
+            Stream intermediate = stream1;
+            stream1 = stream2;
+            return intermediate;
         }
     }
 }
