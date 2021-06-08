@@ -31,15 +31,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal static EventPipeSession Start(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
             IpcMessage requestMessage = CreateStartMessage(providers, requestRundown, circularBufferMB);
-            IpcResponse response = IpcClient.SendMessage(endpoint, requestMessage);
-            return new EventPipeSession(endpoint, response, ValidateStartResponse(response.Message));
+            IpcResponse? response = IpcClient.SendMessage(endpoint, requestMessage);
+            return CreateSessionFromResponse(endpoint, ref response, nameof(Start));
         }
 
         internal static async Task<EventPipeSession> StartAsync(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, CancellationToken cancellationToken)
         {
             IpcMessage requestMessage = CreateStartMessage(providers, requestRundown, circularBufferMB);
-            IpcResponse response = await IpcClient.SendMessageAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
-            return new EventPipeSession(endpoint, response, ValidateStartResponse(response.Message));
+            IpcResponse? response = await IpcClient.SendMessageAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
+            return CreateSessionFromResponse(endpoint, ref response, nameof(StartAsync));
         }
 
         ///<summary>
@@ -49,19 +49,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (TryCreateStopMessage(out IpcMessage requestMessage))
             {
-                IpcMessage responseMessage;
                 try
                 {
                     using IpcResponse response = IpcClient.SendMessage(_endpoint, requestMessage);
-                    responseMessage = response.Message;
+
+                    DiagnosticsClient.ValidateResponse(response, nameof(Stop));
                 }
                 // On non-abrupt exits (i.e. the target process has already exited and pipe is gone, sending Stop command will fail).
                 catch (IOException)
                 {
                     throw new ServerNotAvailableException("Could not send Stop command. The target process may have exited.");
                 }
-
-                ValidateStopResponse(responseMessage);
             }
         }
 
@@ -69,19 +67,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (TryCreateStopMessage(out IpcMessage requestMessage))
             {
-                IpcMessage responseMessage;
                 try
                 {
                     using IpcResponse response = await IpcClient.SendMessageAsync(_endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
-                    responseMessage = response.Message;
+
+                    DiagnosticsClient.ValidateResponse(response, nameof(StopAsync));
                 }
                 // On non-abrupt exits (i.e. the target process has already exited and pipe is gone, sending Stop command will fail).
                 catch (IOException)
                 {
                     throw new ServerNotAvailableException("Could not send Stop command. The target process may have exited.");
                 }
-
-                ValidateStopResponse(responseMessage);
             }
         }
 
@@ -89,6 +85,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             var config = new EventPipeSessionConfiguration(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
             return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
+        }
+
+        private static EventPipeSession CreateSessionFromResponse(IpcEndpoint endpoint, ref IpcResponse? response, string operationName)
+        {
+            try
+            {
+                DiagnosticsClient.ValidateResponse(response.Value, operationName);
+
+                long sessionId = BitConverter.ToInt64(response.Value.Message.Payload, 0);
+
+                var session = new EventPipeSession(endpoint, response.Value, sessionId);
+                response = null;
+                return session;
+            }
+            finally
+            {
+                response?.Dispose();
+            }
         }
 
         private bool TryCreateStopMessage(out IpcMessage stopMessage)
@@ -111,34 +125,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             stopMessage = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload);
 
             return true;
-        }
-
-        private static long ValidateStartResponse(IpcMessage responseMessage)
-        {
-            switch ((DiagnosticsServerResponseId)responseMessage.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.OK:
-                    return BitConverter.ToInt64(responseMessage.Payload, 0);
-                case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(responseMessage.Payload, 0);
-                    throw new ServerErrorException($"EventPipe session start failed (HRESULT: 0x{hr:X8})");
-                default:
-                    throw new ServerErrorException($"EventPipe session start failed - Server responded with unknown command");
-            }
-        }
-
-        private static void ValidateStopResponse(IpcMessage responseMessage)
-        {
-            switch ((DiagnosticsServerResponseId)responseMessage.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.OK:
-                    return;
-                case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(responseMessage.Payload, 0);
-                    throw new ServerErrorException($"EventPipe session stop failed (HRESULT: 0x{hr:X8})");
-                default:
-                    throw new ServerErrorException($"EventPipe session stop failed - Server responded with unknown command");
-            }
         }
 
         protected virtual void Dispose(bool disposing)

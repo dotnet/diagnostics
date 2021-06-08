@@ -329,7 +329,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return ProcessInfo.Parse(response.Message.Payload);
         }
 
-        private static void ValidateResponse(IpcResponse response, string operationName)
+        internal static void ValidateResponse(IpcResponse response, string operationName)
         {
             switch ((DiagnosticsServerResponseId)response.Message.Header.CommandId)
             {

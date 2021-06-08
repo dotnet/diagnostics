@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // Use TaskCompletionSource instead of Task.Delay with cancellation to avoid
                 // using exceptions for normal termination of event stream.
                 await _stopProcessingSource.Task.ConfigureAwait(false);
-                StopSession(session);
+                await StopSessionAsync(session);
             });
 
             return session.EventStream;
@@ -60,11 +60,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _stopProcessingSource.TrySetResult(null);
         }
 
-        private static void StopSession(EventPipeSession session)
+        private static async Task StopSessionAsync(EventPipeSession session)
         {
             try
             {
-                session.Stop();
+                await session.StopAsync(CancellationToken.None).ConfigureAwait(false);
             }
             catch (EndOfStreamException)
             {

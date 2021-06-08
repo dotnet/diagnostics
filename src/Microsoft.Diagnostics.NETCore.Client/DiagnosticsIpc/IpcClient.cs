@@ -59,24 +59,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        private static void Write(Stream stream, byte[] buffer)
-        {
-            stream.Write(buffer, 0, buffer.Length);
-        }
-
         private static void Write(Stream stream, IpcMessage message)
         {
-            Write(stream, message.Serialize());
-        }
-
-        private static Task WriteAsync(Stream stream, byte[] buffer, CancellationToken cancellationToken)
-        {
-            return stream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
+            byte[] buffer = message.Serialize();
+            stream.Write(buffer, 0, buffer.Length);
         }
 
         private static Task WriteAsync(Stream stream, IpcMessage message, CancellationToken cancellationToken)
         {
-            return WriteAsync(stream, message.Serialize(), cancellationToken);
+            byte[] buffer = message.Serialize();
+            return stream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
         }
 
         private static IpcMessage Read(Stream stream)
