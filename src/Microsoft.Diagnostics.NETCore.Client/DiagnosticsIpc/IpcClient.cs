@@ -20,8 +20,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
-        /// <returns>An <see cref="IpcResponse"/> containing the response message and optional continuation stream.</returns>
-        public static IpcResponse SendMessage(IpcEndpoint endpoint, IpcMessage message)
+        /// <returns>An <see cref="IpcMessage"/> that is the response message.</returns>
+        public static IpcMessage SendMessage(IpcEndpoint endpoint, IpcMessage message)
+        {
+            using IpcResponse response = SendMessageGetContinuation(endpoint, message);
+            return response.Message;
+        }
+
+        /// <summary>
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// </summary>
+        /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
+        /// <param name="message">The DiagnosticsIpc Message to be sent</param>
+        /// <returns>An <see cref="IpcResponse"/> containing the response message and continuation stream.</returns>
+        public static IpcResponse SendMessageGetContinuation(IpcEndpoint endpoint, IpcMessage message)
         {
             Stream stream = null;
             try
@@ -40,7 +52,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public static async Task<IpcResponse> SendMessageAsync(IpcEndpoint endpoint, IpcMessage message, CancellationToken cancellationToken)
+        /// <summary>
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// </summary>
+        /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
+        /// <param name="message">The DiagnosticsIpc Message to be sent</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>An <see cref="IpcMessage"/> that is the response message.</returns>
+        public static async Task<IpcMessage> SendMessageAsync(IpcEndpoint endpoint, IpcMessage message, CancellationToken cancellationToken)
+        {
+            using IpcResponse response = await SendMessageGetContinuationAsync(endpoint, message, cancellationToken).ConfigureAwait(false);
+            return response.Message;
+        }
+
+        /// <summary>
+        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// </summary>
+        /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
+        /// <param name="message">The DiagnosticsIpc Message to be sent</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>An <see cref="IpcResponse"/> containing the response message and continuation stream.</returns>
+        public static async Task<IpcResponse> SendMessageGetContinuationAsync(IpcEndpoint endpoint, IpcMessage message, CancellationToken cancellationToken)
         {
             Stream stream = null;
             try

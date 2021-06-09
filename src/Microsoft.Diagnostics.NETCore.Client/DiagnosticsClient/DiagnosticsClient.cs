@@ -118,8 +118,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
         {
             IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
-            using IpcResponse response = IpcClient.SendMessage(_endpoint, request);
-            ValidateResponse(response, nameof(WriteDump));
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, nameof(WriteDump));
         }
 
         /// <summary>
@@ -132,8 +132,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal async Task WriteDumpAsync(DumpType dumpType, string dumpPath, bool logDumpGeneration, CancellationToken token)
         {
             IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
-            using IpcResponse response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-            ValidateResponse(response, nameof(WriteDumpAsync));
+            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            ValidateResponseMessage(response, nameof(WriteDumpAsync));
         }
 
         /// <summary>
@@ -157,11 +157,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
-            using IpcResponse response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerResponseId)response.Message.Header.CommandId)
+            IpcMessage response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
-                    uint hr = BitConverter.ToUInt32(response.Message.Payload, 0);
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
                     {
                       throw new UnsupportedCommandException("The target runtime does not support profiler attach");
@@ -185,35 +185,35 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal void ResumeRuntime()
         {
             IpcMessage request = CreateResumeRuntimeMessage();
-            using IpcResponse response = IpcClient.SendMessage(_endpoint, request);
-            ValidateResponse(response, nameof(ResumeRuntime));
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, nameof(ResumeRuntime));
         }
 
         internal async Task ResumeRuntimeAsync(CancellationToken cancellationToken)
         {
             IpcMessage request = CreateResumeRuntimeMessage();
-            using IpcResponse response = await IpcClient.SendMessageAsync(_endpoint, request, cancellationToken).ConfigureAwait(false);
-            ValidateResponse(response, nameof(ResumeRuntimeAsync));
+            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, cancellationToken).ConfigureAwait(false);
+            ValidateResponseMessage(response, nameof(ResumeRuntimeAsync));
         }
 
         internal ProcessInfo GetProcessInfo()
         {
             IpcMessage request = CreateProcessInfoMessage();
-            using IpcResponse response = IpcClient.SendMessage(_endpoint, request);
+            using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, request);
             return GetProcessInfoFromResponse(response, nameof(GetProcessInfoAsync));
         }
 
         internal async Task<ProcessInfo> GetProcessInfoAsync(CancellationToken token)
         {
             IpcMessage request = CreateProcessInfoMessage();
-            using IpcResponse response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, request, token).ConfigureAwait(false);
             return GetProcessInfoFromResponse(response, nameof(GetProcessInfoAsync));
         }
 
         public Dictionary<string,string> GetProcessEnvironment()
         {
             IpcMessage message = CreateProcessEnvironmentMessage();
-            using IpcResponse response = IpcClient.SendMessage(_endpoint, message);
+            using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, message);
             Task<Dictionary<string, string>> envTask = GetProcessEnvironmentFromResponse(response, nameof(GetProcessEnvironment), CancellationToken.None);
             envTask.Wait();
             return envTask.Result;
@@ -222,7 +222,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal async Task<Dictionary<string, string>> GetProcessEnvironmentAsync(CancellationToken token)
         {
             IpcMessage message = CreateProcessEnvironmentMessage();
-            using IpcResponse response = await IpcClient.SendMessageAsync(_endpoint, message, token).ConfigureAwait(false);
+            using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, message, token).ConfigureAwait(false);
             return await GetProcessEnvironmentFromResponse(response, nameof(GetProcessEnvironmentAsync), token).ConfigureAwait(false);
         }
 
@@ -316,7 +316,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static Task<Dictionary<string, string>> GetProcessEnvironmentFromResponse(IpcResponse response, string operationName, CancellationToken token)
         {
-            ValidateResponse(response, operationName);
+            ValidateResponseMessage(response.Message, operationName);
 
             ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
             return helper.ReadEnvironmentAsync(response.Continuation, token);
@@ -324,20 +324,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)
         {
-            ValidateResponse(response, operationName);
+            ValidateResponseMessage(response.Message, operationName);
 
             return ProcessInfo.Parse(response.Message.Payload);
         }
 
-        internal static void ValidateResponse(IpcResponse response, string operationName)
+        internal static void ValidateResponseMessage(IpcMessage message, string operationName)
         {
-            switch ((DiagnosticsServerResponseId)response.Message.Header.CommandId)
+            switch ((DiagnosticsServerResponseId)message.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
-                    uint hr = BitConverter.ToUInt32(response.Message.Payload, 0);
+                    uint hr = BitConverter.ToUInt32(message.Payload, 0);
                     if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
                     {
-                        throw new UnsupportedCommandException("{callerName} failed - Command is not supported.");
+                        throw new UnsupportedCommandException($"{operationName} failed - Command is not supported.");
                     }
                     throw new ServerErrorException($"{operationName} failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:

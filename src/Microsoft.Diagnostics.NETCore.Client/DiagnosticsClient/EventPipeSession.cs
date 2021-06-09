@@ -31,14 +31,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal static EventPipeSession Start(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
             IpcMessage requestMessage = CreateStartMessage(providers, requestRundown, circularBufferMB);
-            IpcResponse? response = IpcClient.SendMessage(endpoint, requestMessage);
+            IpcResponse? response = IpcClient.SendMessageGetContinuation(endpoint, requestMessage);
             return CreateSessionFromResponse(endpoint, ref response, nameof(Start));
         }
 
         internal static async Task<EventPipeSession> StartAsync(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, CancellationToken cancellationToken)
         {
             IpcMessage requestMessage = CreateStartMessage(providers, requestRundown, circularBufferMB);
-            IpcResponse? response = await IpcClient.SendMessageAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
+            IpcResponse? response = await IpcClient.SendMessageGetContinuationAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
             return CreateSessionFromResponse(endpoint, ref response, nameof(StartAsync));
         }
 
@@ -51,9 +51,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    using IpcResponse response = IpcClient.SendMessage(_endpoint, requestMessage);
+                    IpcMessage response = IpcClient.SendMessage(_endpoint, requestMessage);
 
-                    DiagnosticsClient.ValidateResponse(response, nameof(Stop));
+                    DiagnosticsClient.ValidateResponseMessage(response, nameof(Stop));
                 }
                 // On non-abrupt exits (i.e. the target process has already exited and pipe is gone, sending Stop command will fail).
                 catch (IOException)
@@ -69,9 +69,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    using IpcResponse response = await IpcClient.SendMessageAsync(_endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
+                    IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
 
-                    DiagnosticsClient.ValidateResponse(response, nameof(StopAsync));
+                    DiagnosticsClient.ValidateResponseMessage(response, nameof(StopAsync));
                 }
                 // On non-abrupt exits (i.e. the target process has already exited and pipe is gone, sending Stop command will fail).
                 catch (IOException)
@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             try
             {
-                DiagnosticsClient.ValidateResponse(response.Value, operationName);
+                DiagnosticsClient.ValidateResponseMessage(response.Value.Message, operationName);
 
                 long sessionId = BitConverter.ToInt64(response.Value.Message.Payload, 0);
 
