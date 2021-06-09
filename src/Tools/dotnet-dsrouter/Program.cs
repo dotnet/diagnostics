@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
     {
         delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose);
         delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose);
+        delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter).GetCommandHandler(),
                 // Options
-                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -116,6 +116,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 description:    "Enable verbose logging (debug|trace)")
             {
                 Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "")
+            };
+
+        private static Option ForwardPortOption() =>
+            new Option(
+                aliases: new[] { "--forward-port", "-fp" },
+                description: "Enable port forwarding, values Android|iOS. Make sure to set ANDROID_SDK_ROOT before using this option on Android.")
+            {
+                Argument = new Argument<string>(name: "forwardPort", getDefaultValue: () => "")
             };
 
         private static int Main(string[] args)

@@ -281,15 +281,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class TcpClientRouterFactory
     {
-        readonly ILogger _logger;
+        protected readonly ILogger _logger;
 
-        readonly string _tcpClientAddress;
+        protected readonly string _tcpClientAddress;
 
-        bool _auto_shutdown;
+        protected bool _auto_shutdown;
 
-        int TcpClientTimeoutMs { get; set; } = Timeout.Infinite;
+        protected int TcpClientTimeoutMs { get; set; } = Timeout.Infinite;
 
-        int TcpClientRetryTimeoutMs { get; set; } = 500;
+        protected int TcpClientRetryTimeoutMs { get; set; } = 500;
+
+        public delegate TcpClientRouterFactory CreateInstanceDelegate(string tcpClient, int runtimeTimeoutMs, ILogger logger);
+
+        public static TcpClientRouterFactory CreateDefaultInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
+        {
+            return new TcpClientRouterFactory(tcpClient, runtimeTimeoutMs, logger);
+        }
 
         public string TcpClientAddress {
             get { return _tcpClientAddress; }
@@ -304,7 +311,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 TcpClientTimeoutMs = runtimeTimeoutMs;
         }
 
-        public async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
+        public virtual async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
         {
             Stream tcpClientStream = null;
 
@@ -366,6 +373,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _logger?.LogDebug("Successfully connected tcp stream.");
 
             return tcpClientStream;
+        }
+
+        public virtual void Start()
+        {
+        }
+
+        public virtual void Stop()
+        {
         }
 
         async Task ConnectAsyncInternal(Socket clientSocket, EndPoint remoteEP, CancellationToken token)
@@ -638,6 +653,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Task Stop()
         {
+            _logger?.LogInformation($"Stopping IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
             _ipcServerRouterFactory.Stop();
             return _tcpServerRouterFactory.Stop();
         }
@@ -786,11 +802,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         IpcServerRouterFactory _ipcServerRouterFactory;
         TcpClientRouterFactory _tcpClientRouterFactory;
 
-        public IpcServerTcpClientRouterFactory(string ipcServer, string tcpClient, int runtimeTimeoutMs, ILogger logger)
+        public IpcServerTcpClientRouterFactory(string ipcServer, string tcpClient, int runtimeTimeoutMs, ILogger logger, TcpClientRouterFactory.CreateInstanceDelegate factory)
         {
             _logger = logger;
             _ipcServerRouterFactory = new IpcServerRouterFactory(ipcServer, logger);
-            _tcpClientRouterFactory = new TcpClientRouterFactory(tcpClient, runtimeTimeoutMs, logger);
+            _tcpClientRouterFactory = factory(tcpClient, runtimeTimeoutMs, logger);
         }
 
         public override string IpcAddress
@@ -820,11 +836,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override void Start()
         {
             _ipcServerRouterFactory.Start();
+            _tcpClientRouterFactory.Start();
             _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP client ({_tcpClientRouterFactory.TcpClientAddress}) router.");
         }
 
         public override Task Stop()
         {
+            _logger?.LogInformation($"Stopping IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP client ({_tcpClientRouterFactory.TcpClientAddress}) router.");
+            _tcpClientRouterFactory.Stop();
             _ipcServerRouterFactory.Stop();
             return Task.CompletedTask;
         }
@@ -944,6 +963,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Task Stop()
         {
+            _logger?.LogInformation($"Stopping IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
             return _tcpServerRouterFactory.Stop();
         }
 
