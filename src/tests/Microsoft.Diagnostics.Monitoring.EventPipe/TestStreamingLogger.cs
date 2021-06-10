@@ -10,7 +10,7 @@ using System.Text.Json;
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     /// <summary>
-    /// CONSIDER We can't reuse StreamingLoggerProvider from using Microsoft.Diagnostics.Monitoring.RestServer.
+    /// CONSIDER We can't reuse StreamingLoggerProvider from using Microsoft.Diagnostics.Monitoring.WebApi.
     /// Adding a reference to that project causes assembly resolution issues.
     /// </summary>
     internal sealed class TestStreamingLoggerProvider : ILoggerProvider
