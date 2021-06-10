@@ -8626,6 +8626,7 @@ DECLARE_API(ThreadPool)
     do // while (false)
     {
         UINT64 ui64Value = 0;
+        UINT32 ui32Value = 0;
 
         // Determine if the portable thread pool is enabled
         if (FAILED(
@@ -8722,12 +8723,12 @@ DECLARE_API(ThreadPool)
             accumulatedOffset += offset;
 
             offset = GetValueFieldOffset(vCountsField.MTOfType, W("_data"));
-            if (offset < 0 || FAILED(MOVE(ui64Value, cdaTpInstance + accumulatedOffset + offset)))
+            if (offset < 0 || FAILED(MOVE(ui32Value, cdaTpInstance + accumulatedOffset + offset)))
             {
                 ExtOut("    %s\n", "Failed to read PortableThreadPool._separated.counts._data");
                 break;
             }
-            UINT64 data = ui64Value;
+            UINT32 data = ui32Value;
 
             const UINT8 NumProcessingWorkShift = 0;
             const UINT8 NumExistingThreadsShift = 16;
