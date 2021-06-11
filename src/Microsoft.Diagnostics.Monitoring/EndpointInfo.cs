@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 OperatingSystem = processInfo?.OperatingSystem,
                 ProcessArchitecture = processInfo?.ProcessArchitecture,
                 ManagedEntrypointAssemblyName = processInfo?.ManagedEntrypointAssemblyName,
-                ClrProductionVersionString = processInfo?.ClrProductVersionString
+                ClrProductVersionString = processInfo?.ClrProductVersionString
             };
         }
 
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 OperatingSystem = processInfo?.OperatingSystem,
                 ProcessArchitecture = processInfo?.ProcessArchitecture,
                 ManagedEntrypointAssemblyName = processInfo?.ManagedEntrypointAssemblyName,
-                ClrProductionVersionString = processInfo?.ClrProductVersionString
+                ClrProductVersionString = processInfo?.ClrProductVersionString
             };
         }
 
@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         public string ManagedEntrypointAssemblyName { get; private set; }
 
-        public string ClrProductionVersionString { get; private set; }
+        public string ClrProductVersionString { get; private set; }
 
         internal string DebuggerDisplay => FormattableString.Invariant($"PID={ProcessId}, Cookie={RuntimeInstanceCookie}");
     }

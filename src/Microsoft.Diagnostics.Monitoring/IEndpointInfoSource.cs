@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         string ManagedEntrypointAssemblyName { get; }
 
-        string ClrProductionVersionString { get; }
+        string ClrProductVersionString { get; }
     }
 
     public interface IEndpointInfoSource
