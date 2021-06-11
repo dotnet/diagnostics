@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="profilerGuid">Guid for the profiler to be attached</param>
         /// <param name="profilerPath">Path to the profiler to be attached</param>
-        public void StartupProfiler(Guid profilerGuid, string profilerPath)
+        public void SetStartupProfiler(Guid profilerGuid, string profilerPath)
         {
             if (profilerGuid == null || profilerGuid == Guid.Empty)
             {
