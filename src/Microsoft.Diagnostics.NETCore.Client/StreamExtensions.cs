@@ -25,6 +25,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
 
                 remaining -= read;
+                totalRead += read;
             }
 
             return buffer;
