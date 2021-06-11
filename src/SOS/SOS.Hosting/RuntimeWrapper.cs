@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using VersionInfo = Microsoft.Diagnostics.DebugServices.VersionInfo;
 
 namespace SOS.Hosting
 {
@@ -253,7 +252,7 @@ namespace SOS.Hosting
             {
                 return HResult.E_FAIL;
             }
-            if (module.Version is null)
+            if (module.VersionData is null)
             {
                 return HResult.E_FAIL;
             }
@@ -262,9 +261,9 @@ namespace SOS.Hosting
             pFileInfo->dwFileFlagsMask = 0;
             pFileInfo->dwFileFlags = 0;
 
-            VersionInfo versionInfo = module.Version;
-            pFileInfo->dwFileVersionMS = (uint)versionInfo.Minor | (uint)versionInfo.Major << 16;
-            pFileInfo->dwFileVersionLS = (uint)versionInfo.Patch | (uint)versionInfo.Revision << 16;
+            VersionData versionData = module.VersionData;
+            pFileInfo->dwFileVersionMS = (uint)versionData.Minor | (uint)versionData.Major << 16;
+            pFileInfo->dwFileVersionLS = (uint)versionData.Patch | (uint)versionData.Revision << 16;
 
             // Attempt to get the FileVersion string that contains version and the "built by" and commit id info
             if (fileVersionBuffer != null)

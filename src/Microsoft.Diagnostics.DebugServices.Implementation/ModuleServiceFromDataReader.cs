@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexTimeStamp;
 
-            public override VersionInfo Version
+            public override VersionData VersionData
             {
                 get 
                 {
@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if (_moduleInfo.Version != EmptyVersionInfo)
                         {
-                            base.Version = _moduleInfo.Version.ToVersionInfo();
+                            base.VersionData = _moduleInfo.Version.ToVersionData();
                         }
                         else
                         {
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             }
                         }
                     }
-                    return base.Version;
+                    return base.VersionData;
                 }
             }
 

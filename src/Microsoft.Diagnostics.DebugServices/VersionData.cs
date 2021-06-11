@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// <summary>
     /// Represents the version of a module
     /// </summary>
-    public sealed class VersionInfo : IEquatable<VersionInfo>, IComparable<VersionInfo>
+    public sealed class VersionData : IEquatable<VersionData>, IComparable<VersionData>
     {
         /// <summary>
         /// In a version 'A.B.C.D', this field represents 'A'.
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         public int Patch { get; }
 
-        public VersionInfo(int major, int minor, int revision, int patch)
+        public VersionData(int major, int minor, int revision, int patch)
         {
             if (major < 0)
                 throw new ArgumentOutOfRangeException(nameof(major));
@@ -52,10 +52,10 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         /// <inheritdoc/>
-        public bool Equals(VersionInfo other) => Major == other.Major && Minor == other.Minor && Revision == other.Revision && Patch == other.Patch;
+        public bool Equals(VersionData other) => Major == other.Major && Minor == other.Minor && Revision == other.Revision && Patch == other.Patch;
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is VersionInfo other && Equals(other);
+        public override bool Equals(object obj) => obj is VersionData other && Equals(other);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         /// <inheritdoc/>
-        public int CompareTo(VersionInfo other)
+        public int CompareTo(VersionData other)
         {
             if (Major != other.Major)
                 return Major.CompareTo(other.Major);
@@ -87,16 +87,16 @@ namespace Microsoft.Diagnostics.DebugServices
 
         public override string ToString() => $"{Major}.{Minor}.{Revision}.{Patch}";
 
-        public static bool operator ==(VersionInfo left, VersionInfo right) => left.Equals(right);
+        public static bool operator ==(VersionData left, VersionData right) => left.Equals(right);
 
-        public static bool operator !=(VersionInfo left, VersionInfo right) => !(left == right);
+        public static bool operator !=(VersionData left, VersionData right) => !(left == right);
 
-        public static bool operator <(VersionInfo left, VersionInfo right) => left.CompareTo(right) < 0;
+        public static bool operator <(VersionData left, VersionData right) => left.CompareTo(right) < 0;
 
-        public static bool operator <=(VersionInfo left, VersionInfo right) => left.CompareTo(right) <= 0;
+        public static bool operator <=(VersionData left, VersionData right) => left.CompareTo(right) <= 0;
 
-        public static bool operator >(VersionInfo left, VersionInfo right) => right < left;
+        public static bool operator >(VersionData left, VersionData right) => right < left;
 
-        public static bool operator >=(VersionInfo left, VersionInfo right) => right <= left;
+        public static bool operator >=(VersionData left, VersionData right) => right <= left;
     }
 }

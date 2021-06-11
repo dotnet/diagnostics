@@ -75,12 +75,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// PDB information for Windows PE modules (managed or native).
         /// </summary>
-        PdbInfo PdbInfo { get; }
+        PdbFileInfo PdbFileInfo { get; }
 
         /// <summary>
         /// Version information for Window PE modules (managed or native). 
         /// </summary>
-        VersionInfo Version { get; }
+        VersionData VersionData { get; }
 
         /// <summary>
         /// This is the file version string containing the build version and commit id.

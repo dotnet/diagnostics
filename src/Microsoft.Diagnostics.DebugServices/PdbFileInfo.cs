@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// <summary>
     /// Information about a specific PDB instance obtained from a PE image.
     /// </summary>
-    public sealed class PdbInfo
+    public sealed class PdbFileInfo
     {
         /// <summary>
         /// Gets the Guid of the PDB.
@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Creates an instance of the PdbInfo with the corresponding properties initialized.
         /// </summary>
-        public PdbInfo(string path, Guid guid, int revision)
+        public PdbFileInfo(string path, Guid guid, int revision)
         {
             Path = path;
             Guid = guid;

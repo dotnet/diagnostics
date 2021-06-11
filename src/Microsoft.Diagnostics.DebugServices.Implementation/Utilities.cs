@@ -25,27 +25,27 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from CLRMD VersionInfo to DebugServices VersionInfo
+        /// Convert from CLRMD VersionInfo to DebugServices VersionData
         /// </summary>
-        public static VersionInfo ToVersionInfo(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
+        public static VersionData ToVersionData(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
         { 
-            return new VersionInfo(versionInfo.Major, versionInfo.Minor, versionInfo.Revision, versionInfo.Patch);
+            return new VersionData(versionInfo.Major, versionInfo.Minor, versionInfo.Revision, versionInfo.Patch);
         }
 
         /// <summary>
-        /// Convert from DebugServices VersionInfo to CLRMD VersionInfo
+        /// Convert from DebugServices VersionData to CLRMD VersionInfo
         /// </summary>
-        public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionInfo versionInfo)
+        public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionData versionData)
         { 
-            return new Microsoft.Diagnostics.Runtime.VersionInfo(versionInfo.Major, versionInfo.Minor, versionInfo.Revision, versionInfo.Patch);
+            return new Microsoft.Diagnostics.Runtime.VersionInfo(versionData.Major, versionData.Minor, versionData.Revision, versionData.Patch);
         }
 
         /// <summary>
-        /// Convert from CLRMD PdbInfo to DebugServices PdbInfo
+        /// Convert from CLRMD PdbInfo to DebugServices PdbFileInfo
         /// </summary>
-        public static PdbInfo ToPdbInfo(this Microsoft.Diagnostics.Runtime.PdbInfo pdbInfo)
+        public static PdbFileInfo ToPdbFileInfo(this Microsoft.Diagnostics.Runtime.PdbInfo pdbInfo)
         {
-            return new PdbInfo(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
+            return new PdbFileInfo(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
         }
     }
 }

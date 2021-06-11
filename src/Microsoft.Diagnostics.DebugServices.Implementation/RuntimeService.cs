@@ -138,10 +138,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             try
             {
-                VersionInfo v = ModuleService.GetModuleFromBaseAddress(baseAddress).Version;
-                if (v is not null)
+                VersionData versionData = ModuleService.GetModuleFromBaseAddress(baseAddress).VersionData;
+                if (versionData is not null)
                 {
-                    version = v.ToVersionInfo();
+                    version = versionData.ToVersionInfo();
                     return true;
                 }
             }
