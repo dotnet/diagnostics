@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
 
-            private static readonly VersionInfo EmptyVersionInfo = new VersionInfo(0, 0, 0, 0);
+            private static readonly Microsoft.Diagnostics.Runtime.VersionInfo EmptyVersionInfo = new (0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
             private readonly IExportReader _exportReader;
             private readonly ModuleInfo _moduleInfo;
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexTimeStamp;
 
-            public override VersionInfo? Version
+            public override VersionData VersionData
             {
                 get 
                 {
@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if (_moduleInfo.Version != EmptyVersionInfo)
                         {
-                            base.Version = _moduleInfo.Version;
+                            base.VersionData = _moduleInfo.Version.ToVersionData();
                         }
                         else
                         {
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             }
                         }
                     }
-                    return base.Version;
+                    return base.VersionData;
                 }
             }
 

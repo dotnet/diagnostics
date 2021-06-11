@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Immutable;
 
@@ -39,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices
         ulong ImageBase { get; }
 
         /// <summary>
-        /// Returns the image size of module in memory
+        /// Returns the image size of module in memory.
         /// </summary>
         ulong ImageSize { get; }
 
@@ -59,29 +58,29 @@ namespace Microsoft.Diagnostics.DebugServices
         ImmutableArray<byte> BuildId { get; }
 
         /// <summary>
-        /// Returns true if Windows PE format image (native or IL)
+        /// Returns true if Windows PE format image (native or IL).
         /// </summary>
         bool IsPEImage { get; }
 
         /// <summary>
-        /// Returns true if managed or IL assembly
+        /// Returns true if managed or IL assembly.
         /// </summary>
         bool IsManaged { get; }
 
         /// <summary>
-        /// Returns true if the PE module is layout is file. False, layout is loaded image. Null, not a PE image.
+        /// Returns true if the PE module is layout is file. False, layout is loaded image. If null, not a PE image.
         /// </summary>
         bool? IsFileLayout { get; }
 
         /// <summary>
-        /// PDB information for Windows PE modules (managed or native
+        /// PDB information for Windows PE modules (managed or native).
         /// </summary>
-        PdbInfo PdbInfo { get; }
+        PdbFileInfo PdbFileInfo { get; }
 
         /// <summary>
         /// Version information for Window PE modules (managed or native). 
         /// </summary>
-        VersionInfo? Version { get; }
+        VersionData VersionData { get; }
 
         /// <summary>
         /// This is the file version string containing the build version and commit id.

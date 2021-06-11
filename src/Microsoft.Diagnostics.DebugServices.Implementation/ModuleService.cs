@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
@@ -203,11 +202,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
-        /// <param name="pdbInfo">the pdb record or null</param>
-        /// <param name="version">the PE version or null</param>
+        /// <param name="pdbFileInfo">the pdb record or null</param>
+        /// <param name="versionData">the PE version or null</param>
         /// <param name="flags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbInfo pdbInfo, ref VersionInfo? version, ref Module.Flags flags)
+        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref VersionData versionData, ref Module.Flags flags)
         {
             PEImage peImage = null;
 
@@ -215,13 +214,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (Target.Host.HostType != HostType.Lldb)
             {
                 // First try getting the PE info as load layout (native Windows DLLs and most managed PEs on Linux/MacOS).
-                peImage = GetPEInfo(isVirtual: true, address, size, ref pdbInfo, ref version, ref flags);
+                peImage = GetPEInfo(isVirtual: true, address, size, ref pdbFileInfo, ref versionData, ref flags);
                 if (peImage == null)
                 {
                     if (Target.OperatingSystem != OSPlatform.Windows)
                     {
                         // Then try getting the PE info as file layout (some managed PEs on Linux/MacOS).
-                        peImage = GetPEInfo(isVirtual: false, address, size, ref pdbInfo, ref version, ref flags);
+                        peImage = GetPEInfo(isVirtual: false, address, size, ref pdbFileInfo, ref versionData, ref flags);
                     }
                 }
             }
@@ -234,11 +233,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="isVirtual">the memory layout of the module</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
-        /// <param name="pdbInfo">the pdb record or null</param>
-        /// <param name="version">the PE version or null</param>
+        /// <param name="pdbFileInfo">the pdb record or null</param>
+        /// <param name="versionData">the PE version or null</param>
         /// <param name="flags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbInfo pdbInfo, ref VersionInfo? version, ref Module.Flags flags)
+        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref VersionData versionData, ref Module.Flags flags)
         {
             Stream stream = MemoryService.CreateMemoryStream(address, size);
             try
@@ -249,13 +248,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     flags |= Module.Flags.IsPEImage;
                     flags |= peImage.IsManaged ? Module.Flags.IsManaged : Module.Flags.None;
-                    pdbInfo = peImage.DefaultPdb;
-                    if (!version.HasValue)
+                    pdbFileInfo = peImage.DefaultPdb.ToPdbFileInfo();
+                    if (versionData is null)
                     {
                         FileVersionInfo fileVersionInfo = peImage.GetFileVersionInfo();
                         if (fileVersionInfo != null)
                         {
-                            version = fileVersionInfo.VersionInfo;
+                            versionData = fileVersionInfo.VersionInfo.ToVersionData();
                         }
                     }
                     flags &= ~(Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
