@@ -23,6 +23,10 @@ namespace Microsoft.Diagnostics.Monitoring
         string OperatingSystem { get; }
 
         string ProcessArchitecture { get; }
+
+        string ManagedEntrypointAssemblyName { get; }
+
+        string ClrProductionVersionString { get; }
     }
 
     public interface IEndpointInfoSource

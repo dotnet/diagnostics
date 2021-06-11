@@ -58,5 +58,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         GetProcessInfo = 0x00,
         ResumeRuntime  = 0x01,
         GetProcessEnvironment = 0x02,
+        GetProcessInfo2 = 0x04
     }
 }

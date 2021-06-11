@@ -43,7 +43,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 RuntimeInstanceCookie = processInfo?.RuntimeInstanceCookie ?? Guid.Empty,
                 CommandLine = processInfo?.CommandLine,
                 OperatingSystem = processInfo?.OperatingSystem,
-                ProcessArchitecture = processInfo?.ProcessArchitecture
+                ProcessArchitecture = processInfo?.ProcessArchitecture,
+                ManagedEntrypointAssemblyName = processInfo?.ManagedEntrypointAssemblyName,
+                ClrProductionVersionString = processInfo?.ClrProductVersionString
             };
         }
 
@@ -78,7 +80,9 @@ namespace Microsoft.Diagnostics.Monitoring
                 RuntimeInstanceCookie = info.RuntimeInstanceCookie,
                 CommandLine = processInfo?.CommandLine,
                 OperatingSystem = processInfo?.OperatingSystem,
-                ProcessArchitecture = processInfo?.ProcessArchitecture
+                ProcessArchitecture = processInfo?.ProcessArchitecture,
+                ManagedEntrypointAssemblyName = processInfo?.ManagedEntrypointAssemblyName,
+                ClrProductionVersionString = processInfo?.ClrProductVersionString
             };
         }
 
@@ -93,6 +97,10 @@ namespace Microsoft.Diagnostics.Monitoring
         public string OperatingSystem { get; private set; }
 
         public string ProcessArchitecture { get; private set; }
+
+        public string ManagedEntrypointAssemblyName { get; private set; }
+
+        public string ClrProductionVersionString { get; private set; }
 
         internal string DebuggerDisplay => FormattableString.Invariant($"PID={ProcessId}, Cookie={RuntimeInstanceCookie}");
     }

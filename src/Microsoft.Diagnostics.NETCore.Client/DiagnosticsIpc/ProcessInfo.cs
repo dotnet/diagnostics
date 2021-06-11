@@ -17,6 +17,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
      * # bytes  - Operating system string length and data
      * # bytes  - Process architecture string length and data
      * 
+     * ==ProcessInfo2==
+     * The response payload to issuing the GetProcessInfo2 command.
+     * 
+     * 8 bytes  - PID (little-endian)
+     * 16 bytes - CLR Runtime Instance Cookie (little-endian)
+     * # bytes  - Command line string length and data
+     * # bytes  - Operating system string length and data
+     * # bytes  - Process architecture string length and data
+     * # bytes  - Managed entrypoint assembly name
+     * # bytes  - CLR product version string (may include prerelease labels)
+     * 
+     * 
      * The "string length and data" fields are variable length:
      * 4 bytes            - Length of string data in UTF-16 characters
      * (2 * length) bytes - The data of the string encoded using Unicode
@@ -27,11 +39,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private static readonly int GuidSizeInBytes = 16;
 
-        public static ProcessInfo Parse(byte[] payload)
+        /// <summary>
+        /// Parses a ProcessInfo payload.
+        /// </summary>
+        internal static ProcessInfo ParseV1(byte[] payload)
+        {
+            int index = 0;
+            return ParseCommon(payload, ref index);
+        }
+
+        /// <summary>
+        /// Parses a ProcessInfo2 payload.
+        /// </summary>
+        internal static ProcessInfo ParseV2(byte[] payload)
+        {
+            int index = 0;
+            ProcessInfo processInfo = ParseCommon(payload, ref index);
+
+            processInfo.ManagedEntrypointAssemblyName = ReadString(payload, ref index);
+            processInfo.ClrProductVersionString = ReadString(payload, ref index);
+
+            return processInfo;
+        }
+
+        private static ProcessInfo ParseCommon(byte[] payload, ref int index)
         {
             ProcessInfo processInfo = new ProcessInfo();
 
-            int index = 0;
             processInfo.ProcessId = BitConverter.ToUInt64(payload, index);
             index += sizeof(UInt64);
 
@@ -65,5 +99,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public string CommandLine { get; private set; }
         public string OperatingSystem { get; private set; }
         public string ProcessArchitecture { get; private set; }
+        public string ManagedEntrypointAssemblyName { get; private set; }
+        public string ClrProductVersionString { get; private set; }
     }
 }

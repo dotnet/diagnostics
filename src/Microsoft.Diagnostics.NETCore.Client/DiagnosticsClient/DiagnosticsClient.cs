@@ -194,6 +194,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal ProcessInfo GetProcessInfo()
         {
+            if (TryGetProcessInfo2(out ProcessInfo processInfo))
+            {
+                return processInfo;
+            }
+
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -202,9 +207,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     var hr = BitConverter.ToInt32(response.Payload, 0);
                     throw new ServerErrorException($"Get process info failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
-                    return ProcessInfo.Parse(response.Payload);
+                    return ProcessInfo.ParseV1(response.Payload);
                 default:
                     throw new ServerErrorException($"Get process info failed - server responded with unknown command");
+            }
+        }
+
+        private bool TryGetProcessInfo2(out ProcessInfo processInfo)
+        {
+            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo2);
+            var response = IpcClient.SendMessage(_endpoint, message);
+            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.OK:
+                    processInfo = ProcessInfo.ParseV2(response.Payload);
+                    return true;
+                default:
+                    processInfo = null;
+                    return false;
             }
         }
 

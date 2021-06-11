@@ -125,6 +125,10 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
                 Assert.NotNull(endpointInfo.CommandLine);
                 Assert.NotNull(endpointInfo.OperatingSystem);
                 Assert.NotNull(endpointInfo.ProcessArchitecture);
+                Assert.Equal("EventPipeTracee", endpointInfo.ManagedEntrypointAssemblyName);
+                Version clrVersion = ParseVersionRemoveLabel(endpointInfo.ClrProductionVersionString);
+                Assert.True(clrVersion >= new Version(6, 0, 0));
+
                 VerifyConnection(execution1.TestRunner, endpointInfo);
 
                 _outputHelper.WriteLine("Stopping tracee.");
@@ -180,6 +184,9 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
                     Assert.NotNull(endpointInfo.CommandLine);
                     Assert.NotNull(endpointInfo.OperatingSystem);
                     Assert.NotNull(endpointInfo.ProcessArchitecture);
+                    Assert.Equal("EventPipeTracee", endpointInfo.ManagedEntrypointAssemblyName);
+                    Version clrVersion = ParseVersionRemoveLabel(endpointInfo.ClrProductionVersionString);
+                    Assert.True(clrVersion >= new Version(6, 0, 0));
 
                     VerifyConnection(executions[i].TestRunner, endpointInfo);
                 }
@@ -238,6 +245,17 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
             Assert.Equal(runner.Pid, endpointInfo.ProcessId);
             Assert.NotEqual(Guid.Empty, endpointInfo.RuntimeInstanceCookie);
             Assert.NotNull(endpointInfo.Endpoint);
+        }
+
+        private static Version ParseVersionRemoveLabel(string versionString)
+        {
+            Assert.NotNull(versionString);
+            int prereleaseLabelIndex = versionString.IndexOf('-');
+            if (prereleaseLabelIndex >= 0)
+            {
+                versionString = versionString.Substring(0, prereleaseLabelIndex);
+            }
+            return Version.Parse(versionString);
         }
 
         private sealed class TestServerEndpointInfoSource : ServerEndpointInfoSource
