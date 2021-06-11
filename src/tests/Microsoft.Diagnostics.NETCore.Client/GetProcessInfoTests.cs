@@ -24,21 +24,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), output);
             runner.Start();
 
-            DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
+            try
+            {
+                DiagnosticsClient client = new DiagnosticsClient(runner.Pid);
 
-            // Test fails if execute command too quickly
-            Thread.Sleep(1_000);
+                ProcessInfo processInfo = client.GetProcessInfo();
 
-            ProcessInfo processInfo = client.GetProcessInfo();
-
-            Assert.NotNull(processInfo);
-            Assert.Equal(runner.Pid, (int)processInfo.ProcessId);
-            Assert.NotNull(processInfo.CommandLine);
-            Assert.NotNull(processInfo.OperatingSystem);
-            Assert.NotNull(processInfo.ProcessArchitecture);
-            Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
-            Version clrVersion = ParseVersionRemoveLabel(processInfo.ClrProductVersionString);
-            Assert.True(clrVersion >= new Version(6, 0, 0));
+                Assert.NotNull(processInfo);
+                Assert.Equal(runner.Pid, (int)processInfo.ProcessId);
+                Assert.NotNull(processInfo.CommandLine);
+                Assert.NotNull(processInfo.OperatingSystem);
+                Assert.NotNull(processInfo.ProcessArchitecture);
+                Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
+                Version clrVersion = ParseVersionRemoveLabel(processInfo.ClrProductVersionString);
+                Assert.True(clrVersion >= new Version(6, 0, 0));
+            }
+            finally
+            {
+                runner.PrintStatus();
+            }
         }
 
         private static Version ParseVersionRemoveLabel(string versionString)
