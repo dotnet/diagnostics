@@ -194,10 +194,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal ProcessInfo GetProcessInfo()
         {
-            if (TryGetProcessInfo2(out ProcessInfo processInfo))
-            {
-                return processInfo;
-            }
+            // GetProcessInfo2 command seems to cause target runtime to crash very frequently
+            //if (TryGetProcessInfo2(out ProcessInfo processInfo))
+            //{
+            //    return processInfo;
+            //}
 
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
             var response = IpcClient.SendMessage(_endpoint, message);
