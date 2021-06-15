@@ -488,9 +488,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option ResumeRuntimeOption() =>
             new Option(
                 alias: "--resume-runtime",
-                description: @"Resume runtime once session has been initialized.")
+                description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
-                Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => false)
+                Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
             };
     }
 }
