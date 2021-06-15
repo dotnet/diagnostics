@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,11 @@ namespace Microsoft.Diagnostics.Monitoring
                     try
                     {
                         return EndpointInfo.FromProcessId(pid);
+                    }
+                    // Catch when runtime instance shuts down while attepting to use the established diagnostic port connection.
+                    catch (EndOfStreamException)
+                    {
+                        return null;
                     }
                     //Catch when the application is running a more privilaged socket than dotnet-monitor. For example, running a web app as administrator
                     //while running dotnet-monitor without elevation.
