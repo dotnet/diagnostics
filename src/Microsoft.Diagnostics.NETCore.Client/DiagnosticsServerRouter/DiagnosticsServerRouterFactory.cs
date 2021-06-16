@@ -496,7 +496,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int processId = Process.GetCurrentProcess().Id;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
+                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-diagnostic-{processId}");
             }
             else
             {
@@ -507,7 +507,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 #endif
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
-                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
+                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
             }
         }
     }

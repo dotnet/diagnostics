@@ -201,15 +201,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                defaultAddress = $"dotnet-diagnostic-{pid}";
+                if (File.Exists($"{IpcRootPath}dotnet-dsrouter-diagnostic-{pid}"))
+                    defaultAddress = $"dotnet-dsrouter-diagnostic-{pid}";
+                else
+                    defaultAddress = $"dotnet-diagnostic-{pid}";
             }
             else
             {
                 try
                 {
-                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
+                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-dsrouter-diagnostic-{pid}-*-socket") // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
+
+                    if (string.IsNullOrEmpty(defaultAddress))
+                        defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
+                            .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                            .FirstOrDefault();
                 }
                 catch (InvalidOperationException)
                 {
