@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             // Do nothing
         }
 
-        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool _)
+        public void CounterPayloadReceived(CounterPayload payload, bool _)
         {
             lock (_lock)
             {
@@ -64,12 +64,15 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     builder.Clear();
                 }
 
+                throw new NotImplementedException();
+                /*
                 builder
                     .Append(DateTime.UtcNow.ToString()).Append(',')
-                    .Append(providerName).Append(',')
-                    .Append(payload.GetDisplay()).Append(',')
-                    .Append(payload.GetCounterType()).Append(',')
-                    .Append(payload.GetValue().ToString(CultureInfo.InvariantCulture)).Append('\n');
+                    .Append(payload.ProviderName).Append(',')
+                    .Append(payload.DisplayName).Append(',')
+                    .Append(payload.CounterType).Append(',')
+                    .Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append('\n');
+                */
             }
         }
 

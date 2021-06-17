@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             // Do nothing
         }
 
-        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool _)
+        public void CounterPayloadReceived(CounterPayload payload, bool _)
         {
             lock (_lock)
             {
@@ -65,13 +65,15 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     File.AppendAllText(_output, builder.ToString());
                     builder.Clear();
                 }
-
+                throw new NotImplementedException();
+                /*
                 builder
                     .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
-                    .Append(" \"provider\": \"").Append(providerName).Append("\", ")
-                    .Append(" \"name\": \"").Append(payload.GetDisplay()).Append("\", ")
-                    .Append(" \"counterType\": \"").Append(payload.GetCounterType()).Append("\", ")
-                    .Append(" \"value\": ").Append(payload.GetValue().ToString(CultureInfo.InvariantCulture)).Append(" },");
+                    .Append(" \"provider\": \"").Append(payload.ProviderName).Append("\", ")
+                    .Append(" \"name\": \"").Append(payload.DisplayName).Append("\", ")
+                    .Append(" \"counterType\": \"").Append(payload.CounterType).Append("\", ")
+                    .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
+                */
             }
         }
 
