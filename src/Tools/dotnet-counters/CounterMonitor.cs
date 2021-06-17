@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,6 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
+        const int BufferDelaySecs = 1;
+
         private int _processId;
         private int _interval;
         private CounterSet _counterList;
@@ -34,27 +37,219 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
 
+        class ProviderEventState
+        {
+            public DateTime FirstReceiveTimestamp;
+            public bool InstrumentEventObserved;
+        }
+        private Dictionary<string, ProviderEventState> _providerEventStates = new Dictionary<string, ProviderEventState>();
+        private Queue<CounterPayload> _bufferedEvents = new Queue<CounterPayload>();
+
         public CounterMonitor()
         {
             pauseCmdSet = false;
         }
 
+
+
+
         private void DynamicAllMonitor(TraceEvent obj)
         {
-            // If we are paused, ignore the event. 
-            // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-            _renderer.ToggleStatus(pauseCmdSet);
-
-            if (obj.EventName.Equals("EventCounters"))
+            lock (this)
             {
-                IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
-                IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+                // If we are paused, ignore the event. 
+                // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
+                _renderer.ToggleStatus(pauseCmdSet);
 
-                // If it's not a counter we asked for, ignore it.
-                if (!_counterList.Contains(obj.ProviderName, payloadFields["Name"].ToString())) return;
+                if (obj.ProviderName == "System.Diagnostics.Metrics")
+                {
+                    if (obj.EventName == "BeginMetricReporting")
+                    {
+                        HandleBeginMetricReporting(obj);
+                    }
+                    if (obj.EventName == "HistogramMetricPublished")
+                    {
+                        HandleHistogram(obj);
+                    }
+                    else if (obj.EventName == "GaugeMetricPublished")
+                    {
+                        HandleGauge(obj);
+                    }
+                    else if (obj.EventName == "CounterRateMetricPublished")
+                    {
+                        HandleCounterRate(obj);
+                    }
+                }
+                else if (obj.EventName == "EventCounters")
+                {
+                    HandleDiagnosticCounter(obj);
+                }
+            }
+        }
 
-                ICounterPayload payload = payloadFields["CounterType"].Equals("Sum") ? (ICounterPayload)new IncrementingCounterPayload(payloadFields, _interval) : (ICounterPayload)new CounterPayload(payloadFields);
-                _renderer.CounterPayloadReceived(obj.ProviderName, payload, pauseCmdSet);
+        private void MeterInstrumentEventObserved(string meterName, string instrumentName, DateTime timestamp)
+        {
+            if(!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
+            {
+                providerEventState = new ProviderEventState()
+                {
+                    FirstReceiveTimestamp = timestamp,
+                    InstrumentEventObserved = true
+                };
+                _providerEventStates.Add(meterName, providerEventState);
+            }
+            else
+            {
+                providerEventState.InstrumentEventObserved = true;
+            }
+        }
+
+        private void HandleBeginMetricReporting(TraceEvent obj)
+        {
+            string meterName = (string)obj.PayloadValue(0);
+            string instrumentName = (string)obj.PayloadValue(2);
+            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+        }
+
+        private void HandleCounterRate(TraceEvent obj)
+        {
+            string meterName = (string)obj.PayloadValue(0);
+            string meterVersion = (string)obj.PayloadValue(1);
+            string instrumentName = (string)obj.PayloadValue(2);
+            string unit = (string)obj.PayloadValue(3);
+            string tags = (string)obj.PayloadValue(4);
+            double rate = (double)obj.PayloadValue(5);
+            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
+            _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+        }
+
+        private void HandleGauge(TraceEvent obj)
+        {
+            string meterName = (string)obj.PayloadValue(0);
+            string meterVersion = (string)obj.PayloadValue(1);
+            string instrumentName = (string)obj.PayloadValue(2);
+            string unit = (string)obj.PayloadValue(3);
+            string tags = (string)obj.PayloadValue(4);
+            double lastValue = (double)obj.PayloadValue(5);
+            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
+            _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+        }
+
+        private void HandleHistogram(TraceEvent obj)
+        {
+            string meterName = (string)obj.PayloadValue(0);
+            string meterVersion = (string)obj.PayloadValue(1);
+            string instrumentName = (string)obj.PayloadValue(2);
+            string unit = (string)obj.PayloadValue(3);
+            string tags = (string)obj.PayloadValue(4);
+            string quantiles = (string)obj.PayloadValue(5);
+            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
+            _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+            
+        }
+
+        private void HandleDiagnosticCounter(TraceEvent obj)
+        {
+            IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
+            IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
+
+            // If it's not a counter we asked for, ignore it.
+            string name = payloadFields["Name"].ToString();
+            if (!_counterList.Contains(obj.ProviderName, name)) return;
+
+            // init providerEventState if this is the first time we've seen an event from this provider
+            if (!_providerEventStates.TryGetValue(obj.ProviderName, out ProviderEventState providerState))
+            {
+                providerState = new ProviderEventState()
+                {
+                    FirstReceiveTimestamp = obj.TimeStamp
+                };
+                _providerEventStates.Add(obj.ProviderName, providerState);
+            }
+
+            // we give precedence to instrument events over diagnostic counter events. If we are seeing
+            // both then drop this one.
+            if (providerState.InstrumentEventObserved)
+            {
+                return;
+            }
+
+            CounterPayload payload = null;
+            if (payloadFields["CounterType"].Equals("Sum"))
+            {
+                payload = new RatePayload(
+                    obj.ProviderName,
+                    name,
+                    payloadFields["DisplayName"].ToString(),
+                    payloadFields["DisplayUnits"].ToString(),
+                    null,
+                    (double)payloadFields["Increment"],
+                    _interval,
+                    obj.TimeStamp);
+            }
+            else
+            {
+                payload = new GaugePayload(
+                    obj.ProviderName,
+                    name,
+                    payloadFields["DisplayName"].ToString(),
+                    payloadFields["DisplayUnits"].ToString(),
+                    null,
+                    (double)payloadFields["Mean"],
+                    obj.TimeStamp);
+            }
+
+            // If we saw the first event for this provider recently then a duplicate instrument event may still be
+            // coming. We'll buffer this event for a while and then render it if it remains unduplicated for
+            // a while.
+            // This is all best effort, if we do show the DiagnosticCounter event and then an instrument event shows up
+            // later the renderer may obsserve some odd behavior like changes in the counter metadata, oddly timed reporting
+            // intervals, or counters that stop reporting.
+            // I'm gambling this is good enough that the behavior will never be seen in practice, but if it is we could
+            // either adjust the time delay or try to improve how the renderers handle it.
+            if(providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= obj.TimeStamp)
+            {
+                _bufferedEvents.Enqueue(payload);
+            }
+            else
+            {
+                _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+            }
+        }
+
+        // when receiving DiagnosticCounter events we may have buffered them to wait for
+        // duplicate instrument events. If we've waited long enough then we should remove
+        // them from the buffer and render them.
+        private void HandleBufferedEvents()
+        {
+            DateTime now = DateTime.Now;
+            lock (this)
+            {
+                while (_bufferedEvents.Count != 0)
+                {
+                    CounterPayload payload = _bufferedEvents.Peek();
+                    ProviderEventState providerEventState = _providerEventStates[payload.ProviderName];
+                    if (providerEventState.InstrumentEventObserved)
+                    {
+                        _bufferedEvents.Dequeue();
+                    }
+                    else if (providerEventState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) < now)
+                    {
+                        _bufferedEvents.Dequeue();
+                        _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+                    }
+                    else
+                    {
+                        // technically an event that is eligible to be unbuffered earlier could be waiting behind a
+                        // buffered event that will wait longer, but we don't expect this variation to matter for
+                        // our scenarios. At worst an event might wait up to 2*BufferDelaySecs. If there is a scenario
+                        // where it matters we could scan the entire queue rather than just the front of it.
+                        break;
+                    }
+                }
             }
         }
 
@@ -361,10 +556,44 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
+
+
         private EventPipeProvider[] GetEventPipeProviders()
         {
-            return _counterList.Providers.Select(providerName => new EventPipeProvider(providerName, EventLevel.Error, 0, new Dictionary<string, string>()
-                {{ "EventCounterIntervalSec", _interval.ToString() }})).ToArray();
+            // EventSources support EventCounter based metrics directly
+            IEnumerable<EventPipeProvider> eventCounterProviders = _counterList.Providers.Select(
+                providerName => new EventPipeProvider(providerName, EventLevel.Error, 0, new Dictionary<string, string>()
+                {{ "EventCounterIntervalSec", _interval.ToString() }}));
+
+            //System.Diagnostics.Metrics EventSource supports the new Meter/Instrument APIs
+            const long TimeSeriesValues = 0x2;
+            StringBuilder metrics = new StringBuilder();
+            foreach(string provider in _counterList.Providers)
+            {
+                if(metrics.Length != 0)
+                {
+                    metrics.Append(",");
+                }
+                if(_counterList.IncludesAllCounters(provider))
+                {
+                    metrics.Append(provider);
+                }
+                else
+                {
+                    string[] providerCounters = _counterList.GetCounters(provider).Select(c => "{provider}\\{counter}").ToArray();
+                    metrics.Append(string.Join(',', providerCounters));
+                }
+            }
+            EventPipeProvider metricsEventSourceProvider =
+                new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+                    new Dictionary<string, string>()
+                    {
+                        { "Metrics", metrics.ToString() },
+                        { "RefreshInterval", _interval.ToString() }
+                    }
+                );
+
+            return eventCounterProviders.Append(metricsEventSourceProvider).ToArray();
         }
 
         private async Task<int> Start()
@@ -414,6 +643,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         break;
                     }
+                    HandleBufferedEvents();
                 }
                 ConsoleKey cmd = Console.ReadKey(true).Key;
                 if (cmd == ConsoleKey.Q)
@@ -432,5 +662,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             return await Task.FromResult(0);
         }
+
+
     }
 }

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -35,13 +36,27 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public ObservedCounter(string displayName) => DisplayName = displayName;
             public string DisplayName { get; } // Display name for this counter.
             public int Row { get; set; } // Assigned row for this counter. May change during operation.
+            public Dictionary<string, ObservedTagSet> TagSets { get; } = new Dictionary<string, ObservedTagSet>();
+
+            public bool RenderValueInline => TagSets.Count == 0 ||
+                       (TagSets.Count == 1 && string.IsNullOrEmpty(TagSets.Keys.First()));
+        }
+
+        private class ObservedTagSet
+        {
+            public ObservedTagSet(string tags)
+            {
+                Tags = tags;
+            }
+            public string Tags { get; }
+            public string DisplayTags => string.IsNullOrEmpty(Tags) ? "<no tags>" : Tags;
+            public int Row { get; set; } // Assigned row for this counter. May change during operation.
         }
 
         private readonly object _lock = new object();
         private readonly Dictionary<string, ObservedProvider> providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
         private int maxNameLength = 40; // Allow room for 40 character counter names by default.
-        private int maxPreDecimalDigits = 11; // Allow room for values up to 999 million by default.
 
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
         private bool paused = false;
@@ -83,6 +98,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 {
                     Console.WriteLine($"{new string(' ', Indent)}{counter.DisplayName}");
                     counter.Row = row++;
+                    if(!counter.RenderValueInline)
+                    {
+                        foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+                        {
+                            Console.WriteLine($"{new string(' ', 2 * Indent)}{tagSet.Tags}");
+                            tagSet.Row = row++;
+                        }
+                    }
                 }
             }
 
@@ -100,7 +123,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             UpdateStatus();
         }
 
-        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool pauseCmdSet)
+        public void CounterPayloadReceived(CounterPayload payload, bool pauseCmdSet)
         {
             lock (_lock)
             {
@@ -115,7 +138,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     return;
                 }
 
-                string name = payload.GetName();
+                string providerName = payload.ProviderName;
+                string name = payload.Name;
+                string tags = payload.Tags;
 
                 bool redraw = false;
                 if (!providers.TryGetValue(providerName, out ObservedProvider provider))
@@ -126,24 +151,78 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
                 {
-                    string displayName = payload.GetDisplay();
+                    string displayName = payload.DisplayName;
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
                     maxNameLength = Math.Max(maxNameLength, displayName.Length);
                     redraw = true;
                 }
 
-                const string DecimalPlaces = "###";
-                string payloadVal = payload.GetValue().ToString("#,0." + DecimalPlaces, CultureInfo.CurrentCulture);
-                int decimalIndex = payloadVal.IndexOf(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator, StringComparison.CurrentCulture);
-                if (decimalIndex == -1)
+                ObservedTagSet tagSet = null;
+                if (tags != null && !counter.TagSets.TryGetValue(tags, out tagSet))
                 {
-                    decimalIndex = payloadVal.Length;
+                    counter.TagSets[tags] = tagSet = new ObservedTagSet(tags);
+                    maxNameLength = Math.Max(maxNameLength, tagSet.DisplayTags.Length);
+                    redraw = true;
                 }
 
-                if (decimalIndex > maxPreDecimalDigits)
+                
+                StringBuilder valueText = new StringBuilder();
+                // The value field is formatted:
+                // [Optional name][   value     ]             [optional name][     value   ] 
+                // |<--5 chars-->||<--15 chars->||<-4 chars->||<--5 chars-->||<--15 chars->||<-4 chars->| ...
+                // Each optional name is either a blank or some formatted string like "P50: "
+                // Each value is one of:
+                //  a) If abs(value) >= 10^9 then it is formatted as 0.########e+00
+                //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,
+                //     3 decimal digits or spaces.
+                //
+                // For example:
+                // |    |              |   |    |              |   |    |              |
+                // P50:   1,421,893.21     P95:  19,000,000.001    P99:    4.000123e+25
+                // P50:           0.123    P95:          10.432    P99:         123.456
+                // P50:          -0.123    P95:         -10.432    P99:        -123.456
+                //         -675,430.9    
+                //      -12,675,430.9  
+                //                7
+
+                for (int i = 0; i < payload.Values.Length; i++)
                 {
-                    maxPreDecimalDigits = decimalIndex;
-                    redraw = true;
+                    string key = payload.Values[i].Key;
+                    if(!string.IsNullOrEmpty(key))
+                    {
+                        key = key + ": ";
+                    }
+                    else
+                    {
+                        key = "";
+                    }
+                    double val = payload.Values[i].Value;
+                    if (Math.Abs(val) >= 100_000_000)
+                    {
+                        valueText.AppendFormat(CultureInfo.CurrentCulture, "{0,5}{1,15:0.######e+00}    ", key, val);
+                    }
+                    else
+                    {
+                        string formattedVal = val.ToString("##,###,##0.###");
+                        int seperatorIndex = formattedVal.IndexOf(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator);
+                        if(seperatorIndex == -1)
+                        {
+                            formattedVal += "    ";
+                        }
+                        else
+                        {
+                            int decimalDigits = formattedVal.Length - 1 - seperatorIndex;
+                            formattedVal += new string(' ', 3 - decimalDigits);
+                        }
+                        valueText.AppendFormat(CultureInfo.CurrentCulture, "{0,5}{1,15}    ", key, formattedVal);
+                    }
+                }
+
+                string payloadVal = valueText.ToString();
+                const int valueFixedLength = 68;
+                if (payloadVal.Length > valueFixedLength)
+                {
+                    payloadVal = payloadVal.Substring(0, valueFixedLength);
                 }
 
                 if (redraw)
@@ -151,10 +230,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     AssignRowsAndInitializeDisplay();
                 }
 
-                Console.SetCursorPosition(Indent + maxNameLength + 1, counter.Row);
-                int prefixSpaces = maxPreDecimalDigits - decimalIndex;
-                int postfixSpaces = DecimalPlaces.Length - (payloadVal.Length - decimalIndex - 1);
-                Console.Write($"{new string(' ', prefixSpaces)}{payloadVal}{new string(' ', postfixSpaces)}");
+                int row = counter.RenderValueInline ? counter.Row : tagSet.Row;
+                Console.SetCursorPosition(Indent + maxNameLength + 1, row);
+                Console.Write(payloadVal);
             }
         }
 
