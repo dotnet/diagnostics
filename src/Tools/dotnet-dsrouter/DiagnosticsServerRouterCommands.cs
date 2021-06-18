@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
         }
 
-        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -69,7 +69,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode.");
+                }
+            }
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, factory.CreateLogger("dotnet-dsrounter"), Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -91,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -112,7 +125,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode.");
+                }
+            }
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, factory.CreateLogger("dotnet-dsrounter"), Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {

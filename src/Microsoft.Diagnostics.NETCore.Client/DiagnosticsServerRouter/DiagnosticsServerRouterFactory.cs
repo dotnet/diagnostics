@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class TcpServerRouterFactory : IIpcServerTransportCallbackInternal
     {
-        readonly ILogger _logger;
+        protected readonly ILogger _logger;
 
         string _tcpServerAddress;
 
@@ -177,6 +177,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerAddress; }
         }
 
+        public delegate TcpServerRouterFactory CreateInstanceDelegate(string tcpServer, int runtimeTimeoutMs, ILogger logger);
+
+        public static TcpServerRouterFactory CreateDefaultInstance(string tcpServer, int runtimeTimeoutMs, ILogger logger)
+        {
+            return new TcpServerRouterFactory(tcpServer, runtimeTimeoutMs, logger);
+        }
+
         public TcpServerRouterFactory(string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
             _logger = logger;
@@ -192,12 +199,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _tcpServer.TransportCallback = this;
         }
 
-        public void Start()
+        public virtual void Start()
         {
             _tcpServer.Start();
         }
 
-        public async Task Stop()
+        public virtual async Task Stop()
         {
             await _tcpServer.DisposeAsync().ConfigureAwait(false);
         }
@@ -612,10 +619,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         TcpServerRouterFactory _tcpServerRouterFactory;
         IpcServerRouterFactory _ipcServerRouterFactory;
 
-        public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, ILogger logger)
+        public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
             _logger = logger;
-            _tcpServerRouterFactory = new TcpServerRouterFactory(tcpServer, runtimeTimeoutMs, logger);
+            _tcpServerRouterFactory = factory(tcpServer, runtimeTimeoutMs, logger);
             _ipcServerRouterFactory = new IpcServerRouterFactory(ipcServer, logger);
         }
 
@@ -802,7 +809,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         IpcServerRouterFactory _ipcServerRouterFactory;
         TcpClientRouterFactory _tcpClientRouterFactory;
 
-        public IpcServerTcpClientRouterFactory(string ipcServer, string tcpClient, int runtimeTimeoutMs, ILogger logger, TcpClientRouterFactory.CreateInstanceDelegate factory)
+        public IpcServerTcpClientRouterFactory(string ipcServer, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
             _logger = logger;
             _ipcServerRouterFactory = new IpcServerRouterFactory(ipcServer, logger);
@@ -924,11 +931,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         IpcClientRouterFactory _ipcClientRouterFactory;
         TcpServerRouterFactory _tcpServerRouterFactory;
 
-        public IpcClientTcpServerRouterFactory(string ipcClient, string tcpServer, int runtimeTimeoutMs, ILogger logger)
+        public IpcClientTcpServerRouterFactory(string ipcClient, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
             _logger = logger;
             _ipcClientRouterFactory = new IpcClientRouterFactory(ipcClient, logger);
-            _tcpServerRouterFactory = new TcpServerRouterFactory(tcpServer, runtimeTimeoutMs, logger);
+            _tcpServerRouterFactory = factory(tcpServer, runtimeTimeoutMs, logger);
         }
 
         public override string IpcAddress

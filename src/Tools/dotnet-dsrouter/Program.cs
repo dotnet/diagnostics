@@ -17,8 +17,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
     internal class Program
     {
-        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose);
-        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose);
+        delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
+        delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
         delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
 
         private static Command IpcClientTcpServerRouterCommand() =>
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpServerRouter).GetCommandHandler(),
                 // Options
-                IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+                IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
             };
 
         private static Command IpcServerTcpServerRouterCommand() =>
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter).GetCommandHandler(),
                 // Options
-                IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+                IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
             };
 
         private static Command IpcServerTcpClientRouterCommand() =>
@@ -121,7 +121,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option ForwardPortOption() =>
             new Option(
                 aliases: new[] { "--forward-port", "-fp" },
-                description: "Enable port forwarding, values Android|iOS. Make sure to set ANDROID_SDK_ROOT before using this option on Android.")
+                description: "Enable port forwarding, values Android|iOS for TcpClient and only Android for TcpServer. Make sure to set ANDROID_SDK_ROOT before using this option on Android.")
             {
                 Argument = new Argument<string>(name: "forwardPort", getDefaultValue: () => "")
             };
