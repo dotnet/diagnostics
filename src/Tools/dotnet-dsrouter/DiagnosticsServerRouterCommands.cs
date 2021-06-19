@@ -30,13 +30,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     diagnosticPorts = "";
                 }
 
-                ProcessLauncher.Launcher.Start(diagnosticPorts, CommandToken, Verbose, Verbose);
+                if (!ProcessLauncher.Launcher.Start(diagnosticPorts, CommandToken, Verbose, Verbose))
+                    throw new Exception($"Failed to launch command.");
             }
         }
 
         public void OnRouterStopped()
         {
-            ProcessLauncher.Launcher.Cleanup();
+            if (ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.HasStarted)
+                ProcessLauncher.Launcher.Cleanup();
         }
     }
 
@@ -48,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
         }
 
-        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, bool shutdownOnChildExit, string verbose)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -70,28 +72,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.CommandToken = token;
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
+            await checkKeepRunning(linkedCancelToken, cancelRouterTask, routerTask, shutdownOnChildExit).ConfigureAwait(false);
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, bool shutdownOnChildExit, string verbose)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -113,7 +98,36 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.CommandToken = token;
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            await checkKeepRunning(linkedCancelToken, cancelRouterTask, routerTask, shutdownOnChildExit).ConfigureAwait(false);
+            return routerTask.Result;
+        }
 
+        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, bool shutdownOnChildExit, bool suspend, string verbose)
+        {
+            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+
+            LogLevel logLevel = LogLevel.Information;
+            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Debug;
+            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Trace;
+
+            using var factory = new LoggerFactory();
+            factory.AddConsole(logLevel, false);
+
+            Launcher.SuspendProcess = suspend;
+            Launcher.ConnectMode = false;
+            Launcher.Verbose = logLevel != LogLevel.Information;
+            Launcher.CommandToken = token;
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            await checkKeepRunning (linkedCancelToken, cancelRouterTask, routerTask, shutdownOnChildExit).ConfigureAwait (false);
+            return routerTask.Result;
+        }
+
+        static async Task<int> checkKeepRunning(CancellationTokenSource linkedCancelToken, CancellationTokenSource cancelRouterTask, Task<int> routerTask, bool shutdownOnChildExit)
+        {
             while (!linkedCancelToken.IsCancellationRequested)
             {
                 await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
@@ -129,46 +143,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         break;
                     }
                 }
-            }
 
-            return routerTask.Result;
-        }
-
-        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose)
-        {
-            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
-
-            LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Trace;
-
-            using var factory = new LoggerFactory();
-            factory.AddConsole(logLevel, false);
-
-            Launcher.SuspendProcess = false;
-            Launcher.ConnectMode = false;
-            Launcher.Verbose = logLevel != LogLevel.Information;
-            Launcher.CommandToken = token;
-
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
+                if (shutdownOnChildExit && ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.HasStarted && ProcessLauncher.Launcher.ChildProc.HasExited)
                 {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
+                    cancelRouterTask.Cancel();
+                    break;
                 }
             }
 
