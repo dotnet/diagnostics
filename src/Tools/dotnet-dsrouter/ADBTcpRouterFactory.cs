@@ -66,8 +66,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             process.StartInfo.Arguments = command;
 
             process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = !string.IsNullOrEmpty(expectedOutput);
-            process.StartInfo.RedirectStandardError = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
             process.StartInfo.RedirectStandardInput = false;
 
             bool processStartedResult = false;
@@ -82,10 +82,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
             }
 
-            if (processStartedResult && !string.IsNullOrEmpty(expectedOutput))
+            if (processStartedResult)
             {
                 var stdout = process.StandardOutput.ReadToEnd();
-                expectedOutputResult = stdout.Contains(expectedOutput);
+                var stderr = process.StandardError.ReadToEnd();
+
+                if (!string.IsNullOrEmpty(expectedOutput))
+                    expectedOutputResult = !string.IsNullOrEmpty(stdout) ? stdout.Contains(expectedOutput) : false;
+
+                if (!string.IsNullOrEmpty(stdout))
+                    logger.LogTrace($"stdout: {stdout}");
+
+                if (!string.IsNullOrEmpty(stderr))
+                    logger.LogError($"stderr: {stderr}");
             }
 
             if (processStartedResult)
