@@ -190,7 +190,7 @@ namespace Microsoft.Internal.Common.Utils
             _timeoutInSec = timeoutInSec;
         }
 
-        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, string portName, bool showChildIO, bool printLaunchCommand)
+        public async Task<DiagnosticsClientHolder> Build(CancellationToken ct, int processId, IpcEndpointConfig portConfig, bool showChildIO, bool printLaunchCommand)
         {
             if (ProcessLauncher.Launcher.HasChildProc)
             {
@@ -223,9 +223,9 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, server);
             }
-            else if (!string.IsNullOrEmpty(portName))
+            else if (!string.IsNullOrEmpty(portConfig.Address) && (portConfig.Type == IpcEndpointConfig.PortType.Listen))
             {
-                string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portName : Path.GetFullPath(portName);
+                string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portConfig.Address : Path.GetFullPath(portConfig.Address);
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(fullPort);
                 server.Start();
                 Console.WriteLine($"Waiting for connection on {fullPort}");
@@ -244,6 +244,10 @@ namespace Microsoft.Internal.Common.Utils
                     }
                     return null;
                 }
+            }
+            else if (!string.IsNullOrEmpty(portConfig.Address) && (portConfig.Type == IpcEndpointConfig.PortType.Connect))
+            {
+                return new DiagnosticsClientHolder(new DiagnosticsClient(portConfig.Address));
             }
             else
             {

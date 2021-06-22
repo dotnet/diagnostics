@@ -93,7 +93,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort, bool resumeRuntime)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+            IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
+
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out _processId))
             {
                 return ReturnCode.ArgumentError;
             }
@@ -101,7 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _ct.Register(() => shouldExit.Set());
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, portConfig, showChildIO: false, printLaunchCommand: false))
             {
                 if (holder == null)
                 {
@@ -115,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _interval = refreshInterval;
                     _renderer = new ConsoleWriter();
                     _diagnosticsClient = holder.Client;
-                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort) || resumeRuntime;
+                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || (portConfig.Type == IpcEndpointConfig.PortType.Listen) || resumeRuntime;
                     int ret = await Start();
                     ProcessLauncher.Launcher.Cleanup();
                     return ret;
@@ -137,7 +139,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort, bool resumeRuntime)
         {
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+            IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
+
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out _processId))
             {
                 return ReturnCode.ArgumentError;
             }
@@ -146,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _ct.Register(() => shouldExit.Set());
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, portConfig, showChildIO: false, printLaunchCommand: false))
             {
                 if (holder == null)
                 {
@@ -190,7 +194,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                         return ReturnCode.ArgumentError;
                     }
-                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort) || resumeRuntime;
+                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || (portConfig.Type == IpcEndpointConfig.PortType.Listen) || resumeRuntime;
                     int ret = await Start();
                     return ret;
                 }

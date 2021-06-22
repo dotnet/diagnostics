@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="duration">The duration of trace to be taken. </param>
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
-        /// <param name="port">Path to the diagnostic port to be created.</param>
+        /// <param name="diagnosticPort">Path to the diagnostic port to be used.</param>
         /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <param name="resumeRuntime">Resume runtime once session has been initialized.</param>
         /// <returns></returns>
@@ -50,6 +50,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
             int ret = ReturnCode.Ok;
+
+            IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
 
             try
             {
@@ -82,7 +84,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
+                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -91,7 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ReturnCode.ArgumentError;
                     }
                 }
-                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, portConfig.Address))
                 {
                     return ReturnCode.ArgumentError;
                 }
@@ -151,11 +153,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClient diagnosticsClient;
                 Process process;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
-                bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort) || resumeRuntime;
+                bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || (portConfig.Type == IpcEndpointConfig.PortType.Listen) || resumeRuntime;
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
 
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, portConfig, showChildIO: showchildio, printLaunchCommand: true))
                 {
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
@@ -473,7 +475,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option DiagnosticPortOption() =>
             new Option(
                 alias: "--diagnostic-port",
-                description: @"The path to a diagnostic port to be created.")
+                description: @"The path to a diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };

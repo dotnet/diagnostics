@@ -48,6 +48,88 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
 
+    internal class IpcEndpointConfig
+    {
+        internal enum PortType
+        {
+            None,
+            Connect,
+            Listen
+        }
+
+        public string Address { get; } = "";
+        public PortType Type { get; } = PortType.None;
+
+        public IpcEndpointConfig(string config)
+        {
+            if (!string.IsNullOrEmpty(config))
+            {
+                var parts = config.Split(',');
+
+                Address = parts[0];
+                Type = PortType.Listen;
+
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    if (string.Compare(parts[i], "connect", StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        Type = PortType.Connect;
+                    }
+                    else if (string.Compare(parts[i], "listen", StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        Type = PortType.Listen;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Unknow IPC endpoint config keyword, {parts[i]} in {config}.");
+                    }
+                }
+            }
+        }
+
+        public static Stream Connect(string address, TimeSpan timeout)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var namedPipe = new NamedPipeClientStream(
+                    ".",
+                    address,
+                    PipeDirection.InOut,
+                    PipeOptions.None,
+                    TokenImpersonationLevel.Impersonation);
+                namedPipe.Connect((int)timeout.TotalMilliseconds);
+                return namedPipe;
+            }
+            else
+            {
+                var socket = new IpcUnixDomainSocket();
+                socket.Connect(new IpcUnixDomainSocketEndPoint(address), timeout);
+                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+            }
+        }
+
+        public static async Task<Stream> ConnectAsync(string address, CancellationToken token)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var namedPipe = new NamedPipeClientStream(
+                    ".",
+                    address,
+                    PipeDirection.InOut,
+                    PipeOptions.None,
+                    TokenImpersonationLevel.Impersonation);
+                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
+                return namedPipe;
+            }
+            else
+            {
+                var socket = new IpcUnixDomainSocket();
+                await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(address), token).ConfigureAwait(false);
+                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+            }
+        }
+    }
+
     internal class ServerIpcEndpoint : IpcEndpoint
     {
         private readonly Guid _runtimeId;
@@ -100,6 +182,51 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
+    internal class AddressIpcEndpoint : IpcEndpoint
+    {
+        string _address;
+
+        public AddressIpcEndpoint(string address)
+        {
+            _address = address;
+        }
+
+        public override Stream Connect(TimeSpan timeout)
+        {
+            return IpcEndpointConfig.Connect(_address, timeout);
+        }
+
+        public override async Task<Stream> ConnectAsync(CancellationToken token)
+        {
+            return await IpcEndpointConfig.ConnectAsync(_address, token).ConfigureAwait(false);
+        }
+
+        public override void WaitForConnection(TimeSpan timeout)
+        {
+            using var _ = Connect(timeout);
+        }
+
+        public override async Task WaitForConnectionAsync(CancellationToken token)
+        {
+            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as AddressIpcEndpoint);
+        }
+
+        public bool Equals(AddressIpcEndpoint other)
+        {
+            return other != null && other._address == _address;
+        }
+
+        public override int GetHashCode()
+        {
+            return _address.GetHashCode();
+        }
+    }
+
     internal class PidIpcEndpoint : IpcEndpoint
     {
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
@@ -121,45 +248,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override Stream Connect(TimeSpan timeout)
         {
             string address = GetDefaultAddress();
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var namedPipe = new NamedPipeClientStream(
-                    ".",
-                    address,
-                    PipeDirection.InOut,
-                    PipeOptions.None,
-                    TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)timeout.TotalMilliseconds);
-                return namedPipe;
-            }
-            else
-            {
-                var socket = new IpcUnixDomainSocket();
-                socket.Connect(new IpcUnixDomainSocketEndPoint(Path.Combine(IpcRootPath, address)), timeout);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
+            return IpcEndpointConfig.Connect(address, timeout);
         }
 
         public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
             string address = GetDefaultAddress();
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var namedPipe = new NamedPipeClientStream(
-                    ".",
-                    address,
-                    PipeDirection.InOut,
-                    PipeOptions.None,
-                    TokenImpersonationLevel.Impersonation);
-                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
-                return namedPipe;
-            }
-            else
-            {
-                var socket = new IpcUnixDomainSocket();
-                await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(Path.Combine(IpcRootPath, address)), token).ConfigureAwait(false);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
+            return await IpcEndpointConfig.ConnectAsync(address, token).ConfigureAwait(false);
         }
 
         public override void WaitForConnection(TimeSpan timeout)
@@ -201,23 +296,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                if (File.Exists($"{IpcRootPath}dotnet-dsrouter-diagnostic-{pid}"))
-                    defaultAddress = $"dotnet-dsrouter-diagnostic-{pid}";
-                else
-                    defaultAddress = $"dotnet-diagnostic-{pid}";
+                defaultAddress = $"dotnet-diagnostic-{pid}";
             }
             else
             {
                 try
                 {
-                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-dsrouter-diagnostic-{pid}-*-socket") // Try best match.
+                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
-
-                    if (string.IsNullOrEmpty(defaultAddress))
-                        defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
-                            .OrderByDescending(f => new FileInfo(f).LastWriteTime)
-                            .FirstOrDefault();
                 }
                 catch (InvalidOperationException)
                 {
