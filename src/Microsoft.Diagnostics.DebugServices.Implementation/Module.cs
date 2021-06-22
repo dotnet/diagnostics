@@ -34,9 +34,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IDisposable _onChangeEvent;
         private Flags _flags;
-        private PdbInfo _pdbInfo;
+        private PdbFileInfo _pdbFileInfo;
         private ImmutableArray<byte> _buildId;
-        private VersionInfo? _version;
+        private VersionData _versionData;
         private PEImage _peImage;
 
         public readonly ServiceProvider ServiceProvider;
@@ -118,12 +118,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public PdbInfo PdbInfo
+        public PdbFileInfo PdbFileInfo
         {
             get
             {
                 GetPEInfo();
-                return _pdbInfo;
+                return _pdbFileInfo;
             }
         }
 
@@ -147,10 +147,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public virtual VersionInfo? Version
+        public virtual VersionData VersionData
         {
-            get { return _version; }
-            set { _version = value; }
+            get { return _versionData; }
+            set { _versionData = value; }
         }
 
         public abstract string VersionString { get; }
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             GetPEInfo();
 
             // If we can't get the version from the PE, search for version string embedded in the module data
-            if (!_version.HasValue && !IsPEImage)
+            if (_versionData is null && !IsPEImage)
             {
                 string versionString = VersionString;
                 if (versionString != null)
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         try
                         {
                             Version version = System.Version.Parse(versionToParse);
-                            _version = new VersionInfo(version.Major, version.Minor, version.Build, version.Revision);
+                            _versionData = new VersionData(version.Major, version.Minor, version.Build, version.Revision);
                         }
                         catch (ArgumentException ex)
                         {
@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         protected PEImage GetPEInfo()
         {
             if (InitializeValue(Flags.InitializePEInfo)) {
-                _peImage = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbInfo, ref _version, ref _flags);
+                _peImage = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbFileInfo, ref _versionData, ref _flags);
             }
             return _peImage;
         }

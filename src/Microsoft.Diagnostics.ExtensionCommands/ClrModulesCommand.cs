@@ -4,8 +4,6 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -40,10 +38,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteLine("    MetadataAddress: {0:X16}", module.MetadataAddress);
                     WriteLine("    MetadataSize:    {0:X16}", module.MetadataLength);
                     WriteLine("    PdbInfo:         {0}", module.Pdb?.ToString() ?? "<none>");
-                    VersionInfo? version = null;
+                    VersionData version = null;
                     try
                     {
-                        version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).Version;
+                        version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).VersionData;
                     }
                     catch (DiagnosticsException)
                     {

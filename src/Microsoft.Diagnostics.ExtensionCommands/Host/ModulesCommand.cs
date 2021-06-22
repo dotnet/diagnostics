@@ -32,12 +32,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteLine("    IsFileLayout:    {0}", module.IsFileLayout?.ToString() ?? "<unknown>");
                     WriteLine("    IndexFileSize:   {0}", module.IndexFileSize?.ToString("X8") ?? "<none>");
                     WriteLine("    IndexTimeStamp:  {0}", module.IndexTimeStamp?.ToString("X8") ?? "<none>");
-                    WriteLine("    Version:         {0}", module.Version?.ToString() ?? "<none>");
+                    WriteLine("    Version:         {0}", module.VersionData?.ToString() ?? "<none>");
                     string versionString = module.VersionString;
                     if (!string.IsNullOrEmpty(versionString)) {
                         WriteLine("                     {0}", versionString);
                     }
-                    WriteLine("    PdbInfo:         {0}", module.PdbInfo?.ToString() ?? "<none>");
+                    WriteLine("    PdbInfo:         {0}", module.PdbFileInfo?.ToString() ?? "<none>");
                     WriteLine("    BuildId:         {0}", !module.BuildId.IsDefaultOrEmpty ? string.Concat(module.BuildId.Select((b) => b.ToString("x2"))) : "<none>");
                 }
                 else
