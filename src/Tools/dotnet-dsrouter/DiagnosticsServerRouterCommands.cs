@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var logger = factory.CreateLogger("dotnet-dsrounter");
+            var logger = factory.CreateLogger("dotnet-dsrouter");
 
             TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var logger = factory.CreateLogger("dotnet-dsrounter");
+            var logger = factory.CreateLogger("dotnet-dsrouter");
 
             TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
@@ -183,7 +183,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var logger = factory.CreateLogger("dotnet-dsrounter");
+            var logger = factory.CreateLogger("dotnet-dsrouter");
 
             TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
