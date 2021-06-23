@@ -505,7 +505,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
                 }
 
-                return path;
+                return path.Substring(PidIpcEndpoint.IpcRootPath.Length);
             }
             else
             {
@@ -1065,8 +1065,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 try
                 {
-                    // TcpServer consumes advertise message, needs to be replayed back to ipc client stream. Use router process ID as representation.
-                    await IpcAdvertise.SerializeAsync(ipcClientStream, _tcpServerRouterFactory.RuntimeInstanceId, (ulong)Process.GetCurrentProcess().Id, token).ConfigureAwait(false);
+                    // TcpServer consumes advertise message, needs to be replayed back to ipc client.
+                    await IpcAdvertise.SerializeAsync(ipcClientStream, _tcpServerRouterFactory.RuntimeInstanceId, (ulong)_tcpServerRouterFactory.RuntimeProcessId, token).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {

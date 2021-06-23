@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 PrintProviders(providerCollection, enabledBy);
 
                 DiagnosticsClient diagnosticsClient;
-                Process process;
+                Process process = null;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig || resumeRuntime;
                 var shouldExit = new ManualResetEvent(false);
@@ -159,39 +159,49 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, portConfig, showChildIO: showchildio, printLaunchCommand: true))
                 {
+                    string processMainModuleFileName = "";
+
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
                         return await Task.FromResult(ReturnCode.Ok);
                     }
                     diagnosticsClient = holder.Client;
-                    if (ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort))
+                    if (ProcessLauncher.Launcher.HasChildProc)
                     {
                         process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
+                    }
+                    else if (portConfig.IsConnectConfig || portConfig.IsListenConfig)
+                    {
+                        // No information regarding process (could even be a routed process),
+                        // use "file" part of IPC channel name as process main module file name.
+                        processMainModuleFileName = Path.GetFileName(portConfig.Address);
                     }
                     else
                     {
                         process = Process.GetProcessById(processId);
                     }
-                    string processMainModuleFileName = "";
 
-                    // Reading the process MainModule filename can fail if the target process closes
-                    // or isn't fully setup. Retry a few times to attempt to address the issue
-                    for (int attempts = 0; true; attempts++)
+                    if (process != null)
                     {
-                        try
+                        // Reading the process MainModule filename can fail if the target process closes
+                        // or isn't fully setup. Retry a few times to attempt to address the issue
+                        for (int attempts = 0; true; attempts++)
                         {
-                            processMainModuleFileName = process.MainModule.FileName;
-                            break;
-                        }
-                        catch
-                        {
-                            if (attempts > 10)
+                            try
                             {
-                                Console.Error.WriteLine("Unable to examine process.");
-                                return ReturnCode.SessionCreationError;
+                                processMainModuleFileName = process.MainModule.FileName;
+                                break;
                             }
-                            Thread.Sleep(200);
+                            catch
+                            {
+                                if (attempts > 10)
+                                {
+                                    Console.Error.WriteLine("Unable to examine process.");
+                                    return ReturnCode.SessionCreationError;
+                                }
+                                Thread.Sleep(200);
+                            }
                         }
                     }
 
