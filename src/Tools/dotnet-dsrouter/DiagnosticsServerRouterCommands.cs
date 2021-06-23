@@ -224,6 +224,66 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
+        public async Task<int> RunIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
+        {
+            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+
+            LogLevel logLevel = LogLevel.Information;
+            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Debug;
+            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Trace;
+
+            using var factory = new LoggerFactory();
+            factory.AddConsole(logLevel, false);
+
+            Launcher.SuspendProcess = true;
+            Launcher.ConnectMode = false;
+            Launcher.Verbose = logLevel != LogLevel.Information;
+            Launcher.CommandToken = token;
+
+            var logger = factory.CreateLogger("dotnet-dsrouter");
+
+            TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
+                }
+                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Ignoring --forward-port argument.");
+                }
+            }
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
+
+            while (!linkedCancelToken.IsCancellationRequested)
+            {
+                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
+                    break;
+
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
+                {
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
+                    {
+                        cancelRouterTask.Cancel();
+                        break;
+                    }
+                }
+            }
+
+            return routerTask.Result;
+        }
+
         static void checkLoopbackOnly(string tcpServer)
         {
             if (!string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))

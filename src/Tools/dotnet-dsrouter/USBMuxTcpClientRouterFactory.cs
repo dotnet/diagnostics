@@ -258,9 +258,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             _port = new IpcTcpSocketEndPoint(tcpClient).EndPoint.Port;
         }
 
-        public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
+        public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token, bool retry = false)
         {
-            bool retry = false;
             int handle = -1;
             ushort networkPort = (ushort)IPAddress.HostToNetworkOrder(unchecked((short)_port));
 
@@ -270,6 +269,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             connectTimeoutTokenSource.CancelAfter(TcpClientTimeoutMs);
+
+            if (!retry && _auto_shutdown)
+                retry = true;
 
             do
             {
@@ -290,10 +292,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         throw new TimeoutException();
                     }
 
-                    // If we are not doing auto shutdown when runtime is unavailable, fail right away, this will
+                    // If we are not doing retries when runtime is unavailable, fail right away, this will
                     // break any accepted IPC connections, making sure client is notified and could reconnect.
-                    // If we do have auto shutdown enabled, retry until succeed or time out.
-                    if (!_auto_shutdown)
+                    // If not, retry until succeed or time out.
+                    if (!retry)
                     {
                         _logger?.LogTrace($"Failed connecting {_port} over usbmux.");
                         throw;
