@@ -105,11 +105,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 if (parts.Length == 2)
                 {
-                    if (string.Compare(parts[1], "connect", StringComparison.OrdinalIgnoreCase) == 0)
+                    if (string.Equals(parts[1], "connect", StringComparison.OrdinalIgnoreCase))
                     {
                         type = PortType.Connect;
                     }
-                    else if (string.Compare(parts[1], "listen", StringComparison.OrdinalIgnoreCase) == 0)
+                    else if (string.Equals(parts[1], "listen", StringComparison.OrdinalIgnoreCase))
                     {
                         type = PortType.Listen;
                     }
