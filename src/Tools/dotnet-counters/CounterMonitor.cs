@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort, bool resumeRuntime)
         {
-            IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
+            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
 
             if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out _processId))
             {
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _interval = refreshInterval;
                     _renderer = new ConsoleWriter();
                     _diagnosticsClient = holder.Client;
-                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || (portConfig.Type == IpcEndpointConfig.PortType.Listen) || resumeRuntime;
+                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig || resumeRuntime;
                     int ret = await Start();
                     ProcessLauncher.Launcher.Cleanup();
                     return ret;
@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort, bool resumeRuntime)
         {
-            IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
+            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
 
             if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out _processId))
             {
@@ -194,7 +194,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                         return ReturnCode.ArgumentError;
                     }
-                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || (portConfig.Type == IpcEndpointConfig.PortType.Listen) || resumeRuntime;
+                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig || resumeRuntime;
                     int ret = await Start();
                     return ret;
                 }

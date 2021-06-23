@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool printStatusOverTime = true;
             int ret = ReturnCode.Ok;
 
-            IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
+            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
 
             try
             {
@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClient diagnosticsClient;
                 Process process;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
-                bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || (portConfig.Type == IpcEndpointConfig.PortType.Listen) || resumeRuntime;
+                bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig || resumeRuntime;
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
 

@@ -48,45 +48,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
 
-    internal class IpcEndpointConfig
+    internal class IpcEndpointHelper
     {
-        internal enum PortType
-        {
-            None,
-            Connect,
-            Listen
-        }
-
-        public string Address { get; } = "";
-        public PortType Type { get; } = PortType.None;
-
-        public IpcEndpointConfig(string config)
-        {
-            if (!string.IsNullOrEmpty(config))
-            {
-                var parts = config.Split(',');
-
-                Address = parts[0];
-                Type = PortType.Listen;
-
-                for (int i = 1; i < parts.Length; i++)
-                {
-                    if (string.Compare(parts[i], "connect", StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        Type = PortType.Connect;
-                    }
-                    else if (string.Compare(parts[i], "listen", StringComparison.OrdinalIgnoreCase) == 0)
-                    {
-                        Type = PortType.Listen;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Unknow IPC endpoint config keyword, {parts[i]} in {config}.");
-                    }
-                }
-            }
-        }
-
         public static Stream Connect(string address, TimeSpan timeout)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -193,12 +156,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Stream Connect(TimeSpan timeout)
         {
-            return IpcEndpointConfig.Connect(_address, timeout);
+            return IpcEndpointHelper.Connect(_address, timeout);
         }
 
         public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
-            return await IpcEndpointConfig.ConnectAsync(_address, token).ConfigureAwait(false);
+            return await IpcEndpointHelper.ConnectAsync(_address, token).ConfigureAwait(false);
         }
 
         public override void WaitForConnection(TimeSpan timeout)
@@ -248,13 +211,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override Stream Connect(TimeSpan timeout)
         {
             string address = GetDefaultAddress();
-            return IpcEndpointConfig.Connect(address, timeout);
+            return IpcEndpointHelper.Connect(address, timeout);
         }
 
         public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
             string address = GetDefaultAddress();
-            return await IpcEndpointConfig.ConnectAsync(address, token).ConfigureAwait(false);
+            return await IpcEndpointHelper.ConnectAsync(address, token).ConfigureAwait(false);
         }
 
         public override void WaitForConnection(TimeSpan timeout)

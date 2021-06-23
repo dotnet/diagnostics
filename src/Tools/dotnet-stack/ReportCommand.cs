@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             try
             {
-                IpcEndpointConfig portConfig = new IpcEndpointConfig(diagnosticPort);
+                IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
 
                 // Either processName, processId or diagnosticPort has to be specified.
                 if (!string.IsNullOrEmpty(portConfig.Address))
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         return -1;
                     }
 
-                    if (portConfig.Type != IpcEndpointConfig.PortType.Connect)
+                    if (!portConfig.IsConnectConfig)
                     {
                         Console.WriteLine("--diagnostic-port only supports connect mode.");
                         return -1;

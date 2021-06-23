@@ -223,7 +223,7 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, server);
             }
-            else if (!string.IsNullOrEmpty(portConfig.Address) && (portConfig.Type == IpcEndpointConfig.PortType.Listen))
+            else if (portConfig.IsListenConfig)
             {
                 string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portConfig.Address : Path.GetFullPath(portConfig.Address);
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(fullPort);
@@ -245,7 +245,7 @@ namespace Microsoft.Internal.Common.Utils
                     return null;
                 }
             }
-            else if (!string.IsNullOrEmpty(portConfig.Address) && (portConfig.Type == IpcEndpointConfig.PortType.Connect))
+            else if (portConfig.IsConnectConfig)
             {
                 return new DiagnosticsClientHolder(new DiagnosticsClient(portConfig.Address));
             }
