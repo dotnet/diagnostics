@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -38,9 +39,50 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        const string NamedPipeSchema = "namedpipe";
+        const string UnixDomainSocketSchema = "uds";
+        const string NamedPipeDefaultIPCRoot = @"\\.\pipe\";
+        const string NamedPipeSchemaDefaultIPCRootPath = "/pipe/";
+
         public IpcEndpointConfig(string address, PortType type)
         {
-            Address = address;
+            try
+            {
+                if (Uri.TryCreate(address, UriKind.Absolute, out Uri parsedAddress))
+                {
+                    if (string.Equals(parsedAddress.Scheme, NamedPipeSchema, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            throw new ArgumentException($"{NamedPipeSchema} only supported on Windows.");
+
+                        address = parsedAddress.AbsolutePath;
+                    }
+                    else if (string.Equals(parsedAddress.Scheme, UnixDomainSocketSchema, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            throw new ArgumentException($"{UnixDomainSocketSchema} not supported on Windows, use {NamedPipeSchema}.");
+
+                        address = parsedAddress.AbsolutePath;
+                    }
+                    else if (!string.IsNullOrEmpty(parsedAddress.Scheme))
+                    {
+                        throw new ArgumentException($"{parsedAddress.Scheme} not supported.");
+                    }
+                }
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith(NamedPipeDefaultIPCRoot, StringComparison.OrdinalIgnoreCase))
+                Address = address.Substring(NamedPipeDefaultIPCRoot.Length);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith(NamedPipeSchemaDefaultIPCRootPath, StringComparison.OrdinalIgnoreCase))
+                Address = address.Substring(NamedPipeSchemaDefaultIPCRootPath.Length);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith("/", StringComparison.OrdinalIgnoreCase))
+                Address = address.Substring("/".Length);
+            else
+                Address = address;
+
             _type = type;
         }
 
