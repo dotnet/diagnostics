@@ -401,7 +401,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else if (typeof(T) == typeof(bool))
             {
-                writer.Write((bool)((object)obj));
+                bool bValue = (bool)((object)obj);
+                uint uiValue = bValue ? 1 : 0;
+                writer.Write(uiValue);
             }
             else
             {
