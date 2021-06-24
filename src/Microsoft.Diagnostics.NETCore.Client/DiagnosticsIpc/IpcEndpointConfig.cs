@@ -19,25 +19,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public string Address { get; }
 
-        public bool IsConnectConfig {
-            get
-            {
-                if (!string.IsNullOrEmpty(Address) && _type == PortType.Connect)
-                    return true;
-                else
-                    return false;
-            }
-        }
+        public bool IsConnectConfig => !string.IsNullOrEmpty(Address) && _type == PortType.Connect;
 
-        public bool IsListenConfig {
-            get
-            {
-                if (!string.IsNullOrEmpty(Address) && _type == PortType.Listen)
-                    return true;
-                else
-                    return false;
-            }
-        }
+        public bool IsListenConfig => !string.IsNullOrEmpty(Address) && _type == PortType.Listen;
 
         const string NamedPipeSchema = "namedpipe";
         const string UnixDomainSocketSchema = "uds";
@@ -46,32 +30,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public IpcEndpointConfig(string address, PortType type)
         {
-            try
+            if (Uri.TryCreate(address, UriKind.Absolute, out Uri parsedAddress))
             {
-                if (Uri.TryCreate(address, UriKind.Absolute, out Uri parsedAddress))
+                if (string.Equals(parsedAddress.Scheme, NamedPipeSchema, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.Equals(parsedAddress.Scheme, NamedPipeSchema, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            throw new ArgumentException($"{NamedPipeSchema} only supported on Windows.");
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        throw new PlatformNotSupportedException($"{NamedPipeSchema} only supported on Windows.");
 
-                        address = parsedAddress.AbsolutePath;
-                    }
-                    else if (string.Equals(parsedAddress.Scheme, UnixDomainSocketSchema, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            throw new ArgumentException($"{UnixDomainSocketSchema} not supported on Windows, use {NamedPipeSchema}.");
-
-                        address = parsedAddress.AbsolutePath;
-                    }
-                    else if (!string.IsNullOrEmpty(parsedAddress.Scheme))
-                    {
-                        throw new ArgumentException($"{parsedAddress.Scheme} not supported.");
-                    }
+                    address = parsedAddress.AbsolutePath;
                 }
-            }
-            catch (InvalidOperationException)
-            {
+                else if (string.Equals(parsedAddress.Scheme, UnixDomainSocketSchema, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        throw new PlatformNotSupportedException($"{UnixDomainSocketSchema} not supported on Windows, use {NamedPipeSchema}.");
+
+                    address = parsedAddress.AbsolutePath;
+                }
+                else if (!string.IsNullOrEmpty(parsedAddress.Scheme))
+                {
+                    throw new FormatException($"{parsedAddress.Scheme} not supported.");
+                }
             }
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith(NamedPipeDefaultIPCRoot, StringComparison.OrdinalIgnoreCase))
@@ -95,10 +73,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 var parts = config.Split(',');
                 if (parts.Length > 2)
-                    throw new ArgumentException($"Unknow IPC endpoint config format, {config}.");
+                    throw new FormatException($"Unknow IPC endpoint config format, {config}.");
 
                 if (string.IsNullOrEmpty(parts[0]))
-                    throw new ArgumentException($"Missing IPC endpoint config address, {config}.");
+                    throw new FormatException($"Missing IPC endpoint config address, {config}.");
 
                 type = PortType.Listen;
                 address = parts[0];
@@ -115,7 +93,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     else
                     {
-                        throw new ArgumentException($"Unknow IPC endpoint config keyword, {parts[1]} in {config}.");
+                        throw new FormatException($"Unknow IPC endpoint config keyword, {parts[1]} in {config}.");
                     }
                 }
             }
