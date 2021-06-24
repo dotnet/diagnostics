@@ -29,6 +29,5 @@
     <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
     <InternalsVisibleTo Include="dotnet-counters" />
     <InternalsVisibleTo Include="dotnet-trace" />
-    <InternalsVisibleTo Include="dotnet-stack" />
   </ItemGroup>
 </Project>

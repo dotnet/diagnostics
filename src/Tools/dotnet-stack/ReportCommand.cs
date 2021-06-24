@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, string diagnosticPort, TimeSpan duration);
+        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
 
         /// <summary>
         /// Reports a stack trace
@@ -33,35 +33,18 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="console"></param>
         /// <param name="processId">The process to report the stack from.</param>
         /// <param name="name">The name of process to report the stack from.</param>
-        /// <param name="diagnosticPort">Path to the diagnostic port to be used.</param>
+        /// <param name="output">The output path for the collected trace data.</param>
         /// <param name="duration">The duration of to trace the target for. </param>
         /// <returns></returns>
-        private static async Task<int> Report(CancellationToken ct, IConsole console, int processId, string name, string diagnosticPort, TimeSpan duration)
+        private static async Task<int> Report(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration)
         {
             string tempNetTraceFilename = Path.GetRandomFileName() + ".nettrace";
             string tempEtlxFilename = "";
-            DiagnosticsClient client = null;
 
             try
             {
-                // Either processName, processId or diagnosticPort has to be specified.
-                if (IpcEndpointConfig.TryParse(diagnosticPort, out IpcEndpointConfig portConfig))
-                {
-                    if (processId != 0 || !string.IsNullOrEmpty(name))
-                    {
-                        Console.WriteLine("Can only specify either --diagnostic-port or --name or --process-id option");
-                        return -1;
-                    }
-
-                    if (!portConfig.IsConnectConfig)
-                    {
-                        Console.WriteLine("--diagnostic-port only supports connect mode.");
-                        return -1;
-                    }
-
-                    client = new DiagnosticsClient(portConfig.Address);
-                }
-                else if (!string.IsNullOrEmpty(name))
+                // Either processName or processId has to be specified.
+                if (!string.IsNullOrEmpty(name))
                 {
                     if (processId != 0)
                     {
@@ -73,21 +56,21 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     {
                         return -1;
                     }
-
-                    if (processId < 0)
-                    {
-                        console.Error.WriteLine("Process ID should not be negative.");
-                        return -1;
-                    }
-                    else if (processId == 0)
-                    {
-                        console.Error.WriteLine("--process-id is required");
-                        return -1;
-                    }
-
-                    client = new DiagnosticsClient(processId);
                 }
 
+                if (processId < 0)
+                {
+                    console.Error.WriteLine("Process ID should not be negative.");
+                    return -1;
+                }
+                else if (processId == 0)
+                {
+                    console.Error.WriteLine("--process-id is required");
+                    return -1;
+                }
+
+
+                var client = new DiagnosticsClient(processId);
                 var providers = new List<EventPipeProvider>()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
@@ -201,8 +184,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 // Options
                 ProcessIdOption(),
                 NameOption(),
-                DurationOption(),
-                DiagnosticPortOption()
+                DurationOption()
             };
 
         private static Option DurationOption() =>
@@ -228,14 +210,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 description: "The name of the process to collect the trace.")
             {
                 Argument = new Argument<string>(name: "name")
-            };
-
-        public static Option DiagnosticPortOption() =>
-            new Option(
-                alias: "--diagnostic-port",
-                description: @"The path to a diagnostic port to be used.")
-            {
-                Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };
     }
 }
