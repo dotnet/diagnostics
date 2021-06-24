@@ -27,9 +27,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public string Address { get; }
 
-        public bool IsConnectConfig => !string.IsNullOrEmpty(Address) && _portType == PortType.Connect;
+        public bool IsConnectConfig => _portType == PortType.Connect;
 
-        public bool IsListenConfig => !string.IsNullOrEmpty(Address) && _portType == PortType.Listen;
+        public bool IsListenConfig => _portType == PortType.Listen;
 
         const string NamedPipeSchema = "namedpipe";
         const string UnixDomainSocketSchema = "uds";
@@ -38,6 +38,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public IpcEndpointConfig(string address, TransportType transportType, PortType portType)
         {
+            if (string.IsNullOrEmpty(address))
+                throw new ArgumentException("Address is null or empty.");
+
             switch (transportType)
             {
                 case TransportType.NamedPipe:
@@ -63,8 +66,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _portType = portType;
         }
 
+        public static bool TryParse(string config, out IpcEndpointConfig result)
+        {
+            try
+            {
+                result = Parse(config);
+            }
+            catch(Exception)
+            {
+                result = null;
+            }
+            return result != null;
+        }
+
         public static IpcEndpointConfig Parse(string config)
         {
+            if (string.IsNullOrEmpty(config))
+                throw new FormatException("Missing IPC endpoint config.");
+
             string address = "";
             PortType portType = PortType.Connect;
             TransportType transportType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? TransportType.NamedPipe : TransportType.UnixDomainSocket;

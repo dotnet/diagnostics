@@ -93,9 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort, bool resumeRuntime)
         {
-            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
-
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
                 return ReturnCode.ArgumentError;
             }
@@ -103,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _ct.Register(() => shouldExit.Set());
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, portConfig, showChildIO: false, printLaunchCommand: false))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
             {
                 if (holder == null)
                 {
@@ -139,9 +137,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort, bool resumeRuntime)
         {
-            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
-
-            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out _processId))
+            if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
                 return ReturnCode.ArgumentError;
             }
@@ -150,7 +146,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _ct.Register(() => shouldExit.Set());
 
             DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, portConfig, showChildIO: false, printLaunchCommand: false))
+            using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
             {
                 if (holder == null)
                 {

@@ -44,10 +44,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             try
             {
-                IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
-
                 // Either processName, processId or diagnosticPort has to be specified.
-                if (!string.IsNullOrEmpty(portConfig.Address))
+                if (IpcEndpointConfig.TryParse(diagnosticPort, out IpcEndpointConfig portConfig))
                 {
                     if (processId != 0 || !string.IsNullOrEmpty(name))
                     {

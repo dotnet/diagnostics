@@ -51,8 +51,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool printStatusOverTime = true;
             int ret = ReturnCode.Ok;
 
-            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
-
             try
             {
                 Debug.Assert(output != null);
@@ -84,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, portConfig.Address, out int resolvedProcessId))
+                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -93,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return ReturnCode.ArgumentError;
                     }
                 }
-                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, portConfig.Address))
+                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
                 {
                     return ReturnCode.ArgumentError;
                 }
@@ -156,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
 
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, portConfig, showChildIO: showchildio, printLaunchCommand: true))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
                     string processMainModuleFileName = "";
 
@@ -170,7 +168,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
                     }
-                    else if (portConfig.IsConnectConfig || portConfig.IsListenConfig)
+                    else if (IpcEndpointConfig.TryParse(diagnosticPort, out IpcEndpointConfig portConfig) && (portConfig.IsConnectConfig || portConfig.IsListenConfig))
                     {
                         // No information regarding process (could even be a routed process),
                         // use "file" part of IPC channel name as process main module file name.
