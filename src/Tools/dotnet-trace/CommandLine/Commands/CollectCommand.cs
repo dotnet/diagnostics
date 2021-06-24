@@ -153,7 +153,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClient diagnosticsClient;
                 Process process = null;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
-                bool shouldResumeRuntime = (ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig) && resumeRuntime;
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
 
@@ -223,7 +222,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         try
                         {
                             session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
-                            if (shouldResumeRuntime)
+                            if (resumeRuntime)
                             {
                                 diagnosticsClient.ResumeRuntime();
                             }

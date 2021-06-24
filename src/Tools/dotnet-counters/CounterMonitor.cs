@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private string _output;
         private bool pauseCmdSet;
         private ManualResetEvent shouldExit;
-        private bool shouldResumeRuntime;
+        private bool _resumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
 
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _interval = refreshInterval;
                     _renderer = new ConsoleWriter();
                     _diagnosticsClient = holder.Client;
-                    shouldResumeRuntime = (ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig) && resumeRuntime;
+                    _resumeRuntime = resumeRuntime;
                     int ret = await Start();
                     ProcessLauncher.Launcher.Cleanup();
                     return ret;
@@ -194,7 +194,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                         return ReturnCode.ArgumentError;
                     }
-                    shouldResumeRuntime = (ProcessLauncher.Launcher.HasChildProc || portConfig.IsListenConfig) && resumeRuntime;
                     int ret = await Start();
                     return ret;
                 }
@@ -345,7 +344,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
-                    if (shouldResumeRuntime)
+                    if (_resumeRuntime)
                     {
                         _diagnosticsClient.ResumeRuntime();
                     }
