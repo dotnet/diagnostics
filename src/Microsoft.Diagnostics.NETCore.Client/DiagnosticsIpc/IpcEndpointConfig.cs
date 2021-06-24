@@ -15,59 +15,59 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Listen
         }
 
-        PortType _type;
+        public enum TransportType
+        {
+            NamedPipe,
+            UnixDomainSocket
+        }
+
+        PortType _portType;
+
+        TransportType _transportType;
 
         public string Address { get; }
 
-        public bool IsConnectConfig => !string.IsNullOrEmpty(Address) && _type == PortType.Connect;
+        public bool IsConnectConfig => !string.IsNullOrEmpty(Address) && _portType == PortType.Connect;
 
-        public bool IsListenConfig => !string.IsNullOrEmpty(Address) && _type == PortType.Listen;
+        public bool IsListenConfig => !string.IsNullOrEmpty(Address) && _portType == PortType.Listen;
 
         const string NamedPipeSchema = "namedpipe";
         const string UnixDomainSocketSchema = "uds";
         const string NamedPipeDefaultIPCRoot = @"\\.\pipe\";
         const string NamedPipeSchemaDefaultIPCRootPath = "/pipe/";
 
-        public IpcEndpointConfig(string address, PortType type)
+        public IpcEndpointConfig(string address, TransportType transportType, PortType portType)
         {
-            if (Uri.TryCreate(address, UriKind.Absolute, out Uri parsedAddress))
+            switch (transportType)
             {
-                if (string.Equals(parsedAddress.Scheme, NamedPipeSchema, StringComparison.OrdinalIgnoreCase))
+                case TransportType.NamedPipe:
                 {
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         throw new PlatformNotSupportedException($"{NamedPipeSchema} only supported on Windows.");
-
-                    address = parsedAddress.AbsolutePath;
+                    break;
                 }
-                else if (string.Equals(parsedAddress.Scheme, UnixDomainSocketSchema, StringComparison.OrdinalIgnoreCase))
+                case TransportType.UnixDomainSocket:
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         throw new PlatformNotSupportedException($"{UnixDomainSocketSchema} not supported on Windows, use {NamedPipeSchema}.");
-
-                    address = parsedAddress.AbsolutePath;
+                    break;
                 }
-                else if (!string.IsNullOrEmpty(parsedAddress.Scheme))
+                default:
                 {
-                    throw new FormatException($"{parsedAddress.Scheme} not supported.");
+                    throw new NotSupportedException($"{transportType} not supported.");
                 }
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith(NamedPipeDefaultIPCRoot, StringComparison.OrdinalIgnoreCase))
-                Address = address.Substring(NamedPipeDefaultIPCRoot.Length);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith(NamedPipeSchemaDefaultIPCRootPath, StringComparison.OrdinalIgnoreCase))
-                Address = address.Substring(NamedPipeSchemaDefaultIPCRootPath.Length);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && address.StartsWith("/", StringComparison.OrdinalIgnoreCase))
-                Address = address.Substring("/".Length);
-            else
-                Address = address;
-
-            _type = type;
+            Address = address;
+            _transportType = transportType;
+            _portType = portType;
         }
 
         public static IpcEndpointConfig Parse(string config)
         {
             string address = "";
-            PortType type = PortType.Connect;
+            PortType portType = PortType.Connect;
+            TransportType transportType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? TransportType.NamedPipe : TransportType.UnixDomainSocket;
 
             if (!string.IsNullOrEmpty(config))
             {
@@ -78,18 +78,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 if (string.IsNullOrEmpty(parts[0]))
                     throw new FormatException($"Missing IPC endpoint config address, {config}.");
 
-                type = PortType.Listen;
+                portType = PortType.Listen;
                 address = parts[0];
 
                 if (parts.Length == 2)
                 {
                     if (string.Equals(parts[1], "connect", StringComparison.OrdinalIgnoreCase))
                     {
-                        type = PortType.Connect;
+                        portType = PortType.Connect;
                     }
                     else if (string.Equals(parts[1], "listen", StringComparison.OrdinalIgnoreCase))
                     {
-                        type = PortType.Listen;
+                        portType = PortType.Listen;
                     }
                     else
                     {
@@ -98,7 +98,40 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            return new IpcEndpointConfig(address, type);
+            if (Uri.TryCreate(address, UriKind.Absolute, out Uri parsedAddress))
+            {
+                if (string.Equals(parsedAddress.Scheme, NamedPipeSchema, StringComparison.OrdinalIgnoreCase))
+                {
+                    transportType = TransportType.NamedPipe;
+                    address = parsedAddress.AbsolutePath;
+                }
+                else if (string.Equals(parsedAddress.Scheme, UnixDomainSocketSchema, StringComparison.OrdinalIgnoreCase))
+                {
+                    transportType = TransportType.UnixDomainSocket;
+                    address = parsedAddress.AbsolutePath;
+                }
+                else if (!string.IsNullOrEmpty(parsedAddress.Scheme))
+                {
+                    throw new FormatException($"{parsedAddress.Scheme} not supported.");
+                }
+            }
+            else
+            {
+                if (address.StartsWith(NamedPipeDefaultIPCRoot, StringComparison.OrdinalIgnoreCase))
+                    transportType = TransportType.NamedPipe;
+            }
+
+            if (transportType == TransportType.NamedPipe)
+            {
+                if (address.StartsWith(NamedPipeDefaultIPCRoot, StringComparison.OrdinalIgnoreCase))
+                    address = address.Substring(NamedPipeDefaultIPCRoot.Length);
+                else if (address.StartsWith(NamedPipeSchemaDefaultIPCRootPath, StringComparison.OrdinalIgnoreCase))
+                    address = address.Substring(NamedPipeSchemaDefaultIPCRootPath.Length);
+                else if (address.StartsWith("/", StringComparison.OrdinalIgnoreCase))
+                    address = address.Substring("/".Length);
+            }
+
+            return new IpcEndpointConfig(address, transportType, portType);
         }
     }
 }
