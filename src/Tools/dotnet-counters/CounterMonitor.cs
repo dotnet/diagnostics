@@ -190,6 +190,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                         return ReturnCode.ArgumentError;
                     }
+                    _resumeRuntime = resumeRuntime;
                     int ret = await Start();
                     return ret;
                 }
