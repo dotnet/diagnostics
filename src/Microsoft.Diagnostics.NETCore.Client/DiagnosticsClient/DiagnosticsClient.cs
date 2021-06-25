@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,7 +62,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns> 
         public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown=true, int circularBufferMB=256)
         {
-            return new EventPipeSession(_endpoint, providers, requestRundown, circularBufferMB);
+            return EventPipeSession.Start(_endpoint, providers, requestRundown, circularBufferMB);
         }
 
         /// <summary>
@@ -74,10 +73,40 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
-        /// </returns> 
+        /// </returns>
         public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
         {
-            return new EventPipeSession(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
+            return EventPipeSession.Start(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
+        }
+
+        /// <summary>
+        /// Start tracing the application and return an EventPipeSession object
+        /// </summary>
+        /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
+        /// <param name="requestRundown">If true, request rundown events from the runtime</param>
+        /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// An EventPipeSession object representing the EventPipe session that just started.
+        /// </returns> 
+        internal Task<EventPipeSession> StartEventPipeSessionAsync(IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, CancellationToken token)
+        {
+            return EventPipeSession.StartAsync(_endpoint, providers, requestRundown, circularBufferMB, token);
+        }
+
+        /// <summary>
+        /// Start tracing the application and return an EventPipeSession object
+        /// </summary>
+        /// <param name="provider">An EventPipeProvider to turn on.</param>
+        /// <param name="requestRundown">If true, request rundown events from the runtime</param>
+        /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// An EventPipeSession object representing the EventPipe session that just started.
+        /// </returns>
+        internal Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeProvider provider, bool requestRundown, int circularBufferMB, CancellationToken token)
+        {
+            return EventPipeSession.StartAsync(_endpoint, new[] { provider }, requestRundown, circularBufferMB, token);
         }
 
         /// <summary>
@@ -88,26 +117,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration=false)
         {
-            if (string.IsNullOrEmpty(dumpPath))
-                throw new ArgumentNullException($"{nameof(dumpPath)} required");
+            IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, nameof(WriteDump));
+        }
 
-            byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
-            IpcMessage response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.Error:
-                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
-                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
-                    {
-                        throw new UnsupportedCommandException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
-                    }
-                    throw new ServerErrorException($"Writing dump failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerResponseId.OK:
-                    return;
-                default:
-                    throw new ServerErrorException($"Writing dump failed - server responded with unknown command");
-            }
+        /// <summary>
+        /// Trigger a core dump generation.
+        /// </summary> 
+        /// <param name="dumpType">Type of the dump to be generated</param>
+        /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
+        /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        internal async Task WriteDumpAsync(DumpType dumpType, string dumpPath, bool logDumpGeneration, CancellationToken token)
+        {
+            IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
+            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            ValidateResponseMessage(response, nameof(WriteDumpAsync));
         }
 
         /// <summary>
@@ -131,7 +157,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] serializedConfiguration = SerializeProfilerAttach((uint)attachTimeout.TotalSeconds, profilerGuid, profilerPath, additionalData);
             var message = new IpcMessage(DiagnosticsServerCommandSet.Profiler, (byte)ProfilerCommandId.AttachProfiler, serializedConfiguration);
-            var response = IpcClient.SendMessage(_endpoint, message);
+            IpcMessage response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
@@ -158,73 +184,46 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal void ResumeRuntime()
         {
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ResumeRuntime);
-            var response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.Error:
-                    // Try fallback for Preview 7 and Preview 8
-                    ResumeRuntimeFallback();
-                    //var hr = BitConverter.ToInt32(response.Payload, 0);
-                    //throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
-                    return;
-                case DiagnosticsServerResponseId.OK:
-                    return;
-                default:
-                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
-            }
+            IpcMessage request = CreateResumeRuntimeMessage();
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, nameof(ResumeRuntime));
         }
 
-        // Fallback command for .NET 5 Preview 7 and Preview 8
-        internal void ResumeRuntimeFallback()
+        internal async Task ResumeRuntimeAsync(CancellationToken cancellationToken)
         {
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Server, (byte)DiagnosticServerCommandId.ResumeRuntime);
-            var response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
-                    throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerResponseId.OK:
-                    return;
-                default:
-                    throw new ServerErrorException($"Resume runtime failed - server responded with unknown command");
-            }
+            IpcMessage request = CreateResumeRuntimeMessage();
+            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, cancellationToken).ConfigureAwait(false);
+            ValidateResponseMessage(response, nameof(ResumeRuntimeAsync));
         }
 
         internal ProcessInfo GetProcessInfo()
         {
-            IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
-            var response = IpcClient.SendMessage(_endpoint, message);
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
-                    throw new ServerErrorException($"Get process info failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerResponseId.OK:
-                    return ProcessInfo.Parse(response.Payload);
-                default:
-                    throw new ServerErrorException($"Get process info failed - server responded with unknown command");
-            }
+            IpcMessage request = CreateProcessInfoMessage();
+            using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, request);
+            return GetProcessInfoFromResponse(response, nameof(GetProcessInfoAsync));
+        }
+
+        internal async Task<ProcessInfo> GetProcessInfoAsync(CancellationToken token)
+        {
+            IpcMessage request = CreateProcessInfoMessage();
+            using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, request, token).ConfigureAwait(false);
+            return GetProcessInfoFromResponse(response, nameof(GetProcessInfoAsync));
         }
 
         public Dictionary<string,string> GetProcessEnvironment()
         {
-            var message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
-            Stream continuation = IpcClient.SendMessage(_endpoint, message, out IpcMessage response);
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.Error:
-                    int hr = BitConverter.ToInt32(response.Payload, 0);
-                    throw new ServerErrorException($"Get process environment failed (HRESULT: 0x{hr:X8})");
-                case DiagnosticsServerResponseId.OK:
-                    ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Payload);
-                    Task<Dictionary<string,string>> envTask = helper.ReadEnvironmentAsync(continuation);
-                    envTask.Wait();
-                    return envTask.Result;
-                default:
-                    throw new ServerErrorException($"Get process environment failed - server responded with unknown command");
-            }
+            IpcMessage message = CreateProcessEnvironmentMessage();
+            using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, message);
+            Task<Dictionary<string, string>> envTask = GetProcessEnvironmentFromResponse(response, nameof(GetProcessEnvironment), CancellationToken.None);
+            envTask.Wait();
+            return envTask.Result;
+        }
+
+        internal async Task<Dictionary<string, string>> GetProcessEnvironmentAsync(CancellationToken token)
+        {
+            IpcMessage message = CreateProcessEnvironmentMessage();
+            using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, message, token).ConfigureAwait(false);
+            return await GetProcessEnvironmentFromResponse(response, nameof(GetProcessEnvironmentAsync), token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -288,6 +287,63 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 writer.Flush();
                 return stream.ToArray();
+            }
+        }
+
+        private static IpcMessage CreateProcessEnvironmentMessage()
+        {
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessEnvironment);
+        }
+
+        private static IpcMessage CreateProcessInfoMessage()
+        {
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
+        }
+
+        private static IpcMessage CreateResumeRuntimeMessage()
+        {
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ResumeRuntime);
+        }
+
+        private static IpcMessage CreateWriteDumpMessage(DumpType dumpType, string dumpPath, bool logDumpGeneration)
+        {
+            if (string.IsNullOrEmpty(dumpPath))
+                throw new ArgumentNullException($"{nameof(dumpPath)} required");
+
+            byte[] payload = SerializeCoreDump(dumpPath, dumpType, logDumpGeneration);
+            return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
+        }
+
+        private static Task<Dictionary<string, string>> GetProcessEnvironmentFromResponse(IpcResponse response, string operationName, CancellationToken token)
+        {
+            ValidateResponseMessage(response.Message, operationName);
+
+            ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
+            return helper.ReadEnvironmentAsync(response.Continuation, token);
+        }
+
+        private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)
+        {
+            ValidateResponseMessage(response.Message, operationName);
+
+            return ProcessInfo.Parse(response.Message.Payload);
+        }
+
+        internal static void ValidateResponseMessage(IpcMessage message, string operationName)
+        {
+            switch ((DiagnosticsServerResponseId)message.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.Error:
+                    uint hr = BitConverter.ToUInt32(message.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                        throw new UnsupportedCommandException($"{operationName} failed - Command is not supported.");
+                    }
+                    throw new ServerErrorException($"{operationName} failed (HRESULT: 0x{hr:X8})");
+                case DiagnosticsServerResponseId.OK:
+                    return;
+                default:
+                    throw new ServerErrorException($"{operationName} failed - server responded with unknown command.");
             }
         }
     }

@@ -20,11 +20,11 @@ namespace Microsoft.Diagnostics.Monitoring
             // a GetProcessInfo command to the runtime instance to get additional information.
             foreach (int pid in DiagnosticsClient.GetPublishedProcesses())
             {
-                endpointInfoTasks.Add(Task.Run(() =>
+                endpointInfoTasks.Add(Task.Run(async () =>
                 {
                     try
                     {
-                        return EndpointInfo.FromProcessId(pid);
+                        return await EndpointInfo.FromProcessIdAsync(pid, token).ConfigureAwait(false);
                     }
                     //Catch when the application is running a more privilaged socket than dotnet-monitor. For example, running a web app as administrator
                     //while running dotnet-monitor without elevation.
