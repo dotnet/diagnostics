@@ -827,7 +827,7 @@ Payload:
   * ARM64 => `"arm64"`
   * Other => `"Unknown"`
 * `string managedEntrypointAssemblyName`: the assembly name from the assembly identity of the entrypoint assembly of the process
-* `string clrProductVersion`: the production version of the CLR of the process; may contain prerelease label information e.g. `6.0.0-preview.6.#####`
+* `string clrProductVersion`: the product version of the CLR of the process; may contain prerelease label information e.g. `6.0.0-preview.6.#####`
 
 ##### Details:
 
