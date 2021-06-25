@@ -100,7 +100,7 @@ case $CPUName in
         __HostArch=x86
         ;;
 
-    x86_64)
+    x86_64|amd64)
         __BuildArch=x64
         __HostArch=x64
         ;;
@@ -259,7 +259,7 @@ while :; do
         -clang*)
             __Compiler=clang
             # clangx.y or clang-x.y
-            version="$(echo "$lowerI" | tr -d '[:alpha:]-=')"
+            version="$(echo "$1" | tr -d '[:alpha:]-=')"
             parts=(${version//./ })
             __ClangMajorVersion="${parts[0]}"
             __ClangMinorVersion="${parts[1]}"
@@ -432,15 +432,6 @@ if [ "$__HostOS" == "OSX" ]; then
     export LLDB_PATH=$(xcode-select -p)/usr/bin/lldb
 
     export MACOSX_DEPLOYMENT_TARGET=10.12
-
-    # If Xcode 9.2 exists (like on the CI/build machines), use that. Xcode 9.3 or 
-    # greater (swift 4.1 lldb) doesn't work that well (seg faults on exit).
-    if [ -f "/Applications/Xcode_9.2.app/Contents/Developer/usr/bin/lldb" ]; then
-        if [ -f "/Applications/Xcode_9.2.app/Contents/SharedFrameworks/LLDB.framework/LLDB" ]; then
-            export LLDB_PATH=/Applications/Xcode_9.2.app/Contents/Developer/usr/bin/lldb
-            export LLDB_LIB=/Applications/Xcode_9.2.app/Contents/SharedFrameworks/LLDB.framework/LLDB
-        fi
-    fi
 
     if [ ! -f $LLDB_LIB ]; then
         echo "Cannot find the lldb library. Try installing Xcode."
