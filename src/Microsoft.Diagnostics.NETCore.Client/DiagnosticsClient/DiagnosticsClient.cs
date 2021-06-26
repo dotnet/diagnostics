@@ -206,8 +206,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 case DiagnosticsServerResponseId.Error:
                     // Try fallback for Preview 7 and Preview 8
                     ResumeRuntimeFallback();
-                    //var hr = BitConverter.ToInt32(response.Payload, 0);
-                    //throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
                     return;
                 case DiagnosticsServerResponseId.OK:
                     return;
