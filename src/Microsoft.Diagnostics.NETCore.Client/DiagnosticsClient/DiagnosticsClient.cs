@@ -185,6 +185,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         throw new UnsupportedCommandException("The target runtime does not support the ProfilerStartup command.");
                     }
+                    else if (hr == (uint)DiagnosticsIpcError.InvalidArgument)
+                    {
+                        throw new ServerErrorException("The runtime must be suspended to issue the SetStartupProfiler command.");
+                    }
 
                     throw new ServerErrorException($"Profiler startup failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:

@@ -15,6 +15,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal enum DiagnosticsIpcError : uint
     {
+        InvalidArgument       = 0x80070057,
         ProfilerAlreadyActive = 0x8013136A,
         BadEncoding           = 0x80131384,
         UnknownCommand        = 0x80131385,
