@@ -131,6 +131,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     transportType = TransportType.UnixDomainSocket;
                     address = parsedAddress.AbsolutePath;
                 }
+                else if (string.Equals(parsedAddress.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    address = parsedAddress.AbsolutePath;
+                }
                 else if (!string.IsNullOrEmpty(parsedAddress.Scheme))
                 {
                     throw new FormatException($"{parsedAddress.Scheme} not supported.");
