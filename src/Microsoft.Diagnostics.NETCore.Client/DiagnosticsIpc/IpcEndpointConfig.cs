@@ -31,6 +31,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public bool IsListenConfig => _portType == PortType.Listen;
 
+        public TransportType Transport => _transportType;
+
         const string NamedPipeSchema = "namedpipe";
         const string UnixDomainSocketSchema = "uds";
         const string NamedPipeDefaultIPCRoot = @"\\.\pipe\";
@@ -46,13 +48,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 case TransportType.NamedPipe:
                 {
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        throw new PlatformNotSupportedException($"{NamedPipeSchema} only supported on Windows.");
+                        throw new PlatformNotSupportedException($"{NamedPipeSchema} is only supported on Windows.");
                     break;
                 }
                 case TransportType.UnixDomainSocket:
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                        throw new PlatformNotSupportedException($"{UnixDomainSocketSchema} not supported on Windows, use {NamedPipeSchema}.");
+                        throw new PlatformNotSupportedException($"{UnixDomainSocketSchema} is not supported on Windows, use {NamedPipeSchema}.");
                     break;
                 }
                 default:

@@ -254,7 +254,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             else if (portConfig != null && portConfig.IsConnectConfig)
             {
-                return new DiagnosticsClientHolder(new DiagnosticsClient(portConfig.Address));
+                return new DiagnosticsClientHolder(new DiagnosticsClient(portConfig));
             }
             else
             {
