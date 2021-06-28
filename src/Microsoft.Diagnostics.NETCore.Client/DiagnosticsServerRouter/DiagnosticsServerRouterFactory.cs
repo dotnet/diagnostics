@@ -318,7 +318,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 TcpClientTimeoutMs = runtimeTimeoutMs;
         }
 
-        public virtual async Task<Stream> ConnectTcpStreamAsync(CancellationToken token, bool retry = false)
+        public virtual async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
+        {
+            return await ConnectTcpStreamAsyncInternal(token, _auto_shutdown).ConfigureAwait(false);
+        }
+
+        public virtual async Task<Stream> ConnectTcpStreamAsync(CancellationToken token, bool retry)
+        {
+            return await ConnectTcpStreamAsyncInternal(token, retry).ConfigureAwait(false);
+        }
+
+        public virtual void Start()
+        {
+        }
+
+        public virtual void Stop()
+        {
+        }
+
+        async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
             Stream tcpClientStream = null;
 
@@ -331,9 +349,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             connectTimeoutTokenSource.CancelAfter(TcpClientTimeoutMs);
-
-            if (!retry && _auto_shutdown)
-                retry = true;
 
             do
             {
@@ -380,14 +395,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _logger?.LogDebug("Successfully connected tcp stream.");
 
             return tcpClientStream;
-        }
-
-        public virtual void Start()
-        {
-        }
-
-        public virtual void Stop()
-        {
         }
 
         async Task ConnectAsyncInternal(Socket clientSocket, EndPoint remoteEP, CancellationToken token)

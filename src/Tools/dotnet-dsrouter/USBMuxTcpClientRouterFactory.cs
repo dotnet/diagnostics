@@ -258,7 +258,29 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             _port = new IpcTcpSocketEndPoint(tcpClient).EndPoint.Port;
         }
 
-        public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token, bool retry = false)
+        public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
+        {
+            return await ConnectTcpStreamAsyncInternal(token, _auto_shutdown).ConfigureAwait(false);
+        }
+
+        public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token, bool retry)
+        {
+            return await ConnectTcpStreamAsyncInternal(token, retry).ConfigureAwait(false);
+        }
+
+        public override void Start()
+        {
+            // Start device subscription thread.
+            StartNotificationSubscribeThread();
+        }
+
+        public override void Stop()
+        {
+            // Stop device subscription thread.
+            StopNotificationSubscribeThread();
+        }
+
+        async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
             int handle = -1;
             ushort networkPort = (ushort)IPAddress.HostToNetworkOrder(unchecked((short)_port));
@@ -269,9 +291,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             connectTimeoutTokenSource.CancelAfter(TcpClientTimeoutMs);
-
-            if (!retry && _auto_shutdown)
-                retry = true;
 
             do
             {
@@ -306,25 +325,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     // If we get an error (without hitting timeout above), most likely due to unavailable device/listener.
                     // Delay execution to prevent to rapid retry attempts.
                     await Task.Delay(TcpClientRetryTimeoutMs, token).ConfigureAwait(false);
-
-                    retry = true;
                 }
             }
             while (retry);
 
             return new USBMuxStream(handle);
-        }
-
-        public override void Start()
-        {
-            // Start device subscription thread.
-            StartNotificationSubscribeThread();
-        }
-
-        public override void Stop()
-        {
-            // Stop device subscription thread.
-            StopNotificationSubscribeThread();
         }
 
         int ConnectTcpClientOverUSBMux()
