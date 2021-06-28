@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
+        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime, bool nonInteractiveConsole);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <param name="resumeRuntime">Resume runtime once session has been initialized.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, bool nonInteractiveConsole)
         {
             int ret = 0;
             bool collectionStopped = false;
@@ -272,8 +272,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
                             };
 
+
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
-                                printStatus();
+                            {
+                                if (!nonInteractiveConsole)
+                                {
+                                    printStatus();
+                                }
+                            }
+
 
                             // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
                             if (!copyTask.Wait(0))
@@ -335,7 +342,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (console.GetTerminal() != null)
                         Console.CursorVisible = true;
                 }
-                
+
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
@@ -356,9 +363,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             Console.Out.WriteLine("");
-            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
-            Console.Out.Write(String.Format("{0, -20}","Keywords"));
-            Console.Out.Write(String.Format("{0, -20}","Level"));
+            Console.Out.Write(String.Format("{0, -40}", "Provider Name"));  // +4 is for the tab
+            Console.Out.Write(String.Format("{0, -20}", "Keywords"));
+            Console.Out.Write(String.Format("{0, -20}", "Level"));
             Console.Out.Write("Enabled By\r\n");
             foreach (var provider in providers)
             {
@@ -384,7 +391,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.") 
+                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
@@ -401,7 +408,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.NameOption(),
                 DiagnosticPortOption(),
                 ShowChildIOOption(),
-                ResumeRuntimeOption()
+                ResumeRuntimeOption(),
+                NonInteractiveConsoleOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -454,8 +462,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
-        
-        private static Option CLREventsOption() => 
+
+        private static Option CLREventsOption() =>
             new Option(
                 alias: "--clrevents",
                 description: @"List of CLR runtime events to emit.")
@@ -463,7 +471,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<string>(name: "clrevents", getDefaultValue: () => string.Empty)
             };
 
-        private static Option CLREventLevelOption() => 
+        private static Option CLREventLevelOption() =>
             new Option(
                 alias: "--clreventlevel",
                 description: @"Verbosity of CLR events to be emitted.")
@@ -491,6 +499,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
                 Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
+            };
+
+        private static Option NonInteractiveConsoleOption() =>
+            new Option(
+                alias: "--non-interactive-console",
+                description: @"This make the the console output non interactive. This is may help preventing the app to fail where there is no console.")
+            {
+                Argument = new Argument<bool>(name: "nonInteractiveConsole", getDefaultValue: () => false)
             };
     }
 }
