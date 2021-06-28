@@ -319,12 +319,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal ProcessInfo GetProcessInfo()
         {
-            // GetProcessInfo2 command seems to cause target runtime to crash very frequently
-            //if (TryGetProcessInfo2(out ProcessInfo processInfo))
+            // RE: https://github.com/dotnet/runtime/issues/54083
+            // If the GetProcessInfo2 command is sent too early, it will crash the runtime instance.
+            // Disable the usage of the command until that issue is fixed.
+
+            // Attempt to get ProcessInfo v2
+            //ProcessInfo processInfo = GetProcessInfo2();
+            //if (null != processInfo)
             //{
             //    return processInfo;
             //}
 
+            // Attempt to get ProcessInfo v1
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
@@ -339,18 +345,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        private bool TryGetProcessInfo2(out ProcessInfo processInfo)
+        private ProcessInfo GetProcessInfo2()
         {
             IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo2);
             var response = IpcClient.SendMessage(_endpoint, message);
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
+                case DiagnosticsServerResponseId.Error:
+                    uint hr = BitConverter.ToUInt32(response.Payload, 0);
+                    // In the case that the runtime doesn't understand the GetProcessInfo2 command,
+                    // just break to allow fallback to try to get ProcessInfo v1.
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                        return null;
+                    }
+                    throw new ServerErrorException($"GetProcessInfo2 failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
-                    processInfo = ProcessInfo.ParseV2(response.Payload);
-                    return true;
+                    return ProcessInfo.ParseV2(response.Payload);
                 default:
-                    processInfo = null;
-                    return false;
+                    throw new ServerErrorException($"Get process info failed - server responded with unknown command");
             }
         }
 
@@ -425,7 +438,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else if (typeof(T) == typeof(bool))
             {
                 bool bValue = (bool)((object)obj);
-                uint uiValue = bValue ? 1 : 0;
+                uint uiValue = bValue ? (uint)1 : 0;
                 writer.Write(uiValue);
             }
             else

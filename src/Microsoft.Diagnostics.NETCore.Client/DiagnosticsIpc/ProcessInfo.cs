@@ -56,8 +56,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int index = 0;
             ProcessInfo processInfo = ParseCommon(payload, ref index);
 
-            processInfo.ManagedEntrypointAssemblyName = ReadString(payload, ref index);
-            processInfo.ClrProductVersionString = ReadString(payload, ref index);
+            processInfo.ManagedEntrypointAssemblyName = IpcHelpers.ReadString(payload, ref index);
+            processInfo.ClrProductVersionString = IpcHelpers.ReadString(payload, ref index);
 
             return processInfo;
         }
