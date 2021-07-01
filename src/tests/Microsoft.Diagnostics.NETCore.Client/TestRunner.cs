@@ -146,7 +146,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (testProcess.HasExited)
             {
-                outputHelper.WriteLine($"Process {testProcess.Id} status: Exited {testProcess.ExitCode}");
+                outputHelper.WriteLine($"Process {testProcess.Id} status: Exited 0x{testProcess.ExitCode:X}");
             }
             else
             {

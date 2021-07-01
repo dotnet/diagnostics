@@ -376,8 +376,10 @@ See: [Profiler Commands](#Profiler-Commands)
 ```c++
 enum class ProcessCommandId : uint8_t
 {
-    ProcessInfo   = 0x00,
-    ResumeRuntime = 0x01,
+    ProcessInfo        = 0x00,
+    ResumeRuntime      = 0x01,
+    ProcessEnvironment = 0x02,
+    ProcessInfo2       = 0x04,
     // future
 }
 ```
@@ -784,6 +786,62 @@ struct Payload
 {
     uint32_t nIncomingBytes;
     uint16_t future;
+}
+```
+
+> Available since .NET 6.0
+
+### `ProcessInfo2`
+
+Command Code: `0x0404`
+
+The `ProcessInfo2` command queries the runtime for some basic information about the process. The returned payload has the same information as that of the `ProcessInfo` command in addition to the managed entrypoint assembly name and CLR product version.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0402; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `int64 processId`: the process id in the process's PID-space
+* `GUID runtimeCookie`: a 128-bit GUID that should be unique across PID-spaces
+* `string commandLine`: the command line that invoked the process
+  * Windows: will be the same as the output of `GetCommandLineW`
+  * Non-Windows: will be the fully qualified path of the executable in `argv[0]` followed by all arguments as the appear in `argv` separated by spaces, i.e., `/full/path/to/argv[0] argv[1] argv[2] ...`
+* `string OS`: the operating system that the process is running on
+  * macOS => `"macOS"`
+  * Windows => `"Windows"`
+  * Linux => `"Linux"`
+  * other => `"Unknown"`
+* `string arch`: the architecture of the process
+  * 32-bit => `"x86"`
+  * 64-bit => `"x64"`
+  * ARM32 => `"arm32"`
+  * ARM64 => `"arm64"`
+  * Other => `"Unknown"`
+* `string managedEntrypointAssemblyName`: the assembly name from the assembly identity of the entrypoint assembly of the process. This is the same value that is returned from executing `System.Reflection.Assembly.GetEntryAssembly().GetName().Name` in the target process.
+* `string clrProductVersion`: the product version of the CLR of the process; may contain prerelease label information e.g. `6.0.0-preview.6.#####`
+
+##### Details:
+
+Returns:
+```c++
+struct Payload
+{
+    uint64_t ProcessId;
+    LPCWSTR CommandLine;
+    LPCWSTR OS;
+    LPCWSTR Arch;
+    GUID RuntimeCookie;
+    LPCWSTR ManagedEntrypointAssemblyName;
+    LPCWSTR ClrProductVersion;
 }
 ```
 
