@@ -826,7 +826,7 @@ Payload:
   * ARM32 => `"arm32"`
   * ARM64 => `"arm64"`
   * Other => `"Unknown"`
-* `string managedEntrypointAssemblyName`: the assembly name from the assembly identity of the entrypoint assembly of the process
+* `string managedEntrypointAssemblyName`: the assembly name from the assembly identity of the entrypoint assembly of the process. This is the same value that is returned from executing `System.Reflection.Assembly.GetEntryAssembly().GetName().Name` in the target process.
 * `string clrProductVersion`: the product version of the CLR of the process; may contain prerelease label information e.g. `6.0.0-preview.6.#####`
 
 ##### Details:
