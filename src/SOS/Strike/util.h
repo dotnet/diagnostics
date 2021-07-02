@@ -564,7 +564,8 @@ namespace Output
         DML_Async,
         DML_IL,
         DML_ComWrapperRCW,
-        DML_ComWrapperCCW
+        DML_ComWrapperCCW,
+        DML_TaggedMemory
     };
 
     /**********************************************************************\
@@ -672,6 +673,7 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 #define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
 #define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperRCW).GetPtr()
 #define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperCCW).GetPtr()
+#define DMLTaggedMemory(addr) Output::BuildHexValue(addr, Output::DML_TaggedMemory).GetPtr()
 
 bool IsDMLEnabled();
 

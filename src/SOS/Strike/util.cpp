@@ -4741,6 +4741,7 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
     "<exec cmd=\"!DumpRCW -cw /d %s\">%s</exec>",    // DML_ComWrapperRCW
     "<exec cmd=\"!DumpCCW -cw /d %s\">%s</exec>",    // DML_ComWrapperCCW
+    "<exec cmd=\"dps %s L2\">%s</exec>",             // DML_TaggedMemory (hardcoded current size to 2 pointer sizes)
 };
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len)
