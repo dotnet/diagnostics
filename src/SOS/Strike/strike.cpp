@@ -1570,6 +1570,27 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         }
     }
 
+    // Check for Tracked Type and tagged memory
+    ReleaseHolder<ISOSDacInterface11> sos11;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface11), &sos11)))
+    {
+        CLRDATA_ADDRESS objAddr = TO_CDADDR(taObj);
+        BOOL isTrackedType;
+        BOOL hasTaggedMemory;
+        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory)))
+        {
+            ExtOut("Tracked Type: %s\n", isTrackedType ? "true" : "false");
+            if (hasTaggedMemory)
+            {
+                CLRDATA_ADDRESS taggedMemory = NULL;
+                size_t taggedMemorySizeInBytes = 0;
+                (void)sos11->GetTaggedMemory(objAddr, &taggedMemory, &taggedMemorySizeInBytes);
+                DMLOut("Tagged Memory: %s (%" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes)\n",
+                    DMLTaggedMemory(taggedMemory, taggedMemorySizeInBytes / sizeof(void*)), taggedMemorySizeInBytes, taggedMemorySizeInBytes);
+            }
+        }
+    }
+
     DWORD_PTR size = (DWORD_PTR)objData.Size;
     ExtOut("Size:        %" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes\n", size, size);
 
