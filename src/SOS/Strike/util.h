@@ -599,6 +599,21 @@ namespace Output
     CachedString BuildHexValue(CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
 
     /**********************************************************************\
+    * This function builds a DML string for an object.  If DML is enabled, *
+    * this function returns a DML string based on the format type.         *
+    * Otherwise this returns a string containing only the hex value of     *
+    * addr.                                                                *
+    *                                                                      *
+    * Params:                                                              *
+    *   addr - the address of the object                                   *
+    *   len  - associated length                                           *
+    *   type - the format type to use to output this object                *
+    *   fill - whether or not to pad the hex value with zeros              *
+    *                                                                      *
+    \**********************************************************************/
+    CachedString BuildHexValueWithLength(CLRDATA_ADDRESS addr, size_t len, FormatType type, bool fill = true);
+
+    /**********************************************************************\
     * This function builds a DML string for an managed variable name.      *
     * If DML is enabled, this function returns a DML string that will      *
     * enable the expansion of that managed variable using the !ClrStack    *
@@ -673,7 +688,7 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 #define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
 #define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperRCW).GetPtr()
 #define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperCCW).GetPtr()
-#define DMLTaggedMemory(addr) Output::BuildHexValue(addr, Output::DML_TaggedMemory).GetPtr()
+#define DMLTaggedMemory(addr, len) Output::BuildHexValueWithLength(addr, len, Output::DML_TaggedMemory).GetPtr()
 
 bool IsDMLEnabled();
 

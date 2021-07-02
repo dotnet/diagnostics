@@ -1586,7 +1586,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
                 size_t taggedMemorySizeInBytes = 0;
                 (void)sos11->GetTaggedMemory(objAddr, &taggedMemory, &taggedMemorySizeInBytes);
                 DMLOut("Tagged Memory: %s (%" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes)\n",
-                    DMLTaggedMemory(taggedMemory), taggedMemorySizeInBytes, taggedMemorySizeInBytes);
+                    DMLTaggedMemory(taggedMemory, taggedMemorySizeInBytes / sizeof(void*)), taggedMemorySizeInBytes, taggedMemorySizeInBytes);
             }
         }
     }
