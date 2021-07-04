@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -9,9 +10,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -101,96 +102,111 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             IModule module = _moduleService.GetModuleFromAddress(address);
             if (module != null)
             {
-                Trace.TraceInformation("ReadMemory: address {0:X16} size {1:X8} found module {2}", address, bytesRequested, module.FileName);
-
-                // Recursion can happen in the extreme case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
+                // Recursion can happen in the case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
                 // used to get the timestamp/filesize or build id are not in the dump.
-                if (!_recursionProtection.Contains(module.ImageBase))
+                if (!_recursionProtection.Contains(address))
                 {
-                    _recursionProtection.Add(module.ImageBase);
+                    _recursionProtection.Add(address);
                     try
                     {
                         // We found a module that contains the memory requested. Now find or download the PE image.
                         PEReader reader = module.Services.GetService<PEReader>();
                         if (reader is not null)
                         {
-                            // Read the memory from the PE image.
                             int rva = (int)(address - module.ImageBase);
                             Debug.Assert(rva >= 0);
+                            Debug.Assert(!reader.IsLoadedImage);
+                            Debug.Assert(reader.IsEntireImageAvailable);
+#if TRACE_VERBOSE
+                            Trace.TraceInformation($"ReadMemoryFromModule: address {address:X16} rva {rva:X8} bytesRequested {bytesRequested:X8} {module.FileName}");
+#endif
+                            // Not reading anything in the PE's header
+                            if (rva > reader.PEHeaders.PEHeader.SizeOfHeaders)
+                            {
+                                // This property can cause recursion because this PE being mapped here is read to determine the layout 
+                                if (!module.IsFileLayout.GetValueOrDefault(true))
+                                {
+                                    // If the PE image that we are mapping into has the "loaded" layout convert the rva to a flat/file based one.
+                                    for (int i = 0; i < reader.PEHeaders.SectionHeaders.Length; i++)
+                                    {
+                                        SectionHeader section = reader.PEHeaders.SectionHeaders[i];
+                                        if (rva >= section.VirtualAddress && rva < (section.VirtualAddress + section.VirtualSize))
+                                        {
+                                            rva = section.PointerToRawData + (rva - section.VirtualAddress);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
                             try
                             {
                                 byte[] data = null;
 
-                                int sizeOfHeaders = reader.PEHeaders.PEHeader.SizeOfHeaders;
-                                if (rva < sizeOfHeaders)
+                                // Read the memory from the PE image found/downloaded above
+                                PEMemoryBlock block = reader.GetEntireImage();
+                                if (rva < block.Length)
                                 {
-                                    // If the address isn't contained in one of the sections, assume that SOS is reading the PE headers directly.
-                                    Trace.TraceInformation("ReadMemory: rva {0:X8} size {1:X8} in PE Header", rva, bytesRequested);
-                                    data = reader.GetEntireImage().GetReader(rva, bytesRequested).ReadBytes(bytesRequested);
-                                }
-                                else
-                                {
-                                    PEMemoryBlock block = reader.GetSectionData(rva);
-                                    if (block.Length > 0)
+                                    int size = Math.Min(block.Length - rva, bytesRequested);
+                                    if ((rva + size) <= block.Length)
                                     {
-                                        int size = Math.Min(block.Length, bytesRequested);
-                                        data = block.GetReader().ReadBytes(size);
+                                        data = block.GetReader(rva, size).ReadBytes(size);
                                         ApplyRelocations(module, reader, rva, data);
                                     }
                                     else
                                     {
-                                        Trace.TraceError($"ReadMemory: FAILED rva {rva:X8}");
+                                        Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X8} {module.FileName}");
                                     }
                                 }
-
+                                
                                 return data;
                             }
                             catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
                             {
-                                Trace.TraceError($"ReadMemory: exception {ex.Message}");
-                                return null;
+                                Trace.TraceError($"ReadMemoryFromModule: exception: address {address:X16} {ex.Message} {module.FileName}");
                             }
                         }
-
-                        // Find or download the ELF image, if one.
-                        Reader virtualAddressReader = module.Services.GetService<ELFFile>()?.VirtualAddressReader;
-                        if (virtualAddressReader is null)
+                        else
                         {
-                            // Find or download the MachO image, if one.
-                            virtualAddressReader = module.Services.GetService<MachOFile>()?.VirtualAddressReader;
-                        }
-                        if (virtualAddressReader is not null)
-                        { 
-                            // Read the memory from the image.
-                            ulong rva = address - module.ImageBase;
-                            Debug.Assert(rva >= 0);
-                            try
+                            // Find or download the ELF image, if one.
+                            Reader virtualAddressReader = module.Services.GetService<ELFFile>()?.VirtualAddressReader;
+                            if (virtualAddressReader is null)
                             {
-                                Trace.TraceInformation("ReadMemory: rva {0:X16} size {1:X8} in ELF or MachO file", rva, bytesRequested);
-                                byte[] data = new byte[bytesRequested];
-                                uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
-                                if (read == 0)
-                                {
-                                    Trace.TraceError($"ReadMemory: FAILED rva {rva:X8}");
-                                    data = null;
-                                }
-                                return data;
+                                // Find or download the MachO image, if one.
+                                virtualAddressReader = module.Services.GetService<MachOFile>()?.VirtualAddressReader;
                             }
-                            catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
+                            if (virtualAddressReader is not null)
                             {
-                                Trace.TraceError($"ReadMemory: ELF or MachO file exception {ex.Message}");
-                                return null;
+                                // Read the memory from the image.
+                                ulong rva = address - module.ImageBase;
+                                Debug.Assert(rva >= 0);
+                                try
+                                {
+                                    Trace.TraceInformation($"ReadMemoryFromModule: address {address:X16} rva {rva:X16} size {bytesRequested:X8} in ELF or MachO file {module.FileName}");
+                                    byte[] data = new byte[bytesRequested];
+                                    uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
+                                    if (read == 0)
+                                    {
+                                        Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X16} {module.FileName}");
+                                        data = null;
+                                    }
+                                    return data;
+                                }
+                                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
+                                {
+                                    Trace.TraceError($"ReadMemoryFromModule: ELF or MachO file exception: address {address:X16} {ex.Message} {module.FileName}");
+                                }
                             }
                         }
                     }
                     finally
                     {
-                        _recursionProtection.Remove(module.ImageBase);
+                        _recursionProtection.Remove(address);
                     }
                 }
                 else
                 {
-                    Trace.TraceError("ReadMemory: recursion");
+                    Trace.TraceError($"ReadMemoryFromModule: recursion: address {address:X16} size {bytesRequested:X8} {module.FileName}");
                 }
             }
             return null;
@@ -250,21 +266,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         break;
 
                                     case BaseRelocationType.ImageRelBasedHighLow:
-                                    {
-                                        uint value = BitConverter.ToUInt32(data, offset);
-                                        value += (uint)baseDelta;
-                                        byte[] source = BitConverter.GetBytes(value);
-                                        Array.Copy(source, 0, data, offset, source.Length);
+                                        if ((offset + sizeof(uint)) <= data.Length)
+                                        {
+                                            uint value = BitConverter.ToUInt32(data, offset);
+                                            value += (uint)baseDelta;
+                                            byte[] source = BitConverter.GetBytes(value);
+                                            Array.Copy(source, 0, data, offset, source.Length);
+                                        }
                                         break;
-                                    }
+                                    
                                     case BaseRelocationType.ImageRelBasedDir64:
-                                    {
-                                        ulong value = BitConverter.ToUInt64(data, offset);
-                                        value += baseDelta;
-                                        byte[] source = BitConverter.GetBytes(value);
-                                        Array.Copy(source, 0, data, offset, source.Length);
+                                        if ((offset + sizeof(ulong)) <= data.Length)
+                                        {
+                                            ulong value = BitConverter.ToUInt64(data, offset);
+                                            value += baseDelta;
+                                            byte[] source = BitConverter.GetBytes(value);
+                                            Array.Copy(source, 0, data, offset, source.Length);
+                                        }
                                         break;
-                                    }
+                                    
                                     default:
                                         Debug.Fail($"ApplyRelocations: invalid relocation type {type}");
                                         break;
