@@ -161,4 +161,13 @@ namespace Microsoft.Internal.Common.Utils
 
         private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
     }
+
+    internal class ReturnCode
+    {
+        public static int Ok = 0;
+        public static int SessionCreationError = 1;
+        public static int TracingError = 2;
+        public static int ArgumentError = 3;
+        public static int UnknownError = 4;
+    }
 }
