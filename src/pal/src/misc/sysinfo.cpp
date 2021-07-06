@@ -35,6 +35,10 @@ Revision History:
 #error Either sysctl or sysconf is required for GetSystemInfo.
 #endif
 
+#if defined(__FreeBSD__)
+#include <sys/sysctl.h>
+#endif
+
 #if HAVE_SYSINFO
 #include <sys/sysinfo.h>
 #endif

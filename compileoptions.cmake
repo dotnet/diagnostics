@@ -79,6 +79,11 @@ if(CLR_CMAKE_PLATFORM_UNIX_ARM)
    endif(ARM_SOFTFP)
 endif(CLR_CMAKE_PLATFORM_UNIX_ARM)
 
+if(CLR_CMAKE_PLATFORM_FREEBSD)
+  add_compile_options(-Wno-macro-redefined)
+  add_compile_options(-Wno-pointer-to-int-cast)
+endif(CLR_CMAKE_PLATFORM_FREEBSD)
+
 if (WIN32)
   # Compile options for targeting windows
 

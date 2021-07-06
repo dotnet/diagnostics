@@ -22,6 +22,11 @@
 #include <mach-o/dyld.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #include "palclr.h"
 #include "arrayholder.h"
 #include "coreclrhost.h"
@@ -412,14 +417,15 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         else 
         {
 #ifdef FEATURE_PAL
-#if defined (__FreeBSD__) || defined(__NetBSD__)
-            TraceError("Hosting on FreeBSD or NetBSD not supported\n");
+#if defined(__NetBSD__)
+            TraceError("Hosting on NetBSD not supported\n");
             return E_FAIL;
 #else
             char* line = nullptr;
             size_t lineLen = 0;
 
             // Start with Linux location file if exists
+	    // Note to self: Add a better location in FreeBSD for this
             FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
             if (locationFile != nullptr)
             {
@@ -446,7 +452,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     }
                 }
             }
-#endif // defined (__FreeBSD__) || defined(__NetBSD__)
+#endif // defined(__NetBSD__)
 #else
             ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
             if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)

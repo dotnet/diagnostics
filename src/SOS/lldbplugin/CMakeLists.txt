@@ -114,6 +114,10 @@ else()
     #FreeBSD
     find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm39/include")
     find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm38/include")
+    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm12/include")
+    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm11/include")
+    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm10/include")
+    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm90/include")
 
     if(LLDB_H STREQUAL LLDB_H-NOTFOUND)
 	if(REQUIRE_LLDBPLUGIN)
