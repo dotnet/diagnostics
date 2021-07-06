@@ -37,6 +37,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return await runRouter(token, new IpcServerTcpClientRouterFactory(ipcServer, tcpClient, runtimeTimeoutMs, tcpClientRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
+        public static async Task<int> runIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory, ILogger logger, Callbacks callbacks)
+        {
+            return await runRouter(token, new IpcClientTcpClientRouterFactory(ipcClient, tcpClient, runtimeTimeoutMs, tcpClientRouterFactory, logger), callbacks).ConfigureAwait(false);
+        }
+
         public static bool isLoopbackOnly(string address)
         {
             bool isLooback = false;
@@ -58,8 +63,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                routerFactory.Start();
-                callbacks?.OnRouterStarted(routerFactory.TcpAddress);
+                await routerFactory.Start(token);
+                if (!token.IsCancellationRequested)
+                    callbacks?.OnRouterStarted(routerFactory.TcpAddress);
 
                 while (!token.IsCancellationRequested)
                 {

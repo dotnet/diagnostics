@@ -20,6 +20,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
         delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
         delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
+        delegate Task<int> DiagnosticsServerIpcClientTcpClientRouterDelegate(CancellationToken ct, string ipcClient, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -58,6 +59,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter).GetCommandHandler(),
                 // Options
                 IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+            };
+
+        private static Command IpcClientTcpClientRouterCommand() =>
+            new Command(
+                name: "client-client",
+                description: "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP server. " +
+                                "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
+                                "and a TCP/IP client (connecting runtime TCP server).")
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpClientRouter).GetCommandHandler(),
+                // Options
+                IpcClientAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -139,6 +153,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 .AddCommand(IpcClientTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpClientRouterCommand())
+                .AddCommand(IpcClientTcpClientRouterCommand())
                 .UseDefaults()
                 .Build();
 
