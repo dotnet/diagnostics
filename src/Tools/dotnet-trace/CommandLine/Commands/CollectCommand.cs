@@ -45,11 +45,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime)
         {
-            int ret = 0;
             bool collectionStopped = false;
             bool cancelOnEnter = true;
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
+            int ret = ReturnCode.Ok;
 
             try
             {
@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (showchildio)
                     {
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
-                        return ErrorCodes.ArgumentError;
+                        return ReturnCode.ArgumentError;
                     }
                     if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
@@ -88,12 +88,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     else
                     {
-                        return ErrorCodes.ArgumentError;
+                        return ReturnCode.ArgumentError;
                     }
                 }
                 else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
                 {
-                    return ErrorCodes.ArgumentError;
+                    return ReturnCode.ArgumentError;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (selectedProfile == null)
                     {
                         Console.Error.WriteLine($"Invalid profile name: {profile}");
-                        return ErrorCodes.ArgumentError;
+                        return ReturnCode.ArgumentError;
                     }
 
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
@@ -143,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (providerCollection.Count <= 0)
                 {
                     Console.Error.WriteLine("No providers were specified to start a trace.");
-                    return ErrorCodes.ArgumentError;
+                    return ReturnCode.ArgumentError;
                 }
 
                 PrintProviders(providerCollection, enabledBy);
@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
-                        return await Task.FromResult(ret);
+                        return await Task.FromResult(ReturnCode.Ok);
                     }
                     diagnosticsClient = holder.Client;
                     if (ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort))
@@ -187,7 +187,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             if (attempts > 10)
                             {
                                 Console.Error.WriteLine("Unable to examine process.");
-                                return ErrorCodes.SessionCreationError;
+                                return ReturnCode.SessionCreationError;
                             }
                             Thread.Sleep(200);
                         }
@@ -224,7 +224,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (session == null)
                         {
                             Console.Error.WriteLine("Unable to create session.");
-                            return ErrorCodes.SessionCreationError;
+                            return ReturnCode.SessionCreationError;
                         }
 
                         if (shouldStopAfterDuration)
@@ -325,8 +325,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                ret = ErrorCodes.TracingError;
                 collectionStopped = true;
+                ret = ReturnCode.TracingError;
             }
             finally
             {
@@ -340,7 +340,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
                     {
-                        ret = ErrorCodes.TracingError;
+                        ret = ReturnCode.TracingError;
                     }
 
                     // If we launched a child proc that hasn't exited yet, terminate it before we exit.

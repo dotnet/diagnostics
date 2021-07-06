@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
-                return 0;
+                return ReturnCode.ArgumentError;
             }
             shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 if (holder == null)
                 {
-                    return 1;
+                    return ReturnCode.Ok;
                 }
                 try
                 {
@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     catch (Exception) { } // Swallow all exceptions for now.
 
                     console.Out.WriteLine($"Complete");
-                    return 1;
+                    return ReturnCode.Ok;
                 }
             }
         }
@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
-                return 0;
+                return ReturnCode.ArgumentError;
             }
 
             shouldExit = new ManualResetEvent(false);
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 if (holder == null)
                 {
-                    return 1;
+                    return ReturnCode.Ok;
                 }
 
                 try
@@ -164,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     if (_output.Length == 0)
                     {
                         _console.Error.WriteLine("Output cannot be an empty string");
-                        return 0;
+                        return ReturnCode.ArgumentError;
                     }
                     if (format == CountersExportFormat.csv)
                     {
@@ -188,7 +188,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else
                     {
                         _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                        return 0;
+                        return ReturnCode.ArgumentError;
                     }
                     shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort) || resumeRuntime;
                     int ret = await Start();
@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _session.Stop();
                     }
                     catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
-                    return 1;
+                    return ReturnCode.Ok;
                 }
             }
         }
@@ -332,7 +332,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string providerString = BuildProviderString();
             if (providerString.Length == 0)
             {
-                return 1;
+                return ReturnCode.ArgumentError;
             }
 
             _renderer.Initialize();
@@ -373,7 +373,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     if (shouldExit.WaitOne(250))
                     {
                         StopMonitor();
-                        return 0;
+                        return ReturnCode.Ok;
                     }
                     if (Console.KeyAvailable)
                     {
@@ -395,7 +395,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-            return await Task.FromResult(0);
+            return await Task.FromResult(ReturnCode.Ok);
         }
     }
 }
