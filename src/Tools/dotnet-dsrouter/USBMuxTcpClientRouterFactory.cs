@@ -260,28 +260,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
         {
-            return await ConnectTcpStreamAsyncInternal(token, _auto_shutdown).ConfigureAwait(false);
-        }
-
-        public override async Task<Stream> ConnectTcpStreamAsync(CancellationToken token, bool retry)
-        {
-            return await ConnectTcpStreamAsyncInternal(token, retry).ConfigureAwait(false);
-        }
-
-        public override void Start()
-        {
-            // Start device subscription thread.
-            StartNotificationSubscribeThread();
-        }
-
-        public override void Stop()
-        {
-            // Stop device subscription thread.
-            StopNotificationSubscribeThread();
-        }
-
-        async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
-        {
+            bool retry = false;
             int handle = -1;
             ushort networkPort = (ushort)IPAddress.HostToNetworkOrder(unchecked((short)_port));
 
@@ -311,10 +290,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         throw new TimeoutException();
                     }
 
-                    // If we are not doing retries when runtime is unavailable, fail right away, this will
+                    // If we are not doing auto shutdown when runtime is unavailable, fail right away, this will
                     // break any accepted IPC connections, making sure client is notified and could reconnect.
-                    // If not, retry until succeed or time out.
-                    if (!retry)
+                    // If we do have auto shutdown enabled, retry until succeed or time out.
+                    if (!_auto_shutdown)
                     {
                         _logger?.LogTrace($"Failed connecting {_port} over usbmux.");
                         throw;
@@ -325,11 +304,25 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     // If we get an error (without hitting timeout above), most likely due to unavailable device/listener.
                     // Delay execution to prevent to rapid retry attempts.
                     await Task.Delay(TcpClientRetryTimeoutMs, token).ConfigureAwait(false);
+
+                    retry = true;
                 }
             }
             while (retry);
 
             return new USBMuxStream(handle);
+        }
+
+        public override void Start()
+        {
+            // Start device subscription thread.
+            StartNotificationSubscribeThread();
+        }
+
+        public override void Stop()
+        {
+            // Stop device subscription thread.
+            StopNotificationSubscribeThread();
         }
 
         int ConnectTcpClientOverUSBMux()
