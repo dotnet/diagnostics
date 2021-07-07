@@ -68,6 +68,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _portType = portType;
         }
 
+        // Config format: [Address],[PortType]
+        //
+        // Address in UnixDomainSocket formats:
+        // myport => myport
+        // uds:myport => myport
+        // /User/mrx/myport.sock => /User/mrx/myport.sock
+        // uds:/User/mrx/myport.sock => /User/mrx/myport.sock
+        // uds://authority/User/mrx/myport.sock => /User/mrx/myport.sock
+        // uds:///User/mrx/myport.sock => /User/mrx/myport.sock
+        //
+        // Address in NamedPipe formats:
+        // myport => myport
+        // namedpipe:myport => myport
+        // \\.\pipe\myport => myport (dropping \\.\pipe\ is inline with implemented namedpipe client/server)
+        // namedpipe://./pipe/myport => myport (dropping authority and /pipe/ is inline with implemented namedpipe client/server)
+        // namedpipe:/pipe/myport  => myport (dropping /pipe/ is inline with implemented namedpipe client/server)
+        // namedpipe://authority/myport => myport
+        // namedpipe:///myport => myport
+        //
+        // PortType: Listen|Connect, default Listen.
         public static bool TryParse(string config, out IpcEndpointConfig result)
         {
             try
