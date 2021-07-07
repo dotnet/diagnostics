@@ -1134,7 +1134,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     var response = IpcMessage.Parse(tcpClientStream);
                     if ((DiagnosticsServerResponseId)response.Header.CommandId == DiagnosticsServerResponseId.OK)
                     {
-                        var info = ProcessInfo.Parse(response.Payload);
+                        var info = ProcessInfo.ParseV1(response.Payload);
 
                         _runtimeProcessId = info.ProcessId;
                         _runtimeInstanceId = info.RuntimeInstanceCookie;
