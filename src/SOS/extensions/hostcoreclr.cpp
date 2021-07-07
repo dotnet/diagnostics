@@ -425,7 +425,6 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
             size_t lineLen = 0;
 
             // Start with Linux location file if exists
-	    // Note to self: Add a better location in FreeBSD for this
             FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
             if (locationFile != nullptr)
             {
