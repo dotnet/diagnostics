@@ -393,20 +393,11 @@ ElfReader::EnumerateLinkMapEntries(Elf_Dyn* dynamicAddr)
             for (; i < PATH_MAX; i++)
             {
                 char ch;
-		#ifdef __FreeBSD__
-		{
 		char* l_name = const_cast<char*>(map.l_name);
 		if (!ReadMemory(l_name + i, &ch, sizeof(ch))) {
 		    TRACE("DSO: ReadMemory link_map name %p + %d FAILED\n", map.l_name, i);
                     break;
 		}
-		}
-		#else
-                if (!ReadMemory(map.l_name + i, &ch, sizeof(ch))) {
-                    TRACE("DSO: ReadMemory link_map name %p + %d FAILED\n", map.l_name, i);
-                    break;
-                }
-		#endif
                 if (ch == '\0') {
                     break;
                 }
