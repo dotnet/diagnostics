@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="duration">The duration of trace to be taken. </param>
         /// <param name="clrevents">A list of CLR events to be emitted.</param>
         /// <param name="clreventlevel">The verbosity level of CLR events</param>
-        /// <param name="port">Path to the diagnostic port to be created.</param>
+        /// <param name="diagnosticPort">Path to the diagnostic port to be used.</param>
         /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <param name="resumeRuntime">Resume runtime once session has been initialized.</param>
         /// <returns></returns>
@@ -149,47 +149,56 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 PrintProviders(providerCollection, enabledBy);
 
                 DiagnosticsClient diagnosticsClient;
-                Process process;
+                Process process = null;
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
-                bool shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort) || resumeRuntime;
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
 
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
+                    string processMainModuleFileName = "";
+
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
                         return await Task.FromResult(ReturnCode.Ok);
                     }
                     diagnosticsClient = holder.Client;
-                    if (ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort))
+                    if (ProcessLauncher.Launcher.HasChildProc)
                     {
                         process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
+                    }
+                    else if (IpcEndpointConfig.TryParse(diagnosticPort, out IpcEndpointConfig portConfig) && (portConfig.IsConnectConfig || portConfig.IsListenConfig))
+                    {
+                        // No information regarding process (could even be a routed process),
+                        // use "file" part of IPC channel name as process main module file name.
+                        processMainModuleFileName = Path.GetFileName(portConfig.Address);
                     }
                     else
                     {
                         process = Process.GetProcessById(processId);
                     }
-                    string processMainModuleFileName = "";
 
-                    // Reading the process MainModule filename can fail if the target process closes
-                    // or isn't fully setup. Retry a few times to attempt to address the issue
-                    for (int attempts = 0; true; attempts++)
+                    if (process != null)
                     {
-                        try
+                        // Reading the process MainModule filename can fail if the target process closes
+                        // or isn't fully setup. Retry a few times to attempt to address the issue
+                        for (int attempts = 0; true; attempts++)
                         {
-                            processMainModuleFileName = process.MainModule.FileName;
-                            break;
-                        }
-                        catch
-                        {
-                            if (attempts > 10)
+                            try
                             {
-                                Console.Error.WriteLine("Unable to examine process.");
-                                return ReturnCode.SessionCreationError;
+                                processMainModuleFileName = process.MainModule.FileName;
+                                break;
                             }
-                            Thread.Sleep(200);
+                            catch
+                            {
+                                if (attempts > 10)
+                                {
+                                    Console.Error.WriteLine("Unable to examine process.");
+                                    return ReturnCode.SessionCreationError;
+                                }
+                                Thread.Sleep(200);
+                            }
                         }
                     }
 
@@ -211,7 +220,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         try
                         {
                             session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
-                            if (shouldResumeRuntime)
+                            if (resumeRuntime)
                             {
                                 diagnosticsClient.ResumeRuntime();
                             }
@@ -473,7 +482,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option DiagnosticPortOption() =>
             new Option(
                 alias: "--diagnostic-port",
-                description: @"The path to a diagnostic port to be created.")
+                description: @"The path to a diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };

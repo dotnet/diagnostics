@@ -440,10 +440,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public IpcServerRouterFactory(string ipcServer, ILogger logger)
         {
+            if (string.IsNullOrEmpty(ipcServer))
+                throw new ArgumentException("Missing IPC server path.");
+
             _logger = logger;
             _ipcServerPath = ipcServer;
-            if (string.IsNullOrEmpty(_ipcServerPath))
-                _ipcServerPath = GetDefaultIpcServerPath();
 
             _ipcServer = IpcServerTransport.Create(_ipcServerPath, IpcServerTransport.MaxAllowedConnections, false);
         }
@@ -489,26 +490,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _logger?.LogDebug("Successfully connected ipc stream.");
 
             return ipcServerStream;
-        }
-
-        static string GetDefaultIpcServerPath()
-        {
-            int processId = Process.GetCurrentProcess().Id;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
-            }
-            else
-            {
-                DateTime unixEpoch;
-#if NETCOREAPP2_1_OR_GREATER
-                unixEpoch = DateTime.UnixEpoch;
-#else
-                unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-#endif
-                TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
-                return Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
-            }
         }
     }
 
@@ -975,7 +956,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Task Start(CancellationToken token)
         {
+            if (string.IsNullOrEmpty(_ipcClientRouterFactory.IpcClientPath))
+                throw new ArgumentException("No IPC client path specified.");
+
             _tcpServerRouterFactory.Start();
+
             _logger?.LogInformation($"Starting IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
 
             return Task.CompletedTask;
@@ -1042,8 +1027,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 try
                 {
-                    // TcpServer consumes advertise message, needs to be replayed back to ipc client stream. Use router process ID as representation.
-                    await IpcAdvertise.SerializeAsync(ipcClientStream, _tcpServerRouterFactory.RuntimeInstanceId, (ulong)Process.GetCurrentProcess().Id, token).ConfigureAwait(false);
+                    // TcpServer consumes advertise message, needs to be replayed back to ipc client.
+                    await IpcAdvertise.SerializeAsync(ipcClientStream, _tcpServerRouterFactory.RuntimeInstanceId, (ulong)_tcpServerRouterFactory.RuntimeProcessId, token).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
