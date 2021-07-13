@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         /// <summary>
         /// Set a profiler as the startup profiler. It is only valid to issue this command
-        /// while the runtime is paused in the "reverse server" mode.
+        /// while the runtime is paused at startup.
         /// </summary>
         /// <param name="profilerGuid">Guid for the profiler to be attached</param>
         /// <param name="profilerPath">Path to the profiler to be attached</param>
@@ -204,7 +204,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Tell the runtime to resume execution after being paused for "reverse server" mode.
+        /// Tell the runtime to resume execution after being paused at startup.
         /// </summary>
         public void ResumeRuntime()
         {
