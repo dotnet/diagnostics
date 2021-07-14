@@ -2502,7 +2502,7 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
             if ((hr = module->GetFlags(&flags)) != S_OK) {
                 continue;
             }
-            if (flags != CLRDATA_MODULE_DEFAULT) {
+            if ((flags & (CLRDATA_MODULE_IS_DYNAMIC | CLRDATA_MODULE_IS_MEMORY_STREAM)) != 0) {
                 continue;
             }
             DacpGetModuleData moduleData;
