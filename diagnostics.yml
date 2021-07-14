@@ -140,9 +140,9 @@ stages:
 
     - template: /eng/build.yml
       parameters:
-        name: Alpine3_6
+        name: Alpine3_13
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210714125444-9b5bbc2
         artifactsTargetPath: bin/Linux-musl.x64.Release
         strategy:
           matrix:
@@ -217,9 +217,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Alpine3_6_cross64
+          name: Alpine3_13_cross64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-406629a-20200127195039
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210528184631-b2c2436
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
           buildAndSkipTest: true
