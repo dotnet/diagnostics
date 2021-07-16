@@ -68,6 +68,8 @@ namespace SOS.Hosting
             builder = AddInterface(IID_ICLRRuntimeLocator, false);
             builder.AddMethod(new GetRuntimeBaseDelegate(GetRuntimeBase));
             builder.Complete();
+
+            AddRef();
         }
 
         void AddDataTarget(VTableBuilder builder)

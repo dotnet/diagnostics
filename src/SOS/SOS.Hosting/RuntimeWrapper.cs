@@ -306,13 +306,20 @@ namespace SOS.Hosting
                 return IntPtr.Zero;
             }
             var dataTarget = new DataTargetWrapper(_services, _runtime);
-            int hr = createInstance(IID_IXCLRDataProcess, dataTarget.IDataTarget, out IntPtr unk);
-            if (hr != 0)
+            try
             {
-                Trace.TraceError($"CLRDataCreateInstance FAILED {hr:X8}");
-                return IntPtr.Zero;
+                int hr = createInstance(IID_IXCLRDataProcess, dataTarget.IDataTarget, out IntPtr unk);
+                if (hr != 0)
+                {
+                    Trace.TraceError($"CLRDataCreateInstance FAILED {hr:X8}");
+                    return IntPtr.Zero;
+                }
+                return unk;
             }
-            return unk;
+            finally
+            {
+                dataTarget.Release();
+            }
         }
 
         private IntPtr CreateCorDebugProcess()
@@ -343,96 +350,101 @@ namespace SOS.Hosting
             var dataTarget = new CorDebugDataTargetWrapper(_services);
             ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
             int hresult = 0;
-
-            var openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
-            if (openVirtualProcessImpl2 != null)
+            try
             {
-                hresult = openVirtualProcessImpl2(
-                    clrInstanceId,
-                    dataTarget.ICorDebugDataTarget,
-                    dacFilePath,
-                    ref maxDebuggerSupportedVersion,
-                    ref IID_ICorDebugProcess,
-                    out IntPtr corDebugProcess,
-                    out ClrDebuggingProcessFlags flags);
-
-                if (hresult != 0)
+                var openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
+                if (openVirtualProcessImpl2 != null)
                 {
-                    Trace.TraceError($"DBI OpenVirtualProcessImpl2 FAILED 0x{hresult:X8}");
-                    return IntPtr.Zero;
-                }
-                Trace.TraceInformation($"DBI OpenVirtualProcessImpl2 SUCCEEDED");
-                return corDebugProcess;
-            }
+                    hresult = openVirtualProcessImpl2(
+                        clrInstanceId,
+                        dataTarget.ICorDebugDataTarget,
+                        dacFilePath,
+                        ref maxDebuggerSupportedVersion,
+                        ref IID_ICorDebugProcess,
+                        out IntPtr corDebugProcess,
+                        out ClrDebuggingProcessFlags flags);
 
-            IntPtr dacHandle = GetDacHandle();
-            if (dacHandle == IntPtr.Zero)
-            {
-                return IntPtr.Zero;
-            }
-
-            // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
-            // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share 
-            // the same PAL where dbgshim has it's own.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                var loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
-                if (loadLibraryFunction == null)
-                {
-                    Trace.TraceError($"Can not find the DAC LoadLibraryW export");
-                    return IntPtr.Zero;
+                    if (hresult != 0)
+                    {
+                        Trace.TraceError($"DBI OpenVirtualProcessImpl2 FAILED 0x{hresult:X8}");
+                        return IntPtr.Zero;
+                    }
+                    Trace.TraceInformation($"DBI OpenVirtualProcessImpl2 SUCCEEDED");
+                    return corDebugProcess;
                 }
-                dacHandle = loadLibraryFunction(dacFilePath);
+
+                IntPtr dacHandle = GetDacHandle();
                 if (dacHandle == IntPtr.Zero)
                 {
-                    Trace.TraceError($"DAC LoadLibraryW({dacFilePath}) FAILED");
                     return IntPtr.Zero;
                 }
-            }
 
-            var openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
-            if (openVirtualProcessImpl != null)
-            { 
-                hresult = openVirtualProcessImpl(
-                    clrInstanceId,
-                    dataTarget.ICorDebugDataTarget,
-                    dacHandle,
-                    ref maxDebuggerSupportedVersion,
-                    ref IID_ICorDebugProcess,
-                    out IntPtr corDebugProcess,
-                    out ClrDebuggingProcessFlags flags);
-
-                if (hresult != 0)
+                // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
+                // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share 
+                // the same PAL where dbgshim has it's own.
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    Trace.TraceError($"DBI OpenVirtualProcessImpl FAILED 0x{hresult:X8}");
-                    return IntPtr.Zero;
+                    var loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
+                    if (loadLibraryFunction == null)
+                    {
+                        Trace.TraceError($"Can not find the DAC LoadLibraryW export");
+                        return IntPtr.Zero;
+                    }
+                    dacHandle = loadLibraryFunction(dacFilePath);
+                    if (dacHandle == IntPtr.Zero)
+                    {
+                        Trace.TraceError($"DAC LoadLibraryW({dacFilePath}) FAILED");
+                        return IntPtr.Zero;
+                    }
                 }
-                Trace.TraceInformation($"DBI OpenVirtualProcessImpl SUCCEEDED");
-                return corDebugProcess;
-            }
 
-            var openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
-            if (openVirtualProcess != null)
-            { 
-                hresult = openVirtualProcess(
-                    clrInstanceId,
-                    dataTarget.ICorDebugDataTarget,
-                    dacHandle,
-                    ref IID_ICorDebugProcess,
-                    out IntPtr corDebugProcess,
-                    out ClrDebuggingProcessFlags flags);
-
-                if (hresult != 0)
+                var openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
+                if (openVirtualProcessImpl != null)
                 {
-                    Trace.TraceError($"DBI OpenVirtualProcess FAILED 0x{hresult:X8}");
-                    return IntPtr.Zero;
-                }
-                Trace.TraceInformation($"DBI OpenVirtualProcess SUCCEEDED");
-                return corDebugProcess;
-            }
+                    hresult = openVirtualProcessImpl(
+                        clrInstanceId,
+                        dataTarget.ICorDebugDataTarget,
+                        dacHandle,
+                        ref maxDebuggerSupportedVersion,
+                        ref IID_ICorDebugProcess,
+                        out IntPtr corDebugProcess,
+                        out ClrDebuggingProcessFlags flags);
 
-            Trace.TraceError("DBI OpenVirtualProcess not found");
-            return IntPtr.Zero;
+                    if (hresult != 0)
+                    {
+                        Trace.TraceError($"DBI OpenVirtualProcessImpl FAILED 0x{hresult:X8}");
+                        return IntPtr.Zero;
+                    }
+                    Trace.TraceInformation($"DBI OpenVirtualProcessImpl SUCCEEDED");
+                    return corDebugProcess;
+                }
+
+                var openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
+                if (openVirtualProcess != null)
+                {
+                    hresult = openVirtualProcess(
+                        clrInstanceId,
+                        dataTarget.ICorDebugDataTarget,
+                        dacHandle,
+                        ref IID_ICorDebugProcess,
+                        out IntPtr corDebugProcess,
+                        out ClrDebuggingProcessFlags flags);
+
+                    if (hresult != 0)
+                    {
+                        Trace.TraceError($"DBI OpenVirtualProcess FAILED 0x{hresult:X8}");
+                        return IntPtr.Zero;
+                    }
+                    Trace.TraceInformation($"DBI OpenVirtualProcess SUCCEEDED");
+                    return corDebugProcess;
+                }
+                Trace.TraceError("DBI OpenVirtualProcess not found");
+                return IntPtr.Zero;
+            }
+            finally
+            {
+                dataTarget.Release();
+            }
         }
 
         private IntPtr GetDacHandle()
