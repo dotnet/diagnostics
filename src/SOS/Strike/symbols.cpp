@@ -387,7 +387,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugMod
     ULONG64 peAddress = 0;
     IfFailRet(pModule->GetBaseAddress(&peAddress));
 
-    IXCLRDataModule* pClrModule;
+    ToRelease<IXCLRDataModule> pClrModule;
     IfFailRet(GetModuleFromAddress(peAddress, &pClrModule));
 
     return LoadSymbols(pMD, pClrModule);
