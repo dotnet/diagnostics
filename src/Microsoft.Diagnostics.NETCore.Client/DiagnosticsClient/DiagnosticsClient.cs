@@ -313,7 +313,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch ((DiagnosticsServerResponseId)response.Header.CommandId)
             {
                 case DiagnosticsServerResponseId.Error:
-                    var hr = BitConverter.ToInt32(response.Payload, 0);
+                    var hr = BitConverter.ToUInt32(response.Payload, 0);
+                    if (hr == (uint)DiagnosticsIpcError.UnknownCommand)
+                    {
+                        // We attempted to resume a 3.1 runtime, which doesn't support suspension.
+                        // noop
+                        return;
+                    }
                     throw new ServerErrorException($"Resume runtime failed (HRESULT: 0x{hr:X8})");
                 case DiagnosticsServerResponseId.OK:
                     return;
