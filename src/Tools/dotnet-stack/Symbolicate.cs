@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
-using System.Globalization;
+using System.CommandLine.IO;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -21,51 +21,34 @@ namespace Microsoft.Diagnostics.Tools.Stack
         // Temporary folder to store the files converted from pdb to xml
         private static readonly string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 
-        delegate void SymbolicateDelegate(FileInfo[] inputPath, string searchDir, string output);
+        delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, string output);
 
         /// <summary>
         /// Get the line number from the Method Token and IL Offset at the stacktrace
         /// </summary>
+        /// <param name="console"></param>
         /// <param name="inputPath">The input path for file with stacktrace text</param>
         /// <param name="searchDir">All paths in the directory to the assembly and pdb where the exception occurred</param>
         /// <param name="output">The output path for the extracted line number data</param>
         /// <returns></returns>
-        private static void Symbolicate(FileInfo[] inputPath, string searchDir, string output)
+        private static void Symbolicate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, string output)
         {
             try
             {
-                if (inputPath == null)
+                List<string> search_paths = new List<string>();
+                if (searchDir.Length == 0)
                 {
-                    throw new InvalidDataException("Required argument missing for command\n");
-                }
-
-                string input = string.Empty;
-                if (inputPath.Length > 1)
-                {
-                    for (int i = 0; i < inputPath.Length; i++)
-                    {
-                        Console.WriteLine($" {i + 1}. {inputPath[i]}");
-                    }
-                    Console.Write($"Select one of several stacktrace files [1-{inputPath.Length}]: ");
-                    input = inputPath[Int32.Parse(Console.ReadLine()) - 1].FullName;
+                    search_paths.Add(Directory.GetCurrentDirectory());
                 }
                 else
                 {
-                    input = inputPath[0].FullName;
-                }
-                if (!File.Exists(input))
-                {
-                    throw new FileNotFoundException($"{input} file does not exist\n");
+                    foreach (var path in searchDir)
+                    {
+                        search_paths.Add(path.FullName);
+                    }
                 }
 
-                string[] search_paths = null;
-                if (searchDir != null)
-                {
-                    search_paths = searchDir.Split(";");
-                }
-                search_paths ??= new string[] { Directory.GetCurrentDirectory() };
-
-                Symbolicator(PdbToXmlConvert(search_paths), input, output);
+                Symbolicator(console, PdbToXmlConvert(search_paths), inputPath.FullName, output);
             }
             catch (Exception e)
             {
@@ -73,35 +56,36 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
         }
 
-        private static List<string> PdbToXmlConvert(string[] searchPaths)
+        private static List<string> PdbToXmlConvert(List<string> searchPaths)
         {
             List<string> peFiles = GrabFiles(searchPaths, "*.dll");
             if (peFiles.Count == 0)
             {
                 throw new FileNotFoundException("Assembly file not found\n");
             }
+            peFiles.Sort();
 
             List<string> pdbFiles = GrabFiles(searchPaths, "*.pdb");
             if (pdbFiles.Count == 0)
             {
                 throw new FileNotFoundException("PDB file not found\n");
             }
-
-            Console.Out.Write("Converting pdb to xml...");
-            Console.SetCursorPosition(0, Console.CursorTop);
+            pdbFiles.Sort();
 
             Directory.CreateDirectory(tempDirectory);
 
             List<string> xmlList = new List<string>();
-            foreach (var pdbFile in pdbFiles)
+            foreach (var peFile in peFiles)
             {
-                foreach (var peFile in peFiles)
+                if (pdbFiles.Count == 0) break;
+                foreach (var pdbFile in pdbFiles)
                 {
                     if (Path.GetFileNameWithoutExtension(peFile) == Path.GetFileNameWithoutExtension(pdbFile))
                     {
                         string xmlPath = Path.Combine(tempDirectory, Path.GetFileName(Path.ChangeExtension(peFile, "xml")));
                         GenXmlFromPdb(peFile, pdbFile, xmlPath);
                         xmlList.Add(xmlPath);
+                        pdbFiles.Remove(pdbFile);
                         break;
                     }
                 }
@@ -109,7 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             return xmlList;
         }
 
-        private static List<string> GrabFiles(string[] paths, string searchPattern)
+        private static List<string> GrabFiles(List<string> paths, string searchPattern)
         {
             List<string> files = new List<string>();
             foreach (var assemDir in paths)
@@ -144,7 +128,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
         }
 
-        private static void Symbolicator(List<string> xmlList, string inputPath, string outputPath)
+        private static void Symbolicator(IConsole console, List<string> xmlList, string inputPath, string outputPath)
         {
             if (xmlList.Count == 0)
             {
@@ -152,7 +136,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 throw new FileNotFoundException("Xml file not found\n");
             }
 
-            GetLineFromStack(xmlList, inputPath, outputPath);
+            GetLineFromStack(console, xmlList, inputPath, outputPath);
 
             RemoveTempDirectory();
         }
@@ -172,10 +156,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
             public string EndLine;
         }
 
-        private static void GetLineFromStack(List<string> xmlList, string inputPath, string outputPath)
+        private static void GetLineFromStack(IConsole console, List<string> xmlList, string inputPath, string outputPath)
         {
-            Console.Out.WriteLine("Symbolicate result:     ");
-
             try
             {
                 List<string> outputString = new List<string>();
@@ -185,12 +167,13 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     string line = fsr.ReadLine();
                     if (!line.Contains("at ") || !line.Contains("+"))
                     {
+                        outputString.Add(line);
+                        console.Out.WriteLine($"{line}");
                         continue;
                     }
                     string ret = GetRegex(line, xmlList);
                     outputString.Add(ret);
-                    Console.Out.WriteLine($"\n{line}");
-                    Console.Out.WriteLine($">{ret}");
+                    console.Out.WriteLine($"{ret}");
                 }
 
                 string output = string.Empty;
@@ -203,7 +186,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     }
                     output = $"\nOutput: {outputPath}\n";
                 }
-                Console.Out.WriteLine($"{output}");
+                console.Out.WriteLine($"{output}");
             }
             catch (Exception e)
             {
@@ -241,7 +224,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     GetLineFromXml(xmlPath, stInfo);
                     if (stInfo.Filepath != null && stInfo.StartLine != null)
                     {
-                        ret = $" at {stInfo.Type}.{stInfo.Method}({parameterStr}) in {stInfo.Filepath}:line {stInfo.StartLine}";
+                        ret = $"   at {stInfo.Type}.{stInfo.Method}({parameterStr}) in {stInfo.Filepath}:line {stInfo.StartLine}";
                         break;
                     }
                 }
@@ -341,26 +324,16 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
         }
 
-        private static int HexToInt(string value)
-        {
-            // strip the leading 0x
-            if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            {
-                value = value.Substring(2);
-            }
-            return Int32.Parse(value, NumberStyles.HexNumber);
-        }
-
         private static void ParseEntry(XmlNodeList xn, StackTraceInfo stInfo)
         {
             try
             {
                 XmlNode bestPointSoFar = null;
-                int ilOffset = HexToInt(stInfo.Offset);
+                long ilOffset = Convert.ToInt64(stInfo.Offset, 16);
                 foreach (XmlNode node in xn)
                 {
                     // If the attribute is not 'startLine', but 'hidden', select the best value so far
-                    if (HexToInt(node.Attributes["offset"].Value) > ilOffset)
+                    if (Convert.ToInt64(node.Attributes["offset"].Value, 16) > ilOffset)
                     {
                         break;
                     }
@@ -384,7 +357,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
         public static Command SymbolicateCommand() =>
             new Command(
-                name: "symbolicate", description: "Get the line number from the Method Token and IL Offset at the stacktrace")
+                name: "symbolicate", description: "Get the line number from the Method Token and IL Offset in a stacktrace")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((SymbolicateDelegate)Symbolicate).GetCommandHandler(),
@@ -394,26 +367,26 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 OutputOption()
             };
 
-        public static Argument InputArgument() =>
-            new Argument<FileInfo[]>(name: "input-path")
+        public static Argument<FileInfo> InputArgument() =>
+            new Argument<FileInfo>(name: "input-path")
             {
-                Description = "Path to the stacktrace text file"
+                Description = "Path to the stacktrace text file",
+                Arity = ArgumentArity.ExactlyOne
             }.ExistingOnly();
 
-        public static Option SearchDirectoryOption() =>
-            new Option(
-                aliases: new[] { "-d", "--search-dir" },
-                description: "Path of multiple directories with assembly and pdb separated by semicolon(';')")
+        public static Option<DirectoryInfo[]> SearchDirectoryOption() =>
+            new Option<DirectoryInfo[]>(new[] { "-d", "--search-dir" }, "Path of multiple directories with assembly and pdb")
             {
-                Argument = new Argument<string>(name: "dir1;dir2;...")
+                Argument = new Argument<DirectoryInfo[]>(name: "directory1 directory2 ...", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()).GetDirectories())
+                {
+                    Arity = ArgumentArity.ZeroOrMore
+                }.ExistingOnly()
             };
 
-        public static Option OutputOption() =>
-            new Option(
-                aliases: new[] { "-o", "--output" },
-                description: "Output directly to a file")
+        public static Option<string> OutputOption() =>
+            new Option<string>(new[] { "-o", "--output" }, "Output directly to a file")
             {
-                Argument = new Argument<string>(name: "output_path")
+                Argument = new Argument<string>(name: "output-path")
             };
     }
 }
