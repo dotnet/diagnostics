@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /* this ALWAYS GENERATED file contains the IIDs and CLSIDs */
 
@@ -97,3 +96,6 @@ MIDL_DEFINE_GUID(IID, IID_ICLRDataEnumMemoryRegions,0x471c35b4,0x7c2f,0x4ef0,0xa
 #ifdef __cplusplus
 }
 #endif
+
+
+

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 #ifndef __DBG_TARGET_CONTEXT_INCLUDED
 #define __DBG_TARGET_CONTEXT_INCLUDED
@@ -10,9 +9,9 @@
 #include "crosscomp.h"
 
 //
-// The right side of the debugger can now be built to target multiple platforms. This means it is no longer
+// The right side of the debugger can be built to target multiple platforms. This means it is not
 // safe to use the CONTEXT structure directly: the context of the platform we're building for might not match
-// that of the one the debugger is targetting. So now all right side code will use the DT_CONTEXT abstraction
+// that of the one the debugger is targetting. So all right side code will use the DT_CONTEXT abstraction
 // instead. When the debugger target is the local platform this will just resolve back into CONTEXT, but cross
 // platform we'll provide a hand-rolled version.
 //
@@ -41,18 +40,14 @@
 #define DTCONTEXT_IS_ARM
 #elif defined (DBG_TARGET_ARM64)
 #define DTCONTEXT_IS_ARM64
-#elif defined (DBG_TARGET_MIPS64)
-#define DTCONTEXT_IS_MIPS64
-#elif defined (_TARGET_X86_)
+#elif defined (TARGET_X86)
 #define DTCONTEXT_IS_X86
-#elif defined (_TARGET_AMD64_)
+#elif defined (TARGET_AMD64)
 #define DTCONTEXT_IS_AMD64
-#elif defined (_TARGET_ARM_)
+#elif defined (TARGET_ARM)
 #define DTCONTEXT_IS_ARM
-#elif defined (_TARGET_ARM64_)
+#elif defined (TARGET_ARM64)
 #define DTCONTEXT_IS_ARM64
-#elif defined (_TARGET_MIPS64_)
-#define DTCONTEXT_IS_MIPS64
 #endif
 
 #if defined(DTCONTEXT_IS_X86)
@@ -65,9 +60,10 @@
 #define DT_CONTEXT_SEGMENTS        (DT_CONTEXT_i386 | 0x00000004L)
 #define DT_CONTEXT_FLOATING_POINT  (DT_CONTEXT_i386 | 0x00000008L) // 387 state
 #define DT_CONTEXT_DEBUG_REGISTERS (DT_CONTEXT_i386 | 0x00000010L)
-
-#define DT_CONTEXT_FULL (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_SEGMENTS)
 #define DT_CONTEXT_EXTENDED_REGISTERS  (DT_CONTEXT_i386 | 0x00000020L)
+
+#define DT_CONTEXT_FULL     (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_SEGMENTS)
+#define DT_CONTEXT_ALL      (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_SEGMENTS | DT_CONTEXT_FLOATING_POINT | DT_CONTEXT_DEBUG_REGISTERS | DT_CONTEXT_EXTENDED_REGISTERS)
 
 #define DT_MAXIMUM_SUPPORTED_EXTENSION     512
 
@@ -345,7 +341,7 @@ typedef DECLSPEC_ALIGN(8) struct {
         DT_NEON128 Q[16];
         ULONGLONG D[32];
         DWORD S[32];
-    } DUMMYUNIONNAME;
+    };
 
     //
     // Debug registers
@@ -449,105 +445,6 @@ typedef DECLSPEC_ALIGN(16) struct {
     /* +0x380 */ DWORD64 Wvr[DT_ARM64_MAX_WATCHPOINTS];
     /* +0x390 */
 
-} DT_CONTEXT;
-
-#elif defined(DTCONTEXT_IS_MIPS64)
-
-#define DT_CONTEXT_MIPS64 0x00800000L
-
-#define DT_CONTEXT_CONTROL         (DT_CONTEXT_MIPS64 | 0x1L)
-#define DT_CONTEXT_INTEGER         (DT_CONTEXT_MIPS64 | 0x2L)
-#define DT_CONTEXT_FLOATING_POINT  (DT_CONTEXT_MIPS64 | 0x4L)
-#define DT_CONTEXT_DEBUG_REGISTERS (DT_CONTEXT_MIPS64 | 0x8L)
-
-#define DT_CONTEXT_FULL (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_FLOATING_POINT)
-#define DT_CONTEXT_ALL (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_FLOATING_POINT | DT_CONTEXT_DEBUG_REGISTERS)
-
-#define DT_MIPS64_MAX_BREAKPOINTS     8
-#define DT_MIPS64_MAX_WATCHPOINTS     2
-
-typedef DECLSPEC_ALIGN(16) struct {
-    //
-    // Control flags.
-    //
-
-    DWORD ContextFlags;
-
-    //
-    // Integer registers
-    //
-    DWORD64 R0;
-    DWORD64 AT;
-    DWORD64 V0;
-    DWORD64 V1;
-    DWORD64 A0;
-    DWORD64 A1;
-    DWORD64 A2;
-    DWORD64 A3;
-    DWORD64 A4;
-    DWORD64 A5;
-    DWORD64 A6;
-    DWORD64 A7;
-    DWORD64 T0;
-    DWORD64 T1;
-    DWORD64 T2;
-    DWORD64 T3;
-    DWORD64 S0;
-    DWORD64 S1;
-    DWORD64 S2;
-    DWORD64 S3;
-    DWORD64 S4;
-    DWORD64 S5;
-    DWORD64 S6;
-    DWORD64 S7;
-    DWORD64 T8;
-    DWORD64 T9;
-    DWORD64 K0;
-    DWORD64 K1;
-    DWORD64 GP;
-    DWORD64 SP;
-    DWORD64 FP;
-    DWORD64 RA;
-    DWORD64 PC;
-
-    //
-    // Floating Point/NEON Registers
-    //
-    DWORD64 F0;
-    DWORD64 F1;
-    DWORD64 F2;
-    DWORD64 F3;
-    DWORD64 F4;
-    DWORD64 F5;
-    DWORD64 F6;
-    DWORD64 F7;
-    DWORD64 F8;
-    DWORD64 F9;
-    DWORD64 F10;
-    DWORD64 F11;
-    DWORD64 F12;
-    DWORD64 F13;
-    DWORD64 F14;
-    DWORD64 F15;
-    DWORD64 F16;
-    DWORD64 F17;
-    DWORD64 F18;
-    DWORD64 F19;
-    DWORD64 F20;
-    DWORD64 F21;
-    DWORD64 F22;
-    DWORD64 F23;
-    DWORD64 F24;
-    DWORD64 F25;
-    DWORD64 F26;
-    DWORD64 F27;
-    DWORD64 F28;
-    DWORD64 F29;
-    DWORD64 F30;
-    DWORD64 F31;
-
-    DWORD64 HI;
-    DWORD64 LO;
 } DT_CONTEXT;
 
 #else

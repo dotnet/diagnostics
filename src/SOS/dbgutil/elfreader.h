@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 #include <elf.h>
 #ifdef HOST_UNIX
@@ -9,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#if _TARGET_64BIT_
+#if TARGET_64BIT
 #define TARGET_WORDSIZE 64
 #else
 #define TARGET_WORDSIZE 32
@@ -63,12 +62,9 @@ private:
     bool EnumerateLinkMapEntries(ElfW(Dyn)* dynamicAddr);
 #endif
     bool EnumerateProgramHeaders(ElfW(Phdr)* phdrAddr, int phnum, uint64_t baseAddress, uint64_t* ploadbias, ElfW(Dyn)** pdynamicAddr);
-#ifdef __FreeBSD__
-    virtual void VisitModule(caddr_t baseAddress, std::string& moduleName) { };
-#else
     virtual void VisitModule(uint64_t baseAddress, std::string& moduleName) { };
-#endif
     virtual void VisitProgramHeader(uint64_t loadbias, uint64_t baseAddress, ElfW(Phdr)* phdr) { };
     virtual bool ReadMemory(void* address, void* buffer, size_t size) = 0;
     virtual void Trace(const char* format, ...) { };
+    virtual void TraceVerbose(const char* format, ...) { };
 };

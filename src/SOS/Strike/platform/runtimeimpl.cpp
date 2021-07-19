@@ -56,7 +56,7 @@ IRuntime* g_pRuntime = nullptr;
 
 #if !defined(__APPLE__)
 
-extern bool TryGetSymbol(uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress);
+extern "C" bool TryGetSymbol(uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress);
 
 bool ElfReaderReadMemory(void* address, void* buffer, size_t size)
 {

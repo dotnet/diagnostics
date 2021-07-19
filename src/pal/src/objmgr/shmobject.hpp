@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -60,7 +59,7 @@ namespace CorUnix
         SHMPTR shmPrevObj;
         SHMPTR shmNextObj;
         BOOL fAddedToList;
-        
+
         SHMPTR shmObjName;
         SHMPTR shmObjImmutableData;
         SHMPTR shmObjSharedData;
@@ -79,7 +78,7 @@ namespace CorUnix
     class CSharedMemoryObject : public CPalObjectBase
     {
         template <class T> friend void InternalDelete(T *p);
-        
+
     protected:
 
         //
@@ -98,7 +97,7 @@ namespace CorUnix
         // The SHMObjData for this object, protected by the
         // shared memory lock.
         //
-        
+
         SHMPTR m_shmod;
 
         //
@@ -110,14 +109,14 @@ namespace CorUnix
         //
 
         VOID *m_pvSharedData;
-        
+
         CSimpleSharedMemoryLock m_ssmlSharedData;
         CSimpleDataLock m_sdlSharedData;
 
         //
         // Is this object process local or shared?
         //
-        
+
         ObjectDomain m_ObjectDomain;
 
         //
@@ -158,7 +157,7 @@ namespace CorUnix
             CPalThread *pthr,
             bool fDestructionPending
             );
-        
+
         virtual ~CSharedMemoryObject();
 
     public:
@@ -259,7 +258,7 @@ namespace CorUnix
         //
         // IPalObject routines
         //
-        
+
         virtual
         PAL_ERROR
         GetSharedData(

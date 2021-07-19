@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -24,6 +23,7 @@ Revision History:
 #include "pal/dbgmsg.h"
 #include "pal/cruntime.h"
 #include "pal/thread.hpp"
+#include "pal/threadsusp.hpp"
 #include "pal/printfcpp.hpp"
 
 /* <stdarg.h> needs to be included after "palinternal.h" to avoid name
@@ -227,7 +227,7 @@ PAL_fwprintf(
 
 /*******************************************************************************
 Function:
-  Internal_ScanfExtractFormatA
+  Internal_ScanfExtractFormatW
 
 Paramaters:
   Fmt
@@ -250,337 +250,6 @@ Paramaters:
 
 Notes:
   - I'm also handling the undocumented %ws, %wc, %w...
-*******************************************************************************/
-
-#define CHECK_OUT_IN_ITS_RANGE(Out,BeginOut,EndOut)                                             \
-    if ((Out)<(BeginOut) || (Out)>=(EndOut))                                                    \
-    {                                                                                           \
-        SetLastError(ERROR_INSUFFICIENT_BUFFER);                                                \
-        ERROR("Pointer Out wanted to access 0x%p. However the range of buffer is [0x%p,0x%p).",\
-                 (Out), (BeginOut), (EndOut));                                                  \
-        return false;                                                                           \
-    }
-
-static BOOL Internal_ScanfExtractFormatA(LPCSTR *Fmt, LPSTR Out, int iOutSize, LPBOOL Store,
-                                         LPINT Width, LPINT Prefix, LPINT Type)
-{
-    BOOL Result = FALSE;
-    LPSTR TempStr;
-    LPSTR TempStrPtr;
-    LPSTR BaseOut = Out;
-    LPSTR EndOut = Out + iOutSize;
-
-    *Width = -1;
-    *Store = TRUE;
-    *Prefix = -1;
-    *Type = -1;
-
-    if (*Fmt && **Fmt == '%')
-    {
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = *(*Fmt)++;
-    }
-    else
-    {
-        return Result;
-    }
-
-    /* we'll never need a temp string longer than the original */
-    TempStrPtr = TempStr = (LPSTR) PAL_malloc(strlen(*Fmt)+1);
-    if (!TempStr)
-    {
-        ERROR("PAL_malloc failed\n");
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-        return Result;
-    }
-
-    /* parse '*' flag which means don't store */
-    if (**Fmt == '*')
-    {
-        *Store = FALSE;
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = *(*Fmt)++;
-    }
-
-    /* grab width specifier */
-    if (isdigit((unsigned char) **Fmt))
-    {
-        TempStrPtr = TempStr;
-        while (isdigit((unsigned char) **Fmt))
-        {
-            *TempStrPtr++ = **Fmt;
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = *(*Fmt)++;
-        }
-        *TempStrPtr = 0; /* end string */
-        *Width = atoi(TempStr);
-        if (*Width < 0)
-        {
-            ERROR("atoi returned a negative value indicative of an overflow.\n");
-            SetLastError(ERROR_INTERNAL_ERROR);
-            return Result;
-        }
-    }
-
-#ifdef BIT64
-    if (**Fmt == 'p')
-    {
-        *Prefix = SCANF_PREFIX_LONGLONG;
-    }
-#endif
-    /* grab prefix of 'I64' for __int64 */
-    if ((*Fmt)[0] == 'I' && (*Fmt)[1] == '6' && (*Fmt)[2] == '4')
-    {
-        /* convert to 'q'/'ll' so Unix sscanf can handle it */
-        *Fmt += 3;
-        *Prefix = SCANF_PREFIX_LONGLONG;
-    }
-    /* grab a prefix of 'h' */
-    else if (**Fmt == 'h')
-    {
-        *Prefix = SCANF_PREFIX_SHORT;
-        ++(*Fmt);
-    }
-    /* grab prefix of 'l' or the undocumented 'w' (at least in MSDN) */
-    else if (**Fmt == 'l' || **Fmt == 'w')
-    {
-        ++(*Fmt);
-#ifdef BIT64
-        // Only want to change the prefix on 64 bit when inputing characters.
-        if (**Fmt == 'c' || **Fmt == 's')
-#endif
-        {
-            *Prefix = SCANF_PREFIX_LONG; /* give it a wide prefix */
-        }
-        if (**Fmt == 'l')
-        {
-            *Prefix = SCANF_PREFIX_LONGLONG;
-            ++(*Fmt);
-        }
-    }
-    else if (**Fmt == 'L')
-    {
-        /* a prefix of 'L' seems to be ignored */
-        ++(*Fmt);
-    }
-
-    /* grab type 'c' */
-    if (**Fmt == 'c' || **Fmt == 'C')
-    {
-        *Type = SCANF_TYPE_CHAR;
-        if (*Prefix != SCANF_PREFIX_SHORT && **Fmt == 'C')
-        {
-            *Prefix = SCANF_PREFIX_LONG; /* give it a wide prefix */
-        }
-        if (*Prefix == SCANF_PREFIX_LONG)
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = 'l';
-        }
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = 'c';
-        ++(*Fmt);
-        Result = TRUE;
-    }
-    /* grab type 's' */
-    else if (**Fmt == 's' || **Fmt == 'S')
-    {
-        *Type = SCANF_TYPE_STRING;
-        if (*Prefix != SCANF_PREFIX_SHORT && **Fmt == 'S')
-        {
-            *Prefix = SCANF_PREFIX_LONG; /* give it a wide prefix */
-        }
-        if (*Prefix == SCANF_PREFIX_LONG)
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = 'l';
-        }
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = 's';
-        ++(*Fmt);
-        Result = TRUE;
-    }
-    /* grab int types */
-    else if (**Fmt == 'd' || **Fmt == 'i' || **Fmt == 'o' ||
-             **Fmt == 'u' || **Fmt == 'x' || **Fmt == 'X' ||
-             **Fmt == 'p')
-    {
-        *Type = SCANF_TYPE_INT;
-        if (*Prefix == SCANF_PREFIX_SHORT)
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = 'h';
-        }
-        else if (*Prefix == SCANF_PREFIX_LONG)
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = 'l';
-        }
-        else if (*Prefix == SCANF_PREFIX_LONGLONG)
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            
-            if (strcpy_s(Out, iOutSize-(Out-BaseOut), scanf_longlongfmt) != SAFECRT_SUCCESS)
-            {
-                ERROR("strcpy_s failed\n");
-                SetLastError(ERROR_INSUFFICIENT_BUFFER);
-                return FALSE;
-            }
-
-            Out += strlen(scanf_longlongfmt);
-        }
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = *(*Fmt)++;
-        Result = TRUE;
-    }
-    else if (**Fmt == 'e' || **Fmt == 'E' || **Fmt == 'f' ||
-             **Fmt == 'g' || **Fmt == 'G')
-    {
-        /* we can safely ignore the prefixes and only add the type*/
-        *Type = SCANF_TYPE_FLOAT;
-        /* this gets rid of %E/%G since they're they're the
-           same when scanning */
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = tolower( *(*Fmt)++ );
-        Result = TRUE;
-    }
-    else if (**Fmt == 'n')
-    {
-        if (*Prefix == SCANF_PREFIX_SHORT)
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = 'h';
-        }
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = *(*Fmt)++;
-        *Type = SCANF_TYPE_N;
-        Result = TRUE;
-    }
-    else if (**Fmt == '[')
-    {
-        /* There is a small compatibility problem in the handling of the []
-           option in FreeBSD vs. Windows.  In Windows, you can have [z-a]
-           as well as [a-z].  In FreeBSD, [z-a] fails.  So, we need to 
-           reverse the instances of z-a to a-z (and [m-e] to [e-m], etc). */
-
-        /* step 1 : copy the leading [ */
-        CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-        *Out++ = '[';
-        (*Fmt)++;
-
-        /* step 2 : copy a leading ^, if present */
-        if( '^' == **Fmt )
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = '^';
-            (*Fmt)++;
-        }
-
-        /* step 3 : copy a leading ], if present; a ] immediately after the 
-           leading [ (or [^) does *not* end the sequence, it is part of the 
-           characters to match */
-        if( ']' == **Fmt )
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = ']';
-            (*Fmt)++;
-        }
-
-        /* step 4 : if the next character is already a '-', it's not part of an 
-           interval specifier, so just copy it */
-        if('-' == **Fmt )
-        {
-            CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-            *Out++ = '-';
-            (*Fmt)++;
-        }
-
-        /* ok then, process the rest of it */
-        while( '\0' != **Fmt ) 
-        {
-            if(']' == **Fmt)
-            {
-                /* ']' marks end of the format specifier; we're done */
-                CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-                *Out++ = ']';
-                (*Fmt)++;
-                break;
-            }
-            if('-' == **Fmt)
-            {
-                if( ']' == (*Fmt)[1] )
-                {
-                    /* got a '-', next character is the terminating ']'; 
-                       copy '-' literally */
-                    CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-                    *Out++ = '-';
-                    (*Fmt)++;
-                }
-                else
-                {
-                    /* got a '-' indicating an interval specifier */
-                    unsigned char prev, next;
-
-                    /* get the interval boundaries */
-                    prev = (*Fmt)[-1];
-                    next = (*Fmt)[1];
-
-                    /* if boundaries were inverted, replace the already-copied 
-                       low boundary by the 'real' low boundary */
-                    if( prev > next )
-                    {
-                        CHECK_OUT_IN_ITS_RANGE(Out-1,BaseOut,EndOut)
-                        Out[-1] = next;
-
-                        /* ...and save the 'real' upper boundary, which will be 
-                           copied to 'Out' below */
-                        next = prev;
-                    }
-
-                    CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-                    *Out++ = '-';
-                    CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-                    *Out++ = next;
-
-                    /* skip over the '-' and the next character, which we 
-                       already copied */
-                    (*Fmt)+=2;
-                }
-            }
-            else
-            {
-                /* plain character; just copy it */
-                CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-                *Out++ = **Fmt;
-                (*Fmt)++;
-            }            
-        }
-
-        *Type = SCANF_TYPE_BRACKETS;
-        Result = TRUE;
-    }
-    else if (**Fmt == ' ')
-    {
-        *Type = SCANF_TYPE_SPACE;
-    }
-    
-    /* add %n so we know how far to increment the pointer */
-    CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-    *Out++ = '%';
-    CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-    *Out++ = 'n';
-
-    CHECK_OUT_IN_ITS_RANGE(Out,BaseOut,EndOut)
-    *Out = 0;  /* end the string */
-    PAL_free(TempStr);
-    return Result;
-}
-
-/*******************************************************************************
-Function:
-  Internal_ScanfExtractFormatW
-
-  -- see Internal_ScanfExtractFormatA above
 *******************************************************************************/
 static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, LPBOOL Store,
                                          LPINT Width, LPINT Prefix, LPINT Type)
@@ -634,11 +303,11 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
         {
             ERROR("atoi returned a negative value indicative of an overflow.\n");
             SetLastError(ERROR_INTERNAL_ERROR);
-            return Result;
+            goto EXIT;
         }
     }
 
-#ifdef BIT64
+#ifdef HOST_64BIT
     if (**Fmt == 'p')
     {
         *Prefix = SCANF_PREFIX_LONGLONG;
@@ -661,7 +330,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
     else if (**Fmt == 'l' || **Fmt == 'w')
     {
         ++(*Fmt);
-#ifdef BIT64
+#ifdef HOST_64BIT
         // Only want to change the prefix on 64 bit when inputing characters.
         if (**Fmt == 'C' || **Fmt == 'S')
 #endif
@@ -732,7 +401,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
             {
                 ERROR("strcpy_s failed\n");
                 SetLastError(ERROR_INSUFFICIENT_BUFFER);
-                return FALSE;
+                goto EXIT;
             }
 
             Out += strlen(scanf_longlongfmt);
@@ -764,7 +433,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
     {
         /* There is a small compatibility problem in the handling of the []
            option in FreeBSD vs. Windows.  In Windows, you can have [z-a]
-           as well as [a-z].  In FreeBSD, [z-a] fails.  So, we need to 
+           as well as [a-z].  In FreeBSD, [z-a] fails.  So, we need to
            reverse the instances of z-a to a-z (and [m-e] to [e-m], etc). */
 
         /* step 1 : copy the leading [ */
@@ -778,8 +447,8 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
             (*Fmt)++;
         }
 
-        /* step 3 : copy a leading ], if present; a ] immediately after the 
-           leading [ (or [^) does *not* end the sequence, it is part of the 
+        /* step 3 : copy a leading ], if present; a ] immediately after the
+           leading [ (or [^) does *not* end the sequence, it is part of the
            characters to match */
         if( ']' == **Fmt )
         {
@@ -787,7 +456,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
             (*Fmt)++;
         }
 
-        /* step 4 : if the next character is already a '-', it's not part of an 
+        /* step 4 : if the next character is already a '-', it's not part of an
            interval specifier, so just copy it */
         if('-' == **Fmt )
         {
@@ -796,7 +465,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
         }
 
         /* ok then, process the rest of it */
-        while( '\0' != **Fmt ) 
+        while( '\0' != **Fmt )
         {
             if(']' == **Fmt)
             {
@@ -809,7 +478,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
             {
                 if( ']' == (*Fmt)[1] )
                 {
-                    /* got a '-', next character is the terminating ']'; 
+                    /* got a '-', next character is the terminating ']';
                        copy '-' literally */
                     *Out++ = '-';
                     (*Fmt)++;
@@ -823,13 +492,13 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
                     prev = (*Fmt)[-1];
                     next = (*Fmt)[1];
 
-                    /* if boundaries were inverted, replace the already-copied 
+                    /* if boundaries were inverted, replace the already-copied
                        low boundary by the 'real' low boundary */
                     if( prev > next )
                     {
                         Out[-1] = next;
 
-                        /* ...and save the 'real' upper boundary, which will be 
+                        /* ...and save the 'real' upper boundary, which will be
                            copied to 'Out' below */
                         next = prev;
                     }
@@ -837,7 +506,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
                     *Out++ = '-';
                     *Out++ = next;
 
-                    /* skip over the '-' and the next character, which we 
+                    /* skip over the '-' and the next character, which we
                        already copied */
                     (*Fmt)+=2;
                 }
@@ -847,7 +516,7 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
                 /* plain character; just copy it */
                 *Out++ = **Fmt;
                 (*Fmt)++;
-            }            
+            }
         }
 
         *Type = SCANF_TYPE_BRACKETS;
@@ -863,195 +532,22 @@ static BOOL Internal_ScanfExtractFormatW(LPCWSTR *Fmt, LPSTR Out, int iOutSize, 
     *Out++ = 'n';
 
     *Out = 0;  /* end the string */
+
+EXIT:
     PAL_free(TempStr);
     return Result;
 }
 
 /*******************************************************************************
 Function:
-  PAL_vsscanf
+  PAL_wvsscanf
 
-Parameters:
   Buffer
     - buffer to parse values from
   Format
     - format string
   ap
     - stdarg parameter list
-*******************************************************************************/
-int PAL_vsscanf(LPCSTR Buffer, LPCSTR Format, va_list ap)
-{
-    INT Length = 0;
-    LPCSTR Buff = Buffer;
-    LPCSTR Fmt = Format;
-    CHAR TempBuff[1024]; /* used to hold a single %<foo> format string */
-    BOOL Store;
-    INT Width;
-    INT Prefix;
-    INT Type = -1;
-
-    while (*Fmt)
-    {
-        if (!*Buff && Length == 0)
-        {
-            Length = EOF;
-            break;
-        }
-        /* remove any number of blanks */
-        else if (isspace((unsigned char) *Fmt))
-        {
-            while (isspace((unsigned char) *Buff))
-            {
-                ++Buff;
-            }
-            ++Fmt;
-        }
-        else if (*Fmt == '%' &&
-                 Internal_ScanfExtractFormatA(&Fmt, TempBuff, sizeof(TempBuff), &Store,
-                                              &Width, &Prefix, &Type))
-        {
-            if (Prefix == SCANF_PREFIX_LONG &&
-                (Type == SCANF_TYPE_STRING || Type == SCANF_TYPE_CHAR))
-            {
-                int len = 0;
-                int res;
-                WCHAR *charPtr = 0;
-
-                /* a single character */
-                if (Type == SCANF_TYPE_CHAR && Width == -1)
-                {
-                    len = Width = 1;
-                }
-
-                /* calculate length of string to copy */
-                while (Buff[len] && !isspace((unsigned char) Buff[len]))
-                {
-                    if (Width != -1 && len >= Width)
-                    {
-                        break;
-                    }
-                    ++len;
-                }
-
-                if (Store)
-                {
-                    charPtr = va_arg(ap, WCHAR *);
-
-                    res = MultiByteToWideChar(CP_ACP, 0, Buff, len,
-                                            charPtr, len);
-                    if (!res)
-                    {
-                        ASSERT("MultiByteToWideChar failed.  Error is %d\n",
-                            GetLastError());
-                        return -1;
-                    }
-                    if (Type == SCANF_TYPE_STRING)
-                    {
-                        /* end string */
-                        charPtr[res] = 0;
-                    }
-                    ++Length;
-                }
-                Buff += len;
-            }
-            /* this places the number of bytes stored into the next arg */
-            else if (Type == SCANF_TYPE_N)
-            {
-                if (Prefix == SCANF_PREFIX_SHORT)
-                {
-                    *(va_arg(ap, short *)) = Buff - Buffer;
-                }
-                else
-                {
-                    *(va_arg(ap, LPLONG)) = Buff - Buffer;
-                }
-            }
-            /* types that sscanf can handle */
-            else
-            {
-                int ret;
-                int n;
-                LPVOID voidPtr = NULL;
-
-                if (Store)
-                {
-                    // sscanf_s requires that if we are trying to read "%s" or "%c" or “%[“, then
-                    // the size of the buffer must follow the buffer we are trying to read into.
-                    voidPtr = va_arg(ap, LPVOID);
-                    unsigned typeLen = 0;
-                    if ((Type == SCANF_TYPE_STRING) || (Type == SCANF_TYPE_BRACKETS))
-                    {
-                        // Since this is not a Safe CRT API we don’t really know the size of the destination
-                        // buffer provided by the caller. So we have to assume that the caller has allocated
-                        // enough space to hold either the width specified in the format or the entire input
-                        // string plus ‘\0’. 
-                        typeLen = ((Width > 0) ? Width : strlen(Buffer)) + 1;
-                    }
-                    else if (Type == SCANF_TYPE_CHAR)
-                    {
-                        // Check whether the format string contains number of characters
-                        // that should be read from the input string.
-                        // Note: ‘\0’ does not get appended in the “%c” case.
-                        typeLen = (Width > 0) ? Width : 1;
-                    }
-
-                    if (typeLen > 0)
-                    {
-                        ret = sscanf_s(Buff, TempBuff, voidPtr, typeLen, &n);
-                    }
-                    else
-                    {
-                        ret = sscanf_s(Buff, TempBuff, voidPtr, &n);
-                    }
-                }
-                else
-                {
-                    ret = sscanf_s(Buff, TempBuff, &n);
-                }
-
-#if SSCANF_CANNOT_HANDLE_MISSING_EXPONENT
-                if ((ret == 0) && (Type == SCANF_TYPE_FLOAT))
-                {
-                    ret = SscanfFloatCheckExponent(Buff, TempBuff, voidPtr, &n);
-                }
-#endif // SSCANF_CANNOT_HANDLE_MISSING_EXPONENT
-
-                if (ret > 0)
-                {
-                    Length += ret;
-                }
-                else
-                {
-                    /* no match, break scan */
-                    break;
-                }
-                Buff += n;
-            }
-        }
-        else
-        {
-            /* grab, but not store */
-            if (*Fmt == *Buff && Type != SCANF_TYPE_SPACE)
-            {
-                ++Fmt;
-                ++Buff;
-            }
-            /* doesn't match, break scan */
-            else
-            {
-                break;
-            }
-        }
-    }
-	
-    return Length;
-}
-
-/*******************************************************************************
-Function:
-  PAL_wvsscanf
-
-  -- see PAL_vsscanf above
 *******************************************************************************/
 int PAL_wvsscanf(LPCWSTR Buffer, LPCWSTR Format, va_list ap)
 {
@@ -1165,7 +661,7 @@ int PAL_wvsscanf(LPCWSTR Buffer, LPCWSTR Format, va_list ap)
                 {
                     ASSERT("WideCharToMultiByte failed.  Error is %d\n",
                         GetLastError());
-                    PAL_free(newBuff);    
+                    PAL_free(newBuff);
                     return -1;
                 }
 
@@ -1187,16 +683,16 @@ int PAL_wvsscanf(LPCWSTR Buffer, LPCWSTR Format, va_list ap)
                         TempBuff[0] = '%';
                         TempBuff[1] = '*';
 
-                        /* %n doesn't count as a conversion. Since we're 
-                           suppressing conversion of the %[], sscanf will 
-                           always return 0, so we can't use the return value 
-                           to determine success. Set n to 0 before the call; if 
+                        /* %n doesn't count as a conversion. Since we're
+                           suppressing conversion of the %[], sscanf will
+                           always return 0, so we can't use the return value
+                           to determine success. Set n to 0 before the call; if
                            it's still 0 afterwards, we know the call failed */
                         n = 0;
                         sscanf_s(newBuff, TempBuff, &n);
                         if(0 == n)
                         {
-                            /* sscanf failed, nothing matched. set ret to 0, 
+                            /* sscanf failed, nothing matched. set ret to 0,
                                so we know we have to break */
                             ret = 0;
                         }
@@ -1222,7 +718,7 @@ int PAL_wvsscanf(LPCWSTR Buffer, LPCWSTR Format, va_list ap)
                             // We don’t really know the size of the destination buffer provided by the
                             // caller. So we have to assume that the caller has allocated enough space
                             // to hold either the width specified in the format or the entire input
-                            // string plus ‘\0’. 
+                            // string plus ‘\0’.
                             typeLen = ((Width > 0) ? Width : PAL_wcslen(Buffer)) + 1;
                         }
                         else if (Type == SCANF_TYPE_CHAR)
@@ -1252,7 +748,7 @@ int PAL_wvsscanf(LPCWSTR Buffer, LPCWSTR Format, va_list ap)
                     ret = SscanfFloatCheckExponent(newBuff, TempBuff, voidPtr, &n);
                 }
 #endif // SSCANF_CANNOT_HANDLE_MISSING_EXPONENT
-                
+
                 PAL_free(newBuff);
                 if (ret > 0)
                 {
@@ -1281,7 +777,7 @@ int PAL_wvsscanf(LPCWSTR Buffer, LPCWSTR Format, va_list ap)
             }
         }
     }
-	
+
     return Length;
 }
 
@@ -1320,21 +816,21 @@ Function:
   SscanfFloatCheckExponent
 
   Parameters:
-  buff:     pointer to the buffer to be parsed; the target float must be at 
-            the beginning of the buffer, except for any number of leading 
+  buff:     pointer to the buffer to be parsed; the target float must be at
+            the beginning of the buffer, except for any number of leading
             spaces
   floatFmt: must be "%e%n" (or "%f%n" or "%g%n")
   voidptr:  optional pointer to output variable (which should be a float)
   pn:       pointer to an int to receive the number of bytes parsed.
-  
+
   Notes:
-  On some platforms (specifically AIX) sscanf fails to parse a float from 
-  a string such as 12.34e (while it succeeds for e.g. 12.34a). Sscanf 
-  initially interprets the 'e' as the keyword for the beginning of a 
-  10-exponent of a floating point in scientific notation (as in 12.34e5), 
-  but then it fails to parse the actual exponent. At this point sscanf should 
-  be able to fall back on the narrower pattern, and parse the floating point 
-  in common decimal notation (i.e. 12.34). However AIX's sscanf fails to do 
+  On some platforms (specifically AIX) sscanf fails to parse a float from
+  a string such as 12.34e (while it succeeds for e.g. 12.34a). Sscanf
+  initially interprets the 'e' as the keyword for the beginning of a
+  10-exponent of a floating point in scientific notation (as in 12.34e5),
+  but then it fails to parse the actual exponent. At this point sscanf should
+  be able to fall back on the narrower pattern, and parse the floating point
+  in common decimal notation (i.e. 12.34). However AIX's sscanf fails to do
   so and it does not parse any number.
   This function checks the given string for a such case and removes
   the 'e' before parsing the float.
@@ -1369,11 +865,11 @@ static int SscanfFloatCheckExponent(LPCSTR buff, LPCSTR floatFmt,
         pos++;
     }
 
-    /* check if it is something like 12.34e and the trailing 'e' is not 
+    /* check if it is something like 12.34e and the trailing 'e' is not
        the suffix of a valid exponent of 10, such as 12.34e+5 */
     if ( digits > 0 && *pos && tolower(*pos) == 'e' &&
-         !( *(pos+1) && 
-            ( isdigit(*(pos+1)) || 
+         !( *(pos+1) &&
+            ( isdigit(*(pos+1)) ||
               ( (*(pos+1) == '+' || *(pos+1) == '-') && isdigit(*(pos+2)) )
                 )
              )
@@ -1383,7 +879,7 @@ static int SscanfFloatCheckExponent(LPCSTR buff, LPCSTR floatFmt,
         if (pLocBuf)
         {
             memcpy(pLocBuf, buff, (pos-buff)*sizeof(CHAR));
-            pLocBuf[pos-buff] = 0;                              
+            pLocBuf[pos-buff] = 0;
             if (voidPtr)
                 ret = sscanf_s(pLocBuf, floatFmt, voidPtr, pn);
             else

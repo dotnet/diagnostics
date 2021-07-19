@@ -6318,7 +6318,7 @@ DECLARE_API(DumpModule)
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
 
     ExtOut("BaseAddress:             %p\n", SOS_PTR(module.ilBase));
-    ExtOut("PEFile:                  %p\n", SOS_PTR(module.File));
+    ExtOut("PEAssembly:              %p\n", SOS_PTR(module.PEAssembly));
     ExtOut("ModuleId:                %p\n", SOS_PTR(module.dwModuleID));
     ExtOut("ModuleIndex:             %p\n", SOS_PTR(module.dwModuleIndex));
     ExtOut("LoaderHeap:              %p\n", SOS_PTR(module.pLookupTableHeap));
@@ -9883,7 +9883,6 @@ DECLARE_API(u)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR dwStartAddr = NULL;
     BOOL fWithGCInfo = FALSE;
@@ -15198,7 +15197,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
     if (dmd.Request(g_sos, MethodDescData.ModulePtr) == S_OK)
     {
         CLRDATA_ADDRESS base = 0;
-        if (g_sos->GetPEFileBase(dmd.File, &base) == S_OK)
+        if (g_sos->GetPEFileBase(dmd.PEAssembly, &base) == S_OK)
         {
             if (base)
             {
@@ -15222,7 +15221,7 @@ static HRESULT DumpMDInfoBuffer(DWORD_PTR dwStartAddr, DWORD Flags, ULONG64 Esp,
     if (!bModuleNameWorked)
     {
         wszNameBuffer[0] = W('\0');
-        if (FAILED(g_sos->GetPEFileName(dmd.File, MAX_LONGPATH, wszNameBuffer, NULL)) || wszNameBuffer[0] == W('\0'))
+        if (FAILED(g_sos->GetPEFileName(dmd.PEAssembly, MAX_LONGPATH, wszNameBuffer, NULL)) || wszNameBuffer[0] == W('\0'))
         {
             ToRelease<IXCLRDataModule> pModule;
             if (SUCCEEDED(g_sos->GetModule(dmd.Address, &pModule)))

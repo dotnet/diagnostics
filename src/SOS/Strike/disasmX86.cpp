@@ -405,7 +405,7 @@ void HandleCall(TADDR callee, Register *reg)
     ctx.Rip = callee;
 
     CLRDATA_ADDRESS ip = 0, md = 0;
-    if (S_OK == g_sos->GetJumpThunkTarget(&ctx, &ip, &md))
+    if (S_OK == g_sos->GetJumpThunkTarget((T_CONTEXT*)&ctx, &ip, &md))
     {
         if (md)
         {
@@ -829,7 +829,7 @@ eTargetType GetFinalTarget(TADDR callee, TADDR* finalMDorIP)
     ctx.Rip = callee;
 
     CLRDATA_ADDRESS ip = 0, md = 0;
-    if (S_OK == g_sos->GetJumpThunkTarget(&ctx, &ip, &md))
+    if (S_OK == g_sos->GetJumpThunkTarget((T_CONTEXT*)&ctx, &ip, &md))
     {
         if (md)
         {

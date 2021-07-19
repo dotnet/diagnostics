@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *cruntime.h - definitions specific to the target operating system and hardware
@@ -31,9 +30,9 @@
 #error ERROR: Use of C runtime library internal header file.
 #endif  /* _CRTBLD */
 
-#if defined (_SYSCRT) && defined (_WIN64)
+#if defined (_SYSCRT) && defined (HOST_64BIT)
 #define _USE_OLD_STDCPP 1
-#endif  /* defined (_SYSCRT) && defined (_WIN64) */
+#endif  /* defined (_SYSCRT) && defined (HOST_64BIT) */
 
 #if !defined (UNALIGNED)
 #if defined (_M_AMD64)

@@ -1,17 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 /*****************************************************************************
  *                               GCDumpX86.cpp
  */
 
 /*****************************************************************************/
-#ifdef _TARGET_X86_
+#ifdef TARGET_X86
 /*****************************************************************************/
 
-#ifndef FEATURE_PAL
+#ifndef TARGET_UNIX
 #include "utilcode.h"           // For _ASSERTE()
-#endif //!FEATURE_PAL
+#endif //!TARGET_UNIX
 #include "gcdump.h"
 
 
@@ -62,10 +61,10 @@ const char *        CalleeSavedRegName(unsigned reg)
 
 /*****************************************************************************/
 
-unsigned            GCDump::DumpInfoHdr (PTR_CBYTE      gcInfoBlock,
-                                         InfoHdr*       header,
-                                         unsigned *     methodSize,
-                                         bool           verifyGCTables)
+size_t            GCDump::DumpInfoHdr (PTR_CBYTE      gcInfoBlock,
+                                       InfoHdr*       header,
+                                       unsigned *     methodSize,
+                                       bool           verifyGCTables)
 {
     unsigned        count;
     PTR_CBYTE       table       = gcInfoBlock;
@@ -119,20 +118,20 @@ unsigned            GCDump::DumpInfoHdr (PTR_CBYTE      gcInfoBlock,
     //
     // First print out all the basic information
     //
-    
+
     gcPrintf("    method      size   = %04X\n", *methodSize);
     gcPrintf("    prolog      size   = %2u \n", header->prologSize);
     gcPrintf("    epilog      size   = %2u \n", header->epilogSize);
     gcPrintf("    epilog     count   = %2u \n", header->epilogCount);
     gcPrintf("    epilog      end    = %s  \n", header->epilogAtEnd   ? "yes" : "no");
-    
+
     gcPrintf("    callee-saved regs  = ");
     if (header->ediSaved) gcPrintf("EDI ");
     if (header->esiSaved) gcPrintf("ESI ");
     if (header->ebxSaved) gcPrintf("EBX ");
     if (header->ebpSaved) gcPrintf("EBP ");
     gcPrintf("\n");
-        
+
     gcPrintf("    ebp frame          = %s  \n", header->ebpFrame      ? "yes" : "no");
     gcPrintf("    fully interruptible= %s  \n", header->interruptible ? "yes" : "no");
     gcPrintf("    double align       = %s  \n", header->doubleAlign   ? "yes" : "no");
@@ -144,17 +143,17 @@ unsigned            GCDump::DumpInfoHdr (PTR_CBYTE      gcInfoBlock,
     //
     // Now display optional information
     //
-    
+
     if (header->security)       gcPrintf("    security check obj = yes\n");
     if (header->handlers)       gcPrintf("    exception handlers = yes\n");
     if (header->localloc)       gcPrintf("    localloc           = yes\n");
     if (header->editNcontinue)  gcPrintf("    edit & continue    = yes\n");
     if (header->profCallbacks)  gcPrintf("    profiler callbacks = yes\n");
     if (header->varargs)        gcPrintf("    varargs            = yes\n");
-    if (header->gsCookieOffset != INVALID_GS_COOKIE_OFFSET) 
+    if (header->gsCookieOffset != INVALID_GS_COOKIE_OFFSET)
                                 gcPrintf("    GuardStack cookie  = [%s%u]\n",
                                           header->ebpFrame ? "EBP-" : "ESP+", header->gsCookieOffset);
-    if (header->syncStartOffset != INVALID_SYNC_OFFSET) 
+    if (header->syncStartOffset != INVALID_SYNC_OFFSET)
                                 gcPrintf("    Sync region = [%u,%u]\n",
                                           header->syncStartOffset, header->syncEndOffset);
 
@@ -186,11 +185,11 @@ unsigned            GCDump::DumpInfoHdr (PTR_CBYTE      gcInfoBlock,
     }
 
     {
-        unsigned cur  = 0;
-        unsigned last = table-bp;
+        size_t cur  = 0;
+        size_t last = table-bp;
         while (cur < last)
         {
-            unsigned amount = last - cur;
+            size_t amount = last - cur;
             if (amount>5)
                 amount = 5;
 
@@ -256,7 +255,7 @@ size_t              GCDump::DumpGCTable(PTR_CBYTE      table,
 
         table = DumpEncoding(table, sz);
 
-        _ASSERTE(0 == ~OFFSET_MASK % sizeof(void*));
+        _ASSERTE(0 == ~OFFSET_MASK % sizeof(uint32_t));
 
         lowBits  =   OFFSET_MASK & stkOffs;
         stkOffs &=  ~OFFSET_MASK;
@@ -305,7 +304,7 @@ size_t              GCDump::DumpGCTable(PTR_CBYTE      table,
 
         DumpEncoding(bp, table-bp);
 
-        _ASSERTE(0 == ~OFFSET_MASK % sizeof(void*));
+        _ASSERTE(0 == ~OFFSET_MASK % sizeof(uint32_t));
 
         lowBits  = varOffs & 0x3;
         varOffs &= ~OFFSET_MASK;
@@ -323,7 +322,7 @@ size_t              GCDump::DumpGCTable(PTR_CBYTE      table,
 
         gcPrintf("%s%s pointer\n",
                     (lowBits & byref_OFFSET_FLAG) ? "byref " : "",
-#ifndef WIN64EXCEPTIONS
+#ifndef FEATURE_EH_FUNCLETS
                     (lowBits & this_OFFSET_FLAG)  ? "this"   : ""
 #else
                     (lowBits & pinned_OFFSET_FLAG)  ? "pinned"   : ""
@@ -681,7 +680,7 @@ size_t              GCDump::DumpGCTable(PTR_CBYTE      table,
                 {
                     argTab += decodeUnsigned(argTab, &val);
 
-#ifndef WIN64EXCEPTIONS
+#ifndef FEATURE_EH_FUNCLETS
                     assert((val & this_OFFSET_FLAG) == 0);
 #endif
                     unsigned  stkOffs = val & ~byref_OFFSET_FLAG;
@@ -976,13 +975,13 @@ void                GCDump::DumpPtrsInFrame(PTR_CBYTE   gcInfoBlock,
     methodSize = methodSizeTemp;
 
     //
-    // New style InfoBlk Header 
+    // New style InfoBlk Header
     //
     // Typically only uses one-byte to store everything.
     //
     InfoHdr header;
     table = decodeHeader(table, gcInfoVersion, &header);
-    
+
     if (header.untrackedCnt == HAS_UNTRACKED)
     {
         unsigned count;
@@ -1089,5 +1088,5 @@ EPILOG_MSG:     gcPrintf("    Offset %04X is within the method's epilog"
 }
 
 /*****************************************************************************/
-#endif // _TARGET_X86_
+#endif // TARGET_X86
 /*****************************************************************************/

@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 //*****************************************************************************
 // dbgutil.h
-// 
+//
 
 //
 //*****************************************************************************
@@ -49,7 +48,7 @@ HRESULT GetResourceRvaFromResourceSectionRvaByName(ICorDebugDataTarget* pDataTar
     DWORD* pResourceSize);
 
 // Traverses down one level in the PE resource tree structure
-// 
+//
 // Arguments:
 //   pDataTarget - the data target for inspecting this process
 //   id - the id of the next node in the resource tree you want
@@ -67,7 +66,7 @@ HRESULT GetNextLevelResourceEntryRVA(ICorDebugDataTarget* pDataTarget,
     DWORD* pNextLevelRVA);
 
 // Traverses down one level in the PE resource tree structure
-// 
+//
 // Arguments:
 //   pDataTarget - the data target for inspecting this process
 //   name - the name of the next node in the resource tree you want

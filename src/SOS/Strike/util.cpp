@@ -1649,7 +1649,7 @@ HRESULT FileNameForModule(const DacpModuleData* const pModuleData, __out_ecount(
     fileName[0] = W('\0');
 
     HRESULT hr = S_OK;
-    CLRDATA_ADDRESS dwAddr = pModuleData->File;
+    CLRDATA_ADDRESS dwAddr = pModuleData->PEAssembly;
     if (dwAddr == 0)
     {
         // TODO:  We have dynamic module
@@ -2469,7 +2469,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
 
                     if ((mName == NULL) ||
                         IsSameModuleName(fileName, mName) ||
-                        DebuggerModuleNamesMatch(ModuleData.File, mName) ||
+                        DebuggerModuleNamesMatch(ModuleData.PEAssembly, mName) ||
                         IsFusionLoadedModule(fileName, mName))
                     {
                         AddToModuleList(moduleList, *numModule, maxList, (DWORD_PTR)ModuleAddr);
@@ -3405,6 +3405,7 @@ CLRDATA_ADDRESS GetCurrentManagedThread ()
     return NULL;
 }
 
+#define MSCOREE_SHIM_A                "mscoree.dll"
 
 void ReloadSymbolWithLineInfo()
 {
@@ -5581,7 +5582,7 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
             if (SUCCEEDED(dmd.Request(g_sos, mdescData.ModulePtr)))
             {
                 CLRDATA_ADDRESS peFileBase = 0;
-                if (SUCCEEDED(g_sos->GetPEFileBase(dmd.File, &peFileBase)))
+                if (SUCCEEDED(g_sos->GetPEFileBase(dmd.PEAssembly, &peFileBase)))
                 {
                     if (peFileBase)
                     {
@@ -5934,7 +5935,7 @@ void PopulateMetadataRegions()
                 {
                     if (moduleData.metadataStart != 0)
                     {
-                        MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.File);
+                        MemoryRegion region(moduleData.metadataStart, moduleData.metadataStart + moduleData.metadataSize, moduleData.PEAssembly);
                         g_metadataRegions.insert(region);
 #ifdef DUMP_METADATA_INFO
                         ArrayHolder<WCHAR> name = new WCHAR[MAX_LONGPATH];

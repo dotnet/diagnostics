@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -36,6 +35,15 @@ SET_DEFAULT_DEBUG_CHANNEL(THREAD); // some headers have code with asserts, so do
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <kvm.h>
+#elif defined(__sun)
+#ifndef _KERNEL
+#define _KERNEL
+#define UNDEF_KERNEL
+#endif
+#include <sys/procfs.h>
+#ifdef UNDEF_KERNEL
+#undef _KERNEL
+#endif
 #endif
 
 #include <signal.h>
@@ -70,16 +78,6 @@ extern "C" int _lwp_self ();
 
 using namespace CorUnix;
 
-
-/* ------------------- Definitions ------------------------------*/
-
-/* list of free CPalThread objects */
-static Volatile<CPalThread*> free_threads_list = NULL;
-
-/* lock to access list of free THREAD structures */
-/* NOTE: can't use a CRITICAL_SECTION here (see comment in FreeTHREAD) */
-int free_threads_spinlock = 0;
-
 /*++
 Function:
   InternalEndCurrentThreadWrapper
@@ -100,10 +98,10 @@ static void InternalEndCurrentThreadWrapper(void *arg)
     // that the current thread is known to this PAL, and that pThread
     // actually is the current PAL thread, put it back in TLS temporarily.
     pthread_setspecific(thObjKey, pThread);
-    
+
     /* Call entry point functions of every attached modules to
        indicate the thread is exiting */
-    /* note : no need to enter a critical section for serialization, the loader 
+    /* note : no need to enter a critical section for serialization, the loader
        will lock its own critical section */
     LOADCallDllMain(DLL_THREAD_DETACH, NULL);
 
@@ -126,8 +124,6 @@ BOOL TLSInitialize()
         return FALSE;
     }
 
-    SPINLOCKInit(&free_threads_spinlock);
-
     return TRUE;
 }
 
@@ -139,8 +135,6 @@ Function:
 --*/
 VOID TLSCleanup()
 {
-    SPINLOCKDestroy(&free_threads_spinlock);
-
     pthread_key_delete(thObjKey);
 }
 
@@ -150,36 +144,13 @@ Function:
 
 Abstract:
     Allocate CPalThread instance
-  
+
 Return:
     The fresh thread structure, NULL otherwise
 --*/
 CPalThread* AllocTHREAD()
 {
-    CPalThread* pThread = NULL;
-
-    /* Get the lock */
-    SPINLOCKAcquire(&free_threads_spinlock, 0);
-
-    pThread = free_threads_list;
-    if (pThread != NULL)
-    {
-        free_threads_list = pThread->GetNext();
-    }
-
-    /* Release the lock */
-    SPINLOCKRelease(&free_threads_spinlock);
-
-    if (pThread == NULL)
-    {
-        pThread = InternalNew<CPalThread>();
-    }
-    else
-    {
-        pThread = new (pThread) CPalThread;
-    }
-
-    return pThread;
+    return InternalNew<CPalThread>();
 }
 
 /*++
@@ -188,7 +159,7 @@ Function:
 
 Abstract:
     Free THREAD structure
-  
+
 --*/
 static void FreeTHREAD(CPalThread *pThread)
 {
@@ -203,40 +174,10 @@ static void FreeTHREAD(CPalThread *pThread)
     // check against pThread->dwGuard when getting the current thread's data.
     memset((void*)pThread, 0xcc, sizeof(*pThread));
 #endif
-    
-    // We SHOULD be doing the following, but it causes massive problems. See the 
-    // comment below.
-    //pthread_setspecific(thObjKey, NULL); // Make sure any TLS entry is removed.
 
-    //
-    // Never actually free the THREAD structure to make the TLS lookaside cache work. 
-    // THREAD* for terminated thread can be stuck in the lookaside cache code for an 
-    // arbitrary amount of time. The unused THREAD* structures has to remain in a 
-    // valid memory and thus can't be returned to the heap.
-    //
-    // TODO: is this really true? Why would the entry remain in the cache for
-    // an indefinite period of time after we've flushed it?
-    //
-
-    /* NOTE: can't use a CRITICAL_SECTION here: EnterCriticalSection(&cs,TRUE) and
-       LeaveCriticalSection(&cs,TRUE) need to access the thread private data 
-       stored in the very THREAD structure that we just destroyed. Entering and 
-       leaving the critical section with internal==FALSE leads to possible hangs
-       in the PROCSuspendOtherThreads logic, at shutdown time 
-
-       Update: [TODO] PROCSuspendOtherThreads has been removed. Can this 
-       code be changed?*/
-
-    /* Get the lock */
-    SPINLOCKAcquire(&free_threads_spinlock, 0);
-
-    pThread->SetNext(free_threads_list);
-    free_threads_list = pThread;
-
-    /* Release the lock */
-    SPINLOCKRelease(&free_threads_spinlock);
+    free(pThread);
 }
-
+    
 /*++
 Function:
     CreateThreadData
@@ -245,7 +186,7 @@ Abstract:
     Create the CPalThread for the startup thread
     or another external thread entering the PAL
     for the first time
-  
+
 Parameters:
     ppThread - on success, receives the CPalThread
 
@@ -260,7 +201,7 @@ CorUnix::CreateThreadData(
 {
     PAL_ERROR palError = NO_ERROR;
     CPalThread *pThread = NULL;
-    
+
     /* Create the thread object */
     pThread = AllocTHREAD();
 
@@ -296,7 +237,7 @@ CorUnix::CreateThreadData(
     }
 
     *ppThread = pThread;
-    
+
 CreateThreadDataExit:
 
     if (NO_ERROR != palError)
@@ -308,35 +249,6 @@ CreateThreadDataExit:
     }
 
     return palError;
-}
-
-/*++
-Function:
-  CreateCurrentThreadData
-
-Abstract:
-  This function is called by the InternalGetOrCreateCurrentThread inlined 
-  function to create the thread data when it is null meaning the thread has
-  never been in this PAL. 
-
-Warning:
-  If the allocation fails, this function asserts and exits the process.
---*/
-extern "C" CPalThread *
-CreateCurrentThreadData()
-{
-    CPalThread *pThread = NULL;
-
-    if (PALIsThreadDataInitialized()) {
-        PAL_ERROR palError = CreateThreadData(&pThread);
-        if (NO_ERROR != palError)
-        {
-            ASSERT("Unable to allocate pal thread: error %d - aborting\n", palError);
-            PROCAbort();
-        }
-    }
-
-    return pThread;
 }
 
 PAL_ERROR
@@ -352,6 +264,7 @@ CPalThread::RunPreCreateInitializers(
     //
 
     InternalInitializeCriticalSection(&m_csLock);
+    m_fLockInitialized = TRUE;
 
     //
     // Call the pre-create initializers for embedded classes
@@ -405,7 +318,7 @@ CPalThread::ReleaseThreadReference(
     {
         FreeTHREAD(this);
     }
-    
+
 }
 
 PAL_ERROR
@@ -430,39 +343,3 @@ RunPostCreateInitializersExit:
     return palError;
 }
 
-/* Basic spinlock implementation */
-void SPINLOCKAcquire (LONG * lock, unsigned int flags)
-{
-    size_t loop_seed = 1, loop_count = 0;
-
-    if (flags & SYNCSPINLOCK_F_ASYMMETRIC)
-    {
-        loop_seed = ((size_t)pthread_self() % 10) + 1;
-    }
-    while (InterlockedCompareExchange(lock, 1, 0))
-    {
-        if (!(flags & SYNCSPINLOCK_F_ASYMMETRIC) || (++loop_count % loop_seed))
-        {
-#if PAL_IGNORE_NORMAL_THREAD_PRIORITY
-            struct timespec tsSleepTime;
-            tsSleepTime.tv_sec = 0;
-            tsSleepTime.tv_nsec = 1;
-            nanosleep(&tsSleepTime, NULL);
-#else
-            sched_yield();
-#endif 
-        }
-    }
-    
-}
-
-void SPINLOCKRelease (LONG * lock)
-{
-    VolatileStore(lock, 0);
-}
-
-DWORD SPINLOCKTryAcquire (LONG * lock)
-{
-    return InterlockedCompareExchange(lock, 1, 0);
-    // only returns 0 or 1.
-}

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -128,7 +127,7 @@ PALIMPORT double __cdecl PAL_acos(double x)
 #endif  // HAVE_COMPATIBLE_ACOS
 
     ret = acos(x);
-    
+
 #if !HAVE_COMPATIBLE_ACOS
     if (errno == EDOM)
     {
@@ -138,25 +137,6 @@ PALIMPORT double __cdecl PAL_acos(double x)
 
     LOGEXIT("acos returns double %f\n", ret);
     PERF_EXIT(acos);
-    return ret;
-}
-
-/*++
-Function:
-    acosh
-
-See MSDN.
---*/
-PALIMPORT double __cdecl PAL_acosh(double x)
-{
-    double ret;
-    PERF_ENTRY(acosh);
-    ENTRY("acosh (x=%f)\n", x);
-
-    ret = acosh(x);
-
-    LOGEXIT("acosh returns double %f\n", ret);
-    PERF_EXIT(acosh);
     return ret;
 }
 
@@ -187,25 +167,6 @@ PALIMPORT double __cdecl PAL_asin(double x)
 
     LOGEXIT("asin returns double %f\n", ret);
     PERF_EXIT(asin);
-    return ret;
-}
-
-/*++
-Function:
-    asinh
-
-See MSDN.
---*/
-PALIMPORT double __cdecl PAL_asinh(double x)
-{
-    double ret;
-    PERF_ENTRY(asinh);
-    ENTRY("asinh (x=%f)\n", x);
-
-    ret = asinh(x);
-
-    LOGEXIT("asinh returns double %f\n", ret);
-    PERF_EXIT(asinh);
     return ret;
 }
 
@@ -262,7 +223,7 @@ PALIMPORT double __cdecl PAL_exp(double x)
     ENTRY("exp (x=%f)\n", x);
 
 #if !HAVE_COMPATIBLE_EXP
-    if (x == 1.0) 
+    if (x == 1.0)
     {
         ret = M_E;
     }
@@ -271,7 +232,7 @@ PALIMPORT double __cdecl PAL_exp(double x)
 #endif  // HAVE_COMPATIBLE_EXP
 
     ret = exp(x);
-    
+
 #if !HAVE_COMPATIBLE_EXP
     }
 #endif // HAVE_COMPATIBLE_EXP
@@ -283,21 +244,39 @@ PALIMPORT double __cdecl PAL_exp(double x)
 
 /*++
 Function:
-    labs
+    ilogb
 
 See MSDN.
 --*/
-PALIMPORT LONG __cdecl PAL_labs(LONG l)
+PALIMPORT int __cdecl PAL_ilogb(double x)
 {
-    long lRet;
-    PERF_ENTRY(labs);
-    ENTRY("labs (l=%ld)\n", l);
-    
-    lRet = labs(l);    
+    int ret;
+    PERF_ENTRY(ilogb);
+    ENTRY("ilogb (x=%f)\n", x);
 
-    LOGEXIT("labs returns long %ld\n", lRet);
-    PERF_EXIT(labs);
-    return (LONG)lRet; // This explicit cast to LONG is used to silence any potential warnings due to implicitly casting the native long lRet to LONG when returning.
+#if !HAVE_COMPATIBLE_ILOGB0
+    if (x == 0.0)
+    {
+        ret = -2147483648;
+    }
+    else
+#endif // !HAVE_COMPATIBLE_ILOGB0
+
+#if !HAVE_COMPATIBLE_ILOGBNAN
+    if (isnan(x))
+    {
+        ret = 2147483647;
+    }
+    else
+#endif // !HAVE_COMPATIBLE_ILOGBNAN
+
+    {
+        ret = ilogb(x);
+    }
+
+    LOGEXIT("ilogb returns int %d\n", ret);
+    PERF_EXIT(ilogb);
+    return ret;
 }
 
 /*++
@@ -347,7 +326,7 @@ PALIMPORT double __cdecl PAL_log10(double x)
 #endif  // !HAVE_COMPATIBLE_LOG10
 
     ret = log10(x);
-    
+
 #if !HAVE_COMPATIBLE_LOG10
     if ((errno == EDOM) && (x < 0))
     {
@@ -439,7 +418,7 @@ PALIMPORT double __cdecl PAL_pow(double x, double y)
     * large y. Since large double numbers are always even (e.g., the representation of
     * 1E20+1 is the same as that of 1E20, the last .+1. is too insignificant to be part
     * of the representation), this test will always return the wrong result for large y.
-    * 
+    *
     * The (ceil(y/2) == floor(y/2)) test is slower, but more robust.
     */
     if ((ret == PAL_NEGINF_DBL) && (x < 0) && isfinite(x) && (ceil(y / 2) == floor(y / 2)))
@@ -451,6 +430,27 @@ PALIMPORT double __cdecl PAL_pow(double x, double y)
     LOGEXIT("pow returns double %f\n", ret);
     PERF_EXIT(pow);
     return ret;
+}
+
+/*++
+Function:
+    sincos
+
+See MSDN.
+--*/
+PALIMPORT void __cdecl PAL_sincos(double x, double* sin, double* cos)
+{
+    PERF_ENTRY(sincos);
+    ENTRY("sincos (x=%f)\n", x);
+
+#if defined(__APPLE__)
+    __sincos(x, sin, cos);
+#else
+    sincos(x, sin, cos);
+#endif // !__APPLE__
+
+    LOGEXIT("sincos returns (double %f, double %f)\n", *sin, *cos);
+    PERF_EXIT(sincos);
 }
 
 /*++
@@ -538,7 +538,7 @@ PALIMPORT float __cdecl PAL_acosf(float x)
 #endif  // HAVE_COMPATIBLE_ACOS
 
     ret = acosf(x);
-    
+
 #if !HAVE_COMPATIBLE_ACOS
     if (errno == EDOM)
     {
@@ -548,25 +548,6 @@ PALIMPORT float __cdecl PAL_acosf(float x)
 
     LOGEXIT("acosf returns float %f\n", ret);
     PERF_EXIT(acosf);
-    return ret;
-}
-
-/*++
-Function:
-    acoshf
-
-See MSDN.
---*/
-PALIMPORT float __cdecl PAL_acoshf(float x)
-{
-    float ret;
-    PERF_ENTRY(acoshf);
-    ENTRY("acoshf (x=%f)\n", x);
-
-    ret = acoshf(x);
-
-    LOGEXIT("acoshf returns float %f\n", ret);
-    PERF_EXIT(acoshf);
     return ret;
 }
 
@@ -599,26 +580,6 @@ PALIMPORT float __cdecl PAL_asinf(float x)
     PERF_EXIT(asinf);
     return ret;
 }
-
-/*++
-Function:
-    asinhf
-
-See MSDN.
---*/
-PALIMPORT float __cdecl PAL_asinhf(float x)
-{
-    float ret;
-    PERF_ENTRY(asinhf);
-    ENTRY("asinhf (x=%f)\n", x);
-
-    ret = asinhf(x);
-
-    LOGEXIT("asinhf returns float %f\n", ret);
-    PERF_EXIT(asinhf);
-    return ret;
-}
-
 
 /*++
 Function:
@@ -673,7 +634,7 @@ PALIMPORT float __cdecl PAL_expf(float x)
     ENTRY("expf (x=%f)\n", x);
 
 #if !HAVE_COMPATIBLE_EXP
-    if (x == 1.0f) 
+    if (x == 1.0f)
     {
         ret = M_E;
     }
@@ -682,13 +643,50 @@ PALIMPORT float __cdecl PAL_expf(float x)
 #endif  // HAVE_COMPATIBLE_EXP
 
     ret = expf(x);
-    
+
 #if !HAVE_COMPATIBLE_EXP
     }
 #endif // HAVE_COMPATIBLE_EXP
 
     LOGEXIT("expf returns float %f\n", ret);
     PERF_EXIT(expf);
+    return ret;
+}
+
+/*++
+Function:
+    ilogbf
+
+See MSDN.
+--*/
+PALIMPORT int __cdecl PAL_ilogbf(float x)
+{
+    int ret;
+    PERF_ENTRY(ilogbf);
+    ENTRY("ilogbf (x=%f)\n", x);
+
+#if !HAVE_COMPATIBLE_ILOGB0
+    if (x == 0.0f)
+    {
+        ret = -2147483648;
+    }
+    else
+#endif // !HAVE_COMPATIBLE_ILOGB0
+
+#if !HAVE_COMPATIBLE_ILOGBNAN
+    if (isnan(x))
+    {
+        ret = 2147483647;
+    }
+    else
+#endif // !HAVE_COMPATIBLE_ILOGBNAN
+
+    {
+        ret = ilogbf(x);
+    }
+
+    LOGEXIT("ilogbf returns int %d\n", ret);
+    PERF_EXIT(ilogbf);
     return ret;
 }
 
@@ -739,7 +737,7 @@ PALIMPORT float __cdecl PAL_log10f(float x)
 #endif  // !HAVE_COMPATIBLE_LOG10
 
     ret = log10f(x);
-    
+
 #if !HAVE_COMPATIBLE_LOG10
     if ((errno == EDOM) && (x < 0))
     {
@@ -815,7 +813,7 @@ PALIMPORT float __cdecl PAL_powf(float x, float y)
 #endif  // !HAVE_COMPATIBLE_POW
 
     ret = powf(x, y);
-		
+
 #if !HAVE_VALID_NEGATIVE_INF_POW
     if ((ret == PAL_POSINF_FLT) && (x < 0) && isfinite(x) && (ceilf(y / 2) != floorf(y / 2)))
     {
@@ -837,4 +835,25 @@ PALIMPORT float __cdecl PAL_powf(float x, float y)
     LOGEXIT("powf returns float %f\n", ret);
     PERF_EXIT(powf);
     return ret;
+}
+
+/*++
+Function:
+    sincosf
+
+See MSDN.
+--*/
+PALIMPORT void __cdecl PAL_sincosf(float x, float* sin, float* cos)
+{
+    PERF_ENTRY(sincosf);
+    ENTRY("sincosf (x=%f)\n", x);
+
+#if defined(__APPLE__)
+    __sincosf(x, sin, cos);
+#else
+    sincosf(x, sin, cos);
+#endif // !__APPLE__
+
+    LOGEXIT("sincosf returns (float %f, float %f)\n", *sin, *cos);
+    PERF_EXIT(sincosf);
 }

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -15,7 +14,7 @@ Abstract:
     Simple handle table manager class
 
 
-    
+
 --*/
 
 #ifndef _PAL_HANDLEMGR_H_
@@ -63,16 +62,13 @@ namespace CorUnix
                 IPalObject *pObject;
                 HANDLE_INDEX hiNextIndex;
             } u;
-            
-            DWORD dwAccessRights;
-            bool fInheritable;
-            
+
             bool fEntryAllocated;
         } HANDLE_TABLE_ENTRY;
 
         HANDLE_INDEX m_hiFreeListStart;
         HANDLE_INDEX m_hiFreeListEnd;
-        
+
         DWORD m_dwTableSize;
         DWORD m_dwTableGrowthRate;
         HANDLE_TABLE_ENTRY* m_rghteHandleTable;
@@ -118,8 +114,6 @@ namespace CorUnix
         AllocateHandle(
             CPalThread *pThread,
             IPalObject *pObject,
-            DWORD dwAccessRights,
-            bool fInheritable,
             HANDLE *ph
             );
 
@@ -131,7 +125,6 @@ namespace CorUnix
         GetObjectFromHandle(
             CPalThread *pThread,
             HANDLE h,
-            DWORD *pdwRightsGranted,
             IPalObject **ppObject
             );
 

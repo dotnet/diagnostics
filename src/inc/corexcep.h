@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*********************************************************************
  **                                                                 **
@@ -14,7 +13,7 @@
 
 // All COM+ exceptions are expressed as a RaiseException with this exception
 // code.  If you change this value, you must also change
-// mscorlib\src\system\Exception.cs's _COMPlusExceptionCode value.
+// Exception.cs's _COMPlusExceptionCode value.
 
 #define EXCEPTION_MSVC    0xe06d7363    // 0xe0000000 | 'msc'
 
@@ -30,7 +29,7 @@
 #endif
 
 // This is the exception code to report SetupThread failure to caller of reverse pinvoke
-// It is misleading to use our COM+ exception code, since this is not a managed exception.  
+// It is misleading to use our COM+ exception code, since this is not a managed exception.
 // In the end, we picked e0455858 (EXX).
 #define EXCEPTION_EXX     0xe0455858    // 0xe0000000 | 'EXX'
 #endif // __COREXCEP_H__

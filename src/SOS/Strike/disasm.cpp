@@ -25,16 +25,13 @@ namespace X86GCDump
 #define CONTRACTL
 #define DAC_ARG(x)
 #define CONTRACTL_END
-#define LIMITED_METHOD_CONTRACT
 #undef NOTHROW
 #define NOTHROW
 #define GC_NOTRIGGER
-#define SUPPORTS_DAC
-#define LIMITED_METHOD_DAC_CONTRACT
+#define SUPPORTS_DAC ((void)0)
 #include "gcdecoder.cpp"
 #undef CONTRACTL
 #undef CONTRACTL_END
-#undef LIMITED_METHOD_CONTRACT
 #undef NOTHROW
 #undef GC_NOTRIGGER
 #undef _ASSERTE
@@ -48,9 +45,6 @@ namespace X86GCDump
 #ifdef SOS_TARGET_AMD64 
 #include "gcdump.h"
 #define DAC_ARG(x)
-#define SUPPORTS_DAC
-#define LIMITED_METHOD_DAC_CONTRACT
-#undef LIMITED_METHOD_CONTRACT
 #undef PREGDISPLAY
     #ifdef LOG
     #undef LOG

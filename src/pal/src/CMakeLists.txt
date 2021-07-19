@@ -1,12 +1,18 @@
-cmake_minimum_required(VERSION 2.8.12.2)
+if(CLR_CMAKE_TARGET_OSX OR CLR_CMAKE_TARGET_FREEBSD)
+  # On OSX and *BSD, we use the libunwind that's part of the OS
+  set(CLR_CMAKE_USE_SYSTEM_LIBUNWIND 1)
+endif(CLR_CMAKE_TARGET_OSX OR CLR_CMAKE_TARGET_FREEBSD)
 
-project(coreclrpal)
+if(NOT DEFINED ENV{ROOTFS_DIR})
+  include_directories(SYSTEM /usr/local/include)
+elseif (CLR_CMAKE_TARGET_FREEBSD)
+  include_directories(SYSTEM $ENV{ROOTFS_DIR}/usr/local/include)
+endif()
 
-include_directories(SYSTEM /usr/local/include)
-
-add_compile_options(-fPIC)
 
 include(configure.cmake)
+
+project(coreclrpal)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -15,9 +21,7 @@ if(CORECLR_SET_RPATH)
     set(MACOSX_RPATH ON)
 endif(CORECLR_SET_RPATH)
 
-if(CMAKE_VERSION VERSION_EQUAL 3.0 OR CMAKE_VERSION VERSION_GREATER 3.0)
-    cmake_policy(SET CMP0042 NEW)
-endif()
+cmake_policy(SET CMP0042 NEW)
 
 # Include directories
 
@@ -25,75 +29,39 @@ include_directories(include)
 
 # Compile options
 
-if(CLR_CROSS_COMPONENTS_BUILD)
-    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL amd64)
-        if(CLR_CMAKE_TARGET_ARCH STREQUAL "arm")
-            set(PAL_CMAKE_PLATFORM_ARCH_I386 1)
-            add_definitions(-D_X86_)
-        else()
-            set(PAL_CMAKE_PLATFORM_ARCH_AMD64 1)
-            add_definitions(-D_AMD64_)
-        endif()
-    elseif(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL i686)
-        set(PAL_CMAKE_PLATFORM_ARCH_I386 1)
-        add_definitions(-D_X86_)
-    else()
-        message(FATAL_ERROR "Only AMD64, I386 host for cross-architecture component is supported")
-    endif()
-else()
-    if(CLR_CMAKE_HOST_ARCH_AMD64)
-        set(PAL_CMAKE_PLATFORM_ARCH_AMD64 1)
-    elseif(CLR_CMAKE_HOST_ARCH_ARM)
-        set(PAL_CMAKE_PLATFORM_ARCH_ARM 1)
-    elseif(CLR_CMAKE_HOST_ARCH_ARM64)
-        set(PAL_CMAKE_PLATFORM_ARCH_ARM64 1)
-    elseif(CLR_CMAKE_HOST_ARCH_I386)
-        set(PAL_CMAKE_PLATFORM_ARCH_I386 1)
-    elseif(CLR_CMAKE_HOST_ARCH_MIPS64)
-        set(PAL_CMAKE_PLATFORM_ARCH_MIPS64 1)
-    else()
-        message(FATAL_ERROR "Only ARM, AMD64, ARM64, MIPS64 and I386 is supported")
-    endif()
-endif()
-
-add_definitions(-DPLATFORM_UNIX=1)
-add_definitions(-DLP64COMPATIBLE=1)
-add_definitions(-DFEATURE_PAL=1)
-add_definitions(-DCORECLR=1)
-add_definitions(-DPIC=1)
-add_definitions(-D_FILE_OFFSET_BITS=64)
-if(PAL_CMAKE_PLATFORM_ARCH_AMD64)
-  add_definitions(-DBIT64=1)
-  add_definitions(-D_WIN64=1)
+if(CLR_CMAKE_HOST_ARCH_AMD64)
   set(PAL_ARCH_SOURCES_DIR amd64)
-elseif(PAL_CMAKE_PLATFORM_ARCH_ARM)
-  add_definitions(-DBIT32=1)
+elseif(CLR_CMAKE_HOST_ARCH_ARM)
   set(PAL_ARCH_SOURCES_DIR arm)
-elseif(PAL_CMAKE_PLATFORM_ARCH_ARM64)
-  add_definitions(-DBIT64=1)
-  add_definitions(-D_WIN64=1)
+elseif(CLR_CMAKE_HOST_ARCH_ARM64)
   set(PAL_ARCH_SOURCES_DIR arm64)
-elseif(PAL_CMAKE_PLATFORM_ARCH_I386)
-  add_definitions(-DBIT32=1)
+elseif(CLR_CMAKE_HOST_ARCH_I386)
   set(PAL_ARCH_SOURCES_DIR i386)
-elseif(PAL_CMAKE_PLATFORM_ARCH_MIPS64)
-  add_definitions(-DBIT64=1)
-  add_definitions(-D_WIN64=1)
-  set(PAL_ARCH_SOURCES_DIR mips64)
+elseif(CLR_CMAKE_HOST_ARCH_S390X)
+  set(PAL_ARCH_SOURCES_DIR s390x)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-  add_definitions(-D_TARGET_MAC64)
-  add_definitions(-DXSTATE_SUPPORTED)
+if(CLR_CMAKE_TARGET_OSX)
+  add_definitions(-DTARGET_OSX)
+  if(CLR_CMAKE_TARGET_ARCH_AMD64)
+    add_definitions(-DXSTATE_SUPPORTED)
+  endif()
   set(PLATFORM_SOURCES
     arch/${PAL_ARCH_SOURCES_DIR}/context.S
   )
-endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+endif(CLR_CMAKE_TARGET_OSX)
 
-if(PAL_CMAKE_PLATFORM_ARCH_AMD64 AND CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT CLR_CMAKE_HOST_ALPINE_LINUX)
+if (FEATURE_ENABLE_NO_ADDRESS_SPACE_RANDOMIZATION)
+  add_definitions(-DFEATURE_ENABLE_NO_ADDRESS_SPACE_RANDOMIZATION)
+endif(FEATURE_ENABLE_NO_ADDRESS_SPACE_RANDOMIZATION)
+add_definitions(-DLP64COMPATIBLE)
+add_definitions(-DCORECLR)
+add_definitions(-DPIC)
+
+if(CLR_CMAKE_HOST_ARCH_AMD64 AND CLR_CMAKE_TARGET_LINUX AND NOT CLR_CMAKE_HOST_ALPINE_LINUX)
   # Currently the _xstate is not available on Alpine Linux
   add_definitions(-DXSTATE_SUPPORTED)
-endif(PAL_CMAKE_PLATFORM_ARCH_AMD64 AND CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT CLR_CMAKE_HOST_ALPINE_LINUX)
+endif(CLR_CMAKE_HOST_ARCH_AMD64 AND CLR_CMAKE_TARGET_LINUX AND NOT CLR_CMAKE_HOST_ALPINE_LINUX)
 
 if(CLR_CMAKE_HOST_ALPINE_LINUX)
   # Setting RLIMIT_NOFILE breaks debugging of coreclr on Alpine Linux for some reason
@@ -110,16 +78,22 @@ set(ARCH_SOURCES
   arch/${PAL_ARCH_SOURCES_DIR}/debugbreak.S
   arch/${PAL_ARCH_SOURCES_DIR}/processor.cpp
 )
+if(CLR_CMAKE_HOST_ARCH_ARM)
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set_source_files_properties(exception/seh.cpp PROPERTIES COMPILE_FLAGS -Wno-error=inline-asm)
+  endif()
+endif(CLR_CMAKE_HOST_ARCH_ARM)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND (CLR_CMAKE_HOST_ARCH_AMD64 OR CLR_CMAKE_HOST_ARCH_I386))
+  add_compile_options(-Wa,--divide)
+endif()
 
 set(SOURCES
   cruntime/file.cpp
   cruntime/filecrt.cpp
-  cruntime/lstr.cpp
   cruntime/malloc.cpp
   cruntime/math.cpp
-  cruntime/mbstring.cpp
   cruntime/misc.cpp
-  cruntime/misctls.cpp
   cruntime/path.cpp
   cruntime/printf.cpp
   cruntime/printfcpp.cpp
@@ -137,24 +111,22 @@ set(SOURCES
   handlemgr/handleapi.cpp
   handlemgr/handlemgr.cpp
   init/pal.cpp
+  init/sxs.cpp
   loader/module.cpp
   loader/modulename.cpp
   locale/unicode.cpp
-  locale/unicode_data.cpp
+  locale/unicodedata.cpp
   locale/utf8.cpp
   map/common.cpp
   map/map.cpp
   map/virtual.cpp
-  memory/heap.cpp
   memory/local.cpp
-  misc/cgroup.cpp
   misc/dbgmsg.cpp
   misc/environ.cpp
   misc/error.cpp
   misc/errorstrings.cpp
   misc/fmtmessage.cpp
   misc/miscpalapi.cpp
-  misc/msgbox.cpp
   misc/strutil.cpp
   misc/sysinfo.cpp
   misc/time.cpp
@@ -205,7 +177,7 @@ add_library(coreclrpal
   ${PLATFORM_SOURCES}
 )
 
-if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+if(CLR_CMAKE_TARGET_OSX)
   find_library(COREFOUNDATION CoreFoundation)
   find_library(CORESERVICES CoreServices)
   find_library(SECURITY Security)
@@ -216,58 +188,35 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
     ${SECURITY}
     ${SYSTEM}
   )
-endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+endif(CLR_CMAKE_TARGET_OSX)
 
-if(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+if(CLR_CMAKE_TARGET_FREEBSD)
   target_link_libraries(coreclrpal
     pthread
     rt
   )
-endif(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+endif(CLR_CMAKE_TARGET_FREEBSD)
 
-if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+if(CLR_CMAKE_TARGET_LINUX)
   # On Android, we don't need to link with gcc_s, pthread and rt
-  if(NOT CLR_CMAKE_HOST_ANDROID)
+  if(NOT CLR_CMAKE_TARGET_ANDROID)
     target_link_libraries(coreclrpal
       gcc_s
       pthread
       rt
     )
-  endif()
-
-  if(CLR_CMAKE_HOST_ANDROID)
-    find_library(LZMA NAMES lzma)
-
-    if(LZMA STREQUAL LZMA-NOTFOUND)
-      message(FATAL_ERROR "Cannot find liblzma.")
-    endif(LZMA STREQUAL LZMA-NOTFOUND)
-
+  else(NOT CLR_CMAKE_TARGET_ANDROID)
     target_link_libraries(coreclrpal
-      gnustl_shared
-      android-support
-      android-glob
+      ${ANDROID_GLOB}
       ${LZMA})
-  endif()
-
-  if(CLR_MAKE_PLATFORM_ANDROID)
-    find_library(ANDROID_SUPPORT NAMES android-support)
-    find_library(ANDROID_GLOB NAMES android-glob)
-
-    if(ANDROID_SUPPORT STREQUAL ANDROID_SUPPORT-NOTFOUND)
-      message(FATAL_ERROR "Cannot find android-support.")
-    endif()
-
-    if(ANDROID_GLOB STREQUAL ANDROID_GLOB-NOTFOUND)
-      message(FATAL_ERROR "Cannot find android-glob.")
-    endif()
-  endif()
+  endif(NOT CLR_CMAKE_TARGET_ANDROID)
 
   target_link_libraries(coreclrpal
     dl
   )
-endif(CMAKE_SYSTEM_NAME STREQUAL Linux)
 
-if(CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+endif(CLR_CMAKE_TARGET_LINUX)
+if(CLR_CMAKE_TARGET_NETBSD)
   add_definitions(-D_KMEMUSER)
   find_library(KVM kvm)
   target_link_libraries(coreclrpal
@@ -275,4 +224,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL NetBSD)
     rt
     ${KVM}
   )
-endif(CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+endif(CLR_CMAKE_TARGET_NETBSD)
+if(CLR_CMAKE_TARGET_SUNOS)
+  target_link_libraries(coreclrpal
+    pthread
+    rt
+  )
+endif(CLR_CMAKE_TARGET_SUNOS)

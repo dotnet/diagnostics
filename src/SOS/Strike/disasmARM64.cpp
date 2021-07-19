@@ -1,25 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-// ==++==
-// 
- 
-// 
-// ==--==
-
+#undef _TARGET_AMD64_
 #ifndef _TARGET_ARM64_
 #define _TARGET_ARM64_
 #endif
 
-#ifdef _TARGET_AMD64_
-#undef _TARGET_AMD64_
+#undef TARGET_AMD64
+#ifndef TARGET_ARM64
+#define TARGET_ARM64
 #endif
 
 #include "strike.h"
 #include "util.h"
 #include <dbghelp.h>
-
 
 #include "disasm.h"
 
@@ -29,10 +23,10 @@
 
 namespace ARM64GCDump
 {
-#undef _TARGET_X86_
+#undef TARGET_X86
 #undef LIMITED_METHOD_CONTRACT
-#define LIMITED_METHOD_DAC_CONTRACT
-#define SUPPORTS_DAC
+#define LIMITED_METHOD_DAC_CONTRACT ((void)0)
+#define SUPPORTS_DAC ((void)0)
 #define LF_GCROOTS
 #define LL_INFO1000
 #define LOG(x)

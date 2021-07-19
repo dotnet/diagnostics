@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -56,7 +55,7 @@ INT W32toUnixAccessControl( IN DWORD flProtect )
     case PAGE_NOACCESS :
         MemAccessControl = PROT_NONE;
         break;
-    
+
     default:
         MemAccessControl = 0;
         ERROR( "Incorrect or no protection flags specified.\n" );

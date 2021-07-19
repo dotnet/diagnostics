@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
-
-
 
 Module Name:
 
@@ -13,8 +10,6 @@ Module Name:
 Abstract:
     Implementation of Debug Message utilies. Relay channel information,
     output functions, etc.
-
-
 
 --*/
 
@@ -41,7 +36,7 @@ Abstract:
 #include <dirent.h>
 #include <dlfcn.h>
 
-/* <stdarg.h> needs to be included after "palinternal.h" to avoid name 
+/* <stdarg.h> needs to be included after "palinternal.h" to avoid name
    collision for va_start and va_end */
 #include <stdarg.h>
 
@@ -61,7 +56,7 @@ static const char FOPEN_FLAGS[] = "at";
 /* global and static variables */
 
 LPCWSTR W16_NULLSTRING = (LPCWSTR) "N\0U\0L\0L\0\0";
- 
+
 DWORD dbg_channel_flags[DCI_LAST];
 BOOL g_Dbg_asserts_enabled;
 
@@ -69,7 +64,7 @@ BOOL g_Dbg_asserts_enabled;
   output, because those functions do tracing and we need to avoid recursion */
 FILE *output_file = NULL;
 
-/* main switch for debug channel enablement, to be modified by debugger */
+/* master switch for debug channel enablement, to be modified by debugger */
 Volatile<BOOL> dbg_master_switch = TRUE;
 
 
@@ -98,10 +93,12 @@ static const char *dbg_channel_names[]=
     "POLL",
     "CRYPT",
     "SHFOLDER"
-#ifdef FEATURE_PAL_SXS
   , "SXS"
-#endif // FEATURE_PAL_SXS
+  , "DCI_NUMA"
 };
+
+// Verify the number of elements in dbg_channel_names
+static_assert_no_msg(ARRAY_SIZE(dbg_channel_names) == DCI_LAST);
 
 static const char *dbg_level_names[]=
 {
@@ -127,7 +124,7 @@ static int max_entry_level;
 /* character to use for ENTRY indentation */
 static const char INDENT_CHAR = '.';
 
-static BOOL DBG_get_indent(DBG_LEVEL_ID level, const char *format, 
+static BOOL DBG_get_indent(DBG_LEVEL_ID level, const char *format,
                            char *indent_string);
 
 static CRITICAL_SECTION fprintf_crit_section;
@@ -155,16 +152,18 @@ BOOL DBG_init_channels(void)
     DWORD flag_mask = 0;
     int ret;
 
-    InternalInitializeCriticalSection(&fprintf_crit_section);
-
-    /* output only asserts by default [only affects no-vararg-support case; if 
+    /* output only asserts by default [only affects no-vararg-support case; if
        we have varargs, these flags aren't even checked for ASSERTs] */
     for(i=0;i<DCI_LAST;i++)
         dbg_channel_flags[i]=1<<DLI_ASSERT;
 
     /* parse PAL_DBG_CHANNELS environment variable */
 
-    env_string = EnvironGetenv(ENV_CHANNELS);
+    env_string = getenv(ENV_CHANNELS);
+    if (env_string != NULL)
+    {
+        env_string = strdup(env_string);
+    }
     env_pcache = env_workstring = env_string;
 
     while(env_workstring)
@@ -176,13 +175,13 @@ BOOL DBG_init_channels(void)
         {
             entry_ptr++;
         }
-        
+
         /* break if end of string is reached */
         if(*entry_ptr == '\0')
         {
            break;
         }
-        
+
         plus_or_minus=*entry_ptr++;
 
         /* find end of entry; if strchr returns NULL, we have reached the end
@@ -194,7 +193,7 @@ BOOL DBG_init_channels(void)
         {
             *env_workstring++='\0';
         }
-        
+
         /* find period that separates channel name from level name */
         level_ptr=strchr(entry_ptr,'.');
 
@@ -266,7 +265,7 @@ BOOL DBG_init_channels(void)
                 {
                     dbg_channel_flags[i] |= flag_mask; /* OR to open levels*/
                 }
-            } 
+            }
             else
             {
                 for(i=0;i<DCI_LAST;i++)
@@ -297,10 +296,10 @@ BOOL DBG_init_channels(void)
         }
         /* done processing this entry; on to the next. */
     }
-    PAL_free(env_pcache);
+    free(env_pcache);
 
     /* select output file */
-    env_string = EnvironGetenv(ENV_FILE);
+    env_string = getenv(ENV_FILE);
     if(env_string && *env_string!='\0')
     {
         if(!strcmp(env_string, "stderr"))
@@ -324,19 +323,14 @@ BOOL DBG_init_channels(void)
                         "variable!\n", env_string);
             }
         }
-    } 
-    else 
+    }
+    else
     {
         output_file = stderr; /* output to stderr by default */
     }
 
-    if(env_string)
-    {
-        PAL_free(env_string);
-    }
-
     /* see if we need to disable assertions */
-    env_string = EnvironGetenv(ENV_ASSERTS);
+    env_string = getenv(ENV_ASSERTS);
     if(env_string && 0 == strcmp(env_string,"1"))
     {
         g_Dbg_asserts_enabled = FALSE;
@@ -346,17 +340,11 @@ BOOL DBG_init_channels(void)
         g_Dbg_asserts_enabled = TRUE;
     }
 
-    if(env_string)
-    {
-        PAL_free(env_string);
-    }
-
     /* select ENTRY level limitation */
-    env_string = EnvironGetenv(ENV_ENTRY_LEVELS);
+    env_string = getenv(ENV_ENTRY_LEVELS);
     if(env_string)
     {
         max_entry_level = atoi(env_string);
-        PAL_free(env_string);
     }
     else
     {
@@ -368,12 +356,13 @@ BOOL DBG_init_channels(void)
     {
         if ((ret = pthread_key_create(&entry_level_key,NULL)) != 0)
         {
-            fprintf(stderr, "ERROR : pthread_key_create() failed error:%d (%s)\n", 
+            fprintf(stderr, "ERROR : pthread_key_create() failed error:%d (%s)\n",
                    ret, strerror(ret));
-            DeleteCriticalSection(&fprintf_crit_section);;
             return FALSE;
         }
     }
+
+    InternalInitializeCriticalSection(&fprintf_crit_section);
 
     return TRUE;
 }
@@ -392,7 +381,7 @@ void DBG_close_channels()
     {
         if (fclose(output_file) != 0)
         {
-            fprintf(stderr, "ERROR : fclose() failed errno:%d (%s)\n", 
+            fprintf(stderr, "ERROR : fclose() failed errno:%d (%s)\n",
                    errno, strerror(errno));
         }
     }
@@ -416,7 +405,6 @@ void DBG_close_channels()
 }
 
 
-#ifdef FEATURE_PAL_SXS
 static const void *DBG_get_module_id()
 {
     static const void *s_module_id = NULL;
@@ -437,10 +425,6 @@ static const void *DBG_get_module_id()
 
 #define MODULE_ID DBG_get_module_id,
 #define MODULE_FORMAT "-%p"
-#else
-#define MODULE_ID
-#define MODULE_FORMAT
-#endif // FEATURE_PAL_SXS
 
 /*++
 Function :
@@ -470,66 +454,86 @@ Notes :
 int DBG_printf(DBG_CHANNEL_ID channel, DBG_LEVEL_ID level, BOOL bHeader,
                LPCSTR function, LPCSTR file, INT line, LPCSTR format, ...)
 {
-    CHAR *buffer = (CHAR*)alloca(DBG_BUFFER_SIZE);
+    struct ErrnoHolder
+    {
+        int value;
+        ErrnoHolder() : value(errno) { }
+        ~ErrnoHolder()
+        {
+            errno = value;
+        }
+    } errno_holder;
+
     CHAR indent[MAX_NESTING+1];
-    LPSTR buffer_ptr;
-    INT output_size;
-    va_list args;
-    void *thread_id;
-    int old_errno = 0;
-
-    old_errno = errno;
-
     if(!DBG_get_indent(level, format, indent))
     {
+        // Note: we will drop log messages here if the indent gets too high, and we won't print
+        //       an error when this occurs.
         return 1;
     }
 
-    thread_id = (void *)THREADSilentGetCurrentThreadId();
+    void *thread_id = (void *)THREADSilentGetCurrentThreadId();
 
+    CHAR buffer[DBG_BUFFER_SIZE];
+    INT output_size;
     if(bHeader)
     {
         /* Print file instead of function name for ENTRY messages, because those
            already include the function name */
         /* also print file name for ASSERTs, to match Win32 behavior */
+        LPCSTR location;
         if( DLI_ENTRY == level || DLI_ASSERT == level || DLI_EXIT == level)
-        {
-            output_size=snprintf(buffer, DBG_BUFFER_SIZE,
-                                 "{%p" MODULE_FORMAT "} %-5s [%-7s] at %s.%d: ",
-                                 thread_id, MODULE_ID
-                                 dbg_level_names[level], dbg_channel_names[channel], file, line);
-        }
+            location = file;
         else
+            location = function;
+        output_size=snprintf(buffer, DBG_BUFFER_SIZE,
+                             "{%p" MODULE_FORMAT "} %-5s [%-7s] at %s.%d: ",
+                             thread_id, MODULE_ID
+                             dbg_level_names[level], dbg_channel_names[channel], location, line);
+        if( output_size < 0)
         {
-            output_size=snprintf(buffer, DBG_BUFFER_SIZE,
-                                 "{%p" MODULE_FORMAT "} %-5s [%-7s] at %s.%d: ",
-                                 thread_id, MODULE_ID
-                                 dbg_level_names[level], dbg_channel_names[channel], function, line);
+            fprintf(stderr, "ERROR : DBG_printf: snprintf header failed errno:%d (%s)\n", errno, strerror(errno));
+            output_size = 0; // don't return, just drop the header from the log message
         }
-
-        if(output_size + 1 > DBG_BUFFER_SIZE)
+        else if (output_size > DBG_BUFFER_SIZE)
         {
-            fprintf(stderr, "ERROR : buffer overflow in DBG_printf");
-            return 1;
+            output_size = DBG_BUFFER_SIZE;
         }
-        
-        buffer_ptr=buffer+output_size;
     }
     else
     {
-        buffer_ptr = buffer;
         output_size = 0;
     }
 
-    va_start(args, format);
-
-    output_size+=_vsnprintf_s(buffer_ptr, DBG_BUFFER_SIZE-output_size, _TRUNCATE,
-                              format, args);
-    va_end(args);
-
-    if( output_size > DBG_BUFFER_SIZE )
     {
-        fprintf(stderr, "ERROR : buffer overflow in DBG_printf");
+        va_list args;
+        va_start(args, format);
+        INT result = _vsnprintf_s(buffer+output_size, DBG_BUFFER_SIZE-output_size, _TRUNCATE,
+                                  format, args);
+        va_end(args);
+        if( result < 0 )
+        {
+            // if we didn't get data from _vsnprintf_s, print an error and exit
+            if ( output_size == 0 || buffer[output_size] == '\0' )
+            {
+                fprintf(stderr, "ERROR : DBG_printf: vsnprintf_s failed errno:%d (%s)\n", errno, strerror(errno));
+                return 1;
+            }
+            else if (output_size < DBG_BUFFER_SIZE)
+            {
+                fprintf(stderr, "ERROR : DBG_printf: message truncated, vsnprintf_s failed errno:%d (%s)\n", errno, strerror(errno));
+                // do not return, print what we have
+            }
+        }
+        else
+        {
+            output_size+=result;
+        }
+    }
+
+    if( output_size >= DBG_BUFFER_SIZE )
+    {
+        fprintf(stderr, "ERROR : DBG_printf: message truncated");
     }
 
     /* Use a Critical section before calling printf code to
@@ -551,12 +555,6 @@ int DBG_printf(DBG_CHANNEL_ID channel, DBG_LEVEL_ID level, BOOL bHeader,
     if ( level == DLI_ASSERT )
         PAL_DisplayDialog("PAL ASSERT", buffer);
 
-    if ( old_errno != errno )
-    {
-        fprintf( stderr,"ERROR: errno changed by DBG_printf\n" );
-        errno = old_errno;
-    }
-
     return 1;
 }
 
@@ -566,22 +564,22 @@ Function :
 
     generate an indentation string to be used for message output
 
-Parameters :                                  
+Parameters :
     DBG_LEVEL_ID level  : level of message (DLI_ENTRY, etc)
     const char *format  : printf format string of message
     char *indent_string : destination for indentation string
 
 Return value :
     TRUE if output can proceed, FALSE otherwise
-    
+
 Notes:
-As a side-effect, this function updates the ENTRY nesting level for the current 
-thread : it decrements it if 'format' contains the string 'return', increments 
-it otherwise (but only if 'level' is DLI_ENTRY). The function will return 
+As a side-effect, this function updates the ENTRY nesting level for the current
+thread : it decrements it if 'format' contains the string 'return', increments
+it otherwise (but only if 'level' is DLI_ENTRY). The function will return
 FALSE if the current nesting level is beyond our treshold (max_nesting_level);
 it always returns TRUE for other message levels
 --*/
-static BOOL DBG_get_indent(DBG_LEVEL_ID level, const char *format, 
+static BOOL DBG_get_indent(DBG_LEVEL_ID level, const char *format,
                            char *indent_string)
 {
     int ret;
@@ -659,7 +657,7 @@ Parameters :
 
 Return value :
     nesting level at the time the function was called
-    
+
 Notes:
 if new_level is -1, the nesting level will not be modified
 --*/
@@ -696,17 +694,17 @@ enum CheckAlignmentMode
 {
     // special value to indicate we've not initialized yet
     CheckAlignment_Uninitialized    = -1,
-    
+
     CheckAlignment_Off              = 0,
     CheckAlignment_On               = 1,
-    
+
     CheckAlignment_Default          = CheckAlignment_On
 };
 
 bool DBG_ShouldCheckStackAlignment()
 {
     static CheckAlignmentMode caMode = CheckAlignment_Uninitialized;
-    
+
     if (caMode == CheckAlignment_Uninitialized)
     {
         char* checkAlignmentSettings;
@@ -731,7 +729,7 @@ bool DBG_ShouldCheckStackAlignment()
             free(checkAlignmentSettings);
         }
     }
-    
+
     return caMode == CheckAlignment_On;
 }
 #endif // _DEBUG && __APPLE__
@@ -745,10 +743,10 @@ static const char * PAL_DISPLAY_DIALOG = "PAL_DisplayDialog";
 enum DisplayDialogMode
 {
     DisplayDialog_Uninitialized = -1,
-    
+
     DisplayDialog_Suppress = 0,
     DisplayDialog_Show = 1,
-    
+
     DisplayDialog_Default = DisplayDialog_Suppress,
 };
 
@@ -764,7 +762,7 @@ Function :
 void PAL_DisplayDialog(const char *szTitle, const char *szText)
 {
     static DisplayDialogMode dispDialog = DisplayDialog_Uninitialized;
-    
+
     if (dispDialog == DisplayDialog_Uninitialized)
     {
         char* displayDialog = EnvironGetenv(PAL_DISPLAY_DIALOG);
@@ -778,7 +776,7 @@ void PAL_DisplayDialog(const char *szTitle, const char *szText)
             case 0:
                 dispDialog = DisplayDialog_Suppress;
                 break;
-            
+
             case 1:
                 dispDialog = DisplayDialog_Show;
                 break;
@@ -791,7 +789,7 @@ void PAL_DisplayDialog(const char *szTitle, const char *szText)
         }
         else
             dispDialog = DisplayDialog_Default;
-                
+
         if (dispDialog == DisplayDialog_Show)
         {
             // We may not be allowed to show.
@@ -804,10 +802,10 @@ void PAL_DisplayDialog(const char *szTitle, const char *szText)
                 dispDialog = DisplayDialog_Suppress;
         }
     }
-    
+
     if (dispDialog == DisplayDialog_Suppress)
         return;
-        
+
     CFStringRef cfsTitle = CFStringCreateWithCString(kCFAllocatorDefault,
                                                      szTitle,
                                                      kCFStringEncodingUTF8);

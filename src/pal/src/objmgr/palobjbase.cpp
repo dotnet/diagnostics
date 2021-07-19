@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -80,7 +79,7 @@ CPalObjectBase::Initialize(
             ERROR("Unable to initialize local data lock!\n");
             goto IntializeExit;
         }
-        
+
         m_pvLocalData = InternalMalloc(m_pot->GetProcessLocalDataSize());
         if (NULL != m_pvLocalData)
         {
@@ -120,7 +119,7 @@ CPalObjectBase::GetObjectType(
 {
     ENTRY("CPalObjectBase::GetObjectType(this = %p)\n", this);
     LOGEXIT("CPalObjectBase::GetObjectType returns %p\n", m_pot);
-    
+
     return m_pot;
 }
 
@@ -138,7 +137,7 @@ CPalObjectBase::GetObjectAttributes(
 {
     ENTRY("CPalObjectBase::GetObjectAttributes(this = %p)\n", this);
     LOGEXIT("CPalObjectBase::GetObjectAttributes returns %p\n", &m_oa);
-    
+
     return &m_oa;
 }
 
@@ -159,13 +158,13 @@ CPalObjectBase::GetImmutableData(
     )
 {
     _ASSERTE(NULL != ppvImmutableData);
-    
+
     ENTRY("CPalObjectBase::GetImmutableData"
         "(this = %p, ppvImmutableData = %p)\n",
         this,
         ppvImmutableData
         );
-    
+
     _ASSERTE(0 < m_pot->GetImmutableDataSize());
 
     *ppvImmutableData = m_pvImmutableData;
@@ -202,7 +201,7 @@ CPalObjectBase::GetProcessLocalData(
     _ASSERTE(ReadLock == eLockRequest || WriteLock == eLockRequest);
     _ASSERTE(NULL != ppDataLock);
     _ASSERTE(NULL != ppvProcessLocalData);
-    
+
     ENTRY("CPalObjectBase::GetProcessLocalData"
         "(this = %p, pthr = %p, eLockRequest = %d, ppDataLock = %p,"
         " ppvProcessLocalData = %p)\n",
@@ -212,14 +211,14 @@ CPalObjectBase::GetProcessLocalData(
         ppDataLock,
         ppvProcessLocalData
         );
-    
+
     _ASSERTE(0 < m_pot->GetProcessLocalDataSize());
 
     m_sdlLocalData.AcquireLock(pthr, ppDataLock);
     *ppvProcessLocalData = m_pvLocalData;
 
     LOGEXIT("CPalObjectBase::GetProcessLocalData returns %d\n", NO_ERROR);
-    
+
     return NO_ERROR;
 }
 
@@ -276,7 +275,7 @@ CPalObjectBase::ReleaseReference(
 
     AcquireObjectDestructionLock(pthr);
 
-    _ASSERTE(m_lRefCount > 0); 
+    _ASSERTE(m_lRefCount > 0);
 
     //
     // Even though object destruction takes place under a lock
@@ -329,7 +328,7 @@ CPalObjectBase::ReleaseReference(
         pthr->ReleaseThreadReference();
     }
     else
-    {       
+    {
         ReleaseObjectDestructionLock(pthr, FALSE);
     }
 

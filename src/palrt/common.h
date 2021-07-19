@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 //*****************************************************************************
 // common.h
 //
@@ -16,5 +15,5 @@
 #include <windows.h>
 #include "palclr.h"
 #include "shlwapip.h"
-
+#include <minipal/utils.h>
 #endif // _COMMON_H_

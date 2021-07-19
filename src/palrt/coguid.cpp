@@ -1,16 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 //
 
 //
 // ===========================================================================
 // File: coguid.cpp
-// 
+//
 // misc guid functions for PALRT
 // ===========================================================================
 
-#include "common.h" 
+#include "common.h"
 
 STDAPI_(int) StringFromGUID2(REFGUID rguid, LPOLESTR lptsz, int cchMax)
 {
@@ -134,7 +133,7 @@ static BOOL wUUIDFromString(LPCWSTR lpsz, GUID * pguid)
     if (!HexStringToDword(lpsz, dw, sizeof(BYTE)*2, 0))
         return FALSE;
     pguid->Data4[3] = (BYTE)dw;
- 
+
     if (!HexStringToDword(lpsz, dw, sizeof(BYTE)*2, 0))
         return FALSE;
     pguid->Data4[4] = (BYTE)dw;
