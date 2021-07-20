@@ -32,5 +32,6 @@
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
   </ItemGroup>
 </Project>

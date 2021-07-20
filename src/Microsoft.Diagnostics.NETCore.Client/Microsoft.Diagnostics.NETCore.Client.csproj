@@ -25,6 +25,7 @@
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <!-- Temporary until Diagnostic Apis are finalized-->
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
     <InternalsVisibleTo Include="dotnet-counters" />
     <InternalsVisibleTo Include="dotnet-trace" />

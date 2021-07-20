@@ -224,14 +224,36 @@ public static void PrintEventsLive(int processId)
 
 This sample shows how to attach an ICorProfiler to a process (profiler attach).
 ```cs
-public static int AttachProfiler(int processId, Guid profilerGuid, string profilerPath)
+public static void AttachProfiler(int processId, Guid profilerGuid, string profilerPath)
 {
     var client = new DiagnosticsClient(processId);
-    return client.AttachProfiler(TimeSpan.FromSeconds(10), profilerGuid, profilerPath);
+    client.AttachProfiler(TimeSpan.FromSeconds(10), profilerGuid, profilerPath);
 }
 ```
 
+#### 8. Set an ICorProfiler to be used as the startup profiler
 
+This sample shows how to request that the runtime use an ICorProfiler as the startup profiler (not as an attaching profiler). It is only valid to issue this command while the runtime is paused in "reverse server" mode.
+
+```cs
+public static void SetStartupProfilerProfiler(Guid profilerGuid, string profilerPath)
+{
+    var client = new DiagnosticsClient(processId);
+    client.SetStartupProfiler(profilerGuid, profilerPath);
+}
+```
+
+#### 9. Resume the runtime when it is paused in reverse server mode
+
+This sample shows how a client can instruct the runtime to resume loading after it has been paused in "reverse server" mode.
+
+```cs
+public static void ResumeRuntime(Guid profilerGuid, string profilerPath)
+{
+    var client = new DiagnosticsClient(processId);
+    client.ResumeRuntime();
+}
+```
 
 ## API Description
 

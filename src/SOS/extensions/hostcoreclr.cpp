@@ -22,6 +22,11 @@
 #include <mach-o/dyld.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #include "palclr.h"
 #include "arrayholder.h"
 #include "coreclrhost.h"
@@ -412,8 +417,8 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         else 
         {
 #ifdef FEATURE_PAL
-#if defined (__FreeBSD__) || defined(__NetBSD__)
-            TraceError("Hosting on FreeBSD or NetBSD not supported\n");
+#if defined(__NetBSD__)
+            TraceError("Hosting on NetBSD not supported\n");
             return E_FAIL;
 #else
             char* line = nullptr;
@@ -446,7 +451,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
                     }
                 }
             }
-#endif // defined (__FreeBSD__) || defined(__NetBSD__)
+#endif // defined(__NetBSD__)
 #else
             ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
             if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)

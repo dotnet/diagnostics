@@ -7,7 +7,7 @@ namespace Microsoft.Diagnostics.DebugServices
 	/// <summary>
 	/// Details about a register
 	/// </summary>
-    public struct RegisterInfo
+    public readonly struct RegisterInfo
     {
         public readonly int RegisterIndex;
         public readonly int RegisterOffset;

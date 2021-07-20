@@ -64,7 +64,7 @@ namespace SOS.Extensions
 
             public override uint? IndexTimeStamp { get; }
 
-            public override VersionInfo? Version
+            public override VersionData VersionData
             {
                 get
                 {
@@ -77,7 +77,7 @@ namespace SOS.Extensions
                             int minor = (int)fileInfo.dwFileVersionMS & 0xffff;
                             int revision = (int)fileInfo.dwFileVersionLS >> 16;
                             int patch = (int)fileInfo.dwFileVersionLS & 0xffff;
-                            base.Version = new VersionInfo(major, minor, revision, patch);
+                            base.VersionData = new VersionData(major, minor, revision, patch);
                         }
                         else
                         {
@@ -87,7 +87,7 @@ namespace SOS.Extensions
                             }
                         }
                     }
-                    return base.Version;
+                    return base.VersionData;
                 }
             }
 

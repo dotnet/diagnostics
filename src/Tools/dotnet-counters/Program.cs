@@ -22,8 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName, string port);
-        delegate Task<int> MonitorDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string processName, string port);
+        delegate Task<int> CollectDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName, string port, bool resumeRuntime);
+        delegate Task<int> MonitorDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string processName, string port, bool resumeRuntime);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((MonitorDelegate)new CounterMonitor().Monitor).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption(), DiagnosticPortOption(),
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption(), DiagnosticPortOption(), ResumeRuntimeOption()
             };
         
         private static Command CollectCommand() =>
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption(), DiagnosticPortOption()
+                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption(), DiagnosticPortOption(), ResumeRuntimeOption()
             };
 
         private static Option NameOption() =>
@@ -122,9 +122,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option DiagnosticPortOption() =>
             new Option(
                 alias: "--diagnostic-port",
-                description: "The path to diagnostic port")
+                description: "The path to diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")
+            };
+
+        private static Option ResumeRuntimeOption() =>
+            new Option(
+                alias: "--resume-runtime",
+                description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
+            {
+                Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

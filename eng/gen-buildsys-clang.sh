@@ -29,6 +29,12 @@ elif command -v "clang$2$3" > /dev/null
 elif command -v "clang-$2$3" > /dev/null
     then
         desired_llvm_version="-$2$3"
+elif command -v "clang-$2" > /dev/null
+    then
+        desired_llvm_version="-$2"
+elif command -v "clang$2" > /dev/null
+    then
+        desired_llvm_version="$2"
 elif command -v clang > /dev/null
     then
         desired_llvm_version=

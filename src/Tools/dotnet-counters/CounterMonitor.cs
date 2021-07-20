@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private string _output;
         private bool pauseCmdSet;
         private ManualResetEvent shouldExit;
-        private bool shouldResumeRuntime;
+        private bool _resumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
 
@@ -91,11 +91,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.Stop();
         }
 
-        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort)
+        public async Task<int> Monitor(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string name, string diagnosticPort, bool resumeRuntime)
         {
             if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
-                return 0;
+                return ReturnCode.ArgumentError;
             }
             shouldExit = new ManualResetEvent(false);
             _ct.Register(() => shouldExit.Set());
@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 if (holder == null)
                 {
-                    return 1;
+                    return ReturnCode.Ok;
                 }
                 try
                 {
@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _interval = refreshInterval;
                     _renderer = new ConsoleWriter();
                     _diagnosticsClient = holder.Client;
-                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+                    _resumeRuntime = resumeRuntime;
                     int ret = await Start();
                     ProcessLauncher.Launcher.Cleanup();
                     return ret;
@@ -129,17 +129,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     catch (Exception) { } // Swallow all exceptions for now.
 
                     console.Out.WriteLine($"Complete");
-                    return 1;
+                    return ReturnCode.Ok;
                 }
             }
         }
 
 
-        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort)
+        public async Task<int> Collect(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string name, string diagnosticPort, bool resumeRuntime)
         {
             if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
             {
-                return 0;
+                return ReturnCode.ArgumentError;
             }
 
             shouldExit = new ManualResetEvent(false);
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 if (holder == null)
                 {
-                    return 1;
+                    return ReturnCode.Ok;
                 }
 
                 try
@@ -164,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     if (_output.Length == 0)
                     {
                         _console.Error.WriteLine("Output cannot be an empty string");
-                        return 0;
+                        return ReturnCode.ArgumentError;
                     }
                     if (format == CountersExportFormat.csv)
                     {
@@ -188,9 +188,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else
                     {
                         _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                        return 0;
+                        return ReturnCode.ArgumentError;
                     }
-                    shouldResumeRuntime = ProcessLauncher.Launcher.HasChildProc || !string.IsNullOrEmpty(diagnosticPort);
+                    _resumeRuntime = resumeRuntime;
                     int ret = await Start();
                     return ret;
                 }
@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _session.Stop();
                     }
                     catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
-                    return 1;
+                    return ReturnCode.Ok;
                 }
             }
         }
@@ -332,7 +332,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string providerString = BuildProviderString();
             if (providerString.Length == 0)
             {
-                return 1;
+                return ReturnCode.ArgumentError;
             }
 
             _renderer.Initialize();
@@ -341,9 +341,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
-                    if (shouldResumeRuntime)
+                    if (_resumeRuntime)
                     {
-                        _diagnosticsClient.ResumeRuntime();
+                        try
+                        {
+                            _diagnosticsClient.ResumeRuntime();
+                        }
+                        catch (UnsupportedCommandException)
+                        {
+                            // Noop if the command is unknown since the target process is most likely a 3.1 app.
+                        }
                     }
                     var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
@@ -373,7 +380,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     if (shouldExit.WaitOne(250))
                     {
                         StopMonitor();
-                        return 0;
+                        return ReturnCode.Ok;
                     }
                     if (Console.KeyAvailable)
                     {
@@ -395,7 +402,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pauseCmdSet = false;
                 }
             }
-            return await Task.FromResult(0);
+            return await Task.FromResult(ReturnCode.Ok);
         }
     }
 }

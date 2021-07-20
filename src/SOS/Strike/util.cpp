@@ -4741,6 +4741,7 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
     "<exec cmd=\"!DumpRCW -cw /d %s\">%s</exec>",    // DML_ComWrapperRCW
     "<exec cmd=\"!DumpCCW -cw /d %s\">%s</exec>",    // DML_ComWrapperCCW
+    "<exec cmd=\"dps %s L%d\">%s</exec>",            // DML_TaggedMemory
 };
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len)
@@ -4774,6 +4775,29 @@ CachedString Output::BuildHexValue(CLRDATA_ADDRESS addr, FormatType type, bool f
         char hex[POINTERSIZE_BYTES*2 + 1];
         GetHex(addr, hex, _countof(hex), fill);
         sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], hex, hex);
+    }
+    else
+    {
+        GetHex(addr, ret, ret.GetStrLen(), fill);
+    }
+
+    return ret;
+}
+
+CachedString Output::BuildHexValueWithLength(CLRDATA_ADDRESS addr, size_t len, FormatType type, bool fill)
+{
+    CachedString ret;
+    if (ret.IsOOM())
+    {
+        ReportOOM();
+        return ret;
+    }
+
+    if (IsDMLEnabled())
+    {
+        char hex[POINTERSIZE_BYTES*2 + 1];
+        GetHex(addr, hex, _countof(hex), fill);
+        sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], hex, len, hex);
     }
     else
     {
