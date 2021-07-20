@@ -343,7 +343,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     _session = _diagnosticsClient.StartEventPipeSession(Trace.Extensions.ToProviders(providerString), false, 10);
                     if (_resumeRuntime)
                     {
-                        _diagnosticsClient.ResumeRuntime();
+                        try
+                        {
+                            _diagnosticsClient.ResumeRuntime();
+                        }
+                        catch (UnsupportedCommandException)
+                        {
+                            // Noop if the command is unknown since the target process is most likely a 3.1 app.
+                        }
                     }
                     var source = new EventPipeEventSource(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;

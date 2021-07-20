@@ -222,7 +222,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
                             if (resumeRuntime)
                             {
-                                diagnosticsClient.ResumeRuntime();
+                                try
+                                {
+                                    diagnosticsClient.ResumeRuntime();
+                                }
+                                catch (UnsupportedCommandException)
+                                {
+                                    // Noop if command is unsupported, since the target is most likely a 3.1 app.
+                                }
                             }
                         }
                         catch (DiagnosticsClientException e)
