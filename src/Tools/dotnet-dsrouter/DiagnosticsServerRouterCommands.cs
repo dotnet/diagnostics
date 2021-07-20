@@ -5,6 +5,9 @@
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
         }
 
-        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -69,7 +72,22 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            var logger = factory.CreateLogger("dotnet-dsrouter");
+
+            TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode. Ignoring --forward-port argument.");
+                }
+            }
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -91,7 +109,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
             checkLoopbackOnly(tcpServer);
 
@@ -112,7 +130,25 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            var logger = factory.CreateLogger("dotnet-dsrouter");
+
+            TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode. Ignoring --forward-port argument.");
+                }
+            }
+
+            if (string.IsNullOrEmpty(ipcServer))
+                ipcServer = GetDefaultIpcServerPath(logger);
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -134,7 +170,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose)
+        public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
@@ -153,7 +189,26 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             Launcher.Verbose = logLevel != LogLevel.Information;
             Launcher.CommandToken = token;
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, factory.CreateLogger("dotnet-dsrounter"), Launcher);
+            var logger = factory.CreateLogger("dotnet-dsrouter");
+
+            TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
+                }
+                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Ignoring --forward-port argument.");
+                }
+            }
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
@@ -173,6 +228,105 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
 
             return routerTask.Result;
+        }
+
+        public async Task<int> RunIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
+        {
+            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+
+            LogLevel logLevel = LogLevel.Information;
+            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Debug;
+            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Trace;
+
+            using var factory = new LoggerFactory();
+            factory.AddConsole(logLevel, false);
+
+            Launcher.SuspendProcess = true;
+            Launcher.ConnectMode = false;
+            Launcher.Verbose = logLevel != LogLevel.Information;
+            Launcher.CommandToken = token;
+
+            var logger = factory.CreateLogger("dotnet-dsrouter");
+
+            TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
+                }
+                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Ignoring --forward-port argument.");
+                }
+            }
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
+
+            while (!linkedCancelToken.IsCancellationRequested)
+            {
+                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
+                    break;
+
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
+                {
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
+                    {
+                        cancelRouterTask.Cancel();
+                        break;
+                    }
+                }
+            }
+
+            return routerTask.Result;
+        }
+
+        static string GetDefaultIpcServerPath(ILogger logger)
+        {
+            int processId = Process.GetCurrentProcess().Id;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
+                if (File.Exists(path))
+                {
+                    logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set COMPlus_EnableDiagnostics=0 and re-run.");
+
+                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}");
+                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
+                }
+
+                return path.Substring(PidIpcEndpoint.IpcRootPath.Length);
+            }
+            else
+            {
+                DateTime unixEpoch;
+#if NETCOREAPP2_1_OR_GREATER
+                unixEpoch = DateTime.UnixEpoch;
+#else
+                unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+#endif
+                TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
+
+                var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
+                if (Directory.GetFiles(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket").Length != 0)
+                {
+                    logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set COMPlus_EnableDiagnostics=0 and re-run.");
+
+                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
+                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
+                }
+
+                return path;
+            }
         }
 
         static void checkLoopbackOnly(string tcpServer)

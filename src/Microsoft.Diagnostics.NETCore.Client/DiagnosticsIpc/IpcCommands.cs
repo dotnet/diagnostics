@@ -51,6 +51,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum ProfilerCommandId : byte
     {
         AttachProfiler = 0x01,
+        StartupProfiler = 0x02,
     }
 
     internal enum ProcessCommandId : byte
@@ -58,5 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         GetProcessInfo = 0x00,
         ResumeRuntime  = 0x01,
         GetProcessEnvironment = 0x02,
+        SetEnvironmentVariable = 0x03,
+        GetProcessInfo2 = 0x04
     }
 }

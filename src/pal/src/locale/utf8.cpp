@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -11,7 +10,7 @@ Module Name:
     unicode/utf8.c
 
 Abstract:
-    Functions to encode and decode UTF-8 strings. This is a port of the C# version from mscorlib.
+    Functions to encode and decode UTF-8 strings. This is a port of the C# version from Utf8Encoding.cs.
 
 Revision History:
 
@@ -25,6 +24,10 @@ Revision History:
 using namespace CorUnix;
 
 #define FASTLOOP
+
+#ifndef COUNTOF
+#define COUNTOF(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 struct CharUnicodeInfo
 {
@@ -48,7 +51,7 @@ struct Char
         return (c & 0xFC00) == CharUnicodeInfo::LOW_SURROGATE_START;
     }
 
-    // Test if the wide character is a low surrogate
+    // Test if the wide character is a surrogate half
     static bool IsSurrogate(const WCHAR c)
     {
         return (c & 0xF800) == CharUnicodeInfo::HIGH_SURROGATE_START;
@@ -66,7 +69,7 @@ struct Char
         return IsLowSurrogate(s[index]);
     }
 
-    // Test if the wide character is a low surrogate
+    // Test if the wide character is a surrogate half
     static bool IsSurrogate(const WCHAR* s, int index)
     {
         return IsSurrogate(s[index]);
@@ -229,7 +232,7 @@ public:
         if (bFoundHigh)
             throw ArgumentException("String 'replacement' contains invalid Unicode code points.", "replacement");
 
-        wcscpy_s(strDefault, sizeof(strDefault), replacement);
+        wcscpy_s(strDefault, COUNTOF(strDefault), replacement);
         strDefaultLength = replacementLength;
     }
 
@@ -331,7 +334,7 @@ protected:
                     else
                     {
                         // Low surrogate
-                        if (bHighSurrogate == false)
+                        if (!bHighSurrogate)
                             throw ArgumentException("String 'chars' contains invalid Unicode code points.");
                         bHighSurrogate = false;
                     }
@@ -387,7 +390,7 @@ protected:
                     else
                     {
                         // Low surrogate
-                        if (bHighSurrogate == false)
+                        if (!bHighSurrogate)
                             throw ArgumentException("String 'chars' contains invalid Unicode code points.");
                         bHighSurrogate = false;
                     }
@@ -426,7 +429,7 @@ public:
     // Construction
     DecoderReplacementFallbackBuffer(DecoderReplacementFallback* fallback)
     {
-        wcscpy_s(strDefault, sizeof(strDefault), fallback->GetDefaultString());
+        wcscpy_s(strDefault, COUNTOF(strDefault), fallback->GetDefaultString());
         strDefaultLength = PAL_wcslen((const WCHAR *)fallback->GetDefaultString());
     }
 
@@ -615,7 +618,7 @@ public:
     WCHAR GetCharUnknownHigh()
     {
         return (charUnknownHigh);
-    }   
+    }
 
     WCHAR GetCharUnknownLow()
     {
@@ -706,7 +709,7 @@ public:
         if (bFoundHigh)
             throw ArgumentException("String 'replacement' contains invalid Unicode code points.", "replacement");
 
-        wcscpy_s(strDefault, sizeof(strDefault), replacement);
+        wcscpy_s(strDefault, COUNTOF(strDefault), replacement);
         strDefaultLength = replacementLength;
     }
 
@@ -878,8 +881,8 @@ public:
     EncoderReplacementFallbackBuffer(EncoderReplacementFallback* fallback)
     {
         // 2X in case we're a surrogate pair
-        wcscpy_s(strDefault, sizeof(strDefault), fallback->GetDefaultString());
-        wcscat_s(strDefault, sizeof(strDefault), fallback->GetDefaultString());
+        wcscpy_s(strDefault, COUNTOF(strDefault), fallback->GetDefaultString());
+        wcscat_s(strDefault, COUNTOF(strDefault), fallback->GetDefaultString());
         strDefaultLength = 2 * PAL_wcslen((const WCHAR *)fallback->GetDefaultString());
 
     }
@@ -1134,8 +1137,8 @@ class UTF8Encoding
     {
         // Get our byte[]
         BYTE* pStart = *pSrc;
-        BYTE* bytesUnknown;        
-        int size = GetBytesUnknown(pStart, ch,  &bytesUnknown);
+        BYTE bytesUnknown[3];
+        int size = GetBytesUnknown(pStart, ch, bytesUnknown);
 
         // Do the actual fallback
         if (!fallback->InternalFallback(bytesUnknown, *pSrc, pTarget, size))
@@ -1152,8 +1155,8 @@ class UTF8Encoding
     int FallbackInvalidByteSequence(BYTE* pSrc, int ch, DecoderFallbackBuffer *fallback)
     {
         // Get our byte[]
-        BYTE *bytesUnknown;
-        int size = GetBytesUnknown(pSrc, ch, &bytesUnknown);
+        BYTE bytesUnknown[3];
+        int size = GetBytesUnknown(pSrc, ch, bytesUnknown);
 
         // Do the actual fallback
         int count = fallback->InternalFallback(bytesUnknown, pSrc, size);
@@ -1164,24 +1167,23 @@ class UTF8Encoding
         return count;
     }
 
-    int GetBytesUnknown(BYTE* pSrc, int ch, BYTE **bytesUnknown)
+    int GetBytesUnknown(BYTE* pSrc, int ch, BYTE* bytesUnknown)
     {
         int size;
-        BYTE bytes[3];
 
         // See if it was a plain char
         // (have to check >= 0 because we have all sorts of wierd bit flags)
         if (ch < 0x100 && ch >= 0)
         {
             pSrc--;
-            bytes[0] = (BYTE)ch;
+            bytesUnknown[0] = (BYTE)ch;
             size =  1;
         }
         // See if its an unfinished 2 byte sequence
         else if ((ch & (SupplimentarySeq | ThreeByteSeq)) == 0)
         {
             pSrc--;
-            bytes[0] = (BYTE)((ch & 0x1F) | 0xc0);
+            bytesUnknown[0] = (BYTE)((ch & 0x1F) | 0xc0);
             size = 1;
         }
         // So now we're either 2nd byte of 3 or 4 byte sequence or
@@ -1194,24 +1196,24 @@ class UTF8Encoding
             {
                 // 3rd byte of 4 byte sequence
                 pSrc -= 3;
-                bytes[0] = (BYTE)(((ch >> 12) & 0x07) | 0xF0);
-                bytes[1] = (BYTE)(((ch >> 6) & 0x3F) | 0x80);
-                bytes[2] = (BYTE)(((ch)& 0x3F) | 0x80);
+                bytesUnknown[0] = (BYTE)(((ch >> 12) & 0x07) | 0xF0);
+                bytesUnknown[1] = (BYTE)(((ch >> 6) & 0x3F) | 0x80);
+                bytesUnknown[2] = (BYTE)(((ch)& 0x3F) | 0x80);
                 size = 3;
             }
             else if ((ch & (FinalByte >> 12)) != 0)
             {
                 // 2nd byte of a 4 byte sequence
                 pSrc -= 2;
-                bytes[0] = (BYTE)(((ch >> 6) & 0x07) | 0xF0);
-                bytes[1] = (BYTE)(((ch)& 0x3F) | 0x80);
+                bytesUnknown[0] = (BYTE)(((ch >> 6) & 0x07) | 0xF0);
+                bytesUnknown[1] = (BYTE)(((ch)& 0x3F) | 0x80);
                 size = 2;
             }
             else
             {
                 // 4th byte of a 4 byte sequence
                 pSrc--;
-                bytes[0] = (BYTE)(((ch)& 0x07) | 0xF0);
+                bytesUnknown[0] = (BYTE)(((ch)& 0x07) | 0xF0);
                 size = 1;
             }
         }
@@ -1222,20 +1224,19 @@ class UTF8Encoding
             {
                 // So its 2nd byte of a 3 byte sequence
                 pSrc -= 2;
-                bytes[0] = (BYTE)(((ch >> 6) & 0x0F) | 0xE0);
-                bytes[1] = (BYTE)(((ch)& 0x3F) | 0x80);
+                bytesUnknown[0] = (BYTE)(((ch >> 6) & 0x0F) | 0xE0);
+                bytesUnknown[1] = (BYTE)(((ch)& 0x3F) | 0x80);
                 size = 2;
             }
             else
             {
                 // 1st byte of a 3 byte sequence
                 pSrc--;
-                bytes[0] = (BYTE)(((ch)& 0x0F) | 0xE0);
+                bytesUnknown[0] = (BYTE)(((ch)& 0x0F) | 0xE0);
                 size = 1;
             }
         }
 
-        *bytesUnknown = bytes;
         return size;
     }
 
@@ -1280,7 +1281,7 @@ public:
         int ch = 0;
         DecoderFallbackBuffer *fallback = nullptr;
 
-        for (;;)
+        while (true)
         {
             // SLOWLOOP: does all range checks, handles all special cases, but it is slow
             if (pSrc >= pEnd) {
@@ -1463,7 +1464,7 @@ public:
                 }
 
                 // get pSrc 2-byte aligned
-                if (((int)pSrc & 0x1) != 0) {
+                if (((size_t)pSrc & 0x1) != 0) {
                     ch = *pSrc;
                     pSrc++;
                     if (ch > 0x7F) {
@@ -1472,7 +1473,7 @@ public:
                 }
 
                 // get pSrc 4-byte aligned
-                if (((int)pSrc & 0x2) != 0) {
+                if (((size_t)pSrc & 0x2) != 0) {
                     ch = *(USHORT*)pSrc;
                     if ((ch & 0x8080) != 0) {
                         goto LongCodeWithMask16;
@@ -1650,7 +1651,7 @@ public:
 
         DecoderFallbackBuffer *fallback = nullptr;
 
-        for (;;)
+        while (true)
         {
             // SLOWLOOP: does all range checks, handles all special cases, but it is slow
 
@@ -1737,7 +1738,7 @@ public:
                 fallback = decoderFallback->CreateFallbackBuffer();
                 fallback->InternalInitialize(bytes, pAllocatedBufferEnd);
             }
-            
+
             // That'll back us up the appropriate # of bytes if we didn't get anywhere
             if (!FallbackInvalidByteSequence(&pSrc, ch, fallback, &pTarget))
             {
@@ -1835,7 +1836,7 @@ public:
                 pSrc--;
 
                 // Throw that we don't have enough room (pSrc could be < chars if we had started to process
-                // a 4 byte sequence alredy)
+                // a 4 byte sequence already)
                 Contract::Assert(pSrc >= bytes || pTarget == chars,
                     "[UTF8Encoding.GetChars]Expected pSrc to be within input buffer or throw due to no output]");
                 ThrowCharsOverflow(pTarget == chars);
@@ -1902,7 +1903,7 @@ public:
                 pTarget++;
 
                 // get pSrc to be 2-byte aligned
-                if ((((int)pSrc) & 0x1) != 0) {
+                if ((((size_t)pSrc) & 0x1) != 0) {
                     ch = *pSrc;
                     pSrc++;
                     if (ch > 0x7F) {
@@ -1913,7 +1914,7 @@ public:
                 }
 
                 // get pSrc to be 4-byte aligned
-                if ((((int)pSrc) & 0x2) != 0) {
+                if ((((size_t)pSrc) & 0x2) != 0) {
                     ch = *(USHORT*)pSrc;
                     if ((ch & 0x8080) != 0) {
                         goto LongCodeWithMask16;
@@ -2040,7 +2041,7 @@ public:
 
                         // extra byte, we're already planning 2 chars for 2 of these bytes,
                         // but the big loop is testing the target against pStop, so we need
-                        // to subtract 2 more or we risk overrunning the input.  Subtract 
+                        // to subtract 2 more or we risk overrunning the input.  Subtract
                         // one here and one below.
                         pStop--;
                     }
@@ -2157,7 +2158,7 @@ public:
 
         // assume that JIT will enregister pSrc, pTarget and ch
 
-        for (;;) {
+        while (true) {
             // SLOWLOOP: does all range checks, handles all special cases, but it is slow
 
             if (pSrc >= pEnd) {
@@ -2522,7 +2523,7 @@ public:
             ch = 0;
         }
 
-        InternalDelete(fallbackBuffer); 
+        InternalDelete(fallbackBuffer);
 
         return (int)(pTarget - bytes);
     }
@@ -2540,7 +2541,7 @@ public:
 
         int ch = 0;
 
-        for (;;) {
+        while (true) {
             // SLOWLOOP: does all range checks, handles all special cases, but it is slow
             if (pSrc >= pEnd) {
 
@@ -2736,7 +2737,7 @@ public:
                 }
 
                 // get pSrc aligned
-                if (((int)pSrc & 0x2) != 0) {
+                if (((size_t)pSrc & 0x2) != 0) {
                     ch = *pSrc;
                     pSrc++;
                     if (ch > 0x7F)                                              // Not ASCII

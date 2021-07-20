@@ -17,11 +17,11 @@
     <MicrosoftNETCoreApp50Version>5.0.6</MicrosoftNETCoreApp50Version>
     <MicrosoftAspNetCoreApp50Version>$(MicrosoftNETCoreApp50Version)</MicrosoftAspNetCoreApp50Version>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.0-preview.6.21276.1</VSRedistCommonNetCoreSharedFrameworkx6460Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.0-preview.6.21276.1</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.0-preview.7.21361.10</VSRedistCommonNetCoreSharedFrameworkx6460Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.0-preview.7.21361.10</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-preview.6.21275.8</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>6.0.0-preview.6.21275.8</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-preview.7.21363.17</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>6.0.0-preview.7.21363.17</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>6.0.100-preview.1.21103.13</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
@@ -36,8 +36,8 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.0.226801</MicrosoftDiagnosticsRuntimeVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.226801</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.0.230301</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.230301</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>

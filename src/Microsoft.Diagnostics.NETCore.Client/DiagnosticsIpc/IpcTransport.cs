@@ -48,6 +48,59 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
 
+    internal class IpcEndpointHelper
+    {
+        public static Stream Connect(IpcEndpointConfig config, TimeSpan timeout)
+        {
+            if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+            {
+                var namedPipe = new NamedPipeClientStream(
+                    ".",
+                    config.Address,
+                    PipeDirection.InOut,
+                    PipeOptions.None,
+                    TokenImpersonationLevel.Impersonation);
+                namedPipe.Connect((int)timeout.TotalMilliseconds);
+                return namedPipe;
+            }
+            else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+            {
+                var socket = new IpcUnixDomainSocket();
+                socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
+                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+            }
+        }
+
+        public static async Task<Stream> ConnectAsync(IpcEndpointConfig config, CancellationToken token)
+        {
+            if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+            {
+                var namedPipe = new NamedPipeClientStream(
+                    ".",
+                    config.Address,
+                    PipeDirection.InOut,
+                    PipeOptions.None,
+                    TokenImpersonationLevel.Impersonation);
+                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
+                return namedPipe;
+            }
+            else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+            {
+                var socket = new IpcUnixDomainSocket();
+                await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
+                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+            }
+        }
+    }
+
     internal class ServerIpcEndpoint : IpcEndpoint
     {
         private readonly Guid _runtimeId;
@@ -100,12 +153,64 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
     }
 
+    internal class DiagnosticPortIpcEndpoint : IpcEndpoint
+    {
+        IpcEndpointConfig _config;
+
+        public DiagnosticPortIpcEndpoint(string diagnosticPort)
+        {
+            _config = IpcEndpointConfig.Parse(diagnosticPort);
+        }
+
+        public DiagnosticPortIpcEndpoint(IpcEndpointConfig config)
+        {
+            _config = config;
+        }
+
+        public override Stream Connect(TimeSpan timeout)
+        {
+            return IpcEndpointHelper.Connect(_config, timeout);
+        }
+
+        public override async Task<Stream> ConnectAsync(CancellationToken token)
+        {
+            return await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
+        }
+
+        public override void WaitForConnection(TimeSpan timeout)
+        {
+            using var _ = Connect(timeout);
+        }
+
+        public override async Task WaitForConnectionAsync(CancellationToken token)
+        {
+            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DiagnosticPortIpcEndpoint);
+        }
+
+        public bool Equals(DiagnosticPortIpcEndpoint other)
+        {
+            return other != null && other._config == _config;
+        }
+
+        public override int GetHashCode()
+        {
+            return _config.GetHashCode();
+        }
+    }
+
     internal class PidIpcEndpoint : IpcEndpoint
     {
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
-        private int _pid;
+        int _pid;
+
+        IpcEndpointConfig _config;
 
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
@@ -121,45 +226,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override Stream Connect(TimeSpan timeout)
         {
             string address = GetDefaultAddress();
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var namedPipe = new NamedPipeClientStream(
-                    ".",
-                    address,
-                    PipeDirection.InOut,
-                    PipeOptions.None,
-                    TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)timeout.TotalMilliseconds);
-                return namedPipe;
-            }
-            else
-            {
-                var socket = new IpcUnixDomainSocket();
-                socket.Connect(new IpcUnixDomainSocketEndPoint(Path.Combine(IpcRootPath, address)), timeout);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
+            _config = IpcEndpointConfig.Parse(address + ",connect");
+            return IpcEndpointHelper.Connect(_config, timeout);
         }
 
         public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
             string address = GetDefaultAddress();
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                var namedPipe = new NamedPipeClientStream(
-                    ".",
-                    address,
-                    PipeDirection.InOut,
-                    PipeOptions.None,
-                    TokenImpersonationLevel.Impersonation);
-                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
-                return namedPipe;
-            }
-            else
-            {
-                var socket = new IpcUnixDomainSocket();
-                await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(Path.Combine(IpcRootPath, address)), token).ConfigureAwait(false);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
+            _config = IpcEndpointConfig.Parse(address + ",connect");
+            return await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
         }
 
         public override void WaitForConnection(TimeSpan timeout)

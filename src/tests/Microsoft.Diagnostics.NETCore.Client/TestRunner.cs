@@ -4,6 +4,7 @@
 
 
 using System;
+using System.Linq;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -11,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -22,13 +24,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private CancellationTokenSource cts;
 
         public TestRunner(string testExePath, ITestOutputHelper _outputHelper = null,
-            bool redirectError = false, bool redirectInput = false)
+            bool redirectError = false, bool redirectInput = false, Dictionary<string, string> envVars = null)
         {
             startInfo = new ProcessStartInfo(CommonHelper.HostExe, testExePath);
             startInfo.UseShellExecute = false;
             startInfo.RedirectStandardOutput = true;
             startInfo.RedirectStandardError = redirectError;
             startInfo.RedirectStandardInput = redirectInput;
+            envVars?.ToList().ForEach(item => startInfo.Environment.Add(item.Key, item.Value));
             outputHelper = _outputHelper;
         }
 
@@ -143,7 +146,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (testProcess.HasExited)
             {
-                outputHelper.WriteLine($"Process {testProcess.Id} status: Exited {testProcess.ExitCode}");
+                outputHelper.WriteLine($"Process {testProcess.Id} status: Exited 0x{testProcess.ExitCode:X}");
             }
             else
             {

@@ -55,6 +55,8 @@ namespace SOS.Hosting
             builder = AddInterface(IID_ICorDebugMetaDataLocator, validate: false);
             builder.AddMethod(new GetMetaDataDelegate(GetMetaData));
             builder.Complete();
+
+            AddRef();
         }
 
         protected override void Destroy()
