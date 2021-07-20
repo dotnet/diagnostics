@@ -142,7 +142,7 @@ stages:
       parameters:
         name: Alpine3_13
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-20210719120822-69a32fe
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210719120822-9b5bbc2
         artifactsTargetPath: bin/Linux-musl.x64.Release
         strategy:
           matrix:
@@ -339,12 +339,12 @@ stages:
             dependsOn:
             - Windows
             - CentOS_7
-            - Alpine3_6
+            - Alpine3_13
             - MacOS
             - MacOS_cross
             - Linux_cross
             - Linux_cross64
-            - Alpine3_6_cross64
+            - Alpine_cross64
             condition: succeeded()
             pool:
               name: NetCoreInternal-Pool
