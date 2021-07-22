@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     cancelOnCtrlC = true;
                     cancelOnEnter = !Console.IsInputRedirected;
-                    printStatusOverTime = !Console.IsInputRedirected;
+                    printStatusOverTime = !Console.IsOutputRedirected;
                 }
 
                 if (!cancelOnCtrlC)
