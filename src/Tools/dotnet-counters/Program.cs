@@ -22,8 +22,32 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName, string port, bool resumeRuntime);
-        delegate Task<int> MonitorDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string processName, string port, bool resumeRuntime);
+        delegate Task<int> CollectDelegate(
+            CancellationToken ct,
+            List<string> counter_list,
+            string counters,
+            IConsole console,
+            int processId,
+            int refreshInterval,
+            CountersExportFormat format,
+            string output,
+            string processName,
+            string port,
+            bool resumeRuntime,
+            int maxHistograms,
+            int maxTimeSeries);
+        delegate Task<int> MonitorDelegate(
+            CancellationToken ct,
+            List<string> counter_list,
+            string counters,
+            IConsole console,
+            int processId,
+            int refreshInterval,
+            string processName,
+            string port,
+            bool resumeRuntime,
+            int maxHistograms,
+            int maxTimeSeries);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -33,7 +57,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((MonitorDelegate)new CounterMonitor().Monitor).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption(), DiagnosticPortOption(), ResumeRuntimeOption()
+                CounterList(),
+                CounterOption(),
+                ProcessIdOption(),
+                RefreshIntervalOption(),
+                NameOption(),
+                DiagnosticPortOption(),
+                ResumeRuntimeOption(),
+                MaxHistogramOption(),
+                MaxTimeSeriesOption()
             };
         
         private static Command CollectCommand() =>
@@ -44,7 +76,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption(), DiagnosticPortOption(), ResumeRuntimeOption()
+                CounterList(),
+                CounterOption(),
+                ProcessIdOption(),
+                RefreshIntervalOption(),
+                ExportFormatOption(),
+                ExportFileNameOption(),
+                NameOption(),
+                DiagnosticPortOption(),
+                ResumeRuntimeOption(),
+                MaxHistogramOption(),
+                MaxTimeSeriesOption()
             };
 
         private static Option NameOption() =>
@@ -133,6 +175,22 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
                 Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
+            };
+
+        private static Option MaxHistogramOption() =>
+            new Option(
+                alias: "--maxHistograms",
+                description: "The maximum number of histograms that can be tracked. Tracking more histograms uses more memory in the target process.")
+            {
+                Argument = new Argument<int>(name: "maxHistograms", getDefaultValue: () => 10)
+            };
+
+        private static Option MaxTimeSeriesOption() =>
+            new Option(
+                alias: "--maxTimeSeries",
+                description: "The maximum number of time series that can be tracked. Tracking more time series uses more memory in the target process.")
+            {
+                Argument = new Argument<int>(name: "maxTimeSeries", getDefaultValue: () => 1000)
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };
