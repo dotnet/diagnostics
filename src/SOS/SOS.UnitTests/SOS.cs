@@ -41,7 +41,7 @@ public class SOS
     {
         information.OutputHelper = Output;
 
-        if (testLive && !SOSRunner.IsAlpine())
+        if (testLive)
         {
             // Live
             using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
@@ -50,7 +50,8 @@ public class SOS
             }
         }
 
-        if (testDump)
+        // TODO: enable for 6.0 when PR https://github.com/dotnet/runtime/pull/56272 is merged/released
+        if (testDump && !SOSRunner.IsAlpine())
         {
             // Create and test dumps on OSX only if the runtime is 6.0 or greater
             // TODO: reenable for 5.0 when the MacOS createdump fixes make it into a service release (https://github.com/dotnet/diagnostics/issues/1749)
@@ -59,23 +60,16 @@ public class SOS
                 // Generate a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
                 {
-                    if (information.DumpGenerator == SOSRunner.DumpGenerator.NativeDebugger && SOSRunner.IsAlpine())
-                    {
-                        throw new SkipTestException("lldb tests not supported on Alpine");
-                    }
                     await SOSRunner.CreateDump(information);
                 }
 
                 // Test against a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
                 {
-                    if (!SOSRunner.IsAlpine())
+                    // With cdb (Windows) or lldb (Linux)
+                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
                     {
-                        // With cdb (Windows) or lldb (Linux)
-                        using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
-                        {
-                            await runner.RunScript(scriptName);
-                        }
+                        await runner.RunScript(scriptName);
                     }
 
                     // Using the dotnet-dump analyze tool if the path exists in the config file.
