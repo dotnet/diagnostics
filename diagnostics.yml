@@ -140,9 +140,9 @@ stages:
 
     - template: /eng/build.yml
       parameters:
-        name: Alpine3_6
+        name: Alpine3_13
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.6-WithNode-f4d3fe3-20181220200247
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210720123506-ddfc481
         artifactsTargetPath: bin/Linux-musl.x64.Release
         strategy:
           matrix:
@@ -217,9 +217,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Alpine3_6_cross64
+          name: Alpine_cross64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-406629a-20200127195039
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210719121212-b2c2436
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
           buildAndSkipTest: true
@@ -339,12 +339,12 @@ stages:
             dependsOn:
             - Windows
             - CentOS_7
-            - Alpine3_6
+            - Alpine3_13
             - MacOS
             - MacOS_cross
             - Linux_cross
             - Linux_cross64
-            - Alpine3_6_cross64
+            - Alpine_cross64
             condition: succeeded()
             pool:
               name: NetCoreInternal-Pool
