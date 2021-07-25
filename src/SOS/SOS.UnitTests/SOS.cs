@@ -41,7 +41,9 @@ public class SOS
     {
         information.OutputHelper = Output;
 
-        if (testLive)
+        // TODO: enable when the Alpine images (we are currently using 3.13) have the py3-lldb package installed.
+        // TODO: enable either when bpmd is fixed on Alpine or the bpmd tests are ifdef'ed out of the scripts for Alpine
+        if (testLive && !SOSRunner.IsAlpine())
         {
             // Live
             using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
