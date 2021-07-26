@@ -20,6 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
     {
         // Temporary folder to store the files converted from pdb to xml
         private static readonly string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        private static readonly Regex regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+)(\.dll|\.ni\.dll): token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
 
         delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, string output);
 
@@ -75,20 +76,21 @@ namespace Microsoft.Diagnostics.Tools.Stack
             Directory.CreateDirectory(tempDirectory);
 
             List<string> xmlList = new List<string>();
-            foreach (var peFile in peFiles)
+            int pdbCnt = 0;
+            for (int peCnt = 0; peCnt < peFiles.Count; peCnt++)
             {
-                if (pdbFiles.Count == 0) break;
-                foreach (var pdbFile in pdbFiles)
+                int compare = string.Compare(Path.GetFileNameWithoutExtension(peFiles[peCnt]), Path.GetFileNameWithoutExtension(pdbFiles[pdbCnt]), StringComparison.OrdinalIgnoreCase);
+                if (compare == 0)
                 {
-                    if (Path.GetFileNameWithoutExtension(peFile) == Path.GetFileNameWithoutExtension(pdbFile))
-                    {
-                        string xmlPath = Path.Combine(tempDirectory, Path.GetFileName(Path.ChangeExtension(peFile, "xml")));
-                        GenXmlFromPdb(peFile, pdbFile, xmlPath);
-                        xmlList.Add(xmlPath);
-                        pdbFiles.Remove(pdbFile);
-                        break;
-                    }
+                    string xmlPath = Path.Combine(tempDirectory, Path.GetFileName(Path.ChangeExtension(peFiles[peCnt], "xml")));
+                    GenXmlFromPdb(peFiles[peCnt], pdbFiles[pdbCnt++], xmlPath);
+                    xmlList.Add(xmlPath);
                 }
+                else if (compare > 0) {
+                    pdbCnt++;
+                    peCnt--;
+                }
+                if (pdbCnt == pdbFiles.Count) break;
             }
             return xmlList;
         }
@@ -160,32 +162,30 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                List<string> outputString = new List<string>();
+                string output = string.Empty;
+
+                StreamWriter fsw = null;
+                if (outputPath != null)
+                {
+                    fsw = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
+                    output = $"\nOutput: {outputPath}\n";
+                }
+
                 using StreamReader fsr = new StreamReader(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
                 while (!fsr.EndOfStream)
                 {
                     string line = fsr.ReadLine();
                     if (!line.Contains("at ") || !line.Contains("+"))
                     {
-                        outputString.Add(line);
+                        fsw?.WriteLine(line);
                         console.Out.WriteLine($"{line}");
                         continue;
                     }
                     string ret = GetRegex(line, xmlList);
-                    outputString.Add(ret);
+                    fsw?.WriteLine(ret);
                     console.Out.WriteLine($"{ret}");
                 }
-
-                string output = string.Empty;
-                if (outputPath != null)
-                {
-                    using StreamWriter fsw = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
-                    foreach (var str in outputString)
-                    {
-                        fsw.WriteLine(str);
-                    }
-                    output = $"\nOutput: {outputPath}\n";
-                }
+                fsw?.Close();
                 console.Out.WriteLine($"{output}");
             }
             catch (Exception e)
@@ -197,26 +197,22 @@ namespace Microsoft.Diagnostics.Tools.Stack
         private static string GetRegex(string line, List<string> xmlList)
         {
             string ret = line;
-            string logtagStr = Regex.Match(line, "(?<splitdata>.*?) at").Groups["splitdata"].Value;
-            if (logtagStr.Length != 0)
-            {
-                ret = line.Replace(logtagStr, "");
-            }
-            string typeMethodStr = Regex.Match(line, "at (?<splitdata>.*?)\\((.*)\\)").Groups["splitdata"].Value;
-            string methodStr = typeMethodStr.Split(".")[typeMethodStr.Split(".").Length - 1];
-            string typenameStr = typeMethodStr.Replace("." + methodStr, "");
-            string parameterStr = Regex.Match(line, methodStr + "\\((?<splitdata>.*?)\\)").Groups["splitdata"].Value;
-            string assemblyStr = Regex.Match(line, " in (?<splitdata>.*?)\\: ").Groups["splitdata"].Value;
-            string[] tokenOffsetStr = Regex.Match(line, "\\: token (?<splitdata>.*)?").Groups["splitdata"].Value.Split("+");
-            string xmlStr = assemblyStr.Contains(".ni.dll") ? assemblyStr.Replace(".ni.dll", ".xml") : assemblyStr.Replace(".dll", ".xml");
-
-            if (tokenOffsetStr.Length != 2 || methodStr == "" || typenameStr == "" || assemblyStr == "")
+            Match match = regex.Match(ret);
+            if (!match.Success)
             {
                 return ret;
             }
 
-            StackTraceInfo stInfo = new StackTraceInfo() { Type = typenameStr, Method = methodStr, Assembly = assemblyStr, Token = tokenOffsetStr[0], Offset = tokenOffsetStr[1] };
+            StackTraceInfo stInfo = new StackTraceInfo() {
+                Type = match.Groups["type"].Value,
+                Method = match.Groups["method"].Value,
+                Param = match.Groups["params"].Value,
+                Assembly = match.Groups["filename"].Value,
+                Token = match.Groups["token"].Value,
+                Offset = match.Groups["offset"].Value
+            };
 
+            string xmlStr = stInfo.Assembly.Contains(".ni.dll") ? stInfo.Assembly.Replace(".ni.dll", ".xml") : stInfo.Assembly.Replace(".dll", ".xml");
             foreach (var xmlPath in xmlList)
             {
                 if (xmlPath.Contains(xmlStr))
@@ -224,7 +220,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     GetLineFromXml(xmlPath, stInfo);
                     if (stInfo.Filepath != null && stInfo.StartLine != null)
                     {
-                        ret = $"   at {stInfo.Type}.{stInfo.Method}({parameterStr}) in {stInfo.Filepath}:line {stInfo.StartLine}";
+                        ret = $"   at {stInfo.Type}.{stInfo.Method}({stInfo.Param}) in {stInfo.Filepath}:line {stInfo.StartLine}";
                         break;
                     }
                 }
