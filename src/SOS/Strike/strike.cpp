@@ -9106,6 +9106,7 @@ DECLARE_API(ThreadPool)
                 "Stabilizing",
                 "Starvation",
                 "ThreadTimedOut",
+                "CooperativeBlocking",
                 "Undefined"
             };
 
