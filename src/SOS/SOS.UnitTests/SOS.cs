@@ -41,9 +41,8 @@ public class SOS
     {
         information.OutputHelper = Output;
 
-        // TODO: enable when the Alpine images (we are currently using 3.13) have the py3-lldb package installed.
         // TODO: enable either when bpmd is fixed on Alpine or the bpmd tests are ifdef'ed out of the scripts for Alpine
-        if (testLive && !SOSRunner.IsAlpine())
+        if (testLive)
         {
             // Live
             using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
@@ -52,12 +51,10 @@ public class SOS
             }
         }
 
-        // TODO: enable for 6.0 when PR https://github.com/dotnet/runtime/pull/56272 is merged/released
-        if (testDump && !SOSRunner.IsAlpine())
+        if (testDump)
         {
-            // Create and test dumps on OSX only if the runtime is 6.0 or greater
-            // TODO: reenable for 5.0 when the MacOS createdump fixes make it into a service release (https://github.com/dotnet/diagnostics/issues/1749)
-            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
+            // Create and test dumps on OSX or Alpine only if the runtime is 6.0 or greater
+            if (!(OS.Kind == OSKind.OSX || SOSRunner.IsAlpine()) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
