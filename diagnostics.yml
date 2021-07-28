@@ -142,7 +142,7 @@ stages:
       parameters:
         name: Alpine3_13
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210720123506-ddfc481
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210728123842-ddfc481
         artifactsTargetPath: bin/Linux-musl.x64.Release
         strategy:
           matrix:
