@@ -144,6 +144,7 @@ stages:
         osGroup: Linux
         dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210728123842-ddfc481
         artifactsTargetPath: bin/Linux-musl.x64.Release
+        requiresCapPtraceContainer: true
         strategy:
           matrix:
             Build_Release:
