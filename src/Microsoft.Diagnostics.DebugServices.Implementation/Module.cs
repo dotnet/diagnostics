@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using FileVersionInfo = Microsoft.Diagnostics.Runtime.Utilities.FileVersionInfo;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -36,7 +37,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private Flags _flags;
         private PdbFileInfo _pdbFileInfo;
         private ImmutableArray<byte> _buildId;
-        private VersionData _versionData;
         private PEImage _peImage;
 
         public readonly ServiceProvider ServiceProvider;
@@ -105,16 +105,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             get
             {
-                GetPEInfo();
-                if ((_flags & Flags.IsFileLayout) != 0)
-                {
-                    return true;
-                }
-                if ((_flags & Flags.IsLoadedLayout) != 0)
+                // For Windows targets we can assume that the file layout is always "loaded". The
+                // ImageMappingMemoryService depends on no recursion memory access for this property
+                // i.e. calling GetPEInfo().
+                if (Target.OperatingSystem == OSPlatform.Windows)
                 {
                     return false;
                 }
-                return null;
+                else
+                {
+                    GetPEInfo();
+                    if ((_flags & Flags.IsFileLayout) != 0)
+                    {
+                        return true;
+                    }
+                    if ((_flags & Flags.IsLoadedLayout) != 0)
+                    {
+                        return false;
+                    }
+                    return null;
+                }
             }
         }
 
@@ -147,23 +157,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public virtual VersionData VersionData
-        {
-            get { return _versionData; }
-            set { _versionData = value; }
-        }
+        public abstract VersionData VersionData { get; }
 
         public abstract string VersionString { get; }
 
         #endregion
 
-        protected void GetVersionFromVersionString()
+        protected VersionData GetVersion()
         {
-            GetPEInfo();
+            VersionData versionData = null;
 
-            // If we can't get the version from the PE, search for version string embedded in the module data
-            if (_versionData is null && !IsPEImage)
+            PEImage peImage = GetPEInfo();
+            if (peImage != null)
             {
+                FileVersionInfo fileVersionInfo = peImage.GetFileVersionInfo();
+                if (fileVersionInfo != null)
+                {
+                    versionData = fileVersionInfo.VersionInfo.ToVersionData();
+                }
+            }
+            else 
+            {
+                // If we can't get the version from the PE, search for version string embedded in the module data
                 string versionString = VersionString;
                 if (versionString != null)
                 {
@@ -178,7 +193,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         try
                         {
                             Version version = System.Version.Parse(versionToParse);
-                            _versionData = new VersionData(version.Major, version.Minor, version.Build, version.Revision);
+                            versionData = new VersionData(version.Major, version.Minor, version.Build, version.Revision);
                         }
                         catch (ArgumentException ex)
                         {
@@ -187,12 +202,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
+
+            return versionData;
         }
 
         protected PEImage GetPEInfo()
         {
             if (InitializeValue(Flags.InitializePEInfo)) {
-                _peImage = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbFileInfo, ref _versionData, ref _flags);
+                _peImage = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbFileInfo, ref _flags);
             }
             return _peImage;
         }

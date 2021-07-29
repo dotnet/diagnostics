@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private readonly IExportReader _exportReader;
             private readonly ModuleInfo _moduleInfo;
             private readonly ulong _imageSize;
+            private VersionData _versionData;
             private string _versionString;
 
             public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, IExportReader exportReader, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
@@ -65,17 +66,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if (_moduleInfo.Version != EmptyVersionInfo)
                         {
-                            base.VersionData = _moduleInfo.Version.ToVersionData();
+                            _versionData = _moduleInfo.Version.ToVersionData();
                         }
                         else
                         {
                             if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
                             {
-                                GetVersionFromVersionString();
+                                _versionData = GetVersion();
                             }
                         }
                     }
-                    return base.VersionData;
+                    return _versionData;
                 }
             }
 
