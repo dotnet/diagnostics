@@ -700,7 +700,12 @@ BOOL GCObjInSegment(TADDR taddrObj, const GCHeapDetails &heap,
                     ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
                     return FALSE;
                 }
-                if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj && taddrObj < TO_TADDR(dacpSeg.allocated))
+                TADDR allocated = TO_TADDR(dacpSeg.allocated);
+                if (taddrSeg == TO_TADDR(heap.ephemeral_heap_segment))
+                {
+                    allocated = TO_TADDR(heap.alloc_allocated);
+                }
+                if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < allocated)
                 {
                     rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
                     rngSeg.start = (TADDR)dacpSeg.mem;
@@ -776,7 +781,7 @@ BOOL GCObjInLargeSegment(TADDR taddrObj, const GCHeapDetails &heap, TADDR_SEGINF
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj && taddrObj < TO_TADDR(dacpSeg.allocated))
+        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(dacpSeg.allocated))
         {
             rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
             rngSeg.start   = (TADDR)dacpSeg.mem;
@@ -809,7 +814,7 @@ BOOL GCObjInPinnedObjectSegment(TADDR taddrObj, const GCHeapDetails &heap, TADDR
             ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
             return FALSE;
         }
-        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj && taddrObj < TO_TADDR(dacpSeg.allocated))
+        if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < TO_TADDR(dacpSeg.allocated))
         {
             rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
             rngSeg.start   = (TADDR)dacpSeg.mem;
