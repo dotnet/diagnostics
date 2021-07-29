@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         // Temporary folder to store the files converted from pdb to xml
         private static readonly string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         private static readonly Regex regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+)(\.dll|\.ni\.dll): token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Regex verifyRegex = new Regex(@"at (?<typeMethod>.*)\((?<params>.*?)\) in (?<filename>.*)token(?<token>.*)\+(?<offset>.*)", RegexOptions.Compiled);
 
         delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, string output);
 
@@ -37,23 +38,19 @@ namespace Microsoft.Diagnostics.Tools.Stack
             try
             {
                 List<string> search_paths = new List<string>();
-                if (searchDir.Length == 0)
-                {
-                    search_paths.Add(Directory.GetCurrentDirectory());
-                }
-                else
+                if (searchDir.Length != 0)
                 {
                     foreach (var path in searchDir)
                     {
                         search_paths.Add(path.FullName);
                     }
                 }
-
+                search_paths.Add(Directory.GetCurrentDirectory());
                 Symbolicator(console, PdbToXmlConvert(search_paths), inputPath.FullName, output);
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine(e.Message);
+                console.Error.WriteLine(e.Message);
             }
         }
 
@@ -104,7 +101,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     foreach (var peFile in Directory.GetFiles(assemDir, searchPattern, SearchOption.AllDirectories))
                     {
-                        files.Add(peFile);
+                        if (!peFile.Contains(".ni.dll"))
+                        {
+                            files.Add(peFile);
+                        }
                     }
                 }
             }
@@ -162,46 +162,60 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                string output = string.Empty;
+                StreamWriter fswi = null;
+                if (!inputPath.EndsWith(".symbolicated"))
+                {
+                    fswi = new StreamWriter(new FileStream(inputPath + ".symbolicated", FileMode.Create, FileAccess.Write));
+                }
 
-                StreamWriter fsw = null;
+                string output = string.Empty;
+                StreamWriter fswo = null;
                 if (outputPath != null)
                 {
-                    fsw = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
+                    fswo = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
                     output = $"\nOutput: {outputPath}\n";
                 }
 
-                using StreamReader fsr = new StreamReader(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
-                while (!fsr.EndOfStream)
+                using StreamReader fsri = new StreamReader(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
+                while (!fsri.EndOfStream)
                 {
-                    string line = fsr.ReadLine();
-                    if (!line.Contains("at ") || !line.Contains("+"))
+                    string line = fsri.ReadLine();
+                    // The stacktrace must have "at ... in ... token ..."
+                    if (!line.Contains("at ") || !line.Contains(" in ") || !line.Contains("token"))
                     {
-                        fsw?.WriteLine(line);
+                        fswo?.WriteLine(line);
                         console.Out.WriteLine($"{line}");
                         continue;
                     }
-                    string ret = GetRegex(line, xmlList);
-                    fsw?.WriteLine(ret);
+                    string ret = GetRegex(console, line, xmlList, fswi);
+                    fswo?.WriteLine(ret);
                     console.Out.WriteLine($"{ret}");
                 }
-                fsw?.Close();
+                fswo?.Close();
+                fswi?.Close();
                 console.Out.WriteLine($"{output}");
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine(e);
+                console.Error.WriteLine(e.Message);
             }
         }
 
-        private static string GetRegex(string line, List<string> xmlList)
+        private static string GetRegex(IConsole console, string line, List<string> xmlList, StreamWriter fsw)
         {
             string ret = line;
-            Match match = regex.Match(ret);
-            if (!match.Success)
+            Match match = regex.Match(line);
+            if (!match.Success && fsw != null)
             {
-                return ret;
+                ret = VerifyStackTraceLine(line);
+                if (ret == line)
+                {
+                    fsw.WriteLine(line);
+                    return line;
+                }
+                match = regex.Match(ret);
             }
+            fsw?.WriteLine(ret);
 
             StackTraceInfo stInfo = new StackTraceInfo() {
                 Type = match.Groups["type"].Value,
@@ -217,18 +231,42 @@ namespace Microsoft.Diagnostics.Tools.Stack
             {
                 if (xmlPath.Contains(xmlStr))
                 {
-                    GetLineFromXml(xmlPath, stInfo);
+                    GetLineFromXml(console, xmlPath, stInfo);
                     if (stInfo.Filepath != null && stInfo.StartLine != null)
                     {
-                        ret = $"   at {stInfo.Type}.{stInfo.Method}({stInfo.Param}) in {stInfo.Filepath}:line {stInfo.StartLine}";
-                        break;
+                        return $"   at {stInfo.Type}.{stInfo.Method}({stInfo.Param}) in {stInfo.Filepath}:line {stInfo.StartLine}";
                     }
                 }
             }
             return ret;
         }
 
-        private static void GetLineFromXml(string xmlPath, StackTraceInfo stInfo)
+        private static string VerifyStackTraceLine(string line)
+        {
+            Match match = verifyRegex.Match(line);
+            StringBuilder str = new StringBuilder();
+            str.Append("   at ");
+            str.Append(match.Groups["typeMethod"].Value.TrimEnd());
+            str.Append("(");
+            str.Append(match.Groups["params"].Value);
+            str.Append(") in ");
+            str.Append(match.Groups["filename"].Value.Replace(":", "").Trim());
+            str.Append(": token ");
+            str.Append(match.Groups["token"].Value.Trim());
+            str.Append("+");
+            str.Append(match.Groups["offset"].Value.TrimStart().Split(" ")[0]);
+
+            if (regex.Match(str.ToString()).Success)
+            {
+                return str.ToString();
+            }
+            else
+            {
+                return line;
+            }
+        }
+
+        private static void GetLineFromXml(IConsole console, string xmlPath, StackTraceInfo stInfo)
         {
             try
             {
@@ -244,22 +282,22 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         XmlNode node = xnList[i];
                         if (node.Name == "files")
                         {
-                            ParseFile(node.ChildNodes, stInfo);
+                            ParseFile(console, node.ChildNodes, stInfo);
                         }
                         else if (node.Name == "methods")
                         {
-                            ParseMethod(node.ChildNodes, stInfo);
+                            ParseMethod(console, node.ChildNodes, stInfo);
                         }
                     }
                 }
             }
             catch (ArgumentException e)
             {
-                Console.Error.WriteLine(e);
+                console.Error.WriteLine(e.Message);
             }
         }
 
-        private static void ParseFile(XmlNodeList xn, StackTraceInfo stInfo)
+        private static void ParseFile(IConsole console, XmlNodeList xn, StackTraceInfo stInfo)
         {
             try
             {
@@ -274,11 +312,11 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
             catch (ArgumentException e)
             {
-                Console.Error.WriteLine(e);
+                console.Error.WriteLine(e.Message);
             }
         }
 
-        private static void ParseMethod(XmlNodeList xn, StackTraceInfo stInfo)
+        private static void ParseMethod(IConsole console, XmlNodeList xn, StackTraceInfo stInfo)
         {
             try
             {
@@ -292,17 +330,17 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         {
                             stInfo.Param = node.Attributes["parameterNames"].Value;
                         }
-                        ParseSequence(node.ChildNodes, stInfo);
+                        ParseSequence(console, node.ChildNodes, stInfo);
                     }
                 }
             }
             catch (ArgumentException e)
             {
-                Console.Error.WriteLine(e);
+                console.Error.WriteLine(e.Message);
             }
         }
 
-        private static void ParseSequence(XmlNodeList xn, StackTraceInfo stInfo)
+        private static void ParseSequence(IConsole console, XmlNodeList xn, StackTraceInfo stInfo)
         {
             try
             {
@@ -310,17 +348,17 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     if (node.Name == "sequencePoints")
                     {
-                        ParseEntry(node.ChildNodes, stInfo);
+                        ParseEntry(console, node.ChildNodes, stInfo);
                     }
                 }
             }
             catch (ArgumentException e)
             {
-                Console.Error.WriteLine(e);
+                console.Error.WriteLine(e.Message);
             }
         }
 
-        private static void ParseEntry(XmlNodeList xn, StackTraceInfo stInfo)
+        private static void ParseEntry(IConsole console, XmlNodeList xn, StackTraceInfo stInfo)
         {
             try
             {
@@ -347,7 +385,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
             catch (ArgumentException e)
             {
-                Console.Error.WriteLine(e);
+                console.Error.WriteLine(e.Message);
             }
         }
 
