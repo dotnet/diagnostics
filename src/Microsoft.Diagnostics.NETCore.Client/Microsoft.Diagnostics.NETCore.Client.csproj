@@ -19,15 +19,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="dotnet-counters" />
     <InternalsVisibleTo Include="dotnet-dsrouter" />
-    <InternalsVisibleTo Include="DotnetMonitor.UnitTests" />
+    <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="dotnet-trace" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <!-- Temporary until Diagnostic Apis are finalized-->
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
-    <InternalsVisibleTo Include="dotnet-counters" />
-    <InternalsVisibleTo Include="dotnet-trace" />
   </ItemGroup>
 </Project>
