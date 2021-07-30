@@ -464,7 +464,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     return ReturnCode.ArgumentError;
                 }
-                _ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
@@ -537,7 +537,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return ReturnCode.ArgumentError;
                 }
 
-                _ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
