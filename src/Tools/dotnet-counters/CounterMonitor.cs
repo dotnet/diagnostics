@@ -841,7 +841,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             while(!_shouldExit.Task.Wait(250))
             {
                 HandleBufferedEvents();
-                if (Console.KeyAvailable)
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
                     ConsoleKey cmd = Console.ReadKey(true).Key;
                     if (cmd == ConsoleKey.Q)
