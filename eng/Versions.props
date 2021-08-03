@@ -8,7 +8,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.215101</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.240201</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp21Version>2.1.28</MicrosoftNETCoreApp21Version>
     <MicrosoftAspNetCoreApp21Version>$(MicrosoftNETCoreApp21Version)</MicrosoftAspNetCoreApp21Version>
