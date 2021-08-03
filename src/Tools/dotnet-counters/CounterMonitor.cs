@@ -858,7 +858,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-
             StopMonitor();
             return _shouldExit.Task;
         }
