@@ -245,6 +245,12 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 catch (TaskCanceledException)
                 {
+                    //clean up the server
+                    if (!string.IsNullOrEmpty(fullPort) && File.Exists(fullPort))
+                    {
+                        File.Delete(fullPort);
+                    }
+                    await server.DisposeAsync();
                     if (!ct.IsCancellationRequested)
                     {
                         throw;
