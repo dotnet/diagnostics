@@ -24,9 +24,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "IncrementingCounterTest.csv";
         	CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
+            DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "incrementingCounterOne", i, 1, "Incrementing Counter One: " + i.ToString()), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", "", "", i, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -48,7 +49,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal($"Incrementing Counter One: {i-1} (Count / 1 sec)", tokens[2]);
+                    Assert.Equal($"Incrementing Counter One (Count / 1 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
                     Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
@@ -65,9 +66,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "CounterTest.csv";
             CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
+            DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "counterOne", i, 1, "Counter One: " + i.ToString()), false);
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", "", "", i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -90,7 +92,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal("Counter One: " + (i - 1).ToString(), tokens[2]);
+                    Assert.Equal("Counter One", tokens[2]);
                     Assert.Equal("Metric", tokens[3]);
                     Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
@@ -107,9 +109,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "displayRateTest.csv";
         	CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
+            DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "incrementingCounterOne", i, 60, "Incrementing Counter One: " + i.ToString()), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", "", "", i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -131,7 +134,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal($"Incrementing Counter One: {i-1} (Count / 1 sec)", tokens[2]);
+                    Assert.Equal($"Incrementing Counter One (Count / 60 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
                     Assert.Equal((i-1).ToString(), tokens[4]);
                 }
@@ -148,9 +151,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "displayUnitsTest.csv";
             CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
+            DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "allocRateGen", i, 60, "Allocation Rate Gen: " + i.ToString(), "MB"), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", "", i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -172,9 +176,93 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal($"Allocation Rate Gen: {i-1} (MB / 1 sec)", tokens[2]);
+                    Assert.Equal($"Allocation Rate Gen (MB / 60 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
                     Assert.Equal((i-1).ToString(), tokens[4]);
+                }
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
+        public void TagsTest()
+        {
+            string fileName = "tagsTest.csv";
+            CSVExporter exporter = new CSVExporter(fileName);
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 100; i++)
+            {
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", "foo=bar,baz=7", i, 60, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(101, lines.Count); // should be 101 including the headers
+
+                string[] headerTokens = lines[0].Split(',');
+                Assert.Equal("Provider", headerTokens[1]);
+                Assert.Equal("Counter Name", headerTokens[2]);
+                Assert.Equal("Counter Type", headerTokens[3]);
+                Assert.Equal("Mean/Increment", headerTokens[4]);
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    string[] tokens = lines[i].Split(',');
+
+                    Assert.Equal("myProvider", tokens[1]);
+                    Assert.Equal($"Allocation Rate Gen (MB / 60 sec)[foo=bar;baz=7]", tokens[2]);
+                    Assert.Equal("Rate", tokens[3]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
+                }
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
+        public void PercentilesTest()
+        {
+            string fileName = "percentilesTest.csv";
+            CSVExporter exporter = new CSVExporter(fileName);
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 100; i++)
+            {
+                exporter.CounterPayloadReceived(new PercentilePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", "foo=bar,Percentile=50", i, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(101, lines.Count); // should be 101 including the headers
+
+                string[] headerTokens = lines[0].Split(',');
+                Assert.Equal("Provider", headerTokens[1]);
+                Assert.Equal("Counter Name", headerTokens[2]);
+                Assert.Equal("Counter Type", headerTokens[3]);
+                Assert.Equal("Mean/Increment", headerTokens[4]);
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    string[] tokens = lines[i].Split(',');
+
+                    Assert.Equal("myProvider", tokens[1]);
+                    Assert.Equal($"Allocation Rate Gen (MB)[foo=bar;Percentile=50]", tokens[2]);
+                    Assert.Equal("Metric", tokens[3]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
             }
             finally
