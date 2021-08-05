@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private IConsole _console;
         private ICounterRenderer _renderer;
         private string _output;
-        private bool pauseCmdSet;
+        private bool _pauseCmdSet;
         private TaskCompletionSource<int> _shouldExit;
         private bool _resumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public CounterMonitor()
         {
-            pauseCmdSet = false;
+            _pauseCmdSet = false;
             _metricsEventSourceSessionId = Guid.NewGuid().ToString();
             _shouldExit = new TaskCompletionSource<int>();
         }
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 // If we are paused, ignore the event. 
                 // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-                _renderer.ToggleStatus(pauseCmdSet);
+                _renderer.ToggleStatus(_pauseCmdSet);
 
                 if (obj.ProviderName == "System.Diagnostics.Metrics")
                 {
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (double.TryParse(rateText, out double rate))
             {
                 CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
 
@@ -185,7 +185,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (double.TryParse(lastValueText, out double lastValue))
             {
                 CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
 
@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             foreach((double key, double val) in quantiles)
             {
                 CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key*100}"), val, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
 
@@ -372,7 +372,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             else
             {
-                _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
 
@@ -395,7 +395,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else if (providerEventState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) < now)
                     {
                         _bufferedEvents.Dequeue();
-                        _renderer.CounterPayloadReceived(payload, pauseCmdSet);
+                        _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
                     }
                     else
                     {
@@ -454,7 +454,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             try
             {
-                // is there a better way to do this validation that leverages System.CommandLine?
+                // System.CommandLine does have an option to specify arguments as uint and it would validate they are non-negative. However the error
+                // message is "Cannot parse argument '-1' for option '--maxTimeSeries' as expected type System.UInt32" which is not as user friendly.
+                // If there was another option to leverage System.CommandLine that provides a little more user friendly error message we could switch
+                // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
@@ -523,7 +526,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             try
             {
-                // is there a better way to do this validation that leverages System.CommandLine?
+                // System.CommandLine does have an option to specify arguments as uint and it would validate they are non-negative. However the error
+                // message is "Cannot parse argument '-1' for option '--maxTimeSeries' as expected type System.UInt32" which is not as user friendly.
+                // If there was another option to leverage System.CommandLine that provides a little more user friendly error message we could switch
+                // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
@@ -772,7 +778,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 else
                 {
-                    string[] providerCounters = _counterList.GetCounters(provider).Select(c => "{provider}\\{counter}").ToArray();
+                    string[] providerCounters = _counterList.GetCounters(provider).Select(counter => $"{provider}\\{counter}").ToArray();
                     metrics.Append(string.Join(',', providerCounters));
                 }
             }
@@ -844,11 +850,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     else if (cmd == ConsoleKey.P)
                     {
-                        pauseCmdSet = true;
+                        _pauseCmdSet = true;
                     }
                     else if (cmd == ConsoleKey.R)
                     {
-                        pauseCmdSet = false;
+                        _pauseCmdSet = false;
                     }
                 }
             }
