@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public Task<DebuggeeConfiguration> Execute(ITestOutputHelper output)
         {
-            return Task.Factory.StartNew<DebuggeeConfiguration>(() => new DebuggeeConfiguration(_sourcePath, _binaryPath, _binaryExePath));
+            return Task.FromResult<DebuggeeConfiguration>(new DebuggeeConfiguration(_sourcePath, _binaryPath, _binaryExePath));
         }
     }
 }
