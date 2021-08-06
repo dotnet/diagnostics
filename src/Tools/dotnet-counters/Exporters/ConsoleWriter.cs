@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
-                        Console.WriteLine($"{name}{FormatValue(counter.LastValue)}");
+                        Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
                     }
                     else
                     {
@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
                             string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + maxNameLength);
-                            Console.WriteLine($"{tagName}{FormatValue(tagSet.LastValue)}");
+                            Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                             tagSet.Row = row++;
                         }
                     }
