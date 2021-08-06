@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Xunit;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
+using Microsoft.Diagnostics.Tools.Counters;
 
 namespace DotnetCounters.UnitTests
 {
@@ -22,9 +23,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "IncrementingCounterTest.json";
             JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
             exporter.Initialize();
+            DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(true, "incrementingCounterOne", 1.0, 1, "Incrementing Counter One"), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", "", "", 1, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -52,9 +54,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "CounterTest.json";
             JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
             exporter.Initialize();
+            DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "counterOne", 1.0, 1, "Counter One"), false);
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", "", "", 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -82,10 +85,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "displayUnitsTest.json";
             JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
             exporter.Initialize();
-
+            DateTime start = DateTime.Now;
             for (int i = 0 ; i < 20; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "heapSize", (double)i, 0, "Heap Size", "MB"), false);
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "heapSize", "Heap Size", "MB", "", i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -116,10 +119,10 @@ namespace DotnetCounters.UnitTests
             string fileName = "validJSONFormatTest.json";
             JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
             exporter.Initialize();
-
+            DateTime start = DateTime.Now;
             for (int i = 0 ; i < 20; i++)
             {
-                exporter.CounterPayloadReceived("myProvider", TestHelpers.GenerateCounterPayload(false, "heapSize", 0, 0, "Heap Size", "MB"), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "heapSize", "Heap Size", "MB", "", 0, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -131,6 +134,102 @@ namespace DotnetCounters.UnitTests
                 // next ] from closing "Events" field 
                 // last } from closing the whole JSON
                 Assert.EndsWith("0 }]}", json);
+            }
+        }
+
+        [Fact]
+        public void TagsTest()
+        {
+            string fileName = "TagsTest.json";
+            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 10; i++)
+            {
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", "", "f=abc,two=9", 1, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new StreamReader(fileName))
+            {
+                string json = r.ReadToEnd();
+                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
+
+                Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(10, counterTrace.events.Length);
+                foreach (JSONCounterPayload payload in counterTrace.events)
+                {
+                    Assert.Equal("myProvider", payload.provider);
+                    Assert.Equal("Counter One", payload.name);
+                    Assert.Equal("Metric", payload.counterType);
+                    Assert.Equal(1.0, payload.value);
+                    Assert.Equal("f=abc,two=9", payload.tags);
+                }
+            }
+        }
+
+        [Fact]
+        public void EscapingTest()
+        {
+            string fileName = "EscapingTest.json";
+            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 10; i++)
+            {
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider\\", "counterOne\f", "CounterOne\f", "", "f\b\"\n=abc\r\\,\ttwo=9", 1, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new StreamReader(fileName))
+            {
+                string json = r.ReadToEnd();
+                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
+
+                Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(10, counterTrace.events.Length);
+                foreach (JSONCounterPayload payload in counterTrace.events)
+                {
+                    Assert.Equal("myProvider\\", payload.provider);
+                    Assert.Equal("CounterOne\f", payload.name);
+                    Assert.Equal("Metric", payload.counterType);
+                    Assert.Equal(1.0, payload.value);
+                    Assert.Equal("f\b\"\n=abc\r\\,\ttwo=9", payload.tags);
+                }
+            }
+        }
+
+        [Fact]
+        public void PercentilesTest()
+        {
+            string fileName = "PercentilesTest.json";
+            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 10; i++)
+            {
+                exporter.CounterPayloadReceived(new PercentilePayload("myProvider", "counterOne", "Counter One", "", "f=abc,Percentile=50", 1, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new StreamReader(fileName))
+            {
+                string json = r.ReadToEnd();
+                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
+
+                Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(10, counterTrace.events.Length);
+                foreach (JSONCounterPayload payload in counterTrace.events)
+                {
+                    Assert.Equal("myProvider", payload.provider);
+                    Assert.Equal("Counter One", payload.name);
+                    Assert.Equal("Metric", payload.counterType);
+                    Assert.Equal(1.0, payload.value);
+                    Assert.Equal("f=abc,Percentile=50", payload.tags);
+                }
             }
         }
     }
@@ -145,6 +244,9 @@ namespace DotnetCounters.UnitTests
 
         [JsonProperty("name")]
         public string name { get; set; }
+
+        [JsonProperty("tags")]
+        public string tags { get; set; }
 
         [JsonProperty("counterType")]
         public string counterType { get; set; }

@@ -22,8 +22,32 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, CountersExportFormat format, string output, string processName, string port, bool resumeRuntime);
-        delegate Task<int> MonitorDelegate(CancellationToken ct, List<string> counter_list, string counters, IConsole console, int processId, int refreshInterval, string processName, string port, bool resumeRuntime);
+        delegate Task<int> CollectDelegate(
+            CancellationToken ct,
+            List<string> counter_list,
+            string counters,
+            IConsole console,
+            int processId,
+            int refreshInterval,
+            CountersExportFormat format,
+            string output,
+            string processName,
+            string port,
+            bool resumeRuntime,
+            int maxHistograms,
+            int maxTimeSeries);
+        delegate Task<int> MonitorDelegate(
+            CancellationToken ct,
+            List<string> counter_list,
+            string counters,
+            IConsole console,
+            int processId,
+            int refreshInterval,
+            string processName,
+            string port,
+            bool resumeRuntime,
+            int maxHistograms,
+            int maxTimeSeries);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -33,7 +57,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((MonitorDelegate)new CounterMonitor().Monitor).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), NameOption(), DiagnosticPortOption(), ResumeRuntimeOption()
+                CounterList(),
+                CounterOption(),
+                ProcessIdOption(),
+                RefreshIntervalOption(),
+                NameOption(),
+                DiagnosticPortOption(),
+                ResumeRuntimeOption(),
+                MaxHistogramOption(),
+                MaxTimeSeriesOption()
             };
         
         private static Command CollectCommand() =>
@@ -44,7 +76,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)new CounterMonitor().Collect).GetCommandHandler(),
                 // Arguments and Options
-                CounterList(), CounterOption(), ProcessIdOption(), RefreshIntervalOption(), ExportFormatOption(), ExportFileNameOption(), NameOption(), DiagnosticPortOption(), ResumeRuntimeOption()
+                CounterList(),
+                CounterOption(),
+                ProcessIdOption(),
+                RefreshIntervalOption(),
+                ExportFormatOption(),
+                ExportFileNameOption(),
+                NameOption(),
+                DiagnosticPortOption(),
+                ResumeRuntimeOption(),
+                MaxHistogramOption(),
+                MaxTimeSeriesOption()
             };
 
         private static Option NameOption() =>
@@ -90,15 +132,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option CounterOption() =>
             new Option(
                 alias: "--counters",
-                description: "A comma-separated list of counter providers. Counter providers can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.")
+                description: "A comma-separated list of counter providers. Counter providers can be specified as <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without qualifying counter_names then all counters will be shown. For example \"System.Runtime[cpu-usage,working-set],Microsoft.AspNetCore.Hosting\" includes the cpu-usage and working-set counters from the System.Runtime provider and all the counters from the Microsoft.AspNetCore.Hosting provider. To discover provider and counter names, use the list command.")
             {
-                Argument = new Argument<string>(name: "counters", getDefaultValue: () => "System.Runtime")
+                Argument = new Argument<string>(name: "counters")
             };
 
         private static Argument CounterList() =>
             new Argument<List<string>>(name: "counter_list", getDefaultValue: () => new List<string>())
             {
-                Description = @"A space separated list of counters. Counters can be specified provider_name[:counter_name]. If the provider_name is used without a qualifying counter_name then all counters will be shown. To discover provider and counter names, use the list command.",
+                Description = @"A space separated list of counter providers. Counters can be specified <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without a qualifying counter_names then all counters will be shown. To discover provider and counter names, use the list command.",
                 IsHidden = true
             };
 
@@ -133,6 +175,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
                 Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
+            };
+
+        private static Option MaxHistogramOption() =>
+            new Option(
+                alias: "--maxHistograms",
+                description: "The maximum number of histograms that can be tracked. Each unique combination of provider name, histogram name, and dimension values" +
+                " counts as one histogram. Tracking more histograms uses more memory in the target process so this bound guards against unintentional high memory use.")
+            {
+                Argument = new Argument<int>(name: "maxHistograms", getDefaultValue: () => 10)
+            };
+
+        private static Option MaxTimeSeriesOption() =>
+            new Option(
+                alias: "--maxTimeSeries",
+                description: "The maximum number of time series that can be tracked. Each unique combination of provider name, metric name, and dimension values" +
+                " counts as one time series. Tracking more time series uses more memory in the target process so this bound guards against unintentional high memory use.")
+            {
+                Argument = new Argument<int>(name: "maxTimeSeries", getDefaultValue: () => 1000)
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

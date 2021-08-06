@@ -285,7 +285,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
 
                                 if (rundownRequested)
-                                    Console.Out.WriteLine("Stopping the trace. This may take up to minutes depending on the application being traced.");
+                                    Console.Out.WriteLine("Stopping the trace. This may take several minutes depending on the application being traced.");
                             };
 
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
