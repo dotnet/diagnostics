@@ -182,7 +182,18 @@ namespace Microsoft.Internal.Common.Utils
         private string _toolName;
         private int _timeoutInSec;
 
-        private string GetTransportName(string toolName) => $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
+        private string GetTransportName(string toolName)
+        {
+            string transportName = $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return transportName;
+            }
+            else
+            {
+                return Path.Combine(Path.GetTempPath(), transportName);
+            }
+        }
 
         public DiagnosticsClientBuilder(string toolName, int timeoutInSec)
         {
