@@ -721,18 +721,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             switch (generation)
             {
                 case GCGeneration.Generation0:
-                    if (segment.IsEphemeralSegment)
-                    {
-                        start = segment.Generation0.Start;
-                        end = segment.Generation0.End;
-                    }
+                    start = segment.Generation0.Start;
+                    end = segment.Generation0.End;
                     return start != end;
                 case GCGeneration.Generation1:
-                    if (segment.IsEphemeralSegment)
-                    {
-                        start = segment.Generation1.Start;
-                        end = segment.Generation1.End;
-                    }
+                    start = segment.Generation1.Start;
+                    end = segment.Generation1.End;
                     return start != end;
                 case GCGeneration.Generation2:
                     if (!(segment.IsLargeObjectSegment || segment.IsPinnedObjectSegment))
