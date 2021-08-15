@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.TestHelpers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,7 +42,6 @@ public class SOS
     {
         information.OutputHelper = Output;
 
-        // TODO: enable either when bpmd is fixed on Alpine or the bpmd tests are ifdef'ed out of the scripts for Alpine
         if (testLive)
         {
             // Live
@@ -53,13 +53,15 @@ public class SOS
 
         if (testDump)
         {
+            string dumpName = null;
+
             // Create and test dumps on OSX or Alpine only if the runtime is 6.0 or greater
             if (!(OS.Kind == OSKind.OSX || SOSRunner.IsAlpine()) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
                 {
-                    await SOSRunner.CreateDump(information);
+                    dumpName = await SOSRunner.CreateDump(information);
                 }
 
                 // Test against a crash dump.
@@ -85,7 +87,63 @@ public class SOS
                         }
                     }
                 }
+
+                // Test the crash report json file
+                if (dumpName != null && information.TestCrashReport)
+                {
+                    TestCrashReport(dumpName, information);
+                }
             }
+        }
+    }
+
+    private void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
+    {
+        string crashReportPath = dumpName + ".crashreport.json";
+        TestRunner.OutputHelper outputHelper = TestRunner.ConfigureLogging(information.TestConfiguration, information.OutputHelper, information.TestName + ".CrashReportTest");
+        try
+        {
+            outputHelper.WriteLine("CrashReportTest for {0}", crashReportPath);
+            outputHelper.WriteLine("{");
+
+            AssertX.FileExists("CrashReport", crashReportPath, outputHelper.IndentedOutput);
+
+            dynamic crashReport = JsonConvert.DeserializeObject(File.ReadAllText(crashReportPath));
+            Assert.NotNull(crashReport);
+
+            dynamic payload = crashReport.payload;
+            Assert.NotNull(payload);
+            Version protocol_version = Version.Parse((string)payload.protocol_version);
+            Assert.True(protocol_version >= new Version("1.0.0"));
+            outputHelper.IndentedOutput.WriteLine($"protocol_version {protocol_version}");
+
+            string process_name = (string)payload.process_name;
+            Assert.NotNull(process_name);
+            outputHelper.IndentedOutput.WriteLine($"process_name {process_name}");
+
+            Assert.NotNull(payload.threads);
+            IEnumerable<dynamic> threads = payload.threads;
+            Assert.True(threads.Any());
+            outputHelper.IndentedOutput.WriteLine($"threads # {threads.Count()}");
+
+            if (OS.Kind == OSKind.OSX)
+            {
+                dynamic parameters = crashReport.parameters;
+                Assert.NotNull(parameters);
+                Assert.NotNull(parameters.ExceptionType);
+                Assert.NotNull(parameters.OSVersion);
+                Assert.Equal(parameters.SystemManufacturer, "apple");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            outputHelper.IndentedOutput.WriteLine(ex.ToString());
+        }
+        finally
+        {
+            outputHelper.WriteLine("}");
+            outputHelper.Dispose();
         }
     }
 
@@ -127,7 +185,7 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCPOHTests(TestConfiguration config)
     {
-        if (!config.IsNETCore || config.RuntimeFrameworkVersionMajor < 5)
+        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 5)
         {
             throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
         }
@@ -142,7 +200,7 @@ public class SOS
             TestConfiguration = config,
             DebuggeeName = "Overflow",
             // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
-            DumpDiagnostics = false,
+            DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
             DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
         });
     }

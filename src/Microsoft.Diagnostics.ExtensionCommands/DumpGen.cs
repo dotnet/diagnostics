@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private static bool IsTypeNameMatching(string typeName, string typeNameFilter)
         {
-            return typeName.IndexOf(typeNameFilter, StringComparison.OrdinalIgnoreCase) >= 0;
+            return typeName != null && typeName.IndexOf(typeNameFilter, StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

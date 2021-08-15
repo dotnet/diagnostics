@@ -114,6 +114,7 @@ public:
         {
             return E_UNEXPECTED;
         }
+        address = CONVERT_FROM_SIGN_EXTENDED(address);
 #ifdef FEATURE_PAL
         if (g_sos != nullptr)
         {
