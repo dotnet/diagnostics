@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
                 _latestTicks = payloadTimestampTicks;
             }
 
-            // Trigger is satisfied when the latest time is larger than the targe time.
+            // Trigger is satisfied when the latest time is larger than the target time.
             return _latestTicks >= _targetTicks;
         }
     }

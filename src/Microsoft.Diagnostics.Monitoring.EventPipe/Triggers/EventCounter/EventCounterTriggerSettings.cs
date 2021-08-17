@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
             }
             else if (GreaterThan.HasValue && LessThan.HasValue)
             {
-                if (GreaterThan.Value > LessThan.Value)
+                if (GreaterThan.Value >= LessThan.Value)
                 {
                     results.Add(new ValidationResult(
                         GreaterThanMustBeLessThanLessThanMessage,

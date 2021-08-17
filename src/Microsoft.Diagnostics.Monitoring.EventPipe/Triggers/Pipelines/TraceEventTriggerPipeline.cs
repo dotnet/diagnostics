@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
         private readonly TaskCompletionSource<object> _completionSource =
             new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        // The source of thr trace events to monitor.
+        // The source of the trace events to monitor.
         private readonly TraceEventSource _eventSource;
 
         // The trigger implementation used to detect a condition in the trace event source.

@@ -400,7 +400,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private RemoteTestExecution StartTraceeProcess(string loggerCategory)
         {
-            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory + " SpinWait", _output);
+            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory + " SpinWait10", _output);
         }
 
         private sealed class CpuData
