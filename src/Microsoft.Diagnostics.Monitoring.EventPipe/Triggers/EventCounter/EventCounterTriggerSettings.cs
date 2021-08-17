@@ -17,9 +17,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         internal const int CounterIntervalSeconds_MaxValue = 24 * 60 * 60; // 1 day
         internal const int CounterIntervalSeconds_MinValue = 1; // 1 second
 
-        internal const string EitherGreaterThanLessThanMessage = $"Either the {nameof(GreaterThan)} field or the {nameof(LessThan)} field are required.";
+        internal const string EitherGreaterThanLessThanMessage = "Either the " + nameof(GreaterThan) + " field or the " + nameof(LessThan) + " field are required.";
 
-        internal const string GreaterThanMustBeLessThanLessThanMessage = $"The {nameof(GreaterThan)} field must be less than the {nameof(LessThan)} field.";
+        internal const string GreaterThanMustBeLessThanLessThanMessage = "The " + nameof(GreaterThan) + " field must be less than the " + nameof(LessThan) + " field.";
 
         internal const string SlidingWindowDuration_MaxValue = "1.00:00:00"; // 1 day
         internal const string SlidingWindowDuration_MinValue = "00:00:01"; // 1 second
