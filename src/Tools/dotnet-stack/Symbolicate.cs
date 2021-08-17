@@ -20,17 +20,19 @@ namespace Microsoft.Diagnostics.Tools.Stack
     internal static class SymbolicateHandler
     {
         private static readonly Regex s_regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+)(\.dll|\.ni\.dll): token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new Dictionary<string, string>();
         private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new Dictionary<string, MetadataReader>();
 
         delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
 
         /// <summary>
-        /// Get the line number from the Method Token and IL Offset at the stacktrace
+        /// Get the line number from the Method Token and IL Offset in a stacktrace
         /// </summary>
         /// <param name="console"></param>
-        /// <param name="inputPath">The input path for file with stacktrace text</param>
-        /// <param name="searchDir">All paths in the directory to the assembly and pdb where the exception occurred</param>
-        /// <param name="output">The output path for the extracted line number data</param>
+        /// <param name="inputPath">Path to the stacktrace text file</param>
+        /// <param name="searchDir">Path of multiple directories with assembly and pdb where the exception occurred</param>
+        /// <param name="output">Output directly to a file</param>
+        /// <param name="stdout">Output directly to a console</param>
         /// <returns></returns>
         private static void Symbolicate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout)
         {
@@ -41,7 +43,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     output = new FileInfo(inputPath.FullName + ".symbolicated");
                 }
 
-                CreateSymbolicateFile(console, searchDir, inputPath.FullName, output.FullName, stdout);
+                SetAssemblyFilePathDictionary(console, searchDir);
+
+                CreateSymbolicateFile(console, inputPath.FullName, output.FullName, stdout);
             }
             catch (Exception e)
             {
@@ -49,25 +53,90 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
         }
 
-        private static void CreateSymbolicateFile(IConsole console, DirectoryInfo[] searchDir, string inputPath, string outputPath, bool isStdout)
+        private static void SetAssemblyFilePathDictionary(IConsole console, DirectoryInfo[] searchDir)
         {
             try
             {
-                SetMetadataReader(searchDir);
+                List<string> searchPaths = new List<string>
+                {
+                    Directory.GetCurrentDirectory()
+                };
+                foreach (var path in searchDir)
+                {
+                    searchPaths.Add(path.FullName);
+                }
 
-                string ret = string.Empty;
+                List<string> peFiles = GrabFiles(searchPaths, "*.dll");
+                if (peFiles.Count == 0)
+                {
+                    throw new FileNotFoundException("Assembly file not found\n");
+                }
+                peFiles = peFiles.Distinct().ToList();
+                peFiles.Sort();
+
+                List<string> pdbFiles = GrabFiles(searchPaths, "*.pdb");
+                if (pdbFiles.Count == 0)
+                {
+                    throw new FileNotFoundException("PDB file not found\n");
+                }
+                pdbFiles = pdbFiles.Distinct().ToList();
+                pdbFiles.Sort();
+
+                int pdbCnt = 0;
+                for (int peCnt = 0; peCnt < peFiles.Count; peCnt++)
+                {
+                    if (peFiles[peCnt].Contains(".ni.dll"))
+                    {
+                        continue;
+                    }
+                    int compare = string.Compare(Path.GetFileNameWithoutExtension(peFiles[peCnt]), Path.GetFileNameWithoutExtension(pdbFiles[pdbCnt]), StringComparison.OrdinalIgnoreCase);
+                    if (compare == 0)
+                    {
+                        s_assemblyFilePathDictionary.Add(Path.GetFileNameWithoutExtension(peFiles[peCnt]), peFiles[peCnt]);
+                    }
+                    else if (compare > 0)
+                    {
+                        pdbCnt++;
+                        peCnt--;
+                    }
+                    if (pdbCnt == pdbFiles.Count) break;
+                }
+            }
+            catch (Exception e)
+            {
+                console.Error.WriteLine(e.Message);
+            }
+        }
+
+        private static List<string> GrabFiles(List<string> paths, string searchPattern)
+        {
+            try
+            {
+                List<string> files = new List<string>();
+                foreach (var assemDir in paths)
+                {
+                    if (Directory.Exists(assemDir))
+                    {
+                        files.AddRange(Directory.GetFiles(assemDir, searchPattern, SearchOption.AllDirectories));
+                    }
+                }
+                return files;
+            }
+            catch
+            {
+                return new List<string>();
+            }
+        }
+
+        private static void CreateSymbolicateFile(IConsole console, string inputPath, string outputPath, bool isStdout)
+        {
+            try
+            {
                 using StreamWriter fileStreamWriter = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
                 using StreamReader fileStreamReader = new StreamReader(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
                 while (!fileStreamReader.EndOfStream)
                 {
-                    string line = fileStreamReader.ReadLine();
-                    if (!s_regex.Match(line).Success)
-                    {
-                        fileStreamWriter?.WriteLine(ret);
-                        if (isStdout) console.Out.WriteLine(ret);
-                        continue;
-                    }
-                    ret = TrySymbolicateLine(line);
+                    string ret = TrySymbolicateLine(fileStreamReader.ReadLine());
                     fileStreamWriter?.WriteLine(ret);
                     if (isStdout) console.Out.WriteLine(ret);
                 }
@@ -76,100 +145,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
             catch (Exception e)
             {
                 console.Error.WriteLine(e.Message);
-            }
-        }
-
-        private static void SetMetadataReader(DirectoryInfo[] searchDir)
-        {
-            List<string> searchPaths = new List<string>();
-            searchPaths.Add(Directory.GetCurrentDirectory());
-            foreach (var path in searchDir)
-            {
-                searchPaths.Add(path.FullName);
-            }
-
-            List<string> peFiles = GrabFiles(searchPaths, "*.dll");
-            if (peFiles.Count == 0)
-            {
-                throw new FileNotFoundException("Assembly file not found\n");
-            }
-            peFiles = peFiles.Distinct().ToList();
-            peFiles.Sort();
-
-            List<string> pdbFiles = GrabFiles(searchPaths, "*.pdb");
-            if (pdbFiles.Count == 0)
-            {
-                throw new FileNotFoundException("PDB file not found\n");
-            }
-            pdbFiles = pdbFiles.Distinct().ToList();
-            pdbFiles.Sort();
-
-            int pdbCnt = 0;
-            for (int peCnt = 0; peCnt < peFiles.Count; peCnt++)
-            {
-                if (peFiles[peCnt].Contains(".ni.dll"))
-                {
-                    continue;
-                }
-                int compare = string.Compare(Path.GetFileNameWithoutExtension(peFiles[peCnt]), Path.GetFileNameWithoutExtension(pdbFiles[pdbCnt]), StringComparison.OrdinalIgnoreCase);
-                if (compare == 0)
-                {
-                    SetMetadataReaderDictionary(peFiles[peCnt]);
-                }
-                else if (compare > 0)
-                {
-                    pdbCnt++;
-                    peCnt--;
-                }
-                if (pdbCnt == pdbFiles.Count) break;
-            }
-        }
-
-        private static List<string> GrabFiles(List<string> paths, string searchPattern)
-        {
-            List<string> files = new List<string>();
-            foreach (var assemDir in paths)
-            {
-                if (Directory.Exists(assemDir))
-                {
-                    files.AddRange(Directory.GetFiles(assemDir, searchPattern, SearchOption.AllDirectories));
-                }
-            }
-            return files;
-        }
-
-        private static void SetMetadataReaderDictionary(string filePath)
-        {
-            try
-            {
-                static Stream streamProvider(string sp) => new FileStream(sp, FileMode.Open, FileAccess.Read);
-                using Stream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                if (stream != null)
-                {
-                    MetadataReaderProvider provider = null;
-                    if (filePath.Contains(".dll"))
-                    {
-                        using PEReader peReader = new PEReader(stream);
-                        if (!peReader.TryOpenAssociatedPortablePdb(filePath, streamProvider, out provider, out string pdbPath))
-                        {
-                            return;
-                        }
-                    }
-                    /*else if (filePath.Contains(".pdb"))
-                    {
-                        provider = MetadataReaderProvider.FromPortablePdbStream(stream);
-                    }*/
-                    else
-                    {
-                        return;
-                    }
-                    MetadataReader reader = provider?.GetMetadataReader();
-                    s_metadataReaderDictionary.Add(Path.GetFileNameWithoutExtension(filePath), reader);
-                }
-            }
-            catch
-            {
-                return;
             }
         }
 
@@ -186,7 +161,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
         private static string TrySymbolicateLine(string line)
         {
-            string ret = line;
             Match match = s_regex.Match(line);
             if (!match.Success)
             {
@@ -200,54 +174,109 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 Param = match.Groups["params"].Value,
                 Assembly = match.Groups["filename"].Value,
                 Token = match.Groups["token"].Value,
-                Offset = match.Groups["offset"].Value
+                Offset = match.Groups["offset"].Value,
+                Pdb = match.Groups["filename"].Value + ".pdb"
             };
-            stInfo.Pdb = stInfo.Assembly.Contains(".ni.dll") ? stInfo.Assembly.Replace(".ni.dll", ".pdb") : stInfo.Assembly.Replace(".dll", ".pdb");
 
-            return GetLineFromMetadata(TryGetMetadataReader(stInfo.Assembly), ret, stInfo);
+            return GetLineFromMetadata(TryGetMetadataReader(stInfo.Assembly), line, stInfo);
         }
 
         private static MetadataReader TryGetMetadataReader(string assemblyName)
         {
-            if (s_metadataReaderDictionary.ContainsKey(assemblyName))
+            MetadataReader reader = null;
+            try
             {
-                return s_metadataReaderDictionary[assemblyName];
+                if (s_assemblyFilePathDictionary.TryGetValue(assemblyName, out string filePath))
+                {
+                    if (s_metadataReaderDictionary.TryGetValue(filePath, out reader))
+                    {
+                        return reader;
+                    }
+                    s_metadataReaderDictionary.Add(filePath, SetMetadataReader(filePath));
+                    return s_metadataReaderDictionary[filePath];
+                }
+                return reader;
             }
-            return null;
+            catch
+            {
+                return reader;
+            }
+        }
+
+        private static MetadataReader SetMetadataReader(string filePath)
+        {
+            MetadataReader reader = null;
+            try
+            {
+                MetadataReaderProvider provider = null;
+                static Stream streamProvider(string sp) => new FileStream(sp, FileMode.Open, FileAccess.Read);
+                using Stream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                if (stream != null)
+                {
+                    if (filePath.Contains(".dll"))
+                    {
+                        using PEReader peReader = new PEReader(stream);
+                        if (!peReader.TryOpenAssociatedPortablePdb(filePath, streamProvider, out provider, out string pdbPath))
+                        {
+                            return reader;
+                        }
+                    }
+                    /*else if (filePath.Contains(".pdb"))
+                    {
+                        provider = MetadataReaderProvider.FromPortablePdbStream(stream);
+                    }*/
+                    else
+                    {
+                        return reader;
+                    }
+                }
+                return provider?.GetMetadataReader();
+            }
+            catch
+            {
+                return reader;
+            }
         }
 
         private static string GetLineFromMetadata(MetadataReader reader, string line, StackTraceInfo stInfo)
         {
-            if (reader != null)
+            try
             {
-                Handle handle = MetadataTokens.Handle(Convert.ToInt32(stInfo.Token, 16));
-                if (handle.Kind == HandleKind.MethodDefinition)
+                if (reader != null)
                 {
-                    MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
-                    MethodDebugInformation methodInfo = reader.GetMethodDebugInformation(methodDebugHandle);
-                    if (!methodInfo.SequencePointsBlob.IsNil)
+                    Handle handle = MetadataTokens.Handle(Convert.ToInt32(stInfo.Token, 16));
+                    if (handle.Kind == HandleKind.MethodDefinition)
                     {
-                        SequencePointCollection sequencePoints = methodInfo.GetSequencePoints();
-                        SequencePoint? bestPointSoFar = null;
-                        foreach (SequencePoint point in sequencePoints)
+                        MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
+                        MethodDebugInformation methodInfo = reader.GetMethodDebugInformation(methodDebugHandle);
+                        if (!methodInfo.SequencePointsBlob.IsNil)
                         {
-                            if (point.Offset > Convert.ToInt64(stInfo.Offset, 16))
-                                break;
+                            SequencePointCollection sequencePoints = methodInfo.GetSequencePoints();
+                            SequencePoint? bestPointSoFar = null;
+                            foreach (SequencePoint point in sequencePoints)
+                            {
+                                if (point.Offset > Convert.ToInt64(stInfo.Offset, 16))
+                                    break;
 
-                            if (point.StartLine != SequencePoint.HiddenLine)
-                                bestPointSoFar = point;
-                        }
+                                if (point.StartLine != SequencePoint.HiddenLine)
+                                    bestPointSoFar = point;
+                            }
 
-                        if (bestPointSoFar.HasValue)
-                        {
-                            string sourceFile = reader.GetString(reader.GetDocument(bestPointSoFar.Value.Document).Name);
-                            int sourceLine = bestPointSoFar.Value.StartLine;
-                            return $"   at {stInfo.Type}.{stInfo.Method}({stInfo.Param}) in {sourceFile}:line {sourceLine}";
+                            if (bestPointSoFar.HasValue)
+                            {
+                                string sourceFile = reader.GetString(reader.GetDocument(bestPointSoFar.Value.Document).Name);
+                                int sourceLine = bestPointSoFar.Value.StartLine;
+                                return $"   at {stInfo.Type}.{stInfo.Method}({stInfo.Param}) in {sourceFile}:line {sourceLine}";
+                            }
                         }
                     }
                 }
+                return line;
             }
-            return line;
+            catch
+            {
+                return line;
+            }
         }
 
         public static Command SymbolicateCommand() =>
@@ -285,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 Argument = new Argument<FileInfo>(name: "output-path")
                 {
                     Arity = ArgumentArity.ZeroOrOne
-                }
+                }.ExistingOnly()
             };
 
         public static Option<bool> StandardOutOption() =>
