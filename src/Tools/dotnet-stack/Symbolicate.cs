@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class SymbolicateHandler
     {
-        private static readonly Regex s_regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+)(\.dll|\.ni\.dll): token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Regex s_regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
         private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new Dictionary<string, string>();
         private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new Dictionary<string, MetadataReader>();
 
@@ -153,6 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             public string Type;
             public string Method;
             public string Param;
+            public string Filename;
             public string Assembly;
             public string Pdb;
             public string Token;
@@ -174,11 +175,19 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 Param = match.Groups["params"].Value,
                 Assembly = match.Groups["filename"].Value,
                 Token = match.Groups["token"].Value,
-                Offset = match.Groups["offset"].Value,
-                Pdb = match.Groups["filename"].Value + ".pdb"
+                Offset = match.Groups["offset"].Value
             };
+            if (stInfo.Assembly.Contains(".ni.dll"))
+            {
+                stInfo.Filename = stInfo.Assembly.Replace(".ni.dll", "");
+            }
+            else
+            {
+                stInfo.Filename = stInfo.Assembly.Replace(".dll", "");
+            }
+            stInfo.Pdb = stInfo.Filename + ".pdb";
 
-            return GetLineFromMetadata(TryGetMetadataReader(stInfo.Assembly), line, stInfo);
+            return GetLineFromMetadata(TryGetMetadataReader(stInfo.Filename), line, stInfo);
         }
 
         private static MetadataReader TryGetMetadataReader(string assemblyName)
@@ -266,7 +275,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                             {
                                 string sourceFile = reader.GetString(reader.GetDocument(bestPointSoFar.Value.Document).Name);
                                 int sourceLine = bestPointSoFar.Value.StartLine;
-                                return $"   at {stInfo.Type}.{stInfo.Method}({stInfo.Param}) in {sourceFile}:line {sourceLine}";
+                                string pattern = stInfo.Assembly + @"\:token " + stInfo.Token + @"\+" + stInfo.Offset;
+                                string replacement = sourceFile + @"\:line " + sourceLine;
+                                return Regex.Replace(line, pattern, replacement);
                             }
                         }
                     }
@@ -314,7 +325,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 Argument = new Argument<FileInfo>(name: "output-path")
                 {
                     Arity = ArgumentArity.ZeroOrOne
-                }.ExistingOnly()
+                }
             };
 
         public static Option<bool> StandardOutOption() =>
