@@ -11,7 +11,8 @@ using System.Threading.Tasks;
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 {
     /// <summary>
-    /// Starts an event pipe session using the specified configuration and 
+    /// Starts an event pipe session using the specified configuration and invokes a callback
+    /// when events from the session satisfy the specified trigger.
     /// </summary>
     /// <typeparam name="TSettings">The settings type of the trace event trigger.</typeparam>
     internal sealed class EventPipeTriggerPipeline<TSettings> :

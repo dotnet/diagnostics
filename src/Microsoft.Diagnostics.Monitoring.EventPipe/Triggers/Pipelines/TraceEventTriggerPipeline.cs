@@ -38,8 +38,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
             _eventSource = eventSource ?? throw new ArgumentNullException(nameof(eventSource));
             _trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
 
-            IDictionary<string, IEnumerable<string>> providerEventMap = _trigger.GetProviderEventMap();
-            if (null == providerEventMap)
+            IDictionary<string, IEnumerable<string>> providerEventMapFromTrigger = _trigger.GetProviderEventMap();
+            if (null == providerEventMapFromTrigger)
             {
                 // Allow all events to be forwarded to the trigger
                 _eventSource.Dynamic.AddCallbackForProviderEvents(
@@ -48,6 +48,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
             }
             else
             {
+                // Event providers should be compared case-insensitive whereas counter names should be compared case-sensative.
+                // Make a copy of the provided map and change the comparers as appropriate.
+                IDictionary<string, IEnumerable<string>> providerEventMap = providerEventMapFromTrigger.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value.ToArray().AsEnumerable(),
+                    StringComparer.OrdinalIgnoreCase);
+
                 // Only allow events described in the mapping to be forwarded to the trigger.
                 // If a provider has no events specified, then all events from that provider are forwarded.
                 _eventSource.Dynamic.AddCallbackForProviderEvents(
