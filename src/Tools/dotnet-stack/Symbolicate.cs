@@ -275,8 +275,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                             {
                                 string sourceFile = reader.GetString(reader.GetDocument(bestPointSoFar.Value.Document).Name);
                                 int sourceLine = bestPointSoFar.Value.StartLine;
-                                string pattern = stInfo.Assembly + @"\:token " + stInfo.Token + @"\+" + stInfo.Offset;
-                                string replacement = sourceFile + @"\:line " + sourceLine;
+                                string pattern = stInfo.Assembly + @":token " + stInfo.Token + @"\+" + stInfo.Offset;
+                                string replacement = sourceFile + @":line " + sourceLine;
                                 return Regex.Replace(line, pattern, replacement);
                             }
                         }
