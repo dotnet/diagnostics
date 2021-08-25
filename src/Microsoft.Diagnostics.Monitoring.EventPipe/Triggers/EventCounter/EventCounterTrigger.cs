@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
             _filter = new CounterFilter(settings.CounterIntervalSeconds);
             _filter.AddFilter(settings.ProviderName, new string[] { settings.CounterName });
             
-            _impl = new(settings);
+            _impl = new EventCounterTriggerImpl(settings);
 
             _providerName = settings.ProviderName;
         }
