@@ -4,7 +4,9 @@
 
 using Microsoft.Diagnostics.Tracing;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
@@ -16,6 +18,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
     internal sealed class EventCounterTrigger :
         ITraceEventTrigger
     {
+        // A cache of the list of events that are expected from the specified event provider.
+        // This is a mapping of event provider name to the event map returned by GetProviderEventMap.
+        // This allows caching of the event map between multiple instances of the trigger that
+        // use the same event provider as the source of counter events.
+        private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>> _eventMapCache =
+            new ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>>(StringComparer.OrdinalIgnoreCase);
+        
+        // Only care for the EventCounters events from any of the specified providers, thus
+        // create a static readonly instance that is shared among all event maps.
+        private static readonly IReadOnlyCollection<string> _eventProviderEvents =
+            new ReadOnlyCollection<string>(new string[] { "EventCounters" });
+
         private readonly CounterFilter _filter;
         private readonly EventCounterTriggerImpl _impl;
         private readonly string _providerName;
@@ -37,12 +51,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
             _providerName = settings.ProviderName;
         }
 
-        public IDictionary<string, IEnumerable<string>> GetProviderEventMap()
+        public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap()
         {
-            return new Dictionary<string, IEnumerable<string>>()
-            {
-                { _providerName, new string[] { "EventCounters" } }
-            };
+            return _eventMapCache.GetOrAdd(_providerName, CreateEventMapForProvider);
         }
 
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
@@ -66,6 +77,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         {
             ValidationContext context = new(settings);
             Validator.ValidateObject(settings, context, validateAllProperties: true);
+        }
+
+        private IReadOnlyDictionary<string, IReadOnlyCollection<string>> CreateEventMapForProvider(string providerName)
+        {
+            return new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(
+                new Dictionary<string, IReadOnlyCollection<string>>()
+                {
+                    { _providerName, _eventProviderEvents }
+                });
         }
     }
 }

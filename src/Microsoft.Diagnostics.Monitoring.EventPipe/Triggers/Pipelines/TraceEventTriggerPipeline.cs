@@ -38,7 +38,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
             _eventSource = eventSource ?? throw new ArgumentNullException(nameof(eventSource));
             _trigger = trigger ?? throw new ArgumentNullException(nameof(trigger));
 
-            IDictionary<string, IEnumerable<string>> providerEventMapFromTrigger = _trigger.GetProviderEventMap();
+            IReadOnlyDictionary<string, IReadOnlyCollection<string>> providerEventMapFromTrigger =
+                _trigger.GetProviderEventMap();
+
             if (null == providerEventMapFromTrigger)
             {
                 // Allow all events to be forwarded to the trigger

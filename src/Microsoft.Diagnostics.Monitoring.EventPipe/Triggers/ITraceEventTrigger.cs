@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers
         /// Each event provider entry also may have a null or empty list of event names to
         /// signify that all events from the provider can be forwarded to the trigger.
         /// </remarks>
-        IDictionary<string, IEnumerable<string>> GetProviderEventMap();
+        IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap();
 
         /// <summary>
         /// Check if the given <see cref="TraceEvent"/> satisfies the condition
