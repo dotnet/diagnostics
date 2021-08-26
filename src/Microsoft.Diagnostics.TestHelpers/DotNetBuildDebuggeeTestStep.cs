@@ -188,10 +188,12 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
-                      WithWorkingDirectory(DebuggeeSolutionDirPath).
-                      WithLog(output).
-                      WithTimeout(TimeSpan.FromMinutes(10)).                    // restore can be painfully slow
-                      WithExpectedExitCode(0);
+                WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
+                WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
+                WithWorkingDirectory(DebuggeeSolutionDirPath).
+                WithLog(output).
+                WithTimeout(TimeSpan.FromMinutes(10)).                    // restore can be painfully slow
+                WithExpectedExitCode(0);
 
             if (OS.Kind != OSKind.Windows && Environment.GetEnvironmentVariable("HOME") == null)
             {

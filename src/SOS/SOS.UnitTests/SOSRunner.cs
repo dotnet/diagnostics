@@ -253,6 +253,8 @@ public class SOSRunner : IDisposable
 
                 // Create the debuggee process runner
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
+                    WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
+                    WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
                     WithEnvironmentVariable("COMPlus_DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
@@ -589,6 +591,7 @@ public class SOSRunner : IDisposable
 
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
+                WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));

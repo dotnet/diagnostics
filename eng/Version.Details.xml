@@ -1,8 +1,8 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="6.0.0-beta.21160.7">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="6.0.0-beta.21420.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>7f13798e5f567b72ffe63205bf49839245f0f8c1</Sha>
+      <Sha>fe787bd48ed72e51a98eb5e4e5e5af74edb531e5</Sha>
     </Dependency>
     <Dependency Name="Microsoft.SymbolStore" Version="1.0.240901">
       <Uri>https://github.com/dotnet/symstore</Uri>
@@ -16,9 +16,9 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>957981f36eeccb6e9d266407df6522ca5cfbd899</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.100-preview.1.21103.13">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.100-rc.2.21423.2">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>53e0c8c7f9c65a13c17f58135557665a5a0c15b1</Sha>
+      <Sha>eca586b5e70ee7f55557daed7fa00be974639bf5</Sha>
     </Dependency>
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="5.0.0-alpha.1.20473.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
@@ -27,9 +27,9 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.21160.7">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.21420.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>7f13798e5f567b72ffe63205bf49839245f0f8c1</Sha>
+      <Sha>fe787bd48ed72e51a98eb5e4e5e5af74edb531e5</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.0-rc.2.21421.2">

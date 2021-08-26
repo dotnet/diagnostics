@@ -48,7 +48,9 @@
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
-  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
+
+  <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
+  <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
@@ -151,7 +153,6 @@
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-              <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
             </Option>
             <Option Condition="'$(AspNetCoreVersion50)' != ''">
               <BuildProjectFramework>net5.0</BuildProjectFramework>

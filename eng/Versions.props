@@ -23,7 +23,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-rc.2.21421.2</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>6.0.0-rc.2.21421.2</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>6.0.100-preview.1.21103.13</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>6.0.100-rc.2.21423.2</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -51,7 +51,7 @@
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.21160.7</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.21420.4</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
 </Project>
