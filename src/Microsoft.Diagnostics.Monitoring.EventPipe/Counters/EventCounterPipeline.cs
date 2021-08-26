@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (settings.CounterGroups.Length > 0)
             {
-                _filter = new CounterFilter();
+                _filter = new CounterFilter(CounterIntervalSeconds);
                 foreach (var counterGroup in settings.CounterGroups)
                 {
                     _filter.AddFilter(counterGroup.ProviderName, counterGroup.CounterNames);
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
-                _filter = CounterFilter.AllCounters;
+                _filter = CounterFilter.AllCounters(CounterIntervalSeconds);
             }
         }
 
@@ -49,56 +49,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 try
                 {
-                    // Metrics
-                    if (traceEvent.EventName.Equals("EventCounters"))
+                    if (traceEvent.TryGetCounterPayload(_filter, out ICounterPayload counterPayload))
                     {
-                        IDictionary<string, object> payloadVal = (IDictionary<string, object>)(traceEvent.PayloadValue(0));
-                        IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
-
-                        //Make sure we are part of the requested series. If multiple clients request metrics, all of them get the metrics.
-                        string series = payloadFields["Series"].ToString();
-                        if (GetInterval(series) != CounterIntervalSeconds * 1000)
-                        {
-                            return;
-                        }
-
-                        string counterName = payloadFields["Name"].ToString();
-                        if (!_filter.IsIncluded(traceEvent.ProviderName, counterName))
-                        {
-                            return;
-                        }
-
-                        float intervalSec = (float)payloadFields["IntervalSec"];
-                        string displayName = payloadFields["DisplayName"].ToString();
-                        string displayUnits = payloadFields["DisplayUnits"].ToString();
-                        double value = 0;
-                        CounterType counterType = CounterType.Metric;
-
-                        if (payloadFields["CounterType"].Equals("Mean"))
-                        {
-                            value = (double)payloadFields["Mean"];
-                        }
-                        else if (payloadFields["CounterType"].Equals("Sum"))
-                        {
-                            counterType = CounterType.Rate;
-                            value = (double)payloadFields["Increment"];
-                            if (string.IsNullOrEmpty(displayUnits))
-                            {
-                                displayUnits = "count";
-                            }
-                            //TODO Should we make these /sec like the dotnet-counters tool?
-                        }
-
-                        // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
-                        // We no longer added it here.
-                        var counterPayload = new CounterPayload(traceEvent.TimeStamp,
-                            traceEvent.ProviderName,
-                            counterName, displayName,
-                            displayUnits,
-                            value,
-                            counterType,
-                            intervalSec);
-
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
                 }
@@ -116,17 +68,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             await sourceCompletedTaskSource.Task;
 
             ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStopped());
-        }
-
-        private static int GetInterval(string series)
-        {
-            const string comparison = "Interval=";
-            int interval = 0;
-            if (series.StartsWith(comparison, StringComparison.OrdinalIgnoreCase))
-            {
-                int.TryParse(series.Substring(comparison.Length), out interval);
-            }
-            return interval;
         }
 
         private void ExecuteCounterLoggerAction(Action<ICountersLogger> action)

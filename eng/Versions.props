@@ -45,6 +45,7 @@
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
     <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
+    <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemMemoryVersion>4.5.4</SystemMemoryVersion>
     <SystemTextEncodingsWebVersion>4.7.2</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
