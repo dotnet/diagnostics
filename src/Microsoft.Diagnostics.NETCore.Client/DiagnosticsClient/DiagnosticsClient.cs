@@ -230,16 +230,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             IpcMessage message = CreateProcessEnvironmentMessage();
             using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, message);
-            Task<Dictionary<string, string>> envTask = GetProcessEnvironmentFromResponse(response, nameof(GetProcessEnvironment), CancellationToken.None);
-            envTask.Wait();
-            return envTask.Result;
+            ValidateResponseMessage(response.Message, nameof(GetProcessEnvironmentAsync));
+
+            ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
+            return helper.ReadEnvironment(response.Continuation);
         }
 
         internal async Task<Dictionary<string, string>> GetProcessEnvironmentAsync(CancellationToken token)
         {
             IpcMessage message = CreateProcessEnvironmentMessage();
             using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, message, token).ConfigureAwait(false);
-            return await GetProcessEnvironmentFromResponse(response, nameof(GetProcessEnvironmentAsync), token).ConfigureAwait(false);
+            ValidateResponseMessage(response.Message, nameof(GetProcessEnvironmentAsync));
+
+            ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
+            return await helper.ReadEnvironmentAsync(response.Continuation, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -468,14 +472,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, logDumpGeneration);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
-        }
-
-        private static Task<Dictionary<string, string>> GetProcessEnvironmentFromResponse(IpcResponse response, string operationName, CancellationToken token)
-        {
-            ValidateResponseMessage(response.Message, operationName);
-
-            ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
-            return helper.ReadEnvironmentAsync(response.Continuation, token);
         }
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)

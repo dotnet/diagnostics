@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 IpcMessage response = Read(stream);
 
-                return new IpcResponse(response, Exchange(ref stream, null));
+                return new IpcResponse(response, Release(ref stream));
             }
             finally
             {
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 IpcMessage response = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
 
-                return new IpcResponse(response, Exchange(ref stream, null));
+                return new IpcResponse(response, Release(ref stream));
             }
             finally
             {
@@ -113,10 +113,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return IpcMessage.ParseAsync(stream, cancellationToken);
         }
 
-        private static Stream Exchange(ref Stream stream1, Stream stream2)
+        private static Stream Release(ref Stream stream1)
         {
             Stream intermediate = stream1;
-            stream1 = stream2;
+            stream1 = null;
             return intermediate;
         }
     }
