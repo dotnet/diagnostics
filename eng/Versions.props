@@ -36,8 +36,8 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.0.230301</MicrosoftDiagnosticsRuntimeVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.230301</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.0.242606</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.242606</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>
