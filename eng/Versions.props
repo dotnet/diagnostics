@@ -51,7 +51,7 @@
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.21420.4</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>6.0.0-beta.21427.6</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
   </PropertyGroup>
 </Project>
