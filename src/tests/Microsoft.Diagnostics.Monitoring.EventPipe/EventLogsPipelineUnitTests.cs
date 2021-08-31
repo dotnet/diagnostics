@@ -151,9 +151,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public async Task TestLogsUseAppFiltersAndFilterSpecs()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+            }
+
             using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
