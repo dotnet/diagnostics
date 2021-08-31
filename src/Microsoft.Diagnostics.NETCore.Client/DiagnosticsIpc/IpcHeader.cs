@@ -3,12 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -53,7 +52,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        public static IpcHeader TryParse(BinaryReader reader)
+        public static IpcHeader Parse(BinaryReader reader)
         {
             IpcHeader header = new IpcHeader
             {
@@ -64,6 +63,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Reserved = reader.ReadUInt16()
             };
 
+            return header;
+        }
+
+        public static async Task<IpcHeader> ParseAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            byte[] buffer = await stream.ReadBytesAsync(HeaderSizeInBytes, cancellationToken).ConfigureAwait(false);
+            using MemoryStream bufferStream = new MemoryStream(buffer);
+            using BinaryReader bufferReader = new BinaryReader(bufferStream);
+            IpcHeader header = Parse(bufferReader);
+            Debug.Assert(bufferStream.Position == bufferStream.Length);
             return header;
         }
 
