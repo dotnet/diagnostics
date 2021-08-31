@@ -13,10 +13,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         // The amount of time to wait for a stream to be available for consumption by the Connect method.
         // Normally expect the runtime to respond quickly but resource constrained machines may take longer.
-        private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(30);
+        internal static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(30);
 
         /// <summary>
-        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process associated with the <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process associated with the <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process associated with the <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Sends a single DiagnosticsIpc Message to the dotnet process with PID processId.
+        /// Sends a single DiagnosticsIpc Message to the dotnet process associated with the <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="endpoint">An endpoint that provides a diagnostics connection to a runtime instance.</param>
         /// <param name="message">The DiagnosticsIpc Message to be sent</param>

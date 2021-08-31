@@ -63,9 +63,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private static async Task StopSessionAsync(EventPipeSession session)
         {
+            // Cancel after a generous amount of time if process ended before command is sent.
+            using CancellationTokenSource cancellationSource = new(IpcClient.ConnectTimeout);
             try
             {
-                await session.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                await session.StopAsync(cancellationSource.Token).ConfigureAwait(false);
             }
             catch (EndOfStreamException)
             {
@@ -73,6 +75,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
             catch (TimeoutException)
+            {
+            }
+            // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
+            catch (OperationCanceledException)
             {
             }
             // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
