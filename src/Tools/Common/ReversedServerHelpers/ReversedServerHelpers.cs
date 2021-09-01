@@ -162,10 +162,6 @@ namespace Microsoft.Internal.Common.Utils
 
         public async void Dispose()
         {
-            if (!string.IsNullOrEmpty(_port) && File.Exists(_port))
-            {
-                File.Delete(_port);
-            }
             ProcessLauncher.Launcher.Cleanup();
             if (_server != null)
             {
@@ -246,10 +242,6 @@ namespace Microsoft.Internal.Common.Utils
                 catch (TaskCanceledException)
                 {
                     //clean up the server
-                    if (!string.IsNullOrEmpty(fullPort) && File.Exists(fullPort))
-                    {
-                        File.Delete(fullPort);
-                    }
                     await server.DisposeAsync();
                     if (!ct.IsCancellationRequested)
                     {
