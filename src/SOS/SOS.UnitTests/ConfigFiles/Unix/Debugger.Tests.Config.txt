@@ -24,20 +24,10 @@
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
-  <TestRuntime21>true</TestRuntime21>
-  <TestRuntime21 Condition="'$(RuntimeVersion21)' == ''">false</TestRuntime21>
-  <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm'">false</TestRuntime21>
-  <TestRuntime21 Condition="'$(TargetArchitecture)' == 'arm64'">false</TestRuntime21>
-
-  <TestDotnetDumpCommandsWithRuntime21>true</TestDotnetDumpCommandsWithRuntime21>
-  <TestDotnetDumpCommandsWithRuntime21 Condition="'$(RuntimeVersion21)' == ''">false</TestDotnetDumpCommandsWithRuntime21>
-  <TestDotnetDumpCommandsWithRuntime21 Condition="'$(OS)' == 'Linux'">false</TestDotnetDumpCommandsWithRuntime21>
-
   <!-- Build the debuggee for this framework version but run it on latest -->
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
 
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
@@ -70,11 +60,6 @@
       <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
-    <Option Condition="'$(TestRuntime21)' == 'true'">
-      <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-    </Option>
     <!--
         SOS.StackAndOtherTests (cli because tested with embedded, portable PDBs and single-file)
       -->
@@ -98,10 +83,6 @@
         <Option Condition="'$(RuntimeVersion31)' != ''">
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(TestRuntime21)' == 'true'">
-          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
         </Option>
       </Options>
     </Option>
@@ -151,11 +132,6 @@
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
           <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <Option Condition="'$(TestDotnetDumpCommandsWithRuntime21)' == 'true'">
-          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-        </Option>
       </Options>
     </Option>
   </Options>
@@ -178,7 +154,7 @@
   </Options>
 
   <DotNetDumpHost>$(DotNetRoot)/dotnet</DotNetDumpHost>
-  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp2.1/publish/dotnet-dump.dll</DotNetDumpPath>
+  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp3.1/publish/dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 

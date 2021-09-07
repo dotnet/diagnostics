@@ -379,7 +379,6 @@ const char *g_linuxPaths[] = {
 #else
     "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-    "/rh-dotnet21/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/usr/share/dotnet/shared/Microsoft.NETCore.App",
 #endif
 };
@@ -471,15 +470,11 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
             // Find highest 3.1.x LTS version
             if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
             {
-                // Find highest 2.1.x LTS version
-                if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
+                // Find highest 6.0.x version
+                if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
                 {
-                    // Find highest 6.0.x version
-                    if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
-                    {
-                        TraceError("Error: Failed to find runtime directory\n");
-                        return E_FAIL;
-                    }
+                    TraceError("Error: Failed to find runtime directory\n");
+                    return E_FAIL;
                 }
             }
         }

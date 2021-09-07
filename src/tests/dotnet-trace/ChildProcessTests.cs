@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private void LaunchDotNetTrace(string command, out int exitCode, out string stdOut, out string stdErr)
         {
-            string dotnetTracePathWithArgs = CommonHelper.GetTraceePathWithArgs(traceeName: "dotnet-trace").Replace("net5.0", "netcoreapp2.1");
+            string dotnetTracePathWithArgs = CommonHelper.GetTraceePathWithArgs(traceeName: "dotnet-trace").Replace("net5.0", "netcoreapp3.1");
             ProcessStartInfo startInfo = new ProcessStartInfo(CommonHelper.HostExe, $"{dotnetTracePathWithArgs} {command}");
 
             OutputHelper.WriteLine($"Launching: {startInfo.FileName} {startInfo.Arguments}");
