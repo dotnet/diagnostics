@@ -316,7 +316,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private ReversedDiagnosticsServer CreateReversedServer(out string transportName)
         {
-            transportName = ReversedServerHelper.CreateServerTransportName();
+            transportName = DiagnosticPortsHelper.CreateServerTransportName();
             _outputHelper.WriteLine("Starting reversed server at '" + transportName + "'.");
             return new ReversedDiagnosticsServer(transportName);
         }
@@ -331,7 +331,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private TestRunner StartTracee(string transportName)
         {
             _outputHelper.WriteLine("Starting tracee.");
-            return ReversedServerHelper.StartTracee(_outputHelper, transportName);
+            var runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _outputHelper);
+            runner.SetDiagnosticPort(transportName, suspend: true);
+            runner.Start();
+            return runner;
         }
 
         private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)

@@ -274,16 +274,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal ProcessInfo GetProcessInfo()
         {
-            // RE: https://github.com/dotnet/runtime/issues/54083
-            // If the GetProcessInfo2 command is sent too early, it will crash the runtime instance.
-            // Disable the usage of the command until that issue is fixed.
-
             // Attempt to get ProcessInfo v2
-            //ProcessInfo processInfo = TryGetProcessInfo2();
-            //if (null != processInfo)
-            //{
-            //    return processInfo;
-            //}
+            ProcessInfo processInfo = TryGetProcessInfo2();
+            if (null != processInfo)
+            {
+                return processInfo;
+            }
 
             IpcMessage request = CreateProcessInfoMessage();
             using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, request);
@@ -292,16 +288,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal async Task<ProcessInfo> GetProcessInfoAsync(CancellationToken token)
         {
-            // RE: https://github.com/dotnet/runtime/issues/54083
-            // If the GetProcessInfo2 command is sent too early, it will crash the runtime instance.
-            // Disable the usage of the command until that issue is fixed.
-
             // Attempt to get ProcessInfo v2
-            //ProcessInfo processInfo = await TryGetProcessInfo2Async(token);
-            //if (null != processInfo)
-            //{
-            //    return processInfo;
-            //}
+            ProcessInfo processInfo = await TryGetProcessInfo2Async(token);
+            if (null != processInfo)
+            {
+                return processInfo;
+            }
 
             IpcMessage request = CreateProcessInfoMessage();
             using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, request, token).ConfigureAwait(false);

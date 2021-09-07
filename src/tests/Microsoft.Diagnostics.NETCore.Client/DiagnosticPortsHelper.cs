@@ -8,8 +8,11 @@ using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    internal static class ReversedServerHelper
+    internal static class DiagnosticPortsHelper
     {
+        private const string DiagnosticPortsEnvName = "DOTNET_DiagnosticPorts";
+        private const string DefaultDiagnosticPortSuspendEnvName = "DOTNET_DefaultDiagnosticPortSuspend";
+
         /// <summary>
         /// Creates a unique server name to avoid collisions from simultaneous running tests
         /// or potentially abandoned socket files.
@@ -27,21 +30,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        /// <summary>
-        /// Starts the Tracee executable while enabling connection to reverse diagnostics server.
-        /// </summary>
-        public static TestRunner StartTracee(ITestOutputHelper _outputHelper, string transportName)
+        public static void SetDiagnosticPort(this TestRunner runner, string transportName, bool suspend)
         {
-            var runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _outputHelper);
-            runner.AddReversedServer(transportName);
-            runner.Start();
-            return runner;
+            string suspendArgument = suspend ? "suspend" : "nosuspend";
+            runner.AddEnvVar(DiagnosticPortsEnvName, $"{transportName},connect,{suspendArgument};");
         }
 
-        public static void AddReversedServer(this TestRunner runner, string transportName)
+        public static void SuspendDefaultDiagnosticPort(this TestRunner runner)
         {
-            runner.AddEnvVar("DOTNET_DiagnosticsMonitorAddress", transportName);
-            runner.AddEnvVar("DOTNET_DiagnosticPorts", $"{transportName},nosuspend;");
+            runner.AddEnvVar(DefaultDiagnosticPortSuspendEnvName, "1");
         }
     }
 }
