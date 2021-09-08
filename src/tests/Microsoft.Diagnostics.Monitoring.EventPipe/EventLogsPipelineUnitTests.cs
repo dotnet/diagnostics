@@ -34,9 +34,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that all log events are collected if no filters are specified.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public async Task TestLogsAllCategoriesAllLevels()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+            }
+
             using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
