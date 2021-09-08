@@ -181,11 +181,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for wildcard categories.
         /// </summary>
-        //https://github.com/dotnet/diagnostics/issues/2568
-        //[Fact]
-        //public async Task TestLogsWildcardCategory()
-        private async Task TestLogsWildcardCategory()
+        [SkippableFact]
+        public async Task TestLogsWildcardCategory()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2568");
+            }
             using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
