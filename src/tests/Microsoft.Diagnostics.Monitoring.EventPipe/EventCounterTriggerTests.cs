@@ -9,10 +9,12 @@ using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -313,9 +315,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Tests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public async Task EventCounterTriggerWithEventPipePipelineTest()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2568");
+            }
             EventCounterTriggerSettings settings = new()
             {
                 ProviderName = EventCounterConstants.RuntimeProviderName,
