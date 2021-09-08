@@ -181,8 +181,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for wildcard categories.
         /// </summary>
-        [Fact]
-        public async Task TestLogsWildcardCategory()
+        //https://github.com/dotnet/diagnostics/issues/2568
+        //[Fact]
+        //public async Task TestLogsWildcardCategory()
+        private async Task TestLogsWildcardCategory()
         {
             using Stream outputStream = await GetLogsAsync(settings =>
             {

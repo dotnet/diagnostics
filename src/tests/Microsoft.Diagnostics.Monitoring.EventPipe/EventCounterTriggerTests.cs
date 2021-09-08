@@ -313,8 +313,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Tests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
-        [Fact]
-        public async Task EventCounterTriggerWithEventPipePipelineTest()
+        //https://github.com/dotnet/diagnostics/issues/2568
+        //[Fact]
+        //public async Task EventCounterTriggerWithEventPipePipelineTest()
+        private async Task EventCounterTriggerWithEventPipePipelineTest()
         {
             EventCounterTriggerSettings settings = new()
             {
