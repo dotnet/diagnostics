@@ -208,6 +208,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
             }
 
+            if (string.IsNullOrEmpty(ipcServer))
+                ipcServer = GetDefaultIpcServerPath(logger);
+
             var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
