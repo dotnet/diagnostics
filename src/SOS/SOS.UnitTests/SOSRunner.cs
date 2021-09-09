@@ -67,6 +67,8 @@ public class SOSRunner : IDisposable
     public class TestInformation
     {
         private string _testName;
+        private bool _testCrashReport = true;
+        private DumpGenerator _dumpGenerator = DumpGenerator.CreateDump; 
 
         public TestConfiguration TestConfiguration { get; set; }
 
@@ -82,7 +84,21 @@ public class SOSRunner : IDisposable
 
         public string DebuggeeArguments { get; set; }
 
-        public DumpGenerator DumpGenerator { get; set; } = DumpGenerator.CreateDump;
+        public DumpGenerator DumpGenerator
+        {
+            get {
+                DumpGenerator dumpGeneration = _dumpGenerator;
+                if (dumpGeneration == DumpGenerator.CreateDump)
+                {
+                    if (!TestConfiguration.CreateDumpExists || TestConfiguration.GenerateDumpWithLLDB() || TestConfiguration.GenerateDumpWithGDB())
+                    {
+                        dumpGeneration = DumpGenerator.NativeDebugger;
+                    }
+                }
+                return dumpGeneration;
+            }
+            set { _dumpGenerator = value; }
+        }
 
         public DumpType DumpType { get; set; } = DumpType.Heap;
 
@@ -91,6 +107,12 @@ public class SOSRunner : IDisposable
         public bool DumpDiagnostics { get; set; } = true;
 
         public string DumpNameSuffix { get; set; }
+
+        public bool TestCrashReport
+        {
+            get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows && TestConfiguration.RuntimeFrameworkVersionMajor >= 6; }
+            set { _testCrashReport = value; }
+        }
 
         public bool IsValid()
         {
@@ -134,23 +156,17 @@ public class SOSRunner : IDisposable
     /// Run a debuggee and create a dump.
     /// </summary>
     /// <param name="information">test info</param>
-    public static async Task CreateDump(TestInformation information)
+    /// <returns>full dump name</returns>
+    public static async Task<string> CreateDump(TestInformation information)
     {
         if (!information.IsValid()) {
             throw new ArgumentException("Invalid TestInformation");
         }
         TestConfiguration config = information.TestConfiguration;
         DumpGenerator dumpGeneration = information.DumpGenerator;
+        string dumpName = null;
 
         Directory.CreateDirectory(config.DebuggeeDumpOutputRootDir());
-
-        if (dumpGeneration == DumpGenerator.CreateDump)
-        {
-            if (!config.CreateDumpExists || config.GenerateDumpWithLLDB() || config.GenerateDumpWithGDB())
-            {
-                dumpGeneration = DumpGenerator.NativeDebugger;
-            }
-        }
 
         if (dumpGeneration == DumpGenerator.NativeDebugger)
         {
@@ -160,6 +176,7 @@ public class SOSRunner : IDisposable
                 information.DumpType = DumpType.Full;
             }
             using SOSRunner runner = await SOSRunner.StartDebugger(information, DebuggerAction.GenerateDump);
+            dumpName = runner.ReplaceVariables("%DUMP_NAME%");
             try
             {
                 await runner.LoadSosExtension();
@@ -215,6 +232,7 @@ public class SOSRunner : IDisposable
                 // source directory name has been lowercased by the build system.
                 DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, information.DebuggeeName, outputHelper);
                 Dictionary<string, string> variables = GenerateVariables(information, debuggeeConfig, DebuggerAction.GenerateDump);
+                dumpName = ReplaceVariables(variables, "%DUMP_NAME%");
 
                 outputHelper.WriteLine("Starting {0}", information.TestName);
                 outputHelper.WriteLine("{");
@@ -264,14 +282,19 @@ public class SOSRunner : IDisposable
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
                         WithEnvironmentVariable("COMPlus_DbgEnableMiniDump", "1").
-                        WithEnvironmentVariable("COMPlus_DbgMiniDumpName", ReplaceVariables(variables, "%DUMP_NAME%"));
+                        WithEnvironmentVariable("COMPlus_DbgMiniDumpName", dumpName);
 
                     if (information.DumpDiagnostics)
                     {
                         processRunner.WithEnvironmentVariable("COMPlus_CreateDumpDiagnostics", "1");
                     }
-
-                    // TODO: temporary hack to disable using createdump for triage type until the failures can be fixed
+                    if (information.TestCrashReport)
+                    {
+                        processRunner.WithEnvironmentVariable("COMPlus_EnableCrashReport", "1");
+                    }
+                    // Windows createdump's triage MiniDumpWriteDump flags for .NET 5.0 are broken
+                    // Disable testing triage dumps on 6.0 until the DAC signing issue is resolved - issue https://github.com/dotnet/diagnostics/issues/2542
+                    // if (OS.Kind == OSKind.Windows && dumpType == DumpType.Triage && config.IsNETCore && config.RuntimeFrameworkVersionMajor < 6)
                     DumpType dumpType = information.DumpType;
                     if (OS.Kind == OSKind.Windows && dumpType == DumpType.Triage)
                     {
@@ -315,9 +338,14 @@ public class SOSRunner : IDisposable
                         }
 
                         // Start dotnet-dump collect
+                        DumpType dumpType = information.DumpType;
+                        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor <  6)
+                        {
+                            dumpType = DumpType.Full;
+                        }
                         var dotnetDumpArguments = new StringBuilder();
                         dotnetDumpArguments.Append(config.DotNetDumpPath());
-                        dotnetDumpArguments.AppendFormat(" collect --process-id {0} --output %DUMP_NAME%", processRunner.ProcessId);
+                        dotnetDumpArguments.AppendFormat($" collect --process-id {processRunner.ProcessId} --output {dumpName} --type {dumpType}");
                         if (information.DumpDiagnostics)
                         {
                             dotnetDumpArguments.Append(" --diag");
@@ -362,6 +390,7 @@ public class SOSRunner : IDisposable
                 pipeServer?.Dispose();
             }
         }
+        return dumpName;
     }
 
     /// <summary>
@@ -808,6 +837,15 @@ public class SOSRunner : IDisposable
                 if (!string.IsNullOrEmpty(setHostRuntime))
                 {
                     commands.Add($"!SetHostRuntime {setHostRuntime}");
+                }
+                // Add the path to runtime so SOS can find DAC/DBI for triage dumps
+                if (_dumpType.HasValue && _dumpType == DumpType.Triage)
+                {
+                    string runtimeSymbolsPath = _config.RuntimeSymbolsPath;
+                    if (runtimeSymbolsPath != null)
+                    {
+                        commands.Add("!SetClrPath " + runtimeSymbolsPath);
+                    }
                 }
                 break;
             case NativeDebugger.Lldb:

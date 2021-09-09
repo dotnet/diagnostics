@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                     if ((rva + size) <= block.Length)
                                     {
                                         data = block.GetReader(rva, size).ReadBytes(size);
-                                        ApplyRelocations(module, reader, rva, data);
+                                        ApplyRelocations(module, reader, (int)(address - module.ImageBase), data);
                                     }
                                     else
                                     {
@@ -182,7 +182,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 Debug.Assert(rva >= 0);
                                 try
                                 {
+#if TRACE_VERBOSE
                                     Trace.TraceInformation($"ReadMemoryFromModule: address {address:X16} rva {rva:X16} size {bytesRequested:X8} in ELF or MachO file {module.FileName}");
+#endif
                                     byte[] data = new byte[bytesRequested];
                                     uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
                                     if (read == 0)

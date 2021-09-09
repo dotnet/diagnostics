@@ -502,8 +502,6 @@ HRESULT DbgEngServices::ChangeEngineState(
     {
         if (((Argument & DEBUG_STATUS_MASK) == DEBUG_STATUS_BREAK) && ((Argument & DEBUG_STATUS_INSIDE_WAIT) == 0))
         {
-            m_control->Output(DEBUG_OUTPUT_NORMAL, "ChangeEngineState\n");
-
             // Flush the target when the debugger target breaks
             Extensions::GetInstance()->FlushTarget();
         }

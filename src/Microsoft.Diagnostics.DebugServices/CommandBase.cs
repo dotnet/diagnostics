@@ -38,6 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices
         protected void WriteLine(string message)
         {
             Console.Write(message + Environment.NewLine);
+            Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
         /// <summary>
@@ -48,6 +49,7 @@ namespace Microsoft.Diagnostics.DebugServices
         protected void WriteLine(string format, params object[] args)
         {
             Console.Write(string.Format(format, args) + Environment.NewLine);
+            Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
         /// <summary>
@@ -58,6 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices
         protected void WriteLineWarning(string format, params object[] args)
         {
             Console.WriteWarning(string.Format(format, args) + Environment.NewLine);
+            Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
         /// <summary>
@@ -68,6 +71,7 @@ namespace Microsoft.Diagnostics.DebugServices
         protected void WriteLineError(string format, params object[] args)
         {
             Console.WriteError(string.Format(format, args) + Environment.NewLine);
+            Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
         /// <summary>

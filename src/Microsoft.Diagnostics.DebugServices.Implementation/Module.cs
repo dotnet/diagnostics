@@ -183,6 +183,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (versionString != null)
                 {
                     int spaceIndex = versionString.IndexOf(' ');
+                    if (spaceIndex < 0)
+                    {
+                        // It is probably a private build version that doesn't end with a space (no commit id after)
+                        spaceIndex = versionString.Length;
+                    }
                     if (spaceIndex > 0)
                     {
                         if (versionString[spaceIndex - 1] == '.')
