@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private NamedPipeServerStream CreateNewNamedPipeServer(string pipeName, int maxInstances)
         {
-            var stream = new NamedPipeServerStream(pipeName, PipeDirection.InOut, maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+            var stream = new NamedPipeServerStream(pipeName, PipeDirection.InOut, maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 16 * 1024, 16 * 1024);
             OnCreateNewServer(null);
             return stream;
         }
