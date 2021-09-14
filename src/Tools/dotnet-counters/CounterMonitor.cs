@@ -464,7 +464,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     return ReturnCode.ArgumentError;
                 }
-                _ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
@@ -537,7 +537,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return ReturnCode.ArgumentError;
                 }
 
-                _ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
@@ -841,7 +841,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             while(!_shouldExit.Task.Wait(250))
             {
                 HandleBufferedEvents();
-                if (Console.KeyAvailable)
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
                     ConsoleKey cmd = Console.ReadKey(true).Key;
                     if (cmd == ConsoleKey.Q)
@@ -858,7 +858,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-
             StopMonitor();
             return _shouldExit.Task;
         }
