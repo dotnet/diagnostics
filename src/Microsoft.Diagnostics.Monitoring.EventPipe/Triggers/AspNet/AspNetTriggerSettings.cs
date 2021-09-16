@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
     internal class AspNetTriggerSettings : IValidatableObject
     {
-        public const string SlidingWindowDuration_MaxValue = "01:00:00"; // 1 hour
+        public const string SlidingWindowDuration_MaxValue = "1.00:00:00"; // 1 day
         public const string SlidingWindowDuration_MinValue = "00:00:01"; // 1 second
 
         /// <summary>
@@ -25,8 +25,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         /// The amount of requests that must accumulate in the sliding window and meet the trigger condition.
         /// Note that requests that do not meet the condition do NOT reset the count.
         /// </summary>
-        [Range(1, int.MaxValue)]
-        public int RequestCount { get; set; }
+        [Range(1, long.MaxValue)]
+        public long RequestCount { get; set; }
 
         /// <summary>
         /// List of request paths to include in the trigger condition, such as "/" and "/About".

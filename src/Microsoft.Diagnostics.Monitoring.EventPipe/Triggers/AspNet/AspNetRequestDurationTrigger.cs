@@ -29,12 +29,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         {
             _requests.Add(activityId, timestamp);
 
-            return base.ActivityStart(timestamp, activityId);
+            return false;
         }
 
         protected override bool Heartbeat(DateTime timestamp)
         {
-            //May may get additional heartbeats based on multiple counters or extra intervals. We only
+            //May get additional heartbeats based on multiple counters or extra intervals. We only
             //process the data periodically.
             if (timestamp - _lastHeartbeatProcessed > _heartBeatInterval)
             {
@@ -67,13 +67,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
                 if (trigger)
                 {
-                    //Reset trigger
-                    _window.Clear();
                     return true;
                 }
             }
 
-            return base.Heartbeat(timestamp);
+            return false;
         }
 
         protected override bool ActivityStop(DateTime timestamp, string activityId, long durationTicks, int statusCode)
@@ -91,12 +89,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
             if (_window.Count >= Settings.RequestCount)
             {
-                //Reset trigger
-                _window.Clear();
                 return true;
             }
 
-            return base.ActivityStop(timestamp, activityId, durationTicks, statusCode);
+            return false;
         }
     }
 }

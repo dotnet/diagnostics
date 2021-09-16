@@ -42,12 +42,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
             if (_window.Count >= Settings.RequestCount)
             {
-                //Reset trigger
-                _window.Clear();
                 return true;
             }
 
-            return base.ActivityStop(timestamp, activityId, durationTicks, statusCode);
+            return false;
         }
     }
 }

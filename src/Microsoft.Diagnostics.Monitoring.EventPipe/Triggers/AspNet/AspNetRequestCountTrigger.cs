@@ -23,12 +23,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             _window.AddDataPoint(timestamp);
             if (_window.Count >= Settings.RequestCount)
             {
-                //Reset trigger
-                _window.Clear();
                 return true;
             }
 
-            return base.ActivityStart(timestamp, activityId);
+            return false;
         }
     }
 }

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -15,11 +16,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
     /// <summary>
     /// Base class for all Asp.net triggers.
     /// </summary>
-    internal abstract class AspNetTrigger<TSettings> : IAspNetTraceEventTrigger, ITraceEventTrigger where TSettings : AspNetTriggerSettings
+    internal abstract class AspNetTrigger<TSettings> : ITraceEventTrigger where TSettings : AspNetTriggerSettings
     {
         private const string Activity1Start = "Activity1/Start";
         private const string Activity1Stop = "Activity1/Stop";
         private static readonly Guid CountersGuid = new Guid("{9ded64a4-414c-5251-dcf7-1e4e20c15e70}");
+        private static readonly Dictionary<string, IReadOnlyCollection<string>> _providerMap = new()
+            {
+                {MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },
+                {MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[]{ "EventCounters" } }
+            };
 
         protected AspNetTrigger(TSettings settings)
         {
@@ -36,14 +42,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             Validator.ValidateObject(settings, context, validateAllProperties: true);
         }
 
-        public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap()
-        {
-            return new Dictionary<string, IReadOnlyCollection<string>>
-            {
-                {MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },
-                {MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[]{ "EventCounters" } }
-            };
-        }
+        public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap() => _providerMap;
 
         public TSettings Settings { get; }
 
@@ -68,12 +67,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             if (traceEvent.ProviderGuid == CountersGuid)
             {
                 //Heartbeat only
-                return ((IAspNetTraceEventTrigger)this).HasSatisfiedCondition(timeStamp, eventType: AspnetTriggerEventType.Heartbeat, activityId: null, path: null, statusCode: null, duration: null);
+                return HasSatisfiedCondition(timeStamp, eventType: AspnetTriggerEventType.Heartbeat, activityId: null, path: null, statusCode: null, duration: null);
             }
             else
             {
-                int? statusCode = 200;
-                long? duration = 50;
+                int? statusCode = null;
+                long? duration = null;
                 AspnetTriggerEventType eventType = AspnetTriggerEventType.Start;
 
                 System.Collections.IList arguments = (System.Collections.IList)traceEvent.PayloadValue(2);
@@ -85,13 +84,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                     statusCode = int.Parse(ExtractByIndex(arguments, 2));
                     duration = long.Parse(ExtractByIndex(arguments, 3));
                     eventType = AspnetTriggerEventType.Stop;
+
+                    Debug.Assert(statusCode != null, "Status code cannot be null.");
+                    Debug.Assert(duration != null, "Duration cannot be null.");
                 }
 
-                return ((IAspNetTraceEventTrigger)this).HasSatisfiedCondition(timeStamp, eventType, activityId, path, statusCode, duration);
+                return HasSatisfiedCondition(timeStamp, eventType, activityId, path, statusCode, duration);
             }
         }
 
-        bool IAspNetTraceEventTrigger.HasSatisfiedCondition(DateTime timestamp, AspnetTriggerEventType eventType, string activityId, string path, int? statusCode, long? duration)
+        /// <summary>
+        /// This method is to enable testing.
+        /// </summary>
+        internal bool HasSatisfiedCondition(DateTime timestamp, AspnetTriggerEventType eventType, string activityId, string path, int? statusCode, long? duration)
         {
             if (eventType == AspnetTriggerEventType.Heartbeat)
             {
@@ -138,5 +143,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             //{{ Key:"StatusCode", Value:"200" }}
             return (string)values.Last().Value;
         }
+    }
+
+    internal enum AspnetTriggerEventType
+    {
+        Start,
+        Stop,
+        Heartbeat
     }
 }

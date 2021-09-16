@@ -196,12 +196,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateTriggers(trigger, s1, s2, s3, e3, e1, e2, s4, s5, s6, s7, e5, e4, e6, e7);
         }
 
-        private static void ValidateTriggers(IAspNetTraceEventTrigger requestTrigger, params SimulatedTraceEvent[] events)
+        private static void ValidateTriggers<T>(AspNetTrigger<T> requestTrigger, params SimulatedTraceEvent[] events) where T: AspNetTriggerSettings
         {
             ValidateTriggers(requestTrigger, events.Length - 1, events);
         }
 
-        private static void ValidateTriggers(IAspNetTraceEventTrigger requestTrigger, int triggerIndex, params SimulatedTraceEvent[] events)
+        private static void ValidateTriggers<T>(AspNetTrigger<T> requestTrigger, int triggerIndex, params SimulatedTraceEvent[] events) where T : AspNetTriggerSettings
         {
             for (int i = 0; i < events.Length; i++)
             {

@@ -45,27 +45,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            var providers = new List<EventPipeProvider>()
+            if (_supportHeartbeat)
             {
-                // Diagnostic source events
-                new EventPipeProvider(DiagnosticSourceEventSource,
+                return new AggregateSourceConfiguration(
+                    new AspNetTriggerSourceConfiguration(supportHeartbeat: false),
+                    new MetricSourceConfiguration(DefaultHeartbeatInterval, new[] { MicrosoftAspNetCoreHostingEventSourceName })).GetProviders();
+
+            }
+            else
+            {
+                return new[]
+                {
+                    new EventPipeProvider(DiagnosticSourceEventSource,
                         keywords: 0x1 | 0x2,
                         eventLevel: EventLevel.Verbose,
                         arguments: new Dictionary<string,string>
                         {
                             { "FilterAndPayloadSpecs", DiagnosticFilterString }
                         })
-            };
-
-            if (!_supportHeartbeat)
-            {
-                return providers;
-            }
-            else
-            {
-                return new AggregateSourceConfiguration(
-                    new AspNetTriggerSourceConfiguration(supportHeartbeat: false),
-                    new MetricSourceConfiguration(DefaultHeartbeatInterval, new[] { MicrosoftAspNetCoreHostingEventSourceName })).GetProviders();
+                };
             }
         }
     }
