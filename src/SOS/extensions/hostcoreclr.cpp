@@ -220,19 +220,23 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
                 const char extension[] = ".dll";
                 std::string filename(find.FileName());
                 size_t extLen = sizeof(extension) - 1;
-                size_t extPos = filename.length() - extLen;
-
-                // Check if the extension matches the one we are looking for
-                if ((extPos > 0) && (filename.compare(extPos, extLen, extension) == 0))
+                size_t extPos = filename.length();
+                if (extPos > extLen)
                 {
-                    std::string filenameWithoutExt(filename.substr(0, extPos));
+                    extPos -= extLen;
 
-                    // Make sure if we have an assembly with multiple extensions present,
-                    // we insert only one version of it.
-                    if (addedAssemblies.find(filenameWithoutExt) == addedAssemblies.end())
+                    // Check if the extension matches the one we are looking for
+                    if (filename.compare(extPos, extLen, extension) == 0)
                     {
-                        addedAssemblies.insert(filenameWithoutExt);
-                        AddFileToTpaList(directory, filename.c_str(), tpaList);
+                        std::string filenameWithoutExt(filename.substr(0, extPos));
+
+                        // Make sure if we have an assembly with multiple extensions present,
+                        // we insert only one version of it.
+                        if (addedAssemblies.find(filenameWithoutExt) == addedAssemblies.end())
+                        {
+                            addedAssemblies.insert(filenameWithoutExt);
+                            AddFileToTpaList(directory, filename.c_str(), tpaList);
+                        }
                     }
                 }
             }
