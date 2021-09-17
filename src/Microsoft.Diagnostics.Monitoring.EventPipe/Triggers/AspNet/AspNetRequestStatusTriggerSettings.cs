@@ -17,6 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         /// E.g. 200-200;400-500
         /// </summary>
         [Required]
+        [MinLength(1)]
         [CustomValidation(typeof(StatusCodeRangeValidator), nameof(StatusCodeRangeValidator.ValidateStatusCodes))]
         public StatusCodeRange[] StatusCodes { get; set; }
     }
@@ -37,15 +38,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
     public static class StatusCodeRangeValidator
     {
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes)};
+
         public static ValidationResult ValidateStatusCodes(object statusCodes)
         {
             StatusCodeRange[] statusCodeRanges = (StatusCodeRange[])statusCodes;
-            Func<string[]> validationMembers = () => new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes) };
-
-            if (statusCodeRanges.Length == 0)
-            {
-                return new ValidationResult("No ranges specified.", validationMembers());
-            }
 
             Func<int, bool> validateStatusCode = (int statusCode) => statusCode >= 100 && statusCode < 600;
 
@@ -54,12 +51,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 if (statusCodeRange.Min > statusCodeRange.Max)
                 {
                     return new ValidationResult($"{nameof(StatusCodeRange.Min)} cannot be greater than {nameof(StatusCodeRange.Max)}",
-                        validationMembers());
+                        _validationMembers);
                 }
 
                 if (!validateStatusCode(statusCodeRange.Min) || !validateStatusCode(statusCodeRange.Max))
                 {
-                    return new ValidationResult($"Invalid status code", validationMembers());
+                    return new ValidationResult($"Invalid status code", _validationMembers);
                 }
             }
 

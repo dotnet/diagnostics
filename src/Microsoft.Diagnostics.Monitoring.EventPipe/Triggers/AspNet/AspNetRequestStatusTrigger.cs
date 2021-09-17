@@ -26,12 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 _window.AddDataPoint(timestamp);
             }
 
-            if (_window.Count >= Settings.RequestCount)
-            {
-                return true;
-            }
-
-            return false;
+            return _window.Count >= Settings.RequestCount;
         }
     }
 }

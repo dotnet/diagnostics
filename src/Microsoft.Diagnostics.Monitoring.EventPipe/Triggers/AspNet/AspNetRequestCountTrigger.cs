@@ -21,12 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         protected override bool ActivityStart(DateTime timestamp, string activityId)
         {
             _window.AddDataPoint(timestamp);
-            if (_window.Count >= Settings.RequestCount)
-            {
-                return true;
-            }
-
-            return false;
+            return _window.Count >= Settings.RequestCount;
         }
     }
 }
