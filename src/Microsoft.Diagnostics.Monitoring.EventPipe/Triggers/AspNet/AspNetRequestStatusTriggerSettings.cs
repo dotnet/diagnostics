@@ -7,36 +7,64 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
     internal sealed class AspNetRequestStatusTriggerSettings : AspNetTriggerSettings
     {
-        private const string StatusRegex = "[1-5][0-9]{2}";
-        private static readonly string RangeRegex = FormattableString.Invariant($"^{StatusRegex}(-{StatusRegex})?$");
-
         /// <summary>
-        /// Specifies the set of status codes for the trigger. This can be individual codes or ranges.
-        /// E.g. 200;400-500
+        /// Specifies the set of status codes for the trigger.
+        /// E.g. 200-200;400-500
         /// </summary>
         [Required]
-        public string[] StatusCodes { get; set; }
+        [CustomValidation(typeof(StatusCodeRangeValidator), nameof(StatusCodeRangeValidator.ValidateStatusCodes))]
+        public StatusCodeRange[] StatusCodes { get; set; }
+    }
 
-        public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    internal struct StatusCodeRange
+    {
+        public StatusCodeRange(int min) : this(min, min) { }
+
+        public StatusCodeRange(int min, int max)
         {
-            List<ValidationResult> results = new List<ValidationResult>();
+            Min = min;
+            Max = max;
+        }
 
-            foreach(string statusCode in StatusCodes)
+        public int Min { get; set; }
+        public int Max { get; set; }
+    }
+
+    public static class StatusCodeRangeValidator
+    {
+        public static ValidationResult ValidateStatusCodes(object statusCodes)
+        {
+            StatusCodeRange[] statusCodeRanges = (StatusCodeRange[])statusCodes;
+            Func<string[]> validationMembers = () => new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes) };
+
+            if (statusCodeRanges.Length == 0)
             {
-                if (!Regex.IsMatch(statusCode, RangeRegex))
+                return new ValidationResult("No ranges specified.", validationMembers());
+            }
+
+            Func<int, bool> validateStatusCode = (int statusCode) => statusCode >= 100 && statusCode < 600;
+
+            foreach(StatusCodeRange statusCodeRange in statusCodeRanges)
+            {
+                if (statusCodeRange.Min > statusCodeRange.Max)
                 {
-                    results.Add(new ValidationResult($"'{statusCode}' is not in the correct format.",
-                        new[] { nameof(StatusCodes) }));
+                    return new ValidationResult($"{nameof(StatusCodeRange.Min)} cannot be greater than {nameof(StatusCodeRange.Max)}",
+                        validationMembers());
+                }
+
+                if (!validateStatusCode(statusCodeRange.Min) || !validateStatusCode(statusCodeRange.Max))
+                {
+                    return new ValidationResult($"Invalid status code", validationMembers());
                 }
             }
 
-            return results.Concat(base.Validate(validationContext));
+            return ValidationResult.Success;
         }
     }
+
 }

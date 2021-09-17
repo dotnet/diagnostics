@@ -159,7 +159,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             AspNetRequestStatusTriggerSettings settings = new()
             {
                 RequestCount = 3,
-                StatusCodes = new[] { "520", "521", "400-500" },
+                StatusCodes = new StatusCodeRange[] { new(520), new(521), new(400, 500) },
                 SlidingWindowDuration = TimeSpan.FromMinutes(1),
             };
 
