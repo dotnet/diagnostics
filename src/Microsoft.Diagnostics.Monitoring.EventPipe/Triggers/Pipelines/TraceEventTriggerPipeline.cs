@@ -54,7 +54,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
                 // Make a copy of the provided map and change the comparers as appropriate.
                 IDictionary<string, IEnumerable<string>> providerEventMap = providerEventMapFromTrigger.ToDictionary(
                     kvp => kvp.Key,
-                    kvp => kvp.Value.ToArray().AsEnumerable(),
+                    //Accept null or empty, both indicating that any event will be accepted.
+                    kvp => (kvp.Value == null) ? null : (kvp.Value.Count == 0) ? null : kvp.Value.ToArray().AsEnumerable(),
                     StringComparer.OrdinalIgnoreCase);
 
                 // Only allow events described in the mapping to be forwarded to the trigger.
