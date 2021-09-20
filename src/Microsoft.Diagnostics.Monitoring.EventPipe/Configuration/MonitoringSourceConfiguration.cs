@@ -9,6 +9,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public abstract class MonitoringSourceConfiguration
     {
+        /// <summary>
+        /// Indicates diagnostics messages from DiagnosticSourceEventSource should be included.
+        /// </summary>
+        public const long DiagnosticSourceEventSourceMessages = 0x1;
+
+        /// <summary>
+        /// Indicates that all events from all diagnostic sources should be forwarded to the EventSource using the 'Event' event.
+        /// </summary>
+        public const long DiagnosticSourceEventSourceEvents = 0x2;
+
         public const string MicrosoftExtensionsLoggingProviderName = "Microsoft-Extensions-Logging";
         public const string SystemRuntimeEventSourceName = "System.Runtime";
         public const string MicrosoftAspNetCoreHostingEventSourceName = "Microsoft.AspNetCore.Hosting";

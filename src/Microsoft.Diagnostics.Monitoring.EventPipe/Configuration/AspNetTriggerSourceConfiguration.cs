@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return new[]
                 {
                     new EventPipeProvider(DiagnosticSourceEventSource,
-                        keywords: 0x1 | 0x2,
+                        keywords: DiagnosticSourceEventSourceEvents | DiagnosticSourceEventSourceMessages,
                         eventLevel: EventLevel.Verbose,
                         arguments: new Dictionary<string,string>
                         {

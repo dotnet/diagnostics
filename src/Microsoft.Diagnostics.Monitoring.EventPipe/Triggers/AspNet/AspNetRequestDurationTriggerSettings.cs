@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
     internal sealed class AspNetRequestDurationTriggerSettings : AspNetTriggerSettings
     {
         public const string RequestDuration_MaxValue = "01:00:00"; // 1 hour
-        public const string RequestDuration_MinValue = "00:00:01"; // 1 second
+        public const string RequestDuration_MinValue = "00:00:00"; // No minimum
 
         /// <summary>
         /// The minimum duration of the request to be considered slow.

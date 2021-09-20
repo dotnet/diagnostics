@@ -20,11 +20,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
     {
         private const string Activity1Start = "Activity1/Start";
         private const string Activity1Stop = "Activity1/Stop";
-        private static readonly Guid CountersGuid = new Guid("{9ded64a4-414c-5251-dcf7-1e4e20c15e70}");
+        private static readonly Guid MicrosoftAspNetCoreHostingGuid = new Guid("{adb401e1-5296-51f8-c125-5fda75826144}");
         private static readonly Dictionary<string, IReadOnlyCollection<string>> _providerMap = new()
             {
-                {MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },
-                {MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[]{ "EventCounters" } }
+                { MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },
+                { MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[]{ "EventCounters" } }
             };
 
         protected AspNetTrigger(TSettings settings)
@@ -64,12 +64,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             //We deconstruct the TraceEvent data to make it easy to write tests
             DateTime timeStamp = traceEvent.TimeStamp;
 
-            if (traceEvent.ProviderGuid == CountersGuid)
-            {
-                //Heartbeat only
-                return HasSatisfiedCondition(timeStamp, eventType: AspnetTriggerEventType.Heartbeat, activityId: null, path: null, statusCode: null, duration: null);
-            }
-            else
+            if (traceEvent.ProviderGuid == MicrosoftAspNetCoreHostingGuid)
             {
                 int? statusCode = null;
                 long? duration = null;
@@ -91,6 +86,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
                 return HasSatisfiedCondition(timeStamp, eventType, activityId, path, statusCode, duration);
             }
+
+            //Heartbeat only
+            return HasSatisfiedCondition(timeStamp, eventType: AspnetTriggerEventType.Heartbeat, activityId: null, path: null, statusCode: null, duration: null);
+
         }
 
         /// <summary>
