@@ -173,12 +173,11 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 \**********************************************************************/
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
-    HRESULT hr = S_OK;
     if (g_symbolStoreInitialized)
     {
-        hr = g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
+        return g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
     }
-    return hr;
+    return E_FAIL;
 }
 
 #endif
