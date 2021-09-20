@@ -236,7 +236,7 @@ namespace SOS.Extensions
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)
             {
-                if (!_symbolService.ParseSymbolPath(symbolPath))
+                if (!_symbolService.ParseSymbolPathFixDefault(symbolPath))
                 {
                     Trace.TraceError("ParseSymbolPath FAILED: {0}", symbolPath);
                 }

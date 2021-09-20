@@ -16749,6 +16749,10 @@ DECLARE_API(SetSymbolServer)
     else if (loadNative)
     {
         Status = LoadNativeSymbols();
+        if (FAILED(Status))
+        {
+            ExtErr("Symbol server not set\n");
+        }
     }
 #endif
     else

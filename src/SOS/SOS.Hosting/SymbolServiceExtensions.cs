@@ -22,6 +22,24 @@ namespace SOS.Hosting
         const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
 
         /// <summary>
+        /// Set the windows symbol path converting the default "srv*" to the cached public symbol server URL.
+        /// </summary>
+        /// <param name="symbolPath">The windows symbol path to translate and set</param>
+        /// <returns>if false, error parsing symbol path</returns>
+        public static bool ParseSymbolPathFixDefault(
+            this ISymbolService symbolService,
+            string symbolPath)
+        {
+            // Translate dbgeng's default .sympath to what the public version actually does. Normally "srv*" 
+            // means no caching and the server path depends on whether dbgeng is internal or public.
+            if (symbolPath.ToLowerInvariant() == "srv*")
+            {
+                symbolPath = "cache*;SRV*https://msdl.microsoft.com/download/symbols";
+            }
+            return symbolService.ParseSymbolPath(symbolPath);
+        }
+
+        /// <summary>
         /// Metadata locator helper for the DAC.
         /// </summary>
         /// <param name="imagePath">file name and path to module</param>
