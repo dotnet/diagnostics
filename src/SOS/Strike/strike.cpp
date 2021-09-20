@@ -16748,7 +16748,15 @@ DECLARE_API(SetSymbolServer)
 #ifdef FEATURE_PAL
     else if (loadNative)
     {
-        Status = LoadNativeSymbols();
+        if (g_symbolStoreInitialized)
+        {
+            Status = LoadNativeSymbols();
+        }
+        else
+        {
+            ExtErr("Symbol server not set\n");
+            return E_FAIL;
+        }
     }
 #endif
     else
