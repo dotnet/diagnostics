@@ -18,8 +18,8 @@
     <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.0-rc.2.21464.21</VSRedistCommonNetCoreSharedFrameworkx6460Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>6.0.0-rc.2.21464.21</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-rtm.21467.1</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>6.0.0-rtm.21467.1</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.0-rtm.21471.8</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>6.0.0-rtm.21471.8</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>6.0.100-rtm.21466.6</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
