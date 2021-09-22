@@ -56,9 +56,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
 
                 // While suspended, the runtime will not provide entrypoint information.
+                ProcessInfo processInfoBeforeResume = null;
                 if (suspend)
                 {
-                    ProcessInfo processInfoBeforeResume = await clientShim.GetProcessInfo();
+                    processInfoBeforeResume = await clientShim.GetProcessInfo();
                     ValidateProcessInfo(runner.Pid, processInfoBeforeResume);
                     Assert.True(string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
 
@@ -70,6 +71,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ProcessInfo processInfo = await GetProcessInfoWithEntrypointAsync(clientShim);
                 ValidateProcessInfo(runner.Pid, processInfo);
                 Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
+
+                // Validate values before resume (except for entrypoint) are the same after resume.
+                if (suspend)
+                {
+                    Assert.Equal(processInfoBeforeResume.ProcessId, processInfo.ProcessId);
+                    Assert.Equal(processInfoBeforeResume.RuntimeInstanceCookie, processInfo.RuntimeInstanceCookie);
+                    Assert.Equal(processInfoBeforeResume.CommandLine, processInfo.CommandLine);
+                    Assert.Equal(processInfoBeforeResume.OperatingSystem, processInfo.OperatingSystem);
+                    Assert.Equal(processInfoBeforeResume.ProcessArchitecture, processInfo.ProcessArchitecture);
+                    Assert.Equal(processInfoBeforeResume.ClrProductVersionString, processInfo.ClrProductVersionString);
+                }
             }
             finally
             {
