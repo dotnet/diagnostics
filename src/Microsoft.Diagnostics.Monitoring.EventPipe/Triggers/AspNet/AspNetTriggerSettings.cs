@@ -10,7 +10,10 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
-    internal class AspNetTriggerSettings : IValidatableObject
+    /// <summary>
+    /// Base class for all Asp.net trigger settings.
+    /// </summary>
+    internal class AspNetTriggerSettings
     {
         public const string SlidingWindowDuration_MaxValue = "1.00:00:00"; // 1 day
         public const string SlidingWindowDuration_MinValue = "00:00:01"; // 1 second
@@ -37,17 +40,5 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         /// List of request paths to exclude in the trigger condition.
         /// </summary>
         public string[] ExcludePaths { get; set; }
-
-        public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-        {
-            List<ValidationResult> results = new();
-
-            if (IncludePaths?.Any() == true && ExcludePaths?.Any() == true)
-            {
-                results.Add(new ValidationResult($"Cannot set both {nameof(IncludePaths)} and {nameof(ExcludePaths)}."));
-            }
-
-            return results;
-        }
     }
 }
