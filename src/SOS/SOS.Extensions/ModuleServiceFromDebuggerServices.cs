@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace SOS.Extensions
@@ -17,7 +18,7 @@ namespace SOS.Extensions
     /// </summary>
     internal class ModuleServiceFromDebuggerServices : ModuleService
     {
-        class ModuleFromDebuggerServices : Module, IExportSymbols, IModuleSymbols
+        class ModuleFromDebuggerServices : Module, IModuleSymbols
         {
             // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
@@ -44,7 +45,6 @@ namespace SOS.Extensions
                 IndexFileSize = indexTimeStamp == InvalidTimeStamp ? null : indexFileSize;
                 IndexTimeStamp = indexTimeStamp == InvalidTimeStamp ? null : indexTimeStamp;
 
-                ServiceProvider.AddService<IExportSymbols>(this);
                 ServiceProvider.AddService<IModuleSymbols>(this);
             }
 
@@ -110,19 +110,24 @@ namespace SOS.Extensions
 
             #endregion
 
-            #region IExportSymbols/IModuleSymbols
+            #region IModuleSymbols
 
-            public bool TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
+            bool IModuleSymbols.TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
             {
                 return _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement) == HResult.S_OK;
             }
 
-            public bool TryGetSymbolAddress(string name, out ulong address)
+            bool IModuleSymbols.TryGetSymbolAddress(string name, out ulong address)
             {
                 return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address) == HResult.S_OK;
             }
 
             #endregion
+
+            protected override bool TryGetSymbolAddressInner(string name, out ulong address)
+            {
+                return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address) == HResult.S_OK;
+            }
 
             protected override ModuleService ModuleService => _moduleService;
         }

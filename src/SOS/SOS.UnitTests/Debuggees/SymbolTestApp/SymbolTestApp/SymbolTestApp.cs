@@ -14,7 +14,7 @@ namespace SymbolTestApp
     {
         public static void Main(string[] args)
         {
-            string dllPath = args[0];
+            string dllPath = args.Length > 0 ? args[0] : "";
             Console.WriteLine("SymbolTestApp starting {0}", dllPath);
             Foo1(42, dllPath);
         }

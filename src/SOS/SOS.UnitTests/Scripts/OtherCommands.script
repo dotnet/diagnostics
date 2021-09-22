@@ -6,9 +6,10 @@ LOADSOS
 
 # Verify that bpmd works
 IFDEF:LIVE
-!IFDEF:MAJOR_RUNTIME_VERSION_1
 # Issue: https://github.com/dotnet/diagnostics/issues/2459
 !IFDEF:ALPINE
+# Issue: https://github.com/dotnet/diagnostics/issues/2673
+!IFDEF:UNIX_SINGLE_FILE_APP
 
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Main
@@ -35,11 +36,13 @@ ENDIF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
 ENDIF:DESKTOP
 
+!IFDEF:SINGLE_FILE_APP
 !IFDEF:DESKTOP
 CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
 ENDIF:DESKTOP
+ENDIF:SINGLE_FILE_APP
 
 CONTINUE
 SOSCOMMAND:ClrStack
@@ -54,13 +57,11 @@ CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
 
+ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
-ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
 
 CONTINUE
-
-SOSCOMMAND:SetSymbolServer -ms
 
 EXTCOMMAND:clrmodules
 VERIFY:\s*<HEXVAL>.*
@@ -87,11 +88,13 @@ VERIFY:\s*System Domain:\s+<HEXVAL>\s+
 VERIFY:\s*LowFrequencyHeap:\s+<HEXVAL>\s+
 VERIFY:\s*HighFrequencyHeap:\s+<HEXVAL>\s+
 VERIFY:\s*Domain 1:\s+<HEXVAL>\s+
+!IFDEF:SINGLE_FILE_APP
 VERIFY:\s*Assembly:\s+<HEXVAL>\s+\[.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\]\s+
 
 SOSCOMMAND:DumpAssembly <POUT>\s*Assembly:\s+(<HEXVAL>)\s+\[.*<POUT>
 VERIFY:\s*Parent Domain:\s+<HEXVAL>\s+
 VERIFY:\s*Name:\s+.*(System\.Private\.CoreLib(\.ni)?\.dll|mscorlib.dll)\s+
+ENDIF:SINGLE_FILE_APP
 
 SOSCOMMAND:DumpModule <POUT>\s+Module\s+(<HEXVAL>)\s+.*<POUT>
 VERIFY:\s*PEFile:\s+<HEXVAL>\s+

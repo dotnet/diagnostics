@@ -60,7 +60,9 @@ extern "C" HRESULT STDMETHODCALLTYPE SOSInitializeByHost(IUnknown* punk)
     if (FAILED(hr)) {
         return hr;
     }
-    return InitializeSymbolService();
+    // Ignore error so the C++ hosting fallback doesn't fail because there is no symbol service
+    InitializeSymbolService();
+    return S_OK;
 }
 
 /**********************************************************************\

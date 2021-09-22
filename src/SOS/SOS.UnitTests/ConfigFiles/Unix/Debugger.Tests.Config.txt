@@ -21,6 +21,9 @@
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
 
+  <OSRid>linux</OSRid>
+  <OSRid Condition="$(OS) == OSX">osx</OSRid>
+
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
@@ -43,6 +46,21 @@
   </NuGetPackageFeeds>
 
   <Options>
+    <!--
+        Single file (debuggees cli built)
+     -->
+    <Option Condition="'$(RuntimeVersionLatest)' != ''">
+      <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+      <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+      <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+      <PublishSingleFile>true</PublishSingleFile>
+      <!-- Add the symbol server so SOS can find DAC/DBI for single file apps which
+           may not have been built with the runtime pointed by RuntimeSymbolsPath
+           since we use the arcade provided SDK (in .dotnet) to build them. -->
+      <SetSymbolServer>-ms</SetSymbolServer>
+      <BuildProjectRuntime>$(OSRid)-$(TargetArchitecture)</BuildProjectRuntime>
+    </Option>
     <!--
         Default (prebuilt)
       -->
@@ -69,12 +87,16 @@
       <TestName>SOS.StackAndOtherTests</TestName>
       <Options>
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <Options>
-            <Option>
-              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-            </Option>
-          </Options>
+          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <PublishSingleFile>true</PublishSingleFile>
+          <SetSymbolServer>-ms</SetSymbolServer>
+          <BuildProjectRuntime>$(OSRid)-$(TargetArchitecture)</BuildProjectRuntime>
+        </Option>
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
@@ -105,32 +127,6 @@
           <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
-        </Option>
-      </Options>
-    </Option>
-    <!--
-        DotnetDumpCommands (runs on every runtime except netcore2.1 on Linux)
-      -->
-    <Option>
-      <Options>
-        <Option>
-          <TestName>DotnetDumpCommands</TestName>
-        </Option>
-      </Options>
-      <Options>
-        <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-        </Option>
-        <Option Condition="'$(RuntimeVersion50)' != ''">
-          <BuildProjectFramework>net5.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(RuntimeVersion31)' != ''">
-          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
       </Options>
     </Option>

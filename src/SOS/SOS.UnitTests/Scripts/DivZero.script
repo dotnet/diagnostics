@@ -31,13 +31,13 @@ VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.DivideByZero(\(.*\))?\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 12\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 12\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F3(\(.*\))?\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 21\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 21\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F2(\(.*\))?\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ 33\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 33\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.Main(\(.*\))?\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?DivZero[\\|/]DivZero\.cs @ (54|53)\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ (54|53)\s*\]\s*
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP

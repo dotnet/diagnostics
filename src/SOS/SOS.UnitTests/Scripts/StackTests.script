@@ -22,7 +22,10 @@ IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
 ENDIF:64BIT
 
+!IFDEF:WINDOWS
 SOSCOMMAND:SetSymbolServer -ms -loadsymbols
+ENDIF:WINDOWS
+
 !IFDEF:DOTNETDUMP
 IFDEF:WINDOWS
 SOSCOMMAND:SetHostRuntime
@@ -40,7 +43,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 13\s*\]\s+
 ENDIF:64BIT
-SOSCOMMAND:SetSymbolServer -disable
 
 # 3) Verifying that ClrStack all option works (locals/params)
 SOSCOMMAND:ClrStack -a
@@ -120,7 +122,9 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+\+ string\[\] args\s+\(empty\)\s+
 VERIFY:\s+LOCALS:\s+
+!IFDEF:SINGLE_FILE_APP
 VERIFY:\s+\+ System.FormatException ex @ 0x<HEXVAL>\s+
+ENDIF:SINGLE_FILE_APP
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 

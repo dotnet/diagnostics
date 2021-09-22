@@ -41,9 +41,9 @@ VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace\s+\(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?UserObject\.UseObject.*\+0x<HEXVAL>\s*
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]UserObject\.cs @ 16\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*SimpleThrow[\\|/]UserObject\.cs @ 16\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?Simple\.Main.*\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]SimpleThrow\.cs @ 9\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*SimpleThrow[\\|/]SimpleThrow\.cs @ 9\s*\]\s*
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP
@@ -66,6 +66,6 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for SimpleThrow.exe\s*)?UserObject\.UseObject.*\s+
-VERIFY:[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]UserObject\.cs @ 16\s*\]
+VERIFY:[.*[\\|/]Debuggees[\\|/].*SimpleThrow[\\|/]UserObject\.cs @ 16\s*\]
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+Simple\.Main\(\)\s+
-VERIFY:[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?SimpleThrow[\\|/]SimpleThrow\.cs @ 9\s*\]
+VERIFY:[.*[\\|/]Debuggees[\\|/].*SimpleThrow[\\|/]SimpleThrow\.cs @ 9\s*\]

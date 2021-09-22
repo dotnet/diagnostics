@@ -8,9 +8,10 @@ LOADSOS
 
 # Verify that bpmd works
 IFDEF:LIVE
-!IFDEF:MAJOR_RUNTIME_VERSION_1
 # Issue: https://github.com/dotnet/diagnostics/issues/2459
 !IFDEF:ALPINE
+# Issue: https://github.com/dotnet/diagnostics/issues/2673
+!IFDEF:UNIX_SINGLE_FILE_APP
 
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Main
@@ -36,11 +37,13 @@ ENDIF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
 ENDIF:DESKTOP
 
+!IFDEF:SINGLE_FILE_APP
 !IFDEF:DESKTOP
 CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
 ENDIF:DESKTOP
+ENDIF:SINGLE_FILE_APP
 
 CONTINUE
 SOSCOMMAND:ClrStack
@@ -50,13 +53,11 @@ CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
 
+ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
-ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
 
 CONTINUE
-
-SOSCOMMAND:SetSymbolServer -ms
 
 !IFDEF:DOTNETDUMP
 IFDEF:WINDOWS
@@ -100,7 +101,6 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
-SOSCOMMAND:SetSymbolServer -disable
 
 # Verify that ClrStack all option works (locals/params)
 SOSCOMMAND:ClrStack -a
@@ -176,9 +176,9 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Foo4\
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+\+ string dllPath\s+=\s+".*"\s+
 VERIFY:\s+LOCALS:\s+
-!IFDEF:MAJOR_RUNTIME_VERSION_1
+!IFDEF:SINGLE_FILE_APP
 VERIFY:\s+\+ System.RuntimeType dllType @ 0x<HEXVAL>
-ENDIF:MAJOR_RUNTIME_VERSION_1
+ENDIF:SINGLE_FILE_APP
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo2\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
