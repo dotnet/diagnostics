@@ -34,11 +34,40 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         /// <summary>
         /// List of request paths to include in the trigger condition, such as "/" and "/About".
         /// </summary>
+        [CustomValidation(typeof(IncludesPathValidator), nameof(IncludesPathValidator.ValidatePath))]
         public string[] IncludePaths { get; set; }
 
         /// <summary>
         /// List of request paths to exclude in the trigger condition.
         /// </summary>
+        [CustomValidation(typeof(ExcludesPathValidator), nameof(ExcludesPathValidator.ValidatePath))]
         public string[] ExcludePaths { get; set; }
+    }
+
+    internal static class PathValidator
+    {
+        public static ValidationResult ValidatePath(string[] paths, string[] members)
+        {
+            //While not an error, using *** or more causes confusing and unexpected matching.
+            if (paths?.Any(p => p.IndexOf("***", StringComparison.Ordinal) >= 0) == true)
+            {
+                return new ValidationResult("Only * or **/ wildcard chararcters are allowed", members);
+            }
+            return ValidationResult.Success;
+        }
+    }
+
+    public static class IncludesPathValidator
+    {
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetTriggerSettings.IncludePaths) };
+
+        public static ValidationResult ValidatePath(string[] paths) => PathValidator.ValidatePath(paths, _validationMembers);
+    }
+
+    public static class ExcludesPathValidator
+    {
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetTriggerSettings.ExcludePaths) };
+
+        public static ValidationResult ValidatePath(string[] paths) => PathValidator.ValidatePath(paths, _validationMembers);
     }
 }
