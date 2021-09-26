@@ -63,9 +63,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [Fact]
+        [SkippableFact]
         public async Task TestLogsAllCategoriesDefaultLevel()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+            }
+            
             using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
