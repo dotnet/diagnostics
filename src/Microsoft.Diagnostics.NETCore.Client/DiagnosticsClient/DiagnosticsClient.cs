@@ -388,6 +388,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 uint uiValue = bValue ? (uint)1 : 0;
                 writer.Write(uiValue);
             }
+            else if (typeof(T) == typeof(Guid))
+            {
+                Guid guidVal = (Guid)((object)obj);
+                writer.Write(guidVal.ToByteArray());
+            }
             else
             {
                 throw new ArgumentException($"Type {obj.GetType()} is not supported in SerializePayloadArgument, please add it.");
