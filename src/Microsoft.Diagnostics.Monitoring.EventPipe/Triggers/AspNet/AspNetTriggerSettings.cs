@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             //While not an error, using *** or more causes confusing and unexpected matching.
             if (paths?.Any(p => p.IndexOf("***", StringComparison.Ordinal) >= 0) == true)
             {
-                return new ValidationResult("Only * or **/ wildcard chararcters are allowed", members);
+                return new ValidationResult("Only * or **/ wildcard chararcters are allowed.", members);
             }
             return ValidationResult.Success;
         }

@@ -33,19 +33,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         private const string StartRegex = "^";
         private const string EndRegex = "$";
 
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(2);
+
         public GlobMatcher(string[] includes, string[] excludes)
         {
-            if (includes?.Any() == true)
-            {
-                _includeRegex = new Regex(string.Join("|", includes.Select(TransformPattern)),
-                   RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            }
+            _includeRegex = CreateRegex(includes);
+            _excludeRegex = CreateRegex(excludes);
+        }
 
-            if (excludes?.Any() == true)
+        private static Regex CreateRegex(string[] paths)
+        {
+            if (paths?.Length > 0)
             {
-                _excludeRegex = new Regex(string.Join("|", excludes.Select(TransformPattern)),
-                    RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                return new Regex(string.Join("|", paths.Select(TransformPattern)),
+                    RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeout: Timeout);
             }
+            return null;
         }
 
         private static string TransformPattern(string globPattern) =>
@@ -58,12 +61,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
         public bool Match(string input)
         {
+            //Prioritize excludes over includes
             if (_excludeRegex?.IsMatch(input) == true)
             {
                 return false;
             }
 
-            return _includeRegex?.IsMatch(input) ?? true ? true : false;
+            return _includeRegex == null || _includeRegex.IsMatch(input);
         }
     }
 }
