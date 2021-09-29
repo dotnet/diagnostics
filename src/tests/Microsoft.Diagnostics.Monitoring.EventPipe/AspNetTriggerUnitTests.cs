@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
@@ -194,6 +195,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             //Reflects actual ordering
             ValidateTriggers(trigger, s1, s2, s3, e3, e1, e2, s4, s5, s6, s7, e5, e4, e6, e7);
+        }
+
+        [Fact]
+        public void TestInvalidPaths()
+        {
+            AspNetRequestCountTriggerSettings settings = new()
+            {
+                IncludePaths = new[] { "/SomePath/***/*" },
+                RequestCount = 3,
+                SlidingWindowDuration = TimeSpan.FromMinutes(1)
+            };
+
+            AspNetRequestCountTriggerFactory factory = new();
+            Assert.Throws<ValidationException>(() => factory.Create(settings));
         }
 
         private static void ValidateTriggers<T>(AspNetTrigger<T> requestTrigger, params SimulatedTraceEvent[] events) where T: AspNetTriggerSettings

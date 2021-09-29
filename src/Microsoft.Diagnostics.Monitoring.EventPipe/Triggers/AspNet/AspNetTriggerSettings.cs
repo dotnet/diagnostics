@@ -10,7 +10,10 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
-    internal class AspNetTriggerSettings : IValidatableObject
+    /// <summary>
+    /// Base class for all Asp.net trigger settings.
+    /// </summary>
+    internal class AspNetTriggerSettings
     {
         public const string SlidingWindowDuration_MaxValue = "1.00:00:00"; // 1 day
         public const string SlidingWindowDuration_MinValue = "00:00:01"; // 1 second
@@ -31,23 +34,40 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         /// <summary>
         /// List of request paths to include in the trigger condition, such as "/" and "/About".
         /// </summary>
+        [CustomValidation(typeof(IncludesPathValidator), nameof(IncludesPathValidator.ValidatePath))]
         public string[] IncludePaths { get; set; }
 
         /// <summary>
         /// List of request paths to exclude in the trigger condition.
         /// </summary>
+        [CustomValidation(typeof(ExcludesPathValidator), nameof(ExcludesPathValidator.ValidatePath))]
         public string[] ExcludePaths { get; set; }
+    }
 
-        public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    internal static class PathValidator
+    {
+        public static ValidationResult ValidatePath(string[] paths, string[] members)
         {
-            List<ValidationResult> results = new();
-
-            if (IncludePaths?.Any() == true && ExcludePaths?.Any() == true)
+            //While not an error, using *** or more causes confusing and unexpected matching.
+            if (paths?.Any(p => p.IndexOf("***", StringComparison.Ordinal) >= 0) == true)
             {
-                results.Add(new ValidationResult($"Cannot set both {nameof(IncludePaths)} and {nameof(ExcludePaths)}."));
+                return new ValidationResult("Only * or **/ wildcard chararcters are allowed.", members);
             }
-
-            return results;
+            return ValidationResult.Success;
         }
+    }
+
+    public static class IncludesPathValidator
+    {
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetTriggerSettings.IncludePaths) };
+
+        public static ValidationResult ValidatePath(string[] paths) => PathValidator.ValidatePath(paths, _validationMembers);
+    }
+
+    public static class ExcludesPathValidator
+    {
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetTriggerSettings.ExcludePaths) };
+
+        public static ValidationResult ValidatePath(string[] paths) => PathValidator.ValidatePath(paths, _validationMembers);
     }
 }

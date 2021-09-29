@@ -9,7 +9,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
@@ -27,13 +26,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 { MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[]{ "EventCounters" } }
             };
 
+        private readonly GlobMatcher _matcher;
+
         protected AspNetTrigger(TSettings settings)
         {
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             Validate(settings);
 
-            IncludePaths = new HashSet<string>(Settings.IncludePaths ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-            ExcludePaths = new HashSet<string>(Settings.ExcludePaths ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            _matcher = new GlobMatcher(settings.IncludePaths, settings.ExcludePaths);
         }
 
         private static void Validate(TSettings settings)
@@ -45,13 +45,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap() => _providerMap;
 
         public TSettings Settings { get; }
-
-        //CONSIDER The current design is to trigger in aggregate across all url matches.
-        //If we want per path triggering, we can simply setup more triggers.
-        //TODO Add support for wildcards or globs for paths
-        protected HashSet<string> IncludePaths { get; }
-
-        protected HashSet<string> ExcludePaths { get; }
 
         protected virtual bool ActivityStart(DateTime timestamp, string activityId) => false;
 
@@ -102,7 +95,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 return Heartbeat(timestamp);
             }
 
-            if (!CheckPathFilter(path))
+            if (!_matcher.Match(path))
             {
                 //No need to update counts if the path is excluded.
                 return false;
@@ -117,19 +110,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 return ActivityStop(timestamp, activityId, duration.Value, statusCode.Value);
             }
             return false;
-        }
-
-        private bool CheckPathFilter(string path)
-        {
-            if (IncludePaths.Count > 0)
-            {
-                return IncludePaths.Contains(path);
-            }
-            if (ExcludePaths.Count > 0)
-            {
-                return !ExcludePaths.Contains(path);
-            }
-            return true;
         }
 
         private static string ExtractByIndex(System.Collections.IList arguments, int index)
