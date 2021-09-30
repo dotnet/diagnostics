@@ -1,5 +1,5 @@
 _REPOROOT_=../..
-_VERSION60_=6.0.0-rc.2.21464.21
+_VERSION60_=6.0.0-rtm.21478.11
 ./writexml.sh $_REPOROOT_/artifacts/tmp/Debug/dumps/ProjectK/3.1.18/netcoreapp3.1/portable/SOS.StackAndOtherTests.Heap.portable.dmp $_REPOROOT_/artifacts/Debuggees/portable/SymbolTestApp/SymbolTestApp/bin/Debug/netcoreapp3.1/publish
 ./writexml.sh $_REPOROOT_/artifacts/tmp/Debug/dumps/ProjectK/5.0.9/net5.0/portable/SOS.StackAndOtherTests.Heap.portable.dmp $_REPOROOT_/artifacts/Debuggees/portable/SymbolTestApp/SymbolTestApp/bin/Debug/net5.0/publish
 ./writexml.sh $_REPOROOT_/artifacts/tmp/Debug/dumps/ProjectK/5.0.9/net5.0/SOS.LineNums.Heap.dmp $_REPOROOT_/artifacts/bin/LineNums/Debug/net5.0

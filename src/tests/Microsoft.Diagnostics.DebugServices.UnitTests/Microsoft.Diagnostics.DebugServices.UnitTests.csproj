@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Needs to be netcoreapp3.1 and not higher so this test assembly can be loaded by dotnet-dump via the DOTNET_DIAGNOSTIC_EXTENSIONS env var -->
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <TestConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</TestConfigFileName>
     <TestAssetsVersion>1.0.246501</TestAssetsVersion>
     <!-- Controls the test asset package restore and the tests that use them -->
-    <RunTests>false</RunTests>
+    <RunTests>true</RunTests>
   </PropertyGroup>
 
   <ItemGroup>
@@ -112,7 +113,7 @@
 
   <Target Name="WriteTestConfigFile" Outputs="$(TestConfigFileName)" AfterTargets="Build">
      <PropertyGroup>
-       <TestConfigFileLines>@(ConfigFileEntries-&gt;Metadata("ConfigFileEntry"))</TestConfigFileLines>
+       <TestConfigFileLines>@(ConfigFileEntries->Metadata("ConfigFileEntry"))</TestConfigFileLines>
      </PropertyGroup>
     <WriteLinesToFile File="$(TestConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
     <Message Importance="High" Text="Created config file $(TestConfigFileName)" />

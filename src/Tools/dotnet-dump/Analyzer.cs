@@ -199,16 +199,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
         /// <param name="commandService">Used to add the commands</param>
         private void LoadExtensions()
         {
-            List<string> extensionPaths = new();
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
             if (!string.IsNullOrEmpty(diagnosticExtensions))
             {
                 string[] paths = diagnosticExtensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                extensionPaths.AddRange(paths);
-            }
-            foreach (string extensionPath in extensionPaths)
-            {
-                LoadExtension(extensionPath);
+                foreach (string extensionPath in paths)
+                {
+                    LoadExtension(extensionPath);
+                }
             }
         }
 
