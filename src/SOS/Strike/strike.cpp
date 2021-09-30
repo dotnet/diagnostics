@@ -16667,6 +16667,7 @@ DECLARE_API(SetSymbolServer)
     StringHolder windowsSymbolPath;
     StringHolder authToken;
     size_t timeoutInMinutes = 0;
+    std::string resolvedSearchDirectory;
     BOOL disable = FALSE;
     BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
@@ -16713,9 +16714,17 @@ DECLARE_API(SetSymbolServer)
         DisableSymbolStore();
     }
 
-    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || searchDirectory.data != nullptr || windowsSymbolPath.data != nullptr)
+    if (searchDirectory.data != nullptr) {
+        if (!GetAbsolutePath(searchDirectory.data, resolvedSearchDirectory))
+        {
+            ExtErr("Invalid runtime directory %s\n", resolvedSearchDirectory.c_str());
+            return E_FAIL;
+        }
+    }
+
+    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || !resolvedSearchDirectory.empty() || windowsSymbolPath.data != nullptr)
     {
-        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, searchDirectory.data, windowsSymbolPath.data);
+        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, (resolvedSearchDirectory.empty() ? nullptr : resolvedSearchDirectory.c_str()), windowsSymbolPath.data);
         if (FAILED(Status))
         {
             return Status;
@@ -16736,9 +16745,9 @@ DECLARE_API(SetSymbolServer)
         {
             ExtOut("Added symbol cache path: %s\n", symbolCache.data);
         }
-        if (searchDirectory.data != nullptr)
+        if (!resolvedSearchDirectory.empty())
         {
-            ExtOut("Added symbol directory path: %s\n", searchDirectory.data);
+            ExtOut("Added symbol directory path: %s\n", resolvedSearchDirectory.c_str());
         }
         if (windowsSymbolPath.data != nullptr)
         {
