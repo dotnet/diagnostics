@@ -42,7 +42,20 @@ namespace Microsoft.Diagnostics.Tools.Dump
                                        NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
                             break;
                         case DumpTypeOption.Mini:
-                            dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo;
+                            dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo;
+                            break;
+                        case DumpTypeOption.Triage:
+                            dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpFilterTriage |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpIgnoreInaccessibleMemory |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithoutOptionalData |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithProcessThreadData |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpFilterModulePaths |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpFilterMemory |
+                                       NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData;
                             break;
                     }
 

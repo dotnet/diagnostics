@@ -23,7 +23,6 @@
 
      $(MicrosoftNETCoreApp50Version) $(MicrosoftAspNetCoreApp50Version)  - 5.0 version
      $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
-     $(MicrosoftNETCoreApp21Version) $(MicrosoftAspNetCoreApp21Version)  - 2.1 version
 
      From Arcade:
 
@@ -79,7 +78,6 @@
     <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6460Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
     <TestVersions Include="50" RuntimeVersion="$(MicrosoftNETCoreApp50Version)" AspNetVersion="$(MicrosoftAspNetCoreApp50Version)" />
     <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
-    <TestVersions Condition="'$(BuildArch)' != 'arm' and '$(BuildArch)' != 'arm64'" Include="21" RuntimeVersion="$(MicrosoftNETCoreApp21Version)" AspNetVersion="$(MicrosoftAspNetCoreApp21Version)" />
   </ItemGroup>
 
   <!-- Local private build testing -->
@@ -147,9 +145,6 @@
           Outputs="$(TestConfigFileName)">
 
     <PropertyGroup Condition="'$(PrivateBuildTesting)' != 'true' AND '$(InternalReleaseTesting)' != 'true'">
-      <RuntimeVersion21>$(MicrosoftNETCoreApp21Version)</RuntimeVersion21>
-      <AspNetCoreVersion21>$(MicrosoftAspNetCoreApp21Version)</AspNetCoreVersion21>
-
       <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
       <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
 
@@ -169,9 +164,6 @@
 <Configuration>
   <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
   <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
-
-  <RuntimeVersion21>$(RuntimeVersion21)</RuntimeVersion21>
-  <AspNetCoreVersion21>$(AspNetCoreVersion21)</AspNetCoreVersion21>
 
   <RuntimeVersion31>$(RuntimeVersion31)</RuntimeVersion31>
   <AspNetCoreVersion31>$(AspNetCoreVersion31)</AspNetCoreVersion31>

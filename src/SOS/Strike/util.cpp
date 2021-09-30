@@ -2502,7 +2502,7 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
             if ((hr = module->GetFlags(&flags)) != S_OK) {
                 continue;
             }
-            if (flags != CLRDATA_MODULE_DEFAULT) {
+            if ((flags & (CLRDATA_MODULE_IS_DYNAMIC | CLRDATA_MODULE_IS_MEMORY_STREAM)) != 0) {
                 continue;
             }
             DacpGetModuleData moduleData;
@@ -5109,23 +5109,30 @@ GetLineByOffset(
     ___in ULONG cchFileName,
     ___in BOOL bAdjustOffsetForLineNumber /* = FALSE */)
 {
-    HRESULT Status = S_OK;
+    HRESULT status = S_OK;
     ULONG32 methodToken;
     ULONG32 methodOffs;
 
     // Find the image, method token and IL offset that correspond to "nativeOffset"
     ToRelease<IXCLRDataModule> pModule(NULL);
-    IfFailRet(ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs));
-
-    ToRelease<IMetaDataImport> pMDImport(NULL);
-    Status = pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
-    if (FAILED(Status))
+    status = ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs);
+    if (FAILED(status))
     {
-        ExtDbgOut("GetLineByOffset(%p): QueryInterface(IID_IMetaDataImport) FAILED %08x\n", nativeOffset, Status);
+        ExtDbgOut("GetLineByOffset(%p): ConvertNativeToIlOffset FAILED %08x\n", nativeOffset, status);
+        return status;
+    }
+    ToRelease<IMetaDataImport> pMDImport(NULL);
+    status = pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);
+    if (FAILED(status))
+    {
+        ExtDbgOut("GetLineByOffset(%p): QueryInterface(IID_IMetaDataImport) FAILED %08x\n", nativeOffset, status);
     }
     SymbolReader symbolReader;
-    IfFailRet(symbolReader.LoadSymbols(pMDImport, pModule));
-
+    status = symbolReader.LoadSymbols(pMDImport, pModule);
+    if (FAILED(status))
+    {
+        return status;
+    }
     return symbolReader.GetLineByILOffset(methodToken, methodOffs, pLinenum, pwszFileName, cchFileName);
 }
 

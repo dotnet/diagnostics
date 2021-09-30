@@ -84,14 +84,12 @@ Output File    : E:\temp\gcperfsim\trace.nettrace
 Press <Enter> or <Ctrl+C> to exit...
 ```
 
-You can stop collecting the trace by pressing `<Enter>` or `<Ctrl + C>` key. Doing this will also exit `hello.exe`.
+You can stop collecting the trace by pressing <kbd>Enter</kbd> or <kbd>Ctrl</kbd> + <kbd>C</kbd> key. Doing this will also exit `hello.exe`.
 
-### NOTE
-* Launching `hello.exe` via dotnet-trace will redirect its input/output and you will not be able to interact with it on the console by default. Use the --show-child-io switch to interact with its stdin/stdout.
-
-* Exiting the tool via CTRL+C or SIGTERM will safely end both the tool and the child process.
-
-* If the child process exits before the tool, the tool will exit as well and the trace should be safely viewable.
+> [!NOTE]
+> * Launching hello.exe via dotnet-trace will redirect its input/output and you will not be able to interact with it on the console by default. Use the `--show-child-io` switch to interact with its stdin/stdout.
+> * Exiting the tool via CTRL+C or SIGTERM will safely end both the tool and the child process.
+> * If the child process exits before the tool, the tool will exit as well and the trace should be safely viewable.
 
 
 ## Viewing the trace captured from dotnet-trace

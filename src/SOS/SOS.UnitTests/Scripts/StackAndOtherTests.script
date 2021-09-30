@@ -9,6 +9,8 @@ LOADSOS
 # Verify that bpmd works
 IFDEF:LIVE
 !IFDEF:MAJOR_RUNTIME_VERSION_1
+# Issue: https://github.com/dotnet/diagnostics/issues/2459
+!IFDEF:ALPINE
 
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Main
@@ -48,6 +50,7 @@ CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
 
+ENDIF:ALPINE
 ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
 
@@ -85,12 +88,9 @@ ENDIF:DESKTOP
 
 SOSCOMMAND:SOSStatus
 
-# Issue: https://github.com/dotnet/diagnostics/issues/1567
-!IFDEF:ALPINE
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
-ENDIF:ALPINE
 
 # Verify that ClrStack with managed/native mixed works
 SOSCOMMAND:ClrStack -f
@@ -167,14 +167,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 
-ENDIF:NETCORE_OR_DOTNETDUMP
-
-# Issue: https://github.com/dotnet/diagnostics/issues/504
-!IFDEF:ALPINE
-
-# There seems no way to get -i to work on desktop under cdb. It does work under dotnet-dump because of the module mapping.
-IFDEF:NETCORE_OR_DOTNETDUMP
-
 # Verify that ClrStack with the ICorDebug options and all option (locals/params) works
 SOSCOMMAND:ClrStack -i -a
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
@@ -192,7 +184,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 
-
 # Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
@@ -208,7 +199,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 
 ENDIF:NETCORE_OR_DOTNETDUMP
-ENDIF:ALPINE
 
 !IFDEF:DOTNETDUMP
 !IFDEF:ARM

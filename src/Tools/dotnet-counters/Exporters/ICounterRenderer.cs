@@ -9,7 +9,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         void Initialize();
         void EventPipeSourceConnected();
         void ToggleStatus(bool paused);
-        void CounterPayloadReceived(string providerName, ICounterPayload payload, bool paused);
+        void CounterPayloadReceived(CounterPayload payload, bool paused);
+        void SetErrorText(string errorText);
         void Stop();
     }
 }

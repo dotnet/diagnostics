@@ -6,6 +6,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsShippingAssembly>false</IsShippingAssembly>
     <Optimize>false</Optimize>
-    <BuildTargetFrameworks>netcoreapp2.1;netcoreapp3.1;net5.0;net6.0</BuildTargetFrameworks>
+    <BuildTargetFrameworks>netcoreapp3.1;net5.0;net6.0</BuildTargetFrameworks>
   </PropertyGroup>
 </Project>

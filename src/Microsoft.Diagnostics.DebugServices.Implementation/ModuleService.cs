@@ -16,7 +16,6 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
-using FileVersionInfo = Microsoft.Diagnostics.Runtime.Utilities.FileVersionInfo;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -203,10 +202,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="pdbFileInfo">the pdb record or null</param>
-        /// <param name="versionData">the PE version or null</param>
         /// <param name="flags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref VersionData versionData, ref Module.Flags flags)
+        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
         {
             PEImage peImage = null;
 
@@ -214,13 +212,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (Target.Host.HostType != HostType.Lldb)
             {
                 // First try getting the PE info as load layout (native Windows DLLs and most managed PEs on Linux/MacOS).
-                peImage = GetPEInfo(isVirtual: true, address, size, ref pdbFileInfo, ref versionData, ref flags);
+                peImage = GetPEInfo(isVirtual: true, address: address, size: size, pdbFileInfo: ref pdbFileInfo, flags: ref flags);
                 if (peImage == null)
                 {
                     if (Target.OperatingSystem != OSPlatform.Windows)
                     {
                         // Then try getting the PE info as file layout (some managed PEs on Linux/MacOS).
-                        peImage = GetPEInfo(isVirtual: false, address, size, ref pdbFileInfo, ref versionData, ref flags);
+                        peImage = GetPEInfo(isVirtual: false, address: address, size: size, pdbFileInfo: ref pdbFileInfo, flags: ref flags);
                     }
                 }
             }
@@ -234,10 +232,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="pdbFileInfo">the pdb record or null</param>
-        /// <param name="versionData">the PE version or null</param>
         /// <param name="flags">module flags</param>
+        /// 
         /// <returns>PEImage instance or null</returns>
-        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref VersionData versionData, ref Module.Flags flags)
+        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
         {
             Stream stream = MemoryService.CreateMemoryStream(address, size);
             try
@@ -248,15 +246,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     flags |= Module.Flags.IsPEImage;
                     flags |= peImage.IsManaged ? Module.Flags.IsManaged : Module.Flags.None;
-                    pdbFileInfo = peImage.DefaultPdb.ToPdbFileInfo();
-                    if (versionData is null)
-                    {
-                        FileVersionInfo fileVersionInfo = peImage.GetFileVersionInfo();
-                        if (fileVersionInfo != null)
-                        {
-                            versionData = fileVersionInfo.VersionInfo.ToVersionData();
-                        }
-                    }
+                    pdbFileInfo = peImage.DefaultPdb?.ToPdbFileInfo();
                     flags &= ~(Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
                     flags |= isVirtual ? Module.Flags.IsLoadedLayout : Module.Flags.IsFileLayout;
                     return peImage;
@@ -268,7 +258,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             catch (Exception ex) when (ex is BadImageFormatException || ex is EndOfStreamException || ex is IOException)
             {
-                Trace.TraceError($"GetPEInfo: loaded {address:X16} isVirtual {isVirtual} exception {ex.Message}");
+                Trace.TraceError($"GetPEInfo: {address:X16} isVirtual {isVirtual} exception {ex.Message}");
             }
             return null;
         }

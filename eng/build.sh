@@ -491,8 +491,8 @@ fi
 #
 
 if [[ $__NativeBuild == true || $__Test == true ]]; then
-    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp2.1/publish/$__DistroRid
-    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp2.1/publish/$__DistroRid
+    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp3.1/publish/$__DistroRid
+    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp3.1/publish/$__DistroRid
 
     mkdir -p "$__dotnet_sos"
     mkdir -p "$__dotnet_dump"

@@ -16,10 +16,11 @@ namespace EventPipeTracee
 
         static void Main(string[] args)
         {
-            TestBody(args[0]);
+            bool spinWait10 = args.Length > 1 && "SpinWait10".Equals(args[1], StringComparison.Ordinal);
+            TestBody(args[0], spinWait10);
         }
 
-        private static void TestBody(string loggerCategory)
+        private static void TestBody(string loggerCategory, bool spinWait10)
         {
             Console.Error.WriteLine("Starting remote test process");
             Console.Error.Flush();
@@ -50,6 +51,21 @@ namespace EventPipeTracee
 
             //Signal end of test data
             Console.WriteLine("1");
+
+            if (spinWait10)
+            {
+                DateTime targetDateTime = DateTime.UtcNow.AddSeconds(10);
+
+                long acc = 0;
+                while (DateTime.UtcNow < targetDateTime)
+                {
+                    acc++;
+                    if (acc % 1_000_000 == 0)
+                    {
+                        Console.Error.WriteLine("Spin waiting...");
+                    }
+                }
+            }
 
             Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting end");
             Console.Error.Flush();

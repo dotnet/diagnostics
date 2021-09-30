@@ -189,7 +189,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // There should not be any new endpoint infos
                 await VerifyNoNewEndpointInfos(server, useAsync);
 
-                ResumeRuntime(info);
+                await ResumeRuntime(info, useAsync);
 
                 await VerifySingleSession(info, useAsync);
             }
@@ -246,7 +246,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // There should not be any new endpoint infos
                 await VerifyNoNewEndpointInfos(server, useAsync);
 
-                ResumeRuntime(info);
+                await ResumeRuntime(info, useAsync);
 
                 await VerifyWaitForConnection(info, useAsync);
             }
@@ -296,7 +296,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // There should not be any new endpoint infos
                 await VerifyNoNewEndpointInfos(server, useAsync: true);
 
-                ResumeRuntime(info);
+                await ResumeRuntime(info, useAsync: true);
 
                 await VerifyWaitForConnection(info, useAsync: true);
 
@@ -316,7 +316,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private ReversedDiagnosticsServer CreateReversedServer(out string transportName)
         {
-            transportName = ReversedServerHelper.CreateServerTransportName();
+            transportName = DiagnosticPortsHelper.CreateServerTransportName();
             _outputHelper.WriteLine("Starting reversed server at '" + transportName + "'.");
             return new ReversedDiagnosticsServer(transportName);
         }
@@ -331,7 +331,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private TestRunner StartTracee(string transportName)
         {
             _outputHelper.WriteLine("Starting tracee.");
-            return ReversedServerHelper.StartTracee(_outputHelper, transportName);
+            var runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _outputHelper);
+            runner.SetDiagnosticPort(transportName, suspend: true);
+            runner.Start();
+            return runner;
         }
 
         private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
@@ -372,14 +375,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _outputHelper.WriteLine($"Connection: {info.DebuggerDisplay}");
         }
 
-        private void ResumeRuntime(IpcEndpointInfo info)
+        private async Task ResumeRuntime(IpcEndpointInfo info, bool useAsync)
         {
-            var client = new DiagnosticsClient(info.Endpoint);
+            var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(info.Endpoint), useAsync);
 
             _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Resuming runtime instance.");
             try
             {
-                client.ResumeRuntime();
+                await clientShim.ResumeRuntime(DefaultPositiveVerificationTimeout);
                 _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Resumed successfully.");
             }
             catch (ServerErrorException ex)
@@ -396,7 +399,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await VerifyWaitForConnection(info, useAsync);
 
-            var client = new DiagnosticsClient(info.Endpoint);
+            var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(info.Endpoint), useAsync);
 
             _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Creating session #1.");
             var providers = new List<EventPipeProvider>();
@@ -407,7 +410,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 new Dictionary<string, string>() {
                     { "EventCounterIntervalSec", "1" }
                 }));
-            using var session = client.StartEventPipeSession(providers);
+            using var session = await clientShim.StartEventPipeSession(providers);
 
             _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Verifying session produces events.");
             await VerifyEventStreamProvidesEventsAsync(info, session, 1);

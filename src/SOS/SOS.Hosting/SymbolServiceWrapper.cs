@@ -157,16 +157,16 @@ namespace SOS.Hosting
         /// <summary>
         /// Parse the Windows sympath format
         /// </summary>
-        /// <param name="windowsSymbolPath">windows symbol path</param>
+        /// <param name="symbolPath">windows symbol path</param>
         /// <returns>if false, failure</returns>
         private bool ParseSymbolPath(
             IntPtr self,
-            string windowsSymbolPath)
+            string symbolPath)
         {
-            if (windowsSymbolPath == null) {
+            if (string.IsNullOrWhiteSpace(symbolPath)) {
                 return false;
             }
-            return _symbolService.ParseSymbolPath(windowsSymbolPath);
+            return _symbolService.ParseSymbolPathFixDefault(symbolPath);
         }
 
         /// <summary>

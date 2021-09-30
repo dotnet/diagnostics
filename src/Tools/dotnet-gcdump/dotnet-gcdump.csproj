@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework Condition="'$(BundleTools)' == 'true'">netcoreapp3.1</TargetFramework>
-    <TargetFramework Condition="'$(BundleTools)' != 'true'">netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.GCDump</RootNamespace>
     <ToolCommandName>dotnet-gcdump</ToolCommandName>
     <Description>.NET Managed Heap Dump and Analysis Tool</Description>

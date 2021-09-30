@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -112,10 +114,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             IpcMessage message = new IpcMessage();
             using (var reader = new BinaryReader(stream, Encoding.UTF8, true))
             {
-                message.Header = IpcHeader.TryParse(reader);
+                message.Header = IpcHeader.Parse(reader);
                 message.Payload = reader.ReadBytes(message.Header.Size - IpcHeader.HeaderSizeInBytes);
                 return message;
             }
+        }
+
+        public static async Task<IpcMessage> ParseAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            IpcMessage message = new IpcMessage();
+            message.Header = await IpcHeader.ParseAsync(stream, cancellationToken).ConfigureAwait(false);
+            message.Payload = await stream.ReadBytesAsync(message.Header.Size - IpcHeader.HeaderSizeInBytes, cancellationToken).ConfigureAwait(false);
+            return message;
         }
     }
 }

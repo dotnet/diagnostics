@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             var heap = Runtime.Heap;
             var type = heap.GetObjectType(address);
-            if (type == null)
+            if (type?.Name is null)
             {
                 WriteLine($"{Address:x16} is not referencing an object...");
                 return;

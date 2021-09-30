@@ -4,13 +4,10 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 
 namespace SOS.Extensions
@@ -26,6 +23,7 @@ namespace SOS.Extensions
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
 
             private readonly ModuleServiceFromDebuggerServices _moduleService;
+            private VersionData _versionData;
             private string _versionString;
 
             public ModuleFromDebuggerServices(
@@ -77,17 +75,17 @@ namespace SOS.Extensions
                             int minor = (int)fileInfo.dwFileVersionMS & 0xffff;
                             int revision = (int)fileInfo.dwFileVersionLS >> 16;
                             int patch = (int)fileInfo.dwFileVersionLS & 0xffff;
-                            base.VersionData = new VersionData(major, minor, revision, patch);
+                            _versionData = new VersionData(major, minor, revision, patch);
                         }
                         else
                         {
                             if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
                             {
-                                GetVersionFromVersionString();
+                                _versionData = GetVersion();
                             }
                         }
                     }
-                    return base.VersionData;
+                    return _versionData;
                 }
             }
 
