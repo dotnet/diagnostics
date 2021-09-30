@@ -240,14 +240,20 @@ namespace Microsoft.Diagnostics.Repl
 
         private void OnException(Exception ex, InvocationContext context)
         {
+            if (ex is TargetInvocationException)
+            {
+                ex = ex.InnerException;
+            }
             if (ex is NullReferenceException || 
                 ex is ArgumentException || 
                 ex is ArgumentNullException || 
                 ex is ArgumentOutOfRangeException || 
-                ex is NotImplementedException) {
+                ex is NotImplementedException) 
+            {
                 context.Console.Error.WriteLine(ex.ToString());
             }
-            else {
+            else 
+            {
                 context.Console.Error.WriteLine(ex.Message);
             }
             Trace.TraceError(ex.ToString());
@@ -368,18 +374,11 @@ namespace Microsoft.Diagnostics.Repl
 
             private void Invoke(MethodInfo methodInfo, InvocationContext context, Parser parser, IServiceProvider services)
             {
-                try
-                {
-                    object instance = _factory(services);
-                    SetProperties(context, parser, services, instance);
+                object instance = _factory(services);
+                SetProperties(context, parser, services, instance);
 
-                    object[] arguments = BuildArguments(methodInfo, services);
-                    methodInfo.Invoke(instance, arguments);
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException;
-                }
+                object[] arguments = BuildArguments(methodInfo, services);
+                methodInfo.Invoke(instance, arguments);
             }
 
             private void SetProperties(InvocationContext context, Parser parser, IServiceProvider services, object instance)

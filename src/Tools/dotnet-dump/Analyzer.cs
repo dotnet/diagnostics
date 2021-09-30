@@ -98,9 +98,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                 _target.ServiceProvider.AddServiceFactory<SOSHost>(() => new SOSHost(_contextService.Services));
 
-                // Automatically enable symbol server support
+                // Automatically enable symbol server support, default cache and search for symbols in the dump directory
                 _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
                 _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+                _symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
 
                 // Run the commands from the dotnet-dump command line
                 if (command != null)

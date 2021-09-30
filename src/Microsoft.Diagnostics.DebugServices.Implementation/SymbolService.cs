@@ -8,6 +8,7 @@ using Microsoft.SymbolStore.KeyGenerators;
 using Microsoft.SymbolStore.SymbolStores;
 using SOS;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -27,8 +28,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Symbol server URLs
         /// </summary>
-        const string MsdlSymbolServer = "http://msdl.microsoft.com/download/symbols/";
-        const string SymwebSymbolServer = "http://symweb.corp.microsoft.com/";
+        public const string MsdlSymbolServer = "http://msdl.microsoft.com/download/symbols/";
+        public const string SymwebSymbolServer = "http://symweb.corp.microsoft.com/";
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
@@ -96,77 +97,103 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             foreach (string path in paths.Reverse())
             {
-                string[] parts = path.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
-
-                // UNC or directory paths are ignored (paths not prefixed with srv* or cache*).
+                string[] parts = path.Split(new char[] { '*' }, StringSplitOptions.None);
                 if (parts.Length > 0)
                 {
-                    string symbolServerPath = null;
-                    string symbolCachePath = null;
+                    List<string> symbolCachePaths = new();
                     string symbolDirectoryPath = null;
-                    bool msdl = false;
+                    string symbolServerPath = null;
+
+                    void ParseServer(int start)
+                    {
+                        symbolServerPath = MsdlSymbolServer;
+                        for (int i = start; i < parts.Length; i++)
+                        {
+                            if (string.IsNullOrEmpty(parts[i]))
+                            {
+                                // srv** means use default cache
+                                if (i != (parts.Length - 1))
+                                {
+                                    symbolCachePaths.Add(DefaultSymbolCache);
+                                }
+                            }
+                            else if (i < (parts.Length - 1))
+                            {
+                                symbolCachePaths.Add(parts[i]);
+                            }
+                            else
+                            {
+                                symbolServerPath = parts[i];
+                            }
+                        }
+                    }
 
                     switch (parts[0].ToLowerInvariant())
                     {
-                        case "srv":
-                            switch (parts.Length)
-                            { 
-                                case 1:
-                                    msdl = true;
-                                    symbolCachePath = DefaultSymbolCache;
-                                    break;
-                                case 2:
-                                    symbolServerPath = parts[1];
-                                    break;
-                                case 3:
-                                    symbolCachePath = parts[1];
-                                    symbolServerPath = parts[2];
-                                    break;
-                                default:
-                                    return false;
+                        case "symsrv":
+                            if (parts.Length <= 2)
+                            {
+                                return false;
                             }
+                            // ignore symsrv.dll or other server dlls in parts[2]
+                            ParseServer(2);
+                            break;
+
+                        case "srv":
+                            if (parts.Length <= 1)
+                            {
+                                return false;
+                            }
+                            ParseServer(1);
                             break;
 
                         case "cache":
-                            switch (parts.Length)
-                            { 
-                                case 1:
-                                    symbolCachePath = DefaultSymbolCache;
-                                    break;
-                                case 2:
-                                    symbolCachePath = parts[1];
-                                    break;
-                                default:
-                                    return false;
+                            if (parts.Length <= 1)
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                for (int i = 1; i < parts.Length; i++)
+                                {
+                                    if (string.IsNullOrEmpty(parts[i]))
+                                    {
+                                        if (i == 1)
+                                        {
+                                            symbolCachePaths.Add(DefaultSymbolCache);
+                                        }
+                                    }
+                                    else 
+                                    {
+                                        symbolCachePaths.Add(parts[i]);
+                                    }
+                                }
                             }
                             break;
 
                         default:
                             // Directory path search
-                            switch (parts.Length)
+                            if (parts.Length != 1)
                             {
-                                case 1:
-                                    symbolDirectoryPath = parts[0];
-                                    break;
-                                default:
-                                    return false;
+                                return false;
                             }
+                            symbolDirectoryPath = parts[0];
                             break;
                     }
-                    if (msdl || symbolServerPath != null)
+                    if (symbolServerPath != null)
                     {
-                        if (!AddSymbolServer(msdl, symweb: false, symbolServerPath, authToken: null, timeoutInMinutes: 0))
+                        if (!AddSymbolServer(msdl: false, symweb: false, symbolServerPath.Trim(), authToken: null, timeoutInMinutes: 0))
                         {
                             return false;
                         }
                     }
-                    if (symbolCachePath != null)
+                    foreach (string symbolCachePath in symbolCachePaths.Reverse<string>())
                     {
-                        AddCachePath(symbolCachePath);
+                        AddCachePath(symbolCachePath.Trim());
                     }
                     if (symbolDirectoryPath != null)
                     {
-                        AddDirectoryPath(symbolDirectoryPath);
+                        AddDirectoryPath(symbolDirectoryPath.Trim());
                     }
                 }
             }

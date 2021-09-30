@@ -88,15 +88,9 @@ To install the lldb packages:
 
 This installs lldb version 10.0.0.
 
-#### Alpine 3.9 ####
+#### Alpine 3.9 to 3.12 ####
 
-Currently there is no lldb that works on Alpine.
-
-Issue https://github.com/dotnet/diagnostics/issues/73
-
-#### Alpine 3.12 ####
-
-lldb 10.0 is available for this Apline version.
+lldb 10.0 is available and works for these Apline versions.
 
 #### CentOS 6 ####
 

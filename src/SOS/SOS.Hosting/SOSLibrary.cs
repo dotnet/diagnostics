@@ -107,11 +107,11 @@ namespace SOS.Hosting
                     // This is a workaround for the Microsoft SDK docker images. Can fail when LoadLibrary uses libdl.so to load the SOS module.
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
-                        throw new DllNotFoundException("Problem loading SOS module. Try installing libc6-dev (apt-get install libc6-dev) to work around this problem.", ex);
+                        throw new DllNotFoundException($"Problem loading SOS module from {sosPath}. Try installing libc6-dev (apt-get install libc6-dev) to work around this problem.", ex);
                     }
                     else
                     {
-                        throw;
+                        throw new DllNotFoundException($"Problem loading SOS module from {sosPath}", ex);
                     }
                 }
                 if (_sosLibrary == IntPtr.Zero)

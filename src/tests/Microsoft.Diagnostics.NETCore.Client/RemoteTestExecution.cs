@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
             TestRunner runner = new TestRunner(commandLine, outputHelper, redirectError: true, redirectInput: true);
             if (!string.IsNullOrEmpty(reversedServerTransportName))
             {
-                runner.AddReversedServer(reversedServerTransportName);
+                runner.SetDiagnosticPort(reversedServerTransportName, suspend: false);
             }
             runner.Start(testProcessTimeout: 60_000);
 

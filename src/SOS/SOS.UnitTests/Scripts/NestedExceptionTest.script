@@ -9,6 +9,8 @@ LOADSOS
 # Verify that bpmd works
 IFDEF:LIVE
 !IFDEF:MAJOR_RUNTIME_VERSION_1
+# Issue: https://github.com/dotnet/diagnostics/issues/2459
+!IFDEF:ALPINE
 
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd NestedExceptionTest.exe NestedExceptionTest.Program.Main
@@ -27,6 +29,7 @@ SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
 VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
 
+ENDIF:ALPINE
 ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
 

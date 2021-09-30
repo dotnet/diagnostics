@@ -7,6 +7,8 @@ LOADSOS
 # Verify that bpmd works
 IFDEF:LIVE
 !IFDEF:MAJOR_RUNTIME_VERSION_1
+# Issue: https://github.com/dotnet/diagnostics/issues/2459
+!IFDEF:ALPINE
 
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Main
@@ -33,11 +35,11 @@ ENDIF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
 ENDIF:DESKTOP
 
-IFDEF:PROJECTK
+!IFDEF:DESKTOP
 CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
-ENDIF:PROJECTK
+ENDIF:DESKTOP
 
 CONTINUE
 SOSCOMMAND:ClrStack
@@ -52,6 +54,7 @@ CONTINUE
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
 
+ENDIF:ALPINE
 ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
 
@@ -71,8 +74,6 @@ VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
 EXTCOMMAND:registers
 VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
 
-# Issue: https://github.com/dotnet/diagnostics/issues/503
-!IFDEF:ALPINE
 SOSCOMMAND:DumpHeap
 VERIFY:\s+Address\s+MT\s+Size\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>.*
@@ -80,7 +81,6 @@ VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-ENDIF:ALPINE
 
 SOSCOMMAND:DumpDomain
 VERIFY:\s*System Domain:\s+<HEXVAL>\s+

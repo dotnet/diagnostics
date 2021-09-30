@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.TestHelpers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,7 +42,7 @@ public class SOS
     {
         information.OutputHelper = Output;
 
-        if (testLive && !SOSRunner.IsAlpine())
+        if (testLive)
         {
             // Live
             using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
@@ -52,30 +53,24 @@ public class SOS
 
         if (testDump)
         {
-            // Create and test dumps on OSX only if the runtime is 6.0 or greater
-            // TODO: reenable for 5.0 when the MacOS createdump fixes make it into a service release (https://github.com/dotnet/diagnostics/issues/1749)
-            if (OS.Kind != OSKind.OSX || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
+            string dumpName = null;
+
+            // Create and test dumps on OSX or Alpine only if the runtime is 6.0 or greater
+            if (!(OS.Kind == OSKind.OSX || SOSRunner.IsAlpine()) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
                 {
-                    if (information.DumpGenerator == SOSRunner.DumpGenerator.NativeDebugger && SOSRunner.IsAlpine())
-                    {
-                        throw new SkipTestException("lldb tests not supported on Alpine");
-                    }
-                    await SOSRunner.CreateDump(information);
+                    dumpName = await SOSRunner.CreateDump(information);
                 }
 
                 // Test against a crash dump.
                 if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
                 {
-                    if (!SOSRunner.IsAlpine())
+                    // With cdb (Windows) or lldb (Linux)
+                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
                     {
-                        // With cdb (Windows) or lldb (Linux)
-                        using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
-                        {
-                            await runner.RunScript(scriptName);
-                        }
+                        await runner.RunScript(scriptName);
                     }
 
                     // Using the dotnet-dump analyze tool if the path exists in the config file.
@@ -92,7 +87,63 @@ public class SOS
                         }
                     }
                 }
+
+                // Test the crash report json file
+                if (dumpName != null && information.TestCrashReport)
+                {
+                    TestCrashReport(dumpName, information);
+                }
             }
+        }
+    }
+
+    private void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
+    {
+        string crashReportPath = dumpName + ".crashreport.json";
+        TestRunner.OutputHelper outputHelper = TestRunner.ConfigureLogging(information.TestConfiguration, information.OutputHelper, information.TestName + ".CrashReportTest");
+        try
+        {
+            outputHelper.WriteLine("CrashReportTest for {0}", crashReportPath);
+            outputHelper.WriteLine("{");
+
+            AssertX.FileExists("CrashReport", crashReportPath, outputHelper.IndentedOutput);
+
+            dynamic crashReport = JsonConvert.DeserializeObject(File.ReadAllText(crashReportPath));
+            Assert.NotNull(crashReport);
+
+            dynamic payload = crashReport.payload;
+            Assert.NotNull(payload);
+            Version protocol_version = Version.Parse((string)payload.protocol_version);
+            Assert.True(protocol_version >= new Version("1.0.0"));
+            outputHelper.IndentedOutput.WriteLine($"protocol_version {protocol_version}");
+
+            string process_name = (string)payload.process_name;
+            Assert.NotNull(process_name);
+            outputHelper.IndentedOutput.WriteLine($"process_name {process_name}");
+
+            Assert.NotNull(payload.threads);
+            IEnumerable<dynamic> threads = payload.threads;
+            Assert.True(threads.Any());
+            outputHelper.IndentedOutput.WriteLine($"threads # {threads.Count()}");
+
+            if (OS.Kind == OSKind.OSX)
+            {
+                dynamic parameters = crashReport.parameters;
+                Assert.NotNull(parameters);
+                Assert.NotNull(parameters.ExceptionType);
+                Assert.NotNull(parameters.OSVersion);
+                Assert.Equal(parameters.SystemManufacturer, "apple");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the exception
+            outputHelper.IndentedOutput.WriteLine(ex.ToString());
+        }
+        finally
+        {
+            outputHelper.WriteLine("}");
+            outputHelper.Dispose();
         }
     }
 
@@ -134,7 +185,7 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCPOHTests(TestConfiguration config)
     {
-        if (!config.IsNETCore || config.RuntimeFrameworkVersionMajor < 5)
+        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 5)
         {
             throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
         }
@@ -149,7 +200,7 @@ public class SOS
             TestConfiguration = config,
             DebuggeeName = "Overflow",
             // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
-            DumpDiagnostics = false,
+            DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
             DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
         });
     }

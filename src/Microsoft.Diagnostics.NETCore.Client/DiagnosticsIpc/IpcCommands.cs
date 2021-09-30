@@ -18,17 +18,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         Server         = 0xFF,
     }
 
-    // For .NET 5 Preview 7 and Preview 8, use this with the
-    // DiagnosticsServerCommandSet.Server command set.
-    // For .NET 5 RC and later, use ProcessCommandId.ResumeRuntime with
-    // the DiagnosticsServerCommandSet.Process command set.
-    internal enum DiagnosticServerCommandId : byte
-    {
-        // 0x00 used in DiagnosticServerResponseId
-        ResumeRuntime = 0x01,
-        // 0xFF used DiagnosticServerResponseId
-    };
-
     internal enum DiagnosticsServerResponseId : byte
     {
         OK            = 0x00,

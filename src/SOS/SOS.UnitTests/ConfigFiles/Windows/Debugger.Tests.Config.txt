@@ -39,7 +39,6 @@
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '2.1')">netcoreapp2.1</BuildProjectFrameworkLatest>
 
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
@@ -48,7 +47,9 @@
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
-  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
+
+  <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
+  <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
@@ -80,11 +81,6 @@
           <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
           <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <Option Condition="'$(RuntimeVersion21)' != ''">
-          <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-        </Option>
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
           -->
@@ -104,32 +100,6 @@
             <Option Condition="'$(RuntimeVersion31)' != ''">
               <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(RuntimeVersion21)' != ''">
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-            </Option>
-          </Options>
-        </Option>
-        <!--
-            SOS.WebApp (runs only on Windows 2.x aspnetcore)
-          -->
-        <Option Condition="'$(TestWebApp)' == 'true'">
-          <Options>
-            <Option Condition="'$(AspNetCoreVersion21)' != ''">
-              <TestName>SOS.WebApp</TestName>
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
-              <FrameworkVersion>$(AspNetCoreVersion21)</FrameworkVersion>
-            </Option>
-          </Options>
-          <Options>
-            <!-- Test using the .NET Core and the destkop CLR framework to host the managed SOS bits -->
-            <Option>
-              <SetHostRuntime>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeVersion21)</SetHostRuntime>
-            </Option>
-            <Option>
-              <SetHostRuntime>-netfx</SetHostRuntime>
             </Option>
           </Options>
         </Option>
@@ -151,7 +121,6 @@
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-              <FrameworkVersion>$(AspNetCoreVersionLatest)</FrameworkVersion>
             </Option>
             <Option Condition="'$(AspNetCoreVersion50)' != ''">
               <BuildProjectFramework>net5.0</BuildProjectFramework>
@@ -184,11 +153,6 @@
             <Option Condition="'$(RuntimeVersion31)' != ''">
               <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-            </Option>
-            <Option Condition="'$(RuntimeVersion21)' != ''">
-              <BuildProjectFramework>netcoreapp2.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion21)</RuntimeFrameworkVersion>
               <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
             </Option>
           </Options>
@@ -227,7 +191,7 @@
 
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
   <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
-  <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\netcoreapp2.1\publish\dotnet-dump.dll</DotNetDumpPath>
+  <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\netcoreapp3.1\publish\dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 </Configuration>

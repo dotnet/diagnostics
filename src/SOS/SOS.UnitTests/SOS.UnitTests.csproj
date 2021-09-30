@@ -32,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NewtonSoft.Json" Version="$(NewtonSoftJsonVersion)" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="$(MicrosoftWin32PrimitivesVersion)" />
     <PackageReference Include="cdb-sos" Version="$(cdbsosversion)" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>

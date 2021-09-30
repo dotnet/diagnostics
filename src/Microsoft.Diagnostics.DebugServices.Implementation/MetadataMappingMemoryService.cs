@@ -3,13 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
-using System.Linq;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Immutable;
-using System.IO;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
+using System.IO;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {

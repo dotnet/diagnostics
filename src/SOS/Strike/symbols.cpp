@@ -173,12 +173,11 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 \**********************************************************************/
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
-    HRESULT hr = S_OK;
     if (g_symbolStoreInitialized)
     {
-        hr = g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
+        return g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
     }
-    return hr;
+    return E_FAIL;
 }
 
 #endif
@@ -387,7 +386,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in ICorDebugMod
     ULONG64 peAddress = 0;
     IfFailRet(pModule->GetBaseAddress(&peAddress));
 
-    IXCLRDataModule* pClrModule;
+    ToRelease<IXCLRDataModule> pClrModule;
     IfFailRet(GetModuleFromAddress(peAddress, &pClrModule));
 
     return LoadSymbols(pMD, pClrModule);

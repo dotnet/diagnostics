@@ -26,6 +26,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         // stacks, exception information, handle information, and all memory except for mapped images.
 
             Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
+
+            Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PMI removed.
         }
 
         public Dumper()
@@ -104,6 +106,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                             break;
                         case DumpTypeOption.Mini:
                             dumpType = DumpType.Normal;
+                            break;
+                        case DumpTypeOption.Triage:
+                            dumpType = DumpType.Triage;
                             break;
                     }
 

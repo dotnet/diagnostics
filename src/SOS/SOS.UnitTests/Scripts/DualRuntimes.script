@@ -30,16 +30,11 @@ SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
-# Issue: https://github.com/dotnet/diagnostics/issues/504
-!IFDEF:ALPINE
-
 # Verify that ClrStack with the ICorDebug options works
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:.*\s+Stack walk complete.\s+
-
-ENDIF:ALPINE
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP

@@ -220,19 +220,23 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
                 const char extension[] = ".dll";
                 std::string filename(find.FileName());
                 size_t extLen = sizeof(extension) - 1;
-                size_t extPos = filename.length() - extLen;
-
-                // Check if the extension matches the one we are looking for
-                if ((extPos > 0) && (filename.compare(extPos, extLen, extension) == 0))
+                size_t extPos = filename.length();
+                if (extPos > extLen)
                 {
-                    std::string filenameWithoutExt(filename.substr(0, extPos));
+                    extPos -= extLen;
 
-                    // Make sure if we have an assembly with multiple extensions present,
-                    // we insert only one version of it.
-                    if (addedAssemblies.find(filenameWithoutExt) == addedAssemblies.end())
+                    // Check if the extension matches the one we are looking for
+                    if (filename.compare(extPos, extLen, extension) == 0)
                     {
-                        addedAssemblies.insert(filenameWithoutExt);
-                        AddFileToTpaList(directory, filename.c_str(), tpaList);
+                        std::string filenameWithoutExt(filename.substr(0, extPos));
+
+                        // Make sure if we have an assembly with multiple extensions present,
+                        // we insert only one version of it.
+                        if (addedAssemblies.find(filenameWithoutExt) == addedAssemblies.end())
+                        {
+                            addedAssemblies.insert(filenameWithoutExt);
+                            AddFileToTpaList(directory, filename.c_str(), tpaList);
+                        }
                     }
                 }
             }
@@ -379,7 +383,6 @@ const char *g_linuxPaths[] = {
 #else
     "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-    "/rh-dotnet21/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
     "/usr/share/dotnet/shared/Microsoft.NETCore.App",
 #endif
 };
@@ -471,15 +474,11 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
             // Find highest 3.1.x LTS version
             if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
             {
-                // Find highest 2.1.x LTS version
-                if (!FindDotNetVersion(2, 1, hostRuntimeDirectory))
+                // Find highest 6.0.x version
+                if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
                 {
-                    // Find highest 6.0.x version
-                    if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
-                    {
-                        TraceError("Error: Failed to find runtime directory\n");
-                        return E_FAIL;
-                    }
+                    TraceError("Error: Failed to find runtime directory\n");
+                    return E_FAIL;
                 }
             }
         }

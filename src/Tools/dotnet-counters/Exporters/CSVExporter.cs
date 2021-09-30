@@ -49,12 +49,17 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Console.WriteLine("Starting a counter session. Press Q to quit.");
         }
 
+        public void SetErrorText(string errorText)
+        {
+            Console.WriteLine(errorText);
+        }
+
         public void ToggleStatus(bool paused)
         {
             // Do nothing
         }
 
-        public void CounterPayloadReceived(string providerName, ICounterPayload payload, bool _)
+        public void CounterPayloadReceived(CounterPayload payload, bool _)
         {
             lock (_lock)
             {
@@ -65,11 +70,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
 
                 builder
-                    .Append(DateTime.UtcNow.ToString()).Append(',')
-                    .Append(providerName).Append(',')
-                    .Append(payload.GetDisplay()).Append(',')
-                    .Append(payload.GetCounterType()).Append(',')
-                    .Append(payload.GetValue().ToString(CultureInfo.InvariantCulture)).Append('\n');
+                    .Append(payload.Timestamp.ToString()).Append(',')
+                    .Append(payload.ProviderName).Append(',')
+                    .Append(payload.DisplayName);
+                if(!string.IsNullOrEmpty(payload.Tags))
+                {
+                    builder.Append('[').Append(payload.Tags.Replace(',', ';')).Append(']');
+                }
+                builder.Append(',')
+                    .Append(payload.CounterType).Append(',')
+                    .Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append('\n');
             }
         }
 

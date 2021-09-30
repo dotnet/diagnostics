@@ -7,6 +7,8 @@
 
 #define LIMITED_METHOD_CONTRACT
 
+#define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
+
 // So we can use the PAL_TRY_NAKED family of macros without dependencies on utilcode.
 inline void RestoreSOToleranceState() {}
 

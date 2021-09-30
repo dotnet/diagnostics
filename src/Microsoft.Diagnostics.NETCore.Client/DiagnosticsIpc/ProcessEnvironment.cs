@@ -5,8 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +12,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class ProcessEnvironmentHelper
     {
+        private const int CopyBufferSize = (16 << 10) /* 16KiB */;
+
         private ProcessEnvironmentHelper() {}
         public static ProcessEnvironmentHelper Parse(byte[] payload)
         {
@@ -25,18 +25,29 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return helper;
         }
 
+        public Dictionary<string, string> ReadEnvironment(Stream continuation)
+        {
+            using var memoryStream = new MemoryStream();
+            continuation.CopyTo(memoryStream, CopyBufferSize);
+            return ReadEnvironmentCore(memoryStream);
+        }
+
         public async Task<Dictionary<string,string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
         {
-            var env = new Dictionary<string,string>();
-
             using var memoryStream = new MemoryStream();
-            await continuation.CopyToAsync(memoryStream, (16 << 10) /* 16KiB */, token);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            byte[] envBlock = memoryStream.ToArray();
+            await continuation.CopyToAsync(memoryStream, CopyBufferSize, token);
+            return ReadEnvironmentCore(memoryStream);
+        }
+
+        private Dictionary<string, string> ReadEnvironmentCore(MemoryStream stream)
+        {
+            stream.Seek(0, SeekOrigin.Begin);
+            byte[] envBlock = stream.ToArray();
 
             if (envBlock.Length != (long)ExpectedSizeInBytes)
                 throw new ApplicationException($"ProcessEnvironment continuation length did not match expected length. Expected: {ExpectedSizeInBytes} bytes, Received: {envBlock.Length} bytes");
 
+            var env = new Dictionary<string, string>();
             int cursor = 0;
             UInt32 nElements = BitConverter.ToUInt32(envBlock, cursor);
             cursor += sizeof(UInt32);
@@ -44,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 string pair = IpcHelpers.ReadString(envBlock, ref cursor);
                 int equalsIdx = pair.IndexOf('=');
-                env[pair.Substring(0,equalsIdx)] = equalsIdx != pair.Length - 1 ? pair.Substring(equalsIdx+1) : "";
+                env[pair.Substring(0, equalsIdx)] = equalsIdx != pair.Length - 1 ? pair.Substring(equalsIdx + 1) : "";
             }
 
             return env;

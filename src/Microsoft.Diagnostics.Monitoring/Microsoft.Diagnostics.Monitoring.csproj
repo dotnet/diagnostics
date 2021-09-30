@@ -27,10 +27,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
-    <!-- This is temporary until IEndpointInfoSourceInternal becomes public-->
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.RestServer" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
   </ItemGroup>
