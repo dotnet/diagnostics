@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,7 +45,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task BasicProcessInfoTestCore(bool useAsync, bool suspend)
         {
-            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _output);
+            const string targetFramework = "net5.0";
+
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: targetFramework), _output);
             if (suspend)
             {
                 runner.SuspendDefaultDiagnosticPort();
@@ -68,7 +71,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 // The entrypoint information is available some short time after the runtime
                 // begins to execute. Retry getting process information until entrypoint is available.
-                ProcessInfo processInfo = await GetProcessInfoWithEntrypointAsync(clientShim);
+                _output.WriteLine("Validate entrypoint assembly is available.");
+                Func<ProcessInfo, bool> entrypointNotEmptyFunc =
+                    info => !string.IsNullOrEmpty(info.ManagedEntrypointAssemblyName);
+                ProcessInfo processInfo = await GetProcessInfoWithCondition(clientShim, entrypointNotEmptyFunc);
                 ValidateProcessInfo(runner.Pid, processInfo);
                 Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
 
@@ -82,6 +88,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     Assert.Equal(processInfoBeforeResume.ProcessArchitecture, processInfo.ProcessArchitecture);
                     Assert.Equal(processInfoBeforeResume.ClrProductVersionString, processInfo.ClrProductVersionString);
                 }
+
+                string hostName = Path.GetFileName(CommonHelper.HostExe);
+                Func<ProcessInfo, bool> cmdLineContainsHostFunc =
+                    info => !string.IsNullOrEmpty(info.CommandLine) &&
+                        info.CommandLine.Contains(hostName, StringComparison.OrdinalIgnoreCase);
+
+                _output.WriteLine("Validate command line contains host.");
+                Assert.NotNull(await GetProcessInfoWithCondition(clientShim, cmdLineContainsHostFunc));
+
+                string traceeName = Path.GetFileName(CommonHelper.GetTraceePath(targetFramework: targetFramework));
+                Func<ProcessInfo, bool> cmdLineContainsTraceeFunc =
+                    info => !string.IsNullOrEmpty(info.CommandLine) &&
+                        info.CommandLine.Contains(traceeName, StringComparison.OrdinalIgnoreCase);
+
+                _output.WriteLine("Validate command line contains tracee.");
+                Assert.NotNull(await GetProcessInfoWithCondition(clientShim, cmdLineContainsTraceeFunc));
             }
             finally
             {
@@ -92,13 +114,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Get process information with entrypoint information with exponential backoff on retries.
         /// </summary>
-        private async Task<ProcessInfo> GetProcessInfoWithEntrypointAsync(DiagnosticsClientApiShim shim)
+        private async Task<ProcessInfo> GetProcessInfoWithCondition(DiagnosticsClientApiShim shim, Func<ProcessInfo, bool> condition)
         {
             int retryMilliseconds = 5;
             int currentAttempt = 1;
-            const int maxAttempts = 10;
+            const int maxAttempts = 20;
 
-            _output.WriteLine("Getting process info with entrypoint:");
+            _output.WriteLine("Getting process info:");
             while (currentAttempt <= maxAttempts)
             {
                 _output.WriteLine("- Attempt {0} of {1}.", currentAttempt, maxAttempts);
@@ -106,9 +128,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ProcessInfo processInfo = await shim.GetProcessInfo();
                 Assert.NotNull(processInfo);
 
-                if (!string.IsNullOrEmpty(processInfo.ManagedEntrypointAssemblyName))
+                if (condition(processInfo))
                 {
-                    _output.WriteLine("Got process info with entrypoint.");
+                    _output.WriteLine("Got process info.");
                     return processInfo;
                 }
 
@@ -124,7 +146,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            throw new InvalidOperationException("Unable to get process info with entrypoint.");
+            throw new InvalidOperationException("Unable to get process info with specified condition.");
         }
 
         private static void ValidateProcessInfo(int expectedProcessId, ProcessInfo processInfo)
