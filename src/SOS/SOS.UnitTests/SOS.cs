@@ -56,7 +56,7 @@ public class SOS
             string dumpName = null;
 
             // Create and test dumps on OSX or Alpine only if the runtime is 6.0 or greater
-            if (!(OS.Kind == OSKind.OSX || SOSRunner.IsAlpine()) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
+            if (!(OS.Kind == OSKind.OSX || OS.IsAlpine) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
                 if (information.DebuggeeDumpOutputRootDir != null)
@@ -364,7 +364,7 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
-        if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || SOSRunner.IsAlpine())
+        if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || OS.IsAlpine)
         {
             throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
         }

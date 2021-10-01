@@ -866,12 +866,28 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // Default to Unknown
                 Kind = OSKind.Unknown;
             }
+            if (OS.Kind == OSKind.Linux)
+            {
+                try
+                {
+                    string ostype = File.ReadAllText("/etc/os-release");
+                    IsAlpine = ostype.Contains("ID=alpine");
+                }
+                catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException)
+                {
+                }
+            }
         }
 
         /// <summary>
         /// The OS the tests are running.
         /// </summary>
         public static OSKind Kind { get; private set; }
+
+        /// <summary>
+        /// Returns true if Alpine Linux distro
+        /// </summary>
+        public static bool IsAlpine { get; private set; }
 
         /// <summary>
         /// The architecture the tests are running.  We are assuming that the test runner, the debugger and the debugger's target are all the same architecture.

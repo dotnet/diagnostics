@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,6 +16,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     public class DebugServicesTests : IDisposable
     {
         private const string ListenerName = "DebugServicesTests";
+
+        private static readonly string[] s_excludedModules = new string[] { "MpClient.dll", "MpOAV.dll" };
 
         private static IEnumerable<object[]> _configurations;
 
@@ -67,6 +70,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> moduleData in host.TestData.Modules)
             {
+                if (moduleData.TryGetValue("FileName", out string moduleFileName))
+                {
+                    if (s_excludedModules.Contains(Path.GetFileName(moduleFileName)))
+                    {
+                        continue;
+                    }
+                }
                 // Test the module service's GetModuleFromBaseAddress() and GetModuleFromAddress()
                 Assert.True(moduleData.TryGetValue("ImageBase", out ulong imageBase));
 
@@ -77,8 +87,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 }
                 catch (DiagnosticsException)
                 {
-                    moduleData.TryGetValue("FileName", out string name);
-                    Trace.TraceInformation($"GetModuleFromBaseAddress({imageBase:X16}) {name} FAILED");
+                    Trace.TraceInformation($"GetModuleFromBaseAddress({imageBase:X16}) {moduleFileName} FAILED");
 
                     // Skip modules not found when running under lldb
                     if (host.Target.Host.HostType == HostType.Lldb) {
@@ -88,7 +97,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.NotNull(module);
 
                 if (host.Target.Host.HostType != HostType.Lldb)
-                {
+                { 
                     // Check that the resulting module matches the test data
                     moduleData.CompareMembers(module);
                 }
@@ -119,9 +128,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (host.Target.Host.HostType != HostType.Lldb)
                 {
                     // Test the module service's GetModuleFromName()
-                    if (moduleData.TryGetValue("FileName", out string fileName))
+                    if (!string.IsNullOrEmpty(moduleFileName))
                     {
-                        IEnumerable<IModule> modules = moduleService.GetModuleFromModuleName(fileName);
+                        IEnumerable<IModule> modules = moduleService.GetModuleFromModuleName(moduleFileName);
                         Assert.NotNull(modules);
                         Assert.True(modules.Any());
 
@@ -228,6 +237,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void RuntimeTests(TestHost host)
         {
+            // The current Linux test assets are not alpine/musl
+            if (OS.IsAlpine)
+            {
+                throw new SkipTestException("Not supported on Alpine Linux");
+            }
             var runtimeService = host.Target.Services.GetService<IRuntimeService>();
             Assert.NotNull(runtimeService);
 
