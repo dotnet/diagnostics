@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -97,7 +98,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _output.WriteLine("Validate command line contains host.");
                 Assert.NotNull(await GetProcessInfoWithCondition(clientShim, cmdLineContainsHostFunc));
 
-                string traceeName = Path.GetFileName(CommonHelper.GetTraceePath(targetFramework: targetFramework));
+                string traceeName = Path.GetFileName(CommonHelper.GetTraceePath(Assembly.GetExecutingAssembly(), targetFramework: targetFramework));
                 Func<ProcessInfo, bool> cmdLineContainsTraceeFunc =
                     info => !string.IsNullOrEmpty(info.CommandLine) &&
                         info.CommandLine.Contains(traceeName, StringComparison.OrdinalIgnoreCase);

@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -16,12 +17,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 "..\\..\\..\\..\\..\\.dotnet\\dotnet.exe") : 
             "../../../../../.dotnet/dotnet";
         
-        public static string GetTraceePath(string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
+        public static string GetTraceePath(Assembly testAssembly, string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
         {
             var curPath = Directory.GetCurrentDirectory();
 
             var traceePath = curPath
-                .Replace(System.Reflection.Assembly.GetCallingAssembly().GetName().Name, traceeName)
+                .Replace(testAssembly.GetName().Name, traceeName)
                 .Replace("netcoreapp3.1", targetFramework);
 
             return Path.Combine(traceePath, Path.ChangeExtension(traceeName, ".dll"));
@@ -33,7 +34,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         public static string GetTraceePathWithArgs(string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
         {
-            string traceePath = GetTraceePath(traceeName, targetFramework);
+            string traceePath = GetTraceePath(Assembly.GetCallingAssembly(), traceeName, targetFramework);
 
             // CurrentDARCVersion is generated at build time by Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj
             // This value will be set to whatever the value for the newest runtime in eng/Versions.Props is
