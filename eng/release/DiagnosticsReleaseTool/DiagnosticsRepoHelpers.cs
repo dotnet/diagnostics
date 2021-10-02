@@ -50,13 +50,8 @@ namespace DiagnosticsReleaseTool.Util
                 _ => "UnknownAssets"
             };
 
-            string sha512 = null;
+            string sha512 = GetSha512(fileInZip.FullName);
             string rid = GetRidFromBundleZip(zipFile);
-
-            if (category == BundledToolsCategory)
-            {
-                sha512 = GetSha512(fileInZip.FullName);
-            }
 
             return new FileMetadata(
                     FileClass.Blob,
@@ -68,7 +63,7 @@ namespace DiagnosticsReleaseTool.Util
 
         public static string GetToolPublishRelativePath(FileInfo zipFile, FileInfo fileInZip)
         {
-            return Path.Combine(BundledToolsCategory, GetRidFromBundleZip(zipFile));
+            return FormattableString.Invariant($"{BundledToolsCategory}/{GetRidFromBundleZip(zipFile)}/{fileInZip.Name}");
         }
 
         public static bool IsBundledToolArchive(FileInfo file)
@@ -80,12 +75,10 @@ namespace DiagnosticsReleaseTool.Util
 
         public static string GetSha512(string filePath)
         {
-            using (FileStream stream = System.IO.File.OpenRead(filePath))
-            {
-                var sha = new System.Security.Cryptography.SHA512Managed();
-                byte[] checksum = sha.ComputeHash(stream);
-                return BitConverter.ToString(checksum).Replace("-", String.Empty);
-            }
+            using FileStream stream = System.IO.File.OpenRead(filePath);
+            using var sha = System.Security.Cryptography.SHA512.Create();
+            byte[] checksum = sha.ComputeHash(stream);
+            return Convert.ToHexString(checksum);
         }
     }
 }

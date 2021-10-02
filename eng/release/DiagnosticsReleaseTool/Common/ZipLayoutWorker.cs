@@ -22,9 +22,12 @@ namespace ReleaseTool.Core
 
             _shouldHandleFileFunc = shouldHandleFileFunc ?? (file => file.Extension == ".zip");
 
-            _getRelativePathFromZipAndInnerFileFunc = getRelativePathFromZipAndInnerFileFunc ?? ((zipFile, innerFile) => Path.Combine(zipFile.Name, innerFile.Name));
+            Func<FileInfo, FileInfo, string> defaultgetRelPathFunc = static (zipFile, innerFile) =>
+                                    FormattableString.Invariant($"{Path.GetFileNameWithoutExtension(zipFile.Name)}/{innerFile.Name}");
 
-            _getMetadataForInnerFileFunc = getMetadataForInnerFileFunc ?? ((_, _) => new FileMetadata(FileClass.Blob));
+            _getRelativePathFromZipAndInnerFileFunc = getRelativePathFromZipAndInnerFileFunc ?? defaultgetRelPathFunc;
+
+            _getMetadataForInnerFileFunc = getMetadataForInnerFileFunc ?? (static (_, innerFile) => Helpers.GetDefaultFileMetadata(innerFile, FileClass.Blob));
 
             _stagingPath = stagingPath;
         }
@@ -66,8 +69,6 @@ namespace ReleaseTool.Core
                 }
 
                 string relativePath = _getRelativePathFromZipAndInnerFileFunc(file, extractedFile);
-                relativePath = Path.Combine(relativePath, extractedFile.Name);
-
                 string localPath = extractedFile.FullName;
 
                 if (_stagingPath is not null)

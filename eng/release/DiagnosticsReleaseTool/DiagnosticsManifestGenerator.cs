@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using DiagnosticsReleaseTool.Util;
 using Microsoft.Extensions.Logging;
@@ -33,7 +35,13 @@ namespace DiagnosticsReleaseTool.Impl
         {
             var stream = new MemoryStream();
 
-            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions{ Indented = true }))
+            var jro = new JsonWriterOptions
+            {
+                Indented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+
+            using (var writer = new Utf8JsonWriter(stream, jro))
             {
                 writer.WriteStartObject();
 
@@ -65,6 +73,7 @@ namespace DiagnosticsReleaseTool.Impl
                 writer.WriteString("Rid", fileToRelease.FileMetadata.Rid);
                 writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
+                writer.WriteString("Sha512", fileToRelease.FileMetadata.Sha512);
                 writer.WriteEndObject();
             }
 
@@ -83,6 +92,7 @@ namespace DiagnosticsReleaseTool.Impl
                 writer.WriteStartObject();
                 writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
+                writer.WriteString("Sha512", fileToRelease.FileMetadata.Sha512);
                 writer.WriteEndObject();
             }
 
@@ -96,7 +106,7 @@ namespace DiagnosticsReleaseTool.Impl
 
             var options = new JsonSerializerOptions
             {
-                IgnoreNullValues = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 WriteIndented = true
             };
 
@@ -138,7 +148,7 @@ namespace DiagnosticsReleaseTool.Impl
         private string GenerateSubpath(FileReleaseData fileToRelease)
         {
             var fi = new FileInfo(fileToRelease.FileMap.LocalSourcePath);
-            using var hash = System.Security.Cryptography.SHA256Managed.Create();
+            using var hash = System.Security.Cryptography.SHA256.Create();
             var enc = System.Text.Encoding.UTF8;
             byte[] hashResult = hash.ComputeHash(enc.GetBytes(fileToRelease.FileMap.RelativeOutputPath));
             string pathHash = BitConverter.ToString(hashResult).Replace("-", String.Empty);
@@ -160,7 +170,7 @@ namespace DiagnosticsReleaseTool.Impl
             {
                 if(!match.Groups.TryGetValue("metadata", out Group metadataGroup))
                 {
-                    // Give up if the catpturing failed
+                    // Give up if the capturing failed
                     return null;
                 }
 
