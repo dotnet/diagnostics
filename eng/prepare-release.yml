@@ -46,7 +46,7 @@ stages:
             -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
             -SasSuffixes "$(dotnetclichecksumsmsrc-dotnet-read-list-sas-token),$(dotnetclimsrc-read-sas-token)"
             -ReleaseVersion "$(Build.BuildNumber)"
-        workingDirectory: '$(Build.Repository.LocalPath)'
+          workingDirectory: '$(Build.Repository.LocalPath)'
       - script: >-
           dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
           --
