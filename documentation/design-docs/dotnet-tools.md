@@ -297,10 +297,11 @@ OPTIONS
 
 COMMANDS
 
-    collect         Collects a diagnostic trace from a currently running process
+    collect         Collects a diagnostic trace from a currently running process.
     ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
-    convert         Converts traces to alternate formats for use with alternate trace analysis tools
+    convert         Converts traces to alternate formats for use with alternate trace analysis tools.
+    report          Generate report into stdout from a previously generated trace_file.
 
 COLLECT
 
@@ -397,6 +398,45 @@ CONVERT
       > dotnet-trace convert trace.nettrace -f speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
+
+REPORT
+
+    dotnet-trace report [-h|--help]
+                        [-t|--type]
+                        [-p|--parameters]
+                        [-o|--output <output_file_path>]
+                        --format <format>
+                        <trace_file>
+
+    Generate report into stdout from a previously generated trace_file.
+
+    -h, --help
+        Show command line help
+    
+    -t, --type
+        Specifies the type of report to create. The first type of report that will be available is 'topN'
+
+    -p, --parameters
+        Takes a list of arguments for each specific report type, see below for details.
+        type            parameters  explanation
+        'topN'          -n          the number of top functions to gather on the stack
+                        -i          find the top n methods inclusively on the stack. Without this tag, will find the top N methods exclusively on the stack
+        'countEvent'    
+
+    -o, --output
+        The path where the converted file is written. If unspecified, the file is written in the current directory
+        using the same base filename as the input file and the extension appropriate for the new format.
+
+    --format
+        Specifies the format to convert the trace file to.
+
+    <trace_file>
+        The path to the trace file that will be read to generate the report.
+
+    Examples:
+      > dotnet-trace report -t 'topN' -p <-n 10, -i >
+      Writing:       
+      Report complete
 
 ### dotnet-stack
 
