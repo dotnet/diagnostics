@@ -8,6 +8,7 @@
     <NoWarn>;1591;1701</NoWarn>
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
     <NeedsPublishing>true</NeedsPublishing>
+    <SOSConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</SOSConfigFileName>
   </PropertyGroup>
   
   <ItemGroup>
@@ -25,20 +26,40 @@
       <Link>Debugger.Tests.Config.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\$(Configuration)\Debugger.Tests.Common.txt">
-      <Link>Debugger.Tests.Common.txt</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NewtonSoft.Json" Version="$(NewtonSoftJsonVersion)" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="$(MicrosoftWin32PrimitivesVersion)" />
-    <PackageReference Include="cdb-sos" Version="$(cdbsosversion)" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
   </ItemGroup>
+    
+  <ItemGroup>
+    <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
+  </ItemGroup>
 
+  <Target Name="SOSWriteTestConfigFile" Outputs="$(SOSConfigFileName)" AfterTargets="Build">
+    <PropertyGroup>
+      <TestConfigFileLines>
+<![CDATA[
+<Configuration>
+  <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
+</Configuration>
+]]>
+      </TestConfigFileLines>
+    </PropertyGroup>
+      
+    <WriteLinesToFile File="$(SOSConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+      
+    <Message Importance="High" Text="Created config file $(SOSConfigFileName)" />
+
+    <ItemGroup>
+      <FileWrites Include="$(SOSConfigFileName)" />
+    </ItemGroup>
+  </Target>
+    
 </Project>

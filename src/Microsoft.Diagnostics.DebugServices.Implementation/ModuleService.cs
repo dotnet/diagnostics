@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
 using System;
@@ -270,65 +271,75 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>reader or null</returns>
         internal PEReader GetPEReader(IModule module)
         {
-            string downloadFilePath = null;
-            PEReader reader = null;
+            if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
+            {
+                Trace.TraceWarning($"GetPEReader: module {module.FileName} has no index timestamp/filesize");
+                return null;
+            }
+
+            SymbolStoreKey moduleKey = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+            if (moduleKey is null)
+            {
+                Trace.TraceWarning($"GetPEReader: no index generated for module {module.FileName} ");
+                return null;
+            }
 
             if (File.Exists(module.FileName))
             {
-                // TODO - Need to verify the index timestamp/file size matches this local file
-                downloadFilePath = module.FileName;
-            }
-            else 
-            { 
-                if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
+                Stream stream = OpenFile(module.FileName);
+                if (stream is not null)
                 {
-                    SymbolStoreKey key = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
-                    if (key is not null)
+                    var peFile = new PEFile(new StreamAddressSpace(stream), false);
+                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, module.FileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    foreach (SymbolStoreKey key in keys)
                     {
-                        // Now download the module from the symbol server
-                        downloadFilePath = SymbolService.DownloadFile(key);
+                        if (moduleKey.Equals(key))
+                        {
+                            Trace.TraceInformation("GetPEReader: local file match {0}", module.FileName);
+                            return OpenPEReader(module.FileName);
+                        }
                     }
-                    else
-                    {
-                        Trace.TraceWarning($"GetPEReader: no index generated for module {module.FileName} ");
-                    }
-                }
-                else
-                {
-                    Trace.TraceWarning($"GetPEReader: module {module.FileName} has no index timestamp/filesize");
                 }
             }
 
+            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
+            string downloadFilePath = SymbolService.DownloadFile(moduleKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("GetPEReader: downloaded {0}", downloadFilePath);
-                Stream stream;
+                return OpenPEReader(downloadFilePath);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Opens and returns an PEReader instance from the local file path
+        /// </summary>
+        /// <param name="filePath">PE file to open</param>
+        /// <returns>PEReader instance or null</returns>
+        private PEReader OpenPEReader(string filePath)
+        {
+            Stream stream = OpenFile(filePath);
+            if (stream is not null)
+            {
                 try
                 {
-                    stream = File.OpenRead(downloadFilePath);
-                }
-                catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
-                {
-                    Trace.TraceError($"GetPEReader: OpenRead exception {ex.Message}");
-                    return null;
-                }
-                try
-                {
-                    reader = new PEReader(stream);
+                    var reader = new PEReader(stream);
                     if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
-                        Trace.TraceError($"GetPEReader: PEReader invalid headers");
+                        Trace.TraceError($"OpenPEReader: PEReader invalid headers");
                         return null;
                     }
+                    return reader;
                 }
                 catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
                 {
-                    Trace.TraceError($"GetPEReader: PEReader exception {ex.Message}");
-                    return null;
+                    Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
                 }
             }
-
-            return reader;
+            return null;
         }
 
         /// <summary>
@@ -338,65 +349,74 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>ELFFile instance or null</returns>
         internal ELFFile GetELFFile(IModule module)
         {
-            string downloadFilePath = null;
-            ELFFile elfFile = null;
+            if (module.BuildId.IsDefaultOrEmpty)
+            {
+                Trace.TraceWarning($"GetELFFile: module {module.FileName} has no build id");
+                return null;
+            }
+
+            SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+            if (moduleKey is null)
+            {
+                Trace.TraceWarning($"GetELFFile: no index generated for module {module.FileName} ");
+                return null;
+            }
 
             if (File.Exists(module.FileName))
             {
-                // TODO - Need to verify the build id matches this local file
-                downloadFilePath = module.FileName;
-            }
-            else 
-            { 
-                if (!module.BuildId.IsDefaultOrEmpty)
+                ELFFile elfFile = OpenELFFile(module.FileName);
+                if (elfFile is not null)
                 {
-                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-                    if (key is not null)
+                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, module.FileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    foreach (SymbolStoreKey key in keys)
                     {
-                        // Now download the module from the symbol server
-                        downloadFilePath = SymbolService.DownloadFile(key);
+                        if (moduleKey.Equals(key))
+                        {
+                            Trace.TraceInformation("GetELFFile: local file match {0}", module.FileName);
+                            return elfFile;
+                        }
                     }
-                    else
-                    {
-                        Trace.TraceWarning($"GetELFFile: no index generated for module {module.FileName} ");
-                    }
-                }
-                else
-                {
-                    Trace.TraceWarning($"GetELFFile: module {module.FileName} has no build id");
                 }
             }
 
+            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
+            string downloadFilePath = SymbolService.DownloadFile(moduleKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("GetELFFile: downloaded {0}", downloadFilePath);
-                Stream stream;
+                return OpenELFFile(downloadFilePath);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Opens and returns an ELFFile instance from the local file path
+        /// </summary>
+        /// <param name="filePath">ELF file to open</param>
+        /// <returns>ELFFile instance or null</returns>
+        private ELFFile OpenELFFile(string filePath)
+        {
+            Stream stream = OpenFile(filePath);
+            if (stream is not null)
+            {
                 try
                 {
-                    stream = File.OpenRead(downloadFilePath);
-                }
-                catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
-                {
-                    Trace.TraceError($"GetELFFile: OpenRead exception {ex.Message}");
-                    return null;
-                }
-                try
-                {
-                    elfFile = new ELFFile(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false);
+                    ELFFile elfFile = new ELFFile(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false);
                     if (!elfFile.IsValid())
                     {
-                        Trace.TraceError($"GetELFFile: not a valid file");
+                        Trace.TraceError($"OpenELFFile: not a valid file");
                         return null;
                     }
+                    return elfFile;
                 }
                 catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
                 {
-                    Trace.TraceError($"GetELFFile: exception {ex.Message}");
-                    return null;
+                    Trace.TraceError($"OpenELFFile: exception {ex.Message}");
                 }
             }
-
-            return elfFile;
+            return null;
         }
 
         /// <summary>
@@ -406,65 +426,92 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>MachO file instance or null</returns>
         internal MachOFile GetMachOFile(IModule module)
         {
-            string downloadFilePath = null;
-            MachOFile machoFile = null;
+            if (module.BuildId.IsDefaultOrEmpty)
+            {
+                Trace.TraceWarning($"GetMachOFile: module {module.FileName} has no build id");
+                return null;
+            }
+
+            SymbolStoreKey moduleKey = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+            if (moduleKey is null)
+            {
+                Trace.TraceWarning($"GetMachOFile: no index generated for module {module.FileName} ");
+                return null;
+            }
 
             if (File.Exists(module.FileName))
             {
-                // TODO - Need to verify the build id matches this local file
-                downloadFilePath = module.FileName;
-            }
-            else 
-            { 
-                if (!module.BuildId.IsDefaultOrEmpty)
+                MachOFile machOFile = OpenMachOFile(module.FileName);
+                if (machOFile is not null)
                 {
-                    SymbolStoreKey key = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-                    if (key is not null)
+                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, module.FileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    foreach (SymbolStoreKey key in keys)
                     {
-                        // Now download the module from the symbol server
-                        downloadFilePath = SymbolService.DownloadFile(key);
+                        if (moduleKey.Equals(key))
+                        {
+                            Trace.TraceInformation("GetMachOFile: local file match {0}", module.FileName);
+                            return machOFile;
+                        }
                     }
-                    else
-                    {
-                        Trace.TraceWarning($"GetMachOFile: no index generated for module {module.FileName} ");
-                    }
-                }
-                else
-                {
-                    Trace.TraceWarning($"GetMachOFile: module {module.FileName} has no index timestamp/filesize");
                 }
             }
 
+            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
+            string downloadFilePath = SymbolService.DownloadFile(moduleKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("GetMachOFile: downloaded {0}", downloadFilePath);
-                Stream stream;
+                return OpenMachOFile(downloadFilePath);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Opens and returns an MachOFile instance from the local file path
+        /// </summary>
+        /// <param name="filePath">MachO file to open</param>
+        /// <returns>MachOFile instance or null</returns>
+        private MachOFile OpenMachOFile(string filePath)
+        {
+            Stream stream = OpenFile(filePath);
+            if (stream is not null)
+            {
                 try
                 {
-                    stream = File.OpenRead(downloadFilePath);
-                }
-                catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
-                {
-                    Trace.TraceError($"GetMachOFile: OpenRead exception {ex.Message}");
-                    return null;
-                }
-                try
-                {
-                    machoFile = new MachOFile(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false);
+                    var machoFile = new MachOFile(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false);
                     if (!machoFile.IsValid())
                     {
-                        Trace.TraceError($"GetMachOFile: not a valid file");
+                        Trace.TraceError($"OpenMachOFile: not a valid file");
                         return null;
                     }
+                    return machoFile;
                 }
                 catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
                 {
-                    Trace.TraceError($"GetMachOFile: exception {ex.Message}");
-                    return null;
+                    Trace.TraceError($"OpenMachOFile: exception {ex.Message}");
                 }
             }
+            return null;
+        }
 
-            return machoFile;
+        /// <summary>
+        /// Opens and returns a file stream
+        /// </summary>
+        /// <param name="filePath">file to open</param>
+        /// <returns>stream or null</returns>
+        private Stream OpenFile(string filePath)
+        {
+            try
+            {
+                return File.OpenRead(filePath);
+            }
+            catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
+            {
+                Trace.TraceError($"OpenFile: OpenRead exception {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

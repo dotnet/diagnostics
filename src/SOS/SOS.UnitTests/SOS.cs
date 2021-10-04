@@ -56,16 +56,16 @@ public class SOS
             string dumpName = null;
 
             // Create and test dumps on OSX or Alpine only if the runtime is 6.0 or greater
-            if (!(OS.Kind == OSKind.OSX || SOSRunner.IsAlpine()) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
+            if (!(OS.Kind == OSKind.OSX || OS.IsAlpine) || information.TestConfiguration.RuntimeFrameworkVersionMajor > 5)
             {
                 // Generate a crash dump.
-                if (information.TestConfiguration.DebuggeeDumpOutputRootDir() != null)
+                if (information.DebuggeeDumpOutputRootDir != null)
                 {
                     dumpName = await SOSRunner.CreateDump(information);
                 }
 
                 // Test against a crash dump.
-                if (information.TestConfiguration.DebuggeeDumpInputRootDir() != null)
+                if (information.DebuggeeDumpInputRootDir != null)
                 {
                     // With cdb (Windows) or lldb (Linux)
                     using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
@@ -258,18 +258,23 @@ public class SOS
     {
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {
+            string debuggeeDumpOutputRootDir = Path.Combine(currentConfig.DebuggeeDumpOutputRootDir(), currentConfig.DebugType);
+            string debuggeeDumpInputRootDir = Path.Combine(currentConfig.DebuggeeDumpInputRootDir(), currentConfig.DebugType);
+
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
             await RunTest("StackAndOtherTests.script", information: new SOSRunner.TestInformation {
                 TestConfiguration = currentConfig,
                 TestName = "SOS.StackAndOtherTests",
                 DebuggeeName = "SymbolTestApp",
                 DebuggeeArguments = "%DEBUG_ROOT%",
-                DumpNameSuffix = currentConfig.DebugType
+                DumpNameSuffix = currentConfig.DebugType,
+                DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
+                DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
             });
 
             // This tests using regular Windows PDBs with no managed hosting. SOS should fallback 
             // to using native implementations of the host/target/runtime.
-            if (currentConfig.AllSettings["DebugType"] == "full")
+            if (currentConfig.DebugType == "full")
             {
                 var settings = new Dictionary<string, string>(currentConfig.AllSettings) {
                     ["SetHostRuntime"] = "-none"
@@ -279,7 +284,9 @@ public class SOS
                     TestName = "SOS.StackAndOtherTests",
                     DebuggeeName = "SymbolTestApp",
                     DebuggeeArguments = "%DEBUG_ROOT%",
-                    DumpNameSuffix = currentConfig.DebugType
+                    DumpNameSuffix = currentConfig.DebugType,
+                    DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
+                    DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
                 });
             }
         }
@@ -357,7 +364,7 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
-        if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || SOSRunner.IsAlpine())
+        if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || OS.IsAlpine)
         {
             throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
         }

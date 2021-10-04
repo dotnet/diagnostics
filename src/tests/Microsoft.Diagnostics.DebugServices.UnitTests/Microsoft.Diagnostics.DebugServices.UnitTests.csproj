@@ -1,12 +1,124 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net5.0</TargetFrameworks>
+    <!-- Needs to be netcoreapp3.1 and not higher so this test assembly can be loaded by dotnet-dump via the DOTNET_DIAGNOSTIC_EXTENSIONS env var -->
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TestConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</TestConfigFileName>
+    <TestAssetsVersion>1.0.246501</TestAssetsVersion>
+    <!-- Controls the test asset package restore and the tests that use them -->
+    <RunTests>true</RunTests>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Runtime.Utilities" Version="$(MicrosoftDiagnosticsRuntimeUtilitiesVersion)" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.Extensions\SOS.Extensions.csproj" />
+  </ItemGroup>
+    
+  <ItemGroup Condition="$(RunTests) AND '$(OS)' == 'Windows_NT'">
+    <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
+    <PackageDownload Include="TestAssets.Windows.x64.3.1" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x64.5.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x64.6.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x86.3.1" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x86.5.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x86.6.0" Version="[$(TestAssetsVersion)]" />
+  </ItemGroup>
+    
+  <ItemGroup Condition="$(RunTests) AND ('$(OS)' == 'Unix' OR '$(OS)' == 'Windows_NT')">
+    <PackageDownload Include="TestAssets.Linux.x64.3.1" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.x64.5.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.x64.6.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.arm64.3.1" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.arm64.5.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.arm64.6.0" Version="[$(TestAssetsVersion)]" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\Windows\Debugger.Tests.Config.txt" Condition="'$(OS)' == 'Windows_NT'">
+      <Link>Debugger.Tests.Config.txt</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\Unix\Debugger.Tests.Config.txt" Condition="$(OS) == 'Unix'">
+      <Link>Debugger.Tests.Config.txt</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+    
+  <!--
+    Windows test configuration file
+  -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <ConfigFileEntries Include="Windows_NT">
+       <ConfigFileEntry>
+<![CDATA[
+<Configuration>
+  <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <RepoRootDir>$(RepoRoot)</RepoRootDir>
+  <RunTests>$(RunTests)</RunTests>
+  <DbgEngPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\dbgeng.dll</DbgEngPath>
+  
+  <Package_TestAssets_Windows_x64_3_1>$(NuGetPackageRoot)testassets.windows.x64.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_3_1>
+  <Package_TestAssets_Windows_x64_5_0>$(NuGetPackageRoot)testassets.windows.x64.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_5_0>
+  <Package_TestAssets_Windows_x64_6_0>$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_6_0>
+  
+  <Package_TestAssets_Windows_x86_3_1>$(NuGetPackageRoot)testassets.windows.x86.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_3_1>
+  <Package_TestAssets_Windows_x86_5_0>$(NuGetPackageRoot)testassets.windows.x86.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_5_0>
+  <Package_TestAssets_Windows_x86_6_0>$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_6_0>
+  
+  <Package_TestAssets_Linux_x64_3_1>$(NuGetPackageRoot)testassets.linux.x64.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Linux_x64_3_1>
+  <Package_TestAssets_Linux_x64_5_0>$(NuGetPackageRoot)testassets.linux.x64.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_x64_5_0>
+  <Package_TestAssets_Linux_x64_6_0>$(NuGetPackageRoot)testassets.linux.x64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_x64_6_0>
+  
+  <Package_TestAssets_Linux_arm64_3_1>$(NuGetPackageRoot)testassets.linux.arm64.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Linux_arm64_3_1>
+  <Package_TestAssets_Linux_arm64_5_0>$(NuGetPackageRoot)testassets.linux.arm64.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_arm64_5_0>
+  <Package_TestAssets_Linux_arm64_6_0>$(NuGetPackageRoot)testassets.linux.arm64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_arm64_6_0>
+</Configuration>
+]]>
+       </ConfigFileEntry>
+    </ConfigFileEntries>
   </ItemGroup>
 
+  <!--
+    Linux/MacOS test configuration file
+  -->
+  <ItemGroup Condition="'$(OS)' == 'Unix'">
+    <ConfigFileEntries Include="Unix">
+       <ConfigFileEntry>
+<![CDATA[
+<Configuration>
+  <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <RepoRootDir>$(RepoRoot)</RepoRootDir>
+  <RunTests>$(RunTests)</RunTests>
+  
+  <Package_TestAssets_Linux_x64_3_1>$(NuGetPackageRoot)testassets.linux.x64.3.1/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_3_1>
+  <Package_TestAssets_Linux_x64_5_0>$(NuGetPackageRoot)testassets.linux.x64.5.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_5_0>
+  <Package_TestAssets_Linux_x64_6_0>$(NuGetPackageRoot)testassets.linux.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_6_0>
+  
+  <Package_TestAssets_Linux_arm64_3_1>$(NuGetPackageRoot)testassets.linux.arm64.3.1/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_3_1>
+  <Package_TestAssets_Linux_arm64_5_0>$(NuGetPackageRoot)testassets.linux.arm64.5.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_5_0>
+  <Package_TestAssets_Linux_arm64_6_0>$(NuGetPackageRoot)testassets.linux.arm64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_6_0>
+</Configuration>
+]]>
+       </ConfigFileEntry>
+    </ConfigFileEntries>
+  </ItemGroup>
+
+  <Target Name="WriteTestConfigFile" Outputs="$(TestConfigFileName)" AfterTargets="Build">
+     <PropertyGroup>
+       <TestConfigFileLines>@(ConfigFileEntries->Metadata("ConfigFileEntry"))</TestConfigFileLines>
+     </PropertyGroup>
+    <WriteLinesToFile File="$(TestConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <Message Importance="High" Text="Created config file $(TestConfigFileName)" />
+    <ItemGroup>
+      <FileWrites Include="$(TestConfigFileName)" />
+    </ItemGroup>
+  </Target>
 </Project>
