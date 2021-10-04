@@ -348,8 +348,8 @@ stages:
             - Alpine_cross64
             condition: succeeded()
             pool:
-              name: NetCoreInternal-Pool
-              queue: BuildPool.Windows.10.Amd64.VS2019
+              name: NetCore1ESPool-Internal
+              demands: ImageOverride -equals Build.Windows.10.Amd64.VS2019
             enablePublishUsingPipelines: true
             enableMicrobuild: true
             artifacts:
@@ -401,8 +401,8 @@ stages:
             dependsOn: Sign_Package_Publish
             publishUsingPipelines: true
             pool:
-              name: NetCoreInternal-Pool
-              queue: buildpool.windows.10.amd64.vs2019
+              name: NetCore1ESPool-Internal
+              demands: ImageOverride -equals Build.windows.10.amd64.vs2019
 
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - template: /eng/common/templates/post-build/post-build.yml
