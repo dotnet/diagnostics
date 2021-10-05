@@ -13,14 +13,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private Dictionary<string, List<string>> _enabledCounters;
         private int _intervalMilliseconds;
 
-        public static CounterFilter AllCounters(int counterIntervalSeconds)
+        public static CounterFilter AllCounters(float counterIntervalSeconds)
             => new CounterFilter(counterIntervalSeconds);
 
-        public CounterFilter(int intervalSeconds)
+        public CounterFilter(float intervalSeconds)
         {
             //Provider names are not case sensitive, but counter names are.
             _enabledCounters = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            _intervalMilliseconds = intervalSeconds * 1000;
+
+            //The Series payload of the counter which we use for filtering
+            _intervalMilliseconds = (int)(intervalSeconds * 1000);
         }
 
         // Called when we want to enable all counters under a provider name.
@@ -36,9 +38,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public IEnumerable<string> GetProviders() => _enabledCounters.Keys;
 
-        public bool IsIncluded(string providerName, string counterName, int interval)
+        public bool IsIncluded(string providerName, string counterName, int intervalMilliseconds)
         {
-            if (_intervalMilliseconds != interval)
+            if (_intervalMilliseconds != intervalMilliseconds)
             {
                 return false;
             }

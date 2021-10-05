@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
                 _valueFilter = value => value < maxValue;
             }
 
-            _intervalTicks = settings.CounterIntervalSeconds * TimeSpan.TicksPerSecond;
+            _intervalTicks = (long)(settings.CounterIntervalSeconds * TimeSpan.TicksPerSecond);
             _windowTicks = settings.SlidingWindowDuration.Ticks;
         }
 

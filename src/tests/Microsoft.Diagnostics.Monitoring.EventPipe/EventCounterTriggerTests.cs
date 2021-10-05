@@ -440,12 +440,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// </summary>
         private sealed class CpuUsagePayloadFactory
         {
-            private readonly int _intervalSeconds;
+            private readonly float _intervalSeconds;
             private readonly Random _random;
 
             private DateTime? _lastTimestamp;
 
-            public CpuUsagePayloadFactory(int seed, int intervalSeconds)
+            public CpuUsagePayloadFactory(int seed, float intervalSeconds)
             {
                 _intervalSeconds = intervalSeconds;
                 _random = new Random(seed);

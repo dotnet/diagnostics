@@ -13,13 +13,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         // In order to handle hung requests, we also capture metrics on a regular interval.
         // This acts as a wake up timer, since we cannot rely on Activity1Stop.
-        private readonly bool _supportHeartbeat;
+        // Note this value is parameterizable due to limitations in event counters: only 1 interval duration is
+        // respected. This gives the trigger infrastructure a way to use the same interval.
+        private readonly float? _intervalSeconds;
 
-        public const int DefaultHeartbeatInterval = 10;
-
-        public AspNetTriggerSourceConfiguration(bool supportHeartbeat = false)
+        public AspNetTriggerSourceConfiguration(float? intervalSeconds = null)
         {
-            _supportHeartbeat = supportHeartbeat;
+            _intervalSeconds = intervalSeconds;
         }
 
         /// <summary>
@@ -45,11 +45,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            if (_supportHeartbeat)
+            if (_intervalSeconds.HasValue)
             {
                 return new AggregateSourceConfiguration(
-                    new AspNetTriggerSourceConfiguration(supportHeartbeat: false),
-                    new MetricSourceConfiguration(DefaultHeartbeatInterval, new[] { MicrosoftAspNetCoreHostingEventSourceName })).GetProviders();
+                    new AspNetTriggerSourceConfiguration(intervalSeconds: null),
+                    new MetricSourceConfiguration(_intervalSeconds.Value, new[] { MicrosoftAspNetCoreHostingEventSourceName })).GetProviders();
 
             }
             else
