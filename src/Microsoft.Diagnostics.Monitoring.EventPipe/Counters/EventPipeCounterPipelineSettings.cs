@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         //Do not use TimeSpan here since we may need to synchronize this pipeline interval
         //with a different session and want to make sure the values are identical.
-        public float RefreshIntervalSeconds { get; set; }
+        public float CounterIntervalSeconds { get; set; }
     }
 
     internal class EventPipeCounterGroup

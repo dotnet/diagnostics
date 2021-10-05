@@ -15,11 +15,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         // This acts as a wake up timer, since we cannot rely on Activity1Stop.
         // Note this value is parameterizable due to limitations in event counters: only 1 interval duration is
         // respected. This gives the trigger infrastructure a way to use the same interval.
-        private readonly float? _intervalSeconds;
+        private readonly float? _heartbeatIntervalSeconds;
 
-        public AspNetTriggerSourceConfiguration(float? intervalSeconds = null)
+        public AspNetTriggerSourceConfiguration(float? heartbeatIntervalSeconds = null)
         {
-            _intervalSeconds = intervalSeconds;
+            _heartbeatIntervalSeconds = heartbeatIntervalSeconds;
         }
 
         /// <summary>
@@ -45,11 +45,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            if (_intervalSeconds.HasValue)
+            if (_heartbeatIntervalSeconds.HasValue)
             {
                 return new AggregateSourceConfiguration(
-                    new AspNetTriggerSourceConfiguration(intervalSeconds: null),
-                    new MetricSourceConfiguration(_intervalSeconds.Value, new[] { MicrosoftAspNetCoreHostingEventSourceName })).GetProviders();
+                    new AspNetTriggerSourceConfiguration(heartbeatIntervalSeconds: null),
+                    new MetricSourceConfiguration(_heartbeatIntervalSeconds.Value, new[] { MicrosoftAspNetCoreHostingEventSourceName })).GetProviders();
 
             }
             else
