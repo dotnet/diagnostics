@@ -1,9 +1,5 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.21474.2">
-      <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>3ea0d860c6973f2cbadc9e895c7ec2cbdaec4ad5</Sha>
-    </Dependency>
     <Dependency Name="Microsoft.SymbolStore" Version="1.0.250401">
       <Uri>https://github.com/dotnet/symstore</Uri>
       <Sha>cb24099215a83975c360792edf35102ff0d10702</Sha>
@@ -16,10 +12,6 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>6fb60b0aa79bb50097ba112e1a9c024e32a0c80b</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.100-rtm.21480.21">
-      <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>b2fac072e4480a39df132de7c152ff5466a1bbe3</Sha>
-    </Dependency>
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="5.0.0-alpha.1.20473.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
       <Sha>def2e2c6dc5064319250e2868a041a3dc07f9579</Sha>
@@ -31,6 +23,14 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>3ea0d860c6973f2cbadc9e895c7ec2cbdaec4ad5</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.21474.2">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>3ea0d860c6973f2cbadc9e895c7ec2cbdaec4ad5</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.100-rtm.21480.21">
+      <Uri>https://github.com/dotnet/installer</Uri>
+      <Sha>b2fac072e4480a39df132de7c152ff5466a1bbe3</Sha>
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.0-rtm.21504.14">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
