@@ -5,13 +5,10 @@ namespace ReleaseTool.Core
     public sealed class NugetLayoutWorker : PassThroughLayoutWorker
     {
         public NugetLayoutWorker(string stagingPath) : base(
-            shouldHandleFileFunc: ShouldHandleFile,
-            getRelativePublishPathFromFileFunc: GetNugetPublishRelativePath,
-            getMetadataForFileFunc: (_) => new FileMetadata(FileClass.Nuget),
+            shouldHandleFileFunc: static file => file.Extension == ".nupkg" && !file.Name.EndsWith(".symbols.nupkg"),
+            getRelativePublishPathFromFileFunc: static file => Helpers.GetDefaultPathForFileCategory(file, FileClass.Nuget),
+            getMetadataForFileFunc: static file => Helpers.GetDefaultFileMetadata(file, FileClass.Nuget),
             stagingPath
-        ) {}
-
-        private static bool ShouldHandleFile(FileInfo file) => file.Extension == ".nupkg" && !file.Name.EndsWith(".symbols.nupkg");
-        private static string GetNugetPublishRelativePath(FileInfo file) => FileMetadata.GetDefaultCatgoryForClass(FileClass.Nuget);
+        ){}
     }
 }

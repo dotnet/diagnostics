@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -28,7 +29,7 @@ namespace DiagnosticsReleaseTool.Util
             }
         }
 
-        internal ReleaseMetadata GetDropMetadata(string repoUrl)
+        internal ReleaseMetadata GetDropMetadataForSingleRepoVariants(IEnumerable<string> repoUrls)
         {
             string releaseVersion;
             using (Stream darcReleaseFile = File.OpenRead(ReleaseFilePath))
@@ -44,22 +45,25 @@ namespace DiagnosticsReleaseTool.Util
                 // TODO: Schema validation.
                 JsonElement buildList = jsonDoc.RootElement.GetProperty("builds");
 
-                // TODO: This should be using Uri.Compare...
+                // This iteration is necessary due to the public/private nature repos.
                 var repoBuilds = buildList.EnumerateArray()
-                                          .Where(build => build.GetProperty("repo").GetString() == repoUrl);
+                                          .Where(build => 
+                                          {
+                                            var buildUri = new Uri(build.GetProperty("repo").GetString());
+                                            return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
+                                          });
 
                 if (repoBuilds.Count() != 1)
                 {
                     throw new InvalidOperationException(
-                        $"There's either no build for {repoUrl} or more than one. Can't retrieve metadata.");
+                        $"There's either no build for requested repos or more than one. Can't retrieve metadata.");
                 }
 
-                JsonElement build = repoBuilds.ElementAt(0);
+                JsonElement build = repoBuilds.First();
 
-                // TODO: If any of these were to fail...
                 var releaseMetadata = new ReleaseMetadata(
                     releaseVersion: releaseVersion,
-                    repoUrl: repoUrl,
+                    repoUrl: build.GetProperty("repo").GetString(),
                     branch: build.GetProperty("branch").GetString(),
                     commit: build.GetProperty("commit").GetString(),
                     dateProduced: build.GetProperty("produced").GetString(),
@@ -71,7 +75,7 @@ namespace DiagnosticsReleaseTool.Util
             }
         }
 
-        internal DirectoryInfo GetShippingDirectoryForProject(string projectName)
+        internal DirectoryInfo GetShippingDirectoryForSingleProjectVariants(IEnumerable<string> projectNames)
         {
             using (Stream darcManifest = File.OpenRead(ReleaseFilePath))
             using (JsonDocument jsonDoc = JsonDocument.Parse(darcManifest))
@@ -80,17 +84,16 @@ namespace DiagnosticsReleaseTool.Util
                 // pretty stable schema.
                 JsonElement productList = jsonDoc.RootElement[0].GetProperty("products");
 
-                var directoryList = productList.EnumerateArray()
-                                               .Where(prod => prod.GetProperty("name").GetString() == projectName)
-                                               .Select(prod => prod.GetProperty("fileshare"));
+                var matchingProducts = productList.EnumerateArray()
+                                               .Where(prod => projectNames.Contains(prod.GetProperty("name").GetString()));
 
-                if (directoryList.Count() != 1)
+                if (matchingProducts.Count() != 1)
                 {
                     throw new InvalidOperationException(
-                        $"There's either no product named {projectName} or more than one in the drop.");
+                        $"There's either no product under the provided names or more than one in the drop.");
                 }
 
-                return new DirectoryInfo(directoryList.ElementAt(0).GetString());
+                return new DirectoryInfo(matchingProducts.First().GetProperty("fileshare").GetString());
             }
         }
     }

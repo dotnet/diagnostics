@@ -432,3 +432,6 @@ stages:
           -TsaPublish $True'
           artifactNames:
           - 'Packages'
+
+  # This sets up the bits to do a Release.
+  - template: /eng/prepare-release.yml

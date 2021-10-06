@@ -19,11 +19,11 @@ namespace ReleaseTool.Core
             string stagingPath)
         {
 
-            _shouldHandleFileFunc = shouldHandleFileFunc ?? (_ => true);
+            _shouldHandleFileFunc = shouldHandleFileFunc ?? (static _ => true);
 
-            _getRelativePublishPathFromFileFunc = getRelativePublishPathFromFileFunc ?? (file => Path.Combine(FileMetadata.GetDefaultCatgoryForClass(FileClass.Unknown), file.Name));
+            _getRelativePublishPathFromFileFunc = getRelativePublishPathFromFileFunc ?? (static file => Helpers.GetDefaultPathForFileCategory(file, FileClass.Unknown));
 
-            _getMetadataForFileFunc = getMetadataForFileFunc ?? (_ => new FileMetadata(FileClass.Unknown));
+            _getMetadataForFileFunc = getMetadataForFileFunc ?? (static file => Helpers.GetDefaultFileMetadata(file, FileClass.Unknown));
 
             _stagingPath = stagingPath;
         }
@@ -37,7 +37,7 @@ namespace ReleaseTool.Core
                 return new LayoutWorkerResult(LayoutResultStatus.FileNotHandled);
             }
 
-            string publishReleasePath = Path.Combine(_getRelativePublishPathFromFileFunc(file), file.Name);
+            string publishReleasePath = _getRelativePublishPathFromFileFunc(file);
 
             string localPath = file.FullName;
 

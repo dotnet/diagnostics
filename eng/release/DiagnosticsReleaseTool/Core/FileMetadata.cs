@@ -14,7 +14,7 @@ namespace ReleaseTool.Core
     {
         public readonly FileClass Class { get; }
 
-        public readonly  string AssetCategory { get; }
+        public readonly string AssetCategory { get; }
 
         public readonly bool ShouldPublishToCdn { get; }
 
@@ -24,13 +24,10 @@ namespace ReleaseTool.Core
 
         // TODO: Add a metadata bag for Key,Value pairs.
 
-        public FileMetadata(FileClass fileClass) 
-            : this(fileClass, GetDefaultCatgoryForClass(fileClass)) {}
+        public FileMetadata(FileClass fileClass, string assetCategory, string sha512)
+            : this(fileClass, assetCategory, shouldPublishToCdn: false, rid: "any", sha512: sha512) {}
 
-        public FileMetadata(FileClass fileClass, string assetCategory) 
-            : this(fileClass, assetCategory, shouldPublishToCdn: false, rid: "any", sha512: null) {}
-
-        public FileMetadata(FileClass fileClass, string assetCategory,  bool shouldPublishToCdn, string rid, string sha512)
+        public FileMetadata(FileClass fileClass, string assetCategory, bool shouldPublishToCdn, string rid, string sha512)
         {
             if (string.IsNullOrEmpty(assetCategory))
             {
