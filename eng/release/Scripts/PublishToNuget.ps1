@@ -57,6 +57,12 @@ foreach ($nugetPack in $manifestJson.NugetAssets)
         Invoke-WebRequest -Uri $nugetPack.PublishedPath -OutFile (New-Item -Path $packagePath -Force)
         $progressPreference = 'Continue'
 
+        if ($nugetPack.PSobject.Properties.Name.Contains("Sha512")-and $(Get-FileHash -Algorithm sha512 $packagePath).Hash -ne $nugetPack.Sha512) {
+            Write-Host "Sha512 verification failed for $($nugetPack.PublishRelativePath)."
+            $failedToPublish++
+            continue
+        }
+
         Write-Host "Publishing $packagePath."
         & "$PSScriptRoot/../../../dotnet.cmd" nuget push $packagePath --source $FeedEndpoint --api-key $FeedPat
         if ($LastExitCode -ne 0)
