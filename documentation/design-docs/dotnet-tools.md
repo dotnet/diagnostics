@@ -402,44 +402,61 @@ CONVERT
 REPORT
 
     dotnet-trace report [-h|--help]
-                        [-t|--type]
                         [-p|--parameters]
                         [-o|--output <output_file_path>]
-                        --header
                         <trace_file>
 
     Generate report into stdout from a previously generated trace_file.
 
     -h, --help
-        Show command line help
-    
-    -t, --type
-        Specifies the type of report to create. The first type of report that will be available is 'topN'
+        Show command line help, specifically available report types
 
     -p, --parameters
         Takes a list of arguments for each specific report type, see below for details.
         type            parameters  explanation
         'topN'          -n          the number of top functions to gather on the stack
-                        -i          find the top n methods inclusively on the stack. Without this tag, will find the top N methods exclusively on the stack
+                        -i          find the top n methods inclusively on the stack. Without this tag, will find the top n methods exclusively on the stack
         'countEvent'    
 
     -o, --output
         The path where the converted file is written. If unspecified, the file is written in the current directory
         using the same base filename as the input file and the extension appropriate for the new format.
 
-    --header
-        Creates a header above the usual output containing general information about what was collected
-
     <trace_file>
         The path to the trace file that will be read to generate the report.
 
-    Examples:
-      > dotnet-trace report -t 'topN' -p <-n 3, -i >
-      Top 3 Functions (Inclusive):
-      Function                                   Inclusive       Exclusive
-      1. FirstFunction(...) <IL offset etc.>     75% (430,842)   22% (103,436)
-      2. ...
-      3. ...
+        TOPN
+
+        dotnet-trace report topN [-h|--help]
+                                 [-n|--number]
+                                 [-i|--inclusive]
+                                 <trace_file>
+        Generate a report containing the top N methods that were on the stack the longest.
+
+        -h, --help
+            Show arguments to be specified
+
+        -n, --number
+            Number of top methods(methods that have inclusively/exclusively been on the stack the longest) to display in the report
+
+        -i, --inclusive
+            Specifies to find the top n methods inclusively on the stack. Without this tag, will find the top n methods exclusively on the stack
+
+        Examples:
+        > dotnet-trace report topN -p <-n 3, -i >
+        captured on: Wed Oct 6 12:51:32 2021
+        hostname: msft-coder
+        os release: 11.0
+        dotnet version: 6.0
+        arch: x86_64
+        nrcpus online: 8
+        nrcpus avail: 8
+        total memory: 15401700 kB
+        Top 3 Functions (Inclusive):
+        Function                                   Inclusive       Exclusive
+        1. FirstFunction(...) <IL offset etc.>     75% (430,842)   22% (103,436)
+        2. ...
+        3. ...
 
 
 ### dotnet-stack
