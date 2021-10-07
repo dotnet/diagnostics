@@ -6,10 +6,13 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
+using System.CommandLine.Binding;
+using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
@@ -468,7 +471,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
-                {
+                using(VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable()) //should return an object of type A VirtualTerminalMode.isEnabled
+                {//get the bool using isEnabled and pass into ConsoleWriter, write a new constructor in ConsoleWriter.cs that is expecting a bool
+                    bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {
                         return ReturnCode.Ok;
@@ -483,7 +488,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _interval = refreshInterval;
                         _maxHistograms = maxHistograms;
                         _maxTimeSeries = maxTimeSeries;
-                        _renderer = new ConsoleWriter();
+                        _renderer = new ConsoleWriter(useAnsi);
                         _diagnosticsClient = holder.Client;
                         _resumeRuntime = resumeRuntime;
                         int ret = await Start();
