@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                             CounterNames = expectedCounters
                         }
                     },
-                    RefreshInterval = TimeSpan.FromSeconds(1)
+                    CounterIntervalSeconds = 1
                 }, new[] { logger });
 
                 await PipelineTestUtilities.ExecutePipelineWithDebugee(
