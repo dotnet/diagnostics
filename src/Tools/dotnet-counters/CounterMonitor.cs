@@ -471,8 +471,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
-                using(VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable()) //should return an object of type A VirtualTerminalMode.isEnabled
-                {//get the bool using isEnabled and pass into ConsoleWriter, write a new constructor in ConsoleWriter.cs that is expecting a bool
+                using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
+                {
                     bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {

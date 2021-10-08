@@ -68,9 +68,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int maxRow = -1;
         private bool useAnsi = false;
 
-        public ConsoleWriter(bool _useAnsi) 
+        public ConsoleWriter(bool useAnsi) 
         {
-            this.useAnsi = _useAnsi;
+            this.useAnsi = useAnsi;
         }
 
         public void Initialize()
@@ -88,6 +88,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             _errorText = errorText;
             AssignRowsAndInitializeDisplay();
         }
+
         private void SetCursorPosition(int col, int row) 
         {
             if (this.useAnsi) 
@@ -99,6 +100,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 Console.SetCursorPosition(col, row);
             }
         }
+
         private void Clear() 
         {
             if (this.useAnsi) 
@@ -109,10 +111,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 Console.Clear();
             }
-             
-            //WriteLine to ensure things start at the beginning of a line? 
-            //the first escape code places the Cursor back at 0,0? because that is what [H does after an ESC sequence, yes
-            //does it matter b vs. B?
         }
         private void UpdateStatus()
         {
