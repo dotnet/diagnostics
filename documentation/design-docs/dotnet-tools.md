@@ -402,21 +402,13 @@ CONVERT
 REPORT
 
     dotnet-trace report [-h|--help]
-                        [-p|--parameters]
                         [-o|--output <output_file_path>]
                         <trace_file>
 
     Generate report into stdout from a previously generated trace_file.
 
     -h, --help
-        Show command line help, specifically available report types
-
-    -p, --parameters
-        Takes a list of arguments for each specific report type, see below for details.
-        type            parameters  explanation
-        'topN'          -n          the number of top functions to gather on the stack
-                        -i          find the top n methods inclusively on the stack. Without this tag, will find the top n methods exclusively on the stack
-        'countEvent'    
+        Show command line help, specifically available report types  
 
     -o, --output
         The path where the converted file is written. If unspecified, the file is written in the current directory
