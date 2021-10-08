@@ -443,7 +443,7 @@ REPORT
             Specifies to find the top n methods inclusively on the stack. Without this tag, will find the top n methods exclusively on the stack
 
         Examples:
-        > dotnet-trace report topN -p <-n 3, -i >
+        > dotnet-trace report topN -n 3 --inclusive ./mytrace.nettrace
         captured on: Wed Oct 6 12:51:32 2021
         hostname: msft-coder
         os release: 11.0
