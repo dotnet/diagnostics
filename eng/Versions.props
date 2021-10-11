@@ -49,7 +49,7 @@
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitVersion>2.4.1</XUnitVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.21474.2</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.21508.1</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>12.0.2</NewtonSoftJsonVersion>
   </PropertyGroup>
