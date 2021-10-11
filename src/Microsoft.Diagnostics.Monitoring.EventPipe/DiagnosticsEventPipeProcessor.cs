@@ -82,7 +82,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 catch (DiagnosticsClientException ex)
                 {
-                    throw new InvalidOperationException("Failed to start the event pipe session", ex);
+                    InvalidOperationException wrappingException = new("Failed to start the event pipe session", ex);
+                    TryFailSessionStartedReturnFalse(wrappingException);
+                    throw wrappingException;
+                }
+                catch (Exception ex) when (TryFailSessionStartedReturnFalse(ex))
+                {
+                    throw;
                 }
                 finally
                 {
@@ -155,6 +161,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _sessionStarted.TrySetCanceled();
 
             _eventSource?.Dispose();
+        }
+
+        // Helper method for observing an exception while processing the trace session
+        // so that session start task completion source can be failed and the exception handler
+        // does not catch the exception.
+        private bool TryFailSessionStartedReturnFalse(Exception ex)
+        {
+            if (ex is OperationCanceledException canceledException)
+            {
+                _sessionStarted.TrySetCanceled(canceledException.CancellationToken);
+            }
+            else
+            {
+                _sessionStarted.TrySetException(ex);
+            }
+
+            return false;
         }
     }
 }
