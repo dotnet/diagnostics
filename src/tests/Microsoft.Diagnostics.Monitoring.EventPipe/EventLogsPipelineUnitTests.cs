@@ -235,7 +235,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 {
                     settingsCallback(logSettings);
                 }
-                await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
+                await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory, new TestOutputHelperAsLogger(_output));
 
                 await PipelineTestUtilities.ExecutePipelineWithDebugee(_output, pipeline, testExecution);
             }
@@ -327,7 +327,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
             Assert.NotNull(values);
-            foreach(var expectedValue in expectedValues)
+            foreach (var expectedValue in expectedValues)
             {
                 Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
                 //TODO For now this will always be a string
@@ -349,6 +349,31 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             public string Message { get; set; }
             public IDictionary<string, JsonElement> Arguments { get; set; }
             public IDictionary<string, JsonElement> Scopes { get; set; }
+        }
+
+        private class TestOutputHelperAsLogger : ILogger
+        {
+            private readonly ITestOutputHelper _outputHelper;
+
+            public TestOutputHelperAsLogger(ITestOutputHelper outputHelper)
+            {
+                _outputHelper = outputHelper ?? throw new ArgumentNullException(nameof(outputHelper));
+            }
+
+            public IDisposable BeginScope<TState>(TState state)
+            {
+                return null;
+            }
+
+            public bool IsEnabled(LogLevel logLevel)
+            {
+                return true;
+            }
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            {
+                _outputHelper.WriteLine(formatter(state, exception));
+            }
         }
     }
 }

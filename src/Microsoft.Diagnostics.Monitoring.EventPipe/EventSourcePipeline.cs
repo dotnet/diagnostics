@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,14 +14,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal abstract class EventSourcePipeline<T> : Pipeline where T : EventSourcePipelineSettings
     {
         private readonly Lazy<DiagnosticsEventPipeProcessor> _processor;
+        private readonly ILogger _logger;
         public DiagnosticsClient Client { get; }
         public T Settings { get; }
 
-        protected EventSourcePipeline(DiagnosticsClient client, T settings)
+        protected EventSourcePipeline(DiagnosticsClient client, T settings, ILogger logger = null)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
             Settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _processor = new Lazy<DiagnosticsEventPipeProcessor>(CreateProcessor);
+            _logger = logger;
         }
 
         protected abstract MonitoringSourceConfiguration CreateConfiguration();
@@ -29,7 +32,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             return new DiagnosticsEventPipeProcessor(
                 configuration: CreateConfiguration(),
-                onEventSourceAvailable: OnEventSourceAvailable);
+                onEventSourceAvailable: OnEventSourceAvailable,
+                _logger);
         }
 
         protected override Task OnRun(CancellationToken token)

@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
@@ -23,6 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private EventPipeEventSource _eventSource;
         private Func<Task> _stopFunc;
         private bool _disposed;
+        private ILogger _logger;
 
         // Allows tests to know when the event pipe session has started so that the
         // target application can start producing events.
@@ -30,11 +32,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public DiagnosticsEventPipeProcessor(
             MonitoringSourceConfiguration configuration,
-            Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable
+            Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> onEventSourceAvailable,
+            ILogger logger = null
             )
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _onEventSourceAvailable = onEventSourceAvailable ?? throw new ArgumentNullException(nameof(onEventSourceAvailable));
+            _logger = logger;
 
             _initialized = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -55,15 +59,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     // Allows the event handling routines to stop processing before the duration expires.
                     Func<Task> stopFunc = () => Task.Run(() => { streamProvider.StopProcessing(); });
 
+                    _logger?.LogInformation("Starting stream...");
                     Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token);
 
+                    _logger?.LogInformation("Attempt notify session started...");
                     if (!_sessionStarted.TrySetResult(true))
                     {
                         token.ThrowIfCancellationRequested();
                     }
 
+                    _logger?.LogInformation("Creating event source...");
                     source = new EventPipeEventSource(sessionStream);
 
+                    _logger?.LogInformation("Starting callback...");
                     handleEventsTask = _onEventSourceAvailable(source, stopFunc, token);
 
                     lock (_lock)
@@ -72,12 +80,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         _stopFunc = stopFunc;
                     }
                     registration.Dispose();
+                    _logger?.LogInformation("Attempt notify initialized...");
                     if (!_initialized.TrySetResult(true))
                     {
                         token.ThrowIfCancellationRequested();
                     }
 
+                    _logger?.LogInformation("Start processing events...");
                     source.Process();
+                    _logger?.LogInformation("Finish processing events...");
                     token.ThrowIfCancellationRequested();
                 }
                 catch (DiagnosticsClientException ex)
@@ -118,8 +129,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public async Task StopProcessing(CancellationToken token)
         {
+            _logger?.LogInformation("Waiting for initialization to complete...");
             await _initialized.Task;
 
+            _logger?.LogInformation("Obtaining lock...");
             EventPipeEventSource session = null;
             Func<Task> stopFunc = null;
             lock (_lock)
@@ -129,11 +142,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             if (session != null)
             {
+                _logger?.LogInformation("Stopping session...");
                 //TODO This API is not sufficient to stop data flow.
                 session.StopProcessing();
             }
             if (stopFunc != null)
             {
+                _logger?.LogInformation("Stopping processing...");
                 await stopFunc();
             }
         }
@@ -174,6 +189,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
+                _logger?.LogInformation("Trying to fault completion sources...");
                 _initialized.TrySetException(ex);
                 _sessionStarted.TrySetException(ex);
             }
@@ -183,6 +199,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private void TryCancelCompletionSources(CancellationToken token)
         {
+            _logger?.LogInformation("Trying to cancel completion sources...");
             _initialized.TrySetCanceled(token);
             _sessionStarted.TrySetCanceled(token);
         }

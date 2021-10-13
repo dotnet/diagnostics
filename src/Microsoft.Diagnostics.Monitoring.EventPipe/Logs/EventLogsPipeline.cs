@@ -17,8 +17,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly ILoggerFactory _factory;
         private static readonly Func<object, Exception, string> _messageFormatter = MessageFormatter;
-        public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory) 
-            : base(client, settings)
+        public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory, ILogger logger = null) 
+            : base(client, settings, logger)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         }
