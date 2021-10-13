@@ -372,7 +372,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
             {
-                _outputHelper.WriteLine(formatter(state, exception));
+                _outputHelper.WriteLine("[" + DateTime.Now.TimeOfDay.ToString() + "] " + formatter(state, exception));
             }
         }
     }
