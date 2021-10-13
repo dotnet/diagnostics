@@ -73,15 +73,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> waitTaskSource = null)
             where TPipeline : Pipeline
         {
-            outputHelper.WriteLine("Starting pipeline...");
+            outputHelper.WriteLine("[PipelineTestUtility] Starting pipeline...");
             Task processingTask = startPipelineAsync(pipeline, token);
 
             //Begin event production
-            outputHelper.WriteLine("Notify app to start event production...");
+            outputHelper.WriteLine("[PipelineTestUtility] Notify app to start event production...");
             testExecution.SendSignal();
 
             //Wait for event production to be done
-            outputHelper.WriteLine("Wait for events to finish being produced...");
+            outputHelper.WriteLine("[PipelineTestUtility] Wait for events to finish being produced...");
             testExecution.WaitForSignal();
 
             try
@@ -89,10 +89,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 // Optionally wait on caller before allowing the pipeline to stop.
                 if (null != waitTaskSource)
                 {
-                    outputHelper.WriteLine("Wait for condition from caller...");
+                    outputHelper.WriteLine("[PipelineTestUtility] Wait for condition from caller...");
                     using var _ = token.Register(() =>
                     {
-                        outputHelper.WriteLine("Did not receive completion signal before cancellation.");
+                        outputHelper.WriteLine("[PipelineTestUtility] Did not receive completion signal before cancellation.");
                         waitTaskSource.TrySetCanceled(token);
                     });
 
@@ -100,17 +100,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }
 
                 //Signal for the pipeline to stop
-                outputHelper.WriteLine("Stopping pipeline...");
+                outputHelper.WriteLine("[PipelineTestUtility] Stopping pipeline...");
                 await pipeline.StopAsync(token);
 
                 //After a pipeline is stopped, we should expect the RunTask to eventually finish
-                outputHelper.WriteLine("Waiting for pipeline to finish...");
+                outputHelper.WriteLine("[PipelineTestUtility] Waiting for pipeline to finish...");
                 await processingTask;
             }
             finally
             {
                 //Signal for debugee that's ok to end/move on.
-                outputHelper.WriteLine("Notify app to shutdown...");
+                outputHelper.WriteLine("[PipelineTestUtility] Notify app to shutdown...");
                 testExecution.SendSignal();
             }
         }

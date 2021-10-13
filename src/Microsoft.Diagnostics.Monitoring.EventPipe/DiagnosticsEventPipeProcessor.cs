@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public async Task Process(DiagnosticsClient client, TimeSpan duration, CancellationToken token)
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
-            IDisposable registration = token.Register(() => TryCancelCompletionSources(token));
+            IDisposable registration = token.Register(() => { _logger?.LogInformation("[Processor.Process] Canceled by token."); TryCancelCompletionSources(token); });
             await await Task.Factory.StartNew(async () =>
             {
                 EventPipeEventSource source = null;
@@ -59,19 +59,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     // Allows the event handling routines to stop processing before the duration expires.
                     Func<Task> stopFunc = () => Task.Run(() => { streamProvider.StopProcessing(); });
 
-                    _logger?.LogInformation("Starting stream...");
+                    _logger?.LogInformation("[Processor.Process] Starting stream...");
                     Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token);
 
-                    _logger?.LogInformation("Attempt notify session started...");
+                    _logger?.LogInformation("[Processor.Process] Attempt notify session started...");
                     if (!_sessionStarted.TrySetResult(true))
                     {
                         token.ThrowIfCancellationRequested();
                     }
 
-                    _logger?.LogInformation("Creating event source...");
+                    _logger?.LogInformation("[Processor.Process] Creating event source...");
                     source = new EventPipeEventSource(sessionStream);
 
-                    _logger?.LogInformation("Starting callback...");
+                    _logger?.LogInformation("[Processor.Process] Starting callback...");
                     handleEventsTask = _onEventSourceAvailable(source, stopFunc, token);
 
                     lock (_lock)
@@ -80,15 +80,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         _stopFunc = stopFunc;
                     }
                     registration.Dispose();
-                    _logger?.LogInformation("Attempt notify initialized...");
+                    _logger?.LogInformation("[Processor.Process] Attempt notify initialized...");
                     if (!_initialized.TrySetResult(true))
                     {
                         token.ThrowIfCancellationRequested();
                     }
 
-                    _logger?.LogInformation("Start processing events...");
+                    _logger?.LogInformation("[Processor.Process] Start processing events...");
                     source.Process();
-                    _logger?.LogInformation("Finish processing events...");
+                    _logger?.LogInformation("[Processor.Process] Finish processing events...");
                     token.ThrowIfCancellationRequested();
                 }
                 catch (DiagnosticsClientException ex)
@@ -129,10 +129,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public async Task StopProcessing(CancellationToken token)
         {
-            _logger?.LogInformation("Waiting for initialization to complete...");
+            _logger?.LogInformation("[Processor.StopProcessing] Waiting for initialization to complete...");
             await _initialized.Task;
 
-            _logger?.LogInformation("Obtaining lock...");
+            _logger?.LogInformation("[Processor.StopProcessing] Obtaining lock...");
             EventPipeEventSource session = null;
             Func<Task> stopFunc = null;
             lock (_lock)
@@ -142,13 +142,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             if (session != null)
             {
-                _logger?.LogInformation("Stopping session...");
+                _logger?.LogInformation("[Processor.StopProcessing] Stopping session...");
                 //TODO This API is not sufficient to stop data flow.
                 session.StopProcessing();
             }
             if (stopFunc != null)
             {
-                _logger?.LogInformation("Stopping processing...");
+                _logger?.LogInformation("[Processor.StopProcessing] Stopping processing...");
                 await stopFunc();
             }
         }
@@ -189,7 +189,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
-                _logger?.LogInformation("Trying to fault completion sources...");
+                _logger?.LogInformation("[Processor.TryFailSources] Trying to fault completion sources...");
                 _initialized.TrySetException(ex);
                 _sessionStarted.TrySetException(ex);
             }
@@ -199,7 +199,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private void TryCancelCompletionSources(CancellationToken token)
         {
-            _logger?.LogInformation("Trying to cancel completion sources...");
+            _logger?.LogInformation("[Processor.TryCancelSources] Trying to cancel completion sources...");
             _initialized.TrySetCanceled(token);
             _sessionStarted.TrySetCanceled(token);
         }
