@@ -99,9 +99,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     await waitTaskSource.Task;
                 }
 
-                // Workaround for when stop comes too close to start.
-                await Task.Delay(TimeSpan.FromSeconds(10), token);
-
                 //Signal for the pipeline to stop
                 outputHelper.WriteLine("Stopping pipeline...");
                 await pipeline.StopAsync(token);
