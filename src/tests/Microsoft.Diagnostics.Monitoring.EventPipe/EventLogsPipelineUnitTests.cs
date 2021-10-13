@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         public EventLogsPipelineUnitTests(ITestOutputHelper output)
         {
-            _output = output;
+            _output = new TestOutputHelperWithTimestamp(output);
         }
 
         /// <summary>
@@ -372,7 +372,27 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
             {
-                _outputHelper.WriteLine("[" + DateTime.Now.TimeOfDay.ToString() + "] " + formatter(state, exception));
+                _outputHelper.WriteLine(formatter(state, exception));
+            }
+        }
+
+        private class TestOutputHelperWithTimestamp : ITestOutputHelper
+        {
+            private readonly ITestOutputHelper _outputHelper;
+
+            public TestOutputHelperWithTimestamp(ITestOutputHelper outputHelper)
+            {
+                _outputHelper = outputHelper ?? throw new ArgumentNullException(nameof(outputHelper));
+            }
+
+            public void WriteLine(string message)
+            {
+                _outputHelper.WriteLine("[" + DateTime.Now.TimeOfDay.ToString() + "] " + message);
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                _outputHelper.WriteLine("[" + DateTime.Now.TimeOfDay.ToString() + "] " + format, args);
             }
         }
     }
