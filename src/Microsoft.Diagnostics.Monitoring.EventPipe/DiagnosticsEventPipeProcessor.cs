@@ -50,6 +50,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             IDisposable registration = token.Register(() => { _logger?.LogInformation("[Processor.Process] Canceled by token."); TryCancelCompletionSources(token); });
             await await Task.Factory.StartNew(async () =>
             {
+                _logger?.LogInformation("[Processor.Process] Starting stream provider.");
                 EventPipeEventSource source = null;
                 EventPipeStreamProvider streamProvider = null;
                 Task handleEventsTask = Task.CompletedTask;

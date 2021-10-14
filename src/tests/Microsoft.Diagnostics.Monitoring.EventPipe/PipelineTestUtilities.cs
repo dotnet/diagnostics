@@ -42,7 +42,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             await ExecutePipelineWithDebugee(
                 outputHelper,
                 pipeline,
-                async (p, t) => await p.StartAsync(t),
+                async (p, t) => {
+                    outputHelper.WriteLine("[PipelineTestUtility] Wait for pipeline start...");
+                    await p.StartAsync(t);
+                    outputHelper.WriteLine("[PipelineTestUtility] Pipeline started.");
+                },
                 testExecution,
                 cancellation.Token,
                 waitTaskSource);

@@ -84,14 +84,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         /// </remarks>
         public async Task<Task> StartAsync(CancellationToken token)
         {
+            _logger?.LogInformation("[EventSourcePipeline.StartAsync] Begin running pipeline...");
             Task runTask = RunAsync(token);
 
+            _logger?.LogInformation("[EventSourcePipeline.StartAsync] Waiting for pipeline to start...");
             // Await both the session started or the run task and return when either is completed.
             // This works around an issue where the run task may fail but not cancel/fault the session
             // started task. Logically, the run task will not successfully complete before the session
             // started task. Thus, the combined task completes either when the session started task is
             // completed OR the run task has cancelled/failed.
             await Task.WhenAny(_processor.Value.SessionStarted, runTask).Unwrap();
+
+            _logger?.LogInformation("[EventSourcePipeline.StartAsync] Pipeline has started.");
 
             return runTask;
         }
