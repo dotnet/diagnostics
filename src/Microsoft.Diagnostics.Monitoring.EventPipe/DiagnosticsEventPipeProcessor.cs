@@ -168,6 +168,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         // does not catch the exception.
         private bool TryFailCompletionSourcesReturnFalse(Exception ex)
         {
+            // Use best-effort to set the completion sources to be cancelled or failed.
             if (ex is OperationCanceledException canceledException)
             {
                 TryCancelCompletionSources(canceledException.CancellationToken);
@@ -178,6 +179,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 _sessionStarted.TrySetException(ex);
             }
 
+            // Return false to make the exception handler not handle the exception.
             return false;
         }
 
