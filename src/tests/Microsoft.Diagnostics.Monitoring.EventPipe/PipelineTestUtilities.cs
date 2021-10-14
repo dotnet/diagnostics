@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             await ExecutePipelineWithDebugee(
                 outputHelper,
                 pipeline,
-                async (p, t) => await p.StartAsync(t),
+                (p, t) => p.StartAsync(t),
                 testExecution,
                 cancellation.Token,
                 waitTaskSource);
@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             return ExecutePipelineWithDebugee(
                 outputHelper,
                 pipeline,
-                (p, t) => p.RunAsync(t),
+                (p, t) => Task.FromResult(p.RunAsync(t)),
                 testExecution,
                 token,
                 waitTaskSource);
@@ -67,13 +67,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static async Task ExecutePipelineWithDebugee<TPipeline>(
             ITestOutputHelper outputHelper,
             TPipeline pipeline,
-            Func<TPipeline, CancellationToken, Task> startPipelineAsync,
+            Func<TPipeline, CancellationToken, Task<Task>> startPipelineAsync,
             RemoteTestExecution testExecution,
             CancellationToken token,
             TaskCompletionSource<object> waitTaskSource = null)
             where TPipeline : Pipeline
         {
-            Task processingTask = startPipelineAsync(pipeline, token);
+            Task runTask = await startPipelineAsync(pipeline, token);
 
             //Begin event production
             testExecution.SendSignal();
@@ -99,7 +99,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 await pipeline.StopAsync(token);
 
                 //After a pipeline is stopped, we should expect the RunTask to eventually finish
-                await processingTask;
+                await runTask;
             }
             finally
             {
