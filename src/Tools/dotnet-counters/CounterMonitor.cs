@@ -527,7 +527,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string diagnosticPort,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries)
+            int maxTimeSeries,
+            bool runInBackground)
         {
             try
             {
@@ -659,6 +660,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             if (counters.IsEmpty)
             {
+                //TODO: fix something here, so this is only put into the file? 
                 _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
                 counters.AddAllProviderCounters("System.Runtime");
             }
@@ -676,6 +678,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         // parses a comma separated list of providers
         internal void ParseProviderList(string providerListText, CounterSet counters)
         {
+            //TODO: Something needs to be done here to allow the app to run in the background
             bool inParen = false;
             int startIdx = -1;
             int i = 0;
@@ -728,6 +731,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         //   System.Runtime[exception-count,cpu-usage]
         void ParseCounterProvider(string providerText, CounterSet counters)
         {
+            //TODO: Something needs to be done here to let the app run in the background
             string[] tokens = providerText.Split('[');
             if(tokens.Length == 0)
             {

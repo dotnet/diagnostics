@@ -35,7 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string port,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries);
+            int maxTimeSeries,
+            bool runInBackground);
         delegate Task<int> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
@@ -86,7 +87,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 DiagnosticPortOption(),
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
-                MaxTimeSeriesOption()
+                MaxTimeSeriesOption(),
+                RunInBackgroundOption()
             };
 
         private static Option NameOption() =>
@@ -194,6 +196,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 Argument = new Argument<int>(name: "maxTimeSeries", getDefaultValue: () => 1000)
             };
+
+        private static Option RunInBackgroundOption() =>
+            new Option(
+                alias: "--background",
+                description: "Whether or not dotnet-counters collect will run in the background. Simply prevents the app from interacting with the console so that it can" +
+                "safely run in the background, and then be brought to the foreground when needed by the user. Prevents the use of press p or q to pause or stop feature," + 
+                "but dotnet-counters should be able to be stopped using ctrl+C") 
+                {
+                    Argument = new Argument<bool>(name: "background", getDefaultValue: () => false)
+                };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };
 
