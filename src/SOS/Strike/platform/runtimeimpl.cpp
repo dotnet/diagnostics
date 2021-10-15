@@ -41,13 +41,21 @@ bool ElfReaderReadMemory(void* address, void* buffer, size_t size)
     return SUCCEEDED(g_ExtData->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
 }
 
+#endif // !defined(__APPLE__)
+
 /**********************************************************************\
  * Search all the modules in the process for the single-file host
 \**********************************************************************/
-static HRESULT GetSingleFileInfo(PULONG pModuleIndex, PULONG64 pModuleAddress, RuntimeInfo** ppRuntimeInfo)
+static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 pModuleAddress, RuntimeInfo** ppRuntimeInfo)
 {
     _ASSERTE(pModuleIndex != nullptr);
     _ASSERTE(pModuleAddress != nullptr);
+
+    // No debugger service instance means that SOS is hosted by dotnet-dump so we should never get here.
+    IDebuggerServices* debuggerServices = GetDebuggerServices();
+    if (debuggerServices == nullptr) {
+        return E_NOINTERFACE;
+    }
 
     ULONG loaded, unloaded;
     HRESULT hr = g_ExtSymbols->GetNumberModules(&loaded, &unloaded);
@@ -55,6 +63,7 @@ static HRESULT GetSingleFileInfo(PULONG pModuleIndex, PULONG64 pModuleAddress, R
         return hr;
     }
 
+    const char* symbolName = "DotNetRuntimeInfo";
     for (ULONG index = 0; index < loaded; index++)
     {
         ULONG64 baseAddress;
@@ -63,28 +72,38 @@ static HRESULT GetSingleFileInfo(PULONG pModuleIndex, PULONG64 pModuleAddress, R
             return hr;
         }
         ULONG64 symbolAddress;
-        if (TryGetSymbol(baseAddress, "DotNetRuntimeInfo", &symbolAddress))
+#if !defined(__APPLE__)
+        if (target->GetOperatingSystem() == ITarget::OperatingSystem::Linux)
         {
-            ULONG read = 0;
-            ArrayHolder<BYTE> buffer = new BYTE[sizeof(RuntimeInfo)];
-            hr = g_ExtData->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
-            if (FAILED(hr)) {
-                return hr;
+            if (!TryGetSymbol(baseAddress, symbolName, &symbolAddress)) {
+                continue;
             }
-            if (strcmp(((RuntimeInfo*)buffer.GetPtr())->Signature, "DotNetRuntimeInfo") != 0) {
-                break;
-            }
-            *pModuleIndex = index;
-            *pModuleAddress = baseAddress;
-            *ppRuntimeInfo = (RuntimeInfo*)buffer.Detach();
-            return S_OK;
         }
+        else 
+#endif // !defined(__APPLE__)
+        {
+            hr = debuggerServices->GetOffsetBySymbol(index, symbolName, &symbolAddress);
+            if (FAILED(hr)) {
+                continue;
+            }
+        }
+        ULONG read = 0;
+        ArrayHolder<BYTE> buffer = new BYTE[sizeof(RuntimeInfo)];
+        hr = g_ExtData->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
+        if (FAILED(hr)) {
+            return hr;
+        }
+        if (strcmp(((RuntimeInfo*)buffer.GetPtr())->Signature, "DotNetRuntimeInfo") != 0) {
+            break;
+        }
+        *pModuleIndex = index;
+        *pModuleAddress = baseAddress;
+        *ppRuntimeInfo = (RuntimeInfo*)buffer.Detach();
+        return S_OK;
     }
 
     return E_FAIL;
 }
-
-#endif // !defined(__APPLE__)
 
 /**********************************************************************\
  * Creates a desktop or .NET Core instance of the runtime class
@@ -102,16 +121,14 @@ HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configurat
     {
         // Check if the normal runtime module (coreclr.dll, libcoreclr.so, etc.) is loaded
         hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
-#if !defined(__APPLE__)
         if (FAILED(hr))
         {
             // If the standard runtime module isn't loaded, try looking for a single-file program
-            if (configuration == IRuntime::UnixCore)
+            if (configuration != IRuntime::WindowsDesktop)
             {
-                hr = GetSingleFileInfo(&moduleIndex, &moduleAddress, &runtimeInfo);
+                hr = GetSingleFileInfo(target, &moduleIndex, &moduleAddress, &runtimeInfo);
             }
         }
-#endif // !defined(__APPLE__)
 
         // If the previous operations were successful, get the size of the runtime module
         if (SUCCEEDED(hr))
