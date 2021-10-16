@@ -855,18 +855,22 @@ public class SOSRunner : IDisposable
 
     public async Task LoadSosExtension()
     {
+        string runtimeSymbolsPath = _config.RuntimeSymbolsPath;
         string setHostRuntime = _config.SetHostRuntime();
         string setSymbolServer = _config.SetSymbolServer();
         string sosPath = _config.SOSPath();
         List<string> commands = new List<string>();
+        bool isHostRuntimeNone = false;
 
         if (!string.IsNullOrEmpty(setHostRuntime))
         {
             switch (setHostRuntime)
             {
+                case "-none":
+                    isHostRuntimeNone = true;
+                    break;
                 case "-netfx":
                 case "-netcore":
-                case "-none":
                 case "-clear":
                     break;
                 default:
@@ -877,7 +881,6 @@ public class SOSRunner : IDisposable
         switch (Debugger)
         {
             case NativeDebugger.Cdb:
-                string runtimeSymbolsPath = _config.RuntimeSymbolsPath;
                 if (_config.IsDesktop)
                 {
                     // Force the desktop sos to be loaded and then unload it.
@@ -898,15 +901,16 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"!SetHostRuntime {setHostRuntime}");
                 }
-                // Add the path to runtime so SOS can find DAC/DBI for triage dumps
-                if (_dumpType.HasValue && _dumpType == DumpType.Triage)
+                // If there is no host runtime and a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI.
+                if ((isHostRuntimeNone && _config.PublishSingleFile) || 
+                    (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
                         commands.Add($"!SetClrPath {runtimeSymbolsPath}");
                     }
                 }
-                if (!string.IsNullOrEmpty(setSymbolServer))
+                if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"!SetSymbolServer {setSymbolServer}");
                 }
@@ -917,7 +921,15 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
-                if (!string.IsNullOrEmpty(setSymbolServer))
+                // If there is no host runtime and a single-file app, add the path to runtime so SOS can find DAC/DBI.
+                if (isHostRuntimeNone && _config.PublishSingleFile)
+                {
+                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
+                    {
+                        commands.Add($"setclrpath {runtimeSymbolsPath}");
+                    }
+                }
+                if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"setsymbolserver {setSymbolServer}");
                 }

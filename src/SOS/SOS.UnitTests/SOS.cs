@@ -204,7 +204,7 @@ public class SOS
             DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
             // Single file dumps don't capture the overflow exception info so disable testing against a dump
             // Issue: https://github.com/dotnet/diagnostics/issues/2515
-            TestDump = config.PublishSingleFile ? false : true,
+            TestDump = !config.PublishSingleFile,
             // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
             DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
         });
@@ -284,14 +284,9 @@ public class SOS
             // to using native implementations of the host/target/runtime.
             if (currentConfig.DebugType == "full")
             {
-                var settings = new Dictionary<string, string>(currentConfig.AllSettings);
-
-                // Currently the C++ runtime enumeration fallback doesn't support single file on Windows
-                // Issue: https://github.com/dotnet/diagnostics/issues/2515
-                if (!(OS.Kind == OSKind.Windows && currentConfig.PublishSingleFile))
-                {
-                    settings["SetHostRuntime"] = "-none";
-                }
+                var settings = new Dictionary<string, string>(currentConfig.AllSettings) {
+                    ["SetHostRuntime"] = "-none"
+                };
                 await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation {
                     TestConfiguration = new TestConfiguration(settings),
                     TestName = "SOS.StackAndOtherTests",
