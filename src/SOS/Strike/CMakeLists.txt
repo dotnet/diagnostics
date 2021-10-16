@@ -53,7 +53,6 @@ add_definitions(-DSTRIKE)
 include_directories(${ROOT_DIR}/src/SOS/inc)
 include_directories(${ROOT_DIR}/src/SOS/extensions)
 include_directories(${ROOT_DIR}/src/SOS/gcdump)
-include_directories(${ROOT_DIR}/src/SOS/debugshim)
 include_directories(platform)
 
 if(WIN32)
@@ -97,7 +96,6 @@ if(WIN32)
   set(SOS_LIBRARY
     extensions
     corguids
-    debugshim
     dbgutil
     ${STATIC_MT_CRT_LIB}
     ${STATIC_MT_CPP_LIB}
@@ -176,7 +174,6 @@ else(WIN32)
   set(SOS_LIBRARY
     extensions
     corguids
-    debugshim
     dbgutil
     ${START_WHOLE_ARCHIVE} # force all PAL objects to be included so all exports are available
     coreclrpal

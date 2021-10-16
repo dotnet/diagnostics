@@ -15,11 +15,9 @@
 #include <psapi.h>
 #include <clrinternal.h>
 #include <metahost.h>
-#include "debugshim.h"
 #include "runtimeimpl.h"
 #include "datatarget.h"
 #include "cordebugdatatarget.h"
-#include "cordebuglibraryprovider.h"
 #include "runtimeinfo.h"
 
 #ifdef FEATURE_PAL
@@ -27,6 +25,31 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #endif // !FEATURE_PAL
+
+typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId, 
+    IUnknown * pDataTarget,
+    LPCWSTR pDacModulePath,
+    CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
+    REFIID riid,
+    IUnknown ** ppInstance,
+    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
+
+typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImplFnPtr)(ULONG64 clrInstanceId, 
+    IUnknown * pDataTarget,
+    HMODULE hDacDll,
+    CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
+    REFIID riid,
+    IUnknown ** ppInstance,
+    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
+
+typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceId, 
+    IUnknown * pDataTarget,
+    HMODULE hDacDll,
+    REFIID riid,
+    IUnknown ** ppInstance,
+    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
+
+typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
@@ -437,7 +460,7 @@ HRESULT Runtime::GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess)
         HMODULE hdac = LoadLibraryA(dacFilePath);
         if (hdac == NULL)
         {
-            ExtDbgOut("LoadLibrary(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
+            ExtDbgOut("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
         PFN_CLRDataCreateInstance pfnCLRDataCreateInstance = (PFN_CLRDataCreateInstance)GetProcAddress(hdac, "CLRDataCreateInstance");
@@ -471,9 +494,7 @@ HRESULT Runtime::GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess)
 \**********************************************************************/
 HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 {
-    HMODULE hModule = NULL;
     HRESULT hr;
-    ToRelease<ICLRDebugging> pClrDebugging;
 
     // We may already have an ICorDebug instance we can use
     if (m_pCorDebugProcess != nullptr)
@@ -498,10 +519,6 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         m_pCorDebugProcess->Release();
         m_pCorDebugProcess = nullptr;
     }
-
-    // SOS now has a statically linked version of the loader code that is normally found in mscoree/mscoreei.dll
-    // Its not much code and takes a big step towards 0 install dependencies
-    // Need to pick the appropriate SKU of CLR to detect
 #if defined(FEATURE_CORESYSTEM)
     GUID skuId = CLR_ID_ONECORE_CLR;
 #else
@@ -513,41 +530,107 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         skuId = CLR_ID_V4_DESKTOP;
     }
 #endif
-    CLRDebuggingImpl* pDebuggingImpl = new CLRDebuggingImpl(skuId, IsWindowsTarget());
-    hr = pDebuggingImpl->QueryInterface(IID_ICLRDebugging, (LPVOID *)&pClrDebugging);
-    if (FAILED(hr))
+    const char* dacFilePath = GetDacFilePath();
+    if (dacFilePath == nullptr)
     {
-        delete pDebuggingImpl;
+        ExtErr("Could not find matching DAC\n");
+        return CORDBG_E_NO_IMAGE_AVAILABLE;
+    }
+    ArrayHolder<WCHAR> pDacModulePath = new WCHAR[MAX_LONGPATH + 1];
+    int length = MultiByteToWideChar(CP_ACP, 0, dacFilePath, -1, pDacModulePath, MAX_LONGPATH);
+    if (0 >= length)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        ExtErr("MultiByteToWideChar() DAC FAILED %08x\n", hr);
         return hr;
     }
-
-    ToRelease<ICorDebugMutableDataTarget> pCorDebugDataTarget = new CorDebugDataTarget;
-    pCorDebugDataTarget->AddRef();
-
-    ToRelease<ICLRDebuggingLibraryProvider> pCorDebugLibraryProvider = new CorDebugLibraryProvider(this);
-    pCorDebugLibraryProvider->AddRef();
-
-    CLR_DEBUGGING_VERSION clrDebuggingVersionRequested = {0};
-    clrDebuggingVersionRequested.wMajor = 4;
-
-    CLR_DEBUGGING_VERSION clrDebuggingVersionActual = {0};
-
+    const char* dbiFilePath = GetDbiFilePath();
+    if (dbiFilePath == nullptr) 
+    {
+        ExtErr("Could not find matching DBI\n");
+        return CORDBG_E_NO_IMAGE_AVAILABLE;
+    }
+    HMODULE hDbi = LoadLibraryA(dbiFilePath);
+    if (hDbi == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        ExtErr("LoadLibraryA(%s) FAILED %08x\n", dbiFilePath, hr);
+        return hr;
+    }
+    CLR_DEBUGGING_VERSION clrDebuggingVersionRequested = {0, 4, 0, 0, 0};
     CLR_DEBUGGING_PROCESS_FLAGS clrDebuggingFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+    ToRelease<ICorDebugMutableDataTarget> pDataTarget = new CorDebugDataTarget;
+    ToRelease<IUnknown> pUnkProcess = nullptr;
 
-    ToRelease<IUnknown> pUnkProcess;
-    hr = pClrDebugging->OpenVirtualProcess(
-        GetModuleAddress(),
-        pCorDebugDataTarget,
-        pCorDebugLibraryProvider,
-        &clrDebuggingVersionRequested,
-        IID_ICorDebugProcess,
-        &pUnkProcess,
-        &clrDebuggingVersionActual,
-        &clrDebuggingFlags);
-
-    if (FAILED(hr)) {
-        return hr;
+    // Get access to the latest OVP implementation and call it
+    OpenVirtualProcessImpl2FnPtr ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
+    if (ovpFn != nullptr)
+    {
+        hr = ovpFn(GetModuleAddress(), pDataTarget, pDacModulePath, &clrDebuggingVersionRequested, IID_ICorDebugProcess, &pUnkProcess, &clrDebuggingFlags);
+        if (FAILED(hr)) {
+	        ExtErr("DBI OpenVirtualProcessImpl2 FAILED %08x\n", hr);
+            return hr;
+        }
     }
+    else
+    {
+        HMODULE hDac = LoadLibraryA(dacFilePath);
+        if (hDac == NULL)
+        {
+            ExtErr("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
+            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+        }
+#ifdef FEATURE_PAL
+        // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
+        // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share 
+        // the same PAL where dbgshim has it's own.
+        LoadLibraryWFnPtr loadLibraryWFn = (LoadLibraryWFnPtr)GetProcAddress(hDac, "LoadLibraryW");
+        if (loadLibraryWFn != nullptr)
+        {
+            hDac = loadLibraryWFn(pDacModulePath);
+            if (hDac == NULL)
+            {
+		        ExtErr("DBI LoadLibraryW(%S) FAILED\n", pDacModulePath.GetPtr());
+	            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+            }
+        }
+        else
+        {
+	        ExtErr("DBI GetProcAddress(LoadLibraryW) FAILED\n");
+            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+	    }
+#endif // FEATURE_PAL
+
+        // Get access to OVP and call it
+        OpenVirtualProcessImplFnPtr ovpFn = (OpenVirtualProcessImplFnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl");
+        if (ovpFn != nullptr)
+        {
+            // Have a CLR v4 Beta2+ DBI, call it and let it do the version check
+            hr = ovpFn(GetModuleAddress(), pDataTarget, hDac, &clrDebuggingVersionRequested, IID_ICorDebugProcess, &pUnkProcess, &clrDebuggingFlags);
+            if (FAILED(hr)) {
+		        ExtErr("DBI OpenVirtualProcessImpl FAILED %08x\n", hr);
+                return hr;
+            }
+        }
+        else
+        {
+            // Fallback to CLR v4 Beta1 path, but skip some of the checking we'd normally do (maxSupportedVersion, etc.)
+            OpenVirtualProcess2FnPtr ovp2Fn = (OpenVirtualProcess2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcess2");
+            if (ovp2Fn != nullptr)
+            {
+	            hr = ovp2Fn(GetModuleAddress(), pDataTarget, hDac, IID_ICorDebugProcess, &pUnkProcess, &clrDebuggingFlags);
+            }
+            else
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+            }
+		    if (FAILED(hr)) {
+		        ExtErr("DBI OpenVirtualProcess2 FAILED %08x\n", hr);
+		        return hr;
+		    }
+        }
+    }
+    _ASSERTE(pUnkProcess != nullptr);
     hr = pUnkProcess->QueryInterface(IID_ICorDebugProcess, (PVOID*)&m_pCorDebugProcess);
     if (FAILED(hr)) {
         return hr;
@@ -667,55 +750,3 @@ void Runtime::SymbolFileCallback(const char* moduleFileName, const char* symbolF
         return;
     }
 }
-
-#ifndef FEATURE_PAL
-
-/**********************************************************************\
- * Internal function to load and check the version of the module
-\**********************************************************************/
-HMODULE LoadLibraryAndCheck(
-    PCWSTR filename,
-    DWORD timestamp,
-    DWORD filesize)
-{
-    HMODULE hModule = LoadLibraryExW(
-        filename,
-        NULL,                               //  __reserved
-        LOAD_WITH_ALTERED_SEARCH_PATH);     // Ensure we check the dir in wszFullPath first
-
-    if (hModule == NULL)
-    {
-        ExtOut("Unable to load '%S'. hr = 0x%x.\n", filename, HRESULT_FROM_WIN32(GetLastError()));
-        return NULL;
-    }
-    
-    // Did we load the right one?
-    MODULEINFO modInfo = {0};
-    if (!GetModuleInformation(
-        GetCurrentProcess(),
-        hModule,
-        &modInfo,
-        sizeof(modInfo)))
-    {
-        ExtOut("Failed to read module information for '%S'. hr = 0x%x.\n", filename, HRESULT_FROM_WIN32(GetLastError()));
-        FreeLibrary(hModule);
-        return NULL;
-    }
-
-    IMAGE_DOS_HEADER * pDOSHeader = (IMAGE_DOS_HEADER *) modInfo.lpBaseOfDll;
-    IMAGE_NT_HEADERS * pNTHeaders = (IMAGE_NT_HEADERS *) (((LPBYTE) modInfo.lpBaseOfDll) + pDOSHeader->e_lfanew);
-    DWORD dwSizeActual = pNTHeaders->OptionalHeader.SizeOfImage;
-    DWORD dwTimeStampActual = pNTHeaders->FileHeader.TimeDateStamp;
-    if ((dwSizeActual != filesize) || (dwTimeStampActual != timestamp))
-    {
-        ExtOut("Found '%S', but it does not match the CLR being debugged.\n", filename);
-        ExtOut("Size: Expected '0x%x', Actual '0x%x'\n", filesize, dwSizeActual);
-        ExtOut("Time stamp: Expected '0x%x', Actual '0x%x'\n", timestamp, dwTimeStampActual);
-        FreeLibrary(hModule);
-        return NULL;
-    }
-
-    return hModule;
-}
-
-#endif // FEATURE_PAL
