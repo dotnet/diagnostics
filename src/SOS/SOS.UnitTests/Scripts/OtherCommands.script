@@ -27,6 +27,7 @@ ENDIF:DESKTOP
 
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+SOSCOMMAND:bpmd -clearall
 
 SOSCOMMAND:bpmd SymbolTestApp.cs:29
 IFDEF:DESKTOP
@@ -35,14 +36,6 @@ ENDIF:DESKTOP
 !IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.dll SymbolTestApp.Program.Foo4
 ENDIF:DESKTOP
-
-!IFDEF:SINGLE_FILE_APP
-!IFDEF:DESKTOP
-CONTINUE
-SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
-ENDIF:DESKTOP
-ENDIF:SINGLE_FILE_APP
 
 CONTINUE
 SOSCOMMAND:ClrStack
