@@ -293,5 +293,5 @@ bool IsWindowsTarget()
     {
         return target->GetOperatingSystem() == ITarget::OperatingSystem::Windows;
     }
-    return ITarget::OperatingSystem::Unknown;
+    return false;
 }

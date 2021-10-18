@@ -24,11 +24,11 @@ VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace\s+\(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Bar.*\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/]LineNums[\\|/]Program\.cs @ 25\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 25\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Foo.*\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/]LineNums[\\|/]Program\.cs @ 16\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 16\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Main.*\+0x<HEXVAL>\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/]LineNums[\\|/]Program\.cs @ 10\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 10\s*\]\s*
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP
@@ -51,8 +51,8 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums\.Program\.Bar\(\).*\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/]LineNums[\\|/]Program\.cs @ 25\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 25\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums\.Program\.Foo\(\).*\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/]LineNums[\\|/]Program\.cs @ 16\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 16\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums\.Program\.Main\(System.String\[\]\).*\s+
-VERIFY:\[.*[\\|/]Debuggees[\\|/]LineNums[\\|/]Program\.cs @ 10\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 10\s*\]\s*

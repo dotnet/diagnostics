@@ -65,7 +65,7 @@ namespace WebApp3
             Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder => { 
                 webBuilder.ConfigureKestrel(serverOptions => { 
                     serverOptions.ConfigureHttpsDefaults(httpsOptions => {
-                        string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                        string directory = Path.GetDirectoryName(AppContext.BaseDirectory);
                         httpsOptions.ServerCertificate = new X509Certificate2(Path.Combine(directory, "testCert.pfx"), "testPassword"); 
                     }); 
                 }); 

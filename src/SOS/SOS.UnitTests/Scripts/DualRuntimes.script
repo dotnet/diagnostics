@@ -6,8 +6,6 @@ CONTINUE
 
 LOADSOS
 
-SOSCOMMAND:SetSymbolServer -ms
-
 #
 # First test the .NET Core runtime that WebApp3 was started
 #

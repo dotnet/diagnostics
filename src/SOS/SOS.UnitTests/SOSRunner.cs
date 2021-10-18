@@ -67,14 +67,37 @@ public class SOSRunner : IDisposable
     public class TestInformation
     {
         private string _testName;
+        private bool _testLive = true;
+        private bool _testDump = true;
         private bool _testCrashReport = true;
         private DumpGenerator _dumpGenerator = DumpGenerator.CreateDump; 
+        private DumpType _dumpType = DumpType.Heap;
         private string _debuggeeDumpOutputRootDir;
         private string _debuggeeDumpInputRootDir;
 
         public TestConfiguration TestConfiguration { get; set; }
 
         public ITestOutputHelper OutputHelper { get; set; }
+
+        public bool TestLive
+        {
+            // Don't test single file on Alpine. lldb 10.0 can't launch them.
+            get { return _testLive && !(TestConfiguration.PublishSingleFile && OS.IsAlpine); }
+            set { _testLive = value; }
+        }
+
+        public bool TestDump 
+        {
+            get 
+            { 
+                return _testDump && 
+                    // Only single file dumps on Windows
+                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) && 
+                    // Generate and test dumps if on OSX or Alpine only if the runtime is 6.0 or greater 
+                    (!(OS.Kind == OSKind.OSX || OS.IsAlpine) || TestConfiguration.RuntimeFrameworkVersionMajor > 5);
+            }
+            set { _testDump = value; }
+        }
 
         public string TestName
         {
@@ -88,11 +111,15 @@ public class SOSRunner : IDisposable
 
         public DumpGenerator DumpGenerator
         {
-            get {
+            get 
+            {
                 DumpGenerator dumpGeneration = _dumpGenerator;
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
-                    if (!TestConfiguration.CreateDumpExists || TestConfiguration.GenerateDumpWithLLDB() || TestConfiguration.GenerateDumpWithGDB())
+                    if (!TestConfiguration.CreateDumpExists || 
+                        TestConfiguration.PublishSingleFile || 
+                        TestConfiguration.GenerateDumpWithLLDB() || 
+                        TestConfiguration.GenerateDumpWithGDB())
                     {
                         dumpGeneration = DumpGenerator.NativeDebugger;
                     }
@@ -102,7 +129,16 @@ public class SOSRunner : IDisposable
             set { _dumpGenerator = value; }
         }
 
-        public DumpType DumpType { get; set; } = DumpType.Heap;
+        public DumpType DumpType
+        {
+            get
+            {
+                // Currently neither cdb or dotnet-dump collect generates valid dumps on Windows for an single file app
+                // Issue: https://github.com/dotnet/diagnostics/issues/2515
+                return TestConfiguration.PublishSingleFile ? SOSRunner.DumpType.Full : _dumpType;
+            }
+            set { _dumpType = value; }
+        }
 
         public bool UsePipeSync { get; set; } = false;
 
@@ -184,11 +220,6 @@ public class SOSRunner : IDisposable
 
         if (dumpGeneration == DumpGenerator.NativeDebugger)
         {
-            // Force the dump type to full for .NET Core 1.1 because the heap dumps are broken (can't read ThreadStore).
-            if (config.IsNETCore && config.RuntimeFrameworkVersionMajor == 1)
-            {
-                information.DumpType = DumpType.Full;
-            }
             using SOSRunner runner = await SOSRunner.StartDebugger(information, DebuggerAction.GenerateDump);
             dumpName = runner.ReplaceVariables("%DUMP_NAME%");
             try
@@ -545,7 +576,7 @@ public class SOSRunner : IDisposable
                     }
                     else
                     {
-                        var sb = new StringBuilder("settings set -- target.run-args");
+                        var sb = new StringBuilder();
                         if (!string.IsNullOrWhiteSpace(config.HostArgs))
                         {
                             string[] args = ReplaceVariables(variables, config.HostArgs).Trim().Split(' ');
@@ -567,7 +598,11 @@ public class SOSRunner : IDisposable
                             }
                         }
                         initialCommands.Add($@"target create ""{debuggeeTarget}""");
-                        initialCommands.Add(sb.ToString());
+                        string targetRunArgs = sb.ToString();
+                        if (!string.IsNullOrWhiteSpace(targetRunArgs))
+                        {
+                            initialCommands.Add($"settings set -- target.run-args {targetRunArgs}");
+                        }
                         initialCommands.Add("process launch -s");
 
                         // .NET Core 1.1 or less don't catch stack overflow and abort so need to catch SIGSEGV
@@ -820,17 +855,22 @@ public class SOSRunner : IDisposable
 
     public async Task LoadSosExtension()
     {
+        string runtimeSymbolsPath = _config.RuntimeSymbolsPath;
         string setHostRuntime = _config.SetHostRuntime();
+        string setSymbolServer = _config.SetSymbolServer();
         string sosPath = _config.SOSPath();
         List<string> commands = new List<string>();
+        bool isHostRuntimeNone = false;
 
         if (!string.IsNullOrEmpty(setHostRuntime))
         {
             switch (setHostRuntime)
             {
+                case "-none":
+                    isHostRuntimeNone = true;
+                    break;
                 case "-netfx":
                 case "-netcore":
-                case "-none":
                 case "-clear":
                     break;
                 default:
@@ -844,9 +884,16 @@ public class SOSRunner : IDisposable
                 if (_config.IsDesktop)
                 {
                     // Force the desktop sos to be loaded and then unload it.
-                    commands.Add(".cordll -l");
-                    commands.Add(".unload sos");
+                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
+                    {
+                        commands.Add($".cordll -lp {runtimeSymbolsPath}");
+                    }
+                    else
+                    {
+                        commands.Add(".cordll -l");
+                    }
                 }
+                commands.Add(".unload sos");
                 commands.Add($".load {sosPath}");
                 commands.Add(".reload");
                 commands.Add(".chain");
@@ -854,14 +901,18 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"!SetHostRuntime {setHostRuntime}");
                 }
-                // Add the path to runtime so SOS can find DAC/DBI for triage dumps
-                if (_dumpType.HasValue && _dumpType == DumpType.Triage)
+                // If there is no host runtime and a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI.
+                if ((isHostRuntimeNone && _config.PublishSingleFile) || 
+                    (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
                 {
-                    string runtimeSymbolsPath = _config.RuntimeSymbolsPath;
-                    if (runtimeSymbolsPath != null)
+                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
-                        commands.Add("!SetClrPath " + runtimeSymbolsPath);
+                        commands.Add($"!SetClrPath {runtimeSymbolsPath}");
                     }
+                }
+                if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
+                {
+                    commands.Add($"!SetSymbolServer {setSymbolServer}");
                 }
                 break;
             case NativeDebugger.Lldb:
@@ -870,11 +921,27 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
+                // If there is no host runtime and a single-file app, add the path to runtime so SOS can find DAC/DBI.
+                if (isHostRuntimeNone && _config.PublishSingleFile)
+                {
+                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
+                    {
+                        commands.Add($"setclrpath {runtimeSymbolsPath}");
+                    }
+                }
+                if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
+                {
+                    commands.Add($"setsymbolserver {setSymbolServer}");
+                }
                 SwitchToExceptionThread();
                 break;
             case NativeDebugger.Gdb:
                 break;
             case NativeDebugger.DotNetDump:
+                if (!string.IsNullOrEmpty(setSymbolServer))
+                {
+                    commands.Add($"setsymbolserver {setSymbolServer}");
+                }
                 SwitchToExceptionThread();
                 break;
             default:
@@ -1035,6 +1102,10 @@ public class SOSRunner : IDisposable
             sb.Append(information.TestName);
             sb.Append(".");
             sb.Append(information.DumpType.ToString());
+            if (information.TestConfiguration.PublishSingleFile)
+            {
+                sb.Append(".SingleFile");
+            }
             if (information.DumpNameSuffix != null)
             {
                 sb.Append(".");
@@ -1288,6 +1359,10 @@ public class SOSRunner : IDisposable
         if (_config.PublishSingleFile)
         {
             defines.Add("SINGLE_FILE_APP");
+            if (OS.Kind == OSKind.Linux || OS.Kind == OSKind.OSX)
+            {
+                defines.Add("UNIX_SINGLE_FILE_APP");
+            }
         }
         return defines;
     }
@@ -1533,6 +1608,11 @@ public static class TestConfigurationExtensions
     public static string SetHostRuntime(this TestConfiguration config)
     {
         return config.GetValue("SetHostRuntime");
+    }
+
+    public static string SetSymbolServer(this TestConfiguration config)
+    {
+        return config.GetValue("SetSymbolServer");
     }
 
     public static string DesktopRuntimePath(this TestConfiguration config)
