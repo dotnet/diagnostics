@@ -38,5 +38,3 @@ if(CLR_CMAKE_PLATFORM_UNIX)
   # This prevents inclusion of standard C compiler headers
   add_compile_options(-nostdinc)
 endif(CLR_CMAKE_PLATFORM_UNIX)
-
-add_subdirectory(debugshim)

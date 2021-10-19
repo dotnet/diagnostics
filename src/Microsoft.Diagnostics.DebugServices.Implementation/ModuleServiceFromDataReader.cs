@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ModuleServiceFromDataReader : ModuleService
     {
-        class ModuleFromDataReader : Module, IExportSymbols
+        class ModuleFromDataReader : Module
         {
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
@@ -38,10 +38,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _imageSize = imageSize;
                 _exportReader = exportReader;
                 ModuleIndex = moduleIndex;
-                if (exportReader is not null)
-                {
-                    ServiceProvider.AddService<IExportSymbols>(this);
-                }
             }
 
             #region IModule
@@ -97,27 +93,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             #endregion
 
-            #region IExportSymbols
-
-            public bool TryGetSymbolAddress(string name, out ulong address)
+            protected override bool TryGetSymbolAddressInner(string name, out ulong address)
             {
                 if (_exportReader is not null)
                 {
-                    // Some exceptions are escaping from the clrmd ELF dump reader. This will be
-                    // fixed in a clrmd update.
-                    try
-                    {
-                        return _exportReader.TryGetSymbolAddress(ImageBase, name, out address);
-                    }
-                    catch (IOException)
-                    {
-                    }
+                    return _exportReader.TryGetSymbolAddress(ImageBase, name, out address);
                 }
                 address = 0;
                 return false;
             }
-
-            #endregion
 
             protected override ModuleService ModuleService => _moduleService;
         }

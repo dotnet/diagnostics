@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (settings.CounterGroups.Length > 0)
             {
-                _filter = new CounterFilter(CounterIntervalSeconds);
+                _filter = new CounterFilter(Settings.CounterIntervalSeconds);
                 foreach (var counterGroup in settings.CounterGroups)
                 {
                     _filter.AddFilter(counterGroup.ProviderName, counterGroup.CounterNames);
@@ -32,13 +32,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
-                _filter = CounterFilter.AllCounters(CounterIntervalSeconds);
+                _filter = CounterFilter.AllCounters(Settings.CounterIntervalSeconds);
             }
         }
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            return new MetricSourceConfiguration(CounterIntervalSeconds, _filter.GetProviders());
+            return new MetricSourceConfiguration(Settings.CounterIntervalSeconds, _filter.GetProviders());
         }
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
@@ -83,7 +83,5 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             }
         }
-
-        private int CounterIntervalSeconds => (int)Settings.RefreshInterval.TotalSeconds;
     }
 }

@@ -1,0 +1,65 @@
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+
+  <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
+  <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+
+  <Options>
+    <Option Condition="'$(OS)' == 'Linux'">
+      <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
+    </Option>
+    <Option Condition="'$(OS)' == 'OSX'">
+      <SOSPath>$(InstallDir)/libsosplugin.dylib</SOSPath>
+    </Option>
+  </Options>
+
+  <!-- Run tests on Linux -->
+  <RunTestsLinux_x64>false</RunTestsLinux_x64>
+  <RunTestsLinux_x64 Condition="'$(OS)' == 'Linux'">$(RunTests)</RunTestsLinux_x64>
+  <RunTestsLinux_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsLinux_x64>
+  
+  <RunTestsLinux_arm64>false</RunTestsLinux_arm64>
+  <RunTestsLinux_arm64 Condition="'$(OS)' == 'Linux'">$(RunTests)</RunTestsLinux_arm64>
+  <RunTestsLinux_arm64 Condition="'$(TargetArchitecture)' != 'arm64'">false</RunTestsLinux_arm64>
+  
+  <!-- Linux x64 testing -->
+  <Options Condition="'$(RunTestsLinux_x64)' == 'true'">
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_5_0)/LineNums/SOS.LineNums.Heap.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_5_0)/LineNums/SOS.LineNums.Heap.dmp.xml</TestDataFile>
+    </Option>
+  </Options>
+
+  <!-- Linux arm64 testing -->
+  <Options Condition="'$(RunTestsLinux_arm64)' == 'true'">
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_5_0)/LineNums/SOS.LineNums.Heap.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_5_0)/LineNums/SOS.LineNums.Heap.dmp.xml</TestDataFile>
+    </Option>
+  </Options>
+  
+  <!-- Run tests on OSX x64 -->
+  <RunTestsOSX>false</RunTestsOSX>
+  <RunTestsOSX Condition="'$(OS)' == 'OSX'">true</RunTestsOSX>
+  <RunTestsOSX Condition="'$(TargetArchitecture)' == 'arm'">false</RunTestsOSX>
+  <RunTestsOSX Condition="'$(TargetArchitecture)' == 'arm64'">false</RunTestsOSX>
+  
+  <Options Condition="'$(RunTestsOSX)' == 'true'">
+  </Options>
+</Configuration>

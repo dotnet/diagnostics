@@ -125,6 +125,11 @@ inline IHost* GetHost()
     return Extensions::GetInstance()->GetHost();
 }
 
+inline IDebuggerServices* GetDebuggerServices()
+{
+    return Extensions::GetInstance()->GetDebuggerServices();
+}
+
 inline ITarget* GetTarget()
 {
     return Extensions::GetInstance()->GetTarget();

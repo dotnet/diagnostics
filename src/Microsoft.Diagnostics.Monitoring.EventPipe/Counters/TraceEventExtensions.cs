@@ -22,6 +22,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 //Make sure we are part of the requested series. If multiple clients request metrics, all of them get the metrics.
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
+
+                //CONSIDER
+                //Concurrent counter sessions do not each get a separate interval. Instead the payload
+                //for _all_ the counters changes the Series to be the lowest specified interval, on a per provider basis.
+                //Currently the CounterFilter will remove any data whose Series doesn't match the requested interval.
                 if (!filter.IsIncluded(traceEvent.ProviderName, counterName, GetInterval(series)))
                 {
                     return false;

@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Equal(defaultPath, symbolService.FormatSymbolStores());
             symbolService.DisableSymbolStore();
             
-            Assert.True(symbolService.ParseSymbolPath("srv*http://msdl.microsoft.com/download/symbols/"));
+            Assert.True(symbolService.ParseSymbolPath("srv*https://msdl.microsoft.com/download/symbols/"));
             Assert.Equal(defaultServer, symbolService.FormatSymbolStores());
             symbolService.DisableSymbolStore();
 

@@ -84,7 +84,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\Strike\platform;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\SOS\gcdump;$(SolutionDir)src\SOS\debugshim;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\Strike\platform;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\SOS\gcdump;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -119,15 +119,15 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Debug\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <MASM>
       <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Debug";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
-      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
     </MASM>
     <Midl>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -135,7 +135,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>..\..\inc\Debug\corguids.lib;..\debugshim\Debug\debugshim.lib;..\dbgutil\Debug\dbgutil.lib;libcmtd.lib;libcpmtd.lib;libvcruntimed.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\..\inc\Debug\corguids.lib;;..\dbgutil\Debug\dbgutil.lib;libcmtd.lib;libcpmtd.lib;libvcruntimed.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /NOVCFEATURE</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -156,7 +156,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>Checked/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -191,15 +191,15 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Checked\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <MASM>
       <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Checked";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
-      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
     </MASM>
     <Midl>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -207,7 +207,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>..\..\inc\Checked\corguids.lib;..\debugshim\Checked\debugshim.lib;..\dbgutil\Checked\dbgutil.lib;libcmtd.lib;libcpmtd.lib;libvcruntimed.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\..\inc\Checked\corguids.lib;..\dbgutil\Checked\dbgutil.lib;libcmtd.lib;libcpmtd.lib;libvcruntimed.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /NOVCFEATURE</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -230,7 +230,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -266,15 +266,15 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Release\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike;..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike;..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <MASM>
       <PreprocessorDefinitions>NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Release";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
-      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
     </MASM>
     <Midl>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -282,7 +282,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>..\..\inc\Release\corguids.lib;..\debugshim\Release\debugshim.lib;..\dbgutil\Release\dbgutil.lib;libcmt.lib;libcpmt.lib;libvcruntime.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\..\inc\Release\corguids.lib;..\dbgutil\Release\dbgutil.lib;libcmt.lib;libcpmt.lib;libvcruntime.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /DEFAULTLIB:ucrt.lib</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -306,7 +306,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>RelWithDebInfo/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -342,15 +342,15 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"RelWithDebInfo\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <MASM>
       <PreprocessorDefinitions>NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_CORESYSTEM;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="RelWithDebInfo";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
-      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
     </MASM>
     <Midl>
-      <AdditionalIncludeDirectories>Strike;..\..\pal\prebuilt\inc;..\..\inc;..\gcdump;..\..\SOS\debugshim;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Strike;..\..\pal\prebuilt\inc;..\..\inc;..\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -358,7 +358,7 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>..\..\inc\RelWithDebInfo\corguids.lib;..\debugshim\RelWithDebInfo\debugshim.lib;..\dbgutil\RelWithDebInfo\dbgutil.lib;libcmt.lib;libcpmt.lib;libvcruntime.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>..\..\inc\RelWithDebInfo\corguids.lib;..\dbgutil\RelWithDebInfo\dbgutil.lib;libcmt.lib;libcpmt.lib;libvcruntime.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /DEFAULTLIB:ucrt.lib</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -417,7 +417,6 @@
     <ClInclude Include="ntinfo.h" />
     <ClInclude Include="platformspecific.h" />
     <ClInclude Include="platform\cordebugdatatarget.h" />
-    <ClInclude Include="platform\cordebuglibraryprovider.h" />
     <ClInclude Include="platform\datatarget.h" />
     <ClInclude Include="platform\hostimpl.h" />
     <ClInclude Include="platform\runtimeimpl.h" />

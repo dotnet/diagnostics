@@ -165,12 +165,12 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected static string GetDebuggeeBinaryDllPath(TestConfiguration config, string debuggeeBinaryDirPath, string debuggeeName)
         {
-            return config.IsNETCore ? Path.Combine(debuggeeBinaryDirPath, debuggeeName + (config.PublishSingleFile ? "" : ".dll")) : null;
+            return config.IsNETCore ? Path.Combine(debuggeeBinaryDirPath, debuggeeName + ".dll") : null;
         }
 
         protected static string GetDebuggeeBinaryExePath(TestConfiguration config, string debuggeeBinaryDirPath, string debuggeeName)
         {
-            return config.IsDesktop ? Path.Combine(debuggeeBinaryDirPath, debuggeeName + ".exe") : null;
+            return config.IsDesktop || config.PublishSingleFile ? Path.Combine(debuggeeBinaryDirPath, debuggeeName + (OS.Kind == OSKind.Windows ? ".exe" : "")) : null;
         }
 
         protected static string GetLogPath(TestConfiguration config, string framework, string runtime, string debuggeeName)

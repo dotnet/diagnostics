@@ -13,8 +13,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
     {
         private readonly long _durationTicks;
 
+        //Note that regardless of the metrics interval used, we will only update
+        //on a certain frequency to avoid unnecessary processing.
         //This is adjusted due to rounding errors on event counter timestamp math.
-        private readonly TimeSpan _heartBeatInterval = TimeSpan.FromSeconds(AspNetTriggerSourceConfiguration.DefaultHeartbeatInterval - 1);
+        private static readonly TimeSpan HeartbeatIntervalSeconds = TimeSpan.FromSeconds(9);
         private SlidingWindow _window;
         private Dictionary<string, DateTime> _requests = new();
         private DateTime _lastHeartbeatProcessed = DateTime.MinValue;
@@ -36,7 +38,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         {
             //May get additional heartbeats based on multiple counters or extra intervals. We only
             //process the data periodically.
-            if (timestamp - _lastHeartbeatProcessed > _heartBeatInterval)
+            if (timestamp - _lastHeartbeatProcessed > HeartbeatIntervalSeconds)
             {
                 _lastHeartbeatProcessed = timestamp;
                 List<string> requestsToRemove = new();

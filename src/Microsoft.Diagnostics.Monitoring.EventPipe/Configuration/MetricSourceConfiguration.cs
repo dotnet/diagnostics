@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly IList<EventPipeProvider> _eventPipeProviders;
 
-        public MetricSourceConfiguration(int metricIntervalSeconds, IEnumerable<string> customProviderNames)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
         {
             if (customProviderNames == null)
             {

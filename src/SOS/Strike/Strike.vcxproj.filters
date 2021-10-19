@@ -61,9 +61,6 @@
     <ClInclude Include="platform\cordebugdatatarget.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="platform\cordebuglibraryprovider.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="platform\datatarget.h">
       <Filter>platform</Filter>
     </ClInclude>

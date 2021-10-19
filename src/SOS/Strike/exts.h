@@ -137,22 +137,15 @@ class SOSExtensions : public Extensions
         if (m_pDebuggerServices != nullptr)
         {
             ((DbgEngServices*)m_pDebuggerServices)->Uninitialize();
+            m_pDebuggerServices->Release();
+            m_pDebuggerServices = nullptr;
         }
     }
 #endif
 
 public:
 
-#ifdef FEATURE_PAL
-    static HRESULT Initialize()
-    {
-        if (s_extensions == nullptr)
-        {
-            s_extensions = new SOSExtensions(nullptr, nullptr);
-        }
-        return S_OK;
-    }
-#else
+#ifndef FEATURE_PAL
     static HRESULT Initialize(IDebugClient* client)
     {
         if (s_extensions == nullptr)
@@ -168,11 +161,11 @@ public:
     }
 #endif
 
-    static HRESULT Initialize(IHost* host)
+    static HRESULT Initialize(IHost* host, IDebuggerServices* debuggerServices)
     {
         if (s_extensions == nullptr) 
         {
-            s_extensions = new SOSExtensions(nullptr, host);
+            s_extensions = new SOSExtensions(debuggerServices, host);
         }
         return S_OK;
     }

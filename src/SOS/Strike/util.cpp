@@ -24,7 +24,6 @@
 #include <metahost.h>
 #include <mscoree.h>
 #include <tchar.h>
-#include "debugshim.h"
 #include "gcinfo.h"
 
 #ifndef STRESS_LOG

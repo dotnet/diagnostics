@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     ".",
                     config.Address,
                     PipeDirection.InOut,
-                    PipeOptions.None,
+                    PipeOptions.Asynchronous,
                     TokenImpersonationLevel.Impersonation);
                 await namedPipe.ConnectAsync(token).ConfigureAwait(false);
                 return namedPipe;
