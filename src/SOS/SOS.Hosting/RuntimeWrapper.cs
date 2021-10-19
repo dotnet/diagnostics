@@ -333,12 +333,16 @@ namespace SOS.Hosting
             }
             if (_dbiHandle == IntPtr.Zero)
             {
-                _dbiHandle = DataTarget.PlatformFunctions.LoadLibrary(dbiFilePath);
-                if (_dbiHandle == IntPtr.Zero)
+                try
                 {
-                    Trace.TraceError($"DBI LoadLibrary({dbiFilePath}) FAILED");
+                    _dbiHandle = DataTarget.PlatformFunctions.LoadLibrary(dbiFilePath);
+                }
+                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                {
+                    Trace.TraceError($"LoadLibrary({dbiFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
+                Debug.Assert(_dbiHandle != IntPtr.Zero);
             }
             ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion {
                 StructVersion = 0,
@@ -457,12 +461,16 @@ namespace SOS.Hosting
                     Trace.TraceError($"Could not find matching DAC {dacFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
                     return IntPtr.Zero;
                 }
-                _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
-                if (_dacHandle == IntPtr.Zero)
+                try
                 {
-                    Trace.TraceError($"DAC LoadLibrary({dacFilePath}) FAILED");
+                    _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
+                }
+                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                {
+                    Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
+                Debug.Assert(_dacHandle != IntPtr.Zero);
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     var dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");

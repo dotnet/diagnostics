@@ -4,11 +4,14 @@
 
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using FileVersionInfo = Microsoft.Diagnostics.Runtime.Utilities.FileVersionInfo;
@@ -18,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Module base implementation
     /// </summary>
-    public abstract class Module : IModule, IDisposable
+    public abstract class Module : IModule, IExportSymbols, IDisposable
     {
         [Flags]
         public enum Flags : byte
@@ -58,6 +61,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 ServiceProvider.RemoveService(typeof(ELFFile));
                 ServiceProvider.RemoveService(typeof(PEReader));
             });
+            ServiceProvider.AddService<IExportSymbols>(this);
          }
 
         public void Dispose()
@@ -160,6 +164,57 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public abstract VersionData VersionData { get; }
 
         public abstract string VersionString { get; }
+
+        #endregion
+
+        #region IExportSymbols
+
+        bool IExportSymbols.TryGetSymbolAddress(string name, out ulong address)
+        {
+            if (Target.OperatingSystem == OSPlatform.Windows)
+            {
+                Stream stream = Target.Services.GetService<IMemoryService>().CreateMemoryStream(ImageBase, ImageSize);
+                PEFile image = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
+                if (image.IsValid())
+                { 
+                    if (image.TryGetExportSymbol(name, out ulong offset))
+                    {
+                        address = ImageBase + offset;
+                        return true;
+                    }
+                    address = 0;
+                    return false;
+                }
+            }
+            else if (Target.OperatingSystem == OSPlatform.Linux)
+            {
+                try
+                {
+                    Stream stream = Target.Services.GetService<IMemoryService>().CreateMemoryStream(ImageBase, ImageSize);
+                    ElfFile elfFile = new(stream, position: ImageBase, leaveOpen: false, isVirtual: true);
+                    if (elfFile.Header.IsValid)
+                    {
+                        if (elfFile.TryGetExportSymbol(name, out ulong offset))
+                        {
+                            address = ImageBase + offset;
+                            return true;
+                        }
+                        address = 0;
+                        return false;
+                    }
+                }
+                catch (InvalidDataException)
+                {
+                }
+            }
+            return TryGetSymbolAddressInner(name, out address);
+        }
+
+        protected virtual bool TryGetSymbolAddressInner(string name, out ulong address)
+        {
+            address = 0;
+            return false;
+        }
 
         #endregion
 

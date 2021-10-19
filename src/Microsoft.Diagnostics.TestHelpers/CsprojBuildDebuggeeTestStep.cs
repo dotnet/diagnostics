@@ -30,6 +30,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                        string debuggeeNativeLibDirPath,
                                        Dictionary<string,string> buildProperties,
                                        string runtimeIdentifier,
+                                       string runtimeFramework,
                                        string linkerPackageVersion,
                 					   string debuggeeName,
                                        string debuggeeSolutionDirPath,
@@ -54,6 +55,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             BuildProperties = buildProperties;
             RuntimeIdentifier = runtimeIdentifier;
+            RuntimeFramework = runtimeFramework;
             DebuggeeName = debuggeeName;
             ProjectTemplateFileName = debuggeeName + ".csproj";
             LinkerPackageVersion = linkerPackageVersion;
@@ -64,6 +66,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public IDictionary<string,string> BuildProperties { get; }
         public string RuntimeIdentifier { get; }
+        public string RuntimeFramework { get; }
         public string DebuggeeName { get; }
         public string LinkerPackageVersion { get; }
         public override string ProjectTemplateFileName { get; }
@@ -73,7 +76,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             string extraArgs = "";
             if (RuntimeIdentifier != null)
             {
-                extraArgs = " --runtime " + RuntimeIdentifier;
+                extraArgs += " --runtime " + RuntimeIdentifier;
             }
             foreach (var prop in BuildProperties)
             {
@@ -85,9 +88,14 @@ namespace Microsoft.Diagnostics.TestHelpers
         protected override async Task Build(ITestOutputHelper output)
         {
             string publishArgs = "publish";
+            if (RuntimeFramework != null)
+            {
+                publishArgs += " --framework " + RuntimeFramework;
+            }
             if (RuntimeIdentifier != null)
             {
                 publishArgs += " --runtime " + RuntimeIdentifier;
+                publishArgs += " --self-contained true";
             }
             foreach (var prop in BuildProperties)
             {

@@ -1,3 +1,0 @@
-<Configuration>
-  <TargetConfiguration>Debug</TargetConfiguration>
-</Configuration>

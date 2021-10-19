@@ -20,12 +20,7 @@
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
-  <CDBPath>$(RootBinDir)\bin\SOS.UnitTests\$(TargetConfiguration)\netcoreapp3.1\publish\runtimes\win-$(TargetArchitecture)\native\cdb.exe</CDBPath>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
-
-  <TestWebApp>true</TestWebApp>
-  <TestWebApp Condition="'$(PrivateBuildTesting)' == 'true'">false</TestWebApp>
-  <TestWebApp Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp>
 
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
@@ -65,6 +60,21 @@
       <TestProduct>ProjectK</TestProduct>
       <Options>
         <!--
+            Single file (debuggees cli built)
+         -->
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <PublishSingleFile>true</PublishSingleFile>
+          <!-- Add the symbol server so SOS can find DAC/DBI for single file apps which
+               may not have been built with the runtime pointed by RuntimeSymbolsPath
+               since we use the arcade provided SDK (in .dotnet) to build them. -->
+          <SetSymbolServer>-ms</SetSymbolServer>
+          <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+        </Option>
+        <!--
             Default (prebuilt)
           -->
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
@@ -90,6 +100,14 @@
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <PublishSingleFile>true</PublishSingleFile>
+              <SetSymbolServer>-ms</SetSymbolServer>
+              <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
@@ -113,11 +131,21 @@
             </Option>
             <Option>
               <TestName>SOS.DualRuntimes</TestName>
+              <SetSymbolServer>-ms</SetSymbolServer>
               <!-- The assembly path, class and function name of the desktop test code to load/run -->
               <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
             </Option>
           </Options>
           <Options>
+            <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
+              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <PublishSingleFile>true</PublishSingleFile>
+              <SetSymbolServer>-ms</SetSymbolServer>
+              <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+            </Option>
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
@@ -134,35 +162,14 @@
             </Option>
           </Options>
         </Option>
-        <Option>
-          <Options>
-            <Option>
-              <TestName>DotnetDumpCommands</TestName>
-            </Option>
-          </Options>
-          <Options>
-            <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-            </Option>
-            <Option Condition="'$(RuntimeVersion50)' != ''">
-              <BuildProjectFramework>net5.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(RuntimeVersion31)' != ''">
-              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-            </Option>
-          </Options>
-        </Option>
       </Options>
 
       <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
       <RuntimeSymbolsPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
-      <HostExe>$(DotNetRoot)\dotnet.exe</HostExe>
-      <HostArgs>--fx-version $(FrameworkVersion)</HostArgs>
+      
+      <!-- Single-file debuggees don't need the host -->
+      <HostExe Condition="'$(PublishSingleFile)' != 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
+      <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
     <!--
         Desktop Runtime (debuggees cli built)

@@ -21,7 +21,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class RuntimeService : IRuntimeService, IDataReader, IExportReader
     {
         private readonly ITarget _target;
-        private readonly bool _exportReaderEnabled;
         private readonly IDisposable _onFlushEvent;
         private DataTarget _dataTarget;
         private List<Runtime> _runtimes;
@@ -33,8 +32,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public RuntimeService(ITarget target)
         {
             _target = target;
-            // TODO - mikem 4/30/21 - remove when dbgeng services doesn't take so long looking up exports (attempts to load PDBs).
-            _exportReaderEnabled = target.Host.HostType != HostType.DbgEng || Environment.GetEnvironmentVariable("DOTNET_ENABLE_SOS_SINGLEFILE") == "1";
             _onFlushEvent = target.OnFlushEvent.Register(() => {
                 if (_runtimes is not null && _runtimes.Count == 0)
                 {
@@ -219,19 +216,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         bool IExportReader.TryGetSymbolAddress(ulong baseAddress, string name, out ulong offset)
         {
-            if (_exportReaderEnabled)
+            try
             {
-                try
+                IExportSymbols exportSymbols = ModuleService.GetModuleFromBaseAddress(baseAddress).Services.GetService<IExportSymbols>();
+                if (exportSymbols is not null)
                 {
-                    IExportSymbols exportSymbols = ModuleService.GetModuleFromBaseAddress(baseAddress).Services.GetService<IExportSymbols>();
-                    if (exportSymbols is not null)
-                    {
-                        return exportSymbols.TryGetSymbolAddress(name, out offset);
-                    }
+                    return exportSymbols.TryGetSymbolAddress(name, out offset);
                 }
-                catch (DiagnosticsException)
-                {
-                }
+            }
+            catch (DiagnosticsException)
+            {
             }
             offset = 0;
             return false;

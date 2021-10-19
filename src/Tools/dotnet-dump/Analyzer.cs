@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
+using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -84,6 +85,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is SecurityException)
             {
             }
+
+            // Load any extra extensions
+            LoadExtensions();
 
             try
             { 
@@ -188,5 +192,45 @@ namespace Microsoft.Diagnostics.Tools.Dump
         }
 
         #endregion
+
+        /// <summary>
+        /// Load any extra extensions in the search path
+        /// </summary>
+        /// <param name="commandService">Used to add the commands</param>
+        private void LoadExtensions()
+        {
+            string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
+            if (!string.IsNullOrEmpty(diagnosticExtensions))
+            {
+                string[] paths = diagnosticExtensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string extensionPath in paths)
+                {
+                    LoadExtension(extensionPath);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Load any extra extensions in the search path
+        /// </summary>
+        /// <param name="commandService">Used to add the commands</param>
+        /// <param name="extensionPath">Extension assembly path</param>
+        private void LoadExtension(string extensionPath)
+        {
+            Assembly assembly = null;
+            try
+            {
+                assembly = Assembly.LoadFrom(extensionPath);
+            }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException  || ex is BadImageFormatException || ex is System.Security.SecurityException)
+            {
+                _consoleProvider.WriteLineError($"Extension load {extensionPath} FAILED {ex.Message}");
+            }
+            if (assembly is not null)
+            {
+                _commandProcessor.AddCommands(assembly);
+                _consoleProvider.WriteLine($"Extension loaded {extensionPath}");
+            }
+        }
     }
 }

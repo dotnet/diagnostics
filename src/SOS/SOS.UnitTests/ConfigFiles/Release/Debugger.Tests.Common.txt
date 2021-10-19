@@ -1,3 +1,0 @@
-<Configuration>
-  <TargetConfiguration>Release</TargetConfiguration>
-</Configuration>

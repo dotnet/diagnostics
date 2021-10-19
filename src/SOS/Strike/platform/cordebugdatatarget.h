@@ -12,7 +12,7 @@
 class CorDebugDataTarget : public ICorDebugMutableDataTarget, public ICorDebugMetaDataLocator, public ICorDebugDataTarget4
 {
 public:
-    CorDebugDataTarget() : m_ref(0)
+    CorDebugDataTarget() : m_ref(1)
     {
     }
 

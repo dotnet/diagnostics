@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public async Task Process(DiagnosticsClient client, TimeSpan duration, CancellationToken token)
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
-            IDisposable registration = token.Register(() => _initialized.TrySetCanceled());
+            IDisposable registration = token.Register(() => TryCancelCompletionSources(token));
             await await Task.Factory.StartNew(async () =>
             {
                 EventPipeEventSource source = null;
@@ -82,7 +82,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 catch (DiagnosticsClientException ex)
                 {
-                    throw new InvalidOperationException("Failed to start the event pipe session", ex);
+                    InvalidOperationException wrappingException = new("Failed to start the event pipe session", ex);
+                    TryFailCompletionSourcesReturnFalse(wrappingException);
+                    throw wrappingException;
+                }
+                catch (Exception ex) when (TryFailCompletionSourcesReturnFalse(ex))
+                {
+                    throw;
                 }
                 finally
                 {
@@ -155,6 +161,32 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _sessionStarted.TrySetCanceled();
 
             _eventSource?.Dispose();
+        }
+
+        // Helper method for observing an exception while processing the trace session
+        // so that session start task completion source can be failed and the exception handler
+        // does not catch the exception.
+        private bool TryFailCompletionSourcesReturnFalse(Exception ex)
+        {
+            // Use best-effort to set the completion sources to be cancelled or failed.
+            if (ex is OperationCanceledException canceledException)
+            {
+                TryCancelCompletionSources(canceledException.CancellationToken);
+            }
+            else
+            {
+                _initialized.TrySetException(ex);
+                _sessionStarted.TrySetException(ex);
+            }
+
+            // Return false to make the exception handler not handle the exception.
+            return false;
+        }
+
+        private void TryCancelCompletionSources(CancellationToken token)
+        {
+            _initialized.TrySetCanceled(token);
+            _sessionStarted.TrySetCanceled(token);
         }
     }
 }

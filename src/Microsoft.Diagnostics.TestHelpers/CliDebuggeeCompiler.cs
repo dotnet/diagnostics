@@ -38,6 +38,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 Debug.Assert(runtimeIdentifier != null);
                 buildProperties.Add("PublishSingleFile", "true");
+                buildProperties.Add("SelfContained", "true");
             }
             string debugType = config.DebugType;
             if (debugType == null)
@@ -78,6 +79,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                                GetDebuggeeNativeLibDirPath(config, debuggeeName),
                                                GetBuildProperties(config, runtimeIdentifier),
                                                runtimeIdentifier,
+                                               config.BuildProjectFramework,
                                                config.LinkerPackageVersion,
                                                debuggeeName,
                                                debuggeeSolutionDirPath,

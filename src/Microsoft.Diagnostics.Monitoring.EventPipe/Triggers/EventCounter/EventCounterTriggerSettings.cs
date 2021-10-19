@@ -14,8 +14,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
     internal sealed class EventCounterTriggerSettings :
         IValidatableObject
     {
-        internal const int CounterIntervalSeconds_MaxValue = 24 * 60 * 60; // 1 day
-        internal const int CounterIntervalSeconds_MinValue = 1; // 1 second
+        internal const float CounterIntervalSeconds_MaxValue = 24 * 60 * 60; // 1 day
+        internal const float CounterIntervalSeconds_MinValue = 1; // 1 second
 
         internal const string EitherGreaterThanLessThanMessage = "Either the " + nameof(GreaterThan) + " field or the " + nameof(LessThan) + " field are required.";
 
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         /// The sampling interval of the event counter.
         /// </summary>
         [Range(CounterIntervalSeconds_MinValue, CounterIntervalSeconds_MaxValue)]
-        public int CounterIntervalSeconds { get; set; }
+        public float CounterIntervalSeconds { get; set; }
 
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {

@@ -66,6 +66,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private string _errorText = null;
 
         private int maxRow = -1;
+        private bool useAnsi = false;
+
+        public ConsoleWriter(bool useAnsi) 
+        {
+            this.useAnsi = useAnsi;
+        }
 
         public void Initialize()
         {
@@ -83,9 +89,32 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             AssignRowsAndInitializeDisplay();
         }
 
+        private void SetCursorPosition(int col, int row) 
+        {
+            if (this.useAnsi) 
+            {
+                Console.Write($"\u001b[{row + 1};{col + 1}H");
+            }
+            else 
+            {
+                Console.SetCursorPosition(col, row);
+            }
+        }
+
+        private void Clear() 
+        {
+            if (this.useAnsi) 
+            {
+                Console.Write($"\u001b[H\u001b[J");
+            }
+            else 
+            {
+                Console.Clear();
+            }
+        }
         private void UpdateStatus()
         {
-            Console.SetCursorPosition(0, STATUS_ROW);
+            SetCursorPosition(0, STATUS_ROW);
             Console.Write($"    Status: {GetStatus()}{new string(' ', 40)}"); // Write enough blanks to clear previous status.
         }
 
@@ -94,7 +123,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         /// <summary>Clears display and writes out category and counter name layout.</summary>
         public void AssignRowsAndInitializeDisplay()
         {
-            Console.Clear();
+            Clear();
+            
             int row = Console.CursorTop;
             Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
             Console.WriteLine($"    Status: {GetStatus()}");                STATUS_ROW = row++;
@@ -196,7 +226,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
 
                 int row = counter.RenderValueInline ? counter.Row : tagSet.Row;
-                Console.SetCursorPosition(Indent + maxNameLength + 1, row);
+                SetCursorPosition(Indent + maxNameLength + 1, row);
                 Console.Write(FormatValue(payload.Value));
             }
         }
@@ -279,7 +309,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                     if (row > -1)
                     {
-                        Console.SetCursorPosition(0, row);
+                        SetCursorPosition(0, row);
                         Console.WriteLine();
                     }
                 }

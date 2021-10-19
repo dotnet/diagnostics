@@ -27,10 +27,6 @@ SOSCOMMAND:DumpStackObjects
 VERIFY:<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
 
 SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.IO.StringWriter!\$0_)*System.IO.StringWriter\s+<POUT>
-IFDEF:MAJOR_RUNTIME_VERSION_1
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+shared\s+static\s+Null\s+
-VERIFY:\s+>>\s+Domain:Value\s+<HEXVAL>:(<HEXVAL>|NotInit)\s+<<\s+
-ENDIF:MAJOR_RUNTIME_VERSION_1
 IFDEF:MAJOR_RUNTIME_VERSION_2
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+shared\s+static\s+Null\s+
 VERIFY:\s+>>\s+Domain:Value\s+<HEXVAL>:(<HEXVAL>|NotInit)\s+<<\s+

@@ -64,8 +64,9 @@ extern HMODULE g_hInstance;
 extern void TraceError(PCSTR format, ...);
 
 static HostRuntimeFlavor g_hostRuntimeFlavor = HostRuntimeFlavor::NetCore;
-static bool g_hostingInitialized = false;
+bool g_hostingInitialized = false;
 static LPCSTR g_hostRuntimeDirectory = nullptr;
+static ExtensionsInitializeDelegate g_extensionsInitializeFunc = nullptr;
 
 struct FileFind
 {
@@ -498,18 +499,9 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 \**********************************************************************/
 static HRESULT InitializeNetCoreHost()
 {
-    coreclr_initialize_ptr initializeCoreCLR = nullptr;
-    coreclr_create_delegate_ptr createDelegate = nullptr;
-    std::string hostRuntimeDirectory;
-    std::string sosModuleDirectory;
-    std::string extensionPath;
-    std::string coreClrPath;
+    std::string sosModulePath;
+    HRESULT hr = S_OK;
 
-    HRESULT hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
 #ifdef FEATURE_PAL
     Dl_info info;
     if (dladdr((PVOID)&InitializeNetCoreHost, &info) == 0)
@@ -517,17 +509,7 @@ static HRESULT InitializeNetCoreHost()
         TraceError("Error: dladdr() failed getting current module directory\n");
         return E_FAIL;
     }
-    sosModuleDirectory = info.dli_fname;
-    extensionPath = info.dli_fname;
-
-    void* coreclrLib = dlopen(coreClrPath.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (coreclrLib == nullptr)
-    {
-        TraceError("Error: Failed to load %s\n", coreClrPath.c_str());
-        return E_FAIL;
-    }
-    initializeCoreCLR = (coreclr_initialize_ptr)dlsym(coreclrLib, "coreclr_initialize");
-    createDelegate = (coreclr_create_delegate_ptr)dlsym(coreclrLib, "coreclr_create_delegate");
+    sosModulePath = info.dli_fname;
 #else
     ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
     if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
@@ -535,104 +517,130 @@ static HRESULT InitializeNetCoreHost()
         TraceError("Error: Failed to get SOS module directory\n");
         return HRESULT_FROM_WIN32(GetLastError());
     }
-    sosModuleDirectory = szSOSModulePath;
-    extensionPath = szSOSModulePath;
-
-    HMODULE coreclrLib = LoadLibraryA(coreClrPath.c_str());
-    if (coreclrLib == nullptr)
-    {
-        TraceError("Error: Failed to load %s\n", coreClrPath.c_str());
-        return E_FAIL;
-    }
-    initializeCoreCLR = (coreclr_initialize_ptr)GetProcAddress(coreclrLib, "coreclr_initialize");
-    createDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreclrLib, "coreclr_create_delegate");
+    sosModulePath = szSOSModulePath;
 #endif // FEATURE_PAL
 
-    if (initializeCoreCLR == nullptr || createDelegate == nullptr)
+    if (g_extensionsInitializeFunc == nullptr)
     {
-        TraceError("Error: coreclr_initialize or coreclr_create_delegate not found\n");
-        return E_FAIL;
-    }
+        coreclr_initialize_ptr initializeCoreCLR = nullptr;
+        coreclr_create_delegate_ptr createDelegate = nullptr;
+        std::string sosModuleDirectory;
+        std::string hostRuntimeDirectory;
+        std::string coreClrPath;
 
-    // Get just the sos module directory
-    size_t lastSlash = sosModuleDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
-    if (lastSlash == std::string::npos)
-    {
-        TraceError("Error: Failed to parse sos module name\n");
-        return E_FAIL;
-    }
-    sosModuleDirectory.erase(lastSlash);
-
-    // Trust The SOS managed and dependent assemblies from the sos directory
-    std::string tpaList;
-    const char* directory = sosModuleDirectory.c_str();
-    AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
-    AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-    AddFileToTpaList(directory, "Microsoft.FileFormats.dll", tpaList);
-    AddFileToTpaList(directory, "Microsoft.SymbolStore.dll", tpaList);
-
-    // Trust the runtime assemblies
-    AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
-
-    std::string appPaths;
-    appPaths.append(sosModuleDirectory);
-
-    const char *propertyKeys[] = {
-        "TRUSTED_PLATFORM_ASSEMBLIES", 
-        "APP_PATHS",
-        "APP_NI_PATHS",
-        "NATIVE_DLL_SEARCH_DIRECTORIES",
-        "AppDomainCompatSwitch"
-    };
-
-    const char* propertyValues[] = {
-        // TRUSTED_PLATFORM_ASSEMBLIES
-        tpaList.c_str(),
-        // APP_PATHS
-        appPaths.c_str(),
-        // APP_NI_PATHS
-        hostRuntimeDirectory.c_str(),
-        // NATIVE_DLL_SEARCH_DIRECTORIES
-        appPaths.c_str(),
-        // AppDomainCompatSwitch
-        "UseLatestBehaviorWhenTFMNotSpecified"
-    };
-
-    std::string entryPointExecutablePath;
-    if (!GetEntrypointExecutableAbsolutePath(entryPointExecutablePath))
-    {
-        TraceError("Could not get full path to current executable");
-        return E_FAIL;
-    }
-
-    void *hostHandle;
-    unsigned int domainId;
-    hr = initializeCoreCLR(entryPointExecutablePath.c_str(), "sos", 
-        sizeof(propertyKeys) / sizeof(propertyKeys[0]), propertyKeys, propertyValues, &hostHandle, &domainId);
-
-    if (FAILED(hr))
-    {
-        TraceError("Error: Fail to initialize coreclr %08x\n", hr);
-        return hr;
-    }
-
-    ExtensionsInitializeDelegate extensionsInitializeFunc = nullptr;
-    hr = createDelegate(hostHandle, domainId, ExtensionsDllName, ExtensionsClassName, ExtensionsInitializeFunctionName, (void**)&extensionsInitializeFunc);
-    if (SUCCEEDED(hr)) 
-    {
-        try 
-        {
-            hr = extensionsInitializeFunc(extensionPath.c_str());
-        }
-        catch (...)
-        {
-            hr = E_ACCESSDENIED;
-        }
+        hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
         if (FAILED(hr))
         {
-            TraceError("Extension host initialization FAILED %08x\n", hr);
             return hr;
         }
+#ifdef FEATURE_PAL
+        void* coreclrLib = dlopen(coreClrPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+        if (coreclrLib == nullptr)
+        {
+            TraceError("Error: Failed to load %s\n", coreClrPath.c_str());
+            return E_FAIL;
+        }
+        initializeCoreCLR = (coreclr_initialize_ptr)dlsym(coreclrLib, "coreclr_initialize");
+        createDelegate = (coreclr_create_delegate_ptr)dlsym(coreclrLib, "coreclr_create_delegate");
+#else
+        HMODULE coreclrLib = LoadLibraryA(coreClrPath.c_str());
+        if (coreclrLib == nullptr)
+        {
+            TraceError("Error: Failed to load %s\n", coreClrPath.c_str());
+            return E_FAIL;
+        }
+        initializeCoreCLR = (coreclr_initialize_ptr)GetProcAddress(coreclrLib, "coreclr_initialize");
+        createDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreclrLib, "coreclr_create_delegate");
+#endif // FEATURE_PAL
+
+        if (initializeCoreCLR == nullptr || createDelegate == nullptr)
+        {
+            TraceError("Error: coreclr_initialize or coreclr_create_delegate not found\n");
+            return E_FAIL;
+        }
+
+        // Get just the sos module directory
+        sosModuleDirectory = sosModulePath;
+        size_t lastSlash = sosModuleDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+        if (lastSlash == std::string::npos)
+        {
+            TraceError("Error: Failed to parse sos module name\n");
+            return E_FAIL;
+        }
+        sosModuleDirectory.erase(lastSlash);
+
+        // Trust The SOS managed and dependent assemblies from the sos directory
+        std::string tpaList;
+        const char* directory = sosModuleDirectory.c_str();
+        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
+        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
+        AddFileToTpaList(directory, "Microsoft.FileFormats.dll", tpaList);
+        AddFileToTpaList(directory, "Microsoft.SymbolStore.dll", tpaList);
+
+        // Trust the runtime assemblies
+        AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
+
+        std::string appPaths;
+        appPaths.append(sosModuleDirectory);
+
+        const char* propertyKeys[] = {
+            "TRUSTED_PLATFORM_ASSEMBLIES",
+            "APP_PATHS",
+            "APP_NI_PATHS",
+            "NATIVE_DLL_SEARCH_DIRECTORIES",
+            "AppDomainCompatSwitch"
+        };
+
+        const char* propertyValues[] = {
+            // TRUSTED_PLATFORM_ASSEMBLIES
+            tpaList.c_str(),
+            // APP_PATHS
+            appPaths.c_str(),
+            // APP_NI_PATHS
+            hostRuntimeDirectory.c_str(),
+            // NATIVE_DLL_SEARCH_DIRECTORIES
+            appPaths.c_str(),
+            // AppDomainCompatSwitch
+            "UseLatestBehaviorWhenTFMNotSpecified"
+        };
+
+        std::string entryPointExecutablePath;
+        if (!GetEntrypointExecutableAbsolutePath(entryPointExecutablePath))
+        {
+            TraceError("Could not get full path to current executable");
+            return E_FAIL;
+        }
+
+        void* hostHandle;
+        unsigned int domainId;
+        hr = initializeCoreCLR(entryPointExecutablePath.c_str(), "sos",
+            sizeof(propertyKeys) / sizeof(propertyKeys[0]), propertyKeys, propertyValues, &hostHandle, &domainId);
+
+        if (FAILED(hr))
+        {
+            TraceError("Error: Fail to initialize coreclr %08x\n", hr);
+            return hr;
+        }
+
+        hr = createDelegate(hostHandle, domainId, ExtensionsDllName, ExtensionsClassName, ExtensionsInitializeFunctionName, (void**)&g_extensionsInitializeFunc);
+        if (FAILED(hr))
+        {
+            TraceError("Error: Fail to create host ldelegate %08x\n", hr);
+            return hr;
+        }
+    }
+    try 
+    {
+        hr = g_extensionsInitializeFunc(sosModulePath.c_str());
+    }
+    catch (...)
+    {
+        hr = E_ACCESSDENIED;
+    }
+    if (FAILED(hr))
+    {
+        TraceError("Extension host initialization FAILED %08x\n", hr);
+        return hr;
     }
     return hr;
 }
@@ -698,10 +706,6 @@ BOOL IsHostingInitialized()
 \**********************************************************************/
 HRESULT InitializeHosting()
 {
-    if (g_hostingInitialized)
-    {
-        return S_OK;
-    }
     if (g_hostRuntimeFlavor == HostRuntimeFlavor::None)
     {
         return E_FAIL;

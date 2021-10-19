@@ -25,17 +25,14 @@ void UninitializeDesktopClrHost();
 ICLRRuntimeHost* g_clrHost = nullptr;
 
 /// <summary>
-/// Loads and initializes the desktop CLR to host the managed SOS code.
+/// Loads and initializes the desktop CLR to host the managed SOS code. If the desktop CLR has already
+/// been loaded (g_clrHost != nullptr), then it re-initializes the managed SOS host code.
 /// </summary>
 HRESULT InitializeDesktopClrHost()
 {
     HRESULT hr = S_OK;
     DWORD ret = 0;
 
-    if (g_clrHost != nullptr)
-    {
-        return S_OK;
-    }
     ArrayHolder<WCHAR> wszSOSModulePath = new WCHAR[MAX_LONGPATH + 1];
     if (GetModuleFileNameW(g_hInstance, wszSOSModulePath, MAX_LONGPATH) == 0)
     {
@@ -58,40 +55,43 @@ HRESULT InitializeDesktopClrHost()
         TraceError("Error: Failed to append SOS module name\n");
         return E_FAIL;
     }
-    hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
+    if (g_clrHost == nullptr)
     {
-        TraceError("Error: CoInitializeEx failed. %08x\n", hr);
-        return hr;
-    }
-    // Loads the CLR and then initializes the managed debugger extensions.
-    ReleaseHolder<ICLRMetaHost> metaHost;
-    hr = CLRCreateInstance(CLSID_CLRMetaHost, IID_ICLRMetaHost, (PVOID*)&metaHost);
-    if (FAILED(hr) || metaHost == nullptr)
-    {
-        TraceError("Error: CLRCreateInstance failed %08x\n", hr);
-        return hr;
-    }
-    ReleaseHolder<ICLRRuntimeInfo> runtimeInfo;
-    hr = metaHost->GetRuntime(CLR_VERSION, IID_ICLRRuntimeInfo, (PVOID*)&runtimeInfo);
-    if (FAILED(hr) || runtimeInfo == nullptr)
-    {
-        TraceError("Error: ICLRMetaHost::GetRuntime failed %08x\n", hr);
-        return hr;
-    }
-    hr = runtimeInfo->GetInterface(CLSID_CLRRuntimeHost, IID_ICLRRuntimeHost, (PVOID*)&g_clrHost);
-    if (FAILED(hr) || g_clrHost == nullptr)
-    {
-        TraceError("Error: ICLRRuntimeInfo::GetInterface failed %08x\n", hr);
-        return hr;
-    }
-    hr = g_clrHost->Start();
-    if (FAILED(hr)) 
-    {
-        TraceError("Error: ICLRRuntimeHost::Start failed %08x\n", hr);
-        g_clrHost->Release();
-        g_clrHost = nullptr;
-        return hr;
+        hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+        if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
+        {
+            TraceError("Error: CoInitializeEx failed. %08x\n", hr);
+            return hr;
+        }
+        // Loads the CLR and then initializes the managed debugger extensions.
+        ReleaseHolder<ICLRMetaHost> metaHost;
+        hr = CLRCreateInstance(CLSID_CLRMetaHost, IID_ICLRMetaHost, (PVOID*)&metaHost);
+        if (FAILED(hr) || metaHost == nullptr)
+        {
+            TraceError("Error: CLRCreateInstance failed %08x\n", hr);
+            return hr;
+        }
+        ReleaseHolder<ICLRRuntimeInfo> runtimeInfo;
+        hr = metaHost->GetRuntime(CLR_VERSION, IID_ICLRRuntimeInfo, (PVOID*)&runtimeInfo);
+        if (FAILED(hr) || runtimeInfo == nullptr)
+        {
+            TraceError("Error: ICLRMetaHost::GetRuntime failed %08x\n", hr);
+            return hr;
+        }
+        hr = runtimeInfo->GetInterface(CLSID_CLRRuntimeHost, IID_ICLRRuntimeHost, (PVOID*)&g_clrHost);
+        if (FAILED(hr) || g_clrHost == nullptr)
+        {
+            TraceError("Error: ICLRRuntimeInfo::GetInterface failed %08x\n", hr);
+            return hr;
+        }
+        hr = g_clrHost->Start();
+        if (FAILED(hr))
+        {
+            TraceError("Error: ICLRRuntimeHost::Start failed %08x\n", hr);
+            g_clrHost->Release();
+            g_clrHost = nullptr;
+            return hr;
+        }
     }
     // Initialize the managed code
     hr = g_clrHost->ExecuteInDefaultAppDomain(wszManagedModulePath.GetPtr(), ExtensionsClassNameW, ExtensionsInitializeFunctionNameW, wszSOSModulePath.GetPtr(), (DWORD *)&ret);

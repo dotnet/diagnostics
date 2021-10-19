@@ -8,9 +8,10 @@ LOADSOS
 
 # Verify that bpmd works
 IFDEF:LIVE
-!IFDEF:MAJOR_RUNTIME_VERSION_1
 # Issue: https://github.com/dotnet/diagnostics/issues/2459
 !IFDEF:ALPINE
+# Issue: https://github.com/dotnet/diagnostics/issues/2673
+!IFDEF:UNIX_SINGLE_FILE_APP
 
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd NestedExceptionTest.exe NestedExceptionTest.Program.Main
@@ -27,10 +28,10 @@ ENDIF:DESKTOP
 
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 8\s*\]\s*
 
+ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
-ENDIF:MAJOR_RUNTIME_VERSION_1
 ENDIF:LIVE
 
 CONTINUE
@@ -92,7 +93,7 @@ VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> t
 VERIFY:StackTrace \(generated\):
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s*
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (8|17)\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (8|17)\s*\]\s*
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131509\s+
 VERIFY:There are nested exceptions on this thread. Run with -nested for details
@@ -118,4 +119,4 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
-VERIFY:\[.*[\\|/]Debuggees[\\|/](dotnet.+[\\|/])?[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (8|17)\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (8|17)\s*\]\s*
