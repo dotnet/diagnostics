@@ -179,6 +179,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (c == '\"')
                     {
                         inQuote = false;
+                        valEnd = curIdx + 1;
                     }
                 }
                 else
@@ -208,7 +209,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static void AddKeyValueToArgumentDict(Dictionary<string, string> argumentDict, string argument, int keyStart, int keyEnd, int valStart, int valEnd)
         {
             string key = argument.Substring(keyStart, keyEnd - keyStart);
-            string val = argument.Substring(valStart);
+            string val = argument.Substring(valStart, valEnd - valStart);
             if (val.StartsWith("\"") && val.EndsWith("\""))
             {
                 val = val.Substring(1, val.Length - 2);
