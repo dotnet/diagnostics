@@ -200,20 +200,22 @@ namespace SOS.Hosting
             {
                 try
                 {
-                    Stream stream = MemoryService.CreateMemoryStream(address, size);
                     KeyGenerator generator = null;
                     if (config == RuntimeConfiguration.UnixCore)
                     {
-                        var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                        Stream stream = MemoryService.CreateMemoryStream();
+                        var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
                         generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.OSXCore)
                     {
-                        var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                        Stream stream = MemoryService.CreateMemoryStream();
+                        var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                         generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
                     {
+                        Stream stream = MemoryService.CreateMemoryStream(address, size);
                         var peFile = new PEFile(new StreamAddressSpace(stream), true);
                         generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
                     }

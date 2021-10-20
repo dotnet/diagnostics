@@ -1351,9 +1351,18 @@ LLDBServices::GetModuleSize(
     for (int si = 0; si < numSections; si++)
     {
         lldb::SBSection section = module.GetSectionAtIndex(si);
-        if (section.IsValid())
+        if (section.IsValid() && section.GetPermissions() != 0)
         {
-            size += section.GetByteSize();
+#if defined(__APPLE__)
+            // The __LINKEDIT segment contains the raw data used by dynamic linker, such as symbol,
+            // string and relocation table entries. More importantly, the same __LINKEDIT segment
+            // can be shared by multiple modules so we need to skip them to prevent overlapping
+            // module regions.
+            if (strcmp(section.GetName(), "__LINKEDIT") != 0)
+#endif
+            {
+                size += section.GetByteSize();
+            }
         }
     }
     // For core dumps lldb doesn't return the section sizes when it 

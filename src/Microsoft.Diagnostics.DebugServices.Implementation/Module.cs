@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
@@ -39,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly IDisposable _onChangeEvent;
         private Flags _flags;
         private PdbFileInfo _pdbFileInfo;
-        private ImmutableArray<byte> _buildId;
+        protected ImmutableArray<byte> _buildId;
         private PEImage _peImage;
 
         public readonly ServiceProvider ServiceProvider;
@@ -141,13 +140,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public ImmutableArray<byte> BuildId
+        public virtual ImmutableArray<byte> BuildId
         {
             get
             {
                 if (_buildId.IsDefault)
                 {
-                    byte[] id = ModuleService.GetBuildId(ImageBase, ImageSize);
+                    byte[] id = ModuleService.GetBuildId(ImageBase);
                     if (id != null)
                     {
                         _buildId = id.ToImmutableArray();
