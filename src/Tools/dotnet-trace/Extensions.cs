@@ -179,7 +179,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (c == '\"')
                     {
                         inQuote = false;
-                        valEnd = curIdx + 1;
                     }
                 }
                 else
@@ -201,6 +200,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
                 curIdx += 1;
+            }
+            if(valStart > valEnd)
+            {
+                valEnd = curIdx;
             }
             AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
             return argumentDict;
