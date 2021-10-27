@@ -65,6 +65,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ModuleTests(TestHost host)
         {
+            if (OS.Kind == OSKind.Windows)
+            {
+                throw new SkipTestException("Test unstable on Windows. Issue: https://github.com/dotnet/diagnostics/issues/2709");
+            }
             var moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
 
@@ -256,7 +260,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     IRuntime runtime = runtimeService.EnumerateRuntimes().FirstOrDefault((r) => r.Id == id);
                     Assert.NotNull(runtime);
 
-                    runtimeData.CompareMembers(runtime);
+                    // Issue: https://github.com/dotnet/diagnostics/issues/2709
+                    if (OS.Kind != OSKind.Windows)
+                    {
+                        runtimeData.CompareMembers(runtime);
+                    }
 
                     ClrInfo clrInfo = runtime.Services.GetService<ClrInfo>();
                     Assert.NotNull(clrInfo);
