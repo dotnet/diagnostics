@@ -9,7 +9,7 @@ echo %__MsgPrefix%Starting Build at %TIME%
 set __ThisScriptFull="%~f0"
 set __ThisScriptDir="%~dp0"
 
-call "%__ThisScriptDir%"\setup-vs-tools.cmd
+call "%__ThisScriptDir%"\native\init-vs-env.cmd
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithError
 
 if defined VS160COMNTOOLS (
@@ -192,7 +192,7 @@ if /i %__BuildCrossArch% EQU 1 (
     set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__CrossCompIntermediatesDir%"
-    call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__CrossArch% !__ExtraCmakeArgs!
+    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__CrossCompIntermediatesDir%" %__VSVersion% %__CrossArch% !__ExtraCmakeArgs!
     @if defined _echo @echo on
     popd
 
@@ -235,13 +235,9 @@ if %__Build% EQU 1 (
     if /i "%__BuildArch%" == "x86" ( set __VCBuildArch=x86 )
     if /i "%__BuildArch%" == "arm" (
         set __VCBuildArch=x86_arm
-        :: Make CMake pick the highest installed version in the 10.0.* range
-        set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
     )
     if /i "%__BuildArch%" == "arm64" (
         set __VCBuildArch=x86_arm64
-        :: Make CMake pick the highest installed version in the 10.0.* range
-        set ___SDKVersion="-DCMAKE_SYSTEM_VERSION=10.0"
     )
 
     echo %__MsgPrefix%Using environment: "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
@@ -266,10 +262,10 @@ if %__Build% EQU 1 (
 
     set "__ManagedBinaryDir=%__RootBinDir%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs=!___SDKVersion! "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
+    set __ExtraCmakeArgs="-DCMAKE_SYSTEM_VERSION=10.0" "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__IntermediatesDir%"
-    call "%__ProjectDir%\eng\gen-buildsys-win.bat" "%__ProjectDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!
+    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__IntermediatesDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!
     @if defined _echo @echo on
     popd
 

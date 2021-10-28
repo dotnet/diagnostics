@@ -126,9 +126,9 @@ private:
     IXCLRDataProcess* m_clrDataProcess;
     ICorDebugProcess* m_pCorDebugProcess;
 
-    Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG index, ULONG64 address, ULONG64 size, RuntimeInfo* runtimeInfo);
+    Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG index, ULONG64 address, ULONG64 size, RuntimeInfo* runtimeInfo);
 
-    virtual Runtime::~Runtime();
+    virtual ~Runtime();
 
     void LoadRuntimeModules();
 
