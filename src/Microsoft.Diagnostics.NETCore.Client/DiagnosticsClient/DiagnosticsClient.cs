@@ -132,13 +132,46 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary> 
         /// <param name="dumpType">Type of the dump to be generated</param>
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
+        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported. The rest are ignored</param>
+        public void WriteDump(DumpType dumpType, string dumpPath, WriteDumpFlags flags)
+        {
+            IpcMessage request = CreateWriteDumpMessage2(dumpType, dumpPath, flags);
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            if (!ValidateResponseMessage(response, nameof(WriteDump), ValidateResponseOptions.UnknownCommandReturnsFalse))
+            {
+                WriteDump(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
+            }
+        }
+
+        /// <summary>
+        /// Trigger a core dump generation.
+        /// </summary> 
+        /// <param name="dumpType">Type of the dump to be generated</param>
+        /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        internal async Task WriteDumpAsync(DumpType dumpType, string dumpPath, bool logDumpGeneration, CancellationToken token)
+        public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, bool logDumpGeneration, CancellationToken token)
         {
             IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
             ValidateResponseMessage(response, nameof(WriteDumpAsync));
+        }
+
+        /// <summary>
+        /// Trigger a core dump generation.
+        /// </summary> 
+        /// <param name="dumpType">Type of the dump to be generated</param>
+        /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
+        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported. The rest are ignored</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, WriteDumpFlags flags, CancellationToken token)
+        {
+            IpcMessage request = CreateWriteDumpMessage2(dumpType, dumpPath, flags);
+            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            if (!ValidateResponseMessage(response, nameof(WriteDumpAsync), ValidateResponseOptions.UnknownCommandReturnsFalse))
+            {
+                await WriteDumpAsync(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0, token);
+            }
         }
 
         /// <summary>
@@ -469,6 +502,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, logDumpGeneration);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
+        }
+
+        private static IpcMessage CreateWriteDumpMessage2(DumpType dumpType, string dumpPath, WriteDumpFlags flags)
+        {
+            if (string.IsNullOrEmpty(dumpPath))
+                throw new ArgumentNullException($"{nameof(dumpPath)} required");
+
+            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
+            return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump2, payload);
         }
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)

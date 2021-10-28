@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public int Collect(IConsole console, int processId, string output, bool diag, DumpTypeOption type, string name)
+        public int Collect(IConsole console, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name)
         {
             Console.WriteLine(name);
             if (name != null)
@@ -112,8 +112,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
                             break;
                     }
 
+                    WriteDumpFlags flags = WriteDumpFlags.None;
+                    if (diag)
+                    {
+                        flags |= WriteDumpFlags.LoggingEnabled;
+                    }
+                    if (crashreport)
+                    {
+                        flags |= WriteDumpFlags.CrashReportEnabled;
+                    }
                     // Send the command to the runtime to initiate the core dump
-                    client.WriteDump(dumpType, output, diag);
+                    client.WriteDump(dumpType, output, flags);
                 }
             }
             catch (Exception ex) when 
