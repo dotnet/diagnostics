@@ -86,6 +86,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
+                    if (crashreport)
+                    {
+                        Console.WriteLine("Crash reports not supported on Windows.");
+                        return 0;
+                    }
+
                     // Get the process
                     Process process = Process.GetProcessById(processId);
 

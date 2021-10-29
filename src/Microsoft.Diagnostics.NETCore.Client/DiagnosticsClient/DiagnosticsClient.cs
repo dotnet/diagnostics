@@ -132,13 +132,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary> 
         /// <param name="dumpType">Type of the dump to be generated</param>
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
-        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported. The rest are ignored</param>
+        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, WriteDumpFlags flags)
         {
             IpcMessage request = CreateWriteDumpMessage2(dumpType, dumpPath, flags);
             IpcMessage response = IpcClient.SendMessage(_endpoint, request);
             if (!ValidateResponseMessage(response, nameof(WriteDump), ValidateResponseOptions.UnknownCommandReturnsFalse))
             {
+                if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+                {
+                    throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+                }
                 WriteDump(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
             }
         }
@@ -162,7 +166,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary> 
         /// <param name="dumpType">Type of the dump to be generated</param>
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
-        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported. The rest are ignored</param>
+        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, WriteDumpFlags flags, CancellationToken token)
         {
@@ -170,6 +174,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
             if (!ValidateResponseMessage(response, nameof(WriteDumpAsync), ValidateResponseOptions.UnknownCommandReturnsFalse))
             {
+                if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+                {
+                    throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+                }
                 await WriteDumpAsync(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0, token);
             }
         }
