@@ -16,11 +16,14 @@ using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.StackSources;
+using Diagnostics.Tracing.StackSources;
 
 namespace Microsoft.Diagnostics.Tools.Trace 
 {
     internal static class ReportCommandHandler 
     {
+        static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Thread (" , "Process"};
         //Create an extension function
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
         {
@@ -28,37 +31,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
             return ret;
         }
-        public static int FindStartingIndex(List<CallTreeNodeBase> ListofNodes)
+        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive);
+        private static async Task<int> Report(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
         {
-            int index = 0;
-            int length = ListofNodes.Count;
-            //TODO: What about UNMANAGED_CODE_TIME, System.Private.CoreLib!System.Threading
-            List<string> UnwantedMethods = new List<string>() { "ROOT", "Thread (" };
-            if(length > 0)
+            if (traceFile == null)
             {
-                CallTreeNodeBase TheNode = ListofNodes[index];
-                while(UnwantedMethods.Any(s => s.Equals(TheNode.Name)) && index < length) 
-                {
-                    index++;
-                }
-                return index;
-            }
-            else
-            {
-                //TODO: some kind of exception that the list has 0 or negative length
-                return -1;
+                Console.Error.WriteLine("<traceFile> is required");
+                return await Task.FromResult(-1);
             }
             
-        }
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool isInclusive);
-        private static async Task<int> Report(CancellationToken ct, IConsole console, string traceFile, int n, bool isInclusive) 
-        {
             try 
             {
                 string tempNetTraceFilename = traceFile;
                 string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
                 int count = 0;
-                List<CallTreeNodeBase> NodesToReport = new List<CallTreeNodeBase>();
+                int index = 0;
+                List<CallTreeNodeBase> nodesToReport = new List<CallTreeNodeBase>();
                 using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
                 using (var eventLog = new TraceLog(tempEtlxFilename))
                 {
@@ -68,80 +56,86 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     };
                     //stackSource.DoneAddingSamples();
                     //TODO: change the computer
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);
-                    computer.GenerateThreadTimeStacks(stackSource);
+                    //WE NEED TO FILTER OUT CPU_TIME STACKS
+                    var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);//change this to not insert the CPU timeframe
+                    //do it on a boolean flag generate stacks without inserting CPU time frame
+                    computer.GenerateThreadTimeStacks(stackSource);//modify GenerateThreadTimeStacks to do something
+                    //the reads the event log and knows how to extract the stacks from it
+                    //inside AddCPU function pass in something that prevents adding the CPU frame
+                    //filter out the CPU frame? nope because of GetSumByID
+                    FilterParams filterParams = new FilterParams();
+                    filterParams.ExcludeRegExs = "CPU_TIME";
+                    FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
+                    CallTree callTree = new(ScalingPolicyKind.ScaleToData);
+                    callTree.StackSource = filterStack;
 
-                    CallTree CT = new(ScalingPolicyKind.ScaleToData);
-                    CT.StackSource = stackSource;
-
-                    List<string> UnwantedMethodNames = new List<string>() { "ROOT", "Thread (" , "Process"};
+                    
                     //find the top n Exclusive methods
-                    if(!isInclusive)
+                    if(!inclusive)
                     {
-                        var ExclusiveList = CT.ByIDSortedExclusiveMetric();
-                        int totalElements = ExclusiveList.Count;
-                        int index = FindStartingIndex(ExclusiveList);
-                        while(count < n && index < totalElements) //what if n is larger than the length of the list?
+                        var exclusiveList = callTree.ByIDSortedExclusiveMetric();
+                        int totalElements = exclusiveList.Count;
+                        while(count < number && index < totalElements) //what if n is larger than the length of the list?
                         {
-                            CallTreeNodeBase node = ExclusiveList[index];
+                            CallTreeNodeBase node = exclusiveList[index];
                             index++; // Name == Root or Thread? skip, ensure this is happening
 
-                            if (node.Name == "CPU_TIME") {
-                                CallerCalleeNode CallerCallee = CT.CallerCallee(node.Name);
-                                IList<CallTreeNodeBase> Callers = CallerCallee.Callers;
-                                //the data has already been scaled, so comparison can happen between node values
-                                //What if all of the nodes' exclusive measures in Callers are greater than everything 
-                                //else in the ExclusiveList?
+                            // if (node.Name == "CPU_TIME") {
+                            //     Console.WriteLine("CPU_TIME it is");
+                            //     CallerCalleeNode CallerCallee = CT.CallerCallee(node.Name);
+                            //     IList<CallTreeNodeBase> Callers = CallerCallee.Callers;
+                            //     //the data has already been scaled, so comparison can happen between node values
+                            //     //What if all of the nodes' exclusive measures in Callers are greater than everything 
+                            //     //else in the exclusiveList?
                                     
 
-                                //The inclusive scores of the methods that called CPU_TIME are actually their exclusive metrics
-                                //because we do not care about CPU_TIME
-                                float maxInclusive = 0;
-                                CallTreeNodeBase maxInclusiveNode = null;
-                                foreach(var methodNode in Callers) 
-                                {
-                                    float currentInclusiveMetric = methodNode.InclusiveMetric;
-                                    if(currentInclusiveMetric > maxInclusive)
-                                    {
-                                        maxInclusive = currentInclusiveMetric;
-                                        maxInclusiveNode = methodNode;
-                                    }
+                            //     //The inclusive scores of the methods that called CPU_TIME are actually their exclusive metrics
+                            //     //because we do not care about CPU_TIME
+                            //     float maxInclusive = 0;
+                            //     CallTreeNodeBase maxInclusiveNode = null;
+                            //     foreach(var methodNode in Callers) 
+                            //     {
+                            //         //methodNode.GetSamples??
+                            //         float currentInclusiveMetric = methodNode.InclusiveMetric;
+                            //         if(currentInclusiveMetric > maxInclusive)
+                            //         {
+                            //             maxInclusive = currentInclusiveMetric;
+                            //             maxInclusiveNode = methodNode;
+                            //         }
 
-                                }
-                                //check to see what the Exclusive Metric is for the last node in NodesToReport
-                                    //remembering that NodesToReport could be empty
-                                NodesToReport.Add(maxInclusiveNode);
-                                count++;
+                            //     }
+                            //     //check to see what the Exclusive Metric is for the last node in NodesToReport
+                            //         //remembering that NodesToReport could be empty
+                            //     nodesToReport.Add(maxInclusiveNode);
+                            //     count++;
 
-                            }
-                            else if (!UnwantedMethodNames.Any(node.Name.Contains))
+                            // }
+                            if (!unwantedMethodNames.Any(node.Name.StartsWith))
                             {
-                                NodesToReport.Add(node);
+                                nodesToReport.Add(node);
                                 count++;
                             } 
                         }
                     }
                     else //Find the top N Inclusive methods
                     {
-                        var InclusiveList = CT.ByIDSortedInclusiveMetric();
+                        var InclusiveList = callTree.ByIDSortedInclusiveMetric();
                         int totalElements = InclusiveList.Count;
-
-                        int index = FindStartingIndex(InclusiveList);
-                        while(count < n && index < totalElements)
+                        while(count < number && index < totalElements)
                         {
                             CallTreeNodeBase node = InclusiveList[index];
                             index++;
-                            if(!UnwantedMethodNames.Any(node.Name.Contains))
+                            if(!unwantedMethodNames.Any(node.Name.Contains))
                             {
                                 //do we want CPU_TIME to be in the top N Inclusive? 
                                 //what names do we not want to be in the top N Inclusive?
-                                NodesToReport.Add(node);
+                                nodesToReport.Add(node);
                                 count++;
                             }
                         }
-                        Console.WriteLine("bool IsInclusive: " + isInclusive);
+                        Console.WriteLine("bool IsInclusive: " + inclusive);
                     }
-                    foreach(var node in NodesToReport) 
+                    foreach(var node in nodesToReport) 
                     {
                         Console.WriteLine(node.ToString());
                     }
@@ -161,7 +155,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command ReportCommand() =>
             new Command(
                 name: "report",
-                description: "Generates report into stdout from a previously generated trace_file.")
+                description: "Generates a report into stdout from a previously generated trace.")
                 {
                     //Handler
                     HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
@@ -180,21 +174,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static int DefaultN() => 5;
         private static Option topNOption() =>
             new Option(
-                //aliases: new[] {"-n", "--number" },
-                alias: "-n",
+                aliases: new[] {"-n", "--number" },
+                //alias: "-n",
                 description: $"Gives the top N methods in the callstack.")
                 {
                     Argument = new Argument<int>(name: "n", getDefaultValue: DefaultN)
                 };
 
-        private static bool DefaultIsItInclusive => false;
+        private static bool DefaultIsInclusive => false;
 
         private static Option inclusiveOption() =>
             new Option(
-                aliases: new[] { "-i", "--isInclusive" },
-                description: $"The output with be the top n methods either inclusively or exclusively depending upon the value of {DefaultIsItInclusive}")
+                aliases: new[] { "--inclusive" },
+                description: $"Output the topN methods based on inclusive time. If not specified, exclusive time is used by default")
                 {
-                    Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => DefaultIsItInclusive)
+                    Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => DefaultIsInclusive)
                 };
     }
 }
