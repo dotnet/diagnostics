@@ -284,11 +284,7 @@ PAL_IsDebuggerPresent(VOID);
 
 #ifndef PAL_STDCPP_COMPAT
 
-#if _WIN64 || _MSC_VER >= 1400
 typedef __int64 time_t;
-#else
-typedef long time_t;
-#endif
 #define _TIME_T_DEFINED
 #endif // !PAL_STDCPP_COMPAT
 
