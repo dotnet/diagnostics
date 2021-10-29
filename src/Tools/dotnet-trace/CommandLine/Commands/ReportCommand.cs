@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
             return ret;
         }
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive);
+        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
         private static async Task<int> Report(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
         {
             if (traceFile == null)
@@ -55,16 +55,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         OnlyManagedCodeStacks = true
                     };
                     //stackSource.DoneAddingSamples();
-                    //TODO: change the computer
-                    //WE NEED TO FILTER OUT CPU_TIME STACKS
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);//change this to not insert the CPU timeframe
-                    //do it on a boolean flag generate stacks without inserting CPU time frame
-                    computer.GenerateThreadTimeStacks(stackSource);//modify GenerateThreadTimeStacks to do something
-                    //the reads the event log and knows how to extract the stacks from it
-                    //inside AddCPU function pass in something that prevents adding the CPU frame
-                    //filter out the CPU frame? nope because of GetSumByID
-                    FilterParams filterParams = new FilterParams();
-                    filterParams.ExcludeRegExs = "CPU_TIME";
+
+                    var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);
+
+                    computer.GenerateThreadTimeStacks(stackSource);
+
+                    FilterParams filterParams = new FilterParams()
+                    {
+                        ExcludeRegExs = "CPU_TIME"
+                    };
                     FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
                     CallTree callTree = new(ScalingPolicyKind.ScaleToData);
                     callTree.StackSource = filterStack;
@@ -75,41 +74,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         var exclusiveList = callTree.ByIDSortedExclusiveMetric();
                         int totalElements = exclusiveList.Count;
-                        while(count < number && index < totalElements) //what if n is larger than the length of the list?
+                        while(count < number && index < totalElements)
                         {
                             CallTreeNodeBase node = exclusiveList[index];
-                            index++; // Name == Root or Thread? skip, ensure this is happening
+                            index++;
 
-                            // if (node.Name == "CPU_TIME") {
-                            //     Console.WriteLine("CPU_TIME it is");
-                            //     CallerCalleeNode CallerCallee = CT.CallerCallee(node.Name);
-                            //     IList<CallTreeNodeBase> Callers = CallerCallee.Callers;
-                            //     //the data has already been scaled, so comparison can happen between node values
-                            //     //What if all of the nodes' exclusive measures in Callers are greater than everything 
-                            //     //else in the exclusiveList?
-                                    
-
-                            //     //The inclusive scores of the methods that called CPU_TIME are actually their exclusive metrics
-                            //     //because we do not care about CPU_TIME
-                            //     float maxInclusive = 0;
-                            //     CallTreeNodeBase maxInclusiveNode = null;
-                            //     foreach(var methodNode in Callers) 
-                            //     {
-                            //         //methodNode.GetSamples??
-                            //         float currentInclusiveMetric = methodNode.InclusiveMetric;
-                            //         if(currentInclusiveMetric > maxInclusive)
-                            //         {
-                            //             maxInclusive = currentInclusiveMetric;
-                            //             maxInclusiveNode = methodNode;
-                            //         }
-
-                            //     }
-                            //     //check to see what the Exclusive Metric is for the last node in NodesToReport
-                            //         //remembering that NodesToReport could be empty
-                            //     nodesToReport.Add(maxInclusiveNode);
-                            //     count++;
-
-                            // }
                             if (!unwantedMethodNames.Any(node.Name.StartsWith))
                             {
                                 nodesToReport.Add(node);
@@ -127,7 +96,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             index++;
                             if(!unwantedMethodNames.Any(node.Name.Contains))
                             {
-                                //do we want CPU_TIME to be in the top N Inclusive? 
                                 //what names do we not want to be in the top N Inclusive?
                                 nodesToReport.Add(node);
                                 count++;
@@ -172,14 +140,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Arity = new ArgumentArity(0, 1)
             };
         private static int DefaultN() => 5;
-        private static Option topNOption() =>
-            new Option(
+        private static Option topNOption()
+        {
+            return new Option(
                 aliases: new[] {"-n", "--number" },
-                //alias: "-n",
                 description: $"Gives the top N methods in the callstack.")
                 {
                     Argument = new Argument<int>(name: "n", getDefaultValue: DefaultN)
                 };
+        }         
 
         private static bool DefaultIsInclusive => false;
 
