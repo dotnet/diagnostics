@@ -7,6 +7,7 @@ using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
 using System;
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
@@ -120,6 +121,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
             {
+                Trace.TraceError($"Exception displaying module segments: {ex}");
             }
         }
     }
