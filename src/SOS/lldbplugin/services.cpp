@@ -7,6 +7,9 @@
 #include <string.h>
 #include <string>
 #include <dlfcn.h>
+#if defined(__APPLE__)
+#include <mach-o/loader.h>
+#endif
 #include "sosplugin.h"
 #include "arrayholder.h"
 
@@ -1342,29 +1345,31 @@ LLDBServices::GetModuleBase(
 
 ULONG64
 LLDBServices::GetModuleSize(
+    ULONG64 baseAddress,
     /* const */ lldb::SBModule& module)
 {
     ULONG64 size = 0;
-
+#if defined(__APPLE__)
+    mach_header_64 header;
+    ULONG read;
+    HRESULT hr = ReadVirtual(baseAddress, &header, sizeof(mach_header_64), &read) == S_OK;
+    if (SUCCEEDED(hr))
+    {
+	    // Since MachO segments are not contiguous the image size is just the headers/commands
+	    size = sizeof(mach_header_64) + header.sizeofcmds;
+    }
+#else
     // Find the first section with an valid base address
     int numSections = module.GetNumSections();
     for (int si = 0; si < numSections; si++)
     {
         lldb::SBSection section = module.GetSectionAtIndex(si);
-        if (section.IsValid() && section.GetPermissions() != 0)
+        if (section.IsValid())
         {
-#if defined(__APPLE__)
-            // The __LINKEDIT segment contains the raw data used by dynamic linker, such as symbol,
-            // string and relocation table entries. More importantly, the same __LINKEDIT segment
-            // can be shared by multiple modules so we need to skip them to prevent overlapping
-            // module regions.
-            if (strcmp(section.GetName(), "__LINKEDIT") != 0)
-#endif
-            {
-                size += section.GetByteSize();
-            }
+            size += section.GetByteSize();
         }
     }
+#endif
     // For core dumps lldb doesn't return the section sizes when it 
     // doesn't have access to the actual module file, but SOS (like 
     // the SymbolReader code) still needs a non-zero module size.
@@ -1753,7 +1758,7 @@ LLDBServices::LoadNativeSymbols(
                 path.append("/");
                 path.append(filename);
 
-                int moduleSize = GetModuleSize(module);
+                int moduleSize = GetModuleSize(moduleAddress, module);
 
                 callback(&module, path.c_str(), moduleAddress, moduleSize);
             }
@@ -1831,9 +1836,9 @@ HRESULT LLDBServices::GetModuleInfo(
     {
         return E_INVALIDARG;
     }
+    ULONG64 moduleBase = GetModuleBase(target, module);
     if (pBase)
     {
-        ULONG64 moduleBase = GetModuleBase(target, module);
         if (moduleBase == UINT64_MAX)
         {
             return E_INVALIDARG;
@@ -1842,7 +1847,7 @@ HRESULT LLDBServices::GetModuleInfo(
     }
     if (pSize)
     {
-        *pSize = GetModuleSize(module);
+        *pSize = GetModuleSize(moduleBase, module);
     }
     if (pTimestamp)
     {
