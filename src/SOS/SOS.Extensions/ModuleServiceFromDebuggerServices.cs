@@ -99,7 +99,7 @@ namespace SOS.Extensions
                         {
                             if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
                             {
-                                _versionString = _moduleService.GetVersionString(ImageBase, ImageSize);
+                                _versionString = _moduleService.GetVersionString(ImageBase);
                             }
                         }
                     }

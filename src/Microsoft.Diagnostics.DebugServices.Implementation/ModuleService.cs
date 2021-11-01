@@ -518,18 +518,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Returns the ELF module build id or the MachO module uuid
         /// </summary>
         /// <param name="address">module base address</param>
-        /// <param name="size">module size</param>
         /// <returns>build id or null</returns>
-        internal byte[] GetBuildId(ulong address, ulong size)
+        internal byte[] GetBuildId(ulong address)
         {
-            Debug.Assert(size > 0);
-            Stream stream = MemoryService.CreateMemoryStream(address, size);
+            Stream stream = MemoryService.CreateMemoryStream();
             byte[] buildId = null;
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
                     if (elfFile.IsValid())
                     {
                         buildId = elfFile.BuildID;
@@ -537,7 +535,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
@@ -555,16 +553,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Get the version string from a Linux or MacOS image
         /// </summary>
         /// <param name="address">image base</param>
-        /// <param name="size">image size</param>
         /// <returns>version string or null</returns>
-        protected string GetVersionString(ulong address, ulong size)
+        protected string GetVersionString(ulong address)
         {
-            Stream stream = MemoryService.CreateMemoryStream(address, size);
+            Stream stream = MemoryService.CreateMemoryStream();
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
                     if (elfFile.IsValid())
                     {
                         foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
@@ -585,7 +582,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                     if (machOFile.IsValid())
                     {
                         foreach (MachSegmentLoadCommand loadCommand in machOFile.Segments.Select((segment) => segment.LoadCommand))
@@ -594,9 +591,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                (loadCommand.InitProt & VmProtWrite) != 0 && 
                                 loadCommand.SegName.ToString() != "__LINKEDIT")
                             {
-                                ulong loadAddress = loadCommand.VMAddress;
+                                ulong loadAddress = loadCommand.VMAddress + machOFile.PreferredVMBaseAddress;
                                 long loadSize = (long)loadCommand.VMSize;
-                                if (SearchVersionString(address + loadAddress, loadSize, out string productVersion))
+                                if (SearchVersionString(loadAddress, loadSize, out string productVersion))
                                 {
                                     return productVersion;
                                 }
