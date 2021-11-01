@@ -402,17 +402,13 @@ CONVERT
 REPORT
 
     dotnet-trace report [-h|--help]
-                        [-o|--output <output_file_path>]
+
                         <trace_file>
 
     Generate report into stdout from a previously generated trace_file.
 
     -h, --help
         Show command line help, including available report types  
-
-    -o, --output
-        The path where the converted file is written. If unspecified, the file is written in the current directory
-        using the same base filename as the input file and the extension appropriate for the new format.
 
     <trace_file>
         The path to the trace file that will be read to generate the report.
@@ -421,7 +417,7 @@ REPORT
 
         dotnet-trace report topN [-h|--help]
                                  [-n|--number]
-                                 [-i|--inclusive]
+                                 [--inclusive]
                                  <trace_file>
         Generate a report containing the top N methods that were on the stack the longest.
 
@@ -431,19 +427,12 @@ REPORT
         -n, --number
             Number of top methods(methods that have inclusively/exclusively been on the stack the longest) to display in the report
 
-        -i, --inclusive
+        --inclusive
             Output the top n methods based on inclusive time. If not specified, exclusive time is used by default.
 
         Examples:
         > dotnet-trace report topN -n 3 --inclusive ./mytrace.nettrace
-        captured on: Wed Oct 6 12:51:32 2021
-        hostname: msft-coder
-        os release: 11.0
-        dotnet version: 6.0
-        arch: x86_64
-        nrcpus online: 8
-        nrcpus avail: 8
-        total memory: 15401700 kB
+
         Top 3 Functions (Inclusive):
         Function                                   Inclusive       Exclusive
         1. FirstFunction(...) <IL offset etc.>     75% (430,842)   22% (103,436)
