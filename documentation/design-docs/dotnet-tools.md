@@ -408,7 +408,7 @@ REPORT
     Generate report into stdout from a previously generated trace_file.
 
     -h, --help
-        Show command line help, specifically available report types  
+        Show command line help, including available report types  
 
     -o, --output
         The path where the converted file is written. If unspecified, the file is written in the current directory
@@ -426,13 +426,13 @@ REPORT
         Generate a report containing the top N methods that were on the stack the longest.
 
         -h, --help
-            Show arguments to be specified
+            Show command line help;
 
         -n, --number
             Number of top methods(methods that have inclusively/exclusively been on the stack the longest) to display in the report
 
         -i, --inclusive
-            Specifies to find the top n methods inclusively on the stack. Without this tag, will find the top n methods exclusively on the stack
+            Output the top n methods based on inclusive time. If not specified, exclusive time is used by default.
 
         Examples:
         > dotnet-trace report topN -n 3 --inclusive ./mytrace.nettrace
