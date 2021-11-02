@@ -403,14 +403,14 @@ REPORT
 
     dotnet-trace report [-h|--help]
 
-                        <trace_file>
+                        <trace_file_path>
 
-    Generate report into stdout from a previously generated trace_file.
+    Generate report into stdout from a previously generated trace.
 
     -h, --help
         Show command line help, including available report types  
 
-    <trace_file>
+    <trace_file_path>
         The path to the trace file that will be read to generate the report.
 
         TOPN
@@ -418,7 +418,7 @@ REPORT
         dotnet-trace report topN [-h|--help]
                                  [-n|--number]
                                  [--inclusive]
-                                 <trace_file>
+                                 <trace_file_path>
         Generate a report containing the top N methods that were on the stack the longest.
 
         -h, --help
