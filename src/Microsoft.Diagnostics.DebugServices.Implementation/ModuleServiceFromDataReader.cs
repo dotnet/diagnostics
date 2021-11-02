@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         ImmutableArray<byte> buildId = _moduleService._dataReader.GetBuildId(ImageBase);
                         // If the data reader can't get the build id, it returns a empty (instead of default) immutable array.
-                        _buildId = buildId.IsEmpty ? base.BuildId : buildId;
+                        _buildId = buildId.IsDefaultOrEmpty ? base.BuildId : buildId;
                     }
                     return _buildId;
                 }
@@ -122,8 +122,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IDataReader _dataReader;
 
-        public ModuleServiceFromDataReader(ITarget target, IDataReader dataReader)
-            : base(target)
+        public ModuleServiceFromDataReader(ITarget target, IMemoryService rawMemoryService, IDataReader dataReader)
+            : base(target, rawMemoryService)
         {
             _dataReader = dataReader;
         }

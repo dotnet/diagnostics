@@ -133,8 +133,8 @@ namespace SOS.Extensions
 
         private readonly DebuggerServices _debuggerServices;
 
-        internal ModuleServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices)
-            : base(target)
+        internal ModuleServiceFromDebuggerServices(ITarget target, IMemoryService rawMemoryService, DebuggerServices debuggerServices)
+            : base(target, rawMemoryService)
         {
             Debug.Assert(debuggerServices != null);
             _debuggerServices = debuggerServices;

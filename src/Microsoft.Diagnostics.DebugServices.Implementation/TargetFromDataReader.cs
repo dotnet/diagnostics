@@ -47,10 +47,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Add the thread, memory, and module services
+            IMemoryService rawMemoryService = new MemoryServiceFromDataReader(_dataReader);
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDataReader(this, _dataReader));
-            ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, _dataReader));
+            ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, rawMemoryService, _dataReader));
             ServiceProvider.AddServiceFactory<IMemoryService>(() => {
-                IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
+                IMemoryService memoryService = rawMemoryService;
                 if (IsDump)
                 {
                     memoryService = new ImageMappingMemoryService(this, memoryService);

@@ -90,8 +90,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             get
             {
-                GetPEInfo();
-                return (_flags & Flags.IsPEImage) != 0;
+                // For Windows targets, we can always assume that all the modules are PEs.
+                if (Target.OperatingSystem == OSPlatform.Windows)
+                {
+                    return true;
+                }
+                else
+                {
+                    GetPEInfo();
+                    return (_flags & Flags.IsPEImage) != 0;
+                }
             }
         }
 
@@ -172,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (Target.OperatingSystem == OSPlatform.Windows)
             {
-                Stream stream = Target.Services.GetService<IMemoryService>().CreateMemoryStream(ImageBase, ImageSize);
+                Stream stream = ModuleService.RawMemoryService.CreateMemoryStream(ImageBase, ImageSize);
                 PEFile image = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
                 if (image.IsValid())
                 { 
@@ -189,7 +197,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    Stream stream = Target.Services.GetService<IMemoryService>().CreateMemoryStream(ImageBase, ImageSize);
+                    Stream stream = ModuleService.RawMemoryService.CreateMemoryStream(ImageBase, ImageSize);
                     ElfFile elfFile = new(stream, position: ImageBase, leaveOpen: false, isVirtual: true);
                     if (elfFile.Header.IsValid)
                     {
