@@ -24,22 +24,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal static class ReportCommandHandler 
     {
         static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Thread (" , "Process"};
-        //Create an extension function
+
+        //Create an extension function to help 
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
         {
             var ret = new List<CallTreeNodeBase>(callTree.ByID);
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
             return ret;
         }
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
-        private static async Task<int> Report(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
+        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
+        private static async Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
         {
             if (traceFile == null)
             {
                 Console.Error.WriteLine("<traceFile> is required");
                 return await Task.FromResult(-1);
             }
-            
+            else 
+            {
+                return await Task.FromResult(0);
+            }
+
+        }
+        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
+        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
+        {            
             try 
             {
                 string tempNetTraceFilename = traceFile;
@@ -96,12 +105,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             index++;
                             if(!unwantedMethodNames.Any(node.Name.Contains))
                             {
-                                //what names do we not want to be in the top N Inclusive?
                                 nodesToReport.Add(node);
                                 count++;
                             }
                         }
-                        Console.WriteLine("bool IsInclusive: " + inclusive);
                     }
                     foreach(var node in nodesToReport) 
                     {
@@ -129,15 +136,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
                     //Options
                     FileNameArgument(),
-                    topNOption(),
-                    inclusiveOption()
+                    new Command(
+                        name: "topN",
+                        description: "Find top N methods that were on the callstack the longest.")
+                        {
+                            //Handler
+                            HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
+                            topNOption(),
+                            inclusiveOption(),
+                        }
                 };
         private static Argument<string> FileNameArgument() =>
             new Argument<string>("trace_filename")
             {
                 Name = "tracefile",
                 Description = "The file to read trace from to create report.",
-                Arity = new ArgumentArity(0, 1)
+                Arity = new ArgumentArity(1, 1)
             };
         private static int DefaultN() => 5;
         private static Option topNOption()
