@@ -1,23 +1,17 @@
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.StackSources;
 using Diagnostics.Tracing.StackSources;
+using Microsoft.Diagnostics.Tools.Trace.CommandLine;
 
 namespace Microsoft.Diagnostics.Tools.Trace 
 {
@@ -33,22 +27,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ret;
         }
         delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
-        private static async Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
+        private static Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
+        {
+            Console.Error.WriteLine("Error: subcommand was not provided. Available subcommands:");
+            Console.Error.WriteLine("topN: Finds the top N methods on the callstack the longest.");
+            return Task.FromResult(-1);
+        }
+
+        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
+        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
         {
             if (traceFile == null)
             {
                 Console.Error.WriteLine("<traceFile> is required");
                 return await Task.FromResult(-1);
-            }
-            else 
-            {
-                return await Task.FromResult(0);
-            }
-
-        }
-        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
-        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
-        {            
+            }           
             try 
             {
                 string tempNetTraceFilename = traceFile;
@@ -63,7 +56,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         OnlyManagedCodeStacks = true
                     };
-                    //stackSource.DoneAddingSamples();
 
                     var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);
 
@@ -110,10 +102,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             }
                         }
                     }
-                    foreach(var node in nodesToReport) 
-                    {
-                        Console.WriteLine(node.ToString());
-                    }
+                    PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, number);
+                    // foreach(var node in nodesToReport) 
+                    // {
+                    //     Console.WriteLine(node.ToString());
+                    //     node.GetSamples()
+                    // }
                 }
                 return await Task.FromResult(0);
             }
@@ -138,7 +132,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     FileNameArgument(),
                     new Command(
                         name: "topN",
-                        description: "Find top N methods that were on the callstack the longest.")
+                        description: "Finds the top N methods on the callstack the longest.")
                         {
                             //Handler
                             HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
