@@ -10,6 +10,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public sealed class HttpRequestSourceConfiguration : MonitoringSourceConfiguration
     {
+        public HttpRequestSourceConfiguration()
+        {
+            RequestRundown = false;
+        }
+
         private const string DiagnosticFilterString =
                 "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
                     "Request.Scheme" +
