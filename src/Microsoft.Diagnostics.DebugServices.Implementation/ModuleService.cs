@@ -39,6 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         const uint VmProtWrite = 0x02;
 
         internal protected readonly ITarget Target;
+        internal protected IMemoryService RawMemoryService;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -48,10 +49,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
 
-        public ModuleService(ITarget target)
+        public ModuleService(ITarget target, IMemoryService rawMemoryService)
         {
             Debug.Assert(target != null);
             Target = target;
+            RawMemoryService = rawMemoryService;
 
             target.OnFlushEvent.Register(() => {
                 _versionCache?.Clear();
@@ -118,7 +120,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>module or null</returns>
         IModule IModuleService.GetModuleFromAddress(ulong address)
         {
-            Debug.Assert((address & ~MemoryService.SignExtensionMask()) == 0);
+            Debug.Assert((address & ~RawMemoryService.SignExtensionMask()) == 0);
             IModule[] modules = GetSortedModules();
             int min = 0, max = modules.Length - 1;
 
@@ -129,7 +131,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IModule module = modules[mid];
 
                 ulong start = module.ImageBase;
-                Debug.Assert((start & ~MemoryService.SignExtensionMask()) == 0);
+                Debug.Assert((start & ~RawMemoryService.SignExtensionMask()) == 0);
                 ulong end = start + module.ImageSize;
 
                 if (address >= start && address < end) {
@@ -238,7 +240,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>PEImage instance or null</returns>
         private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
         {
-            Stream stream = MemoryService.CreateMemoryStream(address, size);
+            Stream stream = RawMemoryService.CreateMemoryStream(address, size);
             try
             {
                 stream.Position = 0;
@@ -521,7 +523,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>build id or null</returns>
         internal byte[] GetBuildId(ulong address)
         {
-            Stream stream = MemoryService.CreateMemoryStream();
+            Stream stream = RawMemoryService.CreateMemoryStream();
             byte[] buildId = null;
             try
             {
@@ -556,7 +558,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>version string or null</returns>
         protected string GetVersionString(ulong address)
         {
-            Stream stream = MemoryService.CreateMemoryStream();
+            Stream stream = RawMemoryService.CreateMemoryStream();
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
@@ -566,7 +568,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
                         {
-                            uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
+                            uint flags = RawMemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
                             if (programHeader.Type == ELFProgramHeaderType.Load &&
                                (flags & (uint)ELFProgramHeaderAttributes.Writable) != 0)
                             {
@@ -625,7 +627,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             byte[] buffer = new byte[s_versionString.Length];
 
             if (_versionCache == null) {
-                _versionCache = new ReadVirtualCache(MemoryService);
+                // We use the possibly mapped memory service to find the version string in case it isn't in the dump.
+                _versionCache = new ReadVirtualCache(Target.Services.GetService<IMemoryService>());
             }
             _versionCache.Clear();
 
@@ -687,11 +690,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-        }
+        } 
 
-        protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
+        internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
 
-        protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         /// <summary>
         /// Search memory helper class
