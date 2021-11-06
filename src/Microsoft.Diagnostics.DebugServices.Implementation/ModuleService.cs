@@ -40,6 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         internal protected readonly ITarget Target;
         internal protected IMemoryService RawMemoryService;
+        private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
         private Dictionary<ulong, IModule> _modules;
@@ -689,9 +690,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-        }
+        } 
 
-        protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
+
+        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         /// <summary>
         /// Search memory helper class

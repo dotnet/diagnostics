@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (Target.OperatingSystem == OSPlatform.Windows)
             {
-                Stream stream = ModuleService.RawMemoryService.CreateMemoryStream(ImageBase, ImageSize);
+                Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
                 PEFile image = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
                 if (image.IsValid())
                 { 
@@ -197,7 +197,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    Stream stream = ModuleService.RawMemoryService.CreateMemoryStream(ImageBase, ImageSize);
+                    Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
                     ElfFile elfFile = new(stream, position: ImageBase, leaveOpen: false, isVirtual: true);
                     if (elfFile.Header.IsValid)
                     {
