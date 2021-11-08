@@ -30,22 +30,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
         {
             Console.Error.WriteLine("Error: subcommand was not provided. Available subcommands:");
-            Console.Error.WriteLine("topN: Finds the top N methods on the callstack the longest.");
+            Console.Error.WriteLine("    topN: Finds the top N methods on the callstack the longest.");
             return Task.FromResult(-1);
         }
 
         delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
         private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
-        {
-            if (traceFile == null)
-            {
-                Console.Error.WriteLine("<traceFile> is required");
-                return await Task.FromResult(-1);
-            }           
+        {          
             try 
             {
-                string tempNetTraceFilename = traceFile;
-                string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
+                string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(traceFile);
                 int count = 0;
                 int index = 0;
                 List<CallTreeNodeBase> nodesToReport = new List<CallTreeNodeBase>();
@@ -63,37 +57,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     FilterParams filterParams = new FilterParams()
                     {
-                        ExcludeRegExs = "CPU_TIME"
+                        ExcludeRegExs = "CPU_TIME",
                     };
                     FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
                     CallTree callTree = new(ScalingPolicyKind.ScaleToData);
                     callTree.StackSource = filterStack;
 
-                    
+                    List<CallTreeNodeBase> callTreeNodes = null;
                     //find the top n Exclusive methods
                     if(!inclusive)
                     {
-                        var exclusiveList = callTree.ByIDSortedExclusiveMetric();
-                        int totalElements = exclusiveList.Count;
-                        while(count < number && index < totalElements)
-                        {
-                            CallTreeNodeBase node = exclusiveList[index];
-                            index++;
-
-                            if (!unwantedMethodNames.Any(node.Name.StartsWith))
-                            {
-                                nodesToReport.Add(node);
-                                count++;
-                            } 
-                        }
+                        callTreeNodes = callTree.ByIDSortedExclusiveMetric();
                     }
                     else //Find the top N Inclusive methods
                     {
-                        var InclusiveList = callTree.ByIDSortedInclusiveMetric();
-                        int totalElements = InclusiveList.Count;
+                        callTreeNodes = callTree.ByIDSortedInclusiveMetric();
+                    }
+                    int totalElements = callTreeNodes.Count;
                         while(count < number && index < totalElements)
                         {
-                            CallTreeNodeBase node = InclusiveList[index];
+                            CallTreeNodeBase node = callTreeNodes[index];
                             index++;
                             if(!unwantedMethodNames.Any(node.Name.Contains))
                             {
@@ -101,13 +84,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 count++;
                             }
                         }
-                    }
+
                     PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, number);
-                    // foreach(var node in nodesToReport) 
-                    // {
-                    //     Console.WriteLine(node.ToString());
-                    //     node.GetSamples()
-                    // }
                 }
                 return await Task.FromResult(0);
             }
@@ -115,10 +93,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
             }
-            // finally 
-            // {
-            //     
-            // }
+
             return await Task.FromResult(0);
         }
         public static Command ReportCommand() =>
@@ -136,19 +111,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             //Handler
                             HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
-                            topNOption(),
-                            inclusiveOption(),
+                            TopNOption(),
+                            InclusiveOption(),
                         }
                 };
         private static Argument<string> FileNameArgument() =>
             new Argument<string>("trace_filename")
             {
                 Name = "tracefile",
-                Description = "The file to read trace from to create report.",
+                Description = "The file path for the trace being analyzed.",
                 Arity = new ArgumentArity(1, 1)
             };
         private static int DefaultN() => 5;
-        private static Option topNOption()
+        private static Option TopNOption()
         {
             return new Option(
                 aliases: new[] {"-n", "--number" },
@@ -160,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static bool DefaultIsInclusive => false;
 
-        private static Option inclusiveOption() =>
+        private static Option InclusiveOption() =>
             new Option(
                 aliases: new[] { "--inclusive" },
                 description: $"Output the topN methods based on inclusive time. If not specified, exclusive time is used by default")

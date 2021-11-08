@@ -26,7 +26,8 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 
         internal static void TopNWriteToStdOut(List<CallTreeNodeBase> nodesToReport, bool isInclusive, int n) 
         {
-            List<int> width= new List<int>() {70, 20};
+            const int functionColumnWidth = 70;
+            const int measureColumnWidth = 20;
             string measureType = null;
             if (isInclusive)
             {
@@ -38,13 +39,13 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
 
             string header = "Top " + n.ToString() + " Functions (" + measureType + ")";
-            string uniformHeader = MakeFixedWidth(header, width[0]+7);
+            string uniformHeader = MakeFixedWidth(header, functionColumnWidth+7);
 
             string inclusive = "Inclusive";
-            string uniformInclusive = MakeFixedWidth(inclusive, width[1]);
+            string uniformInclusive = MakeFixedWidth(inclusive, measureColumnWidth);
 
             string exclusive = "Exclusive";
-            string uniformExclusive = MakeFixedWidth(exclusive, width[1]);
+            string uniformExclusive = MakeFixedWidth(exclusive, measureColumnWidth);
             Console.WriteLine(uniformHeader + uniformInclusive + uniformExclusive);
 
 
@@ -52,13 +53,13 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             {
                 CallTreeNodeBase node = nodesToReport[i];
                 string name = node.Name;
-                string uniformName = MakeFixedWidth(name, width[0]);
+                string uniformName = MakeFixedWidth(name, functionColumnWidth);
 
                 double inclusiveMeasure = Math.Round(node.InclusiveMetricPercent, 2);
-                string uniformIMeasure = MakeFixedWidth(inclusiveMeasure.ToString() + "%", width[1]).PadLeft(width[1]+4);
-
+                string uniformIMeasure = MakeFixedWidth(inclusiveMeasure.ToString() + "%", measureColumnWidth).PadLeft(measureColumnWidth+4);
+                // Console.WriteLine("Inclusive Count is " + node.InclusiveCount);
                 double exclusiveMeasure = Math.Round(node.ExclusiveMetricPercent, 2);
-                string uniformEMeasure = MakeFixedWidth(exclusiveMeasure.ToString() + "%", width[1]);
+                string uniformEMeasure = MakeFixedWidth(exclusiveMeasure.ToString() + "%",measureColumnWidth);
 
                 Console.WriteLine($"{i+1}. " + uniformName + uniformIMeasure + uniformEMeasure);
                 
