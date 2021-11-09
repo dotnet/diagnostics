@@ -12,12 +12,13 @@ using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Diagnostics.Tracing;
 using Diagnostics.Tracing.StackSources;
 using Microsoft.Diagnostics.Tools.Trace.CommandLine;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.Trace 
 {
     internal static class ReportCommandHandler 
     {
-        static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Thread (" , "Process"};
+        //static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Thread (" , "Process"};
 
         //Create an extension function to help 
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
@@ -57,7 +58,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     FilterParams filterParams = new FilterParams()
                     {
-                        ExcludeRegExs = "CPU_TIME",
+                        ExcludeRegExs = "CPU_TIME;Thread (;"
+                        //ExcludeRegExs = ""
+                        //ExcludeRegExs = "CPU_TIME"
                     };
                     FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
                     CallTree callTree = new(ScalingPolicyKind.ScaleToData);
@@ -78,11 +81,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             CallTreeNodeBase node = callTreeNodes[index];
                             index++;
-                            if(!unwantedMethodNames.Any(node.Name.Contains))
-                            {
-                                nodesToReport.Add(node);
-                                count++;
-                            }
+                            nodesToReport.Add(node);
+                            Console.WriteLine(node.Name);
+                            count++;
+                            // if(!unwantedMethodNames.Any(node.Name.Contains))
+                            // {
+                            //     nodesToReport.Add(node);
+                            //     count++;
+                            // }
                         }
 
                     PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, number);
