@@ -12,7 +12,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         public HttpRequestSourceConfiguration()
         {
-            RequestRundown = false;
+            //CONSIDER removing rundown for this scenario.
+            RequestRundown = true;
         }
 
         private const string DiagnosticFilterString =
