@@ -441,7 +441,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
             ExtOut("LoadSymbols GetClrModuleImages FAILED 0x%08x\n", hr);
             return hr;
         }
-        if (!HasPortablePDB(moduleBase))
+        if (GetSymbolService() == nullptr || !HasPortablePDB(moduleBase))
         {
             hr = LoadSymbolsForWindowsPDB(pMD, moduleBase, pModuleName, FALSE);
             if (SUCCEEDED(hr))
@@ -456,9 +456,9 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
     }
 
 #ifndef FEATURE_PAL
-    // TODO: in-memory windows PDB not supported
-    if (!HasPortablePDB(moduleData.LoadedPEAddress))
+    if (GetSymbolService() == nullptr || !HasPortablePDB(moduleData.LoadedPEAddress))
     {
+	    // TODO: in-memory windows PDB not supported
         hr = LoadSymbolsForWindowsPDB(pMD, moduleData.LoadedPEAddress, pModuleName, moduleData.IsFileLayout);
         if (SUCCEEDED(hr))
         {
