@@ -112,7 +112,7 @@ dotnet_diagnostic.CA1046.severity = none
 dotnet_diagnostic.CA1047.severity = warning
 
 # CA1050: Declare types in namespaces
-dotnet_diagnostic.CA1050.severity = warning
+dotnet_diagnostic.CA1050.severity = suggestion
 
 # CA1051: Do not declare visible instance fields
 dotnet_diagnostic.CA1051.severity = none
@@ -345,7 +345,7 @@ dotnet_diagnostic.CA1833.severity = warning
 dotnet_diagnostic.CA1834.severity = warning
 
 # CA1835: Prefer the 'Memory'-based overloads for 'ReadAsync' and 'WriteAsync'
-dotnet_diagnostic.CA1835.severity = warning
+dotnet_diagnostic.CA1835.severity = suggestion
 
 # CA1836: Prefer IsEmpty over Count
 dotnet_diagnostic.CA1836.severity = warning
@@ -372,7 +372,7 @@ dotnet_diagnostic.CA1842.severity = warning
 dotnet_diagnostic.CA1843.severity = warning
 
 # CA1844: Provide memory-based overrides of async methods when subclassing 'Stream'
-dotnet_diagnostic.CA1844.severity = warning
+dotnet_diagnostic.CA1844.severity = suggestion
 
 # CA1845: Use span-based 'string.Concat'
 dotnet_diagnostic.CA1845.severity = warning
@@ -393,10 +393,10 @@ dotnet_diagnostic.CA2000.severity = none
 dotnet_diagnostic.CA2002.severity = none
 
 # CA2007: Consider calling ConfigureAwait on the awaited task
-dotnet_diagnostic.CA2007.severity = warning
+dotnet_diagnostic.CA2007.severity = suggestion
 
 # CA2008: Do not create tasks without passing a TaskScheduler
-dotnet_diagnostic.CA2008.severity = warning
+dotnet_diagnostic.CA2008.severity = suggestion
 
 # CA2009: Do not call ToImmutableCollection on an ImmutableCollection value
 dotnet_diagnostic.CA2009.severity = warning
