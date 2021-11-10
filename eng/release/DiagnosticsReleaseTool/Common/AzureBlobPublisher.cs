@@ -1,4 +1,6 @@
-using Azure;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -80,7 +82,7 @@ namespace ReleaseTool.Core
         {
         }
 
-        public async Task<string> PublishFileAsync(FileMapping fileMap, CancellationToken ct)
+        public async Task<string> PublishFileAsync(FileMapping fileData, CancellationToken ct)
         {
             Uri result = null;
             int retriesLeft = MaxFullLoopRetries;
@@ -89,21 +91,21 @@ namespace ReleaseTool.Core
 
             do
             {
-                _logger.LogInformation($"Attempting to publish {fileMap.RelativeOutputPath}, {retriesLeft} tries left.");
+                _logger.LogInformation($"Attempting to publish {fileData.RelativeOutputPath}, {retriesLeft} tries left.");
                 try
                 {
-                    BlobContainerClient client = await GetClient(ct);
+                    BlobContainerClient client = await GetClient(ct).ConfigureAwait(false);
                     if (client == null)
                     {
                         // client creation failed, return
                         return null;
                     }
 
-                    using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
+                    using var srcStream = new FileStream(fileData.LocalSourcePath, FileMode.Open, FileAccess.Read);
 
-                    BlobClient blobClient = client.GetBlobClient(GetBlobName(_releaseName, fileMap.RelativeOutputPath));
+                    BlobClient blobClient = client.GetBlobClient(GetBlobName(_releaseName, fileData.RelativeOutputPath));
 
-                    await blobClient.UploadAsync(srcStream, overwrite: true, ct);
+                    await blobClient.UploadAsync(srcStream, overwrite: true, ct).ConfigureAwait(false);
 
                     BlobSasBuilder sasBuilder = new BlobSasBuilder()
                     {
@@ -114,15 +116,15 @@ namespace ReleaseTool.Core
                     };
                     Uri accessUri = blobClient.GenerateSasUri(sasBuilder);
 
-                    using BlobDownloadStreamingResult blobStream = (await blobClient.DownloadStreamingAsync(cancellationToken: ct)).Value;
+                    using BlobDownloadStreamingResult blobStream = (await blobClient.DownloadStreamingAsync(cancellationToken: ct).ConfigureAwait(false)).Value;
                     srcStream.Position = 0;
-                    completed = await VerifyFileStreamsMatchAsync(srcStream, blobStream, ct);
+                    completed = await VerifyFileStreamsMatchAsync(srcStream, blobStream, ct).ConfigureAwait(false);
 
                     result = accessUri;
                 }
-                catch (IOException ioEx) when (!(ioEx is PathTooLongException))
+                catch (IOException ioEx) when (ioEx is not PathTooLongException)
                 {
-                    _logger.LogWarning(ioEx, $"Failed to publish {fileMap.LocalSourcePath}, retries remaining: {retriesLeft}.");
+                    _logger.LogWarning(ioEx, $"Failed to publish {fileData.LocalSourcePath}, retries remaining: {retriesLeft}.");
 
                     /* Retry IO exceptions */
                     retriesLeft--;
@@ -130,13 +132,13 @@ namespace ReleaseTool.Core
 
                     if (retriesLeft > 0)
                     {
-                        await Task.Delay(loopDelay, ct);
+                        await Task.Delay(loopDelay, ct).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex)
                 {
                     // Azure errors have their own built-in retry logic, so just abort if we got an AzureResponseException
-                    _logger.LogWarning(ex, $"Failed to publish {fileMap.LocalSourcePath}, unexpected error, aborting.");
+                    _logger.LogWarning(ex, $"Failed to publish {fileData.LocalSourcePath}, unexpected error, aborting.");
                     return null;
                 }
             } while (retriesLeft > 0 && !completed);
@@ -163,9 +165,9 @@ namespace ReleaseTool.Core
                     try
                     {
                         newClient = serviceClient.GetBlobContainerClient(_containerName);
-                        if (!(await newClient.ExistsAsync(ct)).Value)
+                        if (!(await newClient.ExistsAsync(ct).ConfigureAwait(false)).Value)
                         {
-                            newClient = (await serviceClient.CreateBlobContainerAsync(_containerName, PublicAccessType.None, metadata: null, ct));
+                            newClient = (await serviceClient.CreateBlobContainerAsync(_containerName, PublicAccessType.None, metadata: null, ct).ConfigureAwait(false));
                         }
                     }
                     catch (Exception ex)
@@ -191,7 +193,7 @@ namespace ReleaseTool.Core
                             }
                         };
                         _logger.LogInformation($"Writing download access policy: {AccessPolicyDownloadId} to {_containerName}.");
-                        await newClient.SetAccessPolicyAsync(PublicAccessType.None, new BlobSignedIdentifier[] { downloadPolicyIdentifier }, cancellationToken: ct);
+                        await newClient.SetAccessPolicyAsync(PublicAccessType.None, new BlobSignedIdentifier[] { downloadPolicyIdentifier }, cancellationToken: ct).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -232,9 +234,9 @@ namespace ReleaseTool.Core
 
             while (bytesProcessed != srcStream.Length)
             {
-                int srcBytesRead = await srcStream.ReadAsync(memSrc.Slice(srcBytesRemainingFromPrevRead), ct);
+                int srcBytesRead = await srcStream.ReadAsync(memSrc.Slice(srcBytesRemainingFromPrevRead), ct).ConfigureAwait(false);
                 srcBytesRead += srcBytesRemainingFromPrevRead;
-                int destBytesRead = await destStream.ReadAsync(memDest.Slice(destBytesRemainingFromPrevRead), ct);
+                int destBytesRead = await destStream.ReadAsync(memDest.Slice(destBytesRemainingFromPrevRead), ct).ConfigureAwait(false);
                 destBytesRead += destBytesRemainingFromPrevRead;
 
                 int bytesToCompare = Math.Min(srcBytesRead, destBytesRead);

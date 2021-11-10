@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -62,7 +65,7 @@ namespace DiagnosticsReleaseTool.Impl
             writer.WritePropertyName(DiagnosticsRepoHelpers.BundledToolsCategory);
             writer.WriteStartArray();
 
-            IEnumerable<FileReleaseData> bundledTools = 
+            IEnumerable<FileReleaseData> bundledTools =
                 filesProcessed.Where(
                     file => file.FileMetadata.AssetCategory == DiagnosticsRepoHelpers.BundledToolsCategory);
 
@@ -151,7 +154,7 @@ namespace DiagnosticsReleaseTool.Impl
             using var hash = System.Security.Cryptography.SHA256.Create();
             var enc = System.Text.Encoding.UTF8;
             byte[] hashResult = hash.ComputeHash(enc.GetBytes(fileToRelease.FileMap.RelativeOutputPath));
-            string pathHash = BitConverter.ToString(hashResult).Replace("-", String.Empty);
+            string pathHash = BitConverter.ToString(hashResult).Replace("-", string.Empty);
 
             return $"{_productReleaseMetadata.ReleaseVersion}/{pathHash}/{fi.Name}";
         }
@@ -168,13 +171,14 @@ namespace DiagnosticsReleaseTool.Impl
             MatchCollection results = s_akaMsMetadataMatcher.Matches(linkSchema);
             foreach (Match match in results)
             {
-                if(!match.Groups.TryGetValue("metadata", out Group metadataGroup))
+                if (!match.Groups.TryGetValue("metadata", out Group metadataGroup))
                 {
                     // Give up if the capturing failed
                     return null;
                 }
 
-                string metadataValue = metadataGroup.Value switch {
+                string metadataValue = metadataGroup.Value switch
+                {
                     "FileName" => fi.Name,
                     "FileNameNoExt" => Path.GetFileNameWithoutExtension(fi.Name),
                     "Rid" => fileToRelease.FileMetadata.Rid,
@@ -195,7 +199,7 @@ namespace DiagnosticsReleaseTool.Impl
                 }
             }
 
-            if (Uri.TryCreate(link, UriKind.Absolute, out Uri uriResult) 
+            if (Uri.TryCreate(link, UriKind.Absolute, out Uri uriResult)
                 && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
             {
                 return link;
@@ -209,7 +213,7 @@ namespace DiagnosticsReleaseTool.Impl
             // There's no way to obtain the json DOM for an object...
             byte[] metadataJsonObj = JsonSerializer.SerializeToUtf8Bytes<ReleaseMetadata>(_productReleaseMetadata);
             JsonDocument metadataDoc = JsonDocument.Parse(metadataJsonObj);
-            foreach(var element in metadataDoc.RootElement.EnumerateObject())
+            foreach (var element in metadataDoc.RootElement.EnumerateObject())
             {
                 element.WriteTo(writer);
             }

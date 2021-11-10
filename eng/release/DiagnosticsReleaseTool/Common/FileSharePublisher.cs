@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Buffers;
 using System.IO;
@@ -20,11 +23,11 @@ namespace ReleaseTool.Core
 
         public void Dispose() { }
 
-        public async Task<string> PublishFileAsync(FileMapping fileMap, CancellationToken ct)
+        public async Task<string> PublishFileAsync(FileMapping fileData, CancellationToken ct)
         {
             // TODO: Be resilient to "can't cancel case".
-            string destinationUri = Path.Combine(_sharePath, fileMap.RelativeOutputPath);
-            FileInfo fi = null;
+            string destinationUri = Path.Combine(_sharePath, fileData.RelativeOutputPath);
+            FileInfo fi;
 
             try
             {
@@ -58,20 +61,20 @@ namespace ReleaseTool.Core
 
             do
             {
-                await Task.Delay(delay, ct);
+                await Task.Delay(delay, ct).ConfigureAwait(false);
 
                 try
                 {
-                    using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
+                    using var srcStream = new FileStream(fileData.LocalSourcePath, FileMode.Open, FileAccess.Read);
                     using var destStream = new FileStream(destinationUri, FileMode.Create, FileAccess.ReadWrite);
-                    await srcStream.CopyToAsync(destStream, ct);
+                    await srcStream.CopyToAsync(destStream, ct).ConfigureAwait(false);
 
                     destStream.Position = 0;
                     srcStream.Position = 0;
 
-                    completed = await VerifyFileStreamsMatchAsync(srcStream, destStream, ct);
+                    completed = await VerifyFileStreamsMatchAsync(srcStream, destStream, ct).ConfigureAwait(false);
                 }
-                catch (IOException ex) when (!(ex is PathTooLongException || ex is FileNotFoundException || ex is DirectoryNotFoundException))
+                catch (IOException ex) when (ex is not (PathTooLongException or FileNotFoundException or DirectoryNotFoundException))
                 {
                     /* Retry IO exceptions */
                 }
@@ -105,9 +108,9 @@ namespace ReleaseTool.Core
 
             while (bytesProcessed != srcStream.Length)
             {
-                int srcBytesRead = await srcStream.ReadAsync(memSrc.Slice(srcBytesRemainingFromPrevRead), ct);
+                int srcBytesRead = await srcStream.ReadAsync(memSrc.Slice(srcBytesRemainingFromPrevRead), ct).ConfigureAwait(false);
                 srcBytesRead += srcBytesRemainingFromPrevRead;
-                int destBytesRead = await destStream.ReadAsync(memDest.Slice(destBytesRemainingFromPrevRead), ct);
+                int destBytesRead = await destStream.ReadAsync(memDest.Slice(destBytesRemainingFromPrevRead), ct).ConfigureAwait(false);
                 destBytesRead += destBytesRemainingFromPrevRead;
 
                 int bytesToCompare = Math.Min(srcBytesRead, destBytesRead);

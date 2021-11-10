@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -11,11 +14,12 @@ using Microsoft.Extensions.Logging;
 
 namespace DiagnosticsReleaseTool.Impl
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1052:Static holder types should be Static or NotInheritable", Justification = "The logger is currently using this class as a generic parameter.")]
     internal class DiagnosticsReleaseRunner
     {
         internal const string ManifestName = "publishManifest.json";
 
-        internal async static Task<int> PrepareRelease(Config releaseConfig, bool verbose, CancellationToken ct)
+        internal static async Task<int> PrepareRelease(Config releaseConfig, bool verbose, CancellationToken ct)
         {
             // TODO: This will throw if invalid drop path is given.
             var darcLayoutHelper = new DarcHelpers(releaseConfig.DropPath);
@@ -62,16 +66,16 @@ namespace DiagnosticsReleaseTool.Impl
 
             diagnosticsRelease.UseLogger(logger);
 
-            return await diagnosticsRelease.RunAsync(ct);
+            return await diagnosticsRelease.RunAsync(ct).ConfigureAwait(false);
         }
 
         private static ILogger GetDiagLogger(bool verbose)
         {
-            var loggingConfiguration = new ConfigurationBuilder()
+            IConfigurationRoot loggingConfiguration = new ConfigurationBuilder()
                 .AddJsonFile("logging.json", optional: false, reloadOnChange: false)
                 .Build();
 
-            using var loggerFactory = LoggerFactory.Create(builder =>
+            using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConfiguration(loggingConfiguration.GetSection("Logging"))
                     .AddConsole();

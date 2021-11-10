@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Generic;
 
 namespace ReleaseTool.Core
@@ -22,6 +25,6 @@ namespace ReleaseTool.Core
                                                 ? fileLayoutDataEnumerable
                                                 : System.Linq.Enumerable.Empty<(FileMapping, FileMetadata)>();
         }
-        public LayoutWorkerResult(LayoutResultStatus status) : this(status, null) {}
+        public LayoutWorkerResult(LayoutResultStatus status) : this(status, null) { }
     }
 }

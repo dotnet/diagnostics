@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,7 +24,7 @@ namespace ReleaseTool.Core
         private readonly List<FileReleaseData> _filesToRelease;
         private ILogger _logger;
 
-        public Release(DirectoryInfo productBuildPath, 
+        public Release(DirectoryInfo productBuildPath,
             List<ILayoutWorker> layoutWorkers, List<IReleaseVerifier> verifiers,
             IPublisher publisher, IManifestGenerator manifestGenerator, string manifestSavePath)
         {
@@ -68,7 +71,7 @@ namespace ReleaseTool.Core
             int unusedFiles = 0;
             try
             {
-                unusedFiles = await LayoutFilesAsync(ct);
+                unusedFiles = await LayoutFilesAsync(ct).ConfigureAwait(false);
 
                 // TODO: Implement switch to ignore files that are not used as option.
                 if (unusedFiles != 0)
@@ -79,32 +82,32 @@ namespace ReleaseTool.Core
 
                 // TODO: Verification
 
-                unusedFiles = await PublishFiles(ct);
+                unusedFiles = await PublishFiles(ct).ConfigureAwait(false);
                 if (unusedFiles != 0)
                 {
                     _logger.LogError("{unusedFiles} files were not published.", unusedFiles);
                     return unusedFiles;
                 }
 
-                return await GenerateAndPublishManifestAsync(ct);
+                return await GenerateAndPublishManifestAsync(ct).ConfigureAwait(false);
             }
             catch (TaskCanceledException)
             {
-               _logger.LogError("Cancellation issued.");
+                _logger.LogError("Cancellation issued.");
                 return -1;
             }
             catch (AggregateException agEx)
             {
-               _logger.LogError("Aggregate Exception");
+                _logger.LogError("Aggregate Exception");
 
                 foreach (var ex in agEx.InnerExceptions)
-                   _logger.LogError(ex, "Inner Exception");
+                    _logger.LogError(ex, "Inner Exception");
 
                 return -1;
             }
             catch (Exception ex)
             {
-               _logger.LogError(ex, "Exception");
+                _logger.LogError(ex, "Exception");
                 return -1;
             }
         }
@@ -121,7 +124,7 @@ namespace ReleaseTool.Core
 
             using (FileStream fs = fi.Open(FileMode.Create, FileAccess.Write))
             {
-                await manifestStream.CopyToAsync(fs, ct);
+                await manifestStream.CopyToAsync(fs, ct).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Manifest saved to {_manifestSavePath}", _manifestSavePath);
@@ -130,7 +133,7 @@ namespace ReleaseTool.Core
             string manifestPublishPath = await _publisher.PublishFileAsync(
                 new FileMapping(_manifestSavePath, fi.Name),
                 ct
-            );
+            ).ConfigureAwait(false);
 
             if (manifestPublishPath is null)
             {
@@ -160,7 +163,7 @@ namespace ReleaseTool.Core
 
                 string sourcePath = releaseData.FileMap.LocalSourcePath;
                 string relOutputPath = releaseData.FileMap.RelativeOutputPath;
-                string publishUri = await _publisher.PublishFileAsync(releaseData.FileMap, ct);
+                string publishUri = await _publisher.PublishFileAsync(releaseData.FileMap, ct).ConfigureAwait(false);
                 if (publishUri is null)
                 {
                     _logger.LogWarning("Failed to publish {sourcePath}", sourcePath);
@@ -188,7 +191,7 @@ namespace ReleaseTool.Core
             // TODO: Make this parallel using Task.Run + semaphore to batch process files. Need to make collections concurrent or have single
             //       queue to aggregate results.
             // TODO: The file enumeration should have the possibility to inject a custom enumerator. Useful in case there's only subsets of files.
-            //       For example, shipping only files. 
+            //       For example, shipping only files.
             foreach (FileInfo file in _productBuildPath.EnumerateFiles("*", SearchOption.AllDirectories))
             {
                 bool isProcessed = false;
@@ -201,7 +204,7 @@ namespace ReleaseTool.Core
                     }
 
                     // Do we want to parallelize the number of workers?
-                    LayoutWorkerResult layoutResult = await worker.HandleFileAsync(file, ct);
+                    LayoutWorkerResult layoutResult = await worker.HandleFileAsync(file, ct).ConfigureAwait(false);
 
                     if (layoutResult.Status == LayoutResultStatus.Error)
                     {
@@ -249,10 +252,10 @@ namespace ReleaseTool.Core
 
         public void Dispose()
         {
-            foreach(ILayoutWorker lw in _layoutWorkers)
+            foreach (ILayoutWorker lw in _layoutWorkers)
                 lw.Dispose();
 
-            foreach(IReleaseVerifier rv in _verifiers)
+            foreach (IReleaseVerifier rv in _verifiers)
                 rv.Dispose();
 
             _publisher.Dispose();

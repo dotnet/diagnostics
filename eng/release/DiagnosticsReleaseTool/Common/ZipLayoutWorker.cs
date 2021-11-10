@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -43,17 +46,19 @@ namespace ReleaseTool.Core
 
             DirectoryInfo unzipDirInfo = null;
 
-            try {
-                do {
+            try
+            {
+                do
+                {
                     string tempUnzipPath = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
                     unzipDirInfo = new DirectoryInfo(tempUnzipPath);
-                } while(unzipDirInfo.Exists);
+                } while (unzipDirInfo.Exists);
 
                 unzipDirInfo.Create();
                 // TODO: Do we really want to block because of unzipping. We could use ZipArchive.
                 System.IO.Compression.ZipFile.ExtractToDirectory(file.FullName, unzipDirInfo.FullName);
             }
-            catch(Exception ex) when (ex is IOException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException || ex is System.Security.SecurityException)
             {
                 return new LayoutWorkerResult(LayoutResultStatus.Error);
             }
@@ -78,7 +83,7 @@ namespace ReleaseTool.Core
                     using (FileStream srcStream = new FileStream(extractedFile.FullName, FileMode.Open, FileAccess.Read))
                     using (FileStream destStream = new FileStream(localPath, FileMode.Create, FileAccess.Write))
                     {
-                        await srcStream.CopyToAsync(destStream, ct);
+                        await srcStream.CopyToAsync(destStream, ct).ConfigureAwait(false);
                     }
                 }
 
