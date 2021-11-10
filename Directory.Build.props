@@ -17,4 +17,15 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <_srcDir>$([MSBuild]::NormalizeDirectory($(RepoRoot)src/)</_srcDir>
+    <_testDir>$([MSBuild]::NormalizeDirectory($(RepoRoot)src/test)</_testDir>
+
+    <IsTestProject Condition="'$(IsTestProject)' == ''">false</IsTestProject>
+    <IsTestProject Condition="$(MSBuildProjectName.ToLower().EndsWith('.unittests')) or $(MSBuildProjectName.ToLower().EndsWith('.tests'))">true</IsTestProject>
+    <IsTestProject Condition="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)').StartsWith('$(_testDir)'))">true</IsTestProject>
+    <IsSourceProject Condition="'$(IsSourceProject)' == '' and '$(IsTestProject)' != 'true' and  !$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)').StartsWith('$(_testDir)'))">true</IsSourceProject>
+  </PropertyGroup>
+
 </Project>
