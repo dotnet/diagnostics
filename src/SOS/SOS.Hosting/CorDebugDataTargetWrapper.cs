@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -90,7 +89,7 @@ namespace SOS.Hosting
                     default:
                         return HResult.E_FAIL;
                 }
-            } 
+            }
             else if (_target.OperatingSystem == OSPlatform.Linux || _target.OperatingSystem == OSPlatform.OSX)
             {
                 switch (_target.Architecture)
@@ -174,7 +173,8 @@ namespace SOS.Hosting
         {
             try
             {
-                if (_threadUnwindService == null) {
+                if (_threadUnwindService == null)
+                {
                     return HResult.E_NOTIMPL;
                 }
                 return _threadUnwindService.Unwind(threadId, contextSize, context);

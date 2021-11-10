@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -26,7 +25,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
         {
             if (string.IsNullOrWhiteSpace(outputFilename))
+            {
                 outputFilename = fileToConvert;
+            }
 
             outputFilename = Path.ChangeExtension(outputFilename, TraceFileFormatExtensions[format]);
             Console.Out.WriteLine($"Writing:\t{outputFilename}");
@@ -63,9 +64,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError=false)
+        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError = false)
         {
-            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
+            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError });
             using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
             using (var eventLog = new TraceLog(etlxFilePath))
             {

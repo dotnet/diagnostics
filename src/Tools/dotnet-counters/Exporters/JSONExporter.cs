@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Globalization;
@@ -9,7 +8,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class JSONExporter : ICounterRenderer
+    internal class JSONExporter : ICounterRenderer
     {
         private object _lock = new object();
         private string _output;
@@ -93,12 +92,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Console.WriteLine("File saved to " + _output);
         }
 
-        static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
+        private static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
 
         private string JsonEscape(string input)
         {
             int offset = input.IndexOfAny(s_escapeChars);
-            if(offset == -1)
+            if (offset == -1)
             {
                 // fast path
                 return input;
@@ -109,7 +108,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             // so I didn't feel justified writing a complex routine or adding a few 100KB for a dependency on a
             // better performing JSON library
             StringBuilder sb = new StringBuilder(input.Length + 10);
-            foreach(char c in input)
+            foreach (char c in input)
             {
                 switch (c)
                 {

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -34,16 +33,24 @@ namespace Microsoft.Diagnostics.DebugServices
         public VersionData(int major, int minor, int revision, int patch)
         {
             if (major < 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(major));
+            }
 
             if (minor < 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(minor));
+            }
 
             if (revision < 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(revision));
+            }
 
             if (patch < 0)
+            {
                 throw new ArgumentOutOfRangeException(nameof(patch));
+            }
 
             Major = major;
             Minor = minor;
@@ -74,13 +81,19 @@ namespace Microsoft.Diagnostics.DebugServices
         public int CompareTo(VersionData other)
         {
             if (Major != other.Major)
+            {
                 return Major.CompareTo(other.Major);
+            }
 
             if (Minor != other.Minor)
+            {
                 return Minor.CompareTo(other.Minor);
+            }
 
             if (Revision != other.Revision)
+            {
                 return Revision.CompareTo(other.Revision);
+            }
 
             return Patch.CompareTo(other.Patch);
         }

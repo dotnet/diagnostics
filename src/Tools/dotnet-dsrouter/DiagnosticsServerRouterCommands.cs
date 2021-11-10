@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
@@ -15,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    public class DiagnosticsServerRouterLauncher : DiagnosticsServerRouterRunner.Callbacks
+    public class DiagnosticsServerRouterLauncher : DiagnosticsServerRouterRunner.ICallbacks
     {
         public CancellationToken CommandToken { get; set; }
         public bool SuspendProcess { get; set; }
@@ -59,10 +58,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
             LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+            }
+            else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Trace;
+            }
 
             using var factory = new LoggerFactory();
             factory.AddConsole(logLevel, false);
@@ -77,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(forwardPort, "android", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
                 }
@@ -93,7 +96,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
                 if (routerTask.IsCompleted)
+                {
                     break;
+                }
 
                 if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
@@ -117,10 +122,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
             LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+            }
+            else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Trace;
+            }
 
             using var factory = new LoggerFactory();
             factory.AddConsole(logLevel, false);
@@ -135,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(forwardPort, "android", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
                 }
@@ -146,7 +155,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
 
             if (string.IsNullOrEmpty(ipcServer))
+            {
                 ipcServer = GetDefaultIpcServerPath(logger);
+            }
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
 
@@ -154,7 +165,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
                 if (routerTask.IsCompleted)
+                {
                     break;
+                }
 
                 if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
@@ -176,10 +189,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
             LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+            }
+            else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Trace;
+            }
 
             using var factory = new LoggerFactory();
             factory.AddConsole(logLevel, false);
@@ -194,11 +211,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(forwardPort, "android", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
                 }
-                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                else if (string.Equals(forwardPort, "ios", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
                 }
@@ -209,7 +226,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
 
             if (string.IsNullOrEmpty(ipcServer))
+            {
                 ipcServer = GetDefaultIpcServerPath(logger);
+            }
 
             var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
 
@@ -217,7 +236,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
                 if (routerTask.IsCompleted)
+                {
                     break;
+                }
 
                 if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
@@ -239,10 +260,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
             LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+            }
+            else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
+            {
                 logLevel = LogLevel.Trace;
+            }
 
             using var factory = new LoggerFactory();
             factory.AddConsole(logLevel, false);
@@ -257,11 +282,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(forwardPort, "android", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
                 }
-                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                else if (string.Equals(forwardPort, "ios", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
                 }
@@ -277,7 +302,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
                 if (routerTask.IsCompleted)
+                {
                     break;
+                }
 
                 if (!Console.IsInputRedirected && Console.KeyAvailable)
                 {
@@ -293,7 +320,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
-        static string GetDefaultIpcServerPath(ILogger logger)
+        private static string GetDefaultIpcServerPath(ILogger logger)
         {
             int processId = Process.GetCurrentProcess().Id;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -332,7 +359,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        static void checkLoopbackOnly(string tcpServer)
+        private static void checkLoopbackOnly(string tcpServer)
         {
             if (!string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
             {

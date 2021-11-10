@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -159,10 +158,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var sb = new StringBuilder();
             string process = ProcessId.HasValue ? string.Format("{0} (0x{0:X})", ProcessId.Value) : "<none>";
             sb.AppendLine($"Target OS: {OperatingSystem} Architecture: {Architecture} ProcessId: {process}");
-            if (_tempDirectory != null) {
+            if (_tempDirectory != null)
+            {
                 sb.AppendLine($"Temp path: {_tempDirectory}");
             }
-            if (_dumpPath != null) {
+            if (_dumpPath != null)
+            {
                 sb.AppendLine($"Dump path: {_dumpPath}");
             }
             var runtimeService = ServiceProvider.GetService<IRuntimeService>();

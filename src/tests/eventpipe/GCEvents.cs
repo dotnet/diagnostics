@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using Xunit;
@@ -37,7 +36,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCCollect_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -53,19 +52,22 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
+                        }
+
                         TestClass testClass = new TestClass();
                         testClass = null;
                         GC.Collect();
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int GCStartEvents = 0;
                     int GCEndEvents = 0;
@@ -73,19 +75,20 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     source.Clr.GCStop += (eventData) => GCEndEvents += 1;
 
                     int GCRestartEEStartEvents = 0;
-                    int GCRestartEEStopEvents = 0;           
+                    int GCRestartEEStopEvents = 0;
                     source.Clr.GCRestartEEStart += (eventData) => GCRestartEEStartEvents += 1;
-                    source.Clr.GCRestartEEStop += (eventData) => GCRestartEEStopEvents += 1; 
+                    source.Clr.GCRestartEEStop += (eventData) => GCRestartEEStopEvents += 1;
 
                     int GCSuspendEEEvents = 0;
                     int GCSuspendEEEndEvents = 0;
                     source.Clr.GCSuspendEEStart += (eventData) => GCSuspendEEEvents += 1;
                     source.Clr.GCSuspendEEStop += (eventData) => GCSuspendEEEndEvents += 1;
 
-                    int GCHeapStatsEvents =0;
-                    source.Clr.GCHeapStats += (eventData) => GCHeapStatsEvents +=1;
+                    int GCHeapStatsEvents = 0;
+                    source.Clr.GCHeapStats += (eventData) => GCHeapStatsEvents += 1;
 
-                    return () => {
+                    return () =>
+                    {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("GCStartEvents: " + GCStartEvents);
@@ -119,7 +122,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCWaitForPendingFinalizers_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -135,12 +138,15 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
+                        }
+
                         TestClass testClass = new TestClass();
                         testClass = null;
                         GC.Collect();
@@ -148,13 +154,14 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int GCFinalizersEndEvents = 0;
                     source.Clr.GCFinalizersStop += (eventData) => GCFinalizersEndEvents += 1;
                     int GCFinalizersStartEvents = 0;
                     source.Clr.GCFinalizersStart += (eventData) => GCFinalizersStartEvents += 1;
-                    return () => {
+                    return () =>
+                    {
                         Logger.logger.Log("Event counts validation");
                         Logger.logger.Log("GCFinalizersEndEvents: " + GCFinalizersEndEvents);
                         Logger.logger.Log("GCFinalizersStartEvents: " + GCFinalizersStartEvents);
@@ -169,7 +176,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCCollect_ProducesVerboseEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -185,10 +192,10 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     List<string> testList = new List<string>();
-                    for(int i = 0; i < 100000000; i ++)
+                    for (int i = 0; i < 100000000; i++)
                     {
                         string t = "Test string!";
                         testList.Add(t);
@@ -196,7 +203,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     GC.Collect();
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int GCCreateSegmentEvents = 0;
                     int GCFreeSegmentEvents = 0;
@@ -211,17 +218,18 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     source.Clr.GCCreateConcurrentThread += (eventData) => GCCreateConcurrentThreadEvents += 1;
                     source.Clr.GCTerminateConcurrentThread += (eventData) => GCTerminateConcurrentThreadEvents += 1;
 
-                    return () => {
+                    return () =>
+                    {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("GCCreateSegmentEvents: " + GCCreateSegmentEvents);
                         Logger.logger.Log("GCFreeSegmentEvents: " + GCFreeSegmentEvents);
                         bool GCSegmentResult = GCCreateSegmentEvents > 0 && GCFreeSegmentEvents > 0;
-                        Logger.logger.Log("GCSegmentResult: " + GCSegmentResult); 
+                        Logger.logger.Log("GCSegmentResult: " + GCSegmentResult);
 
                         Logger.logger.Log("GCAllocationTickEvents: " + GCAllocationTickEvents);
                         bool GCAllocationTickResult = GCAllocationTickEvents > 0;
-                        Logger.logger.Log("GCAllocationTickResult: " + GCAllocationTickResult); 
+                        Logger.logger.Log("GCAllocationTickResult: " + GCAllocationTickResult);
 
                         bool GCCollectResults = GCSegmentResult && GCAllocationTickResult;
                         Logger.logger.Log("GCCollectResults: " + GCCollectResults);

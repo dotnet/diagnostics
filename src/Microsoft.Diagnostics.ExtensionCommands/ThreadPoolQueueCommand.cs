@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using System;
@@ -17,8 +16,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             var workItems = new Dictionary<string, WorkInfo>();
             int workItemCount = 0;
             var tasks = new Dictionary<string, WorkInfo>();
-            int taskCount = 0; 
-            
+            int taskCount = 0;
+
             try
             {
                 WriteLine("global work item queue________________________________");
@@ -113,7 +112,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
     "-------------------------------------------------------------------------------" + Environment.NewLine +
     "ThreadPoolQueue" + Environment.NewLine +
     Environment.NewLine +

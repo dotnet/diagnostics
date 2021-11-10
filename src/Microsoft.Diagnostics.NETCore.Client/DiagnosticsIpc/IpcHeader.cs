@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -13,7 +12,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcHeader
     {
-        IpcHeader() { }
+        private IpcHeader() { }
 
         public IpcHeader(DiagnosticsServerCommandSet commandSet, byte commandId)
         {
@@ -22,14 +21,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         // the number of bytes for the DiagnosticsIpc::IpcHeader type in native code
-        public static readonly UInt16 HeaderSizeInBytes = 20;
-        private static readonly UInt16 MagicSizeInBytes = 14;
+        public const ushort HeaderSizeInBytes = 20;
+        private const ushort MagicSizeInBytes = 14;
 
         public byte[] Magic = DotnetIpcV1; // byte[14] in native code
-        public UInt16 Size = HeaderSizeInBytes;
+        public ushort Size = HeaderSizeInBytes;
         public byte CommandSet;
         public byte CommandId;
-        public UInt16 Reserved = 0x0000;
+        public ushort Reserved;
 
 
         // Helper expression to quickly get V1 magic string for comparison
@@ -46,7 +45,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.Write(Size);
                 writer.Write(CommandSet);
                 writer.Write(CommandId);
-                writer.Write((UInt16)0x0000);
+                writer.Write((ushort)0x0000);
                 writer.Flush();
                 return stream.ToArray();
             }
@@ -76,7 +75,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return header;
         }
 
-        override public string ToString()
+        public override string ToString()
         {
             return $"{{ Magic={Magic}; Size={Size}; CommandSet={CommandSet}; CommandId={CommandId}; Reserved={Reserved} }}";
         }

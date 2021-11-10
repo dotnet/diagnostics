@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
@@ -158,7 +157,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X8} {module.FileName}");
                                     }
                                 }
-                                
+
                                 return data;
                             }
                             catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
@@ -214,14 +213,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        enum BaseRelocationType
+        private enum BaseRelocationType
         {
-            ImageRelBasedAbsolute   = 0,
-            ImageRelBasedHigh       = 1,
-            ImageRelBasedLow        = 2,
-            ImageRelBasedHighLow    = 3,
-            ImageRelBasedHighAdj    = 4,
-            ImageRelBasedDir64      = 10,
+            ImageRelBasedAbsolute = 0,
+            ImageRelBasedHigh = 1,
+            ImageRelBasedLow = 2,
+            ImageRelBasedHighLow = 3,
+            ImageRelBasedHighAdj = 4,
+            ImageRelBasedDir64 = 10,
         }
 
         private void ApplyRelocations(IModule module, PEReader reader, int dataVA, byte[] data)
@@ -252,7 +251,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             // Read relocation type/offset
                             ushort entry = blob.ReadUInt16();
-                            if (entry == 0) {
+                            if (entry == 0)
+                            {
                                 break;
                             }
                             var type = (BaseRelocationType)(entry >> 12);       // type is 4 upper bits
@@ -276,7 +276,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
                                         break;
-                                    
+
                                     case BaseRelocationType.ImageRelBasedDir64:
                                         if ((offset + sizeof(ulong)) <= data.Length)
                                         {
@@ -286,7 +286,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
                                         break;
-                                    
+
                                     default:
                                         Debug.Fail($"ApplyRelocations: invalid relocation type {type}");
                                         break;

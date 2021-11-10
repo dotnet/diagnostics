@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Tools.Common;
 using SOS;
@@ -59,10 +58,12 @@ namespace Microsoft.Diagnostics.Tools.SOS
             try
             {
                 var sosInstaller = new InstallHelper((message) => console.Out.WriteLine(message), architecture);
-                if (install) {
+                if (install)
+                {
                     sosInstaller.Install();
                 }
-                else {
+                else
+                {
                     sosInstaller.Uninstall();
                 }
             }

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
 using System;
@@ -28,7 +27,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Target = target;
 
-            target.OnFlushEvent.Register(() => {
+            target.OnFlushEvent.Register(() =>
+            {
                 _threads?.Clear();
                 _threads = null;
             });
@@ -69,9 +69,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             int index = 0;
 
             FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (FieldInfo field in fields) {
+            foreach (FieldInfo field in fields)
+            {
                 RegisterAttribute registerAttribute = field.GetCustomAttributes<RegisterAttribute>(inherit: false).SingleOrDefault();
-                if (registerAttribute == null) {
+                if (registerAttribute == null)
+                {
                     continue;
                 }
                 RegisterType registerType = registerAttribute.RegisterType & RegisterType.TypeMask;
@@ -84,13 +86,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     default:
                         continue;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.ProgramCounter) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.ProgramCounter) != 0)
+                {
                     InstructionPointerIndex = index;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.StackPointer) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.StackPointer) != 0)
+                {
                     StackPointerIndex = index;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.FramePointer) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.FramePointer) != 0)
+                {
                     FramePointerIndex = index;
                 }
                 FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
@@ -189,7 +194,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
         public IThread GetThreadFromId(uint threadId)
         {
-            if (!GetThreads().TryGetValue(threadId, out IThread thread)) {
+            if (!GetThreads().TryGetValue(threadId, out IThread thread))
+            {
                 throw new DiagnosticsException($"Invalid thread id: {threadId}");
             }
             return thread;
@@ -205,7 +211,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         internal byte[] GetThreadContext(Thread thread)
         {
             var threadContext = new byte[_contextSize];
-            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext)) {
+            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext))
+            {
                 throw new DiagnosticsException();
             }
             return threadContext;
@@ -226,7 +233,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<uint, IThread> GetThreads()
         {
-            if (_threads == null) {
+            if (_threads == null)
+            {
                 _threads = GetThreadsInner().OrderBy((thread) => thread.ThreadId).ToDictionary((thread) => thread.ThreadId);
             }
             return _threads;

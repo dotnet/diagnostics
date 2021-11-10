@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
@@ -52,7 +51,8 @@ namespace SOS.Extensions
         /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
+            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
+            {
                 AssemblyResolver.Enable();
             }
             LoggingCommand.Initialize();
@@ -145,7 +145,8 @@ namespace SOS.Extensions
 
         public void DestroyTarget(ITarget target)
         {
-            if (target == null) {
+            if (target == null)
+            {
                 throw new ArgumentNullException(nameof(target));
             }
             Trace.TraceInformation("IHost.DestroyTarget #{0}", target.Id);
@@ -159,7 +160,8 @@ namespace SOS.Extensions
                     _targetWrapper = null;
                 }
                 _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable) {
+                if (target is IDisposable disposable)
+                {
                     disposable.Dispose();
                 }
             }
@@ -183,7 +185,8 @@ namespace SOS.Extensions
             IntPtr iunk)
         {
             Trace.TraceInformation("HostServices.RegisterDebuggerServices");
-            if (iunk == IntPtr.Zero || DebuggerServices != null) {
+            if (iunk == IntPtr.Zero || DebuggerServices != null)
+            {
                 return HResult.E_FAIL;
             }
             // Create the wrapper for the host debugger services
@@ -214,7 +217,8 @@ namespace SOS.Extensions
                 _serviceProvider.AddService<IContextService>(_contextService);
                 _serviceProvider.AddServiceFactory<IThreadUnwindService>(() => new ThreadUnwindServiceFromDebuggerServices(DebuggerServices));
 
-                _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
+                _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() =>
+                {
                     ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
                     return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
                 });
@@ -253,7 +257,8 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
-            if (_target != null || DebuggerServices == null) {
+            if (_target != null || DebuggerServices == null)
+            {
                 return HResult.E_FAIL;
             }
             try
@@ -383,7 +388,7 @@ namespace SOS.Extensions
         }
 
         #endregion
-        
+
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

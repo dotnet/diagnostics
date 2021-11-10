@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -269,7 +268,7 @@ namespace SOS.Hosting
             [Out] uint* ModuleNameSize,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder LoadedImageNameBuffer,
             [In] uint LoadedImageNameBufferSize,
-            [Out] uint* LoadedImageNameSize); 
+            [Out] uint* LoadedImageNameSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetModuleParametersDelegate(
@@ -424,7 +423,7 @@ namespace SOS.Hosting
         private delegate int StartSymbolMatchDelegate(
             IntPtr self,
             [In][MarshalAs(UnmanagedType.LPStr)] string Pattern,
-            [Out] ulong* Handle); 
+            [Out] ulong* Handle);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetNextSymbolMatchDelegate(
@@ -613,7 +612,7 @@ namespace SOS.Hosting
             [In] int Delta,
             [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder NameBuffer,
             [In] int NameBufferSize,
-            [Out] uint* NameSize, 
+            [Out] uint* NameSize,
             [Out] ulong* Displacement);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
 using System;
@@ -17,12 +16,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ModuleServiceFromDataReader : ModuleService
     {
-        class ModuleFromDataReader : Module
+        private class ModuleFromDataReader : Module
         {
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
 
-            private static readonly VersionInfo EmptyVersionInfo = new (0, 0, 0, 0);
+            private static readonly VersionInfo EmptyVersionInfo = new(0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
             private readonly IExportReader _exportReader;
             private readonly ModuleInfo _moduleInfo;
@@ -70,7 +69,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override VersionData VersionData
             {
-                get 
+                get
                 {
                     if (InitializeValue(Module.Flags.InitializeVersion))
                     {

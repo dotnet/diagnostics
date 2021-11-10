@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -32,10 +31,10 @@ namespace SOS.Hosting
         /// </summary>
         public enum RuntimeConfiguration
         {
-            WindowsDesktop  = 0,
-            WindowsCore     = 1,
-            UnixCore        = 2,
-            OSXCore         = 3
+            WindowsDesktop = 0,
+            WindowsCore = 1,
+            UnixCore = 2,
+            OSXCore = 3
         }
 
         private sealed class OpenedReader : IDisposable
@@ -163,7 +162,8 @@ namespace SOS.Hosting
             IntPtr self,
             string symbolPath)
         {
-            if (string.IsNullOrWhiteSpace(symbolPath)) {
+            if (string.IsNullOrWhiteSpace(symbolPath))
+            {
                 return false;
             }
             return _symbolService.ParseSymbolPathFixDefault(symbolPath);
@@ -213,7 +213,7 @@ namespace SOS.Hosting
                         var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                         generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
                     }
-                    else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
+                    else if (config == RuntimeConfiguration.WindowsCore || config == RuntimeConfiguration.WindowsDesktop)
                     {
                         Stream stream = MemoryService.CreateMemoryStream(address, size);
                         var peFile = new PEFile(new StreamAddressSpace(stream), true);
@@ -240,10 +240,10 @@ namespace SOS.Hosting
                         }
                     }
                 }
-                catch (Exception ex) when 
-                   (ex is DiagnosticsException || 
-                    ex is BadInputFormatException || 
-                    ex is InvalidVirtualAddressException || 
+                catch (Exception ex) when
+                   (ex is DiagnosticsException ||
+                    ex is BadInputFormatException ||
+                    ex is InvalidVirtualAddressException ||
                     ex is ArgumentOutOfRangeException ||
                     ex is IndexOutOfRangeException ||
                     ex is TaskCanceledException)
@@ -342,7 +342,7 @@ namespace SOS.Hosting
             string assemblyPath,
             bool isFileLayout,
             ulong loadedPeAddress,
-            uint loadedPeSize, 
+            uint loadedPeSize,
             ulong inMemoryPdbAddress,
             uint inMemoryPdbSize)
         {
@@ -515,11 +515,15 @@ namespace SOS.Hosting
             {
                 Handle handle = MetadataTokens.Handle(methodToken);
                 if (handle.Kind != HandleKind.MethodDefinition)
+                {
                     return false;
+                }
 
                 MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
                 if (methodDebugHandle.IsNil)
+                {
                     return false;
+                }
 
                 MethodDebugInformation methodDebugInfo = reader.GetMethodDebugInformation(methodDebugHandle);
                 SequencePointCollection sequencePoints = methodDebugInfo.GetSequencePoints();
@@ -528,10 +532,14 @@ namespace SOS.Hosting
                 foreach (SequencePoint point in sequencePoints)
                 {
                     if (point.Offset > ilOffset)
+                    {
                         break;
+                    }
 
                     if (point.StartLine != 0 && !point.IsHidden)
+                    {
                         nearestPoint = point;
+                    }
                 }
 
                 if (nearestPoint.HasValue)
@@ -596,7 +604,9 @@ namespace SOS.Hosting
             {
                 Handle handle = MetadataTokens.Handle(methodToken);
                 if (handle.Kind != HandleKind.MethodDefinition)
+                {
                     return false;
+                }
 
                 MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
                 LocalScopeHandleCollection localScopes = reader.GetLocalScopes(methodDebugHandle);
@@ -610,7 +620,9 @@ namespace SOS.Hosting
                         if (localVar.Index == localIndex)
                         {
                             if (localVar.Attributes == LocalVariableAttributes.DebuggerHidden)
+                            {
                                 return false;
+                            }
 
                             localVarName = reader.GetString(localVar.Name);
                             return true;
@@ -653,7 +665,8 @@ namespace SOS.Hosting
             Debug.Assert(imageTimestamp != 0);
             Debug.Assert(imageSize != 0);
 
-            if (pMetadata == IntPtr.Zero) {
+            if (pMetadata == IntPtr.Zero)
+            {
                 return HResult.E_INVALIDARG;
             }
             int hr = HResult.S_OK;
@@ -671,7 +684,8 @@ namespace SOS.Hosting
                 hr = HResult.E_FAIL;
             }
 
-            if (pMetadataSize != IntPtr.Zero) {
+            if (pMetadataSize != IntPtr.Zero)
+            {
                 Marshal.WriteInt32(pMetadataSize, dataSize);
             }
             return hr;
@@ -760,15 +774,19 @@ namespace SOS.Hosting
         private OpenedReader TryOpenReaderFromAssembly(string assemblyPath, bool isFileLayout, Stream peStream)
         {
             if (assemblyPath == null && peStream == null)
+            {
                 return null;
+            }
 
             PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
             if (peStream == null)
             {
                 peStream = TryOpenFile(assemblyPath);
                 if (peStream == null)
+                {
                     return null;
-                
+                }
+
                 options = PEStreamOptions.Default;
             }
 
@@ -838,7 +856,7 @@ namespace SOS.Hosting
                 string pdbPath = data.Path;
                 Stream pdbStream = null;
 
-                if (assemblyPath != null) 
+                if (assemblyPath != null)
                 {
                     try
                     {
@@ -946,7 +964,7 @@ namespace SOS.Hosting
         /// <returns>Last component of path</returns>
         private static string GetFileName(string pathName)
         {
-            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
+            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\' });
             if (pos < 0)
             {
                 return pathName;

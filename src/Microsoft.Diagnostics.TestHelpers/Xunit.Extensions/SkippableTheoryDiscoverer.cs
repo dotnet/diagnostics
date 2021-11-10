@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Collections.Generic;
 using System.Linq;
 using Xunit.Abstractions;
 using Xunit.Sdk;
@@ -7,8 +10,8 @@ namespace Xunit.Extensions
 {
     public class SkippableTheoryDiscoverer : IXunitTestCaseDiscoverer
     {
-        readonly IMessageSink diagnosticMessageSink;
-        readonly TheoryDiscoverer theoryDiscoverer;
+        private readonly IMessageSink diagnosticMessageSink;
+        private readonly TheoryDiscoverer theoryDiscoverer;
 
         public SkippableTheoryDiscoverer(IMessageSink diagnosticMessageSink)
         {

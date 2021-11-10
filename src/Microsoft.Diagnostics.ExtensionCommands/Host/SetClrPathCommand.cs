@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using System.IO;
@@ -8,7 +7,7 @@ using System.IO;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "setclrpath", Help = "Set the path to load coreclr DAC/DBI files.")]
-    public class SetClrPath: CommandBase
+    public class SetClrPath : CommandBase
     {
         public IRuntime Runtime { get; set; }
 

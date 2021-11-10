@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tracing;
 using System;
@@ -83,9 +82,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 var evntCnt = 0;
 
-                Task streamTask = Task.Run(() => {
+                Task streamTask = Task.Run(() =>
+                {
                     var source = new EventPipeEventSource(session.EventStream);
-                    source.Dynamic.All += (TraceEvent obj) => {
+                    source.Dynamic.All += (TraceEvent obj) =>
+                    {
                         output.WriteLine("Got an event");
                         evntCnt += 1;
                     };

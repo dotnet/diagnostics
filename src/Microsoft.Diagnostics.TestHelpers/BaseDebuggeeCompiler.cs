@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -26,8 +25,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </remarks>
     public abstract class BaseDebuggeeCompiler : IDebuggeeCompiler
     {
-        AcquireDotNetTestStep _acquireTask;
-        DotNetBuildDebuggeeTestStep _buildDebuggeeTask;
+        private AcquireDotNetTestStep _acquireTask;
+        private DotNetBuildDebuggeeTestStep _buildDebuggeeTask;
 
         /// <summary>
         /// Creates a new BaseDebuggeeCompiler. This compiler acquires the CLI tools and uses them to build debuggees via dotnet build.
@@ -61,7 +60,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _buildDebuggeeTask = ConfigureDotNetBuildDebuggeeTask(config, _acquireTask.LocalDotNetPath, config.CliVersion, debuggeeName);
         }
 
-        async public Task<DebuggeeConfiguration> Execute(ITestOutputHelper output)
+        public async Task<DebuggeeConfiguration> Execute(ITestOutputHelper output)
         {
             if (_acquireTask.AnyWorkToDo)
             {
@@ -181,13 +180,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         protected static Dictionary<string, string> GetNugetFeeds(TestConfiguration config)
         {
             Dictionary<string, string> nugetFeeds = new Dictionary<string, string>();
-            if(!string.IsNullOrWhiteSpace(config.NuGetPackageFeeds))
+            if (!string.IsNullOrWhiteSpace(config.NuGetPackageFeeds))
             {
                 string[] feeds = config.NuGetPackageFeeds.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach(string feed in feeds)
+                foreach (string feed in feeds)
                 {
                     string[] feedParts = feed.Trim().Split('=');
-                    if(feedParts.Length != 2)
+                    if (feedParts.Length != 2)
                     {
                         throw new Exception("Expected feed \'" + feed + "\' to value <key>=<value> format");
                     }

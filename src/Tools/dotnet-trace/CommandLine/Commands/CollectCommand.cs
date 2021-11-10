@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
@@ -21,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
@@ -49,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnEnter = true;
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
-            int ret = ReturnCode.Ok;
+            int ret = (int)ReturnCode.Ok;
 
             try
             {
@@ -80,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (showchildio)
                     {
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
-                        return ReturnCode.ArgumentError;
+                        return (int)ReturnCode.ArgumentError;
                     }
                     if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
@@ -88,12 +87,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     else
                     {
-                        return ReturnCode.ArgumentError;
+                        return (int)ReturnCode.ArgumentError;
                     }
                 }
                 else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
                 {
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -117,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (selectedProfile == null)
                     {
                         Console.Error.WriteLine($"Invalid profile name: {profile}");
-                        return ReturnCode.ArgumentError;
+                        return (int)ReturnCode.ArgumentError;
                     }
 
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
@@ -143,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (providerCollection.Count <= 0)
                 {
                     Console.Error.WriteLine("No providers were specified to start a trace.");
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
 
                 PrintProviders(providerCollection, enabledBy);
@@ -161,7 +160,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
-                        return await Task.FromResult(ReturnCode.Ok);
+                        return (int)await Task.FromResult(ReturnCode.Ok);
                     }
                     diagnosticsClient = holder.Client;
                     if (ProcessLauncher.Launcher.HasChildProc)
@@ -195,14 +194,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 if (attempts > 10)
                                 {
                                     Console.Error.WriteLine("Unable to examine process.");
-                                    return ReturnCode.SessionCreationError;
+                                    return (int)ReturnCode.SessionCreationError;
                                 }
                                 Thread.Sleep(200);
                             }
                         }
                     }
 
-                    if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
                     {
                         DateTime now = DateTime.Now;
                         var processMainModuleFileInfo = new FileInfo(processMainModuleFileName);
@@ -240,7 +239,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (session == null)
                         {
                             Console.Error.WriteLine("Unable to create session.");
-                            return ReturnCode.SessionCreationError;
+                            return (int)ReturnCode.SessionCreationError;
                         }
 
                         if (shouldStopAfterDuration)
@@ -261,7 +260,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             Console.Out.WriteLine($"Process        : {processMainModuleFileName}");
                             Console.Out.WriteLine($"Output File    : {fs.Name}");
                             if (shouldStopAfterDuration)
+                            {
                                 Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                            }
+
                             Console.Out.WriteLine("\n\n");
 
                             var fileInfo = new FileInfo(output.FullName);
@@ -285,11 +287,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
 
                                 if (rundownRequested)
+                                {
                                     Console.Out.WriteLine("Stopping the trace. This may take several minutes depending on the application being traced.");
+                                }
                             };
 
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                            {
                                 printStatus();
+                            }
 
                             // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
                             if (!copyTask.Wait(0))
@@ -321,7 +327,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.Out.WriteLine($"\nTrace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
+                        {
                             TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                        }
                     }
 
                     if (!collectionStopped && !ct.IsCancellationRequested)
@@ -342,21 +350,23 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 collectionStopped = true;
-                ret = ReturnCode.TracingError;
+                ret = (int)ReturnCode.TracingError;
             }
             finally
             {
                 if (printStatusOverTime)
                 {
                     if (console.GetTerminal() != null)
+                    {
                         Console.CursorVisible = true;
+                    }
                 }
-                
+
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
                     {
-                        ret = ReturnCode.TracingError;
+                        ret = (int)ReturnCode.TracingError;
                     }
 
                     // If we launched a child proc that hasn't exited yet, terminate it before we exit.
@@ -372,35 +382,43 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             Console.Out.WriteLine("");
-            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
-            Console.Out.Write(String.Format("{0, -20}","Keywords"));
-            Console.Out.Write(String.Format("{0, -20}","Level"));
+            Console.Out.Write(string.Format("{0, -40}", "Provider Name"));  // +4 is for the tab
+            Console.Out.Write(string.Format("{0, -20}", "Keywords"));
+            Console.Out.Write(string.Format("{0, -20}", "Level"));
             Console.Out.Write("Enabled By\r\n");
             foreach (var provider in providers)
             {
-                Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
+                Console.Out.WriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }
             Console.Out.WriteLine();
         }
         private static string GetProviderDisplayString(EventPipeProvider provider) =>
-            String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
+            string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
 
         private static string GetSize(long length)
         {
             if (length > 1e9)
-                return String.Format("{0,-8} (GB)", $"{length / 1e9:0.00##}");
+            {
+                return string.Format("{0,-8} (GB)", $"{length / 1e9:0.00##}");
+            }
             else if (length > 1e6)
-                return String.Format("{0,-8} (MB)", $"{length / 1e6:0.00##}");
+            {
+                return string.Format("{0,-8} (MB)", $"{length / 1e6:0.00##}");
+            }
             else if (length > 1e3)
-                return String.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
+            {
+                return string.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
+            }
             else
-                return String.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
+            {
+                return string.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
+            }
         }
 
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.") 
+                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
@@ -470,8 +488,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
-        
-        private static Option CLREventsOption() => 
+
+        private static Option CLREventsOption() =>
             new Option(
                 alias: "--clrevents",
                 description: @"List of CLR runtime events to emit.")
@@ -479,7 +497,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<string>(name: "clrevents", getDefaultValue: () => string.Empty)
             };
 
-        private static Option CLREventLevelOption() => 
+        private static Option CLREventLevelOption() =>
             new Option(
                 alias: "--clreventlevel",
                 description: @"Verbosity of CLR events to be emitted.")

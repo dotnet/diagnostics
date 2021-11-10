@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
 using System;
@@ -32,7 +31,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public RuntimeService(ITarget target)
         {
             _target = target;
-            _onFlushEvent = target.OnFlushEvent.Register(() => {
+            _onFlushEvent = target.OnFlushEvent.Register(() =>
+            {
                 if (_runtimes is not null && _runtimes.Count == 0)
                 {
                     // If there are no runtimes, try find them again when the target stops
@@ -44,7 +44,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader 
             // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a 
             // stack overflow.
-            target.OnDestroyEvent.Register(() => {
+            target.OnDestroyEvent.Register(() =>
+            {
                 _dataTarget?.Dispose();
                 _dataTarget = null;
                 _onFlushEvent.Dispose();
@@ -63,7 +64,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _runtimes = new List<Runtime>();
                 if (_dataTarget is null)
                 {
-                    _dataTarget = new DataTarget(new CustomDataTarget(this)) {
+                    _dataTarget = new DataTarget(new CustomDataTarget(this))
+                    {
                         BinaryLocator = null
                     };
                 }

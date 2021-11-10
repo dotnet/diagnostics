@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -31,7 +30,10 @@ namespace EventPipe.UnitTests.Common
         public void Log(string message)
         {
             if (!_sw.IsRunning)
+            {
                 _sw.Start();
+            }
+
             _log.WriteLine($"{_sw.Elapsed.TotalSeconds,5:f1}s: {message}");
         }
     }
@@ -86,7 +88,7 @@ namespace EventPipe.UnitTests.Common
     // to synchronize.
     public sealed class SentinelEventSource : EventSource
     {
-        private SentinelEventSource() {}
+        private SentinelEventSource() { }
         public static SentinelEventSource Log = new SentinelEventSource();
         public void SentinelEvent() { WriteEvent(1, "SentinelEvent"); }
     }
@@ -127,7 +129,7 @@ namespace EventPipe.UnitTests.Common
             new EventPipeProvider("SentinelEventSource", EventLevel.Verbose, -1)
         };
 
-        IpcTraceTest(
+        private IpcTraceTest(
             Dictionary<string, ExpectedEventCount> expectedEventCounts,
             Action eventGeneratingAction,
             List<EventPipeProvider> providers,
@@ -172,7 +174,9 @@ namespace EventPipe.UnitTests.Common
         {
             var isClean = EnsureCleanEnvironment();
             if (!isClean)
+            {
                 return -1;
+            }
             // CollectTracing returns before EventPipe::Enable has returned, so the
             // the sources we want to listen for may not have been enabled yet.
             // We'll use this sentinel EventSource to check if Enable has finished
@@ -199,7 +203,7 @@ namespace EventPipe.UnitTests.Common
                 {
                     _eventPipeSession = client.StartEventPipeSession(_testProviders.Concat(_sentinelProviders));
                 }
-                catch(DiagnosticsClientException ex)
+                catch (DiagnosticsClientException ex)
                 {
                     Logger.logger.Log("Failed to connect to EventPipe!");
                     Logger.logger.Log(ex.ToString());
@@ -218,7 +222,10 @@ namespace EventPipe.UnitTests.Common
                         if (eventData.ProviderName == "SentinelEventSource")
                         {
                             if (!sentinelEventReceived.WaitOne(0))
+                            {
                                 Logger.logger.Log("Saw sentinel event");
+                            }
+
                             sentinelEventReceived.Set();
                         }
 
@@ -286,7 +293,7 @@ namespace EventPipe.UnitTests.Common
                 return task;
             });
 
-            var stopTask = Task.Run(() => 
+            var stopTask = Task.Run(() =>
             {
                 Logger.logger.Log("Sending StopTracing command...");
                 lock (threadSync) // eventpipeSession
@@ -358,7 +365,7 @@ namespace EventPipe.UnitTests.Common
                 IEnumerable<FileInfo> ipcPorts = Directory.GetFiles(Path.GetTempPath())
                     .Select(namedPipe => new FileInfo(namedPipe))
                     .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{System.Diagnostics.Process.GetCurrentProcess().Id}-(\\d+)-socket$"));
-                
+
                 if (ipcPorts.Count() > 1)
                 {
                     Logger.logger.Log($"Found {ipcPorts.Count()} OS transports for pid {System.Diagnostics.Process.GetCurrentProcess().Id}:");
@@ -387,7 +394,7 @@ namespace EventPipe.UnitTests.Common
                     else
                     {
                         Logger.logger.Log($"Unable to clean the environment.  The following transports are on the system:");
-                        foreach(var transport in afterIpcPorts)
+                        foreach (var transport in afterIpcPorts)
                         {
                             Logger.logger.Log($"\t{transport.FullName}");
                         }
@@ -405,16 +412,21 @@ namespace EventPipe.UnitTests.Common
             Dictionary<string, ExpectedEventCount> expectedEventCounts,
             Action eventGeneratingAction,
             List<EventPipeProvider> providers,
-            int circularBufferMB=1024,
+            int circularBufferMB = 1024,
             Func<EventPipeEventSource, Func<int>> optionalTraceValidator = null)
         {
             Logger.logger.Log("==TEST STARTING==");
             var test = new IpcTraceTest(expectedEventCounts, eventGeneratingAction, providers, circularBufferMB, optionalTraceValidator);
             var ret = test.Validate();
             if (ret == 100)
+            {
                 Logger.logger.Log("==TEST FINISHED: PASSED!==");
+            }
             else
+            {
                 Logger.logger.Log("==TEST FINISHED: FAILED!==");
+            }
+
             return ret;
         }
     }

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -12,19 +11,19 @@ namespace Microsoft.Diagnostics.DebugServices
     [Flags]
     public enum CommandPlatform : byte
     {
-        Windows     = 0x01,
-        Linux       = 0x02,
-        OSX         = 0x04,
+        Windows = 0x01,
+        Linux = 0x02,
+        OSX = 0x04,
 
         /// <summary>
         /// Command is supported when there is no target
         /// </summary>
-        Global      = 0x08,
+        Global = 0x08,
 
         /// <summary>
         /// Default. All operating system, but target is required
         /// </summary>
-        Default     = Windows | Linux | OSX
+        Default = Windows | Linux | OSX
     }
 
     /// <summary>

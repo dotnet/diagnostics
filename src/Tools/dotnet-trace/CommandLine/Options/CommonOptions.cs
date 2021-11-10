@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.CommandLine;
 
@@ -37,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option ConvertFormatOption() =>
             new Option(
                 alias: "--format",
-                description: $"Sets the output format for the trace file conversion.") 
+                description: $"Sets the output format for the trace file conversion.")
             {
                 Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
             };

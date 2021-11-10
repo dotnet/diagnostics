@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -102,8 +101,9 @@ namespace SOS.Hosting
         /// <param name="command">just the command name</param>
         /// <param name="arguments">the command arguments and options</param>
         public void ExecuteCommand(string command, string arguments)
-        { 
-            if (_disposed) {
+        {
+            if (_disposed)
+            {
                 throw new ObjectDisposedException("SOSHost instance disposed");
             }
             _sosLibrary.ExecuteCommand(_interface, command, arguments);
@@ -376,11 +376,11 @@ namespace SOS.Hosting
             Write(imageNameSize);
             Write(moduleNameSize);
             Write(loadedImageNameSize);
- 
+
             IModule module;
-            try 
-            { 
-                if (index != uint.MaxValue) 
+            try
+            {
+                if (index != uint.MaxValue)
                 {
                     module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
@@ -456,9 +456,9 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             IModule module;
-            try 
-            { 
-                if (index != uint.MaxValue) 
+            try
+            {
+                if (index != uint.MaxValue)
                 {
                     module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
@@ -565,7 +565,8 @@ namespace SOS.Hosting
             int bufferSize,
             uint* pathSize)
         {
-            if (buffer != null) {
+            if (buffer != null)
+            {
                 buffer.Clear();
             }
             Write(pathSize);
@@ -642,7 +643,8 @@ namespace SOS.Hosting
             IntPtr self,
             out uint id)
         {
-            if (!Target.ProcessId.HasValue) {
+            if (!Target.ProcessId.HasValue)
+            {
                 id = 0;
                 return HResult.E_FAIL;
             }
@@ -655,7 +657,8 @@ namespace SOS.Hosting
             out uint id)
         {
             IThread thread = Services.GetService<IThread>();
-            if (thread is not null) { 
+            if (thread is not null)
+            {
                 return GetThreadIdBySystemId(self, thread.ThreadId, out id);
             }
             id = 0;
@@ -669,7 +672,8 @@ namespace SOS.Hosting
             try
             {
                 var contextService = Services.GetService<IContextService>();
-                if (contextService is null) {
+                if (contextService is null)
+                {
                     return HResult.E_FAIL;
                 }
                 contextService.SetCurrentThread(ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId);
@@ -687,7 +691,7 @@ namespace SOS.Hosting
         {
             IThread thread = Services.GetService<IThread>();
             if (thread is not null)
-            { 
+            {
                 sysId = thread.ThreadId;
                 return HResult.S_OK;
             }
@@ -712,10 +716,12 @@ namespace SOS.Hosting
             {
                 if (index >= start && index < start + count)
                 {
-                    if (ids != null) {
+                    if (ids != null)
+                    {
                         ids[index] = (uint)threadInfo.ThreadIndex;
                     }
-                    if (sysIds != null) {
+                    if (sysIds != null)
+                    {
                         sysIds[index] = threadInfo.ThreadId;
                     }
                 }
@@ -751,7 +757,7 @@ namespace SOS.Hosting
         {
             IThread thread = Services.GetService<IThread>();
             if (thread is not null)
-            { 
+            {
                 try
                 {
                     ulong teb = thread.GetThreadTeb();
@@ -792,7 +798,8 @@ namespace SOS.Hosting
             string name,
             out uint index)
         {
-            if (!ThreadService.TryGetRegisterIndexByName(name, out int value)) {
+            if (!ThreadService.TryGetRegisterIndexByName(name, out int value))
+            {
                 index = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -812,14 +819,16 @@ namespace SOS.Hosting
             switch (MemoryService.PointerSize)
             {
                 case 8:
-                    value = new DEBUG_VALUE {
+                    value = new DEBUG_VALUE
+                    {
                         Type = DEBUG_VALUE_TYPE.INT64,
                         I64 = offset
                     };
                     break;
 
                 case 4:
-                    value = new DEBUG_VALUE {
+                    value = new DEBUG_VALUE
+                    {
                         Type = DEBUG_VALUE_TYPE.INT32,
                         I32 = (uint)offset
                     };
@@ -837,7 +846,8 @@ namespace SOS.Hosting
             string register,
             out ulong value)
         {
-            if (!ThreadService.TryGetRegisterIndexByName(register, out int index)) {
+            if (!ThreadService.TryGetRegisterIndexByName(register, out int index))
+            {
                 value = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -845,12 +855,12 @@ namespace SOS.Hosting
         }
 
         internal int GetRegister(
-            int index, 
+            int index,
             out ulong value)
         {
             IThread thread = Services.GetService<IThread>();
             if (thread is not null)
-            { 
+            {
                 if (thread.TryGetRegisterValue(index, out value))
                 {
                     return HResult.S_OK;
@@ -873,7 +883,8 @@ namespace SOS.Hosting
             where T : Delegate
         {
             IntPtr functionAddress = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.GetLibraryExport(library, functionName);
-            if (functionAddress == IntPtr.Zero) {
+            if (functionAddress == IntPtr.Zero)
+            {
                 return default;
             }
             return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
@@ -883,14 +894,16 @@ namespace SOS.Hosting
 
         internal unsafe static void Write(uint* pointer, uint value = 0)
         {
-            if (pointer != null) {
+            if (pointer != null)
+            {
                 *pointer = value;
             }
         }
 
         internal unsafe static void Write(ulong* pointer, ulong value = 0)
         {
-            if (pointer != null) {
+            if (pointer != null)
+            {
                 *pointer = value;
             }
         }

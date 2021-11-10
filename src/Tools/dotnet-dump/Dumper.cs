@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
@@ -51,7 +50,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
             }
 
-            if (processId == 0) {
+            if (processId == 0)
+            {
                 console.Error.WriteLine("ProcessId is required.");
                 return 1;
             }
@@ -131,11 +131,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     client.WriteDump(dumpType, output, flags);
                 }
             }
-            catch (Exception ex) when 
-                (ex is FileNotFoundException || 
-                 ex is DirectoryNotFoundException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is PlatformNotSupportedException || 
+            catch (Exception ex) when
+                (ex is FileNotFoundException ||
+                 ex is DirectoryNotFoundException ||
+                 ex is UnauthorizedAccessException ||
+                 ex is PlatformNotSupportedException ||
                  ex is UnsupportedCommandException ||
                  ex is InvalidDataException ||
                  ex is InvalidOperationException ||

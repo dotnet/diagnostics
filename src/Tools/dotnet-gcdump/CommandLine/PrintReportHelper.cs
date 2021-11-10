@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -30,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             var filteredTypes = GetReportItem(memoryGraph)
                 .OrderByDescending(t => t.SizeBytes)
                 .ThenByDescending(t => t.Count);
-            
+
             foreach (var filteredType in filteredTypes)
             {
                 WriteFixedWidth(filteredType.SizeBytes);
@@ -44,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                 {
                     Console.Out.Write($"{"",8}  ");
                 }
-                    
+
                 Console.Out.Write(filteredType.TypeName ?? "<UNKNOWN>");
                 var dllName = GetDllName(filteredType.ModuleName ?? "");
                 if (!dllName.IsEmpty)
@@ -71,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                 Console.Out.WriteLine();
             }
         }
-        
+
         private struct ReportItem
         {
             public int? Count { get; set; }
@@ -79,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             public string TypeName { get; set; }
             public string ModuleName { get; set; }
         }
-        
+
         private static IEnumerable<ReportItem> GetReportItem(MemoryGraph memoryGraph)
         {
             var histogramByType = memoryGraph.GetHistogramByType();
@@ -87,11 +90,15 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             {
                 var type = memoryGraph.m_types[index];
                 if (string.IsNullOrEmpty(type.Name) || type.Size == 0)
+                {
                     continue;
+                }
 
-                var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
+                var sizeAndCount = histogramByType.FirstOrDefault(c => (int)c.TypeIdx == index);
                 if (sizeAndCount == null || sizeAndCount.Count == 0)
+                {
                     continue;
+                }
 
                 yield return new ReportItem
                 {

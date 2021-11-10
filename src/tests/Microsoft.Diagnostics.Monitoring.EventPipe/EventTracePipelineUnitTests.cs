@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -52,7 +51,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     eventStream = s;
 
                     using var eventSource = new EventPipeEventSource(s);
-                    
+
                     // Dispose event source when cancelled.
                     using var _ = token.Register(() => eventSource.Dispose());
 
@@ -75,7 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
 
             //Validate that the stream is only valid for the lifetime of the callback in the trace pipeline.
-            Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));   
+            Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));
         }
 
         [SkippableFact]

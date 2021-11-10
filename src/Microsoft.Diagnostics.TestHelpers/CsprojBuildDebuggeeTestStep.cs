@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.IO;
@@ -28,18 +27,18 @@ namespace Microsoft.Diagnostics.TestHelpers
         public CsprojBuildDebuggeeTestStep(string dotnetToolPath,
                                        string templateSolutionDirPath,
                                        string debuggeeNativeLibDirPath,
-                                       Dictionary<string,string> buildProperties,
+                                       Dictionary<string, string> buildProperties,
                                        string runtimeIdentifier,
                                        string runtimeFramework,
                                        string linkerPackageVersion,
-                					   string debuggeeName,
+                                       string debuggeeName,
                                        string debuggeeSolutionDirPath,
                                        string debuggeeProjectDirPath,
                                        string debuggeeBinaryDirPath,
                                        string debuggeeBinaryDllPath,
                                        string debuggeeBinaryExePath,
                                        string nugetPackageCacheDirPath,
-                                       Dictionary<string,string> nugetFeeds,
+                                       Dictionary<string, string> nugetFeeds,
                                        string logPath) :
             base(dotnetToolPath,
                  templateSolutionDirPath,
@@ -64,7 +63,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <summary>
         /// A mapping from .csproj property strings to their values. These properties will be set when building the debuggee.
         /// </summary>
-        public IDictionary<string,string> BuildProperties { get; }
+        public IDictionary<string, string> BuildProperties { get; }
         public string RuntimeIdentifier { get; }
         public string RuntimeFramework { get; }
         public string DebuggeeName { get; }

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
 {
-    internal class CommandUtils
+    internal static class CommandUtils
     {
         // Returns processId that matches the given name.
         // It also checks whether the process has a diagnostics server port.
@@ -62,7 +61,7 @@ namespace Microsoft.Internal.Common.Utils
 
         /// <summary>
         /// A helper method for validating --process-id, --name, --diagnostic-port options for collect commands.
-        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
+        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
         /// such duplication, it prints the appropriate error message.
         /// </summary>
         /// <param name="processId">process ID</param>
@@ -129,9 +128,9 @@ namespace Microsoft.Internal.Common.Utils
 
     internal class LineRewriter
     {
-        public int LineToClear { get; set; } = 0;
+        public int LineToClear { get; set; }
 
-        public LineRewriter() {}
+        public LineRewriter() { }
 
         // ANSI escape codes:
         //  [2K => clear current line
@@ -162,12 +161,12 @@ namespace Microsoft.Internal.Common.Utils
         private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
     }
 
-    internal class ReturnCode
+    internal enum ReturnCode
     {
-        public static int Ok = 0;
-        public static int SessionCreationError = 1;
-        public static int TracingError = 2;
-        public static int ArgumentError = 3;
-        public static int UnknownError = 4;
+        Ok = 0,
+        SessionCreationError = 1,
+        TracingError = 2,
+        ArgumentError = 3,
+        UnknownError = 4,
     }
 }

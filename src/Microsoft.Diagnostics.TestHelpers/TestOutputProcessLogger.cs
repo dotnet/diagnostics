@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -12,9 +11,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestOutputProcessLogger : IProcessLogger
     {
-        string _timeFormat = "mm\\:ss\\.fff";
-        ITestOutputHelper _output;
-        StringBuilder[] _lineBuffers;
+        private string _timeFormat = "mm\\:ss\\.fff";
+        private ITestOutputHelper _output;
+        private StringBuilder[] _lineBuffers;
 
         public TestOutputProcessLogger(ITestOutputHelper output)
         {
@@ -28,10 +27,10 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 _output.WriteLine("Running Process: " + runner.ReplayCommand);
                 _output.WriteLine("Working Directory: " + runner.WorkingDirectory);
-                IEnumerable<KeyValuePair<string,string>> additionalEnvVars = 
+                IEnumerable<KeyValuePair<string, string>> additionalEnvVars =
                     runner.EnvironmentVariables.Where(kv => Environment.GetEnvironmentVariable(kv.Key) != kv.Value);
 
-                if(additionalEnvVars.Any())
+                if (additionalEnvVars.Any())
                 {
                     _output.WriteLine("Additional Environment Variables: " +
                         string.Join(", ", additionalEnvVars.Select(kv => kv.Key + "=" + kv.Value)));
@@ -128,12 +127,12 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
 
             // xunit has a bug where a non-printable character isn't properly escaped when
-            // it is written into the xml results which ultimately results in 
+            // it is written into the xml results which ultimately results in
             // the xml being improperly truncated. For example MDbg has a test case that prints
             // \0 and dotnet tools print \u001B to colorize their console output.
-            foreach(char c in data)
+            foreach (char c in data)
             {
-                if(!char.IsControl(c))
+                if (!char.IsControl(c))
                 {
                     lineBuffer.Append(c);
                 }

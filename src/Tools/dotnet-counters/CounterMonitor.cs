@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
@@ -25,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        const int BufferDelaySecs = 1;
+        private const int BufferDelaySecs = 1;
 
         private int _processId;
         private int _interval;
@@ -43,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int _maxTimeSeries;
         private int _maxHistograms;
 
-        class ProviderEventState
+        private class ProviderEventState
         {
             public DateTime FirstReceiveTimestamp;
             public bool InstrumentEventObserved;
@@ -60,14 +59,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void DynamicAllMonitor(TraceEvent obj)
         {
-            if(_shouldExit.Task.IsCompleted)
+            if (_shouldExit.Task.IsCompleted)
             {
                 return;
             }
 
             lock (this)
             {
-                // If we are paused, ignore the event. 
+                // If we are paused, ignore the event.
                 // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
                 _renderer.ToggleStatus(_pauseCmdSet);
 
@@ -119,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void MeterInstrumentEventObserved(string meterName, string instrumentName, DateTime timestamp)
         {
-            if(!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
+            if (!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
             {
                 providerEventState = new ProviderEventState()
                 {
@@ -139,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
             string instrumentName = (string)obj.PayloadValue(3);
-            if(sessionId != _metricsEventSourceSessionId)
+            if (sessionId != _metricsEventSourceSessionId)
             {
                 return;
             }
@@ -183,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
-            
+
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, out double lastValue))
             {
@@ -207,9 +206,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
-            foreach((double key, double val) in quantiles)
+            foreach ((double key, double val) in quantiles)
             {
-                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key*100}"), val, obj.TimeStamp);
+                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
@@ -252,7 +251,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Error reported from target process:" + Environment.NewLine +
                 error
                 );
-            _shouldExit.TrySetResult(ReturnCode.TracingError);
+            _shouldExit.TrySetResult((int)ReturnCode.TracingError);
         }
 
         private void HandleObservableInstrumentCallbackError(TraceEvent obj)
@@ -281,7 +280,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.SetErrorText(
                 "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool?" + Environment.NewLine +
                 "Concurrent sessions are not supported.");
-            _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
+            _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
         }
 
         private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
@@ -317,7 +316,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             // If it's not a counter we asked for, ignore it.
             string name = payloadFields["Name"].ToString();
-            if (!_counterList.Contains(obj.ProviderName, name)) return;
+            if (!_counterList.Contains(obj.ProviderName, name))
+            {
+                return;
+            }
 
             // init providerEventState if this is the first time we've seen an event from this provider
             if (!_providerEventStates.TryGetValue(obj.ProviderName, out ProviderEventState providerState))
@@ -369,7 +371,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // intervals, or counters that stop reporting.
             // I'm gambling this is good enough that the behavior will never be seen in practice, but if it is we could
             // either adjust the time delay or try to improve how the renderers handle it.
-            if(providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= obj.TimeStamp)
+            if (providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= obj.TimeStamp)
             {
                 _bufferedEvents.Enqueue(payload);
             }
@@ -430,12 +432,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
             // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
             // before dotnet-counters and got rid of a pipe that once existed.
-            // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've 
+            // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've
             // been thrown in StartMonitor directly)
             catch (PlatformNotSupportedException)
             {
             }
-            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it.
             catch (ServerNotAvailableException)
             {
             }
@@ -465,9 +467,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
-                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
@@ -476,7 +478,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
                     try
                     {
@@ -504,14 +506,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         catch (Exception) { } // Swallow all exceptions for now.
 
                         console.Out.WriteLine($"Complete");
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
                 }
             }
-            catch(CommandLineErrorException e)
+            catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return ReturnCode.ArgumentError;
+                return (int)ReturnCode.ArgumentError;
             }
         }
         public async Task<int> Collect(
@@ -539,17 +541,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
 
-                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
                 {
                     if (holder == null)
                     {
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
 
                     try
@@ -567,7 +569,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         if (_output.Length == 0)
                         {
                             _console.Error.WriteLine("Output cannot be an empty string");
-                            return ReturnCode.ArgumentError;
+                            return (int)ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
                         {
@@ -591,7 +593,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         else
                         {
                             _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                            return ReturnCode.ArgumentError;
+                            return (int)ReturnCode.ArgumentError;
                         }
                         _resumeRuntime = resumeRuntime;
                         int ret = await Start();
@@ -604,20 +606,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
                             _session.Stop();
                         }
                         catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
                 }
             }
-            catch(CommandLineErrorException e)
+            catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return ReturnCode.ArgumentError;
+                return (int)ReturnCode.ArgumentError;
             }
         }
 
-        static private void ValidateNonNegative(int value, string argName)
+        private static void ValidateNonNegative(int value, string argName)
         {
-            if(value < 0)
+            if (value < 0)
             {
                 throw new CommandLineErrorException($"Argument --{argName} must be non-negative");
             }
@@ -628,12 +630,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             CounterSet counters = new CounterSet();
             try
             {
-                if(commaSeparatedProviderListText != null)
+                if (commaSeparatedProviderListText != null)
                 {
                     ParseProviderList(commaSeparatedProviderListText, counters);
                 }
             }
-            catch(FormatException e)
+            catch (FormatException e)
             {
                 // the FormatException message strings thrown by ParseProviderList are controlled
                 // by us and anticipate being integrated into the command-line error text.
@@ -707,7 +709,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     inParen = false;
                 }
             }
-            if(inParen)
+            if (inParen)
             {
                 throw new FormatException("Expected to find closing ']' in counter_provider");
             }
@@ -726,14 +728,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
         //   System.Runtime
         //   System.Runtime[exception-count]
         //   System.Runtime[exception-count,cpu-usage]
-        void ParseCounterProvider(string providerText, CounterSet counters)
+        private void ParseCounterProvider(string providerText, CounterSet counters)
         {
             string[] tokens = providerText.Split('[');
-            if(tokens.Length == 0)
+            if (tokens.Length == 0)
             {
                 throw new FormatException("Expected non-empty counter_provider");
             }
-            if(tokens.Length > 2)
+            if (tokens.Length > 2)
             {
                 throw new FormatException("Expected at most one '[' in counter_provider");
             }
@@ -745,9 +747,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             else
             {
                 string counterNames = tokens[1];
-                if(!counterNames.EndsWith(']'))
+                if (!counterNames.EndsWith(']'))
                 {
-                    if(counterNames.IndexOf(']') == -1)
+                    if (!counterNames.Contains(']'))
                     {
                         throw new FormatException("Expected to find closing ']' in counter_provider");
                     }
@@ -771,13 +773,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             //System.Diagnostics.Metrics EventSource supports the new Meter/Instrument APIs
             const long TimeSeriesValues = 0x2;
             StringBuilder metrics = new StringBuilder();
-            foreach(string provider in _counterList.Providers)
+            foreach (string provider in _counterList.Providers)
             {
-                if(metrics.Length != 0)
+                if (metrics.Length != 0)
                 {
-                    metrics.Append(",");
+                    metrics.Append(',');
                 }
-                if(_counterList.IncludesAllCounters(provider))
+                if (_counterList.IncludesAllCounters(provider))
                 {
                     metrics.Append(provider);
                 }
@@ -807,7 +809,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             EventPipeProvider[] providers = GetEventPipeProviders();
             _renderer.Initialize();
 
-            Task monitorTask = new Task(() => {
+            Task monitorTask = new Task(() =>
+            {
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(providers, false, 10);
@@ -837,13 +840,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 finally
                 {
-                    _shouldExit.TrySetResult(ReturnCode.Ok);
+                    _shouldExit.TrySetResult((int)ReturnCode.Ok);
                 }
             });
 
             monitorTask.Start();
 
-            while(!_shouldExit.Task.Wait(250))
+            while (!_shouldExit.Task.Wait(250))
             {
                 HandleBufferedEvents();
                 if (!Console.IsInputRedirected && Console.KeyAvailable)

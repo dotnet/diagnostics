@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using Xunit;
@@ -28,7 +27,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
         [Fact]
         public async void ThreadPool_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -42,13 +41,16 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b10000_0000_0000_0000)
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     Task[] taskArray = new Task[1000];
                     for (int i = 0; i < 1000; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Create new task {i} times...");
+                        }
+
                         taskArray[i] = Task.Run(() => TestTask());
                     }
                     Task.WaitAll(taskArray);
@@ -59,7 +61,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     Thread.Sleep(100);
                 }
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int ThreadStartEvents = 0;
                     source.Clr.ThreadPoolWorkerThreadStart += (eventData) => ThreadStartEvents += 1;
@@ -69,7 +71,8 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     source.Clr.ThreadPoolWorkerThreadAdjustmentSample += (eventData) => ThreadPoolWorkerThreadAdjustmentSampleEvents += 1;
                     source.Clr.ThreadPoolWorkerThreadAdjustmentAdjustment += (eventData) => ThreadPoolWorkerThreadAdjustmentAdjustmentEvents += 1;
 
-                    return () => {
+                    return () =>
+                    {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("ThreadStartEvents: " + ThreadStartEvents);
@@ -80,7 +83,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                         Logger.logger.Log("ThreadPoolWorkerThreadAdjustmentAdjustmentEvents: " + ThreadPoolWorkerThreadAdjustmentAdjustmentEvents);
                         bool ThreadAdjustmentResult = ThreadPoolWorkerThreadAdjustmentSampleEvents >= 1 && ThreadPoolWorkerThreadAdjustmentAdjustmentEvents >= 1;
                         Logger.logger.Log("ThreadAdjustmentResult check: " + ThreadAdjustmentResult);
-                        
+
                         return ThreadStartStopResult && ThreadAdjustmentResult ? 100 : -1;
                     };
                 };

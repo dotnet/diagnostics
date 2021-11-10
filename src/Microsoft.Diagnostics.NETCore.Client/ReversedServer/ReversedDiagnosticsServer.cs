@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Concurrent;
@@ -29,9 +28,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
         private readonly string _address;
 
-        private bool _disposed = false;
+        private bool _disposed;
         private Task _listenTask;
-        private bool _enableTcpIpProtocol = false;
+        private bool _enableTcpIpProtocol;
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
@@ -125,7 +124,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             _listenTask = ListenAsync(maxConnections, _disposalSource.Token);
             if (_listenTask.IsFaulted)
+            {
                 _listenTask.Wait(); // Rethrow aggregated exception.
+            }
         }
 
         /// <summary>

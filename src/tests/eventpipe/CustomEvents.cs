@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using Xunit;
@@ -37,14 +36,14 @@ namespace EventPipe.UnitTests.CustomEventsValidation
         [Fact]
         public async void CustomEventProducesEventsWithNoKeywords()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "MyEventSource", -1 },
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     for (int i = 0; i < 1000; i++)
                     {
@@ -53,7 +52,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
                         MyEventSource.Log.Event3();
                     }
                 };
- 
+
                 var providers = new List<EventPipeProvider>()
                 {
                     new EventPipeProvider("MyEventSource", EventLevel.Informational)

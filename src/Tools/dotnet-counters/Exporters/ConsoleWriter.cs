@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -61,16 +60,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int maxNameLength = 40; // Allow room for 40 character counter names by default.
 
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
-        private bool paused = false;
-        private bool initialized = false;
-        private string _errorText = null;
+        private bool paused;
+        private bool initialized;
+        private string _errorText;
 
-        private int maxRow = -1;
-        private bool useAnsi = false;
+        private int _maxRow = -1;
+        private bool _useAnsi;
 
-        public ConsoleWriter(bool useAnsi) 
+        public ConsoleWriter(bool useAnsi)
         {
-            this.useAnsi = useAnsi;
+            this._useAnsi = useAnsi;
         }
 
         public void Initialize()
@@ -89,25 +88,25 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             AssignRowsAndInitializeDisplay();
         }
 
-        private void SetCursorPosition(int col, int row) 
+        private void SetCursorPosition(int col, int row)
         {
-            if (this.useAnsi) 
+            if (this._useAnsi)
             {
                 Console.Write($"\u001b[{row + 1};{col + 1}H");
             }
-            else 
+            else
             {
                 Console.SetCursorPosition(col, row);
             }
         }
 
-        private void Clear() 
+        private void Clear()
         {
-            if (this.useAnsi) 
+            if (this._useAnsi)
             {
                 Console.Write($"\u001b[H\u001b[J");
             }
-            else 
+            else
             {
                 Console.Clear();
             }
@@ -124,16 +123,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         public void AssignRowsAndInitializeDisplay()
         {
             Clear();
-            
+
             int row = Console.CursorTop;
             Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
-            Console.WriteLine($"    Status: {GetStatus()}");                STATUS_ROW = row++;
+            Console.WriteLine($"    Status: {GetStatus()}"); STATUS_ROW = row++;
             if (_errorText != null)
             {
                 Console.WriteLine(_errorText);
                 row += GetLineWrappedLines(_errorText);
             }
-            Console.WriteLine();                                            row++; // Blank line.
+            Console.WriteLine(); row++; // Blank line.
 
             foreach (ObservedProvider provider in providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
@@ -159,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
             }
 
-            maxRow = Math.Max(maxRow, row);
+            _maxRow = Math.Max(_maxRow, row);
         }
 
         public void ToggleStatus(bool pauseCmdSet)
@@ -204,7 +203,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     string displayName = payload.DisplayName;
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
                     maxNameLength = Math.Max(maxNameLength, displayName.Length);
-                    if(tags != null)
+                    if (tags != null)
                     {
                         counter.LastValue = payload.Value;
                     }
@@ -236,7 +235,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             string[] lines = text.Split(Environment.NewLine);
             int lineCount = lines.Length;
             int width = Console.BufferWidth;
-            foreach(string line in lines)
+            foreach (string line in lines)
             {
                 lineCount += (int)Math.Floor(((float)line.Length) / width);
             }
@@ -251,13 +250,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,
             //     3 decimal digits or spaces.
             //
-            // For example:              
-            //   1,421,893.21    
+            // For example:
+            //   1,421,893.21
             //           0.123
             //          -0.123
             //  4.9012e+25
-            //    -675,430.9    
-            // -12,675,430.9  
+            //    -675,430.9
+            // -12,675,430.9
             //           7
 
 
@@ -285,11 +284,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private static string MakeFixedWidth(string text, int width)
         {
-            if(text.Length == width)
+            if (text.Length == width)
             {
                 return text;
             }
-            else if(text.Length > width)
+            else if (text.Length > width)
             {
                 return text.Substring(0, width);
             }
@@ -305,7 +304,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 if (initialized)
                 {
-                    var row = maxRow;
+                    var row = _maxRow;
 
                     if (row > -1)
                     {

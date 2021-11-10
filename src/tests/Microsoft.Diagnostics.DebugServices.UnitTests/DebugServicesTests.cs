@@ -1,4 +1,7 @@
-﻿using Microsoft.Diagnostics.Repl;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.TestHelpers;
 using System;
@@ -30,13 +33,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             return _configurations;
         }
 
-        ITestOutputHelper Output { get; set; }
+        private ITestOutputHelper Output { get; set; }
 
         public DebugServicesTests(ITestOutputHelper output)
         {
             Output = output;
 
-            if (Trace.Listeners[ListenerName] == null) 
+            if (Trace.Listeners[ListenerName] == null)
             {
                 Trace.Listeners.Add(new LoggingListener(output));
                 Trace.AutoFlush = true;
@@ -94,14 +97,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     Trace.TraceInformation($"GetModuleFromBaseAddress({imageBase:X16}) {moduleFileName} FAILED");
 
                     // Skip modules not found when running under lldb
-                    if (host.Target.Host.HostType == HostType.Lldb) {
+                    if (host.Target.Host.HostType == HostType.Lldb)
+                    {
                         continue;
                     }
                 }
                 Assert.NotNull(module);
 
                 if (host.Target.Host.HostType != HostType.Lldb)
-                { 
+                {
                     // Check that the resulting module matches the test data
                     moduleData.CompareMembers(module);
                 }
@@ -162,7 +166,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                             Assert.True(symbol.TryGetValue("Name", out string name));
                             Assert.True(symbol.TryGetValue("Value", out ulong value));
                             Trace.TraceInformation("IExportSymbols.GetSymbolAddress({0}) == {1:X16}", name, value);
-                            
+
                             Assert.True(exportSymbols.TryGetSymbolAddress(name, out ulong offset));
                             Assert.Equal(value, offset);
                         }
@@ -204,7 +208,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             foreach (ImmutableDictionary<string, TestDataReader.Value> threadData in host.TestData.Threads)
             {
                 Assert.True(threadData.TryGetValue("ThreadId", out uint threadId));
-                
+
                 IThread thread = threadService.GetThreadFromId(threadId);
                 Assert.NotNull(thread);
 
@@ -282,14 +286,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
-        class LoggingListener : TraceListener
+        private class LoggingListener : TraceListener
         {
             private readonly CharToLineConverter _converter;
 
             internal LoggingListener(ITestOutputHelper output)
                 : base(ListenerName)
             {
-                _converter = new CharToLineConverter((text) => {
+                _converter = new CharToLineConverter((text) =>
+                {
                     output.WriteLine(text);
                 });
             }

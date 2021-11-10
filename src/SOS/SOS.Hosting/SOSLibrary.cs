@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -56,7 +55,8 @@ namespace SOS.Hosting
                 sosLibrary = null;
                 throw;
             }
-            host.OnShutdownEvent.Register(() => {
+            host.OnShutdownEvent.Register(() =>
+            {
                 sosLibrary.Uninitialize();
                 sosLibrary = null;
             });
@@ -86,16 +86,20 @@ namespace SOS.Hosting
             if (_sosLibrary == IntPtr.Zero)
             {
                 string sos;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
                     sos = "sos.dll";
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
                     sos = "libsos.so";
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
                     sos = "libsos.dylib";
                 }
-                else {
+                else
+                {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                 }
                 string sosPath = Path.Combine(SOSPath, sos);

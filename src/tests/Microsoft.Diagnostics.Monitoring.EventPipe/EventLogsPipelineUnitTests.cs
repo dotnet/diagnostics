@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
@@ -327,7 +326,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
             Assert.NotNull(values);
-            foreach(var expectedValue in expectedValues)
+            foreach (var expectedValue in expectedValues)
             {
                 Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
                 //TODO For now this will always be a string

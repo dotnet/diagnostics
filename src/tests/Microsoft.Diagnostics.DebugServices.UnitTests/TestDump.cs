@@ -1,4 +1,7 @@
-﻿using Microsoft.Diagnostics.DebugServices.Implementation;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.TestHelpers;
 using System;
@@ -35,7 +38,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             _dataTarget = DataTarget.LoadDump(DumpFile);
 
             OSPlatform targetPlatform = _dataTarget.DataReader.TargetPlatform;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
                 targetPlatform = OSPlatform.OSX;
             }
             _symbolService.AddDirectoryPath(Path.GetDirectoryName(DumpFile));
@@ -54,13 +58,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         void IHost.DestroyTarget(ITarget target)
         {
-            if (target == null) {
+            if (target == null)
+            {
                 throw new ArgumentNullException(nameof(target));
             }
             if (target == Target)
             {
                 _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable) {
+                if (target is IDisposable disposable)
+                {
                     disposable.Dispose();
                 }
             }

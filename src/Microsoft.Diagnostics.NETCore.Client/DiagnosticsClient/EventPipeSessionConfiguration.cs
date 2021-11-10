@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -17,14 +16,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class EventPipeSessionConfiguration
     {
-        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown=true)
+        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown = true)
         {
             if (circularBufferSizeMB == 0)
+            {
                 throw new ArgumentException($"Buffer size cannot be zero.");
+            }
+
             if (format != EventPipeSerializationFormat.NetPerf && format != EventPipeSerializationFormat.NetTrace)
+            {
                 throw new ArgumentException("Unrecognized format");
+            }
+
             if (providers == null)
+            {
                 throw new ArgumentNullException(nameof(providers));
+            }
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;

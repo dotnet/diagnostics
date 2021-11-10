@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.IO;
 using System.Threading.Tasks;
@@ -10,9 +9,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class SdkPrebuiltDebuggeeCompiler : IDebuggeeCompiler
     {
-        readonly string _sourcePath;
-        readonly string _binaryPath;
-        readonly string _binaryExePath;
+        private readonly string _sourcePath;
+        private readonly string _binaryPath;
+        private readonly string _binaryExePath;
 
         public SdkPrebuiltDebuggeeCompiler(TestConfiguration config, string debuggeeName)
         {

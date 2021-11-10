@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
@@ -36,7 +35,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         // MachO writable segment attribute
-        const uint VmProtWrite = 0x02;
+        private const uint VmProtWrite = 0x02;
 
         internal protected readonly ITarget Target;
         internal protected IMemoryService RawMemoryService;
@@ -44,7 +43,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
         private Dictionary<ulong, IModule> _modules;
-        private IModule[] _sortedByBaseAddress; 
+        private IModule[] _sortedByBaseAddress;
 
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
@@ -55,13 +54,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = target;
             RawMemoryService = rawMemoryService;
 
-            target.OnFlushEvent.Register(() => {
+            target.OnFlushEvent.Register(() =>
+            {
                 _versionCache?.Clear();
                 if (_modules != null)
                 {
                     foreach (IModule module in _modules.Values)
                     {
-                        if (module is IDisposable disposable) {
+                        if (module is IDisposable disposable)
+                        {
                             disposable.Dispose();
                         }
                     }
@@ -107,7 +108,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">base address not found</exception>
         IModule IModuleService.GetModuleFromBaseAddress(ulong baseAddress)
         {
-            if (!GetModules().TryGetValue(baseAddress, out IModule module)) {
+            if (!GetModules().TryGetValue(baseAddress, out IModule module))
+            {
                 throw new DiagnosticsException($"Invalid module base address: {baseAddress:X16}");
             }
             return module;
@@ -134,14 +136,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Debug.Assert((start & ~RawMemoryService.SignExtensionMask()) == 0);
                 ulong end = start + module.ImageSize;
 
-                if (address >= start && address < end) {
+                if (address >= start && address < end)
+                {
                     return module;
                 }
 
-                if (module.ImageBase < address) {
+                if (module.ImageBase < address)
+                {
                     min = mid + 1;
                 }
-                else { 
+                else
+                {
                     max = mid - 1;
                 }
             }
@@ -164,7 +169,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     yield return module;
                 }
-            }    
+            }
         }
 
         #endregion
@@ -590,7 +595,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         foreach (MachSegmentLoadCommand loadCommand in machOFile.Segments.Select((segment) => segment.LoadCommand))
                         {
                             if (loadCommand.Command == LoadCommandType.Segment64 &&
-                               (loadCommand.InitProt & VmProtWrite) != 0 && 
+                               (loadCommand.InitProt & VmProtWrite) != 0 &&
                                 loadCommand.SegName.ToString() != "__LINKEDIT")
                             {
                                 ulong loadAddress = loadCommand.VMAddress + machOFile.PreferredVMBaseAddress;
@@ -626,7 +631,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             byte[] buffer = new byte[s_versionString.Length];
 
-            if (_versionCache == null) {
+            if (_versionCache == null)
+            {
                 // We use the possibly mapped memory service to find the version string in case it isn't in the dump.
                 _versionCache = new ReadVirtualCache(Target.Services.GetService<IMemoryService>());
             }
@@ -684,17 +690,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private bool IsModuleEqual(IModule module, string moduleName)
         {
-            if (Target.OperatingSystem == OSPlatform.Windows) {
+            if (Target.OperatingSystem == OSPlatform.Windows)
+            {
                 return StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-            else {
+            else
+            {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-        } 
+        }
 
         internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>();
 
         /// <summary>
         /// Search memory helper class

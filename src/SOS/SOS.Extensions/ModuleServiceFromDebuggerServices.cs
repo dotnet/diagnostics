@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
@@ -17,7 +16,7 @@ namespace SOS.Extensions
     /// </summary>
     internal class ModuleServiceFromDebuggerServices : ModuleService
     {
-        class ModuleFromDebuggerServices : Module, IModuleSymbols
+        private class ModuleFromDebuggerServices : Module, IModuleSymbols
         {
             // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
@@ -33,7 +32,7 @@ namespace SOS.Extensions
                 ulong imageBase,
                 ulong imageSize,
                 uint indexFileSize,
-                uint indexTimeStamp) 
+                uint indexTimeStamp)
                     : base(moduleService.Target)
             {
                 _moduleService = moduleService;

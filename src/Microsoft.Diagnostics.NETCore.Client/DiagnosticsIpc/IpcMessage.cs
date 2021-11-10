@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -17,12 +16,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal enum DiagnosticsIpcError : uint
     {
-        InvalidArgument       = 0x80070057,
+        InvalidArgument = 0x80070057,
         ProfilerAlreadyActive = 0x8013136A,
-        BadEncoding           = 0x80131384,
-        UnknownCommand        = 0x80131385,
-        UnknownMagic          = 0x80131386,
-        UnknownError          = 0x80131387,
+        BadEncoding = 0x80131384,
+        UnknownCommand = 0x80131385,
+        UnknownMagic = 0x80131386,
+        UnknownError = 0x80131387,
     }
 
     /// <summary>
@@ -31,7 +30,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum DiagnosticsMessageType : uint
     {
         /// <summary>
-        /// Initiates core dump generation 
+        /// Initiates core dump generation
         /// </summary>
         GenerateCoreDump = 1,
         /// <summary>
@@ -87,14 +86,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
-        public byte[] Payload { get; private set; } = null;
-        public IpcHeader Header { get; private set; } = default;
+        public byte[] Payload { get; private set; }
+        public IpcHeader Header { get; private set; }
 
         public byte[] Serialize()
-        { 
+        {
             byte[] serializedData = null;
             // Verify things will fit in the size capacity
-            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length));
+            Header.Size = checked((ushort)(IpcHeader.HeaderSizeInBytes + Payload.Length));
             byte[] headerBytes = Header.Serialize();
 
             using (var stream = new MemoryStream())

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -47,12 +46,17 @@ namespace ParallelStacks.Runtime
             var limit = visitor.DisplayThreadIDsCountLimit;
             limit = Math.Min(count, limit);
             if (limit < 0)
+            {
                 return string.Join(",", threadIds.Select(tid => visitor.FormatTheadId(tid)));
+            }
             else
             {
                 var result = string.Join(",", threadIds.GetRange(0, limit).Select(tid => visitor.FormatTheadId(tid)));
                 if (count > limit)
+                {
                     result += "...";
+                }
+
                 return result;
             }
         }
@@ -89,7 +93,10 @@ namespace ParallelStacks.Runtime
                 {
                     visitor.WriteType(parameter);
                 }
-                if (current < parameters.Count - 1) visitor.WriteSeparator(", ");
+                if (current < parameters.Count - 1)
+                {
+                    visitor.WriteSeparator(", ");
+                }
             }
             visitor.WriteSeparator(")");
         }

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -14,7 +13,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private const int CopyBufferSize = (16 << 10) /* 16KiB */;
 
-        private ProcessEnvironmentHelper() {}
+        private ProcessEnvironmentHelper() { }
         public static ProcessEnvironmentHelper Parse(byte[] payload)
         {
             ProcessEnvironmentHelper helper = new ProcessEnvironmentHelper();
@@ -32,7 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return ReadEnvironmentCore(memoryStream);
         }
 
-        public async Task<Dictionary<string,string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
         {
             using var memoryStream = new MemoryStream();
             await continuation.CopyToAsync(memoryStream, CopyBufferSize, token);
@@ -45,12 +44,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] envBlock = stream.ToArray();
 
             if (envBlock.Length != (long)ExpectedSizeInBytes)
+            {
                 throw new ApplicationException($"ProcessEnvironment continuation length did not match expected length. Expected: {ExpectedSizeInBytes} bytes, Received: {envBlock.Length} bytes");
+            }
 
             var env = new Dictionary<string, string>();
             int cursor = 0;
-            UInt32 nElements = BitConverter.ToUInt32(envBlock, cursor);
-            cursor += sizeof(UInt32);
+            uint nElements = BitConverter.ToUInt32(envBlock, cursor);
+            cursor += sizeof(uint);
             while (cursor < envBlock.Length)
             {
                 string pair = IpcHelpers.ReadString(envBlock, ref cursor);
@@ -62,7 +63,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
 
-        private UInt32 ExpectedSizeInBytes { get; set; }
-        private UInt16 Future { get; set; }
+        private uint ExpectedSizeInBytes { get; set; }
+        private ushort Future { get; set; }
     }
 }

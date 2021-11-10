@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Tools.Common;
 using Microsoft.Internal.Common.Utils;
@@ -16,7 +15,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -55,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     Console.Out.WriteLine("-p|--process-id is required");
                     return -1;
                 }
-                
+
                 output = string.IsNullOrEmpty(output)
                     ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
@@ -71,10 +70,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 {
                     outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
                 }
-                
+
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
-                var dumpTask = Task.Run(() => 
+                var dumpTask = Task.Run(() =>
                 {
                     if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
                     {
@@ -115,8 +114,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             out MemoryGraph memoryGraph)
         {
             var heapInfo = new DotNetHeapInfo();
-            var log = verbose ? Console.Out : TextWriter.Null; 
-            
+            var log = verbose ? Console.Out : TextWriter.Null;
+
             memoryGraph = new MemoryGraph(50_000);
 
             if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, log, timeout, heapInfo))
@@ -166,7 +165,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] { "-v", "--verbose" },
-                description: "Output the log while collecting the gcdump.") 
+                description: "Output the log while collecting the gcdump.")
             {
                 Argument = new Argument<bool>(name: "verbose")
             };

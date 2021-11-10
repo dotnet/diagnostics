@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -27,7 +26,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly List<T> _items = new List<T>();
         private readonly List<Tuple<TaskCompletionSource<T>, Handler>> _handlers = new List<Tuple<TaskCompletionSource<T>, Handler>>();
 
-        private bool _disposed = false;
+        private bool _disposed;
 
         /// <summary>
         /// Returns an enumerator that iterates through the underlying collection.

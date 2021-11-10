@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
@@ -47,13 +46,13 @@ namespace Microsoft.Internal.Common.Commands
 
                     try
                     {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName}\n");
+                        sb.Append($"{process.Id,10} {process.ProcessName,-10} {process.MainModule.FileName}\n");
                     }
                     catch (Exception ex)
                     {
                         if (ex is System.ComponentModel.Win32Exception || ex is NullReferenceException)
                         {
-                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                            sb.Append($"{process.Id,10} {process.ProcessName,-10} [Elevated process - cannot determine path]\n");
                         }
                         else
                         {

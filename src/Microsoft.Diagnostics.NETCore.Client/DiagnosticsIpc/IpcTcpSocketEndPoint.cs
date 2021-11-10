@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Net;
@@ -21,7 +20,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 ParseTcpIpEndPoint(endPoint, out _, out _);
             }
-            catch(Exception)
+            catch (Exception)
             {
                 result = false;
             }
@@ -50,7 +49,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             port = -1;
 
             bool usesWildcardHost = false;
-            string uriToParse= "";
+            string uriToParse = "";
 
             if (endPoint.Contains("://"))
             {
@@ -71,8 +70,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.RelativeOrAbsolute, out Uri uri))
                 {
-                    if (string.Compare(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase) != 0 &&
-                        string.Compare(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase) != 0)
+                    if (!string.Equals(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
                     }
@@ -138,15 +137,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     var hostEntry = Dns.GetHostEntry(host);
                     if (hostEntry.AddressList.Length > 0)
+                    {
                         ipAddress = hostEntry.AddressList[0];
+                    }
                 }
             }
-            catch(Exception)
+            catch (Exception)
             {
             }
 
             if (ipAddress == null)
+            {
                 throw new ArgumentException(string.Format("Could not resolve {0} into an IP address", host));
+            }
 
             return new IPEndPoint(ipAddress, port);
         }

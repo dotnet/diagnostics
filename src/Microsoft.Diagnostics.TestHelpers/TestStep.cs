@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -28,9 +27,9 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class TestStep
     {
-        string _logFilePath;
-        string _stateFilePath;
-        TimeSpan _timeout;
+        private string _logFilePath;
+        private string _stateFilePath;
+        private TimeSpan _timeout;
 
         public TestStep(string logFilePath, string friendlyName)
         {
@@ -42,7 +41,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public string FriendlyName { get; private set; }
 
-        async public Task Execute(ITestOutputHelper output)
+        public async Task Execute(ITestOutputHelper output)
         {
             // if this step is in progress on another thread, wait for it
             TestStepState stepState = await AcquireStepStateLock(output);
@@ -110,7 +109,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     File.Delete(tempPath);
                 }
-                
+
             }
             catch (IOException ex)
             {
@@ -142,7 +141,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async private Task WriteFinalStepState(TestStepState stepState, ITestOutputHelper output)
+        private async Task WriteFinalStepState(TestStepState stepState, ITestOutputHelper output)
         {
             const int NumberOfRetries = 5;
             FileStream stepStateStream = null;
@@ -212,7 +211,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private async Task<TestStepState> AcquireStepStateLock(ITestOutputHelper output)
         {
             TestStepState initialStepState = new TestStepState();
-            
+
             bool stepStateFileExists = false;
             while (true)
             {
@@ -344,17 +343,17 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static string GetReuseStepStateReason(TestStepState openedStepState)
         {
             //This heuristic may need to change, in some cases it is probably too eager to
-            //reuse past results when we wanted to retest something. 
+            //reuse past results when we wanted to retest something.
 
             if (openedStepState.RunState == TestStepRunState.Complete)
             {
                 return "successful steps are always reused";
             }
-            else if(!IsPreviousMachineSame(openedStepState))
+            else if (!IsPreviousMachineSame(openedStepState))
             {
                 return "steps on run on other machines are always reused, regardless of success";
             }
-            else if(IsPreviousProcessRunning(openedStepState))
+            else if (IsPreviousProcessRunning(openedStepState))
             {
                 return "steps run in currently executing processes are always reused, regardless of success";
             }
@@ -377,7 +376,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private static bool IsOpenedStateChangeable(TestStepState openedStepState)
         {
-            return (openedStepState.RunState == TestStepRunState.InProgress && 
+            return (openedStepState.RunState == TestStepRunState.InProgress &&
                     IsPreviousMachineSame(openedStepState) &&
                     IsPreviousProcessRunning(openedStepState));
         }
@@ -403,20 +402,20 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void ThrowExceptionIfFaulted(TestStepState cachedStepState)
         {
-            if(cachedStepState.RunState == TestStepRunState.Faulted)
+            if (cachedStepState.RunState == TestStepRunState.Faulted)
             {
                 throw new TestStepException(FriendlyName, cachedStepState.ErrorMessage, cachedStepState.ErrorStackTrace);
             }
         }
 
-        enum TestStepRunState
+        private enum TestStepRunState
         {
             InProgress,
             Complete,
             Faulted
         }
 
-        class TestStepState
+        private class TestStepState
         {
             public TestStepState()
             {
@@ -468,7 +467,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 return WithFinalState(TestStepRunState.Complete, DateTimeOffset.Now, null, null);
             }
 
-            TestStepState WithFinalState(TestStepRunState runState, DateTimeOffset? taskCompleteTime, string errorMessage, string errorStackTrace)
+            private TestStepState WithFinalState(TestStepRunState runState, DateTimeOffset? taskCompleteTime, string errorMessage, string errorStackTrace)
             {
                 return new TestStepState(runState, Machine, ProcessID, ProcessName, StartTime, taskCompleteTime, errorMessage, errorStackTrace);
             }
@@ -511,7 +510,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     // The XmlReader is not happy with two root nodes so we crudely split them.
                     int indexOfInitialStepStateElementEnd = text.IndexOf("</InitialStepState>");
-                    if(indexOfInitialStepStateElementEnd == -1)
+                    if (indexOfInitialStepStateElementEnd == -1)
                     {
                         return false;
                     }
@@ -570,7 +569,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // as if the stream had terminated at the end of the InitialTaskState node.
                 // This covers a small window of time when appending the FinalTaskState node is in progress.
                 //
-                if(string.IsNullOrWhiteSpace(text))
+                if (string.IsNullOrWhiteSpace(text))
                 {
                     return;
                 }

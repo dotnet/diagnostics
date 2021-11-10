@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -31,7 +30,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // Setup the logging from the options in the config file
                 outputHelper = ConfigureLogging(config, output, testName);
 
-                // Restore and build the debuggee. The debuggee name is lower cased because the 
+                // Restore and build the debuggee. The debuggee name is lower cased because the
                 // source directory name has been lowercased by the build system.
                 DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName.ToLowerInvariant(), outputHelper);
 
@@ -152,9 +151,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public class OutputHelper : ITestOutputHelper, IDisposable
         {
-            readonly ITestOutputHelper _output;
-            readonly FileTestOutputHelper _fileLogger;
-            readonly ConsoleTestOutputHelper _consoleLogger;
+            private readonly ITestOutputHelper _output;
+            private readonly FileTestOutputHelper _fileLogger;
+            private readonly ConsoleTestOutputHelper _consoleLogger;
 
             public readonly ITestOutputHelper IndentedOutput;
 
@@ -188,8 +187,8 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public class TestLogger : TestOutputProcessLogger
         {
-            readonly StringBuilder _standardOutput;
-            readonly StringBuilder _standardError;
+            private readonly StringBuilder _standardOutput;
+            private readonly StringBuilder _standardError;
 
             public TestLogger(ITestOutputHelper output)
                 : base(output)

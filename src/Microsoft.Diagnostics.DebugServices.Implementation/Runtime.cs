@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.SymbolStore;
@@ -35,10 +34,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
 
             RuntimeType = RuntimeType.Unknown;
-            if (clrInfo.Flavor == ClrFlavor.Core) {
+            if (clrInfo.Flavor == ClrFlavor.Core)
+            {
                 RuntimeType = RuntimeType.NetCore;
             }
-            else if (clrInfo.Flavor == ClrFlavor.Desktop) {
+            else if (clrInfo.Flavor == ClrFlavor.Desktop)
+            {
                 RuntimeType = RuntimeType.Desktop;
             }
             RuntimeModule = target.Services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
@@ -114,10 +115,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                     }
                     catch (Exception ex) when
-                       (ex is DllNotFoundException || 
-                        ex is FileNotFoundException || 
-                        ex is InvalidOperationException || 
-                        ex is InvalidDataException || 
+                       (ex is DllNotFoundException ||
+                        ex is FileNotFoundException ||
+                        ex is InvalidOperationException ||
+                        ex is InvalidDataException ||
                         ex is ClrDiagnosticsException)
                     {
                         Trace.TraceError("CreateRuntime FAILED: {0}", ex.ToString());
@@ -258,7 +259,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return filePath;
         }
 
-        private ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        private ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>();
 
         public override bool Equals(object obj)
         {
@@ -283,19 +284,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var sb = new StringBuilder();
             string config = s_runtimeTypeNames[(int)RuntimeType];
             sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8}");
-            if (_clrInfo.SingleFileRuntimeInfo.HasValue) {
+            if (_clrInfo.SingleFileRuntimeInfo.HasValue)
+            {
                 sb.AppendLine($"    Single-file runtime module path: {RuntimeModule.FileName}");
             }
-            else {
+            else
+            {
                 sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
             }
-            if (RuntimeModuleDirectory is not null) {
+            if (RuntimeModuleDirectory is not null)
+            {
                 sb.AppendLine($"    Runtime module directory: {RuntimeModuleDirectory}");
             }
-            if (_dacFilePath is not null) {
+            if (_dacFilePath is not null)
+            {
                 sb.AppendLine($"    DAC: {_dacFilePath}");
             }
-            if (_dbiFilePath is not null) {
+            if (_dbiFilePath is not null)
+            {
                 sb.AppendLine($"    DBI: {_dbiFilePath}");
             }
             return sb.ToString();

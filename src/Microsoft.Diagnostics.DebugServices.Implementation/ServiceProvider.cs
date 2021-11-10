@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -34,7 +33,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Create a service provider with parent provider and service factories
         /// </summary>
         /// <param name="parents">an array of functions to return the next provider to search if service isn't found in this instance</param>
-        public ServiceProvider(Func<IServiceProvider>[] parents) 
+        public ServiceProvider(Func<IServiceProvider>[] parents)
         {
             _parents = parents;
             _factories = new Dictionary<Type, Func<object>>();
@@ -48,7 +47,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="factory">function to create service instance</param>
         public void AddServiceFactory<T>(Func<object> factory)
         {
-            _factories.Add(typeof(T), () => {
+            _factories.Add(typeof(T), () =>
+            {
                 object service = factory();
                 _services.Add(typeof(T), service);
                 return service;

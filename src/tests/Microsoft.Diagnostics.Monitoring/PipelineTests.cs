@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
@@ -72,7 +71,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
             public int ExecutedCleanup { get; private set; } = 0;
             public TimeSpan Delay { get; }
 
-            public DelayPipeline() : this(Timeout.InfiniteTimeSpan) 
+            public DelayPipeline() : this(Timeout.InfiniteTimeSpan)
             {
             }
 

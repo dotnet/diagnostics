@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -19,7 +18,7 @@ namespace SOS.Hosting
         /// <summary>
         /// The runtime OS and type. Must match IRuntime::RuntimeConfiguration in runtime.h.
         /// </summary>
-        enum RuntimeConfiguration
+        private enum RuntimeConfiguration
         {
             WindowsDesktop = 0,
             WindowsCore = 1,
@@ -188,7 +187,7 @@ namespace SOS.Hosting
         private void SetRuntimeDirectory(
             IntPtr self,
             string runtimeModuleDirectory)
-        { 
+        {
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
@@ -206,14 +205,17 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppClrDataProcess)
         {
-            if (ppClrDataProcess == null) {
+            if (ppClrDataProcess == null)
+            {
                 return HResult.E_INVALIDARG;
             }
-            if (_clrDataProcess == IntPtr.Zero) {
+            if (_clrDataProcess == IntPtr.Zero)
+            {
                 _clrDataProcess = CreateClrDataProcess();
             }
             *ppClrDataProcess = _clrDataProcess;
-            if (*ppClrDataProcess == IntPtr.Zero) {
+            if (*ppClrDataProcess == IntPtr.Zero)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
@@ -223,14 +225,17 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppCorDebugProcess)
         {
-            if (ppCorDebugProcess == null) {
+            if (ppCorDebugProcess == null)
+            {
                 return HResult.E_INVALIDARG;
             }
-            if (_corDebugProcess == IntPtr.Zero) {
+            if (_corDebugProcess == IntPtr.Zero)
+            {
                 _corDebugProcess = CreateCorDebugProcess();
             }
             *ppCorDebugProcess = _corDebugProcess;
-            if (*ppCorDebugProcess == IntPtr.Zero) {
+            if (*ppCorDebugProcess == IntPtr.Zero)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
@@ -268,7 +273,8 @@ namespace SOS.Hosting
             // Attempt to get the FileVersion string that contains version and the "built by" and commit id info
             if (fileVersionBuffer != null)
             {
-                if (fileVersionBufferSizeInBytes > 0) {
+                if (fileVersionBufferSizeInBytes > 0)
+                {
                     *fileVersionBuffer = 0;
                 }
                 string versionString = module.VersionString;
@@ -344,7 +350,8 @@ namespace SOS.Hosting
                 }
                 Debug.Assert(_dbiHandle != IntPtr.Zero);
             }
-            ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion {
+            ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion
+            {
                 StructVersion = 0,
                 Major = 4,
                 Minor = 0,
@@ -507,12 +514,12 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetClrDataProcessDelegate(
             [In] IntPtr self,
-            [Out] IntPtr *ppClrDataProcess);
+            [Out] IntPtr* ppClrDataProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCorDebugInterfaceDelegate(
             [In] IntPtr self,
-            [Out] IntPtr *ppCorDebugProcess);
+            [Out] IntPtr* ppCorDebugProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetEEVersionDelegate(

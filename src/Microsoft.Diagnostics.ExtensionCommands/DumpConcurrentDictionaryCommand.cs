@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -93,7 +92,10 @@ System.Collections.Concurrent.ConcurrentDictionary<System.Int32, ForDump.DumpStr
         private string Truncate(string str, int nbMaxChars)
         {
             if (str.Length <= nbMaxChars)
+            {
                 return str;
+            }
+
             return str.Substring(0, nbMaxChars) + "...";
         }
     }

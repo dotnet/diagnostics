@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
@@ -38,7 +37,8 @@ namespace SOS.Extensions
 
             hr = debuggerServices.GetDebuggeeType(out DEBUG_CLASS debugClass, out DEBUG_CLASS_QUALIFIER qualifier);
             Debug.Assert(hr == HResult.S_OK);
-            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP) {
+            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP)
+            {
                 IsDump = true;
             }
 
@@ -75,7 +75,8 @@ namespace SOS.Extensions
             IMemoryService rawMemoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
             ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDebuggerServices(this, rawMemoryService, debuggerServices));
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDebuggerServices(this, debuggerServices));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
+            ServiceProvider.AddServiceFactory<IMemoryService>(() =>
+            {
                 Debug.Assert(Host.HostType != HostType.DotnetDump);
                 IMemoryService memoryService = rawMemoryService;
                 if (IsDump && Host.HostType == HostType.Lldb)

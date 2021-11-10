@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Tools.Common;
 using System;
@@ -23,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new Dictionary<string, string>();
         private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new Dictionary<string, MetadataReader>();
 
-        delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
+        private delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
 
         /// <summary>
         /// Get the line number from the Method Token and IL Offset in a stacktrace
@@ -99,7 +98,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         pdbCnt++;
                         peCnt--;
                     }
-                    if (pdbCnt == pdbFiles.Count) break;
+                    if (pdbCnt == pdbFiles.Count)
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception e)
@@ -138,7 +140,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     string ret = TrySymbolicateLine(fileStreamReader.ReadLine());
                     fileStreamWriter?.WriteLine(ret);
-                    if (isStdout) console.Out.WriteLine(ret);
+                    if (isStdout)
+                    {
+                        console.Out.WriteLine(ret);
+                    }
                 }
                 console.Out.WriteLine($"\nOutput: {outputPath}\n");
             }
@@ -265,10 +270,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
                             foreach (SequencePoint point in sequencePoints)
                             {
                                 if (point.Offset > Convert.ToInt64(stInfo.Offset, 16))
+                                {
                                     break;
+                                }
 
                                 if (point.StartLine != SequencePoint.HiddenLine)
+                                {
                                     bestPointSoFar = point;
+                                }
                             }
 
                             if (bestPointSoFar.HasValue)

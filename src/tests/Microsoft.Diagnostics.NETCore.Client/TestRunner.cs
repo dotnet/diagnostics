@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 
 using System;
@@ -49,9 +48,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // and its process tree
                 testProcess?.Kill(entireProcessTree: true);
             }
-            catch {}
+            catch { }
 
-            if(disposing)
+            if (disposing)
             {
                 testProcess?.Dispose();
             }
@@ -68,10 +67,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public StreamReader StandardOutput => testProcess.StandardOutput;
         public StreamReader StandardError => testProcess.StandardError;
 
-        public void Start(int timeoutInMSPipeCreation=15_000, int testProcessTimeout=30_000)
+        public void Start(int timeoutInMSPipeCreation = 15_000, int testProcessTimeout = 30_000)
         {
             if (outputHelper != null)
+            {
                 outputHelper.WriteLine($"[{DateTime.Now.ToString()}] Launching test: " + startInfo.FileName + " " + startInfo.Arguments);
+            }
 
             testProcess = new Process();
             testProcess.StartInfo = startInfo;
@@ -138,7 +139,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             this.Dispose();
         }
 
-        public int Pid {
+        public int Pid
+        {
             get { return testProcess.Id; }
         }
 

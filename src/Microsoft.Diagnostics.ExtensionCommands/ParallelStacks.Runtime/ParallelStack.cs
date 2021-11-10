@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -22,13 +21,17 @@ namespace ParallelStacks.Runtime
                 foreach (var stackFrame in thread.EnumerateStackTrace().Reverse())
                 {
                     if ((stackFrame.Kind != ClrStackFrameKind.ManagedMethod) || (stackFrame.Method == null))
+                    {
                         continue;
+                    }
 
                     stackFrames.Add(stackFrame);
                 }
 
                 if (stackFrames.Count == 0)
+                {
                     continue;
+                }
 
                 ps.AddStack(thread.OSThreadId, stackFrames.ToArray());
             }
@@ -121,7 +124,7 @@ namespace ParallelStacks.Runtime
             var runtime = (dacFilePath != null) ? version.CreateRuntime(dacFilePath) : version.CreateRuntime();
             return runtime;
         }
-        
+
         private ParallelStack(ClrStackFrame frame = null)
         {
             Stacks = new List<ParallelStack>();

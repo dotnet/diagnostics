@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -28,7 +27,7 @@ namespace SOS
 
         internal static Guid IID_IDebuggerServices = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
-        private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable >(_vtable);
+        private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 
         private readonly HostType _hostType;
 
@@ -55,7 +54,10 @@ namespace SOS
 
         public HResult AddCommand(string command, string help, IEnumerable<string> aliases)
         {
-            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(help) || aliases == null) throw new ArgumentNullException();
+            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(help) || aliases == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             byte[] commandBytes = Encoding.ASCII.GetBytes(command + "\0");
             byte[] helpBytes = Encoding.ASCII.GetBytes(help + "\0");
@@ -80,7 +82,10 @@ namespace SOS
 
         public void OutputString(DEBUG_OUTPUT mask, string message)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
 
             byte[] messageBytes = Encoding.ASCII.GetBytes(message + "\0");
             fixed (byte* messagePtr = messageBytes)
@@ -166,7 +171,8 @@ namespace SOS
             fixed (byte* versionBufferPtr = versionBuffer)
             {
                 HResult hr = VTable.GetModuleVersionInformation(Self, (uint)index, 0, getVersionInfoPtr, versionBufferPtr, (uint)versionBufferSize, null);
-                if (hr == HResult.S_OK) {
+                if (hr == HResult.S_OK)
+                {
                     fileInfo = *((VS_FIXEDFILEINFO*)versionBufferPtr);
                 }
                 return hr;
@@ -184,7 +190,8 @@ namespace SOS
             fixed (byte* versionBufferPtr = versionBuffer)
             {
                 int hr = VTable.GetModuleVersionInformation(Self, (uint)index, 0, getVersionStringPtr, versionBufferPtr, (uint)versionBuffer.Length, null);
-                if (hr == HResult.S_OK) {
+                if (hr == HResult.S_OK)
+                {
                     version = Marshal.PtrToStringAnsi(new IntPtr(versionBufferPtr));
                 }
                 return hr;
@@ -198,8 +205,15 @@ namespace SOS
 
         public HResult GetThreadIdsByIndex(uint start, uint count, uint[] ids, uint[] sysIds)
         {
-            if (ids != null && (start >= ids.Length || start + count > ids.Length)) throw new ArgumentOutOfRangeException(nameof(ids));
-            if (sysIds != null && (start >= sysIds.Length || start + count > sysIds.Length)) throw new ArgumentOutOfRangeException(nameof(sysIds));
+            if (ids != null && (start >= ids.Length || start + count > ids.Length))
+            {
+                throw new ArgumentOutOfRangeException(nameof(ids));
+            }
+
+            if (sysIds != null && (start >= sysIds.Length || start + count > sysIds.Length))
+            {
+                throw new ArgumentOutOfRangeException(nameof(sysIds));
+            }
 
             fixed (uint* pids = ids)
             {
@@ -298,7 +312,8 @@ namespace SOS
                             if (_hostType == HostType.DbgEng)
                             {
                                 int index = symbol.IndexOf('!');
-                                if (index != -1) {
+                                if (index != -1)
+                                {
                                     symbol = symbol.Remove(0, index + 1);
                                 }
                             }
@@ -315,7 +330,10 @@ namespace SOS
 
         public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)
         {
-            if (symbol == null) throw new ArgumentNullException(nameof(symbol));
+            if (symbol == null)
+            {
+                throw new ArgumentNullException(nameof(symbol));
+            }
 
             byte[] symbolBytes = Encoding.ASCII.GetBytes(symbol + "\0");
             fixed (byte* symbolPtr = symbolBytes)
@@ -338,7 +356,7 @@ namespace SOS
         public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, HResult> GetNumberModules;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, uint, out uint, byte*, uint, uint*, byte*, uint, uint*, HResult> GetModuleNames;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, out ulong, out uint, out uint, HResult> GetModuleInfo;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, HResult> GetModuleVersionInformation; 
+        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, HResult> GetModuleVersionInformation;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetNumberThreads;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint*, uint*, HResult> GetThreadIdsByIndex;
         public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint, byte*, HResult> GetThreadContextBySystemId;

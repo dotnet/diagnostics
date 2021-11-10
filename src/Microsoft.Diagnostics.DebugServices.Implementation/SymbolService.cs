@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.FileFormats;
 using Microsoft.SymbolStore;
@@ -80,7 +79,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 return _defaultSymbolCache;
             }
-            set 
+            set
             {
                 _defaultSymbolCache = value;
             }
@@ -163,7 +162,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             symbolCachePaths.Add(DefaultSymbolCache);
                                         }
                                     }
-                                    else 
+                                    else
                                     {
                                         symbolCachePaths.Add(parts[i]);
                                     }
@@ -287,7 +286,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         public void AddCachePath(string symbolCachePath)
         {
-            if (symbolCachePath == null) throw new ArgumentNullException(nameof(symbolCachePath));
+            if (symbolCachePath == null)
+            {
+                throw new ArgumentNullException(nameof(symbolCachePath));
+            }
 
             Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolCachePath = Path.GetFullPath(symbolCachePath);
@@ -306,7 +308,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
         public void AddDirectoryPath(string symbolDirectoryPath)
         {
-            if (symbolDirectoryPath == null) throw new ArgumentNullException(nameof(symbolDirectoryPath));
+            if (symbolDirectoryPath == null)
+            {
+                throw new ArgumentNullException(nameof(symbolDirectoryPath));
+            }
 
             Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolDirectoryPath = Path.GetFullPath(symbolDirectoryPath);
@@ -419,10 +424,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception ex) when 
-                (ex is UnauthorizedAccessException || 
-                 ex is BadImageFormatException || 
-                 ex is InvalidVirtualAddressException || 
+            catch (Exception ex) when
+                (ex is UnauthorizedAccessException ||
+                 ex is BadImageFormatException ||
+                 ex is InvalidVirtualAddressException ||
                  ex is IOException)
             {
                 Trace.TraceError($"GetMetaData: {ex.Message}");
@@ -458,7 +463,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match) 
+        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
             where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
         {
             while (symbolStore != null)
@@ -481,11 +486,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private static bool IsPathEqual(string path1, string path2)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return StringComparer.OrdinalIgnoreCase.Equals(path1, path2);
             }
-            else 
+            else
             {
                 return string.Equals(path1, path2);
             }

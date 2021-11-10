@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
@@ -18,7 +17,7 @@ namespace Microsoft.Internal.Common.Utils
     // </summary>
     internal class ProcessLauncher
     {
-        private Process _childProc = null;
+        private Process _childProc;
         private Task _stdOutTask = Task.CompletedTask;
         private Task _stdErrTask = Task.CompletedTask;
         internal static ProcessLauncher Launcher = new ProcessLauncher();
@@ -34,9 +33,9 @@ namespace Microsoft.Internal.Common.Utils
             _childProc = new Process();
             _childProc.StartInfo.FileName = args[unparsedTokenIdx];
             string arguments = "";
-            for (int i = unparsedTokenIdx+1; i < args.Length; i++)
+            for (int i = unparsedTokenIdx + 1; i < args.Length; i++)
             {
-                if (args[i].Contains(" "))
+                if (args[i].Contains(' '))
                 {
                     arguments += $"\"{args[i].Replace("\"", "\\\"")}\"";
                 }
@@ -46,7 +45,9 @@ namespace Microsoft.Internal.Common.Utils
                 }
 
                 if (i != args.Length)
+                {
                     arguments += " ";
+                }
             }
             _childProc.StartInfo.Arguments = arguments;
         }
@@ -55,7 +56,10 @@ namespace Microsoft.Internal.Common.Utils
         {
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i] == "--" && i < (args.Length - 1)) return i+1;
+                if (args[i] == "--" && i < (args.Length - 1))
+                {
+                    return i + 1;
+                }
             }
             return -1;
         }
@@ -83,7 +87,7 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start( string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
+        public bool Start(string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
         {
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
@@ -121,7 +125,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     _childProc.Kill();
                 }
-                // if process exited while we were trying to kill it, it can throw IOE 
+                // if process exited while we were trying to kill it, it can throw IOE
                 catch (InvalidOperationException) { }
                 _stdOutTask.Wait();
                 _stdErrTask.Wait();
@@ -133,7 +137,7 @@ namespace Microsoft.Internal.Common.Utils
     {
         public DiagnosticsClient Client;
         public IpcEndpointInfo EndpointInfo;
-        
+
         private ReversedDiagnosticsServer _server;
         private readonly string _port;
 
@@ -208,7 +212,7 @@ namespace Microsoft.Internal.Common.Utils
 
             if (ProcessLauncher.Launcher.HasChildProc)
             {
-                // Create and start the reversed server            
+                // Create and start the reversed server
                 string diagnosticTransportName = GetTransportName(_toolName);
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
                 server.Start();

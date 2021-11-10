@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Tracing;
 using System;
@@ -21,10 +20,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         private const string Activity1Stop = "Activity1/Stop";
         private static readonly Guid MicrosoftAspNetCoreHostingGuid = new Guid("{adb401e1-5296-51f8-c125-5fda75826144}");
         private static readonly Dictionary<string, IReadOnlyCollection<string>> _providerMap = new()
-            {
-                { MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },
-                { MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[]{ "EventCounters" } }
-            };
+        {
+            { MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[] { Activity1Start, Activity1Stop } },
+            { MonitoringSourceConfiguration.MicrosoftAspNetCoreHostingEventSourceName, new[] { "EventCounters" } }
+        };
 
         private readonly GlobMatcher _matcher;
 

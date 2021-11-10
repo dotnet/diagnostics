@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Internal.Common.Utils;
@@ -20,9 +19,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public enum CountersExportFormat { csv, json };
 
-    internal class Program
+    internal static class Program
     {
-        delegate Task<int> CollectDelegate(
+        private delegate Task<int> CollectDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -36,7 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries);
-        delegate Task<int> MonitorDelegate(
+
+        private delegate Task<int> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 MaxHistogramOption(),
                 MaxTimeSeriesOption()
             };
-        
+
         private static Command CollectCommand() =>
             new Command(
                 name: "collect",
@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option ExportFileNameOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: "The output file name.") 
+                description: "The output file name.")
             {
                 Argument = new Argument<string>(name: "output", getDefaultValue: () => "counter")
             };
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option RuntimeVersionOption() =>
             new Option(
                 aliases: new[] { "-r", "--runtime-version" },
-                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
+                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0")
             {
                 Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "3.1")
             };

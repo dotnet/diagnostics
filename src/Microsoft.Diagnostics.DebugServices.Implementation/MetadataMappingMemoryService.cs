@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -72,7 +71,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 MetadataRegion region = FindRegion(address);
                 if (region != null)
                 {
-                    if (region.ReadMetaData(address, buffer, out bytesRead)) {
+                    if (region.ReadMetaData(address, buffer, out bytesRead))
+                    {
                         return true;
                     }
                 }
@@ -163,7 +163,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 ulong size = module.Size;
-                if (size == 0) {
+                if (size == 0)
+                {
                     size = 4096;
                 }
                 Stream stream = _memoryService.CreateMemoryStream(module.ImageBase, size);
@@ -188,7 +189,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private ISymbolService SymbolService => _symbolService ??= _target.Services.GetService<ISymbolService>();
 
-        class MetadataRegion : IComparable<MetadataRegion>
+        private class MetadataRegion : IComparable<MetadataRegion>
         {
             private readonly MetadataMappingMemoryService _memoryService;
             private readonly ClrModule _module;

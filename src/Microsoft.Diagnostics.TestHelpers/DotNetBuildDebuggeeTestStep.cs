@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -77,9 +76,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                                        string debuggeeBinaryDllPath,
                                        string debuggeeBinaryExePath,
                                        string nugetPackageCacheDirPath,
-                                       Dictionary<string,string> nugetFeeds,
+                                       Dictionary<string, string> nugetFeeds,
                                        string logPath) :
-            base(logPath, "Build Debuggee") 
+            base(logPath, "Build Debuggee")
         {
             DotNetToolPath = dotnetToolPath;
             DebuggeeTemplateSolutionDirPath = templateSolutionDirPath;
@@ -91,7 +90,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             DebuggeeBinaryExePath = debuggeeBinaryExePath;
             NuGetPackageCacheDirPath = nugetPackageCacheDirPath;
             NugetFeeds = nugetFeeds;
-            if(NugetFeeds != null && NugetFeeds.Count > 0)
+            if (NugetFeeds != null && NugetFeeds.Count > 0)
             {
                 NuGetConfigPath = Path.Combine(DebuggeeSolutionDirPath, "NuGet.config");
             }
@@ -137,10 +136,10 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// a default cache.
         public string NuGetPackageCacheDirPath { get; private set; }
         public string NuGetConfigPath { get; private set; }
-        public IDictionary<string,string> NugetFeeds { get; private set; }
+        public IDictionary<string, string> NugetFeeds { get; private set; }
         public abstract string ProjectTemplateFileName { get; }
 
-        async protected override Task DoWork(ITestOutputHelper output)
+        protected async override Task DoWork(ITestOutputHelper output)
         {
             PrepareProjectSolution(output);
             await Restore(output);
@@ -148,7 +147,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             CopyNativeDependencies(output);
         }
 
-        void PrepareProjectSolution(ITestOutputHelper output)
+        private void PrepareProjectSolution(ITestOutputHelper output)
         {
             AssertDebuggeeSolutionTemplateDirExists(output);
 
@@ -165,7 +164,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeProjectFileExists(output);
         }
 
-        SemaphoreSlim _dotnetRestoreLock = new SemaphoreSlim(1);
+        private SemaphoreSlim _dotnetRestoreLock = new SemaphoreSlim(1);
 
         protected async Task Restore(string extraArgs, ITestOutputHelper output)
         {
@@ -187,12 +186,13 @@ namespace Microsoft.Diagnostics.TestHelpers
                 args += extraArgs;
             }
             output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
+            // restore can be painfully slow, so use a 10 min timeout
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
                 WithWorkingDirectory(DebuggeeSolutionDirPath).
                 WithLog(output).
-                WithTimeout(TimeSpan.FromMinutes(10)).                    // restore can be painfully slow
+                WithTimeout(TimeSpan.FromMinutes(10)).
                 WithExpectedExitCode(0);
 
             if (OS.Kind != OSKind.Windows && Environment.GetEnvironmentVariable("HOME") == null)
@@ -230,10 +230,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeAssetsFileExists(output);
 
             output.WriteLine("Launching {0} {1}", DotNetToolPath, dotnetArgs);
+            // a mac CI build of the modules debuggee is painfully slow :(
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, dotnetArgs).
                       WithWorkingDirectory(DebuggeeProjectDirPath).
                       WithLog(output).
-                      WithTimeout(TimeSpan.FromMinutes(10)). // a mac CI build of the modules debuggee is painfully slow :(
+                      WithTimeout(TimeSpan.FromMinutes(10)).
                       WithExpectedExitCode(0);
 
             if (OS.Kind != OSKind.Windows && Environment.GetEnvironmentVariable("HOME") == null)
@@ -269,7 +270,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             await Build("build", output);
         }
 
-        void CopyNativeDependencies(ITestOutputHelper output)
+        private void CopyNativeDependencies(ITestOutputHelper output)
         {
             if (Directory.Exists(DebuggeeNativeLibDirPath))
             {
@@ -286,7 +287,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             output.WriteLine("Copying: " + sourceDirPath + " -> " + destDirPath);
             Directory.CreateDirectory(destDirPath);
-            foreach(string dirPath in Directory.EnumerateDirectories(sourceDirPath))
+            foreach (string dirPath in Directory.EnumerateDirectories(sourceDirPath))
             {
                 CopySourceDirectory(dirPath, Path.Combine(destDirPath, Path.GetFileName(dirPath)), output);
             }
@@ -316,11 +317,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             sb.AppendLine("<configuration>");
-            if(NugetFeeds != null && NugetFeeds.Count > 0)
+            if (NugetFeeds != null && NugetFeeds.Count > 0)
             {
                 sb.AppendLine("  <packageSources>");
                 sb.AppendLine("    <clear />");
-                foreach(KeyValuePair<string, string> kv in NugetFeeds)
+                foreach (KeyValuePair<string, string> kv in NugetFeeds)
                 {
                     sb.AppendLine("    <add key=\"" + kv.Key + "\" value=\"" + kv.Value + "\" />");
                 }

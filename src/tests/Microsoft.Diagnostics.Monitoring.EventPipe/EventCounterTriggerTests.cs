@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter;
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
@@ -426,7 +425,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             /// <summary>
             /// The expected result of evaluating the trigger on this data.
             /// </summary>
-            public bool? Result { get;}
+            public bool? Result { get; }
 
             /// <summary>
             /// The sample CPU value to be given to the trigger for evaluation.

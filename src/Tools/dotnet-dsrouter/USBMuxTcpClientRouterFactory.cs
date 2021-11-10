@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -9,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    internal class USBMuxInterop
+    internal static class USBMuxInterop
     {
         public const string CoreFoundationLibrary = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
         public const string MobileDeviceLibrary = "/System/Library/PrivateFrameworks/MobileDevice.framework/MobileDevice";
@@ -39,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public delegate void DeviceNotificationDelegate(ref AMDeviceNotificationCallbackInfo info);
 
-#region MobileDeviceLibrary
+        #region MobileDeviceLibrary
         [DllImport(MobileDeviceLibrary)]
         public static extern uint AMDeviceNotificationSubscribe(DeviceNotificationDelegate callback, uint unused0, uint unused1, uint unused2, out IntPtr context);
 
@@ -60,8 +63,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         [DllImport(MobileDeviceLibrary)]
         public static extern uint USBMuxConnectByPort(uint connection, ushort port, out int socketHandle);
-#endregion
-#region CoreFoundationLibrary
+        #endregion
+        #region CoreFoundationLibrary
         [DllImport(CoreFoundationLibrary)]
         public static extern void CFRunLoopRun();
 
@@ -70,8 +73,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         [DllImport(CoreFoundationLibrary)]
         public static extern IntPtr CFRunLoopGetCurrent();
-#endregion
-#region LibC
+        #endregion
+        #region LibC
         [DllImport(LibC, SetLastError = true)]
         public static extern unsafe int send(int handle, byte* buffer, IntPtr length, int flags);
 
@@ -80,12 +83,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         [DllImport(LibC, SetLastError = true)]
         public static extern int close(int handle);
-#endregion
+        #endregion
     }
 
     internal class USBMuxStream : Stream
     {
-        int _handle = -1;
+        private int _handle = -1;
 
         public USBMuxStream(int handle)
         {
@@ -102,7 +105,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override long Length => throw new NotImplementedException();
 
-        public override long Position {
+        public override long Position
+        {
             get => throw new NotImplementedException();
             set => throw new NotImplementedException();
         }
@@ -126,7 +130,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             while (continueRead && bytesToRead - totalBytesRead > 0)
             {
                 if (!IsOpen)
+                {
                     throw new EndOfStreamException();
+                }
 
                 unsafe
                 {
@@ -137,11 +143,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
 
                 if (currentBytesRead == -1 && Marshal.GetLastWin32Error() == USBMuxInterop.EINTR)
+                {
                     continue;
+                }
 
                 continueRead = currentBytesRead > 0;
                 if (!continueRead)
+                {
                     break;
+                }
 
                 totalBytesRead += currentBytesRead;
             }
@@ -190,7 +200,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             while (continueWrite && bytesToWrite - totalBytesWritten > 0)
             {
                 if (!IsOpen)
+                {
                     throw new EndOfStreamException();
+                }
 
                 unsafe
                 {
@@ -201,12 +213,16 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
 
                 if (currentBytesWritten == -1 && Marshal.GetLastWin32Error() == USBMuxInterop.EINTR)
+                {
                     continue;
+                }
 
                 continueWrite = currentBytesWritten != -1;
 
                 if (!continueWrite)
+                {
                     break;
+                }
 
                 totalBytesWritten += currentBytesWritten;
             }
@@ -220,7 +236,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 {
                     Write(buffer, offset, count);
                 }
-            });
+            }, cancellationToken);
         }
 
         public override void Close()
@@ -241,11 +257,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
     internal class USBMuxTcpClientRouterFactory : TcpClientRouterFactory
     {
-        readonly int _port;
-
-        IntPtr _device = IntPtr.Zero;
-        uint _deviceConnectionID = 0;
-        IntPtr _loopingThread = IntPtr.Zero;
+        private readonly int _port;
+        private IntPtr _device = IntPtr.Zero;
+        private uint _deviceConnectionID;
+        private IntPtr _loopingThread = IntPtr.Zero;
 
         public static TcpClientRouterFactory CreateUSBMuxInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {
@@ -280,7 +295,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             StopNotificationSubscribeThread();
         }
 
-        async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
+        private async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
             int handle = -1;
             ushort networkPort = (ushort)IPAddress.HostToNetworkOrder(unchecked((short)_port));
@@ -306,7 +321,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         _logger?.LogDebug("No USB stream connected, timing out.");
 
                         if (_auto_shutdown)
+                        {
                             throw new RuntimeTimeoutException(TcpClientTimeoutMs);
+                        }
 
                         throw new TimeoutException();
                     }
@@ -332,7 +349,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return new USBMuxStream(handle);
         }
 
-        int ConnectTcpClientOverUSBMux()
+        private int ConnectTcpClientOverUSBMux()
         {
             uint result = 0;
             int handle = -1;
@@ -341,21 +358,27 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             lock (this)
             {
                 if (_deviceConnectionID == 0)
+                {
                     throw new Exception($"Failed to connect device over USB, no device currently connected.");
+                }
 
                 result = USBMuxInterop.USBMuxConnectByPort(_deviceConnectionID, networkPort, out handle);
             }
 
             if (result != 0)
+            {
                 throw new Exception($"Failed to connect device over USB using connection {_deviceConnectionID} and port {_port}.");
+            }
 
             return handle;
         }
 
-        bool ConnectDevice(IntPtr newDevice)
+        private bool ConnectDevice(IntPtr newDevice)
         {
             if (_device != IntPtr.Zero)
+            {
                 return false;
+            }
 
             _device = newDevice;
             if (USBMuxInterop.AMDeviceConnect(_device) == 0)
@@ -371,7 +394,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        bool DisconnectDevice()
+        private bool DisconnectDevice()
         {
             if (_device != IntPtr.Zero)
             {
@@ -388,7 +411,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return true;
         }
 
-        void AMDeviceNotificationCallback(ref USBMuxInterop.AMDeviceNotificationCallbackInfo info)
+        private void AMDeviceNotificationCallback(ref USBMuxInterop.AMDeviceNotificationCallbackInfo info)
         {
             _logger?.LogTrace($"AMDeviceNotificationInternal callback, device={info.am_device}, action={info.message}");
 
@@ -429,7 +452,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        void AMDeviceNotificationSubscribeLoop()
+        private void AMDeviceNotificationSubscribeLoop()
         {
             IntPtr context = IntPtr.Zero;
 
@@ -482,17 +505,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        void StartNotificationSubscribeThread()
+        private void StartNotificationSubscribeThread()
         {
             new Thread(new ThreadStart(() => AMDeviceNotificationSubscribeLoop())).Start();
         }
 
-        void StopNotificationSubscribeThread()
+        private void StopNotificationSubscribeThread()
         {
             lock (this)
             {
                 if (_loopingThread != IntPtr.Zero)
+                {
                     USBMuxInterop.CFRunLoopStop(_loopingThread);
+                }
             }
         }
     }

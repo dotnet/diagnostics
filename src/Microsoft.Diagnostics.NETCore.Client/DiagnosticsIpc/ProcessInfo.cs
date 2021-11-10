@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Text;
@@ -10,16 +9,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /**
      * ==ProcessInfo==
      * The response payload to issuing the GetProcessInfo command.
-     * 
+     *
      * 8 bytes  - PID (little-endian)
      * 16 bytes - CLR Runtime Instance Cookie (little-endian)
      * # bytes  - Command line string length and data
      * # bytes  - Operating system string length and data
      * # bytes  - Process architecture string length and data
-     * 
+     *
      * ==ProcessInfo2==
      * The response payload to issuing the GetProcessInfo2 command.
-     * 
+     *
      * 8 bytes  - PID (little-endian)
      * 16 bytes - CLR Runtime Instance Cookie (little-endian)
      * # bytes  - Command line string length and data
@@ -27,8 +26,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
      * # bytes  - Process architecture string length and data
      * # bytes  - Managed entrypoint assembly name
      * # bytes  - CLR product version string (may include prerelease labels)
-     * 
-     * 
+     *
+     *
      * The "string length and data" fields are variable length:
      * 4 bytes            - Length of string data in UTF-16 characters
      * (2 * length) bytes - The data of the string encoded using Unicode
@@ -37,7 +36,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class ProcessInfo
     {
-        private static readonly int GuidSizeInBytes = 16;
+        private const int GuidSizeInBytes = 16;
 
         /// <summary>
         /// Parses a ProcessInfo payload.
@@ -67,7 +66,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             ProcessInfo processInfo = new ProcessInfo();
 
             processInfo.ProcessId = BitConverter.ToUInt64(payload, index);
-            index += sizeof(UInt64);
+            index += sizeof(ulong);
 
             byte[] cookieBuffer = new byte[GuidSizeInBytes];
             Array.Copy(payload, index, cookieBuffer, 0, GuidSizeInBytes);
@@ -81,7 +80,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return processInfo;
         }
 
-        public UInt64 ProcessId { get; private set; }
+        public ulong ProcessId { get; private set; }
         public Guid RuntimeInstanceCookie { get; private set; }
         public string CommandLine { get; private set; }
         public string OperatingSystem { get; private set; }

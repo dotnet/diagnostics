@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using System;
@@ -79,7 +78,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             // Test removing the callback in the callback (oneshot)
             IDisposable unregister1 = event1.Register(() => callback1Fired++);
             IDisposable unregister2 = event1.Register(() => callback2Fired++);
-            _unregister3 = event1.Register(() => {
+            _unregister3 = event1.Register(() =>
+            {
                 callback3Fired++;
                 _unregister3.Dispose();
             });

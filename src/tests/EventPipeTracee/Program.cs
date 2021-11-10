@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,11 +9,11 @@ using System.Linq;
 
 namespace EventPipeTracee
 {
-    class Program
+    internal class Program
     {
         private const string AppLoggerCategoryName = "AppLoggerCategory";
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             bool spinWait10 = args.Length > 1 && "SpinWait10".Equals(args[1], StringComparison.Ordinal);
             TestBody(args[0], spinWait10);

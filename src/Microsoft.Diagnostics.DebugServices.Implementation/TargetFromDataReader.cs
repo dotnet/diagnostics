@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime;
 using System;
@@ -42,7 +41,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _ => throw new PlatformNotSupportedException($"{dataReader.Architecture}"),
             };
 
-            if (dataReader.ProcessId != -1) {
+            if (dataReader.ProcessId != -1)
+            {
                 ProcessId = (uint)dataReader.ProcessId;
             }
 
@@ -50,7 +50,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             IMemoryService rawMemoryService = new MemoryServiceFromDataReader(_dataReader);
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDataReader(this, _dataReader));
             ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, rawMemoryService, _dataReader));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
+            ServiceProvider.AddServiceFactory<IMemoryService>(() =>
+            {
                 IMemoryService memoryService = rawMemoryService;
                 if (IsDump)
                 {

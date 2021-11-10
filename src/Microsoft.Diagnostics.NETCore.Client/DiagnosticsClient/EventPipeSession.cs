@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -15,8 +14,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private long _sessionId;
         private IpcEndpoint _endpoint;
-        private bool _disposedValue = false; // To detect redundant calls
-        private bool _stopped = false; // To detect redundant calls
+        private bool _disposedValue; // To detect redundant calls
+        private bool _stopped; // To detect redundant calls
         private readonly IpcResponse _response;
 
         private EventPipeSession(IpcEndpoint endpoint, IpcResponse response, long sessionId)
@@ -136,7 +135,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     Stop();
                 }
-                catch {} // swallow any exceptions that may be thrown from Stop.
+                catch { } // swallow any exceptions that may be thrown from Stop.
             }
 
             if (!_disposedValue)

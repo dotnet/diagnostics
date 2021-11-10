@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using Xunit;
@@ -17,7 +16,7 @@ namespace EventPipe.UnitTests.ProviderValidation
 {
     public sealed class MyEventSource : EventSource
     {
-        private MyEventSource() {}
+        private MyEventSource() { }
         public static MyEventSource Log = new MyEventSource();
         public void MyEvent() { WriteEvent(1, "MyEvent"); }
     }
@@ -34,7 +33,7 @@ namespace EventPipe.UnitTests.ProviderValidation
         [Fact]
         public async void UserDefinedEventSource_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -49,12 +48,15 @@ namespace EventPipe.UnitTests.ProviderValidation
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
 
-                Action eventGeneratingAction = () => 
+                Action eventGeneratingAction = () =>
                 {
                     for (int i = 0; i < 100_000; i++)
                     {
                         if (i % 10_000 == 0)
+                        {
                             Logger.logger.Log($"Fired MyEvent {i:N0}/100,000 times...");
+                        }
+
                         MyEventSource.Log.MyEvent();
                     }
                 };

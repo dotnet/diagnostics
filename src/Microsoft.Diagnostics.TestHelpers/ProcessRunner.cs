@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -21,10 +20,10 @@ namespace Microsoft.Diagnostics.TestHelpers
     ///   b) Use the various WithXXX methods to modify the configuration of the process to launch
     ///   c) await RunAsync() to start the process and wait for it to terminate. Configuration
     ///      changes are no longer possible
-    ///   d) While waiting for RunAsync(), optionally call Kill() one or more times. This will expedite 
+    ///   d) While waiting for RunAsync(), optionally call Kill() one or more times. This will expedite
     ///      the termination of the process but there is no guarantee the process is terminated by
     ///      the time Kill() returns.
-    ///      
+    ///
     ///   Although the entire API of this type has been designed to be thread-safe, its typical that
     ///   only calls to Kill() and property getters invoked within the logging callbacks will be called
     ///   asynchronously.
@@ -37,20 +36,19 @@ namespace Microsoft.Diagnostics.TestHelpers
         // Be careful not to cause deadlocks by calling the logging callbacks with the lock held.
         // The logger has its own lock and it will hold that lock when it calls into property getters
         // on this type.
-        object _lock = new object();
-
-        List<IProcessLogger> _loggers;
-        Process _p;
-        DateTime _startTime;
-        TimeSpan _timeout;
-        ITestOutputHelper _traceOutput;
-        int? _expectedExitCode;
-        TaskCompletionSource<Process> _waitForProcessStartTaskSource;
-        Task<int> _waitForExitTask;
-        Task _timeoutProcessTask;
-        Task _readStdOutTask;
-        Task _readStdErrTask;
-        CancellationTokenSource _cancelSource;
+        private object _lock = new object();
+        private List<IProcessLogger> _loggers;
+        private Process _p;
+        private DateTime _startTime;
+        private TimeSpan _timeout;
+        private ITestOutputHelper _traceOutput;
+        private int? _expectedExitCode;
+        private TaskCompletionSource<Process> _waitForProcessStartTaskSource;
+        private Task<int> _waitForExitTask;
+        private Task _timeoutProcessTask;
+        private Task _readStdOutTask;
+        private Task _readStdErrTask;
+        private CancellationTokenSource _cancelSource;
         private string _replayCommand;
         private KillReason? _killReason;
 
@@ -76,19 +74,19 @@ namespace Microsoft.Diagnostics.TestHelpers
                 _killReason = null;
                 _waitForProcessStartTaskSource = new TaskCompletionSource<Process>();
                 Task<Process> startTask = _waitForProcessStartTaskSource.Task;
-                
+
                 // unfortunately we can't use the default Process stream reading because it only returns full lines and we have scenarios
                 // that need to receive the output before the newline character is written
                 _readStdOutTask = startTask.ContinueWith(t =>
                 {
                     ReadStreamToLoggers(_p.StandardOutput, ProcessStream.StandardOut, _cancelSource.Token);
-                }, 
+                },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _readStdErrTask = startTask.ContinueWith(t =>
                 {
                     ReadStreamToLoggers(_p.StandardError, ProcessStream.StandardError, _cancelSource.Token);
-                }, 
+                },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _timeoutProcessTask = startTask.ContinueWith(t =>
@@ -98,7 +96,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _waitForExitTask = InternalWaitForExit(startTask, _readStdOutTask, _readStdErrTask);
-                
+
                 if (replayCommand == null)
                 {
                     _replayCommand = ExePath + " " + Arguments;
@@ -109,7 +107,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
         }
-        
+
         public string ReplayCommand
         {
             get { lock (_lock) { return _replayCommand; } }
@@ -203,7 +201,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { lock (_lock) { return _p.Id; } }
         }
 
-        public Dictionary<string,string> EnvironmentVariables
+        public Dictionary<string, string> EnvironmentVariables
         {
             get { lock (_lock) { return new Dictionary<string, string>(_p.StartInfo.Environment); } }
         }
@@ -450,9 +448,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        class ConsoleTestOutputHelper : ITestOutputHelper
+        private class ConsoleTestOutputHelper : ITestOutputHelper
         {
-            readonly ITestOutputHelper _output;
+            private readonly ITestOutputHelper _output;
 
             public ConsoleTestOutputHelper(ITestOutputHelper output)
             {

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -9,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    internal class IpcClient
+    internal static class IpcClient
     {
         // The amount of time to wait for a stream to be available for consumption by the Connect method.
         // Normally expect the runtime to respond quickly but resource constrained machines may take longer.

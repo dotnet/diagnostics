@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using System;
@@ -10,13 +9,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "readmemory", Aliases = new string[] { "d" }, Help = "Dump memory contents.")]
     [Command(Name = "db", DefaultOptions = "--ascii:true  --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:1  -w:16", Help = "Dump memory as bytes.")]
-    [Command(Name = "dc", DefaultOptions = "--ascii:false --unicode:true  --ascii-string:false --unicode-string:false -c:64  -l:2  -w:8",  Help = "Dump memory as chars.")]
-    [Command(Name = "da", DefaultOptions = "--ascii:false --unicode:false --ascii-string:true  --unicode-string:false -c:128 -l:1  -w:0",  Help = "Dump memory as zero-terminated byte strings.")]
-    [Command(Name = "du", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:true  -c:128 -l:2  -w:0",  Help = "Dump memory as zero-terminated char strings.")]
-    [Command(Name = "dw", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:2  -w:0",  Help = "Dump memory as words (ushort).")]
-    [Command(Name = "dd", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:64  -l:4  -w:0",  Help = "Dump memory as dwords (uint).")]
-    [Command(Name = "dp", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:-1 -w:0",  Help = "Dump memory as pointers.")]
-    [Command(Name = "dq", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:8  -w:0",  Help = "Dump memory as qwords (ulong).")]
+    [Command(Name = "dc", DefaultOptions = "--ascii:false --unicode:true  --ascii-string:false --unicode-string:false -c:64  -l:2  -w:8", Help = "Dump memory as chars.")]
+    [Command(Name = "da", DefaultOptions = "--ascii:false --unicode:false --ascii-string:true  --unicode-string:false -c:128 -l:1  -w:0", Help = "Dump memory as zero-terminated byte strings.")]
+    [Command(Name = "du", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:true  -c:128 -l:2  -w:0", Help = "Dump memory as zero-terminated char strings.")]
+    [Command(Name = "dw", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:2  -w:0", Help = "Dump memory as words (ushort).")]
+    [Command(Name = "dd", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:64  -l:4  -w:0", Help = "Dump memory as dwords (uint).")]
+    [Command(Name = "dp", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:-1 -w:0", Help = "Dump memory as pointers.")]
+    [Command(Name = "dq", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:8  -w:0", Help = "Dump memory as qwords (ulong).")]
     public sealed class ReadMemoryCommand : CommandBase
     {
         [Argument(Name = "address", Help = "Address to dump.")]
@@ -79,15 +78,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (Address.HasValue) {
+            if (Address.HasValue)
+            {
                 _lastAddress = Address.Value;
             }
 
             int length = Length;
-            if (length < 0) {
+            if (length < 0)
+            {
                 length = MemoryService.PointerSize;
             }
-            switch (length) {
+            switch (length)
+            {
                 case 1:
                 case 2:
                 case 4:
@@ -100,8 +102,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             Length = length;
 
-            if (EndAddress.HasValue) {
-                if (EndAddress.Value <= _lastAddress) {
+            if (EndAddress.HasValue)
+            {
+                if (EndAddress.Value <= _lastAddress)
+                {
                     throw new ArgumentException("Cannot dump a negative range");
                 }
                 int range = (int)(EndAddress.Value - _lastAddress);
@@ -250,11 +254,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 value = '?';
             }
 
-            if (value == 0 && zeroOk) {
+            if (value == 0 && zeroOk)
+            {
                 return value;
             }
 
-            if (value < 0x20 || value > 0x7E) {
+            if (value < 0x20 || value > 0x7E)
+            {
                 value = '.';
             }
 

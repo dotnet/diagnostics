@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 using System.Linq;
@@ -8,7 +7,7 @@ using System.Linq;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "runtimes", Help = "List the runtimes in the target or change the default runtime.")]
-    public class RuntimesCommand: CommandBase
+    public class RuntimesCommand : CommandBase
     {
         public IRuntimeService RuntimeService { get; set; }
 
@@ -32,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
                     if (NetFx && runtime.RuntimeType == RuntimeType.Desktop ||
-                        NetCore && runtime.RuntimeType  == RuntimeType.NetCore)
+                        NetCore && runtime.RuntimeType == RuntimeType.NetCore)
                     {
                         ContextService.SetCurrentRuntime(runtime.Id);
                         WriteLine("Switched to {0} runtime successfully", name);

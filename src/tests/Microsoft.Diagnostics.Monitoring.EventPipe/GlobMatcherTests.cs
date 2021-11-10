@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
 using System;
@@ -46,11 +45,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public void TestGlobs()
         {
-            foreach(KeyValuePair<string, IReadOnlyList<string>> keyValuePair in Patterns)
+            foreach (KeyValuePair<string, IReadOnlyList<string>> keyValuePair in Patterns)
             {
                 var matcher = new GlobMatcher(new[] { keyValuePair.Key }, null);
 
-                foreach(string value in keyValuePair.Value)
+                foreach (string value in keyValuePair.Value)
                 {
                     if (!matcher.Match(value))
                     {
@@ -58,7 +57,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     };
                 }
 
-                foreach(string value in Paths.Except(keyValuePair.Value))
+                foreach (string value in Paths.Except(keyValuePair.Value))
                 {
                     if (matcher.Match(value))
                     {

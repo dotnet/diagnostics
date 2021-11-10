@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
@@ -76,9 +75,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     { "EventCounterIntervalSec", "2" }
                 });
 
-            for (var i = 0; i < providers.Length-1; i++)
+            for (var i = 0; i < providers.Length - 1; i++)
             {
-                for (var j = i+1; j < providers.Length; j++)
+                for (var j = i + 1; j < providers.Length; j++)
                 {
                     Assert.True(providers[i] != providers[j]);
                 }

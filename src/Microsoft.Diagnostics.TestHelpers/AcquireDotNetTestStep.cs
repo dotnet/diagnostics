@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -25,7 +24,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// localDotNetZipPath must also be non-null to indicate where the downloaded archive will be cached</param>
         /// <param name="localDotNetZipPath">
         /// If non-null, the location of a .zip or .tar.gz compressed folder containing the CLI tools. This
-        /// must be a local file system or network file system path. 
+        /// must be a local file system or network file system path.
         /// localDotNetZipExpandDirPath must also be non-null to indicate where the expanded folder will be
         /// stored.
         /// localDotNetTarPath must be non-null if localDotNetZip points to a .tar.gz format archive, in order
@@ -43,7 +42,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <param name="logFilePath">
         /// The path where an activity log for this test step should be written.
         /// </param>
-        /// 
+        ///
         public AcquireDotNetTestStep(
             string remoteDotNetZipPath,
             string localDotNetZipPath,
@@ -74,7 +73,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         /// <summary>
         /// If non-null, the location of a .zip or .tar.gz compressed folder containing the CLI tools. This
-        /// is a local file system or network file system path. 
+        /// is a local file system or network file system path.
         /// </summary>
         public string LocalDotNetZipPath { get; private set; }
 
@@ -100,7 +99,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool AnyWorkToDo { get { return RemoteDotNetPath != null || LocalDotNetZipPath != null; } }
 
-        async protected override Task DoWork(ITestOutputHelper output)
+        protected async override Task DoWork(ITestOutputHelper output)
         {
             if (RemoteDotNetPath != null)
             {
@@ -112,7 +111,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     await Unzip(LocalDotNetZipPath, LocalDotNetZipExpandDirPath, output);
                 }
-                else if(LocalDotNetZipPath.EndsWith(".tar.gz"))
+                else if (LocalDotNetZipPath.EndsWith(".tar.gz"))
                 {
                     await UnGZip(LocalDotNetZipPath, LocalDotNetTarPath, output);
                     await Untar(LocalDotNetTarPath, LocalDotNetZipExpandDirPath, output);
@@ -130,7 +129,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task DownloadFile(string remotePath, string localPath, ITestOutputHelper output)
+        private static async Task DownloadFile(string remotePath, string localPath, ITestOutputHelper output)
         {
             output.WriteLine("Downloading: " + remotePath + " -> " + localPath);
             Directory.CreateDirectory(Path.GetDirectoryName(localPath));
@@ -138,8 +137,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             WebResponse response = await request.GetResponseAsync();
             using (FileStream localZipStream = File.OpenWrite(localPath))
             {
-                // TODO: restore the CopyToAsync code after System.Net.Http.dll is 
-                // updated to a newer version. The current old version has a bug 
+                // TODO: restore the CopyToAsync code after System.Net.Http.dll is
+                // updated to a newer version. The current old version has a bug
                 // where the copy never finished.
                 // await response.GetResponseStream().CopyToAsync(localZipStream);
                 byte[] buffer = new byte[16 * 1024];
@@ -149,7 +148,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     int read = response.GetResponseStream().Read(buffer, 0, buffer.Length);
                     if (read == 0)
+                    {
                         break;
+                    }
+
                     localZipStream.Write(buffer, 0, read);
                     bytesLeft -= read;
                 }
@@ -157,7 +159,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task UnGZip(string gzipPath, string expandedFilePath, ITestOutputHelper output)
+        private static async Task UnGZip(string gzipPath, string expandedFilePath, ITestOutputHelper output)
         {
             output.WriteLine("Unziping: " + gzipPath + " -> " + expandedFilePath);
             using (FileStream gzipStream = File.OpenRead(gzipPath))
@@ -172,7 +174,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task Unzip(string zipPath, string expandedDirPath, ITestOutputHelper output)
+        private static async Task Unzip(string zipPath, string expandedDirPath, ITestOutputHelper output)
         {
             output.WriteLine("Unziping: " + zipPath + " -> " + expandedDirPath);
             using (FileStream zipStream = File.OpenRead(zipPath))
@@ -193,7 +195,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task Untar(string tarPath, string expandedDirPath, ITestOutputHelper output)
+        private static async Task Untar(string tarPath, string expandedDirPath, ITestOutputHelper output)
         {
             Directory.CreateDirectory(expandedDirPath);
             string tarToolPath = null;

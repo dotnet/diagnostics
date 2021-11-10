@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using Xunit;
@@ -34,7 +33,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         [Fact]
         public async void AssemblyLoad_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -48,24 +47,27 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b1000)
                 };
 
-                string assemblyPath=null;
-                Action _eventGeneratingAction = () => 
+                string assemblyPath = null;
+                Action _eventGeneratingAction = () =>
                 {
                     GetAssemblyPath();
                     try
                     {
-                        for(int i=0; i<100; i++)
+                        for (int i = 0; i < 100; i++)
                         {
                             if (i % 10 == 0)
+                            {
                                 Logger.logger.Log($"Load/Unload Assembly {i} times...");
+                            }
+
                             AssemblyLoad assemblyLoad = new AssemblyLoad();
-                            assemblyLoad.LoadFromAssemblyPath(assemblyPath+"\\Microsoft.Diagnostics.Runtime.dll");
+                            assemblyLoad.LoadFromAssemblyPath(assemblyPath + "\\Microsoft.Diagnostics.Runtime.dll");
                             assemblyLoad.Unload();
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        Logger.logger.Log(ex.Message+ex.StackTrace);
+                        Logger.logger.Log(ex.Message + ex.StackTrace);
                     }
                 };
 
@@ -75,7 +77,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 }
 
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int LoaderAssemblyLoadEvents = 0;
                     int LoaderAssemblyUnloadEvents = 0;
@@ -87,7 +89,8 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                     source.Clr.LoaderModuleLoad += (eventData) => LoaderModuleLoadEvents += 1;
                     source.Clr.LoaderModuleUnload += (eventData) => LoaderModuleUnloadEvents += 1;
 
-                    return () => {
+                    return () =>
+                    {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("LoaderAssemblyLoadEvents: " + LoaderAssemblyLoadEvents);
@@ -101,7 +104,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                         //Unload method just marks as unloadable, not unload immediately, so we check the unload events >=1 to make the tests stable
                         bool LoaderModuleResult = LoaderModuleLoadEvents >= 100 && LoaderModuleUnloadEvents >= 1;
                         Logger.logger.Log("LoaderModuleResult check: " + LoaderModuleResult);
-                        
+
                         return LoaderAssemblyResult && LoaderModuleResult ? 100 : -1;
                     };
                 };

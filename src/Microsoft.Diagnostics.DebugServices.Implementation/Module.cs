@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
@@ -49,19 +48,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider.AddServiceFactoryWithNoCaching<PEImage>(() => GetPEInfo());
 
             ServiceProvider.AddServiceFactory<PEReader>(() => ModuleService.GetPEReader(this));
-            if (target.OperatingSystem == OSPlatform.Linux) {
+            if (target.OperatingSystem == OSPlatform.Linux)
+            {
                 ServiceProvider.AddServiceFactory<ELFFile>(() => ModuleService.GetELFFile(this));
             }
-            if (target.OperatingSystem == OSPlatform.OSX) {
+            if (target.OperatingSystem == OSPlatform.OSX)
+            {
                 ServiceProvider.AddServiceFactory<MachOFile>(() => ModuleService.GetMachOFile(this));
             }
-            _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() => {
-                ServiceProvider.RemoveService(typeof(MachOFile)); 
+            _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() =>
+            {
+                ServiceProvider.RemoveService(typeof(MachOFile));
                 ServiceProvider.RemoveService(typeof(ELFFile));
                 ServiceProvider.RemoveService(typeof(PEReader));
             });
             ServiceProvider.AddService<IExportSymbols>(this);
-         }
+        }
 
         public void Dispose()
         {
@@ -183,7 +185,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
                 PEFile image = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
                 if (image.IsValid())
-                { 
+                {
                     if (image.TryGetExportSymbol(name, out ulong offset))
                     {
                         address = ImageBase + offset;
@@ -238,7 +240,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     versionData = fileVersionInfo.VersionInfo.ToVersionData();
                 }
             }
-            else 
+            else
             {
                 // If we can't get the version from the PE, search for version string embedded in the module data
                 string versionString = VersionString;
@@ -275,7 +277,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected PEImage GetPEInfo()
         {
-            if (InitializeValue(Flags.InitializePEInfo)) {
+            if (InitializeValue(Flags.InitializePEInfo))
+            {
                 _peImage = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbFileInfo, ref _flags);
             }
             return _peImage;

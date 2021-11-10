@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -22,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public bool IsEmpty => _providerCounters.Count == 0;
 
         public IEnumerable<string> Providers => _providerCounters.Keys;
-        
+
         public bool IncludesAllCounters(string providerName)
         {
             return _providerCounters.TryGetValue(providerName, out List<string> enabledCounters) && enabledCounters.Count == 0;
@@ -45,16 +44,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public void AddProviderCounters(string providerName, string[] counters)
         {
-            if(!_providerCounters.TryGetValue(providerName, out List<string> enabledCounters))
+            if (!_providerCounters.TryGetValue(providerName, out List<string> enabledCounters))
             {
                 enabledCounters = new List<string>(counters.Distinct());
                 _providerCounters.Add(providerName, enabledCounters);
             }
-            else if(enabledCounters.Count != 0) // empty list means all counters are enabled already
+            else if (enabledCounters.Count != 0) // empty list means all counters are enabled already
             {
-                foreach(string counter in counters)
+                foreach (string counter in counters)
                 {
-                    if(!enabledCounters.Contains(counter))
+                    if (!enabledCounters.Contains(counter))
                     {
                         enabledCounters.Add(counter);
                     }
@@ -64,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public bool Contains(string providerName, string counterName)
         {
-            return _providerCounters.TryGetValue(providerName, out List<string> counters) && 
+            return _providerCounters.TryGetValue(providerName, out List<string> counters) &&
                 (counters.Count == 0 || counters.Contains(counterName));
         }
     }

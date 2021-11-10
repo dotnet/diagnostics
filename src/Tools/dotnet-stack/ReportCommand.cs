@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -24,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
 
         /// <summary>
         /// Reports a stack trace
@@ -117,7 +116,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     {
                         var stackIndex = sample.StackIndex;
                         while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                        {
                             stackIndex = stackSource.GetCallerIndex(stackIndex);
+                        }
 
                         // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
                         // Thread id is in the frame name as "Thread (<ID>)"
@@ -153,9 +154,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
             finally
             {
                 if (File.Exists(tempNetTraceFilename))
+                {
                     File.Delete(tempNetTraceFilename);
+                }
+
                 if (File.Exists(tempEtlxFilename))
+                {
                     File.Delete(tempEtlxFilename);
+                }
             }
 
             return 0;
@@ -177,7 +183,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         public static Command ReportCommand() =>
             new Command(
                 name: "report",
-                description: "reports the managed stacks from a running .NET process") 
+                description: "reports the managed stacks from a running .NET process")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),

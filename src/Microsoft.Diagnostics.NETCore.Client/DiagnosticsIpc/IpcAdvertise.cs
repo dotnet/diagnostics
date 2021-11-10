@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Linq;
@@ -14,9 +13,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /**
      * ==ADVERTISE PROTOCOL==
      * Before standard IPC Protocol communication can occur on a client-mode connection
-     * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION 
+     * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION
      * IS STANDARD DIAGNOSTICS IPC PROTOCOL COMMUNICATION.
-     * 
+     *
      * The flow for Advertise is a one-way burst of 34 bytes consisting of
      * 8 bytes  - "ADVR_V1\0" (ASCII chars + null byte)
      * 16 bytes - CLR Instance Cookie (little-endian)
@@ -29,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static byte[] Magic_V1 => Encoding.ASCII.GetBytes("ADVR_V1" + '\0');
         private static readonly int IpcAdvertiseV1SizeInBytes = Magic_V1.Length + 16 + 8 + 2; // 34 bytes
 
-        private IpcAdvertise(byte[] magic, Guid cookie, UInt64 pid, UInt16 future)
+        private IpcAdvertise(byte[] magic, Guid cookie, ulong pid, ushort future)
         {
             Future = future;
             Magic = magic;
@@ -70,10 +69,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Guid cookie = new Guid(cookieBuffer);
             index += 16;
 
-            UInt64 pid = BitConverter.ToUInt64(buffer, index);
+            ulong pid = BitConverter.ToUInt64(buffer, index);
             index += 8;
 
-            UInt16 future = BitConverter.ToUInt16(buffer, index);
+            ushort future = BitConverter.ToUInt16(buffer, index);
             index += 2;
 
             // FUTURE: switch on incoming magic and change if version ever increments
@@ -99,7 +98,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Array.Copy(BitConverter.GetBytes(future), 0, buffer, index, sizeof(short));
             index += sizeof(short);
 
-            await stream.WriteAsync(buffer, 0, index).ConfigureAwait(false);
+            await stream.WriteAsync(buffer, 0, index, token).ConfigureAwait(false);
         }
 
         public override string ToString()
@@ -107,9 +106,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return $"{{ Magic={Magic}; ClrInstanceId={RuntimeInstanceCookie}; ProcessId={ProcessId}; Future={Future} }}";
         }
 
-        private UInt16 Future { get; } = 0;
+        private ushort Future { get; }
         public byte[] Magic { get; } = Magic_V1;
-        public UInt64 ProcessId { get; } = 0;
+        public ulong ProcessId { get; }
         public Guid RuntimeInstanceCookie { get; } = Guid.Empty;
     }
 }

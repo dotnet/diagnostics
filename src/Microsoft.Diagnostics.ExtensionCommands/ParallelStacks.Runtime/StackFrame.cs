@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -66,7 +65,9 @@ namespace ParallelStacks
         public static string GetNextTypeName(string typeName, ref int start, ref int end)
         {
             if (string.IsNullOrEmpty(typeName))
+            {
                 return string.Empty;
+            }
 
             var sb = new StringBuilder();
 
@@ -104,7 +105,7 @@ namespace ParallelStacks
             if (pos == -1)
             {
                 // *.Int32,xxx  with xxx could contain a generic 
-                AppendTypeNameWithoutNamespace(sb, typeName, start, next-1);
+                AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
                 // skip this type
                 start = next + 1;
@@ -122,7 +123,7 @@ namespace ParallelStacks
 
             // a non generic type before another type parameter
             // *.Int32,xxx
-            AppendTypeNameWithoutNamespace(sb, typeName, start, next-1);
+            AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
             // skip this type
             start = next + 1;
@@ -140,7 +141,7 @@ namespace ParallelStacks
             var pos = typeName.IndexOf('`', start, end - start);
 
             // build the name                                       V-- don't want ` in the name
-            AppendTypeNameWithoutNamespace(sb, typeName, start, pos-1);
+            AppendTypeNameWithoutNamespace(sb, typeName, start, pos - 1);
             sb.Append('<');
 
             // go to the first generic parameter
@@ -198,7 +199,10 @@ namespace ParallelStacks
 
                 //                             skip   .      ,
                 parameter = GetParameter(fullName, pos + 1, next - 1);
-                if (parameter != null) parameters.Add(parameter);
+                if (parameter != null)
+                {
+                    parameters.Add(parameter);
+                }
 
                 pos = next + 1;
             }
@@ -211,7 +215,9 @@ namespace ParallelStacks
             const string BYREF = " ByRef";
             //   ()  no parameter
             if (start >= end)
+            {
                 return null;
+            }
 
             var sb = new StringBuilder();
 
@@ -227,7 +233,9 @@ namespace ParallelStacks
             sb.Append(typeName);
 
             if (isByRef)
+            {
                 sb.Append(BYREF);
+            }
 
             return sb.ToString();
         }

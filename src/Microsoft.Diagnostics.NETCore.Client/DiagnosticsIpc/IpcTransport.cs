@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -48,7 +47,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
 
-    internal class IpcEndpointHelper
+    internal static class IpcEndpointHelper
     {
         public static Stream Connect(IpcEndpointConfig config, TimeSpan timeout)
         {
@@ -155,7 +154,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class DiagnosticPortIpcEndpoint : IpcEndpoint
     {
-        IpcEndpointConfig _config;
+        private IpcEndpointConfig _config;
 
         public DiagnosticPortIpcEndpoint(string diagnosticPort)
         {
@@ -208,9 +207,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
-        int _pid;
-
-        IpcEndpointConfig _config;
+        private int _pid;
+        private IpcEndpointConfig _config;
 
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
