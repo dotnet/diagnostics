@@ -199,7 +199,7 @@ fi
 #
 if [[ "$__NativeBuild" == 1 ]]; then
     echo "Generating Version Source File"
-    __GenerateVersionLog="$__LogDir/GenerateVersion.binlog"
+    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
 
     "$__RepoRootDir/eng/common/msbuild.sh" \
         $__RepoRootDir/eng/CreateVersionFile.csproj \
