@@ -64,15 +64,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     callTree.StackSource = filterStack;
 
                     List<CallTreeNodeBase> callTreeNodes = null;
-                    //find the top n Exclusive methods
+
                     if(!inclusive)
                     {
                         callTreeNodes = callTree.ByIDSortedExclusiveMetric();
                     }
-                    else //Find the top N Inclusive methods
+                    else
                     {
                         callTreeNodes = callTree.ByIDSortedInclusiveMetric();
                     }
+
                     int totalElements = callTreeNodes.Count;
                         while(count < number && index < totalElements)
                         {
@@ -96,6 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             return await Task.FromResult(0);
         }
+
         public static Command ReportCommand() =>
             new Command(
                 name: "report",
@@ -115,6 +117,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             InclusiveOption(),
                         }
                 };
+
         private static Argument<string> FileNameArgument() =>
             new Argument<string>("trace_filename")
             {
@@ -122,7 +125,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Description = "The file path for the trace being analyzed.",
                 Arity = new ArgumentArity(1, 1)
             };
+
         private static int DefaultN() => 5;
+        
         private static Option TopNOption()
         {
             return new Option(
