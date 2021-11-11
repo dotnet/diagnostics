@@ -207,7 +207,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
         /t:GenerateVersionFiles \
         /restore \
         /p:GenerateVersionSourceFile=true \
-        /p:NativeVersionSourceFile="$__IntermediatesDir/_version.c" \
+        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
         /p:Configuration="$__BuildType" \
         /p:Platform="$__BuildArch" \
         $__UnprocessedBuildArgs
