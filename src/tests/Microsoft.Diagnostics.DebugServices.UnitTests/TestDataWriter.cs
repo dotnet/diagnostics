@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         private void AddModuleMembers(XElement element, IModule module, string symbolModuleName)
         {
-            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.PdbFileInfo), nameof(IModule.VersionString));
+            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.PdbFileInfos), nameof(IModule.VersionString));
 
             if (symbolModuleName != null && IsModuleEqual(module, symbolModuleName))
             {
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         symbolElement.Add(new XElement("Value", ToHex(offset1)));
                     }
                     string symbol2 = "coreclr_execute_assembly";
-                    if (exportSymbols.TryGetSymbolAddress(symbol1, out ulong offset2))
+                    if (exportSymbols.TryGetSymbolAddress(symbol2, out ulong offset2))
                     {
                         XElement symbolElement = AddExportSymbolSection();
                         symbolElement.Add(new XElement("Name", symbol2));

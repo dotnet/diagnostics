@@ -27,15 +27,21 @@ namespace Microsoft.Diagnostics.DebugServices
         public string Path { get; }
 
         /// <summary>
+        /// True if portable PDB, false Windows
+        /// </summary>
+        public bool IsPortable { get; }
+
+        /// <summary>
         /// Creates an instance of the PdbInfo with the corresponding properties initialized.
         /// </summary>
-        public PdbFileInfo(string path, Guid guid, int revision)
+        public PdbFileInfo(string path, Guid guid, int revision, bool isPortable)
         {
             Path = path;
             Guid = guid;
             Revision = revision;
+            IsPortable = isPortable;
         }
 
-        public override string ToString() => $"{Guid} {Revision} {Path}";
+        public override string ToString() => $"{Guid} {Revision} {(IsPortable ? "(portable) " : "")}{Path}";
     }
 }

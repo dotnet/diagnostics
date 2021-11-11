@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TestAssets.Windows.x86.5.0</id>
+    <version>1.0.0</version>
+    <title>TestAssets.Windows.x86.5.0</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <description>
+      Test assets for Windows x86 on .NET 5.0.9 runtime
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Test assets
+    </summary>
+    <language>en-US</language>
+    <projectUrl>https://github.com/dotnet/diagnostics.git</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <copyright>Copyright 2021</copyright>
+  </metadata>
+  <files>
+    <file src="TestAssets.Windows.x86.5.0\1.0.246501\content\SymbolTestApp\*.*" target="content/SymbolTestApp" />
+    <file src="TestAssets.Windows.x86.5.0\1.0.246501\content\DualRuntimes\*.*" target="content/DualRuntimes" />
+    <file src="TestAssets.Windows.x86.5.0\1.0.246501\content\LineNums\*.*" target="content/LineNums" />
+  </files>
+</package>

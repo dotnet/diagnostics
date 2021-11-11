@@ -70,10 +70,10 @@ namespace SOS.Extensions
                         int hr = _moduleService._debuggerServices.GetModuleVersionInformation(ModuleIndex, out VS_FIXEDFILEINFO fileInfo);
                         if (hr == HResult.S_OK)
                         {
-                            int major = (int)fileInfo.dwFileVersionMS >> 16;
-                            int minor = (int)fileInfo.dwFileVersionMS & 0xffff;
-                            int revision = (int)fileInfo.dwFileVersionLS >> 16;
-                            int patch = (int)fileInfo.dwFileVersionLS & 0xffff;
+                            int major = (int)(fileInfo.dwFileVersionMS >> 16);
+                            int minor = (int)(fileInfo.dwFileVersionMS & 0xffff);
+                            int revision = (int)(fileInfo.dwFileVersionLS >> 16);
+                            int patch = (int)(fileInfo.dwFileVersionLS & 0xffff);
                             _versionData = new VersionData(major, minor, revision, patch);
                         }
                         else

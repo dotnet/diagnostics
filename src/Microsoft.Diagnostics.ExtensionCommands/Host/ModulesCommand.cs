@@ -25,7 +25,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--segments", Aliases = new string[] { "-s" }, Help = "Displays the module segments.")]
         public bool Segment { get; set; }
 
-
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]
         public string ModuleName { get; set; }
 
@@ -57,7 +56,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         {
                             WriteLine("                     {0}", versionString);
                         }
-                        WriteLine("    PdbInfo:         {0}", module.PdbFileInfo?.ToString() ?? "<none>");
+                        foreach (PdbFileInfo pdbFileInfo in module.PdbFileInfos)
+                        {
+                            WriteLine("    PdbInfo:         {0}", pdbFileInfo);
+                        }
                         WriteLine("    BuildId:         {0}", !module.BuildId.IsDefaultOrEmpty ? string.Concat(module.BuildId.Select((b) => b.ToString("x2"))) : "<none>");
                     }
                     else

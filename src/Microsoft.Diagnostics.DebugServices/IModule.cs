@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Microsoft.Diagnostics.DebugServices
@@ -75,7 +76,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// PDB information for Windows PE modules (managed or native).
         /// </summary>
-        PdbFileInfo PdbFileInfo { get; }
+        IEnumerable<PdbFileInfo> PdbFileInfos { get; }
 
         /// <summary>
         /// Version information for Window PE modules (managed or native). 
