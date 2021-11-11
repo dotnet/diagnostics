@@ -112,7 +112,8 @@ echo %NUGET_PACKAGES%
 set "__RootBinDir=%__ProjectDir%\artifacts"
 set "__BinDir=%__RootBinDir%\bin\%__BuildOS%.%__BuildArch%.%__BuildType%"
 set "__LogDir=%__RootBinDir%\log\%__BuildOS%.%__BuildArch%.%__BuildType%"
-set "__IntermediatesDir=%__RootBinDir%\obj\%__BuildOS%.%__BuildArch%.%__BuildType%"
+set "__ArtifactsIntermediatesDir=%__RootBinDir%\obj"
+set "__IntermediatesDir=%__ArtifactsIntermediatesDir%\%__BuildOS%.%__BuildArch%.%__BuildType%"
 set "__PackagesBinDir=%__RootBinDir%\packages\%__BuildType%\Shipping"
 
 set "__CrossComponentBinDir=%__BinDir%"
@@ -177,7 +178,7 @@ if /i %__BuildCrossArch% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__CrossCompIntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         goto ExitWithError
@@ -251,7 +252,7 @@ if %__Build% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__IntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         goto ExitWithError

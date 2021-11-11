@@ -198,6 +198,25 @@ fi
 # Build native components
 #
 if [[ "$__NativeBuild" == 1 ]]; then
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
+
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/CreateVersionFile.csproj \
+        /bl:$__GenerateVersionLog \
+        /t:GenerateVersionFiles \
+        /restore \
+        /p:GenerateVersionSourceFile=true \
+        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
+        /p:Configuration="$__BuildType" \
+        /p:Platform="$__BuildArch" \
+        $__UnprocessedBuildArgs
+
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
+        exit 1
+    fi
+
     build_native "$__TargetOS" "$__BuildArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 fi
 
