@@ -437,7 +437,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             else if (typeof(T) == typeof(byte[]))
             {
                 byte[] byteArray = (byte[])((object)obj);
-                uint length = byteArray == null ? 0 : byteArray.Length;
+                uint length = byteArray == null ? 0U : (uint)byteArray.Length;
                 writer.Write(length);
 
                 if (length > 0)
