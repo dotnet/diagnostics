@@ -434,6 +434,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Guid guidVal = (Guid)((object)obj);
                 writer.Write(guidVal.ToByteArray());
             }
+            else if (typeof(T) == typeof(byte[]))
+            {
+                byte[] byteArray = (byte[])((object)obj);
+                uint length = byteArray == null ? 0 : byteArray.Length;
+                writer.Write(length);
+
+                if (length > 0)
+                {
+                    writer.Write(byteArray);
+                }
+            }
             else
             {
                 throw new ArgumentException($"Type {obj.GetType()} is not supported in SerializePayloadArgument, please add it.");
