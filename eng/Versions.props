@@ -5,6 +5,14 @@
     <VersionPrefix>6.0.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
+    <!--
+      Our nightly tools are stable versioned but go to a non-stable feed.
+      Arcade usually disallows this, but we use such a versioning scheme by design.
+      The nightly bits are versioned in a stable manner to allow `dotnet tool` to perform
+      easy updates. If we have issues, we just respin builds as we are a leaf build node
+      and we don't participate in prodcon.
+    -->
+    <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
