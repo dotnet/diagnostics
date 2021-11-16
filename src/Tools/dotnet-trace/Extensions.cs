@@ -205,7 +205,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 valEnd = curIdx;
             }
-            AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
+            if (keyStart < keyEnd)
+            {
+                AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
+            }
             return argumentDict;
         }
 
