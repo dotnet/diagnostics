@@ -5,6 +5,8 @@
     <OutputType>Exe</OutputType>
     <IsShipping>true</IsShipping>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Tools always ship with stable versions to allow for seamless CLI upgrade experiences. -->
+    <PreReleaseVersionLabel></PreReleaseVersionLabel>
   </PropertyGroup>
 
   <Choose>

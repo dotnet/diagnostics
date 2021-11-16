@@ -71,8 +71,7 @@ public class SOS
                 }
 
                 // Using the dotnet-dump analyze tool if the path exists in the config file.
-                // TODO: dotnet-dump currently doesn't support macho core dumps that the MacOS createdump generates
-                if (information.TestConfiguration.DotNetDumpPath() != null && OS.Kind != OSKind.OSX)
+                if (information.TestConfiguration.DotNetDumpPath() != null)
                 {
                     // Don't test dotnet-dump on triage dumps when running on desktop CLR.
                     if (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage)
@@ -128,7 +127,7 @@ public class SOS
                 Assert.NotNull(parameters);
                 Assert.NotNull(parameters.ExceptionType);
                 Assert.NotNull(parameters.OSVersion);
-                Assert.Equal(parameters.SystemManufacturer, "apple");
+                Assert.Equal("apple", (string)parameters.SystemManufacturer);
             }
         }
         catch (Exception ex)

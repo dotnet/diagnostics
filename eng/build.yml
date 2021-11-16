@@ -13,6 +13,7 @@ parameters:
   dockerImage: ''
   # Optional: ROOTFS_DIR to use
   crossrootfsDir: ''
+  crossbuild: false
   # Optional: test only job if true
   testOnly: false
   buildAndSkipTest: false
@@ -114,10 +115,10 @@ jobs:
       - _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
 
     # This is only required for cross builds.
-    - ${{ if eq(parameters.crossrootfsDir, '') }}:
-      - _RootFs: ''
-    - ${{ if ne(parameters.crossrootfsDir, '') }}:
-      - _RootFs: --rootfs ${{ parameters.crossrootfsDir }}
+    - ${{ if and(eq(parameters.crossbuild, false), eq(parameters.crossrootfsDir, '')) }}:
+      - _Cross: ''
+    - ${{ if or(eq(parameters.crossbuild, true), ne(parameters.crossrootfsDir, '')) }}:
+      - _Cross: -cross
 
     steps:
     - ${{ if eq(parameters.osGroup, 'Linux') }}:
@@ -142,12 +143,14 @@ jobs:
     - script: $(_dockerEnv) $(_buildScript)
         -configuration $(_BuildConfig) 
         -architecture $(_BuildArch)
+        $(_Cross)
         $(_TestArgs)
-        $(_RootFs)
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         $(_InternalInstallArgs)
       displayName: Build / Test
       condition: succeeded()
+      env:
+        ROOTFS_DIR: ${{ parameters.crossrootfsDir }}
 
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - task: CopyFiles@2
