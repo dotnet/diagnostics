@@ -847,7 +847,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            var inputLoopStart = DateTime.Now;
+            var shouldStopAfterDuration = _duration != default(TimeSpan);
+            Stopwatch durationStopwatch = null;
+
+            if (shouldStopAfterDuration)
+            {
+                durationStopwatch = Stopwatch.StartNew();
+            }
 
             while(!_shouldExit.Task.Wait(250))
             {
@@ -869,11 +875,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
 
-                if (DateTime.Now - inputLoopStart > _duration)
+                if (shouldStopAfterDuration && durationStopwatch.Elapsed >= _duration)
                 {
+                    durationStopwatch.Stop();
                     break;
                 }
             }
+
             StopMonitor();
             return _shouldExit.Task;
         }
