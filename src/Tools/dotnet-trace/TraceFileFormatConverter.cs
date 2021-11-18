@@ -13,14 +13,15 @@ using Microsoft.Diagnostics.Tracing.Stacks.Formats;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal enum TraceFileFormat { NetTrace, Speedscope, Chromium };
+	internal enum TraceFileFormat { NetTrace, Speedscope, Chromium, CollapsedStacks };
 
     internal static class TraceFileFormatConverter
     {
         private static IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
             { TraceFileFormat.NetTrace,     "nettrace" },
             { TraceFileFormat.Speedscope,   "speedscope.json" },
-            { TraceFileFormat.Chromium,     "chromium.json" }
+            { TraceFileFormat.Chromium,     "chromium.json" },
+            { TraceFileFormat.CollapsedStacks, "stacks" }
         };
 
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
@@ -37,6 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     break;
                 case TraceFileFormat.Speedscope:
                 case TraceFileFormat.Chromium:
+                case TraceFileFormat.CollapsedStacks:
                     try
                     {
                         Convert(format, fileToConvert, outputFilename);
@@ -87,6 +89,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         break;
                     case TraceFileFormat.Chromium:
                         ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
+                        break;
+                    case TraceFileFormat.CollapsedStacks:
+                        CollapsedStacksSourceWriter.Write(stackSource, outputFilename);
                         break;
                     default:
                         // we should never get here

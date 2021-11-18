@@ -98,6 +98,18 @@ On Windows, `.nettrace` files can be viewed on PerfView (https://github.com/micr
 
 If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `nettrace` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
 
+Another option for visualization is to use [Brendan Gregg's flame graph tool](https://github.com/brendangregg/FlameGraph).
+It expects folded stack traces in a simple text format which can be produced by `dotnet-trace convert --format CollapsedStacks` and it will produce an SVG flame graph.
+Note that compared to speedscope and chromium tracing, this will collapse same stack traces together regardless of the time when they were executed.
+That makes it more suitable for CPU profiling while SpeedScope and Chromium are probably better for tracing.
+
+
+```
+dotnet trace collect -- dotnet myapp.dll
+dotnet trace convert --format CollapsedStacks -o mytrace dotnet_X_Y.nettrace
+flamegraph.pl < mytrace.stacks > myflamegraph.svg
+```
+
 Note: The .NET Core runtime generates traces in the `nettrace` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `nettrace` file is preserved next to the converted file.
 
 ## Known Caveats
