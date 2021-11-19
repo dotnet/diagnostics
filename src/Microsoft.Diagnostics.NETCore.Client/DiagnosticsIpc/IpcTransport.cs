@@ -90,7 +90,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // is waited using WaitNamedPipe with an infinite timeout, then the
                 // CancellationToken cannot be observed.
                 await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
-                
+
                 return namedPipe;
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)

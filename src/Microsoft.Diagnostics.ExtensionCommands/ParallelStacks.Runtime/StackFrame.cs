@@ -77,7 +77,7 @@ namespace ParallelStacks
             //      *.IDictionary`2<*.Int32,*.IList`1<*.String>>    --> IDictionary + continue on *.Int32,*.IList`1<*.String>>
             //      *.Int32,*.IList`1<*.String>>                    --> Int32 + continue on *.IList`1<*.String>>
             //      *.Int32>                                        --> Int32
-            //  1. look for generic 
+            //  1. look for generic
             //  2. if not, look for , as separator of generic parameters
             var pos = typeName.IndexOf('`', start, end - start);
             var next = typeName.IndexOf(',', start, end - start);
@@ -104,7 +104,7 @@ namespace ParallelStacks
             // at least 1 type name (even before a generic type)
             if (pos == -1)
             {
-                // *.Int32,xxx  with xxx could contain a generic 
+                // *.Int32,xxx  with xxx could contain a generic
                 AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
                 // skip this type

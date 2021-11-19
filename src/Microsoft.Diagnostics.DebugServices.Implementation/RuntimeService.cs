@@ -41,8 +41,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     _dataTarget = null;
                 }
             });
-            // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader 
-            // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a 
+            // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader
+            // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a
             // stack overflow.
             target.OnDestroyEvent.Register(() =>
             {
@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 isVirtual: true,
                 unchecked((int)module.IndexFileSize.GetValueOrDefault(0)),
                 unchecked((int)module.IndexTimeStamp.GetValueOrDefault(0)),
-                new ImmutableArray<byte>());
+                default(ImmutableArray<byte>));
 
         ImmutableArray<byte> IDataReader.GetBuildId(ulong baseAddress)
         {

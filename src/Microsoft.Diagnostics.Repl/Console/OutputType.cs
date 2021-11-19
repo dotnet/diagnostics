@@ -4,7 +4,7 @@
 namespace Microsoft.Diagnostics.Repl
 {
     /// <summary>
-    /// The type of output. 
+    /// The type of output.
     /// </summary>
     public enum OutputType
     {

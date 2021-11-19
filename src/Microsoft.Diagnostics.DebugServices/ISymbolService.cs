@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.DebugServices
 
         /// <summary>
         /// The default symbol cache path:
-        /// 
+        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache

@@ -119,8 +119,8 @@ namespace SOS
         {
             imageName = null;
 
-            // GetModuleNames under lldb doesn't support querying just the 
-            // path length (imageNameBufferPtr = null) so use a fix size 
+            // GetModuleNames under lldb doesn't support querying just the
+            // path length (imageNameBufferPtr = null) so use a fix size
             // image name buffer.
             byte[] imageNameBuffer = new byte[1024];
             fixed (byte* imageNameBufferPtr = imageNameBuffer)

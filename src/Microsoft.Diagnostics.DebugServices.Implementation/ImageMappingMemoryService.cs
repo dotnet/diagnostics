@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly HashSet<ulong> _recursionProtection;
 
         /// <summary>
-        /// The PE and ELF image mapping memory service. This service assumes that the managed PE 
+        /// The PE and ELF image mapping memory service. This service assumes that the managed PE
         /// assemblies are in the module service's list. This is true for dbgeng, dotnet-dump but not
         /// true for lldb (only native modules are provided).
         /// </summary>
@@ -88,8 +88,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
-        /// Read memory from a PE module for the memory cache. Finds locally or downloads a module 
-        /// and "maps" it into the address space. This function can return more than requested which 
+        /// Read memory from a PE module for the memory cache. Finds locally or downloads a module
+        /// and "maps" it into the address space. This function can return more than requested which
         /// means the block should not be cached.
         /// </summary>
         /// <param name="address">memory address</param>
@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             // Not reading anything in the PE's header
                             if (rva > reader.PEHeaders.PEHeader.SizeOfHeaders)
                             {
-                                // This property can cause recursion because this PE being mapped here is read to determine the layout 
+                                // This property can cause recursion because this PE being mapped here is read to determine the layout
                                 if (!module.IsFileLayout.GetValueOrDefault(true))
                                 {
                                     // If the PE image that we are mapping into has the "loaded" layout convert the rva to a flat/file based one.

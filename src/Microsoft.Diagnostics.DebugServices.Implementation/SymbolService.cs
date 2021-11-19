@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
-        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore = null;
+        private SymbolStore.SymbolStores.SymbolStore _symbolStore;
 
         public SymbolService(IHost host)
         {
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         /// <summary>
         /// The default symbol cache path:
-        /// 
+        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache

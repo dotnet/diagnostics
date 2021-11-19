@@ -37,8 +37,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         // MachO writable segment attribute
         private const uint VmProtWrite = 0x02;
 
-        internal protected readonly ITarget Target;
-        internal protected IMemoryService RawMemoryService;
+        protected internal readonly ITarget Target;
+        protected internal IMemoryService RawMemoryService;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -241,7 +241,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="size">module size</param>
         /// <param name="pdbFileInfo">the pdb record or null</param>
         /// <param name="flags">module flags</param>
-        /// 
+        ///
         /// <returns>PEImage instance or null</returns>
         private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
         {
@@ -700,9 +700,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
+        protected internal IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>();
+        protected internal ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>();
 
         /// <summary>
         /// Search memory helper class

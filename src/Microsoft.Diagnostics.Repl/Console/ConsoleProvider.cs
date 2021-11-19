@@ -367,7 +367,7 @@ namespace Microsoft.Diagnostics.Repl
 
             switch (keyInfo.Key)
             {
-                case ConsoleKey.Backspace: // The BACKSPACE key. 
+                case ConsoleKey.Backspace: // The BACKSPACE key.
                     if (m_cursorPosition > 0)
                     {
                         EnsureNewEntry();
@@ -377,12 +377,12 @@ namespace Microsoft.Diagnostics.Repl
                     }
                     break;
 
-                case ConsoleKey.Insert: // The INS (INSERT) key. 
+                case ConsoleKey.Insert: // The INS (INSERT) key.
                     m_insertMode = !m_insertMode;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.Delete: // The DEL (DELETE) key. 
+                case ConsoleKey.Delete: // The DEL (DELETE) key.
                     if (m_cursorPosition < activeLineLen)
                     {
                         EnsureNewEntry();
@@ -391,7 +391,7 @@ namespace Microsoft.Diagnostics.Repl
                     }
                     break;
 
-                case ConsoleKey.Enter: // The ENTER key. 
+                case ConsoleKey.Enter: // The ENTER key.
                     string newCommand = m_activeLine.ToString();
 
                     if (m_modified)
@@ -405,24 +405,24 @@ namespace Microsoft.Diagnostics.Repl
                     SwitchToHistoryEntry();
                     break;
 
-                case ConsoleKey.Escape: // The ESC (ESCAPE) key. 
+                case ConsoleKey.Escape: // The ESC (ESCAPE) key.
                     EnsureNewEntry();
                     m_activeLine.Clear();
                     m_cursorPosition = 0;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.End: // The END key. 
+                case ConsoleKey.End: // The END key.
                     m_cursorPosition = activeLineLen;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.Home: // The HOME key. 
+                case ConsoleKey.Home: // The HOME key.
                     m_cursorPosition = 0;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.LeftArrow: // The LEFT ARROW key. 
+                case ConsoleKey.LeftArrow: // The LEFT ARROW key.
                     if (keyInfo.Modifiers == ConsoleModifiers.Control)
                     {
                         while (m_cursorPosition > 0 && char.IsWhiteSpace(m_activeLine[m_cursorPosition - 1]))
@@ -443,7 +443,7 @@ namespace Microsoft.Diagnostics.Repl
                     RefreshLine();
                     break;
 
-                case ConsoleKey.UpArrow: // The UP ARROW key. 
+                case ConsoleKey.UpArrow: // The UP ARROW key.
                     if (m_selectedHistory > 0)
                     {
                         m_selectedHistory--;
@@ -451,7 +451,7 @@ namespace Microsoft.Diagnostics.Repl
                     SwitchToHistoryEntry();
                     break;
 
-                case ConsoleKey.RightArrow: // The RIGHT ARROW key. 
+                case ConsoleKey.RightArrow: // The RIGHT ARROW key.
                     if (keyInfo.Modifiers == ConsoleModifiers.Control)
                     {
                         while (m_cursorPosition < activeLineLen && !char.IsWhiteSpace(m_activeLine[m_cursorPosition]))
@@ -472,7 +472,7 @@ namespace Microsoft.Diagnostics.Repl
                     RefreshLine();
                     break;
 
-                case ConsoleKey.DownArrow: // The DOWN ARROW key. 
+                case ConsoleKey.DownArrow: // The DOWN ARROW key.
                     if (m_selectedHistory < m_history.Count)
                     {
                         m_selectedHistory++;

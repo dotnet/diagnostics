@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             Full,       // The largest dump containing all memory including the module images.
 
-            Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all 
+            Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all
                         // stacks, exception information, handle information, and all memory except for mapped images.
 
             Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     string timestamp = $"{DateTime.Now:yyyyMMdd_HHmmss}";
                     output = Path.Combine(Directory.GetCurrentDirectory(), RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"dump_{timestamp}.dmp" : $"core_{timestamp}");
                 }
-                // Make sure the dump path is NOT relative. This path could be sent to the runtime 
+                // Make sure the dump path is NOT relative. This path could be sent to the runtime
                 // process on Linux which may have a different current directory.
                 output = Path.GetFullPath(output);
 

@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
                     try
                     {
-                        // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader 
+                        // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
                         // returns 0.0.0.0 for the runtime module that the DAC is matched against.
                         _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                     }

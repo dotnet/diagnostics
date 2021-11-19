@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            int threadIDsCountLimit = AllThreads ? -1 : 4;  // by default, show at most 4 thread ID per group 
+            int threadIDsCountLimit = AllThreads ? -1 : 4;  // by default, show at most 4 thread ID per group
 
             var visitor = new MonoColorConsoleRenderer(Console, limit: threadIDsCountLimit);
             WriteLine("");

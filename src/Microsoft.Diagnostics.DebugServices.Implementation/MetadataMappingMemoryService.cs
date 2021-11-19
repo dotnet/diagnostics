@@ -12,10 +12,10 @@ using System.Linq;
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Memory service wrapper that maps always module's metadata into the address 
+    /// Memory service wrapper that maps always module's metadata into the address
     /// space even is some or all of the memory exists in the coredump. lldb returns
-    /// zero's (instead of failing the memory read) for missing pages in core dumps 
-    /// that older (less than 5.0) createdumps generate  so it needs this special 
+    /// zero's (instead of failing the memory read) for missing pages in core dumps
+    /// that older (less than 5.0) createdumps generate  so it needs this special
     /// metadata  mapping memory service.
     /// </summary>
     public class MetadataMappingMemoryService : IMemoryService

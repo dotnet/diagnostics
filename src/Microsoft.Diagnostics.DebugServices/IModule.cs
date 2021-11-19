@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.DebugServices
         PdbFileInfo PdbFileInfo { get; }
 
         /// <summary>
-        /// Version information for Window PE modules (managed or native). 
+        /// Version information for Window PE modules (managed or native).
         /// </summary>
         VersionData VersionData { get; }
 

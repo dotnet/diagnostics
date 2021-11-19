@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #region IContextService
 
         /// <summary>
-        /// Current context service provider. Contains the current ITarget, IThread 
+        /// Current context service provider. Contains the current ITarget, IThread
         /// and IRuntime instances along with all per target and global services.
         /// </summary>
         public IServiceProvider Services => ServiceProvider;
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void ClearCurrentThread() => SetCurrentThread(null);
 
         /// <summary>
-        /// Set the current runtime 
+        /// Set the current runtime
         /// </summary>
         /// <param name="runtimeId">runtime id</param>
         /// <exception cref="DiagnosticsException">invalid runtime id</exception>
@@ -185,7 +185,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Allows hosts to set the initial current runtime 
+        /// Allows hosts to set the initial current runtime
         /// </summary>
         public void SetCurrentRuntime(IRuntime runtime)
         {

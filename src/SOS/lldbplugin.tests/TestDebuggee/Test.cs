@@ -3,14 +3,14 @@
 
 using System;
 
-class Test
+internal static class Test
 {
-    static void LikelyInlined()
+    public static void LikelyInlined()
     {
         Console.WriteLine("I would like to be inlined");
     }
 
-    static void UnlikelyInlined()
+    public static void UnlikelyInlined()
     {
         Console.Write("I");
         Console.Write(" ");
@@ -45,48 +45,48 @@ class Test
         Console.Write("\n");
     }
 
-    static void ClrU()
+    public static void ClrU()
     {
         Console.WriteLine("test dumpclass");
     }
 
-    static void DumpClass()
+    public static void DumpClass()
     {
         Console.WriteLine("test dumpclass");
     }
 
-    static void DumpIL()
+    public static void DumpIL()
     {
         Console.WriteLine("test dumpil");
     }
 
-    static void DumpMD()
+    public static void DumpMD()
     {
         Console.WriteLine("test dumpmd");
     }
 
-    static void DumpModule()
+    public static void DumpModule()
     {
         Console.WriteLine("test dumpmodule");
     }
 
-    static void DumpObject()
+    public static void DumpObject()
     {
         Console.WriteLine("test dumpobject");
     }
 
-    static void DumpStackObjects()
+    public static void DumpStackObjects()
     {
         Console.WriteLine("test dso");
     }
 
-    static void Name2EE()
+    public static void Name2EE()
     {
         Console.WriteLine("test name2ee");
     }
 
 
-    static int Main()
+    public static int Main()
     {
         DumpIL();
         LikelyInlined();

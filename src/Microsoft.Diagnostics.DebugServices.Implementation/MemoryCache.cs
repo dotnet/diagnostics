@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// If the buffer is shorter than a page, it build a validity bitmap for it.
             /// </summary>
             /// <param name="data">the data to cache</param>
-            /// 
+            ///
             internal Cluster(byte[] data)
             {
                 _data = data;

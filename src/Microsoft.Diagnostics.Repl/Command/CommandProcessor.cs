@@ -367,7 +367,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     return false;
                 }
-                // The InvocationContext is null so the options and arguments in the 
+                // The InvocationContext is null so the options and arguments in the
                 // command instance created are not set. The context for the command
                 // requesting help (either the help command or some other command using
                 // --help) won't work for the command instance that implements it's own
@@ -485,7 +485,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     Type parameterType = parameters[i].ParameterType;
 
-                    // The parameter will passed as null to allow for "optional" services. The invoked 
+                    // The parameter will passed as null to allow for "optional" services. The invoked
                     // method needs to check for possible null parameters.
                     arguments[i] = services.GetService(parameterType);
                 }
@@ -494,7 +494,7 @@ namespace Microsoft.Diagnostics.Repl
         }
 
         /// <summary>
-        /// Local help builder that allows commands to provide more detailed help 
+        /// Local help builder that allows commands to provide more detailed help
         /// text via the "InvokeHelp" function.
         /// </summary>
         private class LocalHelpBuilder : IHelpBuilder
@@ -530,8 +530,8 @@ namespace Microsoft.Diagnostics.Repl
         }
 
         /// <summary>
-        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and 
-        /// pipes through the System.CommandLine parsing allowing per command invocation data (service 
+        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and
+        /// pipes through the System.CommandLine parsing allowing per command invocation data (service
         /// provider and raw command line) to be passed through.
         /// </summary>
         private class LocalConsole : IConsole

@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 // This specific hash function is based on the Boost C++ library's CombineHash function:
                 // http://stackoverflow.com/questions/4948780/magic-numbers-in-boosthash-combine
-                // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html 
+                // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html
                 return hashCode0 ^ (hashCode1 + (int)0x9e3779b9 + (hashCode0 << 6) + (hashCode0 >> 2));
             }
         }

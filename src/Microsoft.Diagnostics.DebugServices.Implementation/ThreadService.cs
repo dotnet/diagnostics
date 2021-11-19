@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public abstract class ThreadService : IThreadService
     {
-        internal protected readonly ITarget Target;
+        protected internal readonly ITarget Target;
         private readonly int _contextSize;
         private readonly uint _contextFlags;
         private readonly Dictionary<string, RegisterInfo> _lookupByName;
@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return thread;
         }
 
-        #endregion 
+        #endregion
 
         /// <summary>
         /// Get the thread context
