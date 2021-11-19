@@ -134,13 +134,13 @@ namespace SOS.Hosting
         private void Flush()
         {
             // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
-            if (_corDebugProcess == IntPtr.Zero)
+            if (_corDebugProcess != IntPtr.Zero)
             {
                 COMHelper.Release(_corDebugProcess);
                 _corDebugProcess = IntPtr.Zero;
             }
             // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
-            if (_clrDataProcess == IntPtr.Zero)
+            if (_clrDataProcess != IntPtr.Zero)
             {
                 COMHelper.Release(_clrDataProcess);
                 _clrDataProcess = IntPtr.Zero;

@@ -84,7 +84,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     PipeDirection.InOut,
                     PipeOptions.Asynchronous,
                     TokenImpersonationLevel.Impersonation);
-                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
+
+                // Pass non-infinite timeout in order to cause internal connection algorithm
+                // to check the CancellationToken periodically. Otherwise, if the named pipe
+                // is waited using WaitNamedPipe with an infinite timeout, then the
+                // CancellationToken cannot be observed.
+                await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
+                
                 return namedPipe;
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)

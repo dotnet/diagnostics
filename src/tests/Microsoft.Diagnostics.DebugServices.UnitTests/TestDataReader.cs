@@ -74,6 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             /// <param name="result">resulting object</param>
             public static void GetValue(Type type, string valueString, ref object result)
             {
+                valueString = valueString.Trim();
                 if (type == typeof(string))
                 {
                     result = valueString ?? "";
@@ -290,24 +291,24 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
                             if (nullableType != null && memberValue == null)
                             {
-                                memberValue = "";
+                                memberValue = string.Empty;
                             }
                             else if (memberType == typeof(string))
                             {
-                                memberValue ??= "";
+                                memberValue ??= string.Empty;
                             }
                             else if (memberValue is ImmutableArray<byte> buildId)
                             {
                                 memberType = typeof(string);
-                                memberValue = !buildId.IsDefaultOrEmpty ? string.Concat(buildId.Select((b) => b.ToString("x2"))) : "";
+                                memberValue = !buildId.IsDefaultOrEmpty ? string.Concat(buildId.Select((b) => b.ToString("x2"))) : string.Empty;
                             }
                             else if (!memberType.IsPrimitive && !memberType.IsEnum)
                             {
                                 memberType = typeof(string);
-                                memberValue = memberValue?.ToString() ?? "";
+                                memberValue = memberValue?.ToString() ?? string.Empty;
                             }
                             object testDataValue = testData.Value.GetValue(memberType);
-                            Trace.TraceInformation($"CompareMembers {testData.Key}: {memberValue} == {testDataValue}");
+                            Trace.TraceInformation($"CompareMembers {testData.Key}: '{memberValue}' == '{testDataValue}'");
                             Assert.Equal(memberValue, testDataValue);
                         }
                     }

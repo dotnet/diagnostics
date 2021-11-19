@@ -50,7 +50,7 @@ endif (NOT WIN32)
 
 # Where _version.h for Windows is generated
 if (WIN32)
-include_directories("${CMAKE_BINARY_DIR}")
+include_directories(${CLR_ARTIFACTS_OBJ_DIR})
 endif (WIN32)
 
 set(CORECLR_SET_RPATH ON)
