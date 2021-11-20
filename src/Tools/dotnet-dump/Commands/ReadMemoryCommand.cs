@@ -1,9 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     for (int column = 0; column < width; column++)
                     {
                         int offset = column * length;
-                        sb.Append(" ");
+                        sb.Append(' ');
 
                         if (offset < count)
                         {

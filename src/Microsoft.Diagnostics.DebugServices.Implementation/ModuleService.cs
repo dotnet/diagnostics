@@ -1,13 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +9,13 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -54,8 +54,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = target;
             RawMemoryService = rawMemoryService;
 
-            target.OnFlushEvent.Register(() =>
-            {
+            target.OnFlushEvent.Register(() => {
                 _versionCache?.Clear();
                 if (_modules != null)
                 {

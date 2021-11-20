@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.Repl
 {
@@ -50,18 +50,15 @@ namespace Microsoft.Diagnostics.Repl
             m_activeLine = new StringBuilder();
             m_shutdown = false;
 
-            m_consoleConverter = new CharToLineConverter(text =>
-            {
+            m_consoleConverter = new CharToLineConverter(text => {
                 NewOutput(text);
             });
 
-            m_warningConverter = new CharToLineConverter(text =>
-            {
+            m_warningConverter = new CharToLineConverter(text => {
                 NewOutput(text, warningColor);
             });
 
-            m_errorConverter = new CharToLineConverter(text =>
-            {
+            m_errorConverter = new CharToLineConverter(text => {
                 NewOutput(text, errorColor);
             });
 

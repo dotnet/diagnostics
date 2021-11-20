@@ -1,17 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 using FileVersionInfo = Microsoft.Diagnostics.Runtime.Utilities.FileVersionInfo;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -56,8 +56,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 ServiceProvider.AddServiceFactory<MachOFile>(() => ModuleService.GetMachOFile(this));
             }
-            _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() =>
-            {
+            _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() => {
                 ServiceProvider.RemoveService(typeof(MachOFile));
                 ServiceProvider.RemoveService(typeof(ELFFile));
                 ServiceProvider.RemoveService(typeof(PEReader));
@@ -90,8 +89,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public bool IsPEImage
         {
-            get
-            {
+            get {
                 // For Windows targets, we can always assume that all the modules are PEs.
                 if (Target.OperatingSystem == OSPlatform.Windows)
                 {
@@ -107,8 +105,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public bool IsManaged
         {
-            get
-            {
+            get {
                 GetPEInfo();
                 return (_flags & Flags.IsManaged) != 0;
             }
@@ -116,8 +113,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public bool? IsFileLayout
         {
-            get
-            {
+            get {
                 // For Windows targets we can assume that the file layout is always "loaded". The
                 // ImageMappingMemoryService depends on no recursion memory access for this property
                 // i.e. calling GetPEInfo().
@@ -143,8 +139,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public PdbFileInfo PdbFileInfo
         {
-            get
-            {
+            get {
                 GetPEInfo();
                 return _pdbFileInfo;
             }
@@ -152,8 +147,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public virtual ImmutableArray<byte> BuildId
         {
-            get
-            {
+            get {
                 if (_buildId.IsDefault)
                 {
                     byte[] id = ModuleService.GetBuildId(ImageBase);

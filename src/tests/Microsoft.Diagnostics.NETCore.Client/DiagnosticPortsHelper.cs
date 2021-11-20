@@ -3,7 +3,6 @@
 
 using System.IO;
 using System.Runtime.InteropServices;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {

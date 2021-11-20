@@ -1,16 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interop;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace SOS.Hosting
@@ -671,7 +670,7 @@ namespace SOS.Hosting
         {
             try
             {
-                var contextService = Services.GetService<IContextService>();
+                IContextService contextService = Services.GetService<IContextService>();
                 if (contextService is null)
                 {
                     return HResult.E_FAIL;

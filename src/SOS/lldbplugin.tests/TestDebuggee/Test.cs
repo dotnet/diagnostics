@@ -5,12 +5,12 @@ using System;
 
 internal static class Test
 {
-    public static void LikelyInlined()
+    private static void LikelyInlined()
     {
         Console.WriteLine("I would like to be inlined");
     }
 
-    public static void UnlikelyInlined()
+    private static void UnlikelyInlined()
     {
         Console.Write("I");
         Console.Write(" ");
@@ -45,48 +45,47 @@ internal static class Test
         Console.Write("\n");
     }
 
-    public static void ClrU()
+    private static void ClrU()
     {
         Console.WriteLine("test dumpclass");
     }
 
-    public static void DumpClass()
+    private static void DumpClass()
     {
         Console.WriteLine("test dumpclass");
     }
 
-    public static void DumpIL()
+    private static void DumpIL()
     {
         Console.WriteLine("test dumpil");
     }
 
-    public static void DumpMD()
+    private static void DumpMD()
     {
         Console.WriteLine("test dumpmd");
     }
 
-    public static void DumpModule()
+    private static void DumpModule()
     {
         Console.WriteLine("test dumpmodule");
     }
 
-    public static void DumpObject()
+    private static void DumpObject()
     {
         Console.WriteLine("test dumpobject");
     }
 
-    public static void DumpStackObjects()
+    private static void DumpStackObjects()
     {
         Console.WriteLine("test dso");
     }
 
-    public static void Name2EE()
+    private static void Name2EE()
     {
         Console.WriteLine("test name2ee");
     }
 
-
-    public static int Main()
+    private static int Main()
     {
         DumpIL();
         LikelyInlined();

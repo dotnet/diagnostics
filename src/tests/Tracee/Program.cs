@@ -15,7 +15,7 @@ namespace Tracee
             Console.WriteLine("Sleep in loop for {0} seconds.", LoopCount);
 
             // Runs for max of 30 sec
-            for (var i = 0; i < LoopCount; i++)
+            for (int i = 0; i < LoopCount; i++)
             {
                 Console.WriteLine("Iteration #{0}", i);
                 Thread.Sleep(1000);

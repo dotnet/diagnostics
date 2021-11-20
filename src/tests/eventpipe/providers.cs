@@ -33,8 +33,7 @@ namespace EventPipe.UnitTests.ProviderValidation
         [Fact]
         public async void UserDefinedEventSource_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "MyEventSource", new ExpectedEventCount(100_000, 0.30f) },
@@ -48,8 +47,7 @@ namespace EventPipe.UnitTests.ProviderValidation
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
 
-                Action eventGeneratingAction = () =>
-                {
+                Action eventGeneratingAction = () => {
                     for (int i = 0; i < 100_000; i++)
                     {
                         if (i % 10_000 == 0)
@@ -60,7 +58,7 @@ namespace EventPipe.UnitTests.ProviderValidation
                         MyEventSource.Log.MyEvent();
                     }
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, providers, 1024, null);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, providers, 1024, null);
                 Assert.Equal(100, ret);
             }, output);
         }

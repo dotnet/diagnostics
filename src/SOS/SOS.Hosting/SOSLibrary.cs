@@ -1,13 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
@@ -55,8 +55,7 @@ namespace SOS.Hosting
                 sosLibrary = null;
                 throw;
             }
-            host.OnShutdownEvent.Register(() =>
-            {
+            host.OnShutdownEvent.Register(() => {
                 sosLibrary.Uninitialize();
                 sosLibrary = null;
             });
@@ -120,7 +119,7 @@ namespace SOS.Hosting
                     }
                 }
                 Debug.Assert(_sosLibrary != IntPtr.Zero);
-                var initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
+                SOSInitializeDelegate initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
                 if (initializeFunc == null)
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
@@ -142,7 +141,7 @@ namespace SOS.Hosting
             Trace.TraceInformation("SOSHost: Uninitialize");
             if (_sosLibrary != IntPtr.Zero)
             {
-                var uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
+                SOSUninitializeDelegate uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
                 uninitializeFunc?.Invoke();
 
                 Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.FreeLibrary(_sosLibrary);
@@ -161,7 +160,7 @@ namespace SOS.Hosting
         {
             Debug.Assert(_sosLibrary != IntPtr.Zero);
 
-            var commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
+            SOSCommandDelegate commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
             if (commandFunc == null)
             {
                 throw new EntryPointNotFoundException($"Can not find SOS command: {command}");

@@ -146,12 +146,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             StringBuilder message = new StringBuilder();
 
-            var currentColor = Console.ForegroundColor;
+            ConsoleColor currentColor = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("WARNING: dotnet-dsrouter is a development tool not intended for production environments." + Environment.NewLine);
             Console.ForegroundColor = currentColor;
 
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(IpcClientTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpClientRouterCommand())

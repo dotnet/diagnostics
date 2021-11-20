@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override string FormatTheadId(uint threadID)
         {
-            var idInHex = threadID.ToString("x");
+            string idInHex = threadID.ToString("x");
             return idInHex;
         }
 

@@ -38,8 +38,7 @@ namespace EventPipe.UnitTests.ContentionValidation
         [Fact]
         public async void Contention_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
@@ -51,8 +50,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b100_0000_0000_0000)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
@@ -70,21 +68,19 @@ namespace EventPipe.UnitTests.ContentionValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int ContentionStartEvents = 0;
                     source.Clr.ContentionStart += (eventData) => ContentionStartEvents += 1;
                     int ContentionStopEvents = 0;
                     source.Clr.ContentionStop += (eventData) => ContentionStopEvents += 1;
-                    return () =>
-                    {
+                    return () => {
                         Logger.logger.Log("Event counts validation");
                         Logger.logger.Log("ContentionStartEvents: " + ContentionStartEvents);
                         Logger.logger.Log("ContentionStopEvents: " + ContentionStopEvents);
                         return ContentionStartEvents > 0 && ContentionStopEvents > 0 ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

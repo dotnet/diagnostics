@@ -18,7 +18,7 @@ namespace ParallelStacks
 
         public StackFrame(ClrStackFrame frame)
         {
-            var signature = frame.Method?.Signature;
+            string signature = frame.Method?.Signature;
             Text = string.IsNullOrEmpty(signature) ? "?" : string.Intern(signature);
             Signature = new List<string>();
             ComputeNames(frame);
@@ -27,7 +27,7 @@ namespace ParallelStacks
         private void ComputeNames(ClrStackFrame frame)
         {
             // start by parsing (short)type name
-            var typeName = frame.Method.Type.Name;
+            string typeName = frame.Method.Type.Name;
             if (string.IsNullOrEmpty(typeName))
             {
                 // IL generated frames
@@ -40,7 +40,7 @@ namespace ParallelStacks
 
             // generic methods are not well formatted by ClrMD
             // foo<...>()  =>   foo[[...]]()
-            var fullName = frame.Method?.Signature;
+            string fullName = frame.Method?.Signature;
             MethodName = frame.Method.Name;
             if (MethodName.EndsWith("]]"))
             {
@@ -79,8 +79,8 @@ namespace ParallelStacks
             //      *.Int32>                                        --> Int32
             //  1. look for generic
             //  2. if not, look for , as separator of generic parameters
-            var pos = typeName.IndexOf('`', start, end - start);
-            var next = typeName.IndexOf(',', start, end - start);
+            int pos = typeName.IndexOf('`', start, end - start);
+            int next = typeName.IndexOf(',', start, end - start);
 
             // simple case of 1 type name (with maybe no namespace)
             if ((pos == -1) && (next == -1))
@@ -138,7 +138,7 @@ namespace ParallelStacks
             var sb = new StringBuilder();
 
             // look for ` to get the name and the count of generic parameters
-            var pos = typeName.IndexOf('`', start, end - start);
+            int pos = typeName.IndexOf('`', start, end - start);
 
             // build the name                                       V-- don't want ` in the name
             AppendTypeNameWithoutNamespace(sb, typeName, start, pos - 1);
@@ -150,7 +150,7 @@ namespace ParallelStacks
             // get each generic parameter
             while (start < end)
             {
-                var genericParameter = GetNextTypeName(typeName, ref start, ref end);
+                string genericParameter = GetNextTypeName(typeName, ref start, ref end);
                 sb.Append(genericParameter);
                 if (start < end)
                 {
@@ -163,7 +163,7 @@ namespace ParallelStacks
 
         public static void AppendTypeNameWithoutNamespace(StringBuilder sb, string typeName, int start, int end)
         {
-            var pos = typeName.LastIndexOf('.', end, end - start);
+            int pos = typeName.LastIndexOf('.', end, end - start);
             if (pos == -1)
             {   // no namespace
                 sb.Append(typeName, start, end - start + 1);
@@ -179,7 +179,7 @@ namespace ParallelStacks
         {
             // {namespace.}type.method[[]](..., ..., ...)
             var parameters = new List<string>();
-            var pos = fullName.LastIndexOf('(');
+            int pos = fullName.LastIndexOf('(');
             if (pos == -1)
             {
                 return parameters;
@@ -222,14 +222,14 @@ namespace ParallelStacks
             var sb = new StringBuilder();
 
             // handle ByRef case
-            var isByRef = false;
+            bool isByRef = false;
             if (fullName.LastIndexOf(BYREF, end) == end - BYREF.Length)
             {
                 isByRef = true;
                 end -= BYREF.Length;
             }
 
-            var typeName = GetShortTypeName(fullName, start, end);
+            string typeName = GetShortTypeName(fullName, start, end);
             sb.Append(typeName);
 
             if (isByRef)
@@ -244,13 +244,13 @@ namespace ParallelStacks
         {
             // foo[[...]] --> foo<...>
             // namespace.type.Foo[[System.String, Int32]](System.Collections.Generic.IDictionary`2<Int32,System.String>)
-            var pos = fullName.IndexOf("[[");
+            int pos = fullName.IndexOf("[[");
             if (pos == -1)
             {
                 return fullName;
             }
 
-            var start = fullName.LastIndexOf('.', pos);
+            int start = fullName.LastIndexOf('.', pos);
             return fullName.Substring(start + 1, pos - start - 1);
         }
     }

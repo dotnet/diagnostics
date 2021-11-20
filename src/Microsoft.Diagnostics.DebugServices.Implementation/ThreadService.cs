@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -27,8 +27,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Target = target;
 
-            target.OnFlushEvent.Register(() =>
-            {
+            target.OnFlushEvent.Register(() => {
                 _threads?.Clear();
                 _threads = null;
             });
@@ -210,7 +209,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>context array</returns>
         internal byte[] GetThreadContext(Thread thread)
         {
-            var threadContext = new byte[_contextSize];
+            byte[] threadContext = new byte[_contextSize];
             if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext))
             {
                 throw new DiagnosticsException();

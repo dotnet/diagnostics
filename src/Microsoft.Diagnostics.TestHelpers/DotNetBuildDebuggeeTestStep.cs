@@ -186,7 +186,6 @@ namespace Microsoft.Diagnostics.TestHelpers
                 args += extraArgs;
             }
             output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
-            // restore can be painfully slow, so use a 10 min timeout
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
@@ -230,7 +229,6 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeAssetsFileExists(output);
 
             output.WriteLine("Launching {0} {1}", DotNetToolPath, dotnetArgs);
-            // a mac CI build of the modules debuggee is painfully slow :(
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, dotnetArgs).
                       WithWorkingDirectory(DebuggeeProjectDirPath).
                       WithLog(output).

@@ -658,8 +658,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <exception cref="SkipTestException">the RuntimeFrameworkVersion property doesn't exist</exception>
         public int RuntimeFrameworkVersionMajor
         {
-            get
-            {
+            get {
                 string version = RuntimeFrameworkVersion;
                 if (version != null)
                 {
@@ -755,8 +754,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool CreateDumpExists
         {
-            get
-            {
+            get {
                 return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor >= 2 ||
                        OS.Kind == OSKind.OSX && IsNETCore && RuntimeFrameworkVersionMajor >= 5 ||
                        OS.Kind == OSKind.Windows && IsNETCore && RuntimeFrameworkVersionMajor >= 5;

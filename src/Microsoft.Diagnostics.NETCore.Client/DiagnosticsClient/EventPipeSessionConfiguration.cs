@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -58,7 +57,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.Write(RequestRundown);
 
                 writer.Write(Providers.Count);
-                foreach (var provider in Providers)
+                foreach (EventPipeProvider provider in Providers)
                 {
                     writer.Write(provider.Keywords);
                     writer.Write((uint)provider.EventLevel);

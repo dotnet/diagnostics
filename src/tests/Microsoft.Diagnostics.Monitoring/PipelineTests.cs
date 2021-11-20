@@ -1,11 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Monitoring;
-using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -27,17 +23,17 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
         {
             var timePipeline = new DelayPipeline();
             var cancellationTokenSource = new CancellationTokenSource();
-            var token = cancellationTokenSource.Token;
+            CancellationToken token = cancellationTokenSource.Token;
 
             await Assert.ThrowsAsync<PipelineException>(() => timePipeline.StopAsync());
 
-            var startTask = timePipeline.RunAsync(token);
-            var secondStartCall = timePipeline.RunAsync(token);
+            Task startTask = timePipeline.RunAsync(token);
+            Task secondStartCall = timePipeline.RunAsync(token);
             Assert.Equal(startTask, secondStartCall);
 
             var stopSource = new CancellationTokenSource();
-            var stopTask = timePipeline.StopAsync(stopSource.Token);
-            var secondStopCall = timePipeline.StopAsync(stopSource.Token);
+            Task stopTask = timePipeline.StopAsync(stopSource.Token);
+            Task secondStopCall = timePipeline.StopAsync(stopSource.Token);
             Assert.Equal(stopTask, secondStopCall);
 
             stopSource.Cancel();

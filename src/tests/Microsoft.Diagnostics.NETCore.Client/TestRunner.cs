@@ -109,8 +109,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             // Block until we see the IPC channel created, or until timeout specified.
-            Task monitorSocketTask = Task.Run(() =>
-            {
+            Task monitorSocketTask = Task.Run(() => {
                 while (true)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -121,7 +120,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     else
                     {
                         // On Linux, we wait until the socket is created.
-                        var matchingFiles = Directory.GetFiles(Path.GetTempPath(), $"dotnet-diagnostic-{testProcess.Id}-*-socket"); // Try best match.
+                        string[] matchingFiles = Directory.GetFiles(Path.GetTempPath(), $"dotnet-diagnostic-{testProcess.Id}-*-socket"); // Try best match.
                         if (matchingFiles.Length > 0)
                         {
                             break;
@@ -166,7 +165,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (!testProcess.HasExited)
                 {
-                    using var _ = token.Register(() => exitedSource.TrySetCanceled(token));
+                    using CancellationTokenRegistration _ = token.Register(() => exitedSource.TrySetCanceled(token));
 
                     await exitedSource.Task;
                 }

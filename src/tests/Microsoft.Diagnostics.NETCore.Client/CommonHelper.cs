@@ -21,9 +21,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         public static string GetTraceePathWithArgs(string traceeName = "Tracee", string targetFramework = "netcoreapp3.1")
         {
-            var curPath = Directory.GetCurrentDirectory();
+            string curPath = Directory.GetCurrentDirectory();
 
-            var traceePath = curPath
+            string traceePath = curPath
                 .Replace(System.Reflection.Assembly.GetCallingAssembly().GetName().Name, traceeName)
                 .Replace("netcoreapp3.1", targetFramework);
 

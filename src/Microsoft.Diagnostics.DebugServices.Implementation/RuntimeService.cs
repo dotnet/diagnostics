@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,6 +9,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.Runtime;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -31,8 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public RuntimeService(ITarget target)
         {
             _target = target;
-            _onFlushEvent = target.OnFlushEvent.Register(() =>
-            {
+            _onFlushEvent = target.OnFlushEvent.Register(() => {
                 if (_runtimes is not null && _runtimes.Count == 0)
                 {
                     // If there are no runtimes, try find them again when the target stops
@@ -44,8 +43,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Can't make RuntimeService IDisposable directly because _dataTarget.Dispose() disposes the IDataReader
             // passed which is this RuntimeService instance which would call _dataTarget.Dispose again and causing a
             // stack overflow.
-            target.OnDestroyEvent.Register(() =>
-            {
+            target.OnDestroyEvent.Register(() => {
                 _dataTarget?.Dispose();
                 _dataTarget = null;
                 _onFlushEvent.Dispose();
@@ -92,8 +90,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         Microsoft.Diagnostics.Runtime.Architecture IDataReader.Architecture
         {
-            get
-            {
+            get {
                 return _target.Architecture switch
                 {
                     Architecture.X64 => Microsoft.Diagnostics.Runtime.Architecture.Amd64,

@@ -120,7 +120,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (!string.IsNullOrEmpty(config))
             {
-                var parts = config.Split(',');
+                string[] parts = config.Split(',');
                 if (parts.Length > 2)
                 {
                     throw new FormatException($"Unknow IPC endpoint config format, {config}.");

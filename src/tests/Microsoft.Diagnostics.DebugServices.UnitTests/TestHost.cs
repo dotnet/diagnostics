@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Diagnostics.TestHelpers;
-using System.IO;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
@@ -32,8 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public TestDataReader TestData
         {
-            get
-            {
+            get {
                 _testData ??= new TestDataReader(TestDataFile);
                 return _testData;
             }
@@ -41,8 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public ITarget Target
         {
-            get
-            {
+            get {
                 _target ??= GetTarget();
                 return _target;
             }

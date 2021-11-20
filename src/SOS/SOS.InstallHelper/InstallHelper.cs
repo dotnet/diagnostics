@@ -123,8 +123,7 @@ namespace SOS
 
                 // Copy native SOS files
                 WriteLine($"Copying files from {SOSNativeSourcePath}");
-                RetryOperation("Problem installing native SOS binaries", () =>
-                {
+                RetryOperation("Problem installing native SOS binaries", () => {
                     foreach (string file in Directory.EnumerateFiles(SOSNativeSourcePath))
                     {
                         string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
@@ -134,8 +133,7 @@ namespace SOS
 
                 // Copy managed SOS files
                 WriteLine($"Copying files from {SOSManagedSourcePath}");
-                RetryOperation("Problem installing managed SOS binaries", () =>
-                {
+                RetryOperation("Problem installing managed SOS binaries", () => {
                     foreach (string file in Directory.EnumerateFiles(SOSManagedSourcePath))
                     {
                         string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));

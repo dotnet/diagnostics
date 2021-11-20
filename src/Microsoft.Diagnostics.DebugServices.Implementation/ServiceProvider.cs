@@ -47,8 +47,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="factory">function to create service instance</param>
         public void AddServiceFactory<T>(Func<object> factory)
         {
-            _factories.Add(typeof(T), () =>
-            {
+            _factories.Add(typeof(T), () => {
                 object service = factory();
                 _services.Add(typeof(T), service);
                 return service;

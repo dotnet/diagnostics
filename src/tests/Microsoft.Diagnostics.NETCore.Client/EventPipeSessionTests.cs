@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            using (var session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
+            using (EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)
             }))
@@ -73,20 +73,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
             runner.PrintStatus();
             output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
-            using (var session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
+            using (EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("System.Runtime", EventLevel.Informational, 0, new Dictionary<string, string>() {
                     { "EventCounterIntervalSec", "1" }
                 })
             }))
             {
-                var evntCnt = 0;
+                int evntCnt = 0;
 
-                Task streamTask = Task.Run(() =>
-                {
+                Task streamTask = Task.Run(() => {
                     var source = new EventPipeEventSource(session.EventStream);
-                    source.Dynamic.All += (TraceEvent obj) =>
-                    {
+                    source.Dynamic.All += (TraceEvent obj) => {
                         output.WriteLine("Got an event");
                         evntCnt += 1;
                     };
@@ -160,7 +158,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
             runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            using (var session = await clientShim.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
+            using (EventPipeSession session = await clientShim.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
             {
                 Assert.True(session.EventStream != null);
             }

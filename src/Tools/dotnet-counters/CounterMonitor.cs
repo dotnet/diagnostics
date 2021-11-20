@@ -1,16 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tools.Counters.Exporters;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
-using System.CommandLine.Binding;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
@@ -19,6 +13,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Counters.Exporters;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -41,7 +39,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private string _metricsEventSourceSessionId;
         private int _maxTimeSeries;
         private int _maxHistograms;
-        private TimeSpan _duration;
 
         private class ProviderEventState
         {
@@ -456,8 +453,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string diagnosticPort,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration)
+            int maxTimeSeries)
         {
             try
             {
@@ -495,7 +491,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _renderer = new ConsoleWriter(useAnsi);
                         _diagnosticsClient = holder.Client;
                         _resumeRuntime = resumeRuntime;
-                        _duration = duration;
                         int ret = await Start();
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
@@ -532,8 +527,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string diagnosticPort,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration)
+            int maxTimeSeries)
         {
             try
             {
@@ -570,7 +564,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _maxTimeSeries = maxTimeSeries;
                         _output = output;
                         _diagnosticsClient = holder.Client;
-                        _duration = duration;
                         if (_output.Length == 0)
                         {
                             _console.Error.WriteLine("Output cannot be an empty string");
@@ -814,8 +807,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             EventPipeProvider[] providers = GetEventPipeProviders();
             _renderer.Initialize();
 
-            Task monitorTask = new Task(() =>
-            {
+            Task monitorTask = new Task(() => {
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(providers, false, 10);
@@ -850,13 +842,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            var shouldStopAfterDuration = _duration != default(TimeSpan);
-            Stopwatch durationStopwatch = null;
-
-            if (shouldStopAfterDuration)
-            {
-                durationStopwatch = Stopwatch.StartNew();
-            }
 
             while (!_shouldExit.Task.Wait(250))
             {
@@ -877,14 +862,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _pauseCmdSet = false;
                     }
                 }
-
-                if (shouldStopAfterDuration && durationStopwatch.Elapsed >= _duration)
-                {
-                    durationStopwatch.Stop();
-                    break;
-                }
             }
-
             StopMonitor();
             return _shouldExit.Task;
         }

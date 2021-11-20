@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             runningRouters.RemoveAll(IsRouterDead);
 
                             runningTasks.Clear();
-                            foreach (var runningRouter in runningRouters)
+                            foreach (Router runningRouter in runningRouters)
                             {
                                 runningTasks.Add(runningRouter.RouterTaskCompleted.Task);
                             }

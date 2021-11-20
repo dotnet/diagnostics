@@ -25,7 +25,7 @@ namespace Xunit.Extensions
         {
             // Duplicated code from SkippableFactTestCase. I'm sure we could find a way to de-dup with some thought.
             var skipMessageBus = new SkippableFactMessageBus(messageBus);
-            var result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource);
+            RunSummary result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource);
             if (skipMessageBus.DynamicallySkippedTestCount > 0)
             {
                 result.Failed -= skipMessageBus.DynamicallySkippedTestCount;

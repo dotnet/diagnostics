@@ -153,7 +153,7 @@ namespace EventPipe.UnitTests.Common
             Logger.logger.Log("}\n");
             Logger.logger.Log("Expected:");
             Logger.logger.Log("{");
-            foreach (var (k, v) in _expectedEventCounts)
+            foreach ((string k, ExpectedEventCount v) in _expectedEventCounts)
             {
                 Logger.logger.Log($"\t\"{k}\" = {v}");
             }
@@ -161,7 +161,7 @@ namespace EventPipe.UnitTests.Common
 
             Logger.logger.Log("Actual:");
             Logger.logger.Log("{");
-            foreach (var (k, v) in _actualEventCounts)
+            foreach ((string k, int v) in _actualEventCounts)
             {
                 Logger.logger.Log($"\t\"{k}\" = {v}");
             }
@@ -172,7 +172,7 @@ namespace EventPipe.UnitTests.Common
 
         private int Validate()
         {
-            var isClean = EnsureCleanEnvironment();
+            bool isClean = EnsureCleanEnvironment();
             if (!isClean)
             {
                 return -1;
@@ -181,8 +181,7 @@ namespace EventPipe.UnitTests.Common
             // the sources we want to listen for may not have been enabled yet.
             // We'll use this sentinel EventSource to check if Enable has finished
             ManualResetEvent sentinelEventReceived = new ManualResetEvent(false);
-            var sentinelTask = new Task(() =>
-            {
+            var sentinelTask = new Task(() => {
                 Logger.logger.Log("Started sending sentinel events...");
                 while (!sentinelEventReceived.WaitOne(50))
                 {
@@ -196,8 +195,7 @@ namespace EventPipe.UnitTests.Common
             object threadSync = new object(); // for locking eventpipeSession access
             Func<int> optionalTraceValidationCallback = null;
             DiagnosticsClient client = new DiagnosticsClient(processId);
-            var readerTask = new Task(() =>
-            {
+            var readerTask = new Task(() => {
                 Logger.logger.Log("Connecting to EventPipe...");
                 try
                 {
@@ -215,8 +213,7 @@ namespace EventPipe.UnitTests.Common
                 using EventPipeEventSource source = new EventPipeEventSource(eventPipeStream);
                 Logger.logger.Log("EventPipeEventSource created");
 
-                source.Dynamic.All += (eventData) =>
-                {
+                source.Dynamic.All += (eventData) => {
                     try
                     {
                         if (eventData.ProviderName == "SentinelEventSource")
@@ -280,8 +277,7 @@ namespace EventPipe.UnitTests.Common
             // Should throw if the reader task throws any exceptions
             var tokenSource = new CancellationTokenSource();
             CancellationToken ct = tokenSource.Token;
-            readerTask.ContinueWith((task) =>
-            {
+            readerTask.ContinueWith((task) => {
                 // if our reader task died earlier, we need to break the infinite wait below.
                 // We'll allow the AggregateException to be thrown and fail the test though.
                 Logger.logger.Log($"Task stats: isFaulted: {task.IsFaulted}, Exception == null: {task.Exception == null}");
@@ -293,8 +289,7 @@ namespace EventPipe.UnitTests.Common
                 return task;
             });
 
-            var stopTask = Task.Run(() =>
-            {
+            var stopTask = Task.Run(() => {
                 Logger.logger.Log("Sending StopTracing command...");
                 lock (threadSync) // eventpipeSession
                 {
@@ -321,9 +316,9 @@ namespace EventPipe.UnitTests.Common
             Logger.logger.Log("Reader task finished");
             Logger.logger.Log($"Dropped {_droppedEvents} events");
 
-            foreach (var (provider, expectedCount) in _expectedEventCounts)
+            foreach ((string provider, ExpectedEventCount expectedCount) in _expectedEventCounts)
             {
-                if (_actualEventCounts.TryGetValue(provider, out var actualCount))
+                if (_actualEventCounts.TryGetValue(provider, out int actualCount))
                 {
                     if (!expectedCount.Validate(actualCount))
                     {
@@ -369,21 +364,21 @@ namespace EventPipe.UnitTests.Common
                 if (ipcPorts.Count() > 1)
                 {
                     Logger.logger.Log($"Found {ipcPorts.Count()} OS transports for pid {System.Diagnostics.Process.GetCurrentProcess().Id}:");
-                    foreach (var match in ipcPorts)
+                    foreach (FileInfo match in ipcPorts)
                     {
                         Logger.logger.Log($"\t{match.Name}");
                     }
 
                     // Get everything _except_ the newest pipe
-                    var duplicates = ipcPorts.OrderBy(fileInfo => fileInfo.CreationTime.Ticks).SkipLast(1);
-                    foreach (var duplicate in duplicates)
+                    IEnumerable<FileInfo> duplicates = ipcPorts.OrderBy(fileInfo => fileInfo.CreationTime.Ticks).SkipLast(1);
+                    foreach (FileInfo duplicate in duplicates)
                     {
                         Logger.logger.Log($"Attempting to delete the oldest pipe: {duplicate.FullName}");
                         duplicate.Delete(); // should throw if we can't delete and be caught in Validate
                         Logger.logger.Log($"Deleted");
                     }
 
-                    var afterIpcPorts = Directory.GetFiles(Path.GetTempPath())
+                    IEnumerable<FileInfo> afterIpcPorts = Directory.GetFiles(Path.GetTempPath())
                         .Select(namedPipe => new FileInfo(namedPipe))
                         .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{System.Diagnostics.Process.GetCurrentProcess().Id}-(\\d+)-socket$"));
 
@@ -394,7 +389,7 @@ namespace EventPipe.UnitTests.Common
                     else
                     {
                         Logger.logger.Log($"Unable to clean the environment.  The following transports are on the system:");
-                        foreach (var transport in afterIpcPorts)
+                        foreach (FileInfo transport in afterIpcPorts)
                         {
                             Logger.logger.Log($"\t{transport.FullName}");
                         }
@@ -417,7 +412,7 @@ namespace EventPipe.UnitTests.Common
         {
             Logger.logger.Log("==TEST STARTING==");
             var test = new IpcTraceTest(expectedEventCounts, eventGeneratingAction, providers, circularBufferMB, optionalTraceValidator);
-            var ret = test.Validate();
+            int ret = test.Validate();
             if (ret == 100)
             {
                 Logger.logger.Log("==TEST FINISHED: PASSED!==");

@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             // Create/initialize dbgeng controller
             _controller ??= new DbgEngController(DbgEngPath, DumpFile, SOSPath);
 
-            var contextService = Host.Services.GetService<IContextService>();
+            IContextService contextService = Host.Services.GetService<IContextService>();
             return contextService.GetCurrentTarget();
         }
 
@@ -58,12 +58,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             internal DbgEngController(string dbgengPath, string dumpPath, string sosPath)
             {
                 Trace.TraceInformation($"DbgEngController: {dbgengPath} {dumpPath} {sosPath}");
-                _converter = new CharToLineConverter((text) =>
-                {
+                _converter = new CharToLineConverter((text) => {
                     Trace.TraceInformation(text);
                 });
                 IntPtr dbgengLibrary = DataTarget.PlatformFunctions.LoadLibrary(dbgengPath);
-                var debugCreate = SOSHost.GetDelegateFunction<DebugCreateDelegate>(dbgengLibrary, "DebugCreate");
+                DebugCreateDelegate debugCreate = SOSHost.GetDelegateFunction<DebugCreateDelegate>(dbgengLibrary, "DebugCreate");
                 if (debugCreate == null)
                 {
                     throw new DiagnosticsException($"DebugCreate export not found");
@@ -116,7 +115,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     throw new DiagnosticsException($"HostServices.Initialize({sosPath}) FAILED {hr:X8}");
                 }
 
-                var symbolService = Host.Services.GetService<ISymbolService>();
+                ISymbolService symbolService = Host.Services.GetService<ISymbolService>();
                 Trace.TraceInformation($"SymbolService: {symbolService}");
             }
 
@@ -166,8 +165,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             private DEBUG_STATUS ExecutionStatus
             {
-                get
-                {
+                get {
                     HResult hr = Control.GetExecutionStatus(out DEBUG_STATUS status);
                     if (hr != HResult.S_OK)
                     {
@@ -175,8 +173,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                     return status;
                 }
-                set
-                {
+                set {
                     HResult hr = Control.SetExecutionStatus(value);
                     if (hr != HResult.S_OK)
                     {

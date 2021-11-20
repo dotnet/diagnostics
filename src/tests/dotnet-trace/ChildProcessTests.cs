@@ -2,11 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using System;
 using Xunit;
 using Xunit.Abstractions;
-using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.Tools.Trace

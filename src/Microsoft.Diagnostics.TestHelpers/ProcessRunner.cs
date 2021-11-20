@@ -77,20 +77,17 @@ namespace Microsoft.Diagnostics.TestHelpers
 
                 // unfortunately we can't use the default Process stream reading because it only returns full lines and we have scenarios
                 // that need to receive the output before the newline character is written
-                _readStdOutTask = startTask.ContinueWith(t =>
-                {
+                _readStdOutTask = startTask.ContinueWith(t => {
                     ReadStreamToLoggers(_p.StandardOutput, ProcessStream.StandardOut, _cancelSource.Token);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _readStdErrTask = startTask.ContinueWith(t =>
-                {
+                _readStdErrTask = startTask.ContinueWith(t => {
                     ReadStreamToLoggers(_p.StandardError, ProcessStream.StandardError, _cancelSource.Token);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _timeoutProcessTask = startTask.ContinueWith(t =>
-                {
+                _timeoutProcessTask = startTask.ContinueWith(t => {
                     Task.Delay(_timeout, _cancelSource.Token).ContinueWith(t2 => Kill(KillReason.TimedOut), TaskContinuationOptions.NotOnCanceled);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
@@ -393,8 +390,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             Process p = await startProcessTask;
             DebugTrace("InternalWaitForExit {0} '{1}'", p.Id, _replayCommand);
 
-            Task processExit = Task.Factory.StartNew(() =>
-            {
+            Task processExit = Task.Factory.StartNew(() => {
                 DebugTrace("starting Process.WaitForExit {0}", p.Id);
                 p.WaitForExit();
                 DebugTrace("ending Process.WaitForExit {0}", p.Id);
@@ -407,7 +403,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
             var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
-            var completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
+            Task completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
 
             if (completedTask != streamsTask)
             {

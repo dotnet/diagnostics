@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
 using Xunit;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
@@ -98,7 +97,7 @@ namespace DotnetCounters.UnitTests
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
                 Assert.Equal("myProcess.exe", counterTrace.targetProcess);
                 Assert.Equal(20, counterTrace.events.Length);
-                var i = 0;
+                int i = 0;
                 foreach (JSONCounterPayload payload in counterTrace.events)
                 {
                     Assert.Equal("myProvider", payload.provider);

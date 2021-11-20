@@ -1,22 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.ExtensionCommands;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using SOS.Hosting;
-using System;
-using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security;
-using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -47,8 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider.AddService<IContextService>(_contextService);
             _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
 
-            _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() =>
-            {
+            _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
                 ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
                 return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
             });
@@ -128,8 +126,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) =>
-                    {
+                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
                         _commandProcessor.Execute(commandLine, _contextService.Services);
                     });
                 }

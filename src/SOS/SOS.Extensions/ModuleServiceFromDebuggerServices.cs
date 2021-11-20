@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace SOS.Extensions
 {
@@ -62,8 +62,7 @@ namespace SOS.Extensions
 
             public override VersionData VersionData
             {
-                get
-                {
+                get {
                     if (InitializeValue(Module.Flags.InitializeVersion))
                     {
                         int hr = _moduleService._debuggerServices.GetModuleVersionInformation(ModuleIndex, out VS_FIXEDFILEINFO fileInfo);
@@ -89,8 +88,7 @@ namespace SOS.Extensions
 
             public override string VersionString
             {
-                get
-                {
+                get {
                     if (InitializeValue(Module.Flags.InitializeProductVersion))
                     {
                         int hr = _moduleService._debuggerServices.GetModuleVersionString(ModuleIndex, out _versionString);

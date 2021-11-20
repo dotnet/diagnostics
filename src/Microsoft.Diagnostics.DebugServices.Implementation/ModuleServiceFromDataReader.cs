@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -55,8 +55,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ImmutableArray<byte> BuildId
             {
-                get
-                {
+                get {
                     if (_buildId.IsDefault)
                     {
                         ImmutableArray<byte> buildId = _moduleService._dataReader.GetBuildId(ImageBase);
@@ -69,8 +68,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override VersionData VersionData
             {
-                get
-                {
+                get {
                     if (InitializeValue(Module.Flags.InitializeVersion))
                     {
                         if (_moduleInfo.Version != EmptyVersionInfo)
@@ -91,8 +89,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override string VersionString
             {
-                get
-                {
+                get {
                     if (InitializeValue(Module.Flags.InitializeProductVersion))
                     {
                         if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)

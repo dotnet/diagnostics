@@ -1,12 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             if (settings.CounterGroups.Length > 0)
             {
                 _filter = new CounterFilter(Settings.CounterIntervalSeconds);
-                foreach (var counterGroup in settings.CounterGroups)
+                foreach (EventPipeCounterGroup counterGroup in settings.CounterGroups)
                 {
                     _filter.AddFilter(counterGroup.ProviderName, counterGroup.CounterNames);
                 }
@@ -44,8 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStarted());
 
-            eventSource.Dynamic.All += traceEvent =>
-            {
+            eventSource.Dynamic.All += traceEvent => {
                 try
                 {
                     if (traceEvent.TryGetCounterPayload(_filter, out ICounterPayload counterPayload))

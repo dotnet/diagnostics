@@ -32,8 +32,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             AddRangeAndVerifyItems(collection, endInclusive: 9);
 
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 removeItem = false;
                 return 20 == item;
             };
@@ -150,8 +149,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             const int expectedItem = 7;
             AddRangeAndVerifyItems(collection, endInclusive: expectedItem);
 
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 removeItem = false;
 
                 // Remove every third item
@@ -195,8 +193,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Task handlerBeginTask = collection.WaitForHandlerBeginAsync(DefaultPositiveVerificationTimeout);
 
             const int expectedItem = 3;
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 // Terminate handler on some item in the middle of the collection
                 if (expectedItem == item)
                 {
@@ -260,8 +257,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
             const int expectedItem = 2;
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 // Do not remove any item (the purpose of this test is to handle an
                 // item without removing it).
                 removeItem = false;
@@ -287,8 +283,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
-            HandleableCollection<int>.Handler handler = (int value, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int value, out bool removeItem) => {
                 if (value == 7)
                 {
                     removeItem = true;
@@ -359,8 +354,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 if (6 == item)
                 {
                     throw new InvalidOperationException();
@@ -486,7 +480,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 lock (_handlerBeginSources)
                 {
-                    foreach (var source in _handlerBeginSources)
+                    foreach (TaskCompletionSource<object> source in _handlerBeginSources)
                     {
                         source.TrySetResult(null);
                     }
@@ -498,8 +492,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 TaskCompletionSource<object> handlerBeginSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 using var timeoutCancellation = new CancellationTokenSource();
-                var token = timeoutCancellation.Token;
-                using var _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
+                CancellationToken token = timeoutCancellation.Token;
+                using CancellationTokenRegistration _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
 
                 lock (_handlerBeginSources)
                 {

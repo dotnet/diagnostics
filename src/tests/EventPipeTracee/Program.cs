@@ -1,11 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace EventPipeTracee
 {
@@ -25,17 +25,16 @@ namespace EventPipeTracee
             Console.Error.Flush();
 
             ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging(builder =>
-            {
+            serviceCollection.AddLogging(builder => {
                 builder.AddEventSourceLogger();
                 // Set application defined levels
                 builder.AddFilter(null, LogLevel.Error); // Default
                 builder.AddFilter(AppLoggerCategoryName, LogLevel.Warning);
             });
 
-            using var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-            var customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
-            var appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
+            using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+            ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
+            ILogger appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
 
             Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting start");
             Console.Error.Flush();
@@ -80,7 +79,7 @@ namespace EventPipeTracee
         private static void TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
         {
             //Json data is always converted to strings for ActivityStart events.
-            using (var scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
+            using (IDisposable scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
                     { "IntValue", "5" },
                     { "BoolValue", "true" },
                     { "StringValue", "test" } }.ToList()))

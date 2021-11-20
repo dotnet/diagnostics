@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
@@ -112,9 +111,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                     var samplesForThread = new Dictionary<int, List<StackSourceSample>>();
 
-                    stackSource.ForEach((sample) =>
-                    {
-                        var stackIndex = sample.StackIndex;
+                    stackSource.ForEach((sample) => {
+                        StackSourceCallStackIndex stackIndex = sample.StackIndex;
                         while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
                         {
                             stackIndex = stackSource.GetCallerIndex(stackIndex);
@@ -126,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
                         int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
 
-                        if (samplesForThread.TryGetValue(threadId, out var samples))
+                        if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
                         {
                             samples.Add(sample);
                         }
@@ -137,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     });
 
                     // For every thread recorded in our trace, print the first stack
-                    foreach (var (threadId, samples) in samplesForThread)
+                    foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
                     {
 #if DEBUG
                         console.Out.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
@@ -170,7 +168,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
         {
             console.Out.WriteLine($"Thread (0x{threadId:X}):");
-            var stackIndex = stackSourceSample.StackIndex;
+            StackSourceCallStackIndex stackIndex = stackSourceSample.StackIndex;
             while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
             {
                 console.Out.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"

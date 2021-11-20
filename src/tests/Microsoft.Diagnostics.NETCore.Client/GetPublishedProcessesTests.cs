@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             TestRunner[] runner = new TestRunner[3];
             int[] pids = new int[3];
 
-            for (var i = 0; i < 3; i++)
+            for (int i = 0; i < 3; i++)
             {
                 runner[i] = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
                 runner[i].Start();
@@ -67,12 +67,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
             }
 
-            for (var i = 0; i < 3; i++)
+            for (int i = 0; i < 3; i++)
             {
                 Assert.Contains(publishedProcesses, p => p == pids[i]);
             }
 
-            for (var i = 0; i < 3; i++)
+            for (int i = 0; i < 3; i++)
             {
                 runner[i].Stop();
             }

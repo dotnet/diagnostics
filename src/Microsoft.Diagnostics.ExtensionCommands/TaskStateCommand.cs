@@ -1,8 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // access the Task state field if the flag is not given as a parameter
             if (!Value.HasValue)
             {
-                if (!TryParseAddress(Address, out var address))
+                if (!TryParseAddress(Address, out ulong address))
                 {
                     WriteLine("Numeric value expected: either a task address or -v <state value>..." + Environment.NewLine);
                     return;

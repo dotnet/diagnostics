@@ -27,8 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
             string commandLine = null;
-            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) =>
-            {
+            Action<TraceEvent, Action> processInfoHandler = (TraceEvent traceEvent, Action taskComplete) => {
                 commandLine = (string)traceEvent.PayloadByName("CommandLine");
                 taskComplete();
             };

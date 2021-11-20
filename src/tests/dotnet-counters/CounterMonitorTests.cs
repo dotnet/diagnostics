@@ -1,14 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 using Xunit;
 using Microsoft.Diagnostics.Tools.Counters;
-using Microsoft.Diagnostics.Tools.Counters.Exporters;
 
 namespace DotnetCounters.UnitTests
 {
@@ -99,7 +96,7 @@ namespace DotnetCounters.UnitTests
         {
             CounterMonitor monitor = new CounterMonitor();
             string countersOptionText = "System.Runtime[cpu-usage,MyEventSource";
-            var e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
+            CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Expected to find closing ']' in counter_provider", e.Message);
         }
 
@@ -109,7 +106,7 @@ namespace DotnetCounters.UnitTests
             CounterMonitor monitor = new CounterMonitor();
             string countersOptionText = "System.Runtime,MyEventSource";
             List<string> commandLineProviderArgs = new List<string>() { "System.Runtime[cpu-usage", "MyEventSource" };
-            var e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, commandLineProviderArgs));
+            CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, commandLineProviderArgs));
             Assert.Equal("Error parsing counter_list: Expected to find closing ']' in counter_provider", e.Message);
         }
 
@@ -118,7 +115,7 @@ namespace DotnetCounters.UnitTests
         {
             CounterMonitor monitor = new CounterMonitor();
             string countersOptionText = "System.Runtime[cpu-usage]hello,MyEventSource";
-            var e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
+            CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Unexpected characters after closing ']' in counter_provider", e.Message);
         }
 
@@ -127,7 +124,7 @@ namespace DotnetCounters.UnitTests
         {
             CounterMonitor monitor = new CounterMonitor();
             string countersOptionText = ",MyEventSource";
-            var e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
+            CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Expected non-empty counter_provider", e.Message);
         }
 
@@ -136,7 +133,7 @@ namespace DotnetCounters.UnitTests
         {
             CounterMonitor monitor = new CounterMonitor();
             string countersOptionText = "System.Runtime[cpu-usage][working-set],MyEventSource";
-            var e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
+            CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Expected at most one '[' in counter_provider", e.Message);
         }
     }

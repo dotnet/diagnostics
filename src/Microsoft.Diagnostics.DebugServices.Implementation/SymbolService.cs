@@ -1,11 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using Microsoft.SymbolStore.SymbolStores;
-using SOS;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -16,6 +11,11 @@ using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Microsoft.FileFormats;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
+using SOS;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
-        private SymbolStore.SymbolStores.SymbolStore _symbolStore;
+        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore;
 
         public SymbolService(IHost host)
         {
@@ -59,8 +59,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public string DefaultSymbolCache
         {
-            get
-            {
+            get {
                 if (_defaultSymbolCache == null)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -79,8 +78,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 return _defaultSymbolCache;
             }
-            set
-            {
+            set {
                 _defaultSymbolCache = value;
             }
         }

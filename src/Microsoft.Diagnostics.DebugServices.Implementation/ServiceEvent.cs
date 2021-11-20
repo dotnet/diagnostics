@@ -18,8 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (oneshot)
                 {
-                    _callback = () =>
-                    {
+                    _callback = () => {
                         callback();
                         Remove();
                     };

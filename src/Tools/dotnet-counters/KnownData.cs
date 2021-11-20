@@ -3,9 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
-using Microsoft.Diagnostics.Tracing.Parsers;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -23,11 +21,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static IEnumerable<CounterProvider> CreateKnownProviders(string runtimeVersion)
         {
             yield return new CounterProvider(
-                "System.Runtime", // Name
-                "A default set of performance counters provided by the .NET runtime.", // Description
-                "0xffffffff", // Keywords
-                "5", // Level
-                new[] { // Counters
+                name: "System.Runtime",
+                description: "A default set of performance counters provided by the .NET runtime.",
+                keywords: "0xffffffff",
+                level: "5",
+                counters: new[] {
                     new CounterProfile{ Name="cpu-usage", Description="The percent of process' CPU usage relative to all of the system CPU resources [0-100]", SupportedVersions=new[] { Net30, Net31, Net50 } },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", SupportedVersions=new[] { Net30, Net31, Net50 } },
                     new CounterProfile{ Name="gc-heap-size", Description="Total heap size reported by the GC (MB)", SupportedVersions=new[] { Net30, Net31, Net50 } },
@@ -53,27 +51,27 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="methods-jitted-count", Description="Number of methods jitted", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="gc-committed", Description="Size of committed memory by the GC (MB)", SupportedVersions=new[] { Net60 } }
                 },
-                runtimeVersion // RuntimeVersion
+                version: runtimeVersion
             );
             yield return new CounterProvider(
-                "Microsoft.AspNetCore.Hosting", // Name
-                "A set of performance counters provided by ASP.NET Core.", // Description
-                "0x0", // Keywords
-                "4", // Level
-                new[] { // Counters
+                name: "Microsoft.AspNetCore.Hosting",
+                description: "A set of performance counters provided by ASP.NET Core.",
+                keywords: "0x0",
+                level: "4",
+                counters: new[] {
                     new CounterProfile{ Name="requests-per-second", Description="Number of requests between update intervals", SupportedVersions=new[] { Net30, Net31, Net50 } },
                     new CounterProfile{ Name="total-requests", Description="Total number of requests", SupportedVersions=new[] { Net30, Net31, Net50 } },
                     new CounterProfile{ Name="current-requests", Description="Current number of requests", SupportedVersions=new[] { Net30, Net31, Net50 } },
                     new CounterProfile{ Name="failed-requests", Description="Failed number of requests", SupportedVersions=new[] { Net30, Net31, Net50 } },
                 },
-                runtimeVersion
+                version: runtimeVersion
             );
             yield return new CounterProvider(
-                "Microsoft-AspNetCore-Server-Kestrel", // Name
-                "A set of performance counters provided by Kestrel.", // Description
-                "0x0", // Keywords
-                "4", // Level
-                new[] {
+                name: "Microsoft-AspNetCore-Server-Kestrel",
+                description: "A set of performance counters provided by Kestrel.",
+                keywords: "0x0",
+                level: "4",
+                counters: new[] {
                     new CounterProfile{ Name="connections-per-second", Description="Number of connections between update intervals", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="total-connections", Description="Total Connections", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="tls-handshakes-per-second", Description="Number of TLS Handshakes made between update intervals", SupportedVersions=new[] { Net50 } },
@@ -84,39 +82,39 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="connection-queue-length", Description="Length of Kestrel Connection Queue", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="request-queue-length", Description="Length total HTTP request queue", SupportedVersions=new[] { Net50 } },
                 },
-                runtimeVersion
+                version: runtimeVersion
             );
             yield return new CounterProvider(
-                "System.Net.Http",
-                "A set of performance counters for System.Net.Http",
-                "0x0", // Keywords
-                "4", // Level
-                new[] {
+                name: "System.Net.Http",
+                description: "A set of performance counters for System.Net.Http",
+                keywords: "0x0",
+                level: "4",
+                counters: new[] {
                     new CounterProfile{ Name="requests-started", Description="Total Requests Started", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="requests-started-rate", Description="Number of Requests Started between update intervals", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="requests-aborted", Description="Total Requests Aborted", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="requests-aborted-rate", Description="Number of Requests Aborted between update intervals", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="current-requests", Description="Current Requests", SupportedVersions=new[] { Net50 } }
                 },
-                runtimeVersion
+                version: runtimeVersion
             );
             yield return new CounterProvider(
-                "System.Net.NameResolution",
-                "A set of performance counters for DNS lookups",
-                "0x0",
-                "4",
-                new[] {
+                name: "System.Net.NameResolution",
+                description: "A set of performance counters for DNS lookups",
+                keywords: "0x0",
+                level: "4",
+                counters: new[] {
                     new CounterProfile{ Name="dns-lookups-requested", Description="The number of DNS lookups requested since the process started", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="dns-lookups-duration", Description="Average DNS Lookup Duration", SupportedVersions=new[] { Net50 } },
                 },
-                runtimeVersion
+                version: runtimeVersion
             );
             yield return new CounterProvider(
-                "System.Net.Security",
-                "A set of performance counters for TLS",
-                "0x0",
-                "4",
-                new[] {
+                name: "System.Net.Security",
+                description: "A set of performance counters for TLS",
+                keywords: "0x0",
+                level: "4",
+                counters: new[] {
                     new CounterProfile{ Name="tls-handshake-rate", Description="The number of TLS handshakes completed per update interval", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="total-tls-handshakes", Description="The total number of TLS handshakes completed since the process started", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="current-tls-handshakes", Description="The current number of TLS handshakes that have started but not yet completed", SupportedVersions=new[] { Net50 } },
@@ -132,14 +130,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="tls12-handshake-duration", Description="The average duration of TLS 1.2 handshakes", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="tls13-handshake-duration", Description="The average duration of TLS 1.3 handshakes", SupportedVersions=new[] { Net50 } },
                 },
-                runtimeVersion
+                version: runtimeVersion
             );
             yield return new CounterProvider(
-                "System.Net.Sockets",
-                "A set of performance counters for System.Net.Sockets",
-                "0x0",
-                "4",
-                new[] {
+                name: "System.Net.Sockets",
+                description: "A set of performance counters for System.Net.Sockets",
+                keywords: "0x0",
+                level: "4",
+                counters: new[] {
                     new CounterProfile{ Name="outgoing-connections-established", Description="The total number of outgoing connections established since the process started", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="incoming-connections-established", Description="The total number of incoming connections established since the process started", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="bytes-received", Description="The total number of bytes received since the process started", SupportedVersions=new[] { Net50 } },
@@ -147,7 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     new CounterProfile{ Name="datagrams-received", Description="The total number of datagrams received since the process started", SupportedVersions=new[] { Net50 } },
                     new CounterProfile{ Name="datagrams-sent", Description="The total number of datagrams sent since the process started", SupportedVersions=new[] { Net50 } },
                 },
-                runtimeVersion
+                version: runtimeVersion
             );
         }
 

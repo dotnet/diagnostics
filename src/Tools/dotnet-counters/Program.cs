@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Internal.Common.Commands;
-using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -14,6 +11,9 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common.Commands;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -34,8 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string port,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration);
+            int maxTimeSeries);
 
         private delegate Task<int> MonitorDelegate(
             CancellationToken ct,
@@ -48,8 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string port,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration);
+            int maxTimeSeries);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -67,8 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 DiagnosticPortOption(),
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
-                MaxTimeSeriesOption(),
-                DurationOption()
+                MaxTimeSeriesOption()
             };
 
         private static Command CollectCommand() =>
@@ -89,8 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 DiagnosticPortOption(),
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
-                MaxTimeSeriesOption(),
-                DurationOption()
+                MaxTimeSeriesOption()
             };
 
         private static Option NameOption() =>
@@ -199,14 +195,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Argument = new Argument<int>(name: "maxTimeSeries", getDefaultValue: () => 1000)
             };
 
-        private static Option DurationOption() =>
-            new Option(
-                alias: "--duration",
-                description: @"When specified, will run for the given timespan and then automatically stop. Provided in the form of dd:hh:mm:ss.")
-            {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
-            };
-
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };
 
         public static int List(IConsole console, string runtimeVersion)
@@ -217,15 +205,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0");
                 return 0;
             }
-            var profiles = KnownData.GetAllProviders(runtimeVersion);
-            var maxNameLength = profiles.Max(p => p.Name.Length);
+            IReadOnlyList<CounterProvider> profiles = KnownData.GetAllProviders(runtimeVersion);
+            int maxNameLength = profiles.Max(p => p.Name.Length);
             Console.WriteLine($"Showing well-known counters for .NET (Core) version {runtimeVersion} only. Specific processes may support additional counters.");
-            foreach (var profile in profiles)
+            foreach (CounterProvider profile in profiles)
             {
-                var counters = profile.GetAllCounters();
-                var maxCounterNameLength = counters.Max(c => c.Name.Length);
+                IReadOnlyList<CounterProfile> counters = profile.GetAllCounters();
+                int maxCounterNameLength = counters.Max(c => c.Name.Length);
                 Console.WriteLine($"{profile.Name.PadRight(maxNameLength)}");
-                foreach (var counter in profile.Counters.Values)
+                foreach (CounterProfile counter in profile.Counters.Values)
                 {
                     Console.WriteLine($"    {counter.Name.PadRight(maxCounterNameLength)} \t\t {counter.Description}");
                 }
@@ -236,7 +224,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())

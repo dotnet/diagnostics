@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private static ulong _sessionId;
         private static int threshold;
-        private static int pid; 
+        private static int pid;
 
 
         private static void Main(string[] args)
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     pid = Convert.ToInt32(args[0]);
                     threshold = Convert.ToInt32(args[1]);
 
-                    Task monitorTask = new Task(() => 
+                    Task monitorTask = new Task(() =>
                     {
                         var prov = new List<Provider>();
                         prov.Add(new Provider("System.Runtime", filterData:"EventCounterIntervalSec=1"));
@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         circularBufferSizeMB: 1000,
                         outputPath: "",
                         providers: prov);
-                        
+
                         var binaryReader = EventPipeClient.CollectTracing(Int32.Parse(args[0]), configuration, out _sessionId);
                         EventPipeEventSource source = new EventPipeEventSource(binaryReader);
                         source.Dynamic.All += Dynamic_All;
@@ -68,9 +68,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     try
                     {
-                        EventPipeClient.StopTracing(Int32.Parse(args[0]), _sessionId);    
+                        EventPipeClient.StopTracing(Int32.Parse(args[0]), _sessionId);
                     }
-                    catch (System.IO.EndOfStreamException) {} 
+                    catch (System.IO.EndOfStreamException) {}
             }
         }
 
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
 
                 ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
-                string displayName = payload.GetDisplay();                
+                string displayName = payload.GetDisplay();
                 if (string.IsNullOrEmpty(displayName))
                 {
                     displayName = payload.GetName();
@@ -106,11 +106,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         if (!File.Exists(createDumpPath))
                         {
                             Console.WriteLine("Unable to locate 'createdump' tool in '{runtimeDirectory}'");
-                            Environment.Exit(1);                            
-                        }                        
+                            Environment.Exit(1);
+                        }
 
                         var createdump = new System.Diagnostics.Process()
-                        {       
+                        {
                             StartInfo = new System.Diagnostics.ProcessStartInfo()
                             {
                                 FileName = createDumpPath,

@@ -41,8 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(settings => {
                 settings.UseAppFilters = false;
             });
 
@@ -70,8 +69,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Warning;
             });
@@ -98,8 +96,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
@@ -129,8 +126,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             // Pipeline should throw PipelineException with inner exception of NotSupportedException.
             PipelineException exception = await Assert.ThrowsAsync<PipelineException>(
                 () => GetLogsAsync(
-                    settings =>
-                    {
+                    settings => {
                         settings.UseAppFilters = false;
                         settings.LogLevel = LogLevel.None;
                     }));
@@ -168,8 +164,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(settings => {
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
                     { LoggerRemoteTestName, LogLevel.Warning }
@@ -197,8 +192,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2568");
             }
-            using Stream outputStream = await GetLogsAsync(settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
@@ -222,7 +216,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             var outputStream = new MemoryStream();
 
-            await using (var testExecution = StartTraceeProcess(LoggerRemoteTestName))
+            await using (RemoteTestExecution testExecution = StartTraceeProcess(LoggerRemoteTestName))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
@@ -326,7 +320,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
             Assert.NotNull(values);
-            foreach (var expectedValue in expectedValues)
+            foreach ((string key, object value) expectedValue in expectedValues)
             {
                 Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
                 //TODO For now this will always be a string

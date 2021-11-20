@@ -1,15 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interop;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
@@ -134,13 +134,13 @@ namespace SOS.Hosting
         private void Flush()
         {
             // TODO: there is a better way to flush _corDebugProcess with ICorDebugProcess4::ProcessStateChanged(FLUSH_ALL)
-            if (_corDebugProcess != IntPtr.Zero)
+            if (_corDebugProcess == IntPtr.Zero)
             {
                 COMHelper.Release(_corDebugProcess);
                 _corDebugProcess = IntPtr.Zero;
             }
             // TODO: there is a better way to flush _clrDataProcess with ICLRDataProcess::Flush()
-            if (_clrDataProcess != IntPtr.Zero)
+            if (_clrDataProcess == IntPtr.Zero)
             {
                 COMHelper.Release(_clrDataProcess);
                 _clrDataProcess = IntPtr.Zero;
@@ -305,7 +305,7 @@ namespace SOS.Hosting
             {
                 return IntPtr.Zero;
             }
-            var createInstance = SOSHost.GetDelegateFunction<CLRDataCreateInstanceDelegate>(dacHandle, "CLRDataCreateInstance");
+            CLRDataCreateInstanceDelegate createInstance = SOSHost.GetDelegateFunction<CLRDataCreateInstanceDelegate>(dacHandle, "CLRDataCreateInstance");
             if (createInstance == null)
             {
                 Trace.TraceError("Failed to obtain DAC CLRDataCreateInstance");
@@ -363,7 +363,7 @@ namespace SOS.Hosting
             int hresult = 0;
             try
             {
-                var openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
+                OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
                 {
                     hresult = openVirtualProcessImpl2(
@@ -395,7 +395,7 @@ namespace SOS.Hosting
                 // the same PAL where dbgshim has it's own.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    var loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
+                    LoadLibraryWDelegate loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
                     if (loadLibraryFunction == null)
                     {
                         Trace.TraceError($"Can not find the DAC LoadLibraryW export");
@@ -409,7 +409,7 @@ namespace SOS.Hosting
                     }
                 }
 
-                var openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
+                OpenVirtualProcessImplDelegate openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
                 if (openVirtualProcessImpl != null)
                 {
                     hresult = openVirtualProcessImpl(
@@ -430,7 +430,7 @@ namespace SOS.Hosting
                     return corDebugProcess;
                 }
 
-                var openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
+                OpenVirtualProcessDelegate openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
                 if (openVirtualProcess != null)
                 {
                     hresult = openVirtualProcess(
@@ -480,7 +480,7 @@ namespace SOS.Hosting
                 Debug.Assert(_dacHandle != IntPtr.Zero);
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
+                    DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
                     dllmain?.Invoke(_dacHandle, 1, IntPtr.Zero);
                 }
             }

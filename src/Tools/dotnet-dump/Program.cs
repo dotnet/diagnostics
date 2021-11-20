@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Internal.Common.Commands;
-using Microsoft.Tools.Common;
 using System;
 using System.CommandLine;
 using System.CommandLine.Builder;
@@ -10,14 +8,16 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common.Commands;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    internal class Program
+    internal static class Program
     {
         public static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(CollectCommand())
                 .AddCommand(AnalyzeCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that dumps can be collected"))

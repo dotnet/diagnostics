@@ -1042,7 +1042,7 @@ dotnet_diagnostic.SA1205.severity = warning
 dotnet_diagnostic.SA1206.severity = warning
 
 # SA1208: Using directive ordering
-dotnet_diagnostic.SA1208.severity = none
+dotnet_diagnostic.SA1208.severity = warning
 
 # SA1209: Using alias directives should be placed after all using namespace directives
 dotnet_diagnostic.SA1209.severity = none
@@ -1306,7 +1306,7 @@ dotnet_diagnostic.IDE0009.severity = silent
 dotnet_diagnostic.IDE0010.severity = silent
 
 # IDE0011: Add braces
-dotnet_diagnostic.IDE0011.severity = silent
+dotnet_diagnostic.IDE0011.severity = warning
 
 # IDE0016: Use 'throw' expression
 dotnet_diagnostic.IDE0016.severity = silent

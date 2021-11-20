@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -13,6 +12,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     Directory.GetCurrentDirectory()
                 };
-                foreach (var path in searchDir)
+                foreach (DirectoryInfo path in searchDir)
                 {
                     searchPaths.Add(path.FullName);
                 }
@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             try
             {
                 List<string> files = new List<string>();
-                foreach (var assemDir in paths)
+                foreach (string assemDir in paths)
                 {
                     if (Directory.Exists(assemDir))
                     {

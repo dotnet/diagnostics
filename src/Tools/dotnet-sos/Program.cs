@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Tools.Common;
-using SOS;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
@@ -10,6 +8,8 @@ using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.Tools.Common;
+using SOS;
 
 namespace Microsoft.Diagnostics.Tools.SOS
 {
@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
     {
         public static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(InstallCommand())
                 .AddCommand(UninstallCommand())
                 .UseDefaults()

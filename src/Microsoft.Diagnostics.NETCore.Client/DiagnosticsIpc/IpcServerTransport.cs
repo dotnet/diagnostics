@@ -59,8 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static int MaxAllowedConnections
         {
-            get
-            {
+            get {
                 return -1;
             }
         }
@@ -125,7 +124,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 await _stream.WaitForConnectionAsync(linkedSource.Token).ConfigureAwait(false);
 
                 // Transfer ownership of connected named pipe.
-                var connectedStream = _stream;
+                NamedPipeServerStream connectedStream = _stream;
 
                 // Setup new named pipe server stream used in upcomming accept calls.
                 _stream = CreateNewNamedPipeServer(_pipeName, _maxInstances);
@@ -194,7 +193,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             try
             {
                 // Accept next client socket.
-                var socket = await _socket.AcceptAsync(linkedSource.Token).ConfigureAwait(false);
+                Socket socket = await _socket.AcceptAsync(linkedSource.Token).ConfigureAwait(false);
 
                 // Configure client socket based on transport type.
                 OnAccept(socket);

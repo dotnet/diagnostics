@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -9,6 +8,7 @@ using System.CommandLine.IO;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.NETCore.Client;
 using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands
@@ -29,15 +29,15 @@ namespace Microsoft.Internal.Common.Commands
             try
             {
                 StringBuilder sb = new StringBuilder();
-                var processes = DiagnosticsClient.GetPublishedProcesses()
+                IOrderedEnumerable<Process> processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
                     .OrderBy(process => process.ProcessName)
                     .ThenBy(process => process.Id);
 
-                var currentPid = Process.GetCurrentProcess().Id;
+                int currentPid = Process.GetCurrentProcess().Id;
 
-                foreach (var process in processes)
+                foreach (Process process in processes)
                 {
                     if (process.Id == currentPid)
                     {

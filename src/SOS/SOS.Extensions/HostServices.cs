@@ -1,6 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
@@ -8,11 +13,6 @@ using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace SOS.Extensions
 {
@@ -85,7 +85,7 @@ namespace SOS.Extensions
             {
                 return HResult.E_FAIL;
             }
-            var initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
+            InitializeCallbackDelegate initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
             if (initialializeCallback == null)
             {
                 return HResult.E_FAIL;
@@ -217,8 +217,7 @@ namespace SOS.Extensions
                 _serviceProvider.AddService<IContextService>(_contextService);
                 _serviceProvider.AddServiceFactory<IThreadUnwindService>(() => new ThreadUnwindServiceFromDebuggerServices(DebuggerServices));
 
-                _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() =>
-                {
+                _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
                     ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
                     return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
                 });

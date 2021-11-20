@@ -3,15 +3,11 @@
 
 using System;
 using Xunit;
-using System.IO;
-using System.Runtime.Loader;
-using System.Reflection;
 using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 
 namespace EventPipe.UnitTests.CustomEventsValidation
 {
@@ -36,15 +32,13 @@ namespace EventPipe.UnitTests.CustomEventsValidation
         [Fact]
         public async void CustomEventProducesEventsWithNoKeywords()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "MyEventSource", -1 },
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 1000; i++)
                     {
                         MyEventSource.Log.Event1();
@@ -58,7 +52,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
                     new EventPipeProvider("MyEventSource", EventLevel.Informational)
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, null);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, null);
                 Assert.Equal(100, ret);
             }, output);
         }

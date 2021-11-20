@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -35,7 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             var modulesElement = new XElement("Modules");
             Target.Add(modulesElement);
 
-            var moduleService = target.Services.GetService<IModuleService>();
+            IModuleService moduleService = target.Services.GetService<IModuleService>();
             string runtimeModuleName = target.GetPlatformModuleName("coreclr");
             foreach (IModule module in moduleService.EnumerateModules())
             {
@@ -47,8 +46,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             var threadsElement = new XElement("Threads");
             Target.Add(threadsElement);
 
-            var threadService = target.Services.GetService<IThreadService>();
-            var registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
+            IThreadService threadService = target.Services.GetService<IThreadService>();
+            int[] registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
             foreach (IThread thread in threadService.EnumerateThreads())
             {
                 var threadElement = new XElement("Thread");
@@ -76,7 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             var runtimesElement = new XElement("Runtimes");
             Target.Add(runtimesElement);
 
-            var runtimeService = target.Services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
             foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
             {
                 var runtimeElement = new XElement("Runtime");

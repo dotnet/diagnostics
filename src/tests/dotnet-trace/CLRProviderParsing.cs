@@ -1,11 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using Xunit;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -19,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("GC")]
         public void ValidSingleCLREvent(string providerToParse)
         {
-            var provider = Extensions.ToCLREventPipeProvider(providerToParse, "4");
+            NETCore.Client.EventPipeProvider provider = Extensions.ToCLREventPipeProvider(providerToParse, "4");
             Assert.True(provider.Name == CLRProviderName);
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Informational);
@@ -41,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("GC+GCHandle")]
         public void ValidManyCLREvents(string providerToParse)
         {
-            var provider = Extensions.ToCLREventPipeProvider(providerToParse, "5");
+            NETCore.Client.EventPipeProvider provider = Extensions.ToCLREventPipeProvider(providerToParse, "5");
             Assert.True(provider.Name == CLRProviderName);
             Assert.True(provider.Keywords == 3);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
@@ -55,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("InFORMationAL")]
         public void ValidCLREventLevel(string clreventlevel)
         {
-            var provider = Extensions.ToCLREventPipeProvider("gc", clreventlevel);
+            NETCore.Client.EventPipeProvider provider = Extensions.ToCLREventPipeProvider("gc", clreventlevel);
             Assert.True(provider.Name == CLRProviderName);
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Informational);

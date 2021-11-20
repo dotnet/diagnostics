@@ -84,13 +84,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     PipeDirection.InOut,
                     PipeOptions.Asynchronous,
                     TokenImpersonationLevel.Impersonation);
-
-                // Pass non-infinite timeout in order to cause internal connection algorithm
-                // to check the CancellationToken periodically. Otherwise, if the named pipe
-                // is waited using WaitNamedPipe with an infinite timeout, then the
-                // CancellationToken cannot be observed.
-                await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
-
+                await namedPipe.ConnectAsync(token).ConfigureAwait(false);
                 return namedPipe;
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
@@ -184,12 +178,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void WaitForConnection(TimeSpan timeout)
         {
-            using var _ = Connect(timeout);
+            using Stream _ = Connect(timeout);
         }
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+            using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         public override bool Equals(object obj)
@@ -243,12 +237,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void WaitForConnection(TimeSpan timeout)
         {
-            using var _ = Connect(timeout);
+            using Stream _ = Connect(timeout);
         }
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+            using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         private string GetDefaultAddress()

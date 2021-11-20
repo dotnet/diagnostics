@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -64,12 +63,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private bool initialized;
         private string _errorText;
 
-        private int _maxRow = -1;
-        private bool _useAnsi;
+        private int maxRow = -1;
+        private bool useAnsi;
 
         public ConsoleWriter(bool useAnsi)
         {
-            this._useAnsi = useAnsi;
+            this.useAnsi = useAnsi;
         }
 
         public void Initialize()
@@ -90,7 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private void SetCursorPosition(int col, int row)
         {
-            if (this._useAnsi)
+            if (this.useAnsi)
             {
                 Console.Write($"\u001b[{row + 1};{col + 1}H");
             }
@@ -102,7 +101,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private void Clear()
         {
-            if (this._useAnsi)
+            if (this.useAnsi)
             {
                 Console.Write($"\u001b[H\u001b[J");
             }
@@ -158,7 +157,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
             }
 
-            _maxRow = Math.Max(_maxRow, row);
+            maxRow = Math.Max(maxRow, row);
         }
 
         public void ToggleStatus(bool pauseCmdSet)
@@ -304,7 +303,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 if (initialized)
                 {
-                    var row = _maxRow;
+                    int row = maxRow;
 
                     if (row > -1)
                     {

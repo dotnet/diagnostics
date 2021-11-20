@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace SOS.Extensions
@@ -75,8 +75,7 @@ namespace SOS.Extensions
             IMemoryService rawMemoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
             ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDebuggerServices(this, rawMemoryService, debuggerServices));
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDebuggerServices(this, debuggerServices));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() =>
-            {
+            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
                 Debug.Assert(Host.HostType != HostType.DotnetDump);
                 IMemoryService memoryService = rawMemoryService;
                 if (IsDump && Host.HostType == HostType.Lldb)

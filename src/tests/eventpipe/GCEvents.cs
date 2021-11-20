@@ -36,8 +36,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCCollect_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -52,8 +51,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
@@ -67,8 +65,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCStartEvents = 0;
                     int GCEndEvents = 0;
                     source.Clr.GCStart += (eventData) => GCStartEvents += 1;
@@ -87,8 +84,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     int GCHeapStatsEvents = 0;
                     source.Clr.GCHeapStats += (eventData) => GCHeapStatsEvents += 1;
 
-                    return () =>
-                    {
+                    return () => {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("GCStartEvents: " + GCStartEvents);
@@ -114,7 +110,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     };
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
@@ -122,8 +118,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCWaitForPendingFinalizers_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -138,8 +133,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
@@ -154,21 +148,19 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCFinalizersEndEvents = 0;
                     source.Clr.GCFinalizersStop += (eventData) => GCFinalizersEndEvents += 1;
                     int GCFinalizersStartEvents = 0;
                     source.Clr.GCFinalizersStart += (eventData) => GCFinalizersStartEvents += 1;
-                    return () =>
-                    {
+                    return () => {
                         Logger.logger.Log("Event counts validation");
                         Logger.logger.Log("GCFinalizersEndEvents: " + GCFinalizersEndEvents);
                         Logger.logger.Log("GCFinalizersStartEvents: " + GCFinalizersStartEvents);
                         return GCFinalizersEndEvents >= 50 && GCFinalizersStartEvents >= 50 ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
@@ -176,8 +168,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCCollect_ProducesVerboseEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -192,8 +183,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     List<string> testList = new List<string>();
                     for (int i = 0; i < 100000000; i++)
                     {
@@ -203,8 +193,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     GC.Collect();
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCCreateSegmentEvents = 0;
                     int GCFreeSegmentEvents = 0;
                     source.Clr.GCCreateSegment += (eventData) => GCCreateSegmentEvents += 1;
@@ -218,8 +207,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     source.Clr.GCCreateConcurrentThread += (eventData) => GCCreateConcurrentThreadEvents += 1;
                     source.Clr.GCTerminateConcurrentThread += (eventData) => GCTerminateConcurrentThreadEvents += 1;
 
-                    return () =>
-                    {
+                    return () => {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("GCCreateSegmentEvents: " + GCCreateSegmentEvents);
@@ -238,7 +226,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     };
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

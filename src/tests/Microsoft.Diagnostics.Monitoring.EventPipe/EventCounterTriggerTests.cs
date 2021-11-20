@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// </summary>
         private void ValidateFieldValidation(EventCounterTriggerSettings settings, string expectedMessage, string[] expectedMemberNames)
         {
-            var exception = Assert.Throws<ValidationException>(() => new EventCounterTrigger(settings));
+            ValidationException exception = Assert.Throws<ValidationException>(() => new EventCounterTrigger(settings));
 
             Assert.NotNull(exception.ValidationResult);
 
@@ -330,7 +330,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 CounterIntervalSeconds = 1
             };
 
-            await using (var testExecution = StartTraceeProcess("TriggerRemoteTest"))
+            await using (RemoteTestExecution testExecution = StartTraceeProcess("TriggerRemoteTest"))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
@@ -347,8 +347,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                         TriggerSettings = settings,
                         Duration = Timeout.InfiniteTimeSpan
                     },
-                    traceEvent =>
-                    {
+                    traceEvent => {
                         waitSource.TrySetResult(null);
                     });
 

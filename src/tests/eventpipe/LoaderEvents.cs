@@ -33,8 +33,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         [Fact]
         public async void AssemblyLoad_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -48,8 +47,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 };
 
                 string assemblyPath = null;
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     GetAssemblyPath();
                     try
                     {
@@ -77,8 +75,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 }
 
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int LoaderAssemblyLoadEvents = 0;
                     int LoaderAssemblyUnloadEvents = 0;
                     source.Clr.LoaderAssemblyLoad += (eventData) => LoaderAssemblyLoadEvents += 1;
@@ -89,8 +86,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                     source.Clr.LoaderModuleLoad += (eventData) => LoaderModuleLoadEvents += 1;
                     source.Clr.LoaderModuleUnload += (eventData) => LoaderModuleUnloadEvents += 1;
 
-                    return () =>
-                    {
+                    return () => {
                         Logger.logger.Log("Event counts validation");
 
                         Logger.logger.Log("LoaderAssemblyLoadEvents: " + LoaderAssemblyLoadEvents);
@@ -108,7 +104,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                         return LoaderAssemblyResult && LoaderModuleResult ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

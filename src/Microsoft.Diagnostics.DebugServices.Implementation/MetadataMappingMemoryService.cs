@@ -1,13 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                var runtimes = RuntimeService.EnumerateRuntimes();
+                System.Collections.Generic.IEnumerable<IRuntime> runtimes = RuntimeService.EnumerateRuntimes();
                 if (runtimes.Any())
                 {
                     foreach (IRuntime runtime in runtimes)
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Debug.Assert(module.ImageBase != 0);
 
-            var metadata = ImmutableArray<byte>.Empty;
+            ImmutableArray<byte> metadata = ImmutableArray<byte>.Empty;
             bool isVirtual = module.Layout != ModuleLayout.Flat;
             try
             {

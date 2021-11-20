@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using var cancellation = new CancellationTokenSource(timeout);
 
             var completionSource = new TaskCompletionSource<T>();
-            using var _ = cancellation.Token.Register(
+            using CancellationTokenRegistration _ = cancellation.Token.Register(
                 () => completionSource.TrySetException(new TimeoutException()));
 
             RunOrQueueHandler(handler, completionSource);
@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public async Task<T> HandleAsync(Handler handler, CancellationToken token)
         {
             var completionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var _ = token.Register(() => completionSource.TrySetCanceled(token));
+            using CancellationTokenRegistration _ = token.Register(() => completionSource.TrySetCanceled(token));
 
             RunOrQueueHandler(handler, completionSource);
 

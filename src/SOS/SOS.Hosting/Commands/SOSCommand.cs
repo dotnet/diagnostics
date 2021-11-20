@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Hosting
 {

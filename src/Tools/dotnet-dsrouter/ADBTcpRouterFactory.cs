@@ -64,8 +64,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public static bool RunAdbCommandInternal(string command, string expectedOutput, int expectedExitCode, ILogger logger)
         {
-            var sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
-            var adbTool = "adb";
+            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
+            string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
             {
@@ -97,8 +97,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             if (processStartedResult)
             {
-                var stdout = process.StandardOutput.ReadToEnd();
-                var stderr = process.StandardError.ReadToEnd();
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
 
                 if (!string.IsNullOrEmpty(expectedOutput))
                 {

@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using Xunit;
 
@@ -75,9 +72,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     { "EventCounterIntervalSec", "2" }
                 });
 
-            for (var i = 0; i < providers.Length - 1; i++)
+            for (int i = 0; i < providers.Length - 1; i++)
             {
-                for (var j = i + 1; j < providers.Length; j++)
+                for (int j = i + 1; j < providers.Length; j++)
                 {
                     Assert.True(providers[i] != providers[j]);
                 }

@@ -1,14 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,6 +13,14 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 
 namespace SOS.Hosting
 {
@@ -273,54 +273,51 @@ namespace SOS.Hosting
             int moduleIndexSize,
             IntPtr moduleIndex)
         {
-            if (_symbolService.IsSymbolStoreEnabled)
+            try
             {
-                try
+                KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
+                byte[] id = new byte[moduleIndexSize];
+                Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
+
+                IEnumerable<SymbolStoreKey> keys = null;
+                switch (config)
                 {
-                    KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
-                    byte[] id = new byte[moduleIndexSize];
-                    Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
+                    case RuntimeConfiguration.UnixCore:
+                        keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                        break;
 
-                    IEnumerable<SymbolStoreKey> keys = null;
-                    switch (config)
+                    case RuntimeConfiguration.OSXCore:
+                        keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                        break;
+
+                    case RuntimeConfiguration.WindowsCore:
+                    case RuntimeConfiguration.WindowsDesktop:
+                        uint timeStamp = BitConverter.ToUInt32(id, 0);
+                        uint fileSize = BitConverter.ToUInt32(id, 4);
+                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
+                        keys = new SymbolStoreKey[] { key };
+                        break;
+
+                    default:
+                        Trace.TraceError("LoadNativeSymbolsFromIndex: unsupported platform {0}", config);
+                        return;
+                }
+                foreach (SymbolStoreKey key in keys)
+                {
+                    string moduleFileName = Path.GetFileName(key.FullPathName);
+                    Trace.TraceInformation("{0} {1}", key.FullPathName, key.Index);
+
+                    string downloadFilePath = _symbolService.DownloadFile(key);
+                    if (downloadFilePath != null)
                     {
-                        case RuntimeConfiguration.UnixCore:
-                            keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
-                            break;
-
-                        case RuntimeConfiguration.OSXCore:
-                            keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
-                            break;
-
-                        case RuntimeConfiguration.WindowsCore:
-                        case RuntimeConfiguration.WindowsDesktop:
-                            uint timeStamp = BitConverter.ToUInt32(id, 0);
-                            uint fileSize = BitConverter.ToUInt32(id, 4);
-                            SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
-                            keys = new SymbolStoreKey[] { key };
-                            break;
-
-                        default:
-                            Trace.TraceError("LoadNativeSymbolsFromIndex: unsupported platform {0}", config);
-                            return;
-                    }
-                    foreach (SymbolStoreKey key in keys)
-                    {
-                        string moduleFileName = Path.GetFileName(key.FullPathName);
-                        Trace.TraceInformation("{0} {1}", key.FullPathName, key.Index);
-
-                        string downloadFilePath = _symbolService.DownloadFile(key);
-                        if (downloadFilePath != null)
-                        {
-                            Trace.TraceInformation("{0}: {1}", moduleFileName, downloadFilePath);
-                            callback(parameter, moduleFileName, downloadFilePath);
-                        }
+                        Trace.TraceInformation("{0}: {1}", moduleFileName, downloadFilePath);
+                        callback(parameter, moduleFileName, downloadFilePath);
                     }
                 }
-                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
-                {
-                    Trace.TraceError("{0} - {1}", ex.Message, moduleFilePath);
-                }
+            }
+            catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
+            {
+                Trace.TraceError("{0} - {1}", ex.Message, moduleFilePath);
             }
         }
 
@@ -803,7 +800,7 @@ namespace SOS.Hosting
                     // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
                     if (codeViewEntry.DataSize != 0)
                     {
-                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
+                        OpenedReader result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
                         if (result != null)
                         {
                             return result;

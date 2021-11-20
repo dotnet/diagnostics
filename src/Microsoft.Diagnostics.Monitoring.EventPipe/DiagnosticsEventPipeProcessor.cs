@@ -1,12 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -43,8 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
             IDisposable registration = token.Register(() => TryCancelCompletionSources(token));
-            await await Task.Factory.StartNew(async () =>
-            {
+            await await Task.Factory.StartNew(async () => {
                 EventPipeEventSource source = null;
                 EventPipeStreamProvider streamProvider = null;
                 Task handleEventsTask = Task.CompletedTask;

@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Tools.Common;
-using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
@@ -10,6 +8,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Graphs;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
@@ -73,9 +73,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
-                var dumpTask = Task.Run(() =>
-                {
-                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
+                var dumpTask = Task.Run(() => {
+                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                         return true;
@@ -84,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return false;
                 });
 
-                var fDumpSuccess = await dumpTask;
+                bool fDumpSuccess = await dumpTask;
 
                 if (fDumpSuccess)
                 {
@@ -114,7 +113,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             out MemoryGraph memoryGraph)
         {
             var heapInfo = new DotNetHeapInfo();
-            var log = verbose ? Console.Out : TextWriter.Null;
+            TextWriter log = verbose ? Console.Out : TextWriter.Null;
 
             memoryGraph = new MemoryGraph(50_000);
 

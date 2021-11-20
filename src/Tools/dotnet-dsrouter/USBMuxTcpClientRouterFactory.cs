@@ -161,8 +161,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 int result = 0;
                 using (cancellationToken.Register(() => Close()))
                 {
@@ -230,8 +229,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 using (cancellationToken.Register(() => Close()))
                 {
                     Write(buffer, offset, count);

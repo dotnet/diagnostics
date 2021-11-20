@@ -5,7 +5,6 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.NETCore.Client;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
@@ -40,7 +39,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
 
         public void WaitForSignal()
         {
-            var result = TestRunner.StandardOutput.ReadLine();
+            string result = TestRunner.StandardOutput.ReadLine();
             if (string.Equals(result, "1"))
             {
                 return;
@@ -63,8 +62,7 @@ namespace Microsoft.Diagnostics.NETCore.Client.UnitTests
 
         private static Task ReadAllOutput(StreamReader output, StreamReader error, ITestOutputHelper outputHelper)
         {
-            return Task.Run(async () =>
-            {
+            return Task.Run(async () => {
                 try
                 {
                     Task<string> stdErrorTask = error.ReadToEndAsync();

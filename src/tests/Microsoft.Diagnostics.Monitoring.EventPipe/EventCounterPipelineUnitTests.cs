@@ -3,7 +3,6 @@
 
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -85,7 +84,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public async Task TestCounterEventPipeline()
         {
-            var expectedCounters = new[] { "cpu-usage", "working-set" };
+            string[] expectedCounters = new[] { "cpu-usage", "working-set" };
             string expectedProvider = "System.Runtime";
 
             IDictionary<string, IEnumerable<string>> expectedMap = new Dictionary<string, IEnumerable<string>>();
@@ -95,7 +94,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
 
-            await using (var testExecution = StartTraceeProcess("CounterRemoteTest"))
+            await using (RemoteTestExecution testExecution = StartTraceeProcess("CounterRemoteTest"))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
@@ -124,7 +123,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(logger.Metrics.Any());
 
-            var actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
+            IOrderedEnumerable<string> actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
 
             Assert.Equal(expectedCounters, actualMetrics);
             Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));

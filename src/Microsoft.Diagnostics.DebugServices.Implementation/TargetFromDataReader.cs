@@ -1,9 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -50,8 +50,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             IMemoryService rawMemoryService = new MemoryServiceFromDataReader(_dataReader);
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDataReader(this, _dataReader));
             ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, rawMemoryService, _dataReader));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() =>
-            {
+            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
                 IMemoryService memoryService = rawMemoryService;
                 if (IsDump)
                 {

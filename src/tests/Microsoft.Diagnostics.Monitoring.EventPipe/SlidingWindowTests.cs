@@ -2,17 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers;
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {

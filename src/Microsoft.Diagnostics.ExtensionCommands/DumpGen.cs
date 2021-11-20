@@ -23,11 +23,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             var types = new Dictionary<ClrType, DumpGenStats>();
 
-            foreach (var obj in _helper.EnumerateObjectsInGeneration(_generation)
+            foreach (ClrObject obj in _helper.EnumerateObjectsInGeneration(_generation)
                 .Where(obj => typeNameFilter == null || IsTypeNameMatching(obj.Type.Name, typeNameFilter)))
             {
-                var objectType = obj.Type;
-                if (types.TryGetValue(objectType, out var type))
+                ClrType objectType = obj.Type;
+                if (types.TryGetValue(objectType, out DumpGenStats type))
                 {
                     type.NumberOfOccurences++;
                     type.TotalSize += obj.Size;

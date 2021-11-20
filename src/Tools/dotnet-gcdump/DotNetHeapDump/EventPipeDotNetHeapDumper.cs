@@ -1,18 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.Tracing;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
@@ -53,8 +52,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }, false))
                 {
                     log.WriteLine("{0,5:n1}s: Flushing the type table", getElapsed().TotalSeconds);
-                    typeFlushSession.Source.AllEvents += (traceEvent) =>
-                    {
+                    typeFlushSession.Source.AllEvents += (traceEvent) => {
                         if (!fDone)
                         {
                             fDone = true;
@@ -78,8 +76,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 int gcNum = -1;
 
-                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
-                {
+                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data) {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -94,8 +91,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 };
 
-                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data)
-                {
+                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data) {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -108,8 +104,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 };
 
-                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
-                {
+                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data) {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -131,8 +126,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
 
                 // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded.
-                Task readerTask = Task.Run(() =>
-                {
+                Task readerTask = Task.Run(() => {
                     // cancelled before we began
                     if (ct.IsCancellationRequested)
                     {
@@ -175,8 +169,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 }
 
-                var stopTask = Task.Run(() =>
-                {
+                var stopTask = Task.Run(() => {
                     log.WriteLine("{0,5:n1}s: Shutting down gcdump EventPipe session", getElapsed().TotalSeconds);
                     gcDumpSession.EndSession();
                     log.WriteLine("{0,5:n1}s: gcdump EventPipe session shut down", getElapsed().TotalSeconds);
@@ -191,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 catch (AggregateException ae) // no need to throw if we're just cancelling the tasks
                 {
-                    foreach (var e in ae.Flatten().InnerExceptions)
+                    foreach (Exception e in ae.Flatten().InnerExceptions)
                     {
                         if (!(e is TaskCanceledException))
                         {

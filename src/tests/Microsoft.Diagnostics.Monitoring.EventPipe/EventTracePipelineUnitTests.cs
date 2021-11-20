@@ -2,18 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using Microsoft.Diagnostics.Tracing;
-using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -33,7 +28,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         public async Task TestTraceStopAsync()
         {
             Stream eventStream = null;
-            await using (var testExecution = StartTraceeProcess("TraceStopTest"))
+            await using (RemoteTestExecution testExecution = StartTraceeProcess("TraceStopTest"))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
@@ -46,17 +41,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 var foundProviderSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                await using var pipeline = new EventTracePipeline(client, settings, async (s, token) =>
-                {
+                await using var pipeline = new EventTracePipeline(client, settings, async (s, token) => {
                     eventStream = s;
 
                     using var eventSource = new EventPipeEventSource(s);
 
                     // Dispose event source when cancelled.
-                    using var _ = token.Register(() => eventSource.Dispose());
+                    using CancellationTokenRegistration _ = token.Register(() => eventSource.Dispose());
 
-                    eventSource.Dynamic.All += (TraceEvent obj) =>
-                    {
+                    eventSource.Dynamic.All += (TraceEvent obj) => {
                         if (string.Equals(obj.ProviderName, MonitoringSourceConfiguration.SampleProfilerProviderName, StringComparison.OrdinalIgnoreCase))
                         {
                             foundProviderSource.TrySetResult(null);
@@ -87,7 +80,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Stream eventStream = null;
             using var cancellationTokenSource = new CancellationTokenSource();
-            await using (var testExecution = StartTraceeProcess("TestEventStreamCleanup"))
+            await using (RemoteTestExecution testExecution = StartTraceeProcess("TestEventStreamCleanup"))
             {
                 //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
 
@@ -98,8 +91,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     Configuration = new CpuProfileConfiguration()
                 };
 
-                await using var pipeline = new EventTracePipeline(client, settings, (s, token) =>
-                {
+                await using var pipeline = new EventTracePipeline(client, settings, (s, token) => {
                     eventStream = s; //Clients should not do this.
                     cancellationTokenSource.Cancel();
                     token.ThrowIfCancellationRequested();

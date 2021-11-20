@@ -1,14 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Graphs;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Graphs;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -30,8 +30,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             int gcNum = -1;
 
-            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) =>
-            {
+            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) => {
                 taskComplete();
 
                 if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
@@ -40,13 +39,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             };
 
-            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) =>
-            {
+            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) => {
                 taskComplete();
             };
 
-            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) =>
-            {
+            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) => {
                 if (data.Count == gcNum)
                 {
                     taskComplete();

@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -21,14 +21,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             try
             {
                 WriteLine("global work item queue________________________________");
-                foreach (var item in Helper.EnumerateGlobalThreadPoolItems())
+                foreach (ThreadPoolItem item in Helper.EnumerateGlobalThreadPoolItems())
                 {
                     DisplayItem(item, tasks, ref taskCount, workItems, ref workItemCount);
                 }
                 WriteLine("");
 
                 WriteLine("local per thread work items_____________________________________");
-                foreach (var item in Helper.EnumerateLocalThreadPoolItems())
+                foreach (ThreadPoolItem item in Helper.EnumerateLocalThreadPoolItems())
                 {
                     DisplayItem(item, tasks, ref taskCount, workItems, ref workItemCount);
                 }
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // tasks first if any
                 if (tasks.Values.Count > 0)
                 {
-                    foreach (var item in tasks.Values.OrderBy(wi => wi.Count))
+                    foreach (WorkInfo item in tasks.Values.OrderBy(wi => wi.Count))
                     {
                         WriteLine($" {item.Count,4} Task  {item.Name}");
                     }
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // then QueueUserWorkItem next if any
                 if (workItems.Values.Count > 0)
                 {
-                    foreach (var item in workItems.Values.OrderBy(wi => wi.Count))
+                    foreach (WorkInfo item in workItems.Values.OrderBy(wi => wi.Count))
                     {
                         WriteLine($" {item.Count,4} Work  {item.Name}");
                     }

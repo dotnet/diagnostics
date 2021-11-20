@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.RelativeOrAbsolute, out Uri uri))
                 {
                     if (!string.Equals(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase))
+!string.Equals(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
                     }
@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
                 else if (!IPAddress.TryParse(host, out ipAddress))
                 {
-                    var hostEntry = Dns.GetHostEntry(host);
+                    IPHostEntry hostEntry = Dns.GetHostEntry(host);
                     if (hostEntry.AddressList.Length > 0)
                     {
                         ipAddress = hostEntry.AddressList[0];

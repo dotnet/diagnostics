@@ -1,25 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text.RegularExpressions;
 using Graphs;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Parsers.Symbol;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Text.RegularExpressions;
-using Address = System.UInt64;
 
 /// <summary>
 /// Reads a .NET Heap dump generated from ETW
 /// </summary>
-#pragma warning disable CA1050 // Declare types in namespaces
 public class DotNetHeapDumpGraphReader
-#pragma warning restore CA1050 // Declare types in namespaces
 {
     /// <summary>
     /// A class for reading ETW events from the .NET runtime and creating a MemoryGraph from it.   This only works on V4.5.1 of the runtime or later.
@@ -112,8 +109,7 @@ public class DotNetHeapDumpGraphReader
         }
 
         // Remember the module IDs too.
-        Action<ModuleLoadUnloadTraceData> moduleCallback = delegate (ModuleLoadUnloadTraceData data)
-        {
+        Action<ModuleLoadUnloadTraceData> moduleCallback = delegate (ModuleLoadUnloadTraceData data) {
             if (data.ProcessID != m_processId)
             {
                 return;
@@ -133,8 +129,7 @@ public class DotNetHeapDumpGraphReader
 
         DbgIDRSDSTraceData lastDbgData = null;
         var symbolParser = new SymbolTraceEventParser(source);
-        symbolParser.ImageIDDbgID_RSDS += delegate (DbgIDRSDSTraceData data)
-        {
+        symbolParser.ImageIDDbgID_RSDS += delegate (DbgIDRSDSTraceData data) {
             if (data.ProcessID != m_processId)
             {
                 return;
@@ -143,8 +138,7 @@ public class DotNetHeapDumpGraphReader
             lastDbgData = (DbgIDRSDSTraceData)data.Clone();
         };
 
-        source.Kernel.ImageGroup += delegate (ImageLoadTraceData data)
-        {
+        source.Kernel.ImageGroup += delegate (ImageLoadTraceData data) {
             if (m_processId == 0)
             {
                 return;
@@ -169,8 +163,7 @@ public class DotNetHeapDumpGraphReader
         };
 
         // TODO this does not work in the circular case
-        source.Kernel.ProcessGroup += delegate (ProcessTraceData data)
-        {
+        source.Kernel.ProcessGroup += delegate (ProcessTraceData data) {
             if (0 <= m_processId || m_processName == null)
             {
                 return;
@@ -187,8 +180,7 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
-        source.Clr.GCStart += delegate (GCStartTraceData data)
-        {
+        source.Clr.GCStart += delegate (GCStartTraceData data) {
             // If this GC is not part of a heap dump, ignore it.
             // TODO FIX NOW if (data.ClientSequenceNumber == 0)
             //     return;
@@ -238,8 +230,7 @@ public class DotNetHeapDumpGraphReader
 
 
 
-        source.Clr.GCStop += delegate (GCEndTraceData data)
-        {
+        source.Clr.GCStop += delegate (GCEndTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -267,8 +258,7 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
-        source.Clr.TypeBulkType += delegate (GCBulkTypeTraceData data)
-        {
+        source.Clr.TypeBulkType += delegate (GCBulkTypeTraceData data) {
             // Don't check m_ignoreEvents here, as BulkType events can be emitted by other events...such as the GC allocation event.
             // This means that when setting m_processId to 0 in the command line may still lose type events.
             if (data.ProcessID != m_processId)
@@ -279,8 +269,7 @@ public class DotNetHeapDumpGraphReader
             m_typeBlocks.Enqueue((GCBulkTypeTraceData)data.Clone());
         };
 
-        source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
-        {
+        source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -289,8 +278,7 @@ public class DotNetHeapDumpGraphReader
             m_nodeBlocks.Enqueue((GCBulkNodeTraceData)data.Clone());
         };
 
-        source.Clr.GCBulkEdge += delegate (GCBulkEdgeTraceData data)
-        {
+        source.Clr.GCBulkEdge += delegate (GCBulkEdgeTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -299,8 +287,7 @@ public class DotNetHeapDumpGraphReader
             m_edgeBlocks.Enqueue((GCBulkEdgeTraceData)data.Clone());
         };
 
-        source.Clr.GCBulkRootEdge += delegate (GCBulkRootEdgeTraceData data)
-        {
+        source.Clr.GCBulkRootEdge += delegate (GCBulkRootEdgeTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -309,8 +296,8 @@ public class DotNetHeapDumpGraphReader
             MemoryNodeBuilder staticRoot = m_root.FindOrCreateChild("[static vars]");
             for (int i = 0; i < data.Count; i++)
             {
-                var value = data.Values(i);
-                var flags = value.GCRootFlag;
+                GCBulkRootEdgeValues value = data.Values(i);
+                GCRootFlags flags = value.GCRootFlag;
                 if ((flags & GCRootFlags.WeakRef) == 0)     // ignore weak references. they are not roots.
                 {
                     GCRootKind kind = value.GCRootKind;
@@ -357,9 +344,9 @@ public class DotNetHeapDumpGraphReader
                                 Module gcRootModule = GetModuleForAddress(gcRootId);
                                 if (gcRootModule != null)
                                 {
-                                    var staticRva = (int)(gcRootId - gcRootModule.ImageBase);
-                                    var staticTypeIdx = m_graph.CreateType(staticRva, gcRootModule, 0, " (static var)");
-                                    var staticNodeIdx = m_graph.CreateNode();
+                                    int staticRva = (int)(gcRootId - gcRootModule.ImageBase);
+                                    NodeTypeIndex staticTypeIdx = m_graph.CreateType(staticRva, gcRootModule, 0, " (static var)");
+                                    NodeIndex staticNodeIdx = m_graph.CreateNode();
                                     m_children.Clear();
                                     m_children.Add(m_graph.GetNodeIndex(value.RootedNodeAddress));
                                     m_graph.SetNode(staticNodeIdx, staticTypeIdx, 0, m_children);
@@ -380,8 +367,7 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
-        source.Clr.GCBulkRCW += delegate (GCBulkRCWTraceData data)
-        {
+        source.Clr.GCBulkRCW += delegate (GCBulkRCWTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -394,8 +380,7 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
-        source.Clr.GCBulkRootCCW += delegate (GCBulkRootCCWTraceData data)
-        {
+        source.Clr.GCBulkRootCCW += delegate (GCBulkRootCCWTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -404,8 +389,7 @@ public class DotNetHeapDumpGraphReader
             m_ccwBlocks.Enqueue((GCBulkRootCCWTraceData)data.Clone());
         };
 
-        source.Clr.GCBulkRootStaticVar += delegate (GCBulkRootStaticVarTraceData data)
-        {
+        source.Clr.GCBulkRootStaticVar += delegate (GCBulkRootStaticVarTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -414,18 +398,17 @@ public class DotNetHeapDumpGraphReader
             m_staticVarBlocks.Enqueue((GCBulkRootStaticVarTraceData)data.Clone());
         };
 
-        source.Clr.GCBulkRootConditionalWeakTableElementEdge += delegate (GCBulkRootConditionalWeakTableElementEdgeTraceData data)
-        {
+        source.Clr.GCBulkRootConditionalWeakTableElementEdge += delegate (GCBulkRootConditionalWeakTableElementEdgeTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
             }
 
-            var otherRoots = m_root.FindOrCreateChild("[other roots]");
-            var dependentHandles = otherRoots.FindOrCreateChild("[Dependent Handles]");
+            MemoryNodeBuilder otherRoots = m_root.FindOrCreateChild("[other roots]");
+            MemoryNodeBuilder dependentHandles = otherRoots.FindOrCreateChild("[Dependent Handles]");
             for (int i = 0; i < data.Count; i++)
             {
-                var value = data.Values(i);
+                GCBulkRootConditionalWeakTableElementEdgeValues value = data.Values(i);
                 // TODO fix this so that they you see this as an arc from source to target.
                 // The target is alive only if the source ID (which is a weak handle) is alive (non-zero)
                 if (value.GCKeyNodeID != 0)
@@ -435,8 +418,7 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
-        source.Clr.GCGenerationRange += delegate (GCGenerationRangeTraceData data)
-        {
+        source.Clr.GCGenerationRange += delegate (GCGenerationRangeTraceData data) {
             if (m_ignoreEvents || data.ProcessID != m_processId)
             {
                 return;
@@ -528,13 +510,13 @@ public class DotNetHeapDumpGraphReader
             for (int i = 0; i < data.Count; i++)
             {
                 GCBulkTypeValues typeData = data.Values(i);
-                var typeName = typeData.TypeName;
+                string typeName = typeData.TypeName;
                 if (IsProjectN)
                 {
                     // For project N we only log the type ID and module base address.
                     Debug.Assert(typeName.Length == 0);
                     Debug.Assert((typeData.Flags & TypeFlags.ModuleBaseAddress) != 0);
-                    var moduleBaseAddress = typeData.TypeID - (ulong)typeData.TypeNameID;   // Tricky way of getting the image base.
+                    ulong moduleBaseAddress = typeData.TypeID - (ulong)typeData.TypeNameID;   // Tricky way of getting the image base.
                     Debug.Assert((moduleBaseAddress & 0xFFFF) == 0);       // Image loads should be on 64K boundaries.
 
                     Module module = GetModuleForImageBase(moduleBaseAddress);
@@ -585,7 +567,7 @@ public class DotNetHeapDumpGraphReader
         }
 
         // Process all the ccw root information (which also need the type information complete)
-        var ccwRoot = m_root.FindOrCreateChild("[COM/WinRT Objects]");
+        MemoryNodeBuilder ccwRoot = m_root.FindOrCreateChild("[COM/WinRT Objects]");
         while (m_ccwBlocks.Count > 0)
         {
             GCBulkRootCCWTraceData data = m_ccwBlocks.Dequeue();
@@ -604,12 +586,12 @@ public class DotNetHeapDumpGraphReader
                     }
 
                     // Create a CCW node that represents the COM object that has one child that points at the managed object.
-                    var ccwNode = m_graph.GetNodeIndex(ccwInfo.IUnknown);
+                    NodeIndex ccwNode = m_graph.GetNodeIndex(ccwInfo.IUnknown);
 
-                    var ccwTypeIndex = GetTypeIndex(ccwInfo.TypeID, 200);
-                    var ccwType = m_graph.GetType(ccwTypeIndex, m_typeStorage);
+                    NodeTypeIndex ccwTypeIndex = GetTypeIndex(ccwInfo.TypeID, 200);
+                    NodeType ccwType = m_graph.GetType(ccwTypeIndex, m_typeStorage);
 
-                    var typeName = "[CCW 0x" + ccwInfo.IUnknown.ToString("x") + " for type " + ccwType.Name + "]";
+                    string typeName = "[CCW 0x" + ccwInfo.IUnknown.ToString("x") + " for type " + ccwType.Name + "]";
                     ccwTypeIndex = CreateType(typeName);
 
                     ccwChildren.Clear();
@@ -621,14 +603,14 @@ public class DotNetHeapDumpGraphReader
         }
 
         // Process all the static variable root information (which also need the module information complete
-        var staticVarsRoot = m_root.FindOrCreateChild("[static vars]");
+        MemoryNodeBuilder staticVarsRoot = m_root.FindOrCreateChild("[static vars]");
         while (m_staticVarBlocks.Count > 0)
         {
             GCBulkRootStaticVarTraceData data = m_staticVarBlocks.Dequeue();
             for (int i = 0; i < data.Count; i++)
             {
                 GCBulkRootStaticVarValues staticVarData = data.Values(i);
-                var rootToAddTo = staticVarsRoot;
+                MemoryNodeBuilder rootToAddTo = staticVarsRoot;
                 if ((staticVarData.Flags & GCRootStaticVarFlags.ThreadLocal) != 0)
                 {
                     rootToAddTo = m_root.FindOrCreateChild("[thread static vars]");
@@ -639,7 +621,7 @@ public class DotNetHeapDumpGraphReader
                 string typeName;
                 if (m_typeID2TypeIndex.TryGetValue(staticVarData.TypeID, out typeIdx))
                 {
-                    var type = m_graph.GetType(typeIdx, m_typeStorage);
+                    NodeType type = m_graph.GetType(typeIdx, m_typeStorage);
                     typeName = type.Name;
                 }
                 else
@@ -650,7 +632,7 @@ public class DotNetHeapDumpGraphReader
                 string fullFieldName = typeName + "." + staticVarData.FieldName;
 
                 rootToAddTo = rootToAddTo.FindOrCreateChild("[static var " + fullFieldName + "]");
-                var nodeIdx = m_graph.GetNodeIndex(staticVarData.ObjectID);
+                NodeIndex nodeIdx = m_graph.GetNodeIndex(staticVarData.ObjectID);
                 rootToAddTo.AddChild(nodeIdx);
             }
         }
@@ -669,10 +651,10 @@ public class DotNetHeapDumpGraphReader
             }
 
             // Get the node index
-            var nodeIdx = m_graph.GetNodeIndex((ulong)node->Address);
-            var objSize = (int)node->Size;
+            NodeIndex nodeIdx = m_graph.GetNodeIndex((ulong)node->Address);
+            int objSize = (int)node->Size;
             Debug.Assert(node->Size < 0x1000000000);
-            var typeIdx = GetTypeIndex(node->TypeID, objSize);
+            NodeTypeIndex typeIdx = GetTypeIndex(node->TypeID, objSize);
 
             // TODO FIX NOW REMOVE
             // var type = m_graph.GetType(typeIdx, typeStorage);
@@ -683,7 +665,7 @@ public class DotNetHeapDumpGraphReader
             for (int i = 0; i < node->EdgeCount; i++)
             {
                 ulong edge = GetNextEdge();
-                var childIdx = m_graph.GetNodeIndex(edge);
+                NodeIndex childIdx = m_graph.GetNodeIndex(edge);
                 m_children.Add(childIdx);
                 // Trace.WriteLine(string.Format("   Child 0x{0:x}", edge));
             }
@@ -705,7 +687,7 @@ public class DotNetHeapDumpGraphReader
             if (m_graph.NodeCount >= maxNodeCount)
             {
                 doCompletionCheck = false;
-                var userMessage = string.Format("Exceeded max node count {0}", maxNodeCount);
+                string userMessage = string.Format("Exceeded max node count {0}", maxNodeCount);
                 m_log.WriteLine("[WARNING: ]", userMessage);
                 break;
             }
@@ -782,7 +764,7 @@ public class DotNetHeapDumpGraphReader
                 return null;
             }
 
-            var nextBlock = m_nodeBlocks.Dequeue();
+            GCBulkNodeTraceData nextBlock = m_nodeBlocks.Dequeue();
             if (m_curNodeBlock != null && nextBlock.Index != m_curNodeBlock.Index + 1)
             {
                 throw new ApplicationException("Error expected Node Index " + (m_curNodeBlock.Index + 1) + " Got " + nextBlock.Index + " Giving up on heap dump.");
@@ -804,7 +786,7 @@ public class DotNetHeapDumpGraphReader
                 throw new ApplicationException("Error not enough edge data.  Giving up on heap dump.");
             }
 
-            var nextEdgeBlock = m_edgeBlocks.Dequeue();
+            GCBulkEdgeTraceData nextEdgeBlock = m_edgeBlocks.Dequeue();
             if (m_curEdgeBlock != null && nextEdgeBlock.Index != m_curEdgeBlock.Index + 1)
             {
                 throw new ApplicationException("Error expected Node Index " + (m_curEdgeBlock.Index + 1) + " Got " + nextEdgeBlock.Index + " Giving up on heap dump.");
@@ -824,16 +806,16 @@ public class DotNetHeapDumpGraphReader
             m_log.WriteLine("Error: Did not have a type definition for typeID 0x{0:x}", typeID);
             Trace.WriteLine(string.Format("Error: Did not have a type definition for typeID 0x{0:x}", typeID));
 
-            var typeName = "UNKNOWN 0x" + typeID.ToString("x");
+            string typeName = "UNKNOWN 0x" + typeID.ToString("x");
             ret = CreateType(typeName);
             m_typeID2TypeIndex[typeID] = ret;
         }
 
         if (objSize > 1000)
         {
-            var type = m_graph.GetType(ret, m_typeStorage);
-            var suffix = GetObjectSizeSuffix(objSize);      // indicates the size range
-            var typeName = type.Name + suffix;
+            NodeType type = m_graph.GetType(ret, m_typeStorage);
+            string suffix = GetObjectSizeSuffix(objSize);      // indicates the size range
+            string typeName = type.Name + suffix;
 
             // TODO FIX NOW worry about module collision
             if (!m_arrayNametoIndex.TryGetValue(typeName, out ret))
@@ -892,7 +874,7 @@ public class DotNetHeapDumpGraphReader
 
     private NodeTypeIndex CreateType(string typeName, string moduleName = null)
     {
-        var fullTypeName = typeName;
+        string fullTypeName = typeName;
         if (moduleName != null)
         {
             fullTypeName = moduleName + "!" + typeName;

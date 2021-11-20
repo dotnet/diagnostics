@@ -65,8 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) =>
-                    {
+                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) => {
                         return BeginConnect(remoteEP, callback, state);
                     };
                     await Task.Factory.FromAsync(beginConnect, EndConnect, this).ConfigureAwait(false);

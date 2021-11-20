@@ -96,11 +96,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private string JsonEscape(string input)
         {
-            if (input is null)
-            {
-                return string.Empty;
-            }
-
             int offset = input.IndexOfAny(s_escapeChars);
             if (offset == -1)
             {

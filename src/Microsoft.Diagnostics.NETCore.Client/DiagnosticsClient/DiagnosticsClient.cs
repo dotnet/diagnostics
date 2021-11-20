@@ -296,17 +296,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             static IEnumerable<int> GetAllPublishedProcesses()
             {
-                foreach (var port in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
+                foreach (string port in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
                 {
-                    var fileName = new FileInfo(port).Name;
-                    var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
+                    string fileName = new FileInfo(port).Name;
+                    Match match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
                     if (!match.Success)
                     {
                         continue;
                     }
 
-                    var group = match.Groups[1].Value;
-                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out var processId))
+                    string group = match.Groups[1].Value;
+                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out int processId))
                     {
                         continue;
                     }
@@ -438,17 +438,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 Guid guidVal = (Guid)((object)obj);
                 writer.Write(guidVal.ToByteArray());
-            }
-            else if (typeof(T) == typeof(byte[]))
-            {
-                byte[] byteArray = (byte[])((object)obj);
-                uint length = byteArray == null ? 0U : (uint)byteArray.Length;
-                writer.Write(length);
-
-                if (length > 0)
-                {
-                    writer.Write(byteArray);
-                }
             }
             else
             {

@@ -25,7 +25,7 @@ namespace Xunit.Extensions
             var testFailed = message as ITestFailed;
             if (testFailed != null)
             {
-                var exceptionType = testFailed.ExceptionTypes.FirstOrDefault();
+                string exceptionType = testFailed.ExceptionTypes.FirstOrDefault();
                 if (exceptionType == typeof(SkipTestException).FullName)
                 {
                     DynamicallySkippedTestCount++;

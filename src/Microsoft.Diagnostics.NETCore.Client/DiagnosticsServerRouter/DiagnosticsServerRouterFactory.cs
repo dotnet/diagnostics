@@ -2,17 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Net.Sockets;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -416,8 +416,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) =>
-                    {
+                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) => {
                         return clientSocket.BeginConnect(remoteEP, callback, state);
                     };
                     await Task.Factory.FromAsync(beginConnect, clientSocket.EndConnect, this).ConfigureAwait(false);
@@ -636,24 +635,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcServerRouterFactory.IpcServerPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _tcpServerRouterFactory.TcpServerAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -692,10 +688,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Get new tcp server endpoint.
-                using var tcpServerStreamTask = _tcpServerRouterFactory.AcceptTcpStreamAsync(cancelRouter.Token);
+                using Task<Stream> tcpServerStreamTask = _tcpServerRouterFactory.AcceptTcpStreamAsync(cancelRouter.Token);
 
                 // Get new ipc server endpoint.
-                using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
+                using Task<Stream> ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
 
                 await Task.WhenAny(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
 
@@ -710,7 +706,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     // We have a valid ipc stream and a pending tcp accept. Wait for completion
                     // or disconnect of ipc stream.
-                    using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
+                    using Task checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
 
                     // Wait for at least completion of one task.
                     await Task.WhenAny(tcpServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
@@ -747,7 +743,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     // We have a valid tcp stream and a pending ipc accept. Wait for completion
                     // or disconnect of tcp stream.
-                    using var checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
+                    using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
 
                     // Wait for at least completion of one task.
                     await Task.WhenAny(ipcServerStreamTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -835,24 +831,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcServerRouterFactory.IpcServerPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _tcpClientRouterFactory.TcpClientAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -889,11 +882,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ipcServerStream = await _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token).ConfigureAwait(false);
 
                 // Get new client endpoint.
-                using var tcpClientStreamTask = _tcpClientRouterFactory.ConnectTcpStreamAsync(cancelRouter.Token);
+                using Task<Stream> tcpClientStreamTask = _tcpClientRouterFactory.ConnectTcpStreamAsync(cancelRouter.Token);
 
                 // We have a valid ipc stream and a pending tcp stream. Wait for completion
                 // or disconnect of ipc stream.
-                using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
+                using Task checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(tcpClientStreamTask, checkIpcStreamTask).ConfigureAwait(false);
@@ -961,24 +954,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcClientRouterFactory.IpcClientPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _tcpServerRouterFactory.TcpServerAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -1023,11 +1013,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 tcpServerStream = await _tcpServerRouterFactory.AcceptTcpStreamAsync(cancelRouter.Token).ConfigureAwait(false);
 
                 // Get new client endpoint.
-                using var ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
+                using Task<Stream> ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
 
                 // We have a valid tcp stream and a pending ipc stream. Wait for completion
                 // or disconnect of tcp stream.
-                using var checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
+                using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -1110,24 +1100,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcClientRouterFactory.IpcClientPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _tcpClientRouterFactory.TcpClientAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -1137,14 +1124,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _tcpClientRouterFactory.Start();
             _logger?.LogInformation($"Starting IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> TCP client ({_tcpClientRouterFactory.TcpClientAddress}) router.");
 
-            var requestRuntimeInfo = new Task(() =>
-            {
+            var requestRuntimeInfo = new Task(() => {
                 try
                 {
                     _logger?.LogDebug($"Requesting runtime process information.");
 
                     // Get new tcp client endpoint.
-                    using var tcpClientStream = _tcpClientRouterFactory.ConnectTcpStreamAsync(token).Result;
+                    using Stream tcpClientStream = _tcpClientRouterFactory.ConnectTcpStreamAsync(token).Result;
 
                     // Request process info.
                     IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
@@ -1201,11 +1187,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 tcpClientStream = await _tcpClientRouterFactory.ConnectTcpStreamAsync(cancelRouter.Token, true).ConfigureAwait(false);
 
                 // Get new ipc client endpoint.
-                using var ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
+                using Task<Stream> ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
 
                 // We have a valid tcp stream and a pending ipc stream. Wait for completion
                 // or disconnect of tcp stream.
-                using var checkTcpStreamTask = IsStreamConnectedAsync(tcpClientStream, cancelRouter.Token);
+                using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpClientStream, cancelRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -1341,8 +1327,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public bool IsRunning
         {
-            get
-            {
+            get {
                 if (_backendReadFrontendWriteTask == null || _frontendReadBackendWriteTask == null || _disposed)
                 {
                     return false;
