@@ -13,10 +13,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
   </ItemGroup>
   

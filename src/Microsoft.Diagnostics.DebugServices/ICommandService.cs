@@ -23,5 +23,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="type">Command type to search</param>
         /// <param name="factory">function to create command instance</param>
         void AddCommands(Type type, Func<IServiceProvider, object> factory);
+
+        /// <summary>
+        /// Displays the help for a command
+        /// </summary>
+        /// <param name="commandName">name of the command or alias</param>
+        /// <param name="services">service provider</param>
+        /// <returns>true if success, false if command not found</returns>
+        bool DisplayHelp(string commandName, IServiceProvider services);
     }
 }

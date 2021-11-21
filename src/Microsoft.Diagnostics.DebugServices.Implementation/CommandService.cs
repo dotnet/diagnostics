@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -17,12 +16,12 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Microsoft.Diagnostics.Repl
+namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
     /// Implements the ICommandService interface using System.CommandLine.
     /// </summary>
-    public class CommandProcessor : ICommandService
+    public class CommandService : ICommandService
     {
         private Parser _parser;
         private readonly CommandLineBuilder _rootBuilder;
@@ -32,7 +31,7 @@ namespace Microsoft.Diagnostics.Repl
         /// Create an instance of the command processor;
         /// </summary>
         /// <param name="commandPrompt">command prompted used in help message</param>
-        public CommandProcessor(string commandPrompt = null)
+        public CommandService(string commandPrompt = null)
         {
             _rootBuilder = new CommandLineBuilder(new Command(commandPrompt ?? ">"));
             _rootBuilder.UseHelpBuilder((bindingContext) => new LocalHelpBuilder(this, bindingContext.Console, useHelpBuilder: false));
@@ -46,10 +45,8 @@ namespace Microsoft.Diagnostics.Repl
         /// <returns>exit code</returns>
         public int Execute(string commandLine, IServiceProvider services)
         {
-            Debug.Assert(_parser != null);
-
             // Parse the command line and invoke the command
-            ParseResult parseResult = _parser.Parse(commandLine);
+            ParseResult parseResult = Parser.Parse(commandLine);
 
             var context = new InvocationContext(parseResult, new LocalConsole(services));
             if (parseResult.Errors.Count > 0)
@@ -172,8 +169,8 @@ namespace Microsoft.Diagnostics.Repl
                 }
             }
 
-            // Build parser instance after all the commands and aliases are added
-            BuildParser();
+            // Build or re-build parser instance after all these commands and aliases are added
+            _parser = null;
         }
 
         private void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
@@ -233,10 +230,7 @@ namespace Microsoft.Diagnostics.Repl
             _rootBuilder.AddCommand(command);
         }
 
-        private void BuildParser()
-        {
-            _parser = _rootBuilder.Build();
-        }
+        private Parser Parser => _parser ??= _rootBuilder.Build();
 
         private void OnException(Exception ex, InvocationContext context)
         {
@@ -488,13 +482,13 @@ namespace Microsoft.Diagnostics.Repl
         /// </summary>
         class LocalHelpBuilder : IHelpBuilder
         {
-            private readonly CommandProcessor _commandProcessor;
+            private readonly CommandService _commandService;
             private readonly IConsole _console;
             private readonly bool _useHelpBuilder;
 
-            public LocalHelpBuilder(CommandProcessor commandProcessor, IConsole console, bool useHelpBuilder)
+            public LocalHelpBuilder(CommandService commandService, IConsole console, bool useHelpBuilder)
             {
-                _commandProcessor = commandProcessor;
+                _commandService = commandService;
                 _console = console;
                 _useHelpBuilder = useHelpBuilder;
             }
@@ -502,9 +496,9 @@ namespace Microsoft.Diagnostics.Repl
             void IHelpBuilder.Write(ICommand command)
             {
                 bool useHelpBuilder = _useHelpBuilder;
-                if (_commandProcessor._commandHandlers.TryGetValue(command.Name, out CommandHandler handler))
+                if (_commandService._commandHandlers.TryGetValue(command.Name, out CommandHandler handler))
                 {
-                    if (handler.InvokeHelp(_commandProcessor._parser, LocalConsole.ToServices(_console))) {
+                    if (handler.InvokeHelp(_commandService.Parser, LocalConsole.ToServices(_console))) {
                         return;
                     }
                     useHelpBuilder = true;

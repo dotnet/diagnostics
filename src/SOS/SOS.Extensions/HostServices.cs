@@ -5,7 +5,6 @@
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
-using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
@@ -38,7 +37,7 @@ namespace SOS.Extensions
         internal DebuggerServices DebuggerServices { get; private set; }
 
         private readonly ServiceProvider _serviceProvider;
-        private readonly CommandProcessor _commandProcessor;
+        private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
         private ContextServiceFromDebuggerServices _contextService;
@@ -99,12 +98,12 @@ namespace SOS.Extensions
         {
             _serviceProvider = new ServiceProvider();
             _symbolService = new SymbolService(this);
-            _commandProcessor = new CommandProcessor(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!ext" : null);
-            _commandProcessor.AddCommands(new Assembly[] { typeof(HostServices).Assembly });
-            _commandProcessor.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
+            _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!ext" : null);
+            _commandService.AddCommands(new Assembly[] { typeof(HostServices).Assembly });
+            _commandService.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
 
             _serviceProvider.AddService<IHost>(this);
-            _serviceProvider.AddService<ICommandService>(_commandProcessor);
+            _serviceProvider.AddService<ICommandService>(_commandService);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
 
             _hostWrapper = new HostWrapper(this, () => _targetWrapper);
@@ -220,7 +219,7 @@ namespace SOS.Extensions
                 });
 
                 // Add each extension command to the native debugger
-                foreach ((string name, string help, IEnumerable<string> aliases) in _commandProcessor.Commands)
+                foreach ((string name, string help, IEnumerable<string> aliases) in _commandService.Commands)
                 {
                     hr = DebuggerServices.AddCommand(name, help, aliases);
                     if (hr != HResult.S_OK)
@@ -325,7 +324,7 @@ namespace SOS.Extensions
             }
             try
             {
-                return _commandProcessor.Execute(commandLine, _contextService.Services);
+                return _commandService.Execute(commandLine, _contextService.Services);
             }
             catch (Exception ex)
             {
@@ -340,7 +339,7 @@ namespace SOS.Extensions
         {
             try
             {
-                if (!_commandProcessor.DisplayHelp(command, _contextService.Services))
+                if (!_commandService.DisplayHelp(command, _contextService.Services))
                 {
                     return HResult.E_INVALIDARG;
                 }

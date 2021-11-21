@@ -4,8 +4,6 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using System;
-using System.CommandLine;
-using System.CommandLine.Help;
 
 namespace Microsoft.Diagnostics.Repl
 {
@@ -15,18 +13,18 @@ namespace Microsoft.Diagnostics.Repl
         [Argument(Help = "Command to find help.")]
         public string Command { get; set; }
 
-        private readonly CommandProcessor _commandProcessor;
+        private readonly ICommandService _commandService;
         private readonly IServiceProvider _services;
 
-        public HelpCommand(CommandProcessor commandProcessor, IServiceProvider services)
+        public HelpCommand(ICommandService commandService, IServiceProvider services)
         {
-            _commandProcessor = commandProcessor;
+            _commandService = commandService;
             _services = services;
         }
 
         public override void Invoke()
         {
-            if (!_commandProcessor.DisplayHelp(Command, _services))
+            if (!_commandService.DisplayHelp(Command, _services))
             {
                 throw new NotSupportedException($"Help for {Command} not found");
             }
