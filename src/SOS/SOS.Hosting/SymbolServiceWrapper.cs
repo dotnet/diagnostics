@@ -200,20 +200,22 @@ namespace SOS.Hosting
             {
                 try
                 {
-                    Stream stream = MemoryService.CreateMemoryStream(address, size);
                     KeyGenerator generator = null;
                     if (config == RuntimeConfiguration.UnixCore)
                     {
-                        var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
+                        Stream stream = MemoryService.CreateMemoryStream();
+                        var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
                         generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.OSXCore)
                     {
-                        var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
+                        Stream stream = MemoryService.CreateMemoryStream();
+                        var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                         generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
                     {
+                        Stream stream = MemoryService.CreateMemoryStream(address, size);
                         var peFile = new PEFile(new StreamAddressSpace(stream), true);
                         generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
                     }
@@ -271,51 +273,54 @@ namespace SOS.Hosting
             int moduleIndexSize,
             IntPtr moduleIndex)
         {
-            try
+            if (_symbolService.IsSymbolStoreEnabled)
             {
-                KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
-                byte[] id = new byte[moduleIndexSize];
-                Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
-
-                IEnumerable<SymbolStoreKey> keys = null;
-                switch (config)
+                try
                 {
-                    case RuntimeConfiguration.UnixCore:
-                        keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
-                        break;
+                    KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
+                    byte[] id = new byte[moduleIndexSize];
+                    Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
 
-                    case RuntimeConfiguration.OSXCore:
-                        keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
-                        break;
-
-                    case RuntimeConfiguration.WindowsCore:
-                    case RuntimeConfiguration.WindowsDesktop:
-                        uint timeStamp = BitConverter.ToUInt32(id, 0);
-                        uint fileSize = BitConverter.ToUInt32(id, 4);
-                        SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
-                        keys = new SymbolStoreKey[] { key };
-                        break;
-
-                    default:
-                        Trace.TraceError("LoadNativeSymbolsFromIndex: unsupported platform {0}", config);
-                        return;
-                }
-                foreach (SymbolStoreKey key in keys)
-                {
-                    string moduleFileName = Path.GetFileName(key.FullPathName);
-                    Trace.TraceInformation("{0} {1}", key.FullPathName, key.Index);
-
-                    string downloadFilePath = _symbolService.DownloadFile(key);
-                    if (downloadFilePath != null)
+                    IEnumerable<SymbolStoreKey> keys = null;
+                    switch (config)
                     {
-                        Trace.TraceInformation("{0}: {1}", moduleFileName, downloadFilePath);
-                        callback(parameter, moduleFileName, downloadFilePath);
+                        case RuntimeConfiguration.UnixCore:
+                            keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                            break;
+
+                        case RuntimeConfiguration.OSXCore:
+                            keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
+                            break;
+
+                        case RuntimeConfiguration.WindowsCore:
+                        case RuntimeConfiguration.WindowsDesktop:
+                            uint timeStamp = BitConverter.ToUInt32(id, 0);
+                            uint fileSize = BitConverter.ToUInt32(id, 4);
+                            SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
+                            keys = new SymbolStoreKey[] { key };
+                            break;
+
+                        default:
+                            Trace.TraceError("LoadNativeSymbolsFromIndex: unsupported platform {0}", config);
+                            return;
+                    }
+                    foreach (SymbolStoreKey key in keys)
+                    {
+                        string moduleFileName = Path.GetFileName(key.FullPathName);
+                        Trace.TraceInformation("{0} {1}", key.FullPathName, key.Index);
+
+                        string downloadFilePath = _symbolService.DownloadFile(key);
+                        if (downloadFilePath != null)
+                        {
+                            Trace.TraceInformation("{0}: {1}", moduleFileName, downloadFilePath);
+                            callback(parameter, moduleFileName, downloadFilePath);
+                        }
                     }
                 }
-            }
-            catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
-            {
-                Trace.TraceError("{0} - {1}", ex.Message, moduleFilePath);
+                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
+                {
+                    Trace.TraceError("{0} - {1}", ex.Message, moduleFilePath);
+                }
             }
         }
 

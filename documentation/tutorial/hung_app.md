@@ -330,7 +330,7 @@ Lastly, the code prints out the dictionary allowing us to see the duplicate call
 Build the dotnet-dump tool (dotnet build) and run it from the following location on the same dump that we generated earlier:
 
 ```bash
-~/diagnostics/artifacts/bin/dotnet-dump/Debug/netcoreapp2.1/publish/dotnet dotnet-dump.dll analyze ~/.dotnet/tools/core_20190513_143916
+~/diagnostics/artifacts/bin/dotnet-dump/Debug/netcoreapp3.1/publish/dotnet dotnet-dump.dll analyze ~/.dotnet/tools/core_20190513_143916
 ```
 
 You can now use the 'uniquestacks' command and see the following output (partial):

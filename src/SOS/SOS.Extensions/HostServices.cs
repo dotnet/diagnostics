@@ -302,9 +302,16 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.DestroyTarget #{0}", _target != null ? _target.Id : "<none>");
-            if (_target != null)
+            try
             {
-                DestroyTarget(_target);
+                if (_target != null)
+                {
+                    DestroyTarget(_target);
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError(ex.ToString());
             }
         }
 
@@ -350,22 +357,29 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.Uninitialize");
-            DestroyTarget(self);
-
-            if (DebuggerServices != null)
+            try
             {
-                DebuggerServices.Release();
-                DebuggerServices = null;
+                DestroyTarget(self);
+
+                if (DebuggerServices != null)
+                {
+                    DebuggerServices.Release();
+                    DebuggerServices = null;
+                }
+
+                // Send shutdown event on exit
+                OnShutdownEvent.Fire();
+
+                // Release the host services wrapper
+                Release();
+
+                // Clear HostService instance
+                Instance = null;
             }
-
-            // Send shutdown event on exit
-            OnShutdownEvent.Fire();
-
-            // Release the host services wrapper
-            Release();
-
-            // Clear HostService instance
-            Instance = null;
+            catch (Exception ex)
+            {
+                Trace.TraceError(ex.ToString());
+            }
         }
 
         #endregion

@@ -1,7 +1,7 @@
 Installing SOS on Linux and MacOS
 =================================
 
-The first step is to install the dotnet-sos CLI global tool. This requires at least the 2.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-sos' is already installed`, you will need to uninstall the global tool (see below). 
+The first step is to install the dotnet-sos CLI global tool. This requires at least the 3.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-sos' is already installed`, you will need to uninstall the global tool (see below). 
 
     $ dotnet tool install -g dotnet-sos
     You can invoke the tool using the following command: dotnet-sos
@@ -10,7 +10,7 @@ The first step is to install the dotnet-sos CLI global tool. This requires at le
 The next step is use this global tool to install SOS. 
 
     $ dotnet-sos install
-    Installing SOS to /home/mikem/.dotnet/sos from /home/mikem/.dotnet/tools/.store/dotnet-sos/3.0.47001/dotnet-sos/3.0.47001/tools/netcoreapp2.1/any/linux-x64
+    Installing SOS to /home/mikem/.dotnet/sos from /home/mikem/.dotnet/tools/.store/dotnet-sos/5.0.251802/dotnet-sos/5.0.251802/tools/netcoreapp3.1/any/linux-x64
     Creating installation directory...
     Copying files...
     Updating existing /home/mikem/.lldbinit file - LLDB will load SOS automatically at startup
@@ -72,7 +72,7 @@ Now any time you run lldb, SOS will automatically be loaded and the symbol downl
 The installer needs to be run again:
 
     $ dotnet-sos install
-    Installing SOS to /home/mikem/.dotnet/sos from /home/mikem/.dotnet/tools/.store/dotnet-sos/3.0.47001/dotnet-sos/3.0.47001/tools/netcoreapp2.1/any/linux-x64
+    Installing SOS to /home/mikem/.dotnet/sos from /home/mikem/.dotnet/tools/.store/dotnet-sos/5.0.251802/dotnet-sos/5.0.251802/tools/netcoreapp3.1/any/linux-x64
     Installing over existing installation...
     Creating installation directory...
     Copying files...
