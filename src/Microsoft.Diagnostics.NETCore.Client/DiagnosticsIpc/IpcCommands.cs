@@ -35,7 +35,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum DumpCommandId : byte
     {
         GenerateCoreDump = 0x01,
-        GenerateCoreDump2 = 0x02,
     }
 
     internal enum ProfilerCommandId : byte

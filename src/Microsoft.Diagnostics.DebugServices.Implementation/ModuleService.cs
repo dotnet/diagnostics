@@ -39,7 +39,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         const uint VmProtWrite = 0x02;
 
         internal protected readonly ITarget Target;
-        internal protected IMemoryService RawMemoryService;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -49,11 +48,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
 
-        public ModuleService(ITarget target, IMemoryService rawMemoryService)
+        public ModuleService(ITarget target)
         {
             Debug.Assert(target != null);
             Target = target;
-            RawMemoryService = rawMemoryService;
 
             target.OnFlushEvent.Register(() => {
                 _versionCache?.Clear();
@@ -120,7 +118,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>module or null</returns>
         IModule IModuleService.GetModuleFromAddress(ulong address)
         {
-            Debug.Assert((address & ~RawMemoryService.SignExtensionMask()) == 0);
+            Debug.Assert((address & ~MemoryService.SignExtensionMask()) == 0);
             IModule[] modules = GetSortedModules();
             int min = 0, max = modules.Length - 1;
 
@@ -131,7 +129,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IModule module = modules[mid];
 
                 ulong start = module.ImageBase;
-                Debug.Assert((start & ~RawMemoryService.SignExtensionMask()) == 0);
+                Debug.Assert((start & ~MemoryService.SignExtensionMask()) == 0);
                 ulong end = start + module.ImageSize;
 
                 if (address >= start && address < end) {
@@ -240,7 +238,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>PEImage instance or null</returns>
         private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
         {
-            Stream stream = RawMemoryService.CreateMemoryStream(address, size);
+            Stream stream = MemoryService.CreateMemoryStream(address, size);
             try
             {
                 stream.Position = 0;
@@ -520,16 +518,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Returns the ELF module build id or the MachO module uuid
         /// </summary>
         /// <param name="address">module base address</param>
+        /// <param name="size">module size</param>
         /// <returns>build id or null</returns>
-        internal byte[] GetBuildId(ulong address)
+        internal byte[] GetBuildId(ulong address, ulong size)
         {
-            Stream stream = RawMemoryService.CreateMemoryStream();
+            Debug.Assert(size > 0);
+            Stream stream = MemoryService.CreateMemoryStream(address, size);
             byte[] buildId = null;
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
                     if (elfFile.IsValid())
                     {
                         buildId = elfFile.BuildID;
@@ -537,7 +537,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
@@ -555,20 +555,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Get the version string from a Linux or MacOS image
         /// </summary>
         /// <param name="address">image base</param>
+        /// <param name="size">image size</param>
         /// <returns>version string or null</returns>
-        protected string GetVersionString(ulong address)
+        protected string GetVersionString(ulong address, ulong size)
         {
-            Stream stream = RawMemoryService.CreateMemoryStream();
+            Stream stream = MemoryService.CreateMemoryStream(address, size);
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), 0, true);
                     if (elfFile.IsValid())
                     {
                         foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
                         {
-                            uint flags = RawMemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
+                            uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
                             if (programHeader.Type == ELFProgramHeaderType.Load &&
                                (flags & (uint)ELFProgramHeaderAttributes.Writable) != 0)
                             {
@@ -584,7 +585,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
+                    var machOFile = new MachOFile(new StreamAddressSpace(stream), 0, true);
                     if (machOFile.IsValid())
                     {
                         foreach (MachSegmentLoadCommand loadCommand in machOFile.Segments.Select((segment) => segment.LoadCommand))
@@ -593,9 +594,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                (loadCommand.InitProt & VmProtWrite) != 0 && 
                                 loadCommand.SegName.ToString() != "__LINKEDIT")
                             {
-                                ulong loadAddress = loadCommand.VMAddress + machOFile.PreferredVMBaseAddress;
+                                ulong loadAddress = loadCommand.VMAddress;
                                 long loadSize = (long)loadCommand.VMSize;
-                                if (SearchVersionString(loadAddress, loadSize, out string productVersion))
+                                if (SearchVersionString(address + loadAddress, loadSize, out string productVersion))
                                 {
                                     return productVersion;
                                 }
@@ -627,8 +628,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             byte[] buffer = new byte[s_versionString.Length];
 
             if (_versionCache == null) {
-                // We use the possibly mapped memory service to find the version string in case it isn't in the dump.
-                _versionCache = new ReadVirtualCache(Target.Services.GetService<IMemoryService>());
+                _versionCache = new ReadVirtualCache(MemoryService);
             }
             _versionCache.Clear();
 
@@ -690,11 +690,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-        } 
+        }
 
-        internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
+        protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         /// <summary>
         /// Search memory helper class

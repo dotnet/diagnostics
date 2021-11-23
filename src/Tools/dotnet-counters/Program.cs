@@ -35,8 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string port,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration);
+            int maxTimeSeries);
         delegate Task<int> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
@@ -48,8 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string port,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration);
+            int maxTimeSeries);
 
         private static Command MonitorCommand() =>
             new Command(
@@ -67,8 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 DiagnosticPortOption(),
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
-                MaxTimeSeriesOption(),
-                DurationOption()
+                MaxTimeSeriesOption()
             };
         
         private static Command CollectCommand() =>
@@ -89,8 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 DiagnosticPortOption(),
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
-                MaxTimeSeriesOption(),
-                DurationOption()
+                MaxTimeSeriesOption()
             };
 
         private static Option NameOption() =>
@@ -197,14 +193,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 " counts as one time series. Tracking more time series uses more memory in the target process so this bound guards against unintentional high memory use.")
             {
                 Argument = new Argument<int>(name: "maxTimeSeries", getDefaultValue: () => 1000)
-            };
-
-        private static Option DurationOption() =>
-            new Option(
-                alias: "--duration",
-                description: @"When specified, will run for the given timespan and then automatically stop. Provided in the form of dd:hh:mm:ss.")
-            {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };

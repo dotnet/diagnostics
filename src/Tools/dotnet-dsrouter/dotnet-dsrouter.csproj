@@ -8,6 +8,7 @@
     <Description>.NET Performance Diagnostic Server Router Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <IsShipping>false</IsShipping>
   </PropertyGroup>
 
   <ItemGroup>

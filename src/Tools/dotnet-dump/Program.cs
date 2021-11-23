@@ -32,9 +32,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new Command( name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
-                CommandHandler.Create<IConsole, int, string, bool, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),
+                CommandHandler.Create<IConsole, int, string, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),
                 // Options
-                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption(), ProcessNameOption()
+                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), TypeOption(), ProcessNameOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -68,14 +68,6 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 description: "Enable dump collection diagnostic logging.") 
             {
                 Argument = new Argument<bool>(name: "diag")
-            };
-
-        private static Option CrashReportOption() =>
-            new Option(
-                alias: "--crashreport", 
-                description: "Enable crash report generation.") 
-            {
-                Argument = new Argument<bool>(name: "crashreport")
             };
 
         private static Option TypeOption() =>

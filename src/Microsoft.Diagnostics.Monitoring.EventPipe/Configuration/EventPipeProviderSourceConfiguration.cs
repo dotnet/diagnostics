@@ -11,12 +11,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     public sealed class EventPipeProviderSourceConfiguration : MonitoringSourceConfiguration
     {
         private readonly IEnumerable<EventPipeProvider> _providers;
+        private readonly bool _requestRundown;
         private readonly int _bufferSizeInMB;
 
         public EventPipeProviderSourceConfiguration(bool requestRundown = true, int bufferSizeInMB = 256, params EventPipeProvider[] providers)
         {
             _providers = providers;
-            RequestRundown = requestRundown;
+            _requestRundown = requestRundown;
             _bufferSizeInMB = bufferSizeInMB;
         }
 
@@ -24,6 +25,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             return _providers.ToList();
         }
+
+        public override bool RequestRundown => _requestRundown;
 
         public override int BufferSizeInMB => _bufferSizeInMB;
     }

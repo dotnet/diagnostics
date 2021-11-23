@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public abstract IList<EventPipeProvider> GetProviders();
 
-        public virtual bool RequestRundown { get; set; } = true;
+        public virtual bool RequestRundown => true;
 
         public virtual int BufferSizeInMB => 256;
     }

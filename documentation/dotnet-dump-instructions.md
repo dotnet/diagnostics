@@ -21,7 +21,7 @@ Here's a table showing how dotnet-dump fits into your dump debugging options:
 
 ## Installing dotnet-dump
 
-The first step is to install the dotnet-dump CLI global tool. This requires at least the 3.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
+The first step is to install the dotnet-dump CLI global tool. This requires at least the 2.1 or greater .NET Core SDK to be installed. If you see the error message `Tool 'dotnet-dump' is already installed`, you will need to uninstall the global tool (see below). 
 
     $ dotnet tool install -g dotnet-dump
     You can invoke the tool using the following command: dotnet-dump

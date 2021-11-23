@@ -700,13 +700,15 @@ void Runtime::DisplayStatus()
     }
 }
 
+extern bool g_symbolStoreInitialized;
+
 /**********************************************************************\
  * Attempt to download the runtime modules (runtime, DAC and DBI)
 \**********************************************************************/
 void Runtime::LoadRuntimeModules()
 {
     HRESULT hr = InitializeSymbolService();
-    if (SUCCEEDED(hr))
+    if (SUCCEEDED(hr) && g_symbolStoreInitialized)
     {
         if (m_runtimeInfo != nullptr)
         {

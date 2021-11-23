@@ -11,11 +11,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public sealed class GCDumpSourceConfiguration : MonitoringSourceConfiguration
     {
-        public GCDumpSourceConfiguration()
-        {
-            RequestRundown = false;
-        }
-
         public override IList<EventPipeProvider> GetProviders()
         {
             var providers = new List<EventPipeProvider>()
