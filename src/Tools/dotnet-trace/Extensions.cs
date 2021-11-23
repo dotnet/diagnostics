@@ -201,14 +201,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 curIdx += 1;
             }
-            AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
+            if(valStart > valEnd)
+            {
+                valEnd = curIdx;
+            }
+            if (keyStart < keyEnd)
+            {
+                AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
+            }
             return argumentDict;
         }
 
         private static void AddKeyValueToArgumentDict(Dictionary<string, string> argumentDict, string argument, int keyStart, int keyEnd, int valStart, int valEnd)
         {
             string key = argument.Substring(keyStart, keyEnd - keyStart);
-            string val = argument.Substring(valStart);
+            string val = argument.Substring(valStart, valEnd - valStart);
             if (val.StartsWith("\"") && val.EndsWith("\""))
             {
                 val = val.Substring(1, val.Length - 2);

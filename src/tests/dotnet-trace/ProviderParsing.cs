@@ -188,6 +188,47 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerThree.Arguments["FilterAndPayloadSpecs"] == "QuotedValue:-\r\nQuoted/Value:-A=B;C=D;");
         }
 
+        [Fact]
+        public void ProvidersWithComplexFilters_CorrectlyParse()
+        {
+            string providersToParse = @"MyProvider:::A=B;C=D";
+            List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providersToParse);
+            Assert.Single(parsedProviders);
+            EventPipeProvider providerOne = parsedProviders[0];
+            Assert.Equal("MyProvider", providerOne.Name);
+            Assert.Equal(2, providerOne.Arguments.Count);
+            Assert.Equal("B", providerOne.Arguments["A"]);
+            Assert.Equal("D", providerOne.Arguments["C"]);
+
+            providersToParse = @"MyProvider:::A=B;C=""D"",MyProvider2:::A=1;B=2;";
+            parsedProviders = Extensions.ToProviders(providersToParse);
+            Assert.Equal(2, parsedProviders.Count);
+            providerOne = parsedProviders[0];
+            EventPipeProvider providerTwo = parsedProviders[1];
+            Assert.Equal("MyProvider", providerOne.Name);
+            Assert.Equal("MyProvider2", providerTwo.Name);
+            Assert.Equal(2, providerOne.Arguments.Count);
+            Assert.Equal("B", providerOne.Arguments["A"]);
+            Assert.Equal("D", providerOne.Arguments["C"]);
+            Assert.Equal(2, providerTwo.Arguments.Count);
+            Assert.Equal("1", providerTwo.Arguments["A"]);
+            Assert.Equal("2", providerTwo.Arguments["B"]);
+
+            providersToParse = @"MyProvider:::A=""B;C=D"",MyProvider2:::A=""spaced words"";C=1285;D=Spaced Words 2";
+            parsedProviders = Extensions.ToProviders(providersToParse);
+            Assert.Equal(2, parsedProviders.Count);
+            providerOne = parsedProviders[0];
+            providerTwo = parsedProviders[1];
+            Assert.Equal("MyProvider", providerOne.Name);
+            Assert.Equal("MyProvider2", providerTwo.Name);
+            Assert.Equal(1, providerOne.Arguments.Count);
+            Assert.Equal(3, providerTwo.Arguments.Count);
+            Assert.Equal("B;C=D", providerOne.Arguments["A"]);
+            Assert.Equal("spaced words", providerTwo.Arguments["A"]);
+            Assert.Equal("Spaced Words 2", providerTwo.Arguments["D"]);
+            Assert.Equal("1285", providerTwo.Arguments["C"]);
+        }
+
         [Theory]
         [InlineData("ProviderOne:0x1:Verbose")]
         [InlineData("ProviderOne:0x1:verbose")]

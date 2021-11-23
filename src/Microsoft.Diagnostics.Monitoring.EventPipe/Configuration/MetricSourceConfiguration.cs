@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
         {
+            RequestRundown = false;
             if (customProviderNames == null)
             {
                 throw new ArgumentNullException(nameof(customProviderNames));

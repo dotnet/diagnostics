@@ -142,7 +142,7 @@ stages:
       parameters:
         name: Alpine3_13
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210728123842-ddfc481
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210910135845-c401c85
         artifactsTargetPath: bin/Linux-musl.x64.Release
         requiresCapPtraceContainer: true
         strategy:
@@ -175,6 +175,7 @@ stages:
       parameters:
         name: MacOS_cross
         osGroup: MacOS_cross
+        crossbuild: true
         buildAndSkipTest: true
         strategy:
           matrix:
@@ -192,7 +193,7 @@ stages:
         parameters:
           name: Linux_cross
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-14.04-cross-1735d26-20190521133857
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-20210719121212-8a8d3be
           crossrootfsDir: '/crossrootfs/arm'
           buildAndSkipTest: true
           strategy:
@@ -206,7 +207,7 @@ stages:
         parameters:
           name: Linux_cross64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-a3ae44b-20180315221921
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
           crossrootfsDir: '/crossrootfs/arm64'
           buildAndSkipTest: true
           strategy:
@@ -220,7 +221,7 @@ stages:
         parameters:
           name: Alpine_cross64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210719121212-b2c2436
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210923140502-78f7860
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
           buildAndSkipTest: true

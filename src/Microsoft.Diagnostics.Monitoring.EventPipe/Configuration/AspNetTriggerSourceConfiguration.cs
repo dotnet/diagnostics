@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public AspNetTriggerSourceConfiguration(float? heartbeatIntervalSeconds = null)
         {
+            RequestRundown = false;
             _heartbeatIntervalSeconds = heartbeatIntervalSeconds;
         }
 
