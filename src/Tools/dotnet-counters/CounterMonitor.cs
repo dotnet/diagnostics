@@ -42,7 +42,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private string _metricsEventSourceSessionId;
         private int _maxTimeSeries;
         private int _maxHistograms;
-        private TimeSpan _duration;
 
         class ProviderEventState
         {
@@ -454,8 +453,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string diagnosticPort,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration)
+            int maxTimeSeries)
         {
             try
             {
@@ -493,7 +491,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _renderer = new ConsoleWriter(useAnsi);
                         _diagnosticsClient = holder.Client;
                         _resumeRuntime = resumeRuntime;
-                        _duration = duration;
                         int ret = await Start();
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
@@ -530,8 +527,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string diagnosticPort,
             bool resumeRuntime,
             int maxHistograms,
-            int maxTimeSeries,
-            TimeSpan duration)
+            int maxTimeSeries)
         {
             try
             {
@@ -568,7 +564,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _maxTimeSeries = maxTimeSeries;
                         _output = output;
                         _diagnosticsClient = holder.Client;
-                        _duration = duration;
                         if (_output.Length == 0)
                         {
                             _console.Error.WriteLine("Output cannot be an empty string");
@@ -847,13 +842,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            var shouldStopAfterDuration = _duration != default(TimeSpan);
-            Stopwatch durationStopwatch = null;
-
-            if (shouldStopAfterDuration)
-            {
-                durationStopwatch = Stopwatch.StartNew();
-            }
 
             while(!_shouldExit.Task.Wait(250))
             {
@@ -874,14 +862,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _pauseCmdSet = false;
                     }
                 }
-
-                if (shouldStopAfterDuration && durationStopwatch.Elapsed >= _duration)
-                {
-                    durationStopwatch.Stop();
-                    break;
-                }
             }
-
             StopMonitor();
             return _shouldExit.Task;
         }

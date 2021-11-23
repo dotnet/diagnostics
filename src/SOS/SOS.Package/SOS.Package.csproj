@@ -143,19 +143,19 @@
          <TargetPath>$(SymbolsDir)</TargetPath>
       </ZipSymbolFiles>
 
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\PDB\sos.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\sos.pdb">
          <TargetPath>$(SymbolsDir)\win-x64</TargetPath>
       </ZipSymbolFiles>
 
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\PDB\sos.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\sos.pdb">
          <TargetPath>$(SymbolsDir)\win-x86</TargetPath>
       </ZipSymbolFiles>
 
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\PDB\sos.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\sos.pdb">
          <TargetPath>$(SymbolsDir)\win-arm</TargetPath>
       </ZipSymbolFiles>
 
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\PDB\sos.pdb">
+      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\sos.pdb">
          <TargetPath>$(SymbolsDir)\win-arm64</TargetPath>
       </ZipSymbolFiles>
     </ItemGroup>

@@ -99,7 +99,7 @@ namespace SOS.Extensions
                         {
                             if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
                             {
-                                _versionString = _moduleService.GetVersionString(ImageBase);
+                                _versionString = _moduleService.GetVersionString(ImageBase, ImageSize);
                             }
                         }
                     }
@@ -133,8 +133,8 @@ namespace SOS.Extensions
 
         private readonly DebuggerServices _debuggerServices;
 
-        internal ModuleServiceFromDebuggerServices(ITarget target, IMemoryService rawMemoryService, DebuggerServices debuggerServices)
-            : base(target, rawMemoryService)
+        internal ModuleServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices)
+            : base(target)
         {
             Debug.Assert(debuggerServices != null);
             _debuggerServices = debuggerServices;

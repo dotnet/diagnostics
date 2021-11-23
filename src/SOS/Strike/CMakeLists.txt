@@ -6,14 +6,14 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # For more information: http://www.cmake.org/Wiki/CMake_RPATH_handling.
 if (CORECLR_SET_RPATH)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-  if(CLR_CMAKE_HOST_OSX)
+  if(CLR_CMAKE_PLATFORM_DARWIN)
     set(CMAKE_INSTALL_RPATH "@loader_path")
   else()
     set(CMAKE_INSTALL_RPATH "\$ORIGIN")
-  endif(CLR_CMAKE_HOST_OSX)
+  endif(CLR_CMAKE_PLATFORM_DARWIN)
 endif (CORECLR_SET_RPATH)
 
-if(CLR_CMAKE_HOST_ARCH_AMD64)
+if(CLR_CMAKE_PLATFORM_ARCH_AMD64)
   add_definitions(-DSOS_TARGET_AMD64=1)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
@@ -24,24 +24,24 @@ if(CLR_CMAKE_HOST_ARCH_AMD64)
   remove_definitions(-D_TARGET_ARM64_=1)
   add_definitions(-D_TARGET_AMD64_)
   add_definitions(-DDBG_TARGET_AMD64)
-elseif(CLR_CMAKE_HOST_ARCH_I386)
+elseif(CLR_CMAKE_PLATFORM_ARCH_I386)
   add_definitions(-DSOS_TARGET_X86=1)
   add_definitions(-D_TARGET_X86_=1)
   add_definitions(-DDBG_TARGET_32BIT)
   if(WIN32)
     add_definitions(-DSOS_TARGET_ARM=1)
   endif(WIN32)
-elseif(CLR_CMAKE_HOST_ARCH_ARM)
+elseif(CLR_CMAKE_PLATFORM_ARCH_ARM)
   add_definitions(-DSOS_TARGET_ARM=1)
   add_definitions(-D_TARGET_WIN32_=1)
   add_definitions(-D_TARGET_ARM_=1)
   add_definitions(-DDBG_TARGET_32BIT)
-elseif(CLR_CMAKE_HOST_ARCH_ARM64)
+elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
   add_definitions(-DSOS_TARGET_ARM64=1)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
   add_definitions(-DDBG_TARGET_WIN64=1)
-elseif(CLR_CMAKE_HOST_ARCH_MIPS64)
+elseif(CLR_CMAKE_PLATFORM_ARCH_MIPS64)
   add_definitions(-DSOS_TARGET_MIPS64=1)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
@@ -90,7 +90,7 @@ if(WIN32)
   add_definitions(-DFX_VER_INTERNALNAME_STR=SOS.dll)
 
   #Preprocess exports definition file
-  preprocess_file(${CMAKE_CURRENT_SOURCE_DIR}/sos.def ${CMAKE_CURRENT_BINARY_DIR}/sos.def)
+  preprocess_def_file(${CMAKE_CURRENT_SOURCE_DIR}/sos.def ${CMAKE_CURRENT_BINARY_DIR}/sos.def)
   list(APPEND SOS_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/sos.def)
 
   set(SOS_LIBRARY
@@ -113,11 +113,11 @@ if(WIN32)
     ntdll.lib
   )
 
-  if(NOT CLR_CMAKE_HOST_ARCH_ARM64)
+  if(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
     list(APPEND 
       SOS_LIBRARY 
         mscoree.lib)
-  endif(NOT CLR_CMAKE_HOST_ARCH_ARM64)
+  endif(NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
 
 else(WIN32)
   add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
@@ -183,7 +183,7 @@ else(WIN32)
 
 endif(WIN32)
 
-if(CLR_CMAKE_HOST_ARCH_AMD64)
+if(CLR_CMAKE_PLATFORM_ARCH_AMD64)
   set(SOS_SOURCES_ARCH
     disasmX86.cpp
   )
@@ -193,7 +193,7 @@ if(CLR_CMAKE_HOST_ARCH_AMD64)
       disasmARM64.cpp
     )
   endif(WIN32)
-elseif(CLR_CMAKE_HOST_ARCH_I386)
+elseif(CLR_CMAKE_PLATFORM_ARCH_I386)
   set(SOS_SOURCES_ARCH 
     disasmX86.cpp
   )
@@ -203,11 +203,11 @@ elseif(CLR_CMAKE_HOST_ARCH_I386)
       disasmARM.cpp
     )
   endif(WIN32)
-elseif(CLR_CMAKE_HOST_ARCH_ARM)
+elseif(CLR_CMAKE_PLATFORM_ARCH_ARM)
   set(SOS_SOURCES_ARCH
     disasmARM.cpp
   )
-elseif(CLR_CMAKE_HOST_ARCH_ARM64)
+elseif(CLR_CMAKE_PLATFORM_ARCH_ARM64)
   set(SOS_SOURCES_ARCH
     disasmARM64.cpp
   )
@@ -215,30 +215,30 @@ endif()
 
 list(APPEND SOS_SOURCES ${SOS_SOURCES_ARCH})
 
-if(CLR_CMAKE_HOST_LINUX OR CLR_CMAKE_HOST_FREEBSD OR CLR_CMAKE_HOST_NETBSD OR CLR_CMAKE_HOST_SUNOS)
+if(CLR_CMAKE_PLATFORM_LINUX OR CLR_CMAKE_PLATFORM_FREEBSD OR CLR_CMAKE_PLATFORM_NETBSD)
     # Add linker exports file option
     set(EXPORTS_LINKER_OPTION -Wl,--version-script=${EXPORTS_FILE})
-endif(CLR_CMAKE_HOST_LINUX OR CLR_CMAKE_HOST_FREEBSD OR CLR_CMAKE_HOST_NETBSD OR CLR_CMAKE_HOST_SUNOS)
+endif(CLR_CMAKE_PLATFORM_LINUX OR CLR_CMAKE_PLATFORM_FREEBSD OR CLR_CMAKE_PLATFORM_NETBSD)
 
-if(CLR_CMAKE_HOST_OSX)
+if(CLR_CMAKE_PLATFORM_DARWIN)
     # Add linker exports file option
     set(EXPORTS_LINKER_OPTION -Wl,-exported_symbols_list,${EXPORTS_FILE})
-endif(CLR_CMAKE_HOST_OSX)
+endif(CLR_CMAKE_PLATFORM_DARWIN)
 
 add_library_clr(sos SHARED ${SOS_SOURCES})
 
-if(CLR_CMAKE_HOST_UNIX)
+if(CLR_CMAKE_PLATFORM_UNIX)
     add_custom_target(sos_exports DEPENDS ${EXPORTS_FILE})
     add_dependencies(sos sos_exports)
 
     set_property(TARGET sos APPEND_STRING PROPERTY LINK_FLAGS ${EXPORTS_LINKER_OPTION})
     set_property(TARGET sos APPEND_STRING PROPERTY LINK_DEPENDS ${EXPORTS_FILE})
-endif(CLR_CMAKE_HOST_UNIX)
+endif(CLR_CMAKE_PLATFORM_UNIX)
 
 target_link_libraries(sos ${SOS_LIBRARY})
 
 # add the install targets
-install_clr(TARGETS sos DESTINATIONS .)
+install_clr(sos)
 
 if(NOT WIN32)
   install(FILES sosdocsunix.txt DESTINATION .)

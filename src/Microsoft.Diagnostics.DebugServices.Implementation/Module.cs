@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
@@ -38,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly IDisposable _onChangeEvent;
         private Flags _flags;
         private PdbFileInfo _pdbFileInfo;
-        protected ImmutableArray<byte> _buildId;
+        private ImmutableArray<byte> _buildId;
         private PEImage _peImage;
 
         public readonly ServiceProvider ServiceProvider;
@@ -90,16 +91,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             get
             {
-                // For Windows targets, we can always assume that all the modules are PEs.
-                if (Target.OperatingSystem == OSPlatform.Windows)
-                {
-                    return true;
-                }
-                else
-                {
-                    GetPEInfo();
-                    return (_flags & Flags.IsPEImage) != 0;
-                }
+                GetPEInfo();
+                return (_flags & Flags.IsPEImage) != 0;
             }
         }
 
@@ -148,13 +141,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public virtual ImmutableArray<byte> BuildId
+        public ImmutableArray<byte> BuildId
         {
             get
             {
                 if (_buildId.IsDefault)
                 {
-                    byte[] id = ModuleService.GetBuildId(ImageBase);
+                    byte[] id = ModuleService.GetBuildId(ImageBase, ImageSize);
                     if (id != null)
                     {
                         _buildId = id.ToImmutableArray();
@@ -180,7 +173,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (Target.OperatingSystem == OSPlatform.Windows)
             {
-                Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
+                Stream stream = Target.Services.GetService<IMemoryService>().CreateMemoryStream(ImageBase, ImageSize);
                 PEFile image = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
                 if (image.IsValid())
                 { 
@@ -197,7 +190,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
+                    Stream stream = Target.Services.GetService<IMemoryService>().CreateMemoryStream(ImageBase, ImageSize);
                     ElfFile elfFile = new(stream, position: ImageBase, leaveOpen: false, isVirtual: true);
                     if (elfFile.Header.IsValid)
                     {

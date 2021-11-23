@@ -47,20 +47,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Add the thread, memory, and module services
-            IMemoryService rawMemoryService = new MemoryServiceFromDataReader(_dataReader);
             ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDataReader(this, _dataReader));
-            ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, rawMemoryService, _dataReader));
+            ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDataReader(this, _dataReader));
             ServiceProvider.AddServiceFactory<IMemoryService>(() => {
-                IMemoryService memoryService = rawMemoryService;
-                if (IsDump)
+                IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
+                if (IsDump && Host.HostType == HostType.DotnetDump)
                 {
                     memoryService = new ImageMappingMemoryService(this, memoryService);
-                    // Any dump created for a MacOS target does not have managed assemblies in the module service so
-                    // we need to use the metadata mapping memory service to make sure the metadata is available.
-                    if (targetOS == OSPlatform.OSX)
-                    {
-                        memoryService = new MetadataMappingMemoryService(this, memoryService);
-                    }
                 }
                 return memoryService;
             });

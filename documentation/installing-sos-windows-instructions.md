@@ -18,7 +18,7 @@ To install the latest released SOS manually, use the dotnet-sos CLI global tool.
 Run the installer:
 
     C:\Users\mikem>dotnet-sos install
-    Installing SOS to C:\Users\mikem\.dotnet\sos from C:\Users\mikem\.dotnet\tools\.store\dotnet-sos\5.0.251802\dotnet-sos\5.0.251802\tools\netcoreapp3.1\any\win-x64
+    Installing SOS to C:\Users\mikem\.dotnet\sos from C:\Users\mikem\.dotnet\tools\.store\dotnet-sos\5.0.160202\dotnet-sos\5.0.160202\tools\netcoreapp2.1\any\win-x64
     Installing over existing installation...
     Creating installation directory...
     Copying files...
@@ -70,9 +70,9 @@ The latest released version of SOS will automatically be loaded from the interna
 
     0:000> sxe ld coreclr
     0:000> g
-    ModLoad: 00007ffe`e9100000 00007ffe`e9165000   C:\Program Files\dotnet\host\fxr\3.0.3\hostfxr.dll
-    ModLoad: 00007ffe`e7ba0000 00007ffe`e7c32000   C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.20\hostpolicy.dll
-    ModLoad: 00007ffe`abb60000 00007ffe`ac125000   C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.20\coreclr.dll
+    ModLoad: 00007ffe`e9100000 00007ffe`e9165000   C:\Program Files\dotnet\host\fxr\2.2.2\hostfxr.dll
+    ModLoad: 00007ffe`e7ba0000 00007ffe`e7c32000   C:\Program Files\dotnet\shared\Microsoft.NETCore.App\2.1.6\hostpolicy.dll
+    ModLoad: 00007ffe`abb60000 00007ffe`ac125000   C:\Program Files\dotnet\shared\Microsoft.NETCore.App\2.1.6\coreclr.dll
     ntdll!ZwMapViewOfSection+0x14:
     00007fff`16e2fb74 c3              ret
     0:000> .chain

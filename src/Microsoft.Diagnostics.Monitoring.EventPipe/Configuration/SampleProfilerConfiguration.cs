@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 
@@ -19,10 +18,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override int BufferSizeInMB => 1;
 
-        public override bool RequestRundown
-        {
-            get => false;
-            set => throw new NotSupportedException();
-        }
+        public override bool RequestRundown => false;
     }
 }

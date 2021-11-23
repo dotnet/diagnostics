@@ -35,38 +35,9 @@ if [ "$__osname" == "Linux" ]; then
             source scl_source enable python27 devtoolset-2
         fi
     fi
-
-    # We are using old (2019) centos image in the CI with old cmake (2.8).
-    # Upgrading to 2021 centos image was failing SOS tests which rely on
-    # lldb REPL and ptrace etc. e.g. from test attachment logs:
-    #
-    #             00:00.136: error: process launch failed: 'A' packet returned an error: 8
-    #             00:00.136:
-    #             00:00.136: <END_COMMAND_ERROR>
-    #System.Exception: 'process launch -s' FAILED
-    #
-    # so we will keep using old image for now and install newer cmake as a workaround instead..
-    # FIXME: delete this comment and the next `if` block once centos image is upgraded.
-    if [ "$ID" = "centos" ]; then
-        # upgrade cmake
-        requiredversion=3.6.2
-        cmakeversion="$(cmake --version | head -1)"
-        currentversion="${cmakeversion##* }"
-        if ! printf '%s\n' "$requiredversion" "$currentversion" | sort --version-sort --check 2>/dev/null; then
-            echo "Old cmake version found: $currentversion, minimal requirement is $requiredversion. Upgrading to 3.15.5 .."
-            curl -sSL -o /tmp/cmake-install.sh https://github.com/Kitware/CMake/releases/download/v3.15.5/cmake-3.15.5-Linux-$(uname -m).sh
-            mkdir "$HOME/.cmake"
-            bash /tmp/cmake-install.sh --skip-license --exclude-subdir --prefix="$HOME/.cmake"
-            PATH="$HOME/.cmake/bin:$PATH"
-            export PATH
-            cmakeversion="$(cmake --version | head -1)"
-            newversion="${cmakeversion##* }"
-            echo "New cmake version is: $newversion"
-       fi
-    fi
 fi
 
-"$scriptroot/build.sh" -restore -prepareMachine -ci $@
+"$scriptroot/build.sh" --restore --prepareMachine --ci --stripsymbols $@
 if [[ $? != 0 ]]; then
     exit 1
 fi

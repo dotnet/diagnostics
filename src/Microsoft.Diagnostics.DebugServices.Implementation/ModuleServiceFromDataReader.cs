@@ -5,8 +5,8 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
 
-            private static readonly VersionInfo EmptyVersionInfo = new (0, 0, 0, 0);
+            private static readonly Microsoft.Diagnostics.Runtime.VersionInfo EmptyVersionInfo = new (0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
             private readonly IExportReader _exportReader;
             private readonly ModuleInfo _moduleInfo;
@@ -54,20 +54,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexTimeStamp;
 
-            public override ImmutableArray<byte> BuildId
-            {
-                get
-                {
-                    if (_buildId.IsDefault)
-                    {
-                        ImmutableArray<byte> buildId = _moduleService._dataReader.GetBuildId(ImageBase);
-                        // If the data reader can't get the build id, it returns a empty (instead of default) immutable array.
-                        _buildId = buildId.IsDefaultOrEmpty ? base.BuildId : buildId;
-                    }
-                    return _buildId;
-                }
-            }
-
             public override VersionData VersionData
             {
                 get 
@@ -98,7 +84,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
                         {
-                            _versionString = _moduleService.GetVersionString(ImageBase);
+                            _versionString = _moduleService.GetVersionString(ImageBase, ImageSize);
                         }
                     }
                     return _versionString;
@@ -122,8 +108,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IDataReader _dataReader;
 
-        public ModuleServiceFromDataReader(ITarget target, IMemoryService rawMemoryService, IDataReader dataReader)
-            : base(target, rawMemoryService)
+        public ModuleServiceFromDataReader(ITarget target, IDataReader dataReader)
+            : base(target)
         {
             _dataReader = dataReader;
         }

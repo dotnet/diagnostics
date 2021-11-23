@@ -36,4 +36,4 @@ add_library_clr(runcommand SHARED ${RUNCOMMAND_SOURCES})
 target_link_libraries(runcommand ${RUNCOMMAND_LIBRARY})
 
 # add the install targets
-install_clr(TARGETS runcommand DESTINATIONS .)
+install_clr(runcommand)

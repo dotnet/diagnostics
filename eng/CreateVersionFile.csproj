@@ -38,10 +38,7 @@
       </NativeVersionLines>
     </PropertyGroup>
 
-    <WriteLinesToFile File="$(NativeVersionHeaderFile)"
-                      Lines="$(NativeVersionLines.Replace(';', '%3B'))"
-                      Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(NativeVersionHeaderFile)" Lines="$(NativeVersionLines.Replace(';', '%3B'))" Overwrite="true" />
 
     <ItemGroup>
       <FileWrites Include="$(NativeVersionHeaderFile)" />
@@ -84,10 +81,7 @@ char sccsid[] __attribute__((used)) = "@(#)Version $(InformationalVersion)$(Buil
       </NativeVersionLines>
     </PropertyGroup>
 
-    <WriteLinesToFile File="$(NativeVersionSourceFile)"
-                      Lines="$(NativeVersionLines.Replace(';', '%3B'))"
-                      Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(NativeVersionSourceFile)" Lines="$(NativeVersionLines.Replace(';', '%3B'))" Overwrite="true" />
 
     <ItemGroup>
       <FileWrites Include="$(NativeVersionSourceFile)" />

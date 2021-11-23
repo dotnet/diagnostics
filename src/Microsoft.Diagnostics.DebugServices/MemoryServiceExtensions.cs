@@ -105,26 +105,14 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         /// <summary>
-        /// Create a stream for all of memory.
-        /// </summary>
-        /// <param name="memoryService">memory service instance</param>
-        /// <returns>Stream of all of memory</returns>
-        public static Stream CreateMemoryStream(this IMemoryService memoryService)
-        {
-            return new TargetStream(memoryService, 0, long.MaxValue);
-        }
-
-        /// <summary>
         /// Create a stream for the address range.
         /// </summary>
         /// <param name="memoryService">memory service instance</param>
         /// <param name="address">address to read</param>
         /// <param name="size">size of stream</param>
-        /// <returns>memory range Stream</returns>
+        /// <returns></returns>
         public static Stream CreateMemoryStream(this IMemoryService memoryService, ulong address, ulong size)
         {
-            Debug.Assert(address != 0);
-            Debug.Assert(size != 0);
             return new TargetStream(memoryService, address, size);
         }
 
@@ -145,6 +133,8 @@ namespace Microsoft.Diagnostics.DebugServices
             public TargetStream(IMemoryService memoryService, ulong address, ulong size)
                 : base()
             {
+                Debug.Assert(address != 0);
+                Debug.Assert(size != 0);
                 _memoryService = memoryService;
                 _address = address;
                 Length = (long)size;

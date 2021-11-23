@@ -146,7 +146,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             var currentColor = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("WARNING: dotnet-dsrouter is a development tool not intended for production environments." + Environment.NewLine);
+            Console.WriteLine("WARNING: dotnet-dsrouter is an experimental development tool not intended for production environments." + Environment.NewLine);
             Console.ForegroundColor = currentColor;
 
             var parser = new CommandLineBuilder()
