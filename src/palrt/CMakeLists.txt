@@ -25,7 +25,7 @@ set(PALRT_SOURCES
     variant.cpp
 )
 
-_add_library(palrt
+add_library(palrt
     STATIC
     ${PALRT_SOURCES}
 )
