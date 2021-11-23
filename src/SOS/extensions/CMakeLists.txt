@@ -15,17 +15,17 @@ set(SOURCES
     extensions.cpp
 )
 
-if(WIN32 AND NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
+if(WIN32 AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
     list(APPEND SOURCES
         hostdesktop.cpp
     )
-endif(WIN32 AND NOT CLR_CMAKE_PLATFORM_ARCH_ARM64)
+endif(WIN32 AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
 
-if(CLR_CMAKE_PLATFORM_UNIX)
+if(CLR_CMAKE_HOST_UNIX)
     add_definitions(-DHOST_UNIX)
     add_compile_options(-fPIC)
-else(CLR_CMAKE_PLATFORM_UNIX)
+else(CLR_CMAKE_HOST_UNIX)
     add_definitions(-DHOST_WINDOWS)
-endif(CLR_CMAKE_PLATFORM_UNIX)
+endif(CLR_CMAKE_HOST_UNIX)
 
-_add_library(extensions STATIC ${SOURCES})
+add_library(extensions STATIC ${SOURCES})

@@ -65,6 +65,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ModuleTests(TestHost host)
         {
+            if (OS.Kind == OSKind.Windows)
+            {
+                throw new SkipTestException("Test unstable on Windows. Issue: https://github.com/dotnet/diagnostics/issues/2709");
+            }
             var moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
 
@@ -237,6 +241,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void RuntimeTests(TestHost host)
         {
+            if (OS.Kind == OSKind.Windows)
+            {
+                throw new SkipTestException("Test unstable on Windows. Issue: https://github.com/dotnet/diagnostics/issues/2709");
+            }
             // The current Linux test assets are not alpine/musl
             if (OS.IsAlpine)
             {

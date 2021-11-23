@@ -34,8 +34,6 @@
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 #endif
 
-bool g_symbolStoreInitialized = false;
-
 #ifndef FEATURE_PAL
 HMODULE g_hmoduleSymBinder = nullptr;
 ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
@@ -78,15 +76,16 @@ extern "C" void STDMETHODCALLTYPE SOSUninitializeByHost()
 \**********************************************************************/
 HRESULT InitializeSymbolService()
 {
-    if (!g_symbolStoreInitialized)
+    static bool initialized = false;
+    if (!initialized)
     {
         ISymbolService* symbolService = GetSymbolService();
         if (symbolService == nullptr) {
             return E_NOINTERFACE;
         }
-        g_symbolStoreInitialized = symbolService->IsSymbolStoreEnabled();
+        initialized = true;
 #ifndef FEATURE_PAL
-        // When SOS is hosted on dotnet-dump, the ExtensionApis are not set so 
+        // When SOS is hosted on dotnet-dump on Windows, the ExtensionApis are not set so 
         // the expression evaluation function needs to be supplied.
         if (GetExpression == nullptr)
         {
@@ -96,6 +95,7 @@ HRESULT InitializeSymbolService()
         }
 #endif
         OnUnloadTask::Register([]() {
+            initialized = false;
             DisableSymbolStore();
         });
     }
@@ -137,7 +137,6 @@ HRESULT InitializeSymbolStore(
             return E_FAIL;
         }
     }
-    g_symbolStoreInitialized = true;
     return S_OK;
 }
 
@@ -175,9 +174,13 @@ static void LoadNativeSymbolsCallback(void* param, const char* moduleFilePath, U
 \**********************************************************************/
 HRESULT LoadNativeSymbols(bool runtimeOnly)
 {
-    if (g_symbolStoreInitialized)
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService != nullptr)
     {
-        return g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
+        if (symbolService->IsSymbolStoreEnabled())
+        {
+            return g_ExtServices2->LoadNativeSymbols(runtimeOnly, LoadNativeSymbolsCallback);
+        }
     }
     return E_FAIL;
 }
@@ -189,9 +192,10 @@ HRESULT LoadNativeSymbols(bool runtimeOnly)
 \**********************************************************************/
 void DisplaySymbolStore()
 {
-    if (g_symbolStoreInitialized)
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService != nullptr)
     {
-        GetSymbolService()->DisplaySymbolStore([] (const char* message) {
+        symbolService->DisplaySymbolStore([] (const char* message) {
             ExtOut(message);
             ExtOut("\n");
         });
@@ -203,10 +207,10 @@ void DisplaySymbolStore()
 \**********************************************************************/
 void DisableSymbolStore()
 {
-    if (g_symbolStoreInitialized)
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService != nullptr)
     {
-        g_symbolStoreInitialized = false;
-        GetSymbolService()->DisableSymbolStore();
+        symbolService->DisableSymbolStore();
     }
 }
 
@@ -226,7 +230,6 @@ HRESULT GetMetadataLocator(
 {
     HRESULT Status = S_OK;
     IfFailRet(InitializeSymbolService());
-
     return GetSymbolService()->GetMetadataLocator(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
@@ -438,7 +441,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
             ExtOut("LoadSymbols GetClrModuleImages FAILED 0x%08x\n", hr);
             return hr;
         }
-        if (!HasPortablePDB(moduleBase))
+        if (GetSymbolService() == nullptr || !HasPortablePDB(moduleBase))
         {
             hr = LoadSymbolsForWindowsPDB(pMD, moduleBase, pModuleName, FALSE);
             if (SUCCEEDED(hr))
@@ -453,9 +456,9 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
     }
 
 #ifndef FEATURE_PAL
-    // TODO: in-memory windows PDB not supported
-    if (!HasPortablePDB(moduleData.LoadedPEAddress))
+    if (GetSymbolService() == nullptr || !HasPortablePDB(moduleData.LoadedPEAddress))
     {
+	    // TODO: in-memory windows PDB not supported
         hr = LoadSymbolsForWindowsPDB(pMD, moduleData.LoadedPEAddress, pModuleName, moduleData.IsFileLayout);
         if (SUCCEEDED(hr))
         {
