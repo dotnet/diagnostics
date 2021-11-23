@@ -25,7 +25,7 @@
       {
         "name": "dotnet-stack",
         "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
-      }
+      },
       {
         "name": "dotnet-dsrouter",
         "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
