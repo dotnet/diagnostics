@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.Diagnostics.Tracing.Stacks;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 {
@@ -24,7 +25,57 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
         }
 
-        internal static void TopNWriteToStdOut(List<CallTreeNodeBase> nodesToReport, bool isInclusive, int n) 
+        private static string FormatFunction(string name)
+        {
+            string classMethod;
+            Regex nameRx = new Regex(@"(.*\..*)(\(.*\))");
+            Match match = nameRx.Match(name);
+            string functionList = match.Groups[1].Value;
+            string arguments = match.Groups[2].Value;
+            string[] usingStatement = functionList.Split(".");
+            int length = usingStatement.Length;
+
+            if (length < 2) 
+            {
+                if (length == 1)
+                {
+                    classMethod = usingStatement[length - 1];
+                }
+                else 
+                {
+                    classMethod = usingStatement[length];
+                }
+            }
+            else
+            {
+                classMethod = usingStatement[length - 2] + "." + usingStatement[length - 1];
+            }
+            return classMethod + arguments;
+        }
+
+        public static List<string> SplitInto(string str, int n)
+        {
+            int length = str.Length;
+            if(length < n)
+            {
+                string shortName = MakeFixedWidth(str, n);
+
+                return new List<string> {shortName};
+            }
+
+            if (String.IsNullOrEmpty(str) || n < 1)
+            {
+                throw new ArgumentException();
+            }
+            IEnumerable<string> uniformName = Enumerable.Range(0, length / n).Select(i => str.Substring(i * n, n));
+            List<string> strList = uniformName.ToList<string>();
+            int remainder = (length / n)*n; 
+            strList.Add(str.Substring(remainder, length - remainder));
+            return strList;
+        }
+
+
+        internal static void TopNWriteToStdOut(List<CallTreeNodeBase> nodesToReport, bool isInclusive, bool isVerbose) 
         {
             const int functionColumnWidth = 70;
             const int measureColumnWidth = 20;
@@ -38,6 +89,10 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 measureType = "Exclusive";
             }
 
+            int n = nodesToReport.Count;
+            int maxDigit = n.ToString().Count();
+            string extra = new string(' ', maxDigit - 1);
+
             string header = "Top " + n.ToString() + " Functions (" + measureType + ")";
             string uniformHeader = MakeFixedWidth(header, functionColumnWidth+7);
 
@@ -46,22 +101,46 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 
             string exclusive = "Exclusive";
             string uniformExclusive = MakeFixedWidth(exclusive, measureColumnWidth);
-            Console.WriteLine(uniformHeader + uniformInclusive + uniformExclusive);
+            Console.WriteLine(uniformHeader + extra + uniformInclusive + uniformExclusive);
 
-
-            for(int i = 0; i < nodesToReport.Count; i++)
+            int numLines;
+            for(int i = 0; i < n; i++)
             {
+
+                int iLength = (i+1).ToString().Count();
+                int numSpace = maxDigit - iLength + 1;
+
                 CallTreeNodeBase node = nodesToReport[i];
                 string name = node.Name;
-                string uniformName = MakeFixedWidth(name, functionColumnWidth);
+                string formatName = FormatFunction(name);
+                List<string> nameList = SplitInto(formatName, functionColumnWidth);
 
-                double inclusiveMeasure = Math.Round(node.InclusiveMetricPercent, 2);
-                string uniformIMeasure = MakeFixedWidth(inclusiveMeasure.ToString() + "%", measureColumnWidth).PadLeft(measureColumnWidth+4);
-                // Console.WriteLine("Inclusive Count is " + node.InclusiveCount);
-                double exclusiveMeasure = Math.Round(node.ExclusiveMetricPercent, 2);
-                string uniformEMeasure = MakeFixedWidth(exclusiveMeasure.ToString() + "%",measureColumnWidth);
+                if(isVerbose)
+                {
+                    numLines = nameList.Count;
+                }
+                else
+                {
+                    numLines = 1;
+                }
 
-                Console.WriteLine($"{i+1}. " + uniformName + uniformIMeasure + uniformEMeasure);
+                for(int j = 0; j < numLines; j++)
+                {
+                    string inclusiveMeasure = "";
+                    string exclusiveMeasure = "";
+                    string number = new string(' ', maxDigit + 2); //+2 lines 130 and 137 account for '. '
+
+                    if(j == 0)
+                    {
+                        inclusiveMeasure = Math.Round(node.InclusiveMetricPercent, 2).ToString() + "%";
+                        exclusiveMeasure = Math.Round(node.ExclusiveMetricPercent, 2).ToString() + "%";
+                        number = (i + 1).ToString() + "." + number.Substring(maxDigit - numSpace + 2);
+                    }
+
+                    string uniformIMeasure = MakeFixedWidth(inclusiveMeasure, measureColumnWidth).PadLeft(measureColumnWidth+4);
+                    string uniformEMeasure = MakeFixedWidth(exclusiveMeasure, measureColumnWidth);
+                    Console.WriteLine(number + nameList[j] + uniformIMeasure + uniformEMeasure);
+                }
                 
             }
         }

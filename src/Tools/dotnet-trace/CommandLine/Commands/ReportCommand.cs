@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class ReportCommandHandler 
     {
-        static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Thread (" , "Process"};
+        static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process"};
 
         //Create an extension function to help 
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
@@ -34,8 +34,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Task.FromResult(-1);
         }
 
-        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive);
-        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive) 
+        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
+        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose) 
         {          
             try 
             {
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     FilterParams filterParams = new FilterParams()
                     {
-                        ExcludeRegExs = "CPU_TIME",
+                        FoldRegExs = "CPU_TIME;UNMANAGED_CODE_TIME;{Thread (}",
                     };
                     FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
                     CallTree callTree = new(ScalingPolicyKind.ScaleToData);
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             }
                         }
 
-                    PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, number);
+                    PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
                 }
                 return await Task.FromResult(0);
             }
@@ -115,6 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
                             TopNOption(),
                             InclusiveOption(),
+                            VerboseOption(),
                         }
                 };
 
@@ -127,7 +128,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static int DefaultN() => 5;
-        
+
         private static Option TopNOption()
         {
             return new Option(
@@ -143,9 +144,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option InclusiveOption() =>
             new Option(
                 aliases: new[] { "--inclusive" },
-                description: $"Output the topN methods based on inclusive time. If not specified, exclusive time is used by default")
+                description: $"Output the topN methods based on inclusive time. If not specified, exclusive time is used by default.")
                 {
                     Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => DefaultIsInclusive)
+                };
+
+        private static bool DefaultVerbose => false;
+
+        private static Option VerboseOption() =>
+            new Option(
+                aliases: new[] {"-v", "--verbose"},
+                description: $"Output the parameters of each method in full. If not specified, parameters will be cut off.")
+                {
+                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => DefaultVerbose)
                 };
     }
 }
