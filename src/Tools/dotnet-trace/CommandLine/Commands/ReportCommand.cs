@@ -154,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] {"-v", "--verbose"},
-                description: $"Output the parameters of each method in full. If not specified, parameters will be cut off.")
+                description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
                 {
                     Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => DefaultVerbose)
                 };
