@@ -38,6 +38,16 @@ public:
     virtual OperatingSystem STDMETHODCALLTYPE GetOperatingSystem() = 0;
 
     /// <summary>
+    /// Returns the per-target native service for the given interface 
+    /// id. There is only a limited set of services that can be queried 
+    /// through this function. Adds a reference like QueryInterface.
+    /// </summary>
+    /// <param name="serviceId">guid of the service</param>
+    /// <param name="service">pointer to return service instance</param>
+    /// <returns>S_OK or E_NOINTERFACE</returns>
+    virtual HRESULT STDMETHODCALLTYPE GetService(REFIID serviceId, PVOID* service) = 0;
+
+    /// <summary>
     /// Returns the unique temporary directory for this instance of SOS
     /// </summary>
     /// <returns>temporary directory string</returns>

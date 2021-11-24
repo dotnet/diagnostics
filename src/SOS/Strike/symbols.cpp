@@ -58,8 +58,21 @@ extern "C" HRESULT STDMETHODCALLTYPE SOSInitializeByHost(IUnknown* punk, IDebugg
     if (FAILED(hr)) {
         return hr;
     }
-    // Ignore error so the C++ hosting fallback doesn't fail because there is no symbol service
-    InitializeSymbolService();
+#ifndef FEATURE_PAL
+    // When SOS is hosted on dotnet-dump on Windows, the ExtensionApis are not set so 
+    // the expression evaluation function needs to be supplied.
+    if (GetExpression == nullptr)
+    {
+        GetExpression = ([](const char* message) {
+		    ISymbolService* symbolService = GetSymbolService();
+		    if (symbolService == nullptr)
+		    {
+		        return (ULONG64)0;
+		    }
+            return symbolService->GetExpressionValue(message);
+        });
+    }
+#endif
     return S_OK;
 }
 
@@ -69,37 +82,6 @@ extern "C" HRESULT STDMETHODCALLTYPE SOSInitializeByHost(IUnknown* punk, IDebugg
 extern "C" void STDMETHODCALLTYPE SOSUninitializeByHost()
 {
     OnUnloadTask::Run();
-}
-
-/**********************************************************************\
- * Get the symbol service callback entry points.
-\**********************************************************************/
-HRESULT InitializeSymbolService()
-{
-    static bool initialized = false;
-    if (!initialized)
-    {
-        ISymbolService* symbolService = GetSymbolService();
-        if (symbolService == nullptr) {
-            return E_NOINTERFACE;
-        }
-        initialized = true;
-#ifndef FEATURE_PAL
-        // When SOS is hosted on dotnet-dump on Windows, the ExtensionApis are not set so 
-        // the expression evaluation function needs to be supplied.
-        if (GetExpression == nullptr)
-        {
-            GetExpression = ([](const char* message) {
-                return GetSymbolService()->GetExpressionValue(message);
-            });
-        }
-#endif
-        OnUnloadTask::Register([]() {
-            initialized = false;
-            DisableSymbolStore();
-        });
-    }
-    return S_OK;
 }
 
 /**********************************************************************\
@@ -116,8 +98,12 @@ HRESULT InitializeSymbolStore(
     const char* windowsSymbolPath)
 {
     HRESULT Status = S_OK;
-    IfFailRet(InitializeSymbolService());
-    if (!GetSymbolService()->InitializeSymbolStore(
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
+    if (!symbolService->InitializeSymbolStore(
         msdl,
         symweb,
         symbolServer,
@@ -131,7 +117,7 @@ HRESULT InitializeSymbolStore(
     }
     if (windowsSymbolPath != nullptr)
     {
-        if (!GetSymbolService()->ParseSymbolPath(windowsSymbolPath))
+        if (!symbolService->ParseSymbolPath(windowsSymbolPath))
         {
             ExtErr("Error parsing symbol path %s\n", windowsSymbolPath);
             return E_FAIL;
@@ -228,9 +214,12 @@ HRESULT GetMetadataLocator(
     BYTE* buffer,
     ULONG32* dataSize)
 {
-    HRESULT Status = S_OK;
-    IfFailRet(InitializeSymbolService());
-    return GetSymbolService()->GetMetadataLocator(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
+    return symbolService->GetMetadataLocator(imagePath, imageTimestamp, imageSize, mvid, mdRva, flags, bufferSize, buffer, dataSize);
 }
 
 /**********************************************************************\
@@ -244,9 +233,12 @@ HRESULT GetICorDebugMetadataLocator(
     ULONG32 *pcchPathBuffer,
     WCHAR wszPathBuffer[])
 {
-    HRESULT Status = S_OK;
-    IfFailRet(InitializeSymbolService());
-    return GetSymbolService()->GetICorDebugMetadataLocator(imagePath, imageTimestamp, imageSize, cchPathBuffer, pcchPathBuffer, wszPathBuffer);
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
+    return symbolService->GetICorDebugMetadataLocator(imagePath, imageTimestamp, imageSize, cchPathBuffer, pcchPathBuffer, wszPathBuffer);
 }
 
 #ifndef FEATURE_PAL
@@ -592,9 +584,11 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
 HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in BOOL isInMemory, ___in BOOL isFileLayout,
     ___in ULONG64 peAddress, ___in ULONG64 peSize, ___in ULONG64 inMemoryPdbAddress, ___in ULONG64 inMemoryPdbSize)
 {
-    HRESULT Status = S_OK;
-    IfFailRet(InitializeSymbolService());
-
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
     m_symbolReaderHandle = GetSymbolService()->LoadSymbolsForModule(
         pModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
 
@@ -602,8 +596,7 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     {
         return E_FAIL;
     }
-
-    return Status;
+    return S_OK;
 }
 
 /**********************************************************************\

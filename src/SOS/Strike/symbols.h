@@ -12,8 +12,6 @@ extern HMODULE g_hInstance;
 extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
 #endif
 
-extern HRESULT InitializeSymbolService();
-
 extern HRESULT InitializeSymbolStore(
     BOOL msdl,
     BOOL symweb,

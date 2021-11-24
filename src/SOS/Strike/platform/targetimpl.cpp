@@ -241,6 +241,11 @@ ITarget::OperatingSystem Target::GetOperatingSystem()
 #endif
 }
 
+HRESULT Target::GetService(REFIID serviceId, PVOID* ppService)
+{
+    return E_NOINTERFACE;
+}
+
 LPCSTR Target::GetTempDirectory()
 {
     if (m_tmpPath == nullptr)

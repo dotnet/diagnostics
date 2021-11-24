@@ -12,14 +12,9 @@ using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -73,15 +68,15 @@ namespace SOS.Hosting
 
         public static readonly Guid IID_ISymbolService = new Guid("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1");
 
-        private readonly Func<IMemoryService> _getMemoryService;
         private readonly ISymbolService _symbolService;
+        private readonly IMemoryService _memoryService;
 
-        public SymbolServiceWrapper(IHost host, Func<IMemoryService> getMemoryService)
+        public SymbolServiceWrapper(ISymbolService symbolService, IMemoryService memoryService)
         {
-            Debug.Assert(host != null);
-            Debug.Assert(getMemoryService != null);
-            _getMemoryService = getMemoryService;
-            _symbolService = host.Services.GetService<ISymbolService>();
+            Debug.Assert(symbolService != null);
+            Debug.Assert(memoryService != null);
+            _symbolService = symbolService;
+            _memoryService = memoryService;
             Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
@@ -203,19 +198,19 @@ namespace SOS.Hosting
                     KeyGenerator generator = null;
                     if (config == RuntimeConfiguration.UnixCore)
                     {
-                        Stream stream = MemoryService.CreateMemoryStream();
+                        Stream stream = _memoryService.CreateMemoryStream();
                         var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
                         generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.OSXCore)
                     {
-                        Stream stream = MemoryService.CreateMemoryStream();
+                        Stream stream = _memoryService.CreateMemoryStream();
                         var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                         generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
                     {
-                        Stream stream = MemoryService.CreateMemoryStream(address, size);
+                        Stream stream = _memoryService.CreateMemoryStream(address, size);
                         var peFile = new PEFile(new StreamAddressSpace(stream), true);
                         generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
                     }
@@ -354,12 +349,12 @@ namespace SOS.Hosting
                 Stream peStream = null;
                 if (loadedPeAddress != 0)
                 {
-                    peStream = MemoryService.CreateMemoryStream(loadedPeAddress, loadedPeSize);
+                    peStream = _memoryService.CreateMemoryStream(loadedPeAddress, loadedPeSize);
                 }
                 Stream pdbStream = null;
                 if (inMemoryPdbAddress != 0)
                 {
-                    pdbStream = MemoryService.CreateMemoryStream(inMemoryPdbAddress, inMemoryPdbSize);
+                    pdbStream = _memoryService.CreateMemoryStream(inMemoryPdbAddress, inMemoryPdbSize);
                 }
                 OpenedReader openedReader = GetReader(assemblyPath, isFileLayout, peStream, pdbStream);
                 if (openedReader != null)
@@ -956,8 +951,6 @@ namespace SOS.Hosting
             }
             return pathName.Substring(pos + 1);
         }
-
-        private IMemoryService MemoryService => _getMemoryService() ?? throw new DiagnosticsException("SymbolServiceWrapper: no current target");
 
         #region Symbol service delegates
 

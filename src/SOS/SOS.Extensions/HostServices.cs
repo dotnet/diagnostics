@@ -44,7 +44,6 @@ namespace SOS.Extensions
         private int _targetIdFactory;
         private ITarget _target;
         private TargetWrapper _targetWrapper;
-        private IMemoryService _memoryService;
 
         /// <summary>
         /// Enable the assembly resolver to get the right versions in the same directory as this assembly.
@@ -107,8 +106,7 @@ namespace SOS.Extensions
             _serviceProvider.AddService<ISymbolService>(_symbolService);
 
             _hostWrapper = new HostWrapper(this, () => _targetWrapper);
-            _hostWrapper.AddServiceWrapper(IID_IHostServices, this);
-            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(this, () => _memoryService));
+            _hostWrapper.ServiceWrapper.AddServiceWrapper(IID_IHostServices, this);
 
             VTableBuilder builder = AddInterface(IID_IHostServices, validate: false);
             builder.AddMethod(new GetHostDelegate(GetHost));
@@ -128,7 +126,7 @@ namespace SOS.Extensions
         protected override void Destroy()
         {
             Trace.TraceInformation("HostServices.Destroy");
-            _hostWrapper.RemoveServiceWrapper(IID_IHostServices);
+            _hostWrapper.ServiceWrapper.RemoveServiceWrapper(IID_IHostServices);
             _hostWrapper.Release();
         }
 
@@ -151,7 +149,6 @@ namespace SOS.Extensions
             if (target == _target)
             {
                 _target = null;
-                _memoryService = null;
                 if (_targetWrapper != null)
                 {
                     _targetWrapper.Release();
@@ -260,7 +257,7 @@ namespace SOS.Extensions
                 _target = new TargetFromDebuggerServices(DebuggerServices, this, _targetIdFactory++);
                 _contextService.SetCurrentTarget(_target);
                 _targetWrapper = new TargetWrapper(_contextService.Services);
-                _memoryService = _contextService.Services.GetService<IMemoryService>();
+                _targetWrapper.ServiceWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(_symbolService, _target.Services.GetService<IMemoryService>()));
             }
             catch (Exception ex)
             {
