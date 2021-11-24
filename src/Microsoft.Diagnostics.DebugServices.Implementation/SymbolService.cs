@@ -3,8 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
@@ -16,6 +14,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -43,6 +42,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _host = host;
             OnChangeEvent = new ServiceEvent();
         }
+
+        #region ISymbolService
 
         /// <summary>
         /// Invoked when anything changes in the symbol service (adding servers, caches, or directories, clearing store, etc.)
@@ -393,27 +394,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Attempts to download/retrieve from cache the key.
-        /// </summary>
-        /// <param name="key">index of the file to retrieve</param>
-        /// <returns>stream or null</returns>
-        public SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
-        {
-            if (IsSymbolStoreEnabled)
-            {
-                try
-                {
-                    return _symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
-                }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
-                {
-                    Trace.TraceError("Exception: {0}", ex.ToString());
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
         /// Returns the metadata for the assembly
         /// </summary>
         /// <param name="imagePath">file name and path to module</param>
@@ -460,21 +440,108 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
         /// <param name="isFileLayout">type of in-memory PE layout, if true, file based layout otherwise, loaded layout</param>
-        /// <param name="peStream">in-memory PE stream</param>
-        /// <param name="pdbStream">optional in-memory PDB stream</param>
+        /// <param name="peStream">in-memory PE stream or null</param>
         /// <returns>symbol file or null</returns>
         /// <remarks>
         /// Assumes that neither PE image nor PDB loaded into memory can be unloaded or moved around.
         /// </remarks>
-        public ISymbolFile OpenSymbolFile(
-            string assemblyPath,
-            bool isFileLayout,
-            Stream peStream,
-            Stream pdbStream)
+        public ISymbolFile OpenSymbolFile(string assemblyPath, bool isFileLayout, Stream peStream)
         {
-            return (pdbStream != null) ? 
-                TryOpenReaderForInMemoryPdb(pdbStream) : 
-                TryOpenReaderFromAssembly(assemblyPath, isFileLayout, peStream);
+            if (assemblyPath == null && peStream == null) throw new ArgumentNullException(nameof(assemblyPath));
+            if (peStream is not null && !peStream.CanSeek) throw new ArgumentException(nameof(peStream));
+
+            PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
+            if (peStream == null)
+            {
+                peStream = Utilities.TryOpenFile(assemblyPath);
+                if (peStream == null)
+                    return null;
+                
+                options = PEStreamOptions.Default;
+            }
+
+            try
+            {
+                using (var peReader = new PEReader(peStream, options))
+                {
+                    ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
+
+                    // First try .pdb file specified in CodeView data (we prefer .pdb file on disk over embedded PDB
+                    // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
+                    if (codeViewEntry.DataSize != 0)
+                    {
+                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
+                        if (result != null)
+                        {
+                            return result;
+                        }
+                    }
+
+                    // if it failed try Embedded Portable PDB (if available):
+                    if (embeddedPdbEntry.DataSize != 0)
+                    {
+                        return TryOpenReaderFromEmbeddedPdb(peReader, embeddedPdbEntry);
+                    }
+                }
+            }
+            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            {
+                // nop
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the portable PDB reader for the portable PDB stream
+        /// </summary>
+        /// <param name="pdbStream">portable PDB memory or file stream</param>
+        /// <returns>symbol file or null</returns>
+        /// <remarks>
+        /// Assumes that the PDB loaded into memory can be unloaded or moved around.
+        /// </remarks>
+        public ISymbolFile OpenSymbolFile(Stream pdbStream)
+        {
+            if (pdbStream != null) throw new ArgumentNullException(nameof(pdbStream));
+            if (!pdbStream.CanSeek) throw new ArgumentException(nameof(pdbStream));
+
+            byte[] buffer = new byte[sizeof(uint)];
+            pdbStream.Position = 0;
+            if (pdbStream.Read(buffer, 0, sizeof(uint)) != sizeof(uint))
+            {
+                return null;
+            }
+            uint signature = BitConverter.ToUInt32(buffer, 0);
+
+            // quick check to avoid throwing exceptions below in common cases:
+            const uint ManagedMetadataSignature = 0x424A5342;
+            if (signature != ManagedMetadataSignature)
+            {
+                // not a Portable PDB
+                return null;
+            }
+
+            SymbolFile result = null;
+            MetadataReaderProvider provider = null;
+            try
+            {
+                pdbStream.Position = 0;
+                provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
+                result = new SymbolFile(provider, provider.GetMetadataReader());
+            }
+            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            {
+                return null;
+            }
+            finally
+            {
+                if (result == null)
+                {
+                    provider?.Dispose();
+                }
+            }
+
+            return result;
         }
 
         #endregion
@@ -627,95 +694,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        private SymbolFile TryOpenReaderForInMemoryPdb(Stream pdbStream)
-        {
-            Debug.Assert(pdbStream != null);
-
-            byte[] buffer = new byte[sizeof(uint)];
-            if (pdbStream.Read(buffer, 0, sizeof(uint)) != sizeof(uint))
-            {
-                return null;
-            }
-            uint signature = BitConverter.ToUInt32(buffer, 0);
-
-            // quick check to avoid throwing exceptions below in common cases:
-            const uint ManagedMetadataSignature = 0x424A5342;
-            if (signature != ManagedMetadataSignature)
-            {
-                // not a Portable PDB
-                return null;
-            }
-
-            SymbolFile result = null;
-            MetadataReaderProvider provider = null;
-            try
-            {
-                pdbStream.Position = 0;
-                provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
-                result = new SymbolFile(provider, provider.GetMetadataReader());
-            }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
-            {
-                return null;
-            }
-            finally
-            {
-                if (result == null)
-                {
-                    provider?.Dispose();
-                }
-            }
-
-            return result;
-        }
-
-        private SymbolFile TryOpenReaderFromAssembly(string assemblyPath, bool isFileLayout, Stream peStream)
-        {
-            if (assemblyPath == null && peStream == null)
-                return null;
-
-            PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
-            if (peStream == null)
-            {
-                peStream = Utilities.TryOpenFile(assemblyPath);
-                if (peStream == null)
-                    return null;
-                
-                options = PEStreamOptions.Default;
-            }
-
-            try
-            {
-                using (var peReader = new PEReader(peStream, options))
-                {
-                    ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
-
-                    // First try .pdb file specified in CodeView data (we prefer .pdb file on disk over embedded PDB
-                    // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
-                    if (codeViewEntry.DataSize != 0)
-                    {
-                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
-                        if (result != null)
-                        {
-                            return result;
-                        }
-                    }
-
-                    // if it failed try Embedded Portable PDB (if available):
-                    if (embeddedPdbEntry.DataSize != 0)
-                    {
-                        return TryOpenReaderFromEmbeddedPdb(peReader, embeddedPdbEntry);
-                    }
-                }
-            }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
-            {
-                // nop
-            }
-
-            return null;
-        }
-
         private void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
         {
             // See spec: https://github.com/dotnet/runtime/blob/main/docs/design/specs/PE-COFF.md
@@ -832,7 +810,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
->>>>>>> f81f23bb (DownloadModule API - need to dispose of streams)
         /// Displays the symbol server and cache configuration
         /// </summary>
         public override string ToString()
@@ -845,6 +822,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 symbolStore = symbolStore.BackingStore;
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Attempts to download/retrieve from cache the key.
+        /// </summary>
+        /// <param name="key">index of the file to retrieve</param>
+        /// <returns>stream or null</returns>
+        private SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
+        {
+            Debug.Assert(IsSymbolStoreEnabled);
+            try
+            {
+                return _symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
+            {
+                Trace.TraceError("Exception: {0}", ex.ToString());
+            }
+            return null;
         }
 
         /// <summary>
@@ -876,6 +872,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 symbolStore = symbolStore.BackingStore;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Quick fix for Path.GetFileName which incorrectly handles Windows-style paths on Linux
+        /// </summary>
+        /// <param name="pathName"> File path to be processed </param>
+        /// <returns>Last component of path</returns>
+        internal static string GetFileName(string pathName)
+        {
+            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
+            if (pos < 0)
+            {
+                return pathName;
+            }
+            return pathName.Substring(pos + 1);
         }
 
         /// <summary>

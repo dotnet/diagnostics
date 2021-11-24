@@ -3,12 +3,24 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.SymbolStore;
+using System;
 using System.Collections.Immutable;
+using System.IO;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
     public interface ISymbolService
     {
+        /// <summary>
+        /// Symbol file reader instance
+        /// </summary>
+        public class SymbolFile : IDisposable
+        {
+            public virtual void Dispose() 
+            { 
+            }
+        }
+
         /// <summary>
         /// Invoked when anything changes in the symbol service (adding servers, caches, or directories, clearing store, etc.)
         /// </summary>
@@ -78,13 +90,6 @@ namespace Microsoft.Diagnostics.DebugServices
         string DownloadFile(SymbolStoreKey key);
 
         /// <summary>
-        /// Attempts to download/retrieve from cache the key.
-        /// </summary>
-        /// <param name="key">index of the file to retrieve</param>
-        /// <returns>stream or null</returns>
-        SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key);
-
-        /// <summary>
         /// Returns the metadata for the assembly
         /// </summary>
         /// <param name="imagePath">file name and path to module</param>
@@ -92,5 +97,27 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="imageSize">size of PE image</param>
         /// <returns>metadata</returns>
         ImmutableArray<byte> GetMetadata(string imagePath, uint imageTimestamp, uint imageSize);
+
+        /// <summary>
+        /// Returns the portable PDB reader for the assembly path
+        /// </summary>
+        /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
+        /// <param name="isFileLayout">type of in-memory PE layout, if true, file based layout otherwise, loaded layout</param>
+        /// <param name="peStream">in-memory PE stream</param>
+        /// <returns>symbol file or null</returns>
+        /// <remarks>
+        /// Assumes that neither PE image nor PDB loaded into memory can be unloaded or moved around.
+        /// </remarks>
+        ISymbolFile OpenSymbolFile(string assemblyPath, bool isFileLayout, Stream peStream);
+
+        /// <summary>
+        /// Returns the portable PDB reader for the portable PDB stream
+        /// </summary>
+        /// <param name="pdbStream">portable PDB memory or file stream</param>
+        /// <returns>symbol file or null</returns>
+        /// <remarks>
+        /// Assumes that the PDB loaded into memory can be unloaded or moved around.
+        /// </remarks>
+        ISymbolFile OpenSymbolFile(Stream pdbStream);
     }
 }

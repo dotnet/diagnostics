@@ -5,6 +5,7 @@
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
