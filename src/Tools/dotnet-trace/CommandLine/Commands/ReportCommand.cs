@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     FileNameArgument(),
                     new Command(
                         name: "topN",
-                        description: "Finds the top N methods on the callstack the longest.")
+                        description: "Finds the top N methods that have been on the callstack the longest.")
                         {
                             //Handler
                             HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             return new Option(
                 aliases: new[] {"-n", "--number" },
-                description: $"Gives the top N methods in the callstack.")
+                description: $"Gives the top N methods on the callstack.")
                 {
                     Argument = new Argument<int>(name: "n", getDefaultValue: DefaultN)
                 };
@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option InclusiveOption() =>
             new Option(
                 aliases: new[] { "--inclusive" },
-                description: $"Output the topN methods based on inclusive time. If not specified, exclusive time is used by default.")
+                description: $"Output the top N methods based on inclusive time. If not specified, exclusive time is used by default.")
                 {
                     Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => DefaultIsInclusive)
                 };
