@@ -48,12 +48,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceProvider = new ServiceProvider();
             ServiceProvider.AddServiceFactoryWithNoCaching<PEFile>(() => GetPEInfo());
 
-            ServiceProvider.AddServiceFactory<PEReader>(() => ModuleService.GetPEReader(this));
+            ServiceProvider.AddServiceFactory<PEReader>(() => Utilities.OpenPEReader(ModuleService.SymbolService.DownloadModule(this)));
             if (target.OperatingSystem == OSPlatform.Linux) {
-                ServiceProvider.AddServiceFactory<ELFFile>(() => ModuleService.GetELFFile(this));
+                ServiceProvider.AddServiceFactory<ELFFile>(() => Utilities.OpenELFFile(ModuleService.SymbolService.DownloadModule(this)));
             }
             if (target.OperatingSystem == OSPlatform.OSX) {
-                ServiceProvider.AddServiceFactory<MachOFile>(() => ModuleService.GetMachOFile(this));
+                ServiceProvider.AddServiceFactory<MachOFile>(() => Utilities.OpenMachOFile(ModuleService.SymbolService.DownloadModule(this)));
             }
             _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() => {
                 ServiceProvider.RemoveService(typeof(MachOFile)); 

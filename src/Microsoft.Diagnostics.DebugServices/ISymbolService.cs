@@ -64,6 +64,13 @@ namespace Microsoft.Diagnostics.DebugServices
         void DisableSymbolStore();
 
         /// <summary>
+        /// Downloads module file
+        /// </summary>
+        /// <param name="module">module interface</param>
+        /// <returns>module path or null</returns>
+        string DownloadModule(IModule module);
+        
+        /// <summary>
         /// Download a file from the symbol stores/server.
         /// </summary>
         /// <param name="key">index of the file to download</param>

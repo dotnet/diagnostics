@@ -3,6 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
 using Microsoft.SymbolStore.SymbolStores;
@@ -326,6 +329,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Downloads module file
+        /// </summary>
+        /// <param name="module">module interface</param>
+        /// <returns>module path or null</returns>
+        public string DownloadModule(IModule module)
+        {
+            string downloadFilePath = DownloadPE(module);
+            if (downloadFilePath is null)
+            {
+                if (module.Target.OperatingSystem == OSPlatform.Linux)
+                {
+                    downloadFilePath = DownloadELF(module);
+                }
+                else if (module.Target.OperatingSystem == OSPlatform.OSX)
+                {
+                    downloadFilePath = DownloadMachO(module);
+                }
+            }
+            return downloadFilePath;
+        }
+
+        /// <summary>
         /// Download a file from the symbol stores/server.
         /// </summary>
         /// <param name="key">index of the file to download</param>
@@ -402,7 +427,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Stream peStream = null;
                 if (imagePath != null && File.Exists(imagePath))
                 {
-                    peStream = TryOpenFile(imagePath);
+                    peStream = Utilities.TryOpenFile(imagePath);
                 }
                 else if (IsSymbolStoreEnabled)
                 {
@@ -431,6 +456,383 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Returns the portable PDB reader for the assembly path
+        /// </summary>
+        /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
+        /// <param name="isFileLayout">type of in-memory PE layout, if true, file based layout otherwise, loaded layout</param>
+        /// <param name="peStream">in-memory PE stream</param>
+        /// <param name="pdbStream">optional in-memory PDB stream</param>
+        /// <returns>symbol file or null</returns>
+        /// <remarks>
+        /// Assumes that neither PE image nor PDB loaded into memory can be unloaded or moved around.
+        /// </remarks>
+        public ISymbolFile OpenSymbolFile(
+            string assemblyPath,
+            bool isFileLayout,
+            Stream peStream,
+            Stream pdbStream)
+        {
+            return (pdbStream != null) ? 
+                TryOpenReaderForInMemoryPdb(pdbStream) : 
+                TryOpenReaderFromAssembly(assemblyPath, isFileLayout, peStream);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Finds or downloads the PE module
+        /// </summary>
+        /// <param name="module">module instance</param>
+        /// <returns>module path or null</returns>
+        private string DownloadPE(IModule module)
+        {
+            if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
+            {
+                Trace.TraceWarning($"DownLoadPE: module {module.FileName} has no index timestamp/filesize");
+                return null;
+            }
+
+            SymbolStoreKey moduleKey = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+            if (moduleKey is null)
+            {
+                Trace.TraceWarning($"DownLoadPE: no index generated for module {module.FileName} ");
+                return null;
+            }
+
+            if (File.Exists(module.FileName))
+            {
+                using Stream stream = Utilities.TryOpenFile(module.FileName);
+                if (stream is not null)
+                {
+                    var peFile = new PEFile(new StreamAddressSpace(stream), false);
+                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, module.FileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    foreach (SymbolStoreKey key in keys)
+                    {
+                        if (moduleKey.Equals(key))
+                        {
+                            Trace.TraceInformation("DownloadPE: local file match {0}", module.FileName);
+                            return module.FileName;
+                        }
+                    }
+                }
+            }
+
+            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
+            string downloadFilePath = DownloadFile(moduleKey);
+            if (!string.IsNullOrEmpty(downloadFilePath))
+            {
+                Trace.TraceInformation("DownloadPE: downloaded {0}", downloadFilePath);
+                return downloadFilePath;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Finds or downloads the ELF module
+        /// </summary>
+        /// <param name="module">module instance</param>
+        /// <returns>module path or null</returns>
+        private string DownloadELF(IModule module)
+        {
+            if (module.BuildId.IsDefaultOrEmpty)
+            {
+                Trace.TraceWarning($"DownloadELF: module {module.FileName} has no build id");
+                return null;
+            }
+
+            SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+            if (moduleKey is null)
+            {
+                Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
+                return null;
+            }
+
+            if (File.Exists(module.FileName))
+            {
+                using Utilities.ELFModule elfModule = Utilities.OpenELFFile(module.FileName);
+                if (elfModule is not null)
+                {
+                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfModule, module.FileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    foreach (SymbolStoreKey key in keys)
+                    {
+                        if (moduleKey.Equals(key))
+                        {
+                            Trace.TraceInformation("DownloadELF: local file match {0}", module.FileName);
+                            return module.FileName;
+                        }
+                    }
+                }
+            }
+
+            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
+            string downloadFilePath = DownloadFile(moduleKey);
+            if (!string.IsNullOrEmpty(downloadFilePath))
+            {
+                Trace.TraceInformation("DownloadELF: downloaded {0}", downloadFilePath);
+                return downloadFilePath;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Finds or downloads the MachO module.
+        /// </summary>
+        /// <param name="module">module instance</param>
+        /// <returns>module path or null</returns>
+        private string DownloadMachO(IModule module)
+        {
+            if (module.BuildId.IsDefaultOrEmpty)
+            {
+                Trace.TraceWarning($"DownloadMachO: module {module.FileName} has no build id");
+                return null;
+            }
+
+            SymbolStoreKey moduleKey = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
+            if (moduleKey is null)
+            {
+                Trace.TraceWarning($"DownloadMachO: no index generated for module {module.FileName} ");
+                return null;
+            }
+
+            if (File.Exists(module.FileName))
+            {
+                using Utilities.MachOModule machOModule = Utilities.OpenMachOFile(module.FileName);
+                if (machOModule is not null)
+                {
+                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOModule, module.FileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    foreach (SymbolStoreKey key in keys)
+                    {
+                        if (moduleKey.Equals(key))
+                        {
+                            Trace.TraceInformation("DownloadMachO: local file match {0}", module.FileName);
+                            return module.FileName;
+                        }
+                    }
+                }
+            }
+
+            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
+            string downloadFilePath = DownloadFile(moduleKey);
+            if (!string.IsNullOrEmpty(downloadFilePath))
+            {
+                Trace.TraceInformation("DownloadMachO: downloaded {0}", downloadFilePath);
+                return downloadFilePath;
+            }
+
+            return null;
+        }
+
+        private SymbolFile TryOpenReaderForInMemoryPdb(Stream pdbStream)
+        {
+            Debug.Assert(pdbStream != null);
+
+            byte[] buffer = new byte[sizeof(uint)];
+            if (pdbStream.Read(buffer, 0, sizeof(uint)) != sizeof(uint))
+            {
+                return null;
+            }
+            uint signature = BitConverter.ToUInt32(buffer, 0);
+
+            // quick check to avoid throwing exceptions below in common cases:
+            const uint ManagedMetadataSignature = 0x424A5342;
+            if (signature != ManagedMetadataSignature)
+            {
+                // not a Portable PDB
+                return null;
+            }
+
+            SymbolFile result = null;
+            MetadataReaderProvider provider = null;
+            try
+            {
+                pdbStream.Position = 0;
+                provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
+                result = new SymbolFile(provider, provider.GetMetadataReader());
+            }
+            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            {
+                return null;
+            }
+            finally
+            {
+                if (result == null)
+                {
+                    provider?.Dispose();
+                }
+            }
+
+            return result;
+        }
+
+        private SymbolFile TryOpenReaderFromAssembly(string assemblyPath, bool isFileLayout, Stream peStream)
+        {
+            if (assemblyPath == null && peStream == null)
+                return null;
+
+            PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
+            if (peStream == null)
+            {
+                peStream = Utilities.TryOpenFile(assemblyPath);
+                if (peStream == null)
+                    return null;
+                
+                options = PEStreamOptions.Default;
+            }
+
+            try
+            {
+                using (var peReader = new PEReader(peStream, options))
+                {
+                    ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
+
+                    // First try .pdb file specified in CodeView data (we prefer .pdb file on disk over embedded PDB
+                    // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
+                    if (codeViewEntry.DataSize != 0)
+                    {
+                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
+                        if (result != null)
+                        {
+                            return result;
+                        }
+                    }
+
+                    // if it failed try Embedded Portable PDB (if available):
+                    if (embeddedPdbEntry.DataSize != 0)
+                    {
+                        return TryOpenReaderFromEmbeddedPdb(peReader, embeddedPdbEntry);
+                    }
+                }
+            }
+            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            {
+                // nop
+            }
+
+            return null;
+        }
+
+        private void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
+        {
+            // See spec: https://github.com/dotnet/runtime/blob/main/docs/design/specs/PE-COFF.md
+
+            codeViewEntry = default;
+            embeddedPdbEntry = default;
+
+            foreach (DebugDirectoryEntry entry in peReader.ReadDebugDirectory())
+            {
+                if (entry.Type == DebugDirectoryEntryType.CodeView)
+                {
+                    if (entry.MinorVersion != ImageDebugDirectory.PortablePDBMinorVersion)
+                    {
+                        continue;
+                    }
+                    codeViewEntry = entry;
+                }
+                else if (entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb)
+                {
+                    embeddedPdbEntry = entry;
+                }
+            }
+        }
+
+        private SymbolFile TryOpenReaderFromCodeView(PEReader peReader, DebugDirectoryEntry codeViewEntry, string assemblyPath)
+        {
+            SymbolFile result = null;
+            MetadataReaderProvider provider = null;
+            try
+            {
+                CodeViewDebugDirectoryData data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
+                string pdbPath = data.Path;
+                Stream pdbStream = null;
+
+                if (assemblyPath != null) 
+                {
+                    try
+                    {
+                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), GetFileName(pdbPath));
+                    }
+                    catch
+                    {
+                        // invalid characters in CodeView path
+                        return null;
+                    }
+                    pdbStream = Utilities.TryOpenFile(pdbPath);
+                }
+
+                if (pdbStream == null)
+                {
+                    if (IsSymbolStoreEnabled)
+                    {
+                        Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
+                        SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
+                        pdbStream = GetSymbolStoreFile(key)?.Stream;
+                    }
+                    if (pdbStream == null)
+                    {
+                        return null;
+                    }
+                    // Make sure the stream is at the beginning of the pdb.
+                    pdbStream.Position = 0;
+                }
+
+                provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
+                MetadataReader reader = provider.GetMetadataReader();
+
+                // Validate that the PDB matches the assembly version
+                if (data.Age == 1 && new BlobContentId(reader.DebugMetadataHeader.Id) == new BlobContentId(data.Guid, codeViewEntry.Stamp))
+                {
+                    result = new SymbolFile(provider, reader);
+                }
+            }
+            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            {
+                return null;
+            }
+            finally
+            {
+                if (result == null)
+                {
+                    provider?.Dispose();
+                }
+            }
+
+            return result;
+        }
+
+        private SymbolFile TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
+        {
+            SymbolFile result = null;
+            MetadataReaderProvider provider = null;
+
+            try
+            {
+                // TODO: We might want to cache this provider globally (across stack traces), 
+                // since decompressing embedded PDB takes some time.
+                provider = peReader.ReadEmbeddedPortablePdbDebugDirectoryData(embeddedPdbEntry);
+                result = new SymbolFile(provider, provider.GetMetadataReader());
+            }
+            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            {
+                return null;
+            }
+            finally
+            {
+                if (result == null)
+                {
+                    provider?.Dispose();
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+>>>>>>> f81f23bb (DownloadModule API - need to dispose of streams)
         /// Displays the symbol server and cache configuration
         /// </summary>
         public override string ToString()
@@ -489,27 +891,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 return string.Equals(path1, path2);
             }
-        }
-
-        /// <summary>
-        /// Attempt to open a file stream.
-        /// </summary>
-        /// <param name="path">file path</param>
-        /// <returns>stream or null if doesn't exist or error</returns>
-        private Stream TryOpenFile(string path)
-        {
-            if (File.Exists(path))
-            {
-                try
-                {
-                    return File.OpenRead(path);
-                }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is NotSupportedException || ex is IOException)
-                {
-                    Trace.TraceError($"TryOpenFile: {ex.Message}");
-                }
-            }
-            return null;
         }
     }
 }
