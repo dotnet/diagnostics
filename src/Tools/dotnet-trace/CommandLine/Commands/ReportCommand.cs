@@ -127,36 +127,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Arity = new ArgumentArity(1, 1)
             };
 
-        private static int DefaultN() => 5;
-
         private static Option TopNOption()
         {
             return new Option(
                 aliases: new[] {"-n", "--number" },
                 description: $"Gives the top N methods on the callstack.")
                 {
-                    Argument = new Argument<int>(name: "n", getDefaultValue: DefaultN)
+                    Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
                 };
         }         
-
-        private static bool DefaultIsInclusive => false;
 
         private static Option InclusiveOption() =>
             new Option(
                 aliases: new[] { "--inclusive" },
                 description: $"Output the top N methods based on inclusive time. If not specified, exclusive time is used by default.")
                 {
-                    Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => DefaultIsInclusive)
+                    Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
                 };
-
-        private static bool DefaultVerbose => false;
 
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] {"-v", "--verbose"},
                 description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
                 {
-                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => DefaultVerbose)
+                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
                 };
     }
 }
