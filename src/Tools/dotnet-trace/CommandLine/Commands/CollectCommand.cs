@@ -59,14 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
             int ret = ReturnCode.Ok;
-            if (showchildio)
-            {
-                IsQuiet = true;
-            }
-            else
-            {
-                IsQuiet = false;
-            }
+            IsQuiet = showchildio;
 
             try
             {
@@ -349,14 +342,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
                         {
                             ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
-                            if(ret != 0)
-                            {
-                                Console.Error.WriteLine($"Process exited with code '{ret}'.");
-                            }
-                            else 
-                            {
-                                ConsoleWriteLine($"Process exited with code '{ret}'.");
-                            }
+                            ConsoleWriteLine($"Process exited with code '{ret}'.");
                             collectionStopped = true;
                         }
                     }
