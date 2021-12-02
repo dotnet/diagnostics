@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -478,6 +479,7 @@ namespace Microsoft.Diagnostics.Repl
                 catch (Exception ex) when (!(ex is NullReferenceException || ex is ArgumentNullException || ex is ArgumentException))
                 {
                     WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
+                    Trace.TraceError(ex.ToString());
                     m_lastCommandLine = null;
                     result = false;
                 }
