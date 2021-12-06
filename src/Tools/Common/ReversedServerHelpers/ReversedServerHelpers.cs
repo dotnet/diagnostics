@@ -92,7 +92,7 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
             try
             {
-                if (printLaunchCommand)
+                if (printLaunchCommand && !showChildIO)
                 {
                     Console.WriteLine($"Launching: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
                 }
