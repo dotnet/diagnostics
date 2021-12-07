@@ -42,6 +42,6 @@ namespace Microsoft.Diagnostics.DebugServices
             IsPortable = isPortable;
         }
 
-        public override string ToString() => $"{Guid} {Revision} {(IsPortable ? "(portable) " : "")}{Path}";
+        public override string ToString() => $"{Guid} {Revision} {(IsPortable ? "(portable) " : string.Empty)}{Path}";
     }
 }

@@ -139,7 +139,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             get
             {
                 GetPEInfo();
-                return _pdbFileInfos ??= Array.Empty<PdbFileInfo>();
+                Debug.Assert(_pdbFileInfos is not null);
+                return _pdbFileInfos;
             }
         }
 
@@ -279,7 +280,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (InitializeValue(Flags.InitializePEInfo))
             {
-                _peFile = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbFileInfos, ref _flags);
+                _peFile = ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags);
             }
             return _peFile;
         }

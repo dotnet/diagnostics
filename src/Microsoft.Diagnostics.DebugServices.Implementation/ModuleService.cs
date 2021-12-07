@@ -206,11 +206,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="pdbFileInfos">the pdb records or null</param>
         /// <param name="moduleFlags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        internal PEFile GetPEInfo(ulong address, ulong size, ref IEnumerable<PdbFileInfo> pdbFileInfos, ref Module.Flags moduleFlags)
+        internal PEFile GetPEInfo(ulong address, ulong size, out IEnumerable<PdbFileInfo> pdbFileInfos, ref Module.Flags moduleFlags)
         {
             PEFile peFile = null;
 
-            // Start off as a native non-PE non-managed module
+            // Start off with no pdb infos and as a native non-PE non-managed module
+            pdbFileInfos = Array.Empty<PdbFileInfo>();
             moduleFlags &= ~(Module.Flags.IsPEImage | Module.Flags.IsManaged | Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
 
             // None of the modules that lldb (on either Linux/MacOS) provides are PEs
