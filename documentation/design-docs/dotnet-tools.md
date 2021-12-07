@@ -301,7 +301,7 @@ COMMANDS
     ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
     convert         Converts traces to alternate formats for use with alternate trace analysis tools.
-    report          Generate report into stdout from a previously generated trace_file.
+    report          Generate a report into stdout from a previously generated trace.
 
 COLLECT
 
