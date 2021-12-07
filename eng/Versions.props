@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.257901</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.260601</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp31Version>3.1.18</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
