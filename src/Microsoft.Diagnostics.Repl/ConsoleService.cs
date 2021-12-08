@@ -12,7 +12,7 @@ using System.Threading;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    public sealed class ConsoleProvider : IConsoleService
+    public sealed class ConsoleService : IConsoleService
     {
         private readonly List<StringBuilder> m_history;
 
@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Repl
         /// </summary>
         /// <param name="errorColor">error color (default red)</param>
         /// <param name="warningColor">warning color (default yellow)</param>
-        public ConsoleProvider(ConsoleColor errorColor = ConsoleColor.Red, ConsoleColor warningColor = ConsoleColor.Yellow)
+        public ConsoleService(ConsoleColor errorColor = ConsoleColor.Red, ConsoleColor warningColor = ConsoleColor.Yellow)
         {
             m_history = new List<StringBuilder>();
             m_activeLine = new StringBuilder();

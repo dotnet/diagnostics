@@ -20,7 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>
