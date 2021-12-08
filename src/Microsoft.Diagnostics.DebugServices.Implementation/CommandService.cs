@@ -170,7 +170,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Build or re-build parser instance after all these commands and aliases are added
-            _parser = null;
+            FlushParser();
         }
 
         private void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
@@ -231,6 +231,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         private Parser Parser => _parser ??= _rootBuilder.Build();
+
+        private void FlushParser() => _parser = null;
 
         private void OnException(Exception ex, InvocationContext context)
         {
