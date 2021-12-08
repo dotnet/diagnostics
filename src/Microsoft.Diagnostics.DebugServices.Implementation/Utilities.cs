@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.FileFormats.PE;
+
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
@@ -25,7 +27,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from CLRMD VersionInfo to DebugServices VersionData
+        /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
+        /// </summary>
+        public static VersionData ToVersionData(this VsFixedFileInfo fileInfo)
+        { 
+            return new VersionData(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionRevision, fileInfo.FileVersionBuild);
+        }
+
+        /// <summary>
+        /// Convert from clrmd VersionInfo to DebugServices VersionData
         /// </summary>
         public static VersionData ToVersionData(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
         { 
@@ -33,7 +43,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from DebugServices VersionData to CLRMD VersionInfo
+        /// Convert from DebugServices VersionData to clrmd VersionInfo
         /// </summary>
         public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionData versionData)
         { 
@@ -41,11 +51,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from CLRMD PdbInfo to DebugServices PdbFileInfo
+        /// Convert from symstore PEPdbRecord to DebugServices PdbFileInfo
         /// </summary>
-        public static PdbFileInfo ToPdbFileInfo(this Microsoft.Diagnostics.Runtime.PdbInfo pdbInfo)
+        public static PdbFileInfo ToPdbFileInfo(this PEPdbRecord pdbInfo)
         {
-            return new PdbFileInfo(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
+            return new PdbFileInfo(pdbInfo.Path, pdbInfo.Signature, pdbInfo.Age, pdbInfo.IsPortablePDB);
         }
     }
 }

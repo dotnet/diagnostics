@@ -4,7 +4,7 @@
     <!-- Needs to be netcoreapp3.1 and not higher so this test assembly can be loaded by dotnet-dump via the DOTNET_DIAGNOSTIC_EXTENSIONS env var -->
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <TestConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</TestConfigFileName>
-    <TestAssetsVersion>1.0.246501</TestAssetsVersion>
+    <TestAssetsVersion>1.0.257801</TestAssetsVersion>
     <!-- Controls the test asset package restore and the tests that use them -->
     <RunTests>true</RunTests>
   </PropertyGroup>

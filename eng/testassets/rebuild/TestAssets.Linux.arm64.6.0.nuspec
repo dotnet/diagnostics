@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TestAssets.Linux.arm64.6.0</id>
+    <version>1.0.0</version>
+    <title>TestAssets.Linux.arm64.6.0</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <description>
+      Test assets for Linux arm64 on .NET 6.0.0 runtime
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Test assets
+    </summary>
+    <language>en-US</language>
+    <projectUrl>https://github.com/dotnet/diagnostics.git</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <copyright>Copyright 2021</copyright>
+  </metadata>
+  <files>
+    <file src="TestAssets.Linux.arm64.6.0\1.0.246501\content\DivZero\*.*" target="content/DivZero" />
+    <file src="TestAssets.Linux.arm64.6.0\1.0.246501\content\WebApp3\*.*" target="content/WebApp3" />
+  </files>
+</package>
