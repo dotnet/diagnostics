@@ -57,7 +57,7 @@ namespace SOS.Hosting
     [Command(Name = "gcheapstat",       DefaultOptions = "GCHeapStat",          Platform = CommandPlatform.Windows, Help = "Display various GC heap stats.")]
     [Command(Name = "watsonbuckets",    DefaultOptions = "WatsonBuckets",       Platform = CommandPlatform.Windows, Help = "Displays the Watson buckets.")]
     [Command(Name = "comstate",         DefaultOptions = "COMState",            Platform = CommandPlatform.Windows, Help = "Lists the COM apartment model for each thread.")]
-    [Command(Name = "gchandles",        DefaultOptions = "GCHandles",           Platform = CommandPlatform.Windows, Help = "Provides statistics about GCHandles in the process.")]
+    [Command(Name = "gchandles",        DefaultOptions = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]
     [Command(Name = "objsize",          DefaultOptions = "ObjSize",             Platform = CommandPlatform.Windows, Help = "Lists the sizes of the all the objects found on managed threads.")]
     [Command(Name = "gchandleleaks",    DefaultOptions = "GCHandleLeaks",       Platform = CommandPlatform.Windows, Help = "Helps in tracking down GCHandle leaks")]
     public class SOSCommand : CommandBase
