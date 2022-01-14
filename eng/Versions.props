@@ -26,7 +26,7 @@
     <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.2-servicing.22062.5</VSRedistCommonNetCoreSharedFrameworkx6460Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>6.0.2</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.2-servicing.22060.18</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.2-servicing.22063.3</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>6.0.2</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>6.0.102-servicing.21629.4</MicrosoftDotnetSdkInternalVersion>
