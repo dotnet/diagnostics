@@ -276,7 +276,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             var fileInfo = new FileInfo(output.FullName);
                             Task copyTask = session.EventStream.CopyToAsync(fs);
-                            Task shouldExitTask = copyTask.ContinueWith((task) => shouldExit.Set());
+                            Task shouldExitTask = copyTask.ContinueWith((task) => shouldExit.Set(), TaskScheduler.Default);
 
                             if (printStatusOverTime)
                             {
