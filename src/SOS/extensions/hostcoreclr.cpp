@@ -572,6 +572,7 @@ static HRESULT InitializeNetCoreHost()
         // Trust The SOS managed and dependent assemblies from the sos directory
         std::string tpaList;
         const char* directory = sosModuleDirectory.c_str();
+        AddFileToTpaList(directory, "System.Runtime.CompilerServices.Unsafe.dll", tpaList);
         AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
         AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
         AddFileToTpaList(directory, "Microsoft.FileFormats.dll", tpaList);
