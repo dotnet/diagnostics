@@ -778,6 +778,36 @@ LLDBServices::ReadVirtual(
 
     read = process.ReadMemory(offset, buffer, bufferSize, error);
 
+    if (!error.Success())
+    {
+        lldb::SBTarget target = process.GetTarget();
+        if (!target.IsValid())
+        {
+            goto exit;
+        }
+
+        int numModules = target.GetNumModules();
+        bool found = false;
+        for (int i = 0; !found && i < numModules; i++)
+        {
+            lldb::SBModule module = target.GetModuleAtIndex(i);
+            int numSections = module.GetNumSections();
+            for (int j = 0; j < numSections; j++)
+            {
+                lldb::SBSection section = module.GetSectionAtIndex(j);
+                lldb::addr_t loadAddr = section.GetLoadAddress(target);
+                lldb::addr_t byteSize = section.GetByteSize();
+                if ((loadAddr != LLDB_INVALID_ADDRESS) && (offset >= loadAddr) && (offset < loadAddr + byteSize))
+                {
+                    lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
+                    read = sectionData.ReadRawData(error, 0, buffer, bufferSize);
+                    found = true;
+                    break;
+                }
+            }
+        }
+    }
+
 exit:
     if (bytesRead)
     {
