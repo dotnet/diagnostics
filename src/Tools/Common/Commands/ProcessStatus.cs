@@ -123,6 +123,7 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         continue;
                     }
+<<<<<<< HEAD
                     try
                     {
                         String cmdLineArgs = GetArgs(process);
@@ -183,6 +184,53 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path] [Elevated process - cannot determine commandline arguments]\n");
 >>>>>>> f8c7b095... added ability to view the command line arguemnts to dotnet-count tool.
+=======
+                    if(verbose)
+                    {
+                        try
+                        {
+                            String cmdLineArgs = GetArgs(process);
+                            cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? "" : cmdLineArgs;
+                            string fileName = process.MainModule?.FileName ?? "";
+                            string[] cmdList = cmdLineArgs.Split(" ");
+                            foreach(string str in cmdList)
+                            {
+                                string splitChar = "";
+                                if (str.Contains("/"))
+                                {
+                                    splitChar = "/";
+                                    
+                                }
+                                else if(str.Contains("\\"))
+                                {
+                                    splitChar = "\\";
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"{str}");
+                                    continue;
+                                }
+                                string[] filePath = str.Split(splitChar);
+                                fileName = filePath.LastOrDefault();
+                                break;
+                            }
+                            string toAppend = $"{process.Id, 10} {process.ProcessName, -10} {fileName, -10} {cmdLineArgs, -10}\n";
+                            if (toAppend.Length > 140)
+                            {
+                                toAppend = $"{process.Id, 10} {fileName, -10} {cmdLineArgs, -10}\n";
+                            }
+                            if (toAppend.Length > 120)
+                            {
+                                toAppend = $"{process.Id, 10} {cmdLineArgs, -10}\n";
+                            }
+                            sb.Append(toAppend);
+
+                        }
+                    catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
+                        {
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path] [Elevated process - cannot determine commandline arguments]\n");
+                        }
+>>>>>>> 9f2e1d89... checking on Windows
                     }
                 }
                 FormatTableRows(printInfo, sb);
@@ -192,6 +240,7 @@ namespace Microsoft.Internal.Common.Commands
             {
                 console.Out.WriteLine(ex.ToString());
             }
+            return Task.FromResult(0);
         }
 
         private static Process GetProcessById(int processId)
@@ -239,10 +288,14 @@ namespace Microsoft.Internal.Common.Commands
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');
 <<<<<<< HEAD
+<<<<<<< HEAD
                         if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
 =======
                         if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
 >>>>>>> f8c7b095... added ability to view the command line arguemnts to dotnet-count tool.
+=======
+                        if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
+>>>>>>> 9f2e1d89... checking on Windows
                         {
                             return String.Join(" ", commandLineSplit.Skip(1));
                         }
