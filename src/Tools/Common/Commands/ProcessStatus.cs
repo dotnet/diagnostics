@@ -14,21 +14,36 @@ using System.Text;
 using Process = System.Diagnostics.Process;
 using System.IO;
 using System.ComponentModel;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.CommandLine.Binding;
 
 namespace Microsoft.Internal.Common.Commands
 {
     public class ProcessStatusCommandHandler
     {
-        public static Command ProcessStatusCommand(string description) =>
-            new Command(name: "ps", description)
+        delegate Task<int> ProcessStatusDelegate(IConsole console, bool verbose);
+        public static Command ProcessStatusCommand() =>
+            new Command(
+                name: "ps", 
+                description: "Lists the dotnet processes that traces can be collected")
             {
-                Handler = CommandHandler.Create<IConsole>(PrintProcessStatus)
+                HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler(),
+                VerboseOption()
             };
+
+        public static Option VerboseOption() =>
+            new Option(
+                aliases: new[] {"-v", "--verbose"},
+                description: "Output includes commandline arguments.")
+                {
+                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+                };
 
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis, their statuses and the command line arguments that are passed to them.
         /// </summary>
-        public static void PrintProcessStatus(IConsole console)
+        public static Task<int> ProcessStatus(IConsole console, bool verbose)
         {
             try
             {
@@ -47,17 +62,51 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         continue;
                     }
-
-                    try
+                    if(verbose)
                     {
-                        String cmdLineArgs = GetArgs(process);
-                        cmdLineArgs = cmdLineArgs == process.MainModule.FileName ? "" : cmdLineArgs;
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} {process.MainModule.FileName, -10} {cmdLineArgs, -10}\n");
+                        try
+                        {
+                            String cmdLineArgs = GetArgs(process);
+                            cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? "" : cmdLineArgs;
+                            string fileName = process.MainModule?.FileName ?? "";
+                            string[] cmdList = cmdLineArgs.Split(" ");
+                            foreach(string str in cmdList)
+                            {
+                                string splitChar = "";
+                                if (str.Contains("/"))
+                                {
+                                    splitChar = "/";
+                                    
+                                }
+                                else if(str.Contains("\\"))
+                                {
+                                    splitChar = "\\";
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"{str}");
+                                    continue;
+                                }
+                                string[] filePath = str.Split(splitChar);
+                                fileName = filePath.LastOrDefault();
+                                break;
+                            }
+                            string toAppend = $"{process.Id, 10} {process.ProcessName, -10} {fileName, -10} {cmdLineArgs, -10}\n";
+                            if (toAppend.Length > 140)
+                            {
+                                toAppend = $"{process.Id, 10} {fileName, -10} {cmdLineArgs, -10}\n";
+                            }
+                            if (toAppend.Length > 120)
+                            {
+                                toAppend = $"{process.Id, 10} {cmdLineArgs, -10}\n";
+                            }
+                            sb.Append(toAppend);
 
-                    }
-                   catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
-                    {
-                        sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path] [Elevated process - cannot determine commandline arguments]\n");
+                        }
+                    catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
+                        {
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path] [Elevated process - cannot determine commandline arguments]\n");
+                        }
                     }
                 }
                 console.Out.WriteLine(sb.ToString());
@@ -66,6 +115,7 @@ namespace Microsoft.Internal.Common.Commands
             {
                 console.Out.WriteLine(ex.ToString());
             }
+            return Task.FromResult(0);
         }
 
         private static Process GetProcessById(int processId)
@@ -112,7 +162,7 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');
-                        if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
+                        if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
                         {
                             return String.Join(" ", commandLineSplit.Skip(1));
                         }
