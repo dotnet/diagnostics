@@ -371,14 +371,14 @@ BOOL IsValueField (DacpFieldDescData *pFD)
 static DWORD_PTR ResolveByRefField(DacpFieldDescData* pFD, DWORD_PTR dwAddr, CLRDATA_ADDRESS* methodTable)
 {
     if (dwAddr == 0)
-        return dwAddr;
+        return 0;
 
     ToRelease<IMetaDataImport> pImport = MDImportForModule(pFD->ModuleOfType);
 
     PCCOR_SIGNATURE   pSignatureBlob = NULL;
     ULONG             sigBlobLength = 0;
     if(FAILED(pImport->GetFieldProps(pFD->mb, NULL, NULL, 0, NULL, NULL, &pSignatureBlob, &sigBlobLength, NULL, NULL, NULL)))
-        return dwAddr;
+        return 0;
 
     SigParser sigParser(pSignatureBlob, sigBlobLength);
     sigParser.SkipExactlyOne();
@@ -386,13 +386,13 @@ static DWORD_PTR ResolveByRefField(DacpFieldDescData* pFD, DWORD_PTR dwAddr, CLR
     // Move past and assert the ByRef
     CorElementType etype;
     if (FAILED(sigParser.GetElemType(&etype)))
-        return dwAddr;
+        return 0;
 
     _ASSERTE(etype == ELEMENT_TYPE_BYREF);
 
     // Get the byref's type. If this is also a byref we give up.
     if (FAILED(sigParser.GetElemType(&etype)) || etype == ELEMENT_TYPE_BYREF)
-        return dwAddr;
+        return 0;
 
     // If the type was determined to be a valuetype, we need the methodtable
     // to be able to properly display it.
@@ -400,11 +400,11 @@ static DWORD_PTR ResolveByRefField(DacpFieldDescData* pFD, DWORD_PTR dwAddr, CLR
     {
         mdToken token = mdTokenNil;
         if (FAILED(sigParser.GetToken(&token)))
-            return dwAddr;
+            return 0;
 
         CLRDATA_ADDRESS methodTableMaybe = 0;
         if (FAILED(g_sos->GetMethodDescFromToken(pFD->ModuleOfType, token, &methodTableMaybe)))
-            return dwAddr;
+            return 0;
 
         *methodTable = methodTableMaybe;
     }
@@ -414,7 +414,7 @@ static DWORD_PTR ResolveByRefField(DacpFieldDescData* pFD, DWORD_PTR dwAddr, CLR
     DWORD_PTR tgt;
     CLRDATA_ADDRESS address = TO_CDADDR(dwAddr);
     if (FAILED(g_ExtData->ReadVirtual(dwAddr, &tgt, sizeof(DWORD_PTR), NULL)))
-        return dwAddr;
+        return 0;
 
     return tgt;
 }
@@ -550,7 +550,9 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
                     }
                     else
                     {
-                        ExtOut("%p", SOS_PTR(0));
+                        // This will display zero if that is what the value was or the
+                        // supplied value if ResolveByRefField() failed.
+                        ExtOut("%p", SOS_PTR(value.ptr));
                     }
                 }
                     break;
