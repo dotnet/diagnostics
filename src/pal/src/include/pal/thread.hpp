@@ -28,6 +28,7 @@ Abstract:
 
 #include "threadsusp.hpp"
 #include "threadinfo.hpp"
+#include "synchobjects.hpp"
 #include <errno.h>
 
 namespace CorUnix
@@ -40,8 +41,50 @@ namespace CorUnix
     };
     
     PAL_ERROR
+    InternalCreateThread(
+        CPalThread *pThread,
+        LPSECURITY_ATTRIBUTES lpThreadAttributes,
+        DWORD dwStackSize,
+        LPTHREAD_START_ROUTINE lpStartAddress,
+        LPVOID lpParameter,
+        DWORD dwCreationFlags,
+        PalThreadType eThreadType,
+        SIZE_T* pThreadId,
+        HANDLE *phThread
+        );
+
+    PAL_ERROR
+    InternalGetThreadDataFromHandle(
+        CPalThread *pThread,
+        HANDLE hThread,
+        CPalThread **ppTargetThread,
+        IPalObject **ppobjThread
+        );
+
+    VOID
+    InternalEndCurrentThread(
+        CPalThread *pThread
+        );
+
+    PAL_ERROR
+    InternalCreateDummyThread(
+        CPalThread *pThread,
+        LPSECURITY_ATTRIBUTES lpThreadAttributes,
+        CPalThread **ppDummyThread,
+        HANDLE *phThread
+        );
+
+ 
+    PAL_ERROR
     CreateThreadData(
         CPalThread **ppThread
+        );
+
+    PAL_ERROR
+    CreateThreadObject(
+        CPalThread *pThread,
+        CPalThread *pNewThread,
+        HANDLE *phThread
         );
 
     /* In the windows CRT there is a constant defined for the max width
@@ -71,13 +114,46 @@ namespace CorUnix
     {
         friend
             PAL_ERROR
+            InternalCreateThread(
+                CPalThread *,
+                LPSECURITY_ATTRIBUTES,
+                DWORD,
+                LPTHREAD_START_ROUTINE,
+                LPVOID,
+                DWORD,
+                PalThreadType,
+                SIZE_T*,
+                HANDLE*
+                );
+
+        friend
+            PAL_ERROR
+            InternalCreateDummyThread(
+                CPalThread *pThread,
+                LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                CPalThread **ppDummyThread,
+                HANDLE *phThread
+                );
+
+        friend
+            PAL_ERROR
             CreateThreadData(
                 CPalThread **ppThread
+                );
+
+        friend
+            PAL_ERROR
+            CreateThreadObject(
+                CPalThread *pThread,
+                CPalThread *pNewThread,
+                HANDLE *phThread
                 );
 
     private:
 
         CPalThread *m_pNext;
+        DWORD m_dwExitCode;
+        BOOL m_fExitCodeSet;
         CRITICAL_SECTION m_csLock;
         bool m_fLockInitialized;
         bool m_fIsDummy;
@@ -97,6 +173,13 @@ namespace CorUnix
         LONG m_lRefCount;
 
         //
+        // The IPalObject for this thread. The thread will release its reference
+        // to this object when it exits.
+        //
+
+        IPalObject *m_pThreadObject;
+
+        //
         // Thread ID info
         //
 
@@ -104,22 +187,76 @@ namespace CorUnix
         DWORD m_dwLwpId;
         pthread_t m_pthreadSelf;
 
+        //
+        // Start info
+        //
+
+        LPTHREAD_START_ROUTINE m_lpStartAddress;
+        LPVOID m_lpStartParameter;
+        BOOL m_bCreateSuspended;
+        PalThreadType m_eThreadType;
+
+        //
+        // pthread mutex / condition variable for gating thread startup.
+        // InternalCreateThread waits on the condition variable to determine
+        // when the new thread has reached passed all failure points in
+        // the entry routine
+        //
+
+        pthread_mutex_t m_startMutex;
+        pthread_cond_t m_startCond;
+        bool m_fStartItemsInitialized;
+        bool m_fStartStatus;
+        bool m_fStartStatusSet;
+
+        // Base address of the stack of this thread
+        void* m_stackBase;
+        // Limit address of the stack of this thread
+        void* m_stackLimit;
+        // Signal handler's alternate stack to help with stack overflow
+        void* m_alternateStack;
+
+        //
+        // The thread entry routine (called from InternalCreateThread)
+        //
+
+        static void* ThreadEntry(void * pvParam);
+
+        //
+        // Data for PAL side-by-side support
+        //
+
     public:
 
         //
         // Embedded information for areas owned by other subsystems
         //
 
+        CThreadSynchronizationInfo synchronizationInfo;
+        CThreadSuspensionInfo suspensionInfo;
         CThreadCRTInfo crtInfo;
 
         CPalThread()
             :
             m_pNext(NULL),
+            m_dwExitCode(STILL_ACTIVE),
+            m_fExitCodeSet(FALSE),
             m_fLockInitialized(FALSE),
+            m_fIsDummy(FALSE),
             m_lRefCount(1),
+            m_pThreadObject(NULL),
             m_threadId(0),
             m_dwLwpId(0),
-            m_pthreadSelf(0)
+            m_pthreadSelf(0),
+            m_lpStartAddress(NULL),
+            m_lpStartParameter(NULL),
+            m_bCreateSuspended(FALSE),
+            m_eThreadType(UserCreatedThread),
+            m_fStartItemsInitialized(FALSE),
+            m_fStartStatus(FALSE),
+            m_fStartStatusSet(FALSE),
+            m_stackBase(NULL),
+            m_stackLimit(NULL)
         {
         };
 
@@ -140,6 +277,24 @@ namespace CorUnix
             void
             );
 
+        //
+        // SetStartStatus is called by THREADEntry or InternalSuspendNewThread
+        // to inform InternalCreateThread of the results of the thread's
+        // initialization. InternalCreateThread calls WaitForStartStatus to
+        // obtain this information (and will not return to its caller until
+        // the info is available).
+        //
+
+        void
+        SetStartStatus(
+            bool fStartSucceeded
+            );
+
+        bool
+        WaitForStartStatus(
+            void
+            );
+
         void
         Lock(
             CPalThread *pThread
@@ -155,6 +310,35 @@ namespace CorUnix
         {
             InternalLeaveCriticalSection(pThread, &m_csLock);
         };
+
+        //
+        // The following three methods provide access to the
+        // native lock used to protect thread native wait data.
+        //
+
+        void
+        AcquireNativeWaitLock(
+            void
+            )
+        {
+            synchronizationInfo.AcquireNativeWaitLock();
+        }
+
+        void
+        ReleaseNativeWaitLock(
+            void
+            )
+        {
+            synchronizationInfo.ReleaseNativeWaitLock();
+        }
+
+        bool
+        TryAcquireNativeWaitLock(
+            void
+            )
+        {
+            return synchronizationInfo.TryAcquireNativeWaitLock();
+        }
 
         static void
         SetLastError(
@@ -172,6 +356,24 @@ namespace CorUnix
         {
             // Reuse errno to store last error
             return errno;
+        };
+
+        void
+        SetExitCode(
+            DWORD dwExitCode
+            )
+        {
+            m_dwExitCode = dwExitCode;
+            m_fExitCodeSet = TRUE;
+        };
+
+        BOOL
+        GetExitCode(
+            DWORD *pdwExitCode
+            )
+        {
+            *pdwExitCode = m_dwExitCode;
+            return m_fExitCodeSet;
         };
 
         SIZE_T
@@ -196,6 +398,53 @@ namespace CorUnix
             )
         {
             return m_pthreadSelf;
+        };
+
+        LPTHREAD_START_ROUTINE
+        GetStartAddress(
+            void
+            )
+        {
+            return m_lpStartAddress;
+        };
+
+        LPVOID
+        GetStartParameter(
+            void
+            )
+        {
+            return m_lpStartParameter;
+        };
+
+        BOOL
+        GetCreateSuspended(
+            void
+            )
+        {
+            return m_bCreateSuspended;
+        };
+
+        PalThreadType
+        GetThreadType(
+            void
+            )
+        {
+            return m_eThreadType;
+        };
+
+        IPalObject *
+        GetThreadObject(
+            void
+            )
+        {
+            return m_pThreadObject;
+        }
+        BOOL
+        IsDummy(
+            void
+            )
+        {
+            return m_fIsDummy;
         };
 
         CPalThread*
@@ -239,6 +488,37 @@ namespace CorUnix
             pThread = CreateCurrentThreadData();
         return pThread;
     }
+
+/***
+
+    $$TODO: These are needed only to support cross-process thread duplication
+
+    class CThreadImmutableData
+    {
+    public:
+        DWORD dwProcessId;
+    };
+
+    class CThreadSharedData
+    {
+    public:
+        DWORD dwThreadId;
+        DWORD dwExitCode;
+    };
+***/
+
+    //
+    // The process local information for a thread is just a pointer
+    // to the underlying CPalThread object.
+    //
+
+    class CThreadProcessLocalData
+    {
+    public:
+        CPalThread *pThread;
+    };
+
+    extern CObjectType otThread;
 }
 
 BOOL

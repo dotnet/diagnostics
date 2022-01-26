@@ -145,8 +145,6 @@ else(WIN32)
 
   include_directories(BEFORE xplat)
 
-  add_compile_options(-fPIC)
-
   set(SOS_SOURCES
     disasm.cpp
     eeheap.cpp

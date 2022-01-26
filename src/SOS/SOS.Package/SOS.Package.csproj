@@ -11,6 +11,7 @@
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <GalleryManifestName>$(ArtifactsPackagesDir)\GalleryManifest.xml</GalleryManifestName>
     <BeforePack>GenerateGalleryZip;GenerateSymbolsZip</BeforePack>
+    <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
     

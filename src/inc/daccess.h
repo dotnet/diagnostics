@@ -15,6 +15,9 @@
 
 #ifdef PAL_STDCPP_COMPAT
 #include <type_traits>
+#else
+#include "clr_std/type_traits"
+#include "crosscomp.h"
 #endif
 
 //
@@ -35,6 +38,13 @@ typedef ULONG_PTR TADDR;
 // target pointer.  For cross-plat, this may be different than SIZE_T
 // which reflects the host pointer size.
 typedef SIZE_T TSIZE_T;
+#define VPTR_CLASS_METHODS(name)
+// Used for base classes that can be instantiated directly.
+// The fake vfn is still used to force a vtable even when
+// all the normal vfns are ifdef'ed out.
+#define VPTR_BASE_CONCRETE_VTABLE_CLASS(name)                   \
+public: name(TADDR addr, TADDR vtAddr) {}                       \
+        VPTR_CLASS_METHODS(name)
 
 //
 // This version of the macros turns into normal pointers
@@ -67,6 +77,17 @@ typedef const void* PTR_CVOID;
 #define S8PTRMAX(type, maxChars) type*
 #define S16PTR(type) type*
 #define S16PTRMAX(type, maxChars) type*
+#define _SPTR_DECL(acc_type, store_type, var) \
+    static store_type var
+#define _SPTR_IMPL(acc_type, store_type, cls, var) \
+    store_type cls::var
+
+#define GVAL_DECL(type, var) \
+    extern type var
+#define GVAL_IMPL(type, var) \
+    type var
+#define GVAL_IMPL_INIT(type, var, init) \
+    type var = init
 
 //----------------------------------------------------------------------------
 // dac_cast
@@ -131,6 +152,8 @@ inline Tgt dac_cast(Src src)
     // Perhaps we should more precisely restrict it's usage, but we get the precise
     // restrictions in DAC builds, so it wouldn't buy us much.
     return (Tgt)(src);
+#define SPTR_DECL(type, var) _SPTR_DECL(type*, PTR_##type, var)
+#define SPTR_IMPL(type, cls, var) _SPTR_IMPL(type*, PTR_##type, cls, var)
 }
 
 //----------------------------------------------------------------------------
@@ -192,6 +215,7 @@ typedef DPTR(IMAGE_NT_HEADERS)      PTR_IMAGE_NT_HEADERS;
 typedef DPTR(IMAGE_NT_HEADERS32)    PTR_IMAGE_NT_HEADERS32;
 typedef DPTR(IMAGE_NT_HEADERS64)    PTR_IMAGE_NT_HEADERS64;
 typedef DPTR(IMAGE_SECTION_HEADER)  PTR_IMAGE_SECTION_HEADER;
+typedef DPTR(IMAGE_EXPORT_DIRECTORY)  PTR_IMAGE_EXPORT_DIRECTORY;
 typedef DPTR(IMAGE_TLS_DIRECTORY)   PTR_IMAGE_TLS_DIRECTORY;
 
 //----------------------------------------------------------------------------
@@ -204,4 +228,22 @@ typedef TADDR PCODE;
 typedef DPTR(PCODE) PTR_PCODE;
 typedef DPTR(PTR_PCODE) PTR_PTR_PCODE;
 
+// TARGET_CONSISTENCY_CHECK represents a condition that should not fail unless the DAC target is corrupt.
+// This is in contrast to ASSERTs in DAC infrastructure code which shouldn't fail regardless of the memory
+// read from the target.  At the moment we treat these the same, but in the future we will want a mechanism
+// for disabling just the target consistency checks (eg. for tests that intentionally use corrupted targets).
+// @dbgtodo : Separating asserts and target consistency checks is tracked by DevDiv Bugs 31674
+#define TARGET_CONSISTENCY_CHECK(expr,msg) _ASSERTE_MSG(expr,msg)
+
+// For cross compilation, controlling type layout is important
+// We add a simple macro here which defines DAC_ALIGNAS to the C++11 alignas operator
+// This helps force the alignment of the next member
+// For most cross compilation cases the layout of types simply works
+// There are a few cases (where this macro is helpful) which are not consistent across platforms:
+// - Base class whose size is padded to its align size.  On Linux the gcc/clang
+//   layouts will reuse this padding in the derived class for the first member
+// - Class with an vtable pointer and an alignment greater than the pointer size.
+//   The Windows compilers will align the first member to the alignment size of the
+//   class.  Linux will align the first member to its natural alignment
+#define DAC_ALIGNAS(a) alignas(a)
 #endif // #ifndef __daccess_h__

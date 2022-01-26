@@ -11171,7 +11171,7 @@ DECLARE_API (ProcInfo)
         typedef BOOL (WINAPI *FntGetProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
         static FntGetProcessTimes pFntGetProcessTimes = (FntGetProcessTimes)-1;
         if (pFntGetProcessTimes == (FntGetProcessTimes)-1) {
-            HINSTANCE hstat = LoadLibrary ("Kernel32.dll");
+            HINSTANCE hstat = LoadLibraryA("kernel32.dll");
             if (hstat != 0)
             {
                 pFntGetProcessTimes = (FntGetProcessTimes)GetProcAddress (hstat, "GetProcessTimes");
@@ -11270,7 +11270,7 @@ DECLARE_API (ProcInfo)
 
         static FntNtQueryInformationProcess pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)-1;
         if (pFntNtQueryInformationProcess == (FntNtQueryInformationProcess)-1) {
-            HINSTANCE hstat = LoadLibrary ("ntdll.dll");
+            HINSTANCE hstat = LoadLibraryA("ntdll.dll");
             if (hstat != 0)
             {
                 pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)GetProcAddress (hstat, "NtQueryInformationProcess");

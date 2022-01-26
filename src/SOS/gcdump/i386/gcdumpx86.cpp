@@ -8,9 +8,6 @@
 #ifdef TARGET_X86
 /*****************************************************************************/
 
-#ifndef TARGET_UNIX
-#include "utilcode.h"           // For _ASSERTE()
-#endif //!TARGET_UNIX
 #include "gcdump.h"
 
 

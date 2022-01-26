@@ -23,7 +23,6 @@ endif(WIN32 AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
 
 if(CLR_CMAKE_HOST_UNIX)
     add_definitions(-DHOST_UNIX)
-    add_compile_options(-fPIC)
 else(CLR_CMAKE_HOST_UNIX)
     add_definitions(-DHOST_WINDOWS)
 endif(CLR_CMAKE_HOST_UNIX)

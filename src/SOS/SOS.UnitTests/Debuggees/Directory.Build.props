@@ -4,7 +4,6 @@
   <PropertyGroup>
     <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IsShippingAssembly>false</IsShippingAssembly>
     <Optimize>false</Optimize>
     <BuildTargetFrameworks>netcoreapp3.1;net5.0;net6.0</BuildTargetFrameworks>
   </PropertyGroup>

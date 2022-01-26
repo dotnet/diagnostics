@@ -3,7 +3,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 if(CLR_CMAKE_HOST_WIN32)
     include_directories(${ROOT_DIR}/src/inc/llvm)
     #use static crt
-    add_definitions(-MT)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 endif(CLR_CMAKE_HOST_WIN32)
 
 add_definitions(-DPAL_STDCPP_COMPAT)
@@ -21,6 +21,5 @@ if(NOT DEFINED CLR_CMAKE_HOST_OSX)
         elfreader.cpp
     )
 endif(NOT DEFINED CLR_CMAKE_HOST_OSX)
-
 
 add_library(dbgutil STATIC ${DBGUTIL_SOURCES})

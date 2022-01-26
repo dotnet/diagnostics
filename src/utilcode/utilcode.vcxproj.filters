@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="clrhost_nodependencies.cpp">
+    </ClCompile>
+    <ClCompile Include="ex.cpp">
+    </ClCompile>
+    <ClCompile Include="sbuffer.cpp">
+    </ClCompile>
+    <ClCompile Include="sstring_com.cpp">
+    </ClCompile>
+    <ClCompile Include="fstring.cpp">
+    </ClCompile>
+    <ClCompile Include="namespaceutil.cpp">
+    </ClCompile>
+    <ClCompile Include="check.cpp">
+    </ClCompile>
+    <ClCompile Include="sstring.cpp">
+    </ClCompile>
+    <ClCompile Include="safewrap.cpp">
+    </ClCompile>
+    <ClCompile Include="debug.cpp">
+    </ClCompile>
+    <ClCompile Include="pedecoder.cpp">
+    </ClCompile>
+    <ClCompile Include="longfilepathwrappers.cpp">
+    </ClCompile>
+    <ClCompile Include="dlwrap.cpp">
+    </ClCompile>
+    <ClCompile Include="securitywrapper.cpp">
+    </ClCompile>
+    <ClCompile Include="securityutil.cpp">
+    </ClCompile>
+    <ClCompile Include="hostimpl.cpp">
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt" />
+  </ItemGroup>
+</Project>

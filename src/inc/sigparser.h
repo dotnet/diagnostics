@@ -9,16 +9,22 @@
 #ifndef _H_SIGPARSER
 #define _H_SIGPARSER
 
+#ifndef LIMITED_METHOD_DAC_CONTRACT 
 #define LIMITED_METHOD_DAC_CONTRACT ((void)0)
+#endif
+#ifndef LIMITED_METHOD_CONTRACT 
 #define LIMITED_METHOD_CONTRACT ((void)0)
+#endif
+#ifndef WRAPPER_NO_CONTRACT 
 #define WRAPPER_NO_CONTRACT ((void)0)
+#endif
+#ifndef SUPPORTS_DAC 
 #define SUPPORTS_DAC ((void)0)
-
+#endif
 #ifndef _ASSERT
 #define _ASSERT _ASSERTE
 #endif
 
-#include "utilcode.h"
 #include "corhdr.h"
 
 #include <minipal/utils.h>
