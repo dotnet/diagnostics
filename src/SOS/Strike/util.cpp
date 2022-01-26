@@ -373,7 +373,7 @@ static DWORD_PTR ResolveByRefField(DacpFieldDescData* pFD, DWORD_PTR dwAddr, CLR
     if (dwAddr == 0)
         return 0;
 
-    ToRelease<IMetaDataImport> pImport = MDImportForModule(pFD->ModuleOfType);
+    ToRelease<IMetaDataImport> pImport = MDImportForModule(TO_TADDR(pFD->ModuleOfType));
 
     PCCOR_SIGNATURE   pSignatureBlob = NULL;
     ULONG             sigBlobLength = 0;
