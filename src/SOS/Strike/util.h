@@ -577,28 +577,29 @@ namespace Output
     * of addr.                                                             *
     *                                                                      *
     * Params:                                                              *
+    *   disp - the display address of the object                           *
     *   mt - the method table of the ValueClass                            *
     *   addr - the address of the ValueClass                               *
     *   type - the format type to use to output this object                *
     *   fill - whether or not to pad the hex value with zeros              *
     *                                                                      *
     \**********************************************************************/
-    CachedString BuildVCValue(CLRDATA_ADDRESS mt, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
-
+    CachedString BuildVCValue(CLRDATA_ADDRESS disp, CLRDATA_ADDRESS mt, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
 
     /**********************************************************************\
-    * This function builds a DML string for an object.  If DML is enabled, *
+    * This function builds a DML string with a display name.  If DML is enabled,  *
     * this function returns a DML string based on the format type.         *
     * Otherwise this returns a string containing only the hex value of     *
     * addr.                                                                *
     *                                                                      *
     * Params:                                                              *
+    *   disp - the display address of the object                           *
     *   addr - the address of the object                                   *
     *   type - the format type to use to output this object                *
     *   fill - whether or not to pad the hex value with zeros              *
     *                                                                      *
     \**********************************************************************/
-    CachedString BuildHexValue(CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
+    CachedString BuildHexValue(CLRDATA_ADDRESS disp, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
 
     /**********************************************************************\
     * This function builds a DML string for an object.  If DML is enabled, *
@@ -671,25 +672,27 @@ inline void DecrementIndent()  { if (Output::g_Indent > 0) Output::g_Indent--; }
 inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 
 // DML Generation Methods
-#define DMLListNearObj(addr) Output::BuildHexValue(addr, Output::DML_ListNearObj).GetPtr()
-#define DMLDumpHeapMT(addr) Output::BuildHexValue(addr, Output::DML_DumpHeapMT).GetPtr()
-#define DMLMethodTable(addr) Output::BuildHexValue(addr, Output::DML_MethodTable).GetPtr()
-#define DMLMethodDesc(addr) Output::BuildHexValue(addr, Output::DML_MethodDesc).GetPtr()
-#define DMLClass(addr) Output::BuildHexValue(addr, Output::DML_EEClass).GetPtr()
-#define DMLModule(addr) Output::BuildHexValue(addr, Output::DML_Module).GetPtr()
-#define DMLIP(ip) Output::BuildHexValue(ip, Output::DML_IP).GetPtr()
-#define DMLObject(addr) Output::BuildHexValue(addr, Output::DML_Object).GetPtr()
-#define DMLDomain(addr) Output::BuildHexValue(addr, Output::DML_Domain).GetPtr()
-#define DMLAssembly(addr) Output::BuildHexValue(addr, Output::DML_Assembly).GetPtr()
-#define DMLThreadID(id) Output::BuildHexValue(id, Output::DML_ThreadID, false).GetPtr()
-#define DMLValueClass(mt, addr) Output::BuildVCValue(mt, addr, Output::DML_ValueClass).GetPtr()
-#define DMLRCWrapper(addr) Output::BuildHexValue(addr, Output::DML_RCWrapper).GetPtr()
-#define DMLCCWrapper(addr) Output::BuildHexValue(addr, Output::DML_CCWrapper).GetPtr()
+#define DMLListNearObj(addr) Output::BuildHexValue(addr, addr, Output::DML_ListNearObj).GetPtr()
+#define DMLDumpHeapMT(addr) Output::BuildHexValue(addr, addr, Output::DML_DumpHeapMT).GetPtr()
+#define DMLMethodTable(addr) Output::BuildHexValue(addr, addr, Output::DML_MethodTable).GetPtr()
+#define DMLMethodDesc(addr) Output::BuildHexValue(addr, addr, Output::DML_MethodDesc).GetPtr()
+#define DMLClass(addr) Output::BuildHexValue(addr, addr, Output::DML_EEClass).GetPtr()
+#define DMLModule(addr) Output::BuildHexValue(addr, addr, Output::DML_Module).GetPtr()
+#define DMLIP(ip) Output::BuildHexValue(ip, ip, Output::DML_IP).GetPtr()
+#define DMLObject(addr) Output::BuildHexValue(addr, addr, Output::DML_Object).GetPtr()
+#define DMLByRefObject(byref, addr) Output::BuildHexValue(byref, addr, Output::DML_Object).GetPtr()
+#define DMLDomain(addr) Output::BuildHexValue(addr, addr, Output::DML_Domain).GetPtr()
+#define DMLAssembly(addr) Output::BuildHexValue(addr, addr, Output::DML_Assembly).GetPtr()
+#define DMLThreadID(id) Output::BuildHexValue(id, id, Output::DML_ThreadID, false).GetPtr()
+#define DMLValueClass(mt, addr) Output::BuildVCValue(addr, mt, addr, Output::DML_ValueClass).GetPtr()
+#define DMLByRefValueClass(byref, mt, addr) Output::BuildVCValue(byref, mt, addr, Output::DML_ValueClass).GetPtr()
+#define DMLRCWrapper(addr) Output::BuildHexValue(addr, addr, Output::DML_RCWrapper).GetPtr()
+#define DMLCCWrapper(addr) Output::BuildHexValue(addr, addr, Output::DML_CCWrapper).GetPtr()
 #define DMLManagedVar(expansionName,frame,simpleName) Output::BuildManagedVarValue(expansionName, frame, simpleName, Output::DML_ManagedVar).GetPtr()
-#define DMLAsync(addr) Output::BuildHexValue(addr, Output::DML_Async).GetPtr()
-#define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
-#define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperRCW).GetPtr()
-#define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperCCW).GetPtr()
+#define DMLAsync(addr) Output::BuildHexValue(addr, addr, Output::DML_Async).GetPtr()
+#define DMLIL(addr) Output::BuildHexValue(addr, addr, Output::DML_IL).GetPtr()
+#define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, addr, Output::DML_ComWrapperRCW).GetPtr()
+#define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, addr, Output::DML_ComWrapperCCW).GetPtr()
 #define DMLTaggedMemory(addr, len) Output::BuildHexValueWithLength(addr, len, Output::DML_TaggedMemory).GetPtr()
 
 bool IsDMLEnabled();
