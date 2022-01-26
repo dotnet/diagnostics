@@ -21,7 +21,10 @@
 #define ARM_MAX_BREAKPOINTS     8
 #define ARM_MAX_WATCHPOINTS     1
 
+// This is already set in winnt.h when building for Win-x86 or Win-ARM64
+#ifndef CONTEXT_UNWOUND_TO_CALL
 #define CONTEXT_UNWOUND_TO_CALL 0x20000000
+#endif
 
 typedef struct _NEON128 {
     ULONGLONG Low;
@@ -82,7 +85,7 @@ typedef struct DECLSPEC_ALIGN(8) _T_CONTEXT {
     DWORD Bcr[ARM_MAX_BREAKPOINTS];
     DWORD Wvr[ARM_MAX_WATCHPOINTS];
     DWORD Wcr[ARM_MAX_WATCHPOINTS];
-    
+
     DWORD Padding2[2];
 
 } T_CONTEXT, *PT_CONTEXT;
@@ -370,7 +373,7 @@ typedef struct _T_KNONVOLATILE_CONTEXT_POINTERS {
 #define T_RUNTIME_FUNCTION RUNTIME_FUNCTION
 #define PT_RUNTIME_FUNCTION PRUNTIME_FUNCTION
 
-#endif 
+#endif
 
 
 #ifdef CROSSGEN_COMPILE
