@@ -1534,7 +1534,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         CLRDATA_ADDRESS objAddr = TO_CDADDR(taObj);
         CLRDATA_ADDRESS rcwNative;
         unsigned int needed;
-       if (SUCCEEDED(sos10->GetObjectComWrappersData(objAddr, &rcwNative, 0, NULL, &needed)) 
+       if (SUCCEEDED(sos10->GetObjectComWrappersData(objAddr, &rcwNative, 0, NULL, &needed))
             && (needed > 0 || rcwNative != 0))
         {
             ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[needed];
@@ -1640,7 +1640,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
             moveN(num, taObj + sizeof(DWORD_PTR));
 
             if (IsDMLEnabled())
-                DMLOut("<exec cmd=\"%s %x L%x\">Content</exec>:     ", (wide) ? "dw" : "db", pos, num);
+                DMLOut("<exec cmd=\"%s %" POINTERSIZE_TYPE "x L%x\">Content</exec>:     ", (wide) ? "dw" : "db", pos, num);
             else
                 ExtOut("Content:     ");
             CharArrayContent(pos, (ULONG)(num <= 128 ? num : 128), wide);
@@ -3307,7 +3307,7 @@ DECLARE_API(DumpCCW)
         ExtOut("Missing CCW address\n");
         return Status;
     }
-    
+
 
     DWORD_PTR p_CCW = GetExpression(strObject.data);
     if (p_CCW == 0)
@@ -5628,7 +5628,7 @@ DECLARE_API(GCHeapStat)
                     (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%",
                     pohUnrootedUsage, "%");
             }
-            
+
             ExtOut("\nCommitted space:");
             ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
                 hpUsage.genUsage[0].committed, hpUsage.genUsage[1].committed,
@@ -16603,15 +16603,15 @@ DECLARE_API(SetHostRuntime)
             goto exit;
         }
     }
-    if (bClear) 
+    if (bClear)
     {
         SetHostRuntimeDirectory(nullptr);
     }
-    else if (bNone) 
+    else if (bNone)
     {
         SetHostRuntimeFlavor(HostRuntimeFlavor::None);
     }
-    else if (bNetCore) 
+    else if (bNetCore)
     {
         SetHostRuntimeFlavor(HostRuntimeFlavor::NetCore);
     }
@@ -16619,9 +16619,9 @@ DECLARE_API(SetHostRuntime)
     {
         SetHostRuntimeFlavor(HostRuntimeFlavor::NetFx);
     }
-    if (narg > 0) 
+    if (narg > 0)
     {
-        if (!SetHostRuntimeDirectory(hostRuntimeDirectory.data)) 
+        if (!SetHostRuntimeDirectory(hostRuntimeDirectory.data))
         {
             ExtErr("Invalid host runtime path %s\n", hostRuntimeDirectory.data);
             return E_FAIL;
@@ -16770,7 +16770,7 @@ DECLARE_API(SetSymbolServer)
 
     return Status;
 }
- 
+
 //
 // Sets the runtime module path
 //
@@ -16900,7 +16900,7 @@ HRESULT ExecuteCommand(PCSTR command, PCSTR args)
 }
 
 //
-// Dumps the managed assemblies 
+// Dumps the managed assemblies
 //
 DECLARE_API(clrmodules)
 {
