@@ -17,6 +17,7 @@ using Process = System.Diagnostics.Process;
 using System.IO;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Tools.Trace.CommandLine;
 using System.CommandLine.Binding;
 using Microsoft.Internal.Common.Utils;
 namespace Microsoft.Internal.Common.Commands
@@ -124,6 +125,7 @@ namespace Microsoft.Internal.Common.Commands
                         continue;
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
                     try
                     {
                         String cmdLineArgs = GetArgs(process);
@@ -186,9 +188,16 @@ namespace Microsoft.Internal.Common.Commands
 >>>>>>> f8c7b095... added ability to view the command line arguemnts to dotnet-count tool.
 =======
                     if(verbose)
+=======
+                    try
+>>>>>>> 43d4d24a... cleaning up the addition of commandline arguments
                     {
-                        try
+                        if(verbose)
                         {
+                            int iDLength = 10;
+                            int nameLength = 10;
+                            int fileLength = 25;
+                            int cmdLength = 55;
                             String cmdLineArgs = GetArgs(process);
                             cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? "" : cmdLineArgs;
                             string fileName = process.MainModule?.FileName ?? "";
@@ -207,28 +216,34 @@ namespace Microsoft.Internal.Common.Commands
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"{str}");
                                     continue;
                                 }
                                 string[] filePath = str.Split(splitChar);
                                 fileName = filePath.LastOrDefault();
                                 break;
                             }
-                            string toAppend = $"{process.Id, 10} {process.ProcessName, -10} {fileName, -10} {cmdLineArgs, -10}\n";
-                            if (toAppend.Length > 140)
-                            {
-                                toAppend = $"{process.Id, 10} {fileName, -10} {cmdLineArgs, -10}\n";
-                            }
-                            if (toAppend.Length > 120)
-                            {
-                                toAppend = $"{process.Id, 10} {cmdLineArgs, -10}\n";
-                            }
+                            string processID = MakeFixedWidth(process.Id.ToString(), iDLength);
+                            string processName = MakeFixedWidth(process.ProcessName, nameLength);
+                            fileName = MakeFixedWidth(fileName, fileLength);
+                            cmdLineArgs = MakeFixedWidth(cmdLineArgs, cmdLength, true);
+                            string toAppend = $"{processID, 10} {processName, -10} {fileName, -25} {cmdLineArgs, -55}\n";
                             sb.Append(toAppend);
-
                         }
-                    catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
+                        else
                         {
-                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} [Elevated process - cannot determine path] [Elevated process - cannot determine commandline arguments]\n");
+                            string fileName = process.MainModule?.FileName ?? "[Elevated process - cannot determine path]";
+                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {fileName}\n");
+                        }
+                    }
+                    catch (Exception ex) 
+                    {
+                        if (ex is Win32Exception || ex is InvalidOperationException)
+                        {
+                            sb.Append($"{process.Id, 6} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[PrintProcessStatus] {ex.ToString()}");
                         }
 >>>>>>> 9f2e1d89... checking on Windows
                     }
@@ -289,6 +304,7 @@ namespace Microsoft.Internal.Common.Commands
                         string[] commandLineSplit = commandLine.Split('\0');
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                         if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
 =======
                         if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
@@ -296,6 +312,9 @@ namespace Microsoft.Internal.Common.Commands
 =======
                         if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
 >>>>>>> 9f2e1d89... checking on Windows
+=======
+                        if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
+>>>>>>> 43d4d24a... cleaning up the addition of commandline arguments
                         {
                             return String.Join(" ", commandLineSplit.Skip(1));
                         }
