@@ -705,12 +705,12 @@ void Runtime::DisplayStatus()
 \**********************************************************************/
 void Runtime::LoadRuntimeModules()
 {
-    HRESULT hr = InitializeSymbolService();
-    if (SUCCEEDED(hr))
+    ISymbolService* symbolService = GetSymbolService();
+    if (symbolService != nullptr)
     {
         if (m_runtimeInfo != nullptr)
         {
-            GetSymbolService()->LoadNativeSymbolsFromIndex(
+            symbolService->LoadNativeSymbolsFromIndex(
                 SymbolFileCallback,
                 this,
                 GetRuntimeConfiguration(),
@@ -721,7 +721,7 @@ void Runtime::LoadRuntimeModules()
         }
         else
         {
-            GetSymbolService()->LoadNativeSymbols(
+            symbolService->LoadNativeSymbols(
                 SymbolFileCallback,
                 this,
                 GetRuntimeConfiguration(),

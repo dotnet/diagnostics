@@ -52,6 +52,7 @@ namespace SOS.Hosting
             ModuleService = services.GetService<IModuleService>();
             ThreadService = services.GetService<IThreadService>();
             MemoryService = services.GetService<IMemoryService>();
+            TargetWrapper.ServiceWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(services.GetService<ISymbolService>(), MemoryService));
             _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
             _sosLibrary = services.GetService<SOSLibrary>();
 

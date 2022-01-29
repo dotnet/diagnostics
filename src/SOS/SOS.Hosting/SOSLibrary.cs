@@ -75,7 +75,6 @@ namespace SOS.Hosting
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
 
             _hostWrapper = new HostWrapper(host, () => GetSOSHost()?.TargetWrapper);
-            _hostWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(host, () => GetSOSHost()?.MemoryService));
         }
 
         /// <summary>
