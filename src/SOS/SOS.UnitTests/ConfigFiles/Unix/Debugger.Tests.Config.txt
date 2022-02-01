@@ -28,6 +28,7 @@
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
@@ -69,6 +70,10 @@
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
+    <Option Condition="'$(RuntimeVersion60)' != ''">
+      <BuildProjectFramework>net6.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+    </Option>
     <Option Condition="'$(RuntimeVersion50)' != ''">
       <BuildProjectFramework>net5.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
@@ -98,6 +103,10 @@
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
         </Option>
+        <Option Condition="'$(RuntimeVersion60)' != ''">
+          <BuildProjectFramework>net6.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+        </Option>
         <Option Condition="'$(RuntimeVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
@@ -117,6 +126,11 @@
         <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(AspNetCoreVersion60)' != ''">
+          <BuildProjectFramework>net6.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+          <FrameworkVersion>$(AspNetCoreVersion60)</FrameworkVersion>
         </Option>
         <Option Condition="'$(AspNetCoreVersion50)' != ''">
           <BuildProjectFramework>net5.0</BuildProjectFramework>

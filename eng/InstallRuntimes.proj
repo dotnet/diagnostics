@@ -150,6 +150,9 @@
 
       <RuntimeVersion50>$(MicrosoftNETCoreApp50Version)</RuntimeVersion50>
       <AspNetCoreVersion50>$(MicrosoftAspNetCoreApp50Version)</AspNetCoreVersion50>
+
+      <RuntimeVersion60>$(MicrosoftNETCoreApp60Version)</RuntimeVersion60>
+      <AspNetCoreVersion60>$(MicrosoftAspNetCoreApp60Version)</AspNetCoreVersion60>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -170,6 +173,9 @@
 
   <RuntimeVersion50>$(RuntimeVersion50)</RuntimeVersion50>
   <AspNetCoreVersion50>$(AspNetCoreVersion50)</AspNetCoreVersion50>
+
+  <RuntimeVersion60>$(RuntimeVersion60)</RuntimeVersion60>
+  <AspNetCoreVersion60>$(AspNetCoreVersion60)</AspNetCoreVersion60>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
   <AspNetCoreVersionLatest>$(AspNetCoreVersionLatest)</AspNetCoreVersionLatest>
