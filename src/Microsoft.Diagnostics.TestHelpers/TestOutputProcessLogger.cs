@@ -12,9 +12,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestOutputProcessLogger : IProcessLogger
     {
-        string _timeFormat = "mm\\:ss\\.fff";
-        ITestOutputHelper _output;
-        StringBuilder[] _lineBuffers;
+        private static readonly string _timeFormat = "mm\\:ss\\.fff";
+        private readonly ITestOutputHelper _output;
+        private readonly StringBuilder[] _lineBuffers;
 
         public TestOutputProcessLogger(ITestOutputHelper output)
         {
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 TimeSpan offset = runner.StartTime - DateTime.Now;
                 _output.WriteLine("}");
-                _output.WriteLine("Exit code: " + runner.ExitCode + " ( " + offset.ToString(_timeFormat) + " elapsed)");
+                _output.WriteLine($"Process {runner.ProcessId} exited {runner.ExitCode} ({offset.ToString(_timeFormat)} elapsed)");
                 _output.WriteLine("");
             }
         }
@@ -80,15 +80,19 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 TimeSpan offset = runner.StartTime - DateTime.Now;
                 string reasonText = "";
-                if (reason == KillReason.TimedOut)
+                switch (reason)
                 {
-                    reasonText = "Process timed out";
+                    case KillReason.TimedOut:
+                        reasonText = "Process timed out";
+                        break;
+                    case KillReason.Stopped:
+                        reasonText = "Process was stopped";
+                        break;
+                    case KillReason.Unknown:
+                        reasonText = "Kill() was called";
+                        break;
                 }
-                else if (reason == KillReason.Unknown)
-                {
-                    reasonText = "Kill() was called";
-                }
-                _output.WriteLine("    Killing process: " + offset.ToString(_timeFormat) + ": " + reasonText);
+                _output.WriteLine($"Killing process {runner.ProcessId}: {offset.ToString(_timeFormat)} - {reasonText}");
             }
         }
 

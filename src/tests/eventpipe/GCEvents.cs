@@ -10,6 +10,8 @@ using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace EventPipe.UnitTests.GCEventsValidation
 {
@@ -188,8 +190,15 @@ namespace EventPipe.UnitTests.GCEventsValidation
                 Action _eventGeneratingAction = () => 
                 {
                     List<string> testList = new List<string>();
-                    for(int i = 0; i < 100000000; i ++)
+                    for (int i = 0; i < 100_000_000; i ++)
                     {
+                        if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
+                        {
+                            if (i % 1_000_000 == 0)
+                            {
+                                GC.Collect();
+                            }
+                        }
                         string t = "Test string!";
                         testList.Add(t);
                     }

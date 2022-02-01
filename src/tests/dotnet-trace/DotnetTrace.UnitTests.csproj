@@ -1,12 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../Tools/dotnet-trace/dotnet-trace.csproj" />
-    <ProjectReference Include="..\ExitCodeTracee\ExitCodeTracee.csproj" />
+    <ProjectReference Include="..\..\Tools\dotnet-trace\dotnet-trace.csproj" />
+    <ProjectReference Include="..\CommonTestRunner\CommonTestRunner.csproj" />
     <ProjectReference Include="..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
   </ItemGroup>
 

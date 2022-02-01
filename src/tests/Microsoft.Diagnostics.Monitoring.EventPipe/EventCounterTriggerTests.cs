@@ -5,8 +5,9 @@
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter;
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.NETCore.Client.UnitTests;
+using Microsoft.Diagnostics.TestHelpers;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -15,12 +16,15 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
+using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class EventCounterTriggerTests
     {
         private readonly ITestOutputHelper _output;
+
+        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
 
         public EventCounterTriggerTests(ITestOutputHelper output)
         {
@@ -315,12 +319,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Tests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
-        [SkippableFact]
-        public async Task EventCounterTriggerWithEventPipePipelineTest()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task EventCounterTriggerWithEventPipePipelineTest(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && config.RuntimeFrameworkVersionMajor < 5)
             {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2568");
+                throw new SkipTestException("Unreliable on Linux .NET 3.1");
             }
             EventCounterTriggerSettings settings = new()
             {
@@ -331,11 +335,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 CounterIntervalSeconds = 1
             };
 
-            await using (var testExecution = StartTraceeProcess("TriggerRemoteTest"))
+            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "TriggerRemoteTest SpinWait10", _output, testProcessTimeout: 2 * 60 * 1000))
             {
-                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
-
-                DiagnosticsClient client = new(testExecution.TestRunner.Pid);
+                DiagnosticsClient client = new(testRunner.Pid);
 
                 TaskCompletionSource<object> waitSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -353,10 +355,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                         waitSource.TrySetResult(null);
                     });
 
-                await PipelineTestUtilities.ExecutePipelineWithDebugee(
-                    _output,
+                await PipelineTestUtilities.ExecutePipelineWithTracee(
                     pipeline,
-                    testExecution,
+                    testRunner,
                     waitSource);
 
                 Assert.True(waitSource.Task.IsCompletedSuccessfully);
@@ -402,11 +403,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     Assert.Equal(data.Result.Value, actualResult);
                 }
             }
-        }
-
-        private RemoteTestExecution StartTraceeProcess(string loggerCategory)
-        {
-            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory + " SpinWait10", _output);
         }
 
         private sealed class CpuData

@@ -781,6 +781,18 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { return GetValue("LinkerPackageVersion"); }
         }
 
+        /// <summary>
+        /// The root of the dotnet install to use to run the test (i.e. $(RepoRootDir)/.dotnet-test)
+        /// </summary>
+        public string DotNetRoot
+        {
+            get
+            {
+                string dotnetRoot = GetValue("DotNetRoot");
+                return MakeCanonicalPath(dotnetRoot);
+            }
+        }
+
         #region Runtime Features properties
 
         /// <summary>

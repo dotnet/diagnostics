@@ -4,11 +4,10 @@
 
 using System.IO;
 using System.Runtime.InteropServices;
-using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostics.NETCore.Client
+namespace Microsoft.Diagnostics.CommonTestRunner
 {
-    internal static class DiagnosticPortsHelper
+    public static class DiagnosticPortsHelper
     {
         private const string DiagnosticPortsEnvName = "DOTNET_DiagnosticPorts";
         private const string DefaultDiagnosticPortSuspendEnvName = "DOTNET_DefaultDiagnosticPortSuspend";
