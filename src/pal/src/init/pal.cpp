@@ -1,10 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
-
-
 
 Module Name:
 
@@ -14,25 +11,24 @@ Abstract:
 
     Implementation of PAL exported functions not part of the Win32 API.
 
-
-
 --*/
 
 #include "pal/dbgmsg.h"
 SET_DEFAULT_DEBUG_CHANNEL(PAL); // some headers have code with asserts, so do this first
 
 #include "pal/thread.hpp"
+#include "pal/cs.hpp"
 #include "pal/file.hpp"
 #include "pal/map.hpp"
 #include "../objmgr/shmobjectmanager.hpp"
 #include "pal/palinternal.h"
+#include "pal/sharedmemory.h"
 #include "pal/process.h"
 #include "pal/module.h"
 #include "pal/virtual.h"
 #include "pal/misc.h"
 #include "pal/environ.h"
 #include "pal/utils.h"
-#include "pal/locale.h"
 #include "pal/init.h"
 #include "pal/stackstring.hpp"
 
@@ -68,6 +64,19 @@ int CacheLineSize;
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <kvm.h>
+#elif defined(__sun)
+#ifndef _KERNEL
+#define _KERNEL
+#define UNDEF_KERNEL
+#endif
+#include <sys/procfs.h>
+#ifdef UNDEF_KERNEL
+#undef _KERNEL
+#endif
+#endif
+
+#ifdef __FreeBSD__
+#include <sys/user.h>
 #endif
 
 #include <algorithm>
@@ -87,6 +96,9 @@ static pthread_mutex_t init_critsec_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // The default minimum stack size
 SIZE_T g_defaultStackSize = 0;
+
+// The default value of parameter, whether to mmap images at default base address or not
+BOOL g_useDefaultBaseAddr = FALSE;
 
 /* critical section to protect access to init_count. This is allocated on the
    very first PAL_Initialize call, and is freed afterward. */
@@ -147,15 +159,15 @@ Function:
 Abstract:
   This fixes a problem on MUSL where the initial stack size reported by the
   pthread_attr_getstack is about 128kB, but this limit is not fixed and
-  the stack can grow dynamically. The problem is that it makes the 
-  functions ReflectionInvocation::[Try]EnsureSufficientExecutionStack 
+  the stack can grow dynamically. The problem is that it makes the
+  functions ReflectionInvocation::[Try]EnsureSufficientExecutionStack
   to fail for real life scenarios like e.g. compilation of corefx.
   Since there is no real fixed limit for the stack, the code below
   ensures moving the stack limit to a value that makes reasonable
   real life scenarios work.
 
 --*/
-__attribute__((noinline,optnone))
+__attribute__((noinline,NOOPT_ATTRIBUTE))
 void
 EnsureStackSize(SIZE_T stackSize)
 {
@@ -169,7 +181,7 @@ Function:
   InitializeDefaultStackSize
 
 Abstract:
-  Initializes the default stack size. 
+  Initializes the default stack size.
 
 --*/
 void
@@ -179,7 +191,7 @@ InitializeDefaultStackSize()
     if (defaultStackSizeStr != NULL)
     {
         errno = 0;
-        // Like all numeric values specific by the COMPlus_xxx variables, it is a 
+        // Like all numeric values specific by the COMPlus_xxx variables, it is a
         // hexadecimal string without any prefix.
         long int size = strtol(defaultStackSizeStr, NULL, 16);
 
@@ -220,8 +232,8 @@ Initialize(
     PAL_ERROR palError = ERROR_GEN_FAILURE;
     CPalThread *pThread = NULL;
     CSharedMemoryObjectManager *pshmom = NULL;
-    bool fFirstTimeInit = false;
     int retval = -1;
+    bool fFirstTimeInit = false;
 
     /* the first ENTRY within the first call to PAL_Initialize is a special
        case, since debug channels are not initialized yet. So in that case the
@@ -243,7 +255,7 @@ Initialize(
 
     if(NULL == init_critsec)
     {
-        pthread_mutex_lock(&init_critsec_mutex); // prevents race condition of two threads 
+        pthread_mutex_lock(&init_critsec_mutex); // prevents race condition of two threads
                                                  // initializing the critical section.
         if(NULL == init_critsec)
         {
@@ -255,7 +267,7 @@ Initialize(
             if(NULL != InterlockedCompareExchangePointer(&init_critsec, &temp_critsec, NULL))
             {
                 // Another thread got in before us! shouldn't happen, if the PAL
-                // isn't initialized there shouldn't be any other threads 
+                // isn't initialized there shouldn't be any other threads
                 WARN("Another thread initialized the critical section\n");
                 InternalDeleteCriticalSection(&temp_critsec);
             }
@@ -271,6 +283,20 @@ Initialize(
         gPID = getpid();
         gSID = getsid(gPID);
 
+        // Initialize the thread local storage
+        if (FALSE == TLSInitialize())
+        {
+            palError = ERROR_PALINIT_TLS;
+            goto done;
+        }
+
+        // Initialize debug channel settings before anything else.
+        if (FALSE == DBG_init_channels())
+        {
+            palError = ERROR_PALINIT_DBG_CHANNELS;
+            goto CLEANUP0a;
+        }
+
         fFirstTimeInit = true;
 
         InitializeDefaultStackSize();
@@ -282,25 +308,14 @@ Initialize(
         }
 #endif // ENSURE_PRIMARY_STACK_SIZE
 
-        // Initialize the TLS lookaside cache
-        if (FALSE == TLSInitialize())
-        {
-            goto done;
-        }
 
         // Initialize the environment.
         if (FALSE == EnvironInitialize())
         {
+            palError = ERROR_PALINIT_ENV;
             goto CLEANUP0;
         }
 
-        // Initialize debug channel settings before anything else.
-        // This depends on the environment, so it must come after
-        // EnvironInitialize.
-        if (FALSE == DBG_init_channels())
-        {
-            goto CLEANUP0;
-        }
 
         if (!INIT_IncreaseDescriptorLimit())
         {
@@ -332,8 +347,8 @@ Initialize(
         if (FALSE == LOADInitializeModules())
         {
             ERROR("Unable to initialize module manager\n");
-            palError = ERROR_INTERNAL_ERROR;
-            goto CLEANUP2;
+            palError = ERROR_PALINIT_MODULE_MANAGER;
+            goto CLEANUP1b;
         }
 
         //
@@ -345,7 +360,7 @@ Initialize(
         {
             ERROR("Unable to allocate new object manager\n");
             palError = ERROR_OUTOFMEMORY;
-            goto CLEANUP2;
+            goto CLEANUP1b;
         }
 
         palError = pshmom->Initialize();
@@ -353,7 +368,7 @@ Initialize(
         {
             ERROR("object manager initialization failed!\n");
             InternalDelete(pshmom);
-            goto CLEANUP2;
+            goto CLEANUP1b;
         }
 
         g_pObjectManager = pshmom;
@@ -373,7 +388,8 @@ Initialize(
         if (FALSE == MAPInitialize())
         {
             ERROR("Unable to initialize file mapping support\n");
-            goto CLEANUP2;
+            palError = ERROR_PALINIT_MAP;
+            goto CLEANUP6;
         }
 
         /* Initialize the Virtual* functions. */
@@ -381,6 +397,7 @@ Initialize(
         if (FALSE == VIRTUALInitialize(initializeExecutableMemoryAllocator))
         {
             ERROR("Unable to initialize virtual memory support\n");
+            palError = ERROR_PALINIT_VIRTUAL;
             goto CLEANUP10;
         }
 
@@ -390,6 +407,7 @@ Initialize(
             if (!FILEInitStdHandles())
             {
                 ERROR("Unable to initialize standard file handles\n");
+                palError = ERROR_PALINIT_STD_HANDLES;
                 goto CLEANUP14;
             }
         }
@@ -397,11 +415,12 @@ Initialize(
         if (FALSE == CRTInitStdStreams())
         {
             ERROR("Unable to initialize CRT standard streams\n");
+            palError = ERROR_PALINIT_STD_STREAMS;
             goto CLEANUP15;
         }
 
         TRACE("First-time PAL initialization complete.\n");
-        init_count++;        
+        init_count++;
 
         /* Set LastError to a non-good value - functions within the
            PAL startup may set lasterror to a nonzero value. */
@@ -426,14 +445,17 @@ CLEANUP14:
     VIRTUALCleanup();
 CLEANUP10:
     MAPCleanup();
+CLEANUP6:
 CLEANUP2:
+CLEANUP1b:
     SHMCleanup();
 CLEANUP0:
+CLEANUP0a:
     TLSCleanup();
     ERROR("PAL_Initialize failed\n");
     SetLastError(palError);
 done:
-#ifdef PAL_PERF 
+#ifdef PAL_PERF
     if( retval == 0)
     {
          PERFEnableProcessProfile();
@@ -500,14 +522,18 @@ PAL_IsDebuggerPresent()
     close(status_fd);
 
     return debugger_present;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
     struct kinfo_proc info = {};
     size_t size = sizeof(info);
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
     int ret = sysctl(mib, sizeof(mib)/sizeof(*mib), &info, &size, NULL, 0);
 
     if (ret == 0)
+#if defined(__APPLE__)
         return ((info.kp_proc.p_flag & P_TRACED) != 0);
+#else // __FreeBSD__
+        return ((info.ki_flag & P_TRACED) != 0);
+#endif
 
     return FALSE;
 #elif defined(__NetBSD__)
@@ -535,6 +561,25 @@ PAL_IsDebuggerPresent()
         return TRUE;
     else
         return FALSE;
+#elif defined(__sun)
+    int readResult;
+    char statusFilename[64];
+    snprintf(statusFilename, sizeof(statusFilename), "/proc/%d/status", getpid());
+    int fd = open(statusFilename, O_RDONLY);
+    if (fd == -1)
+    {
+        return FALSE;
+    }
+
+    pstatus_t status;
+    do
+    {
+        readResult = read(fd, &status, sizeof(status));
+    }
+    while ((readResult == -1) && (errno == EINTR));
+
+    close(fd);
+    return status.pr_flttrace.word[0] != 0;
 #else
     return FALSE;
 #endif
@@ -555,7 +600,7 @@ BOOL PALIsThreadDataInitialized()
 Function:
   PALInitLock
 
-Take the initializaiton critical section (init_critsec). necessary to serialize 
+Take the initializaiton critical section (init_critsec). necessary to serialize
 TerminateProcess along with PAL_Terminate and PAL_Initialize
 
 (no parameters)
@@ -570,10 +615,10 @@ BOOL PALInitLock(void)
     {
         return FALSE;
     }
-    
-    CPalThread * pThread = 
+
+    CPalThread * pThread =
         (PALIsThreadDataInitialized() ? InternalGetCurrentThread() : NULL);
-    
+
     InternalEnterCriticalSection(pThread, init_critsec);
     return TRUE;
 }
@@ -582,7 +627,7 @@ BOOL PALInitLock(void)
 Function:
   PALInitUnlock
 
-Release the initialization critical section (init_critsec). 
+Release the initialization critical section (init_critsec).
 
 (no parameters, no return value)
 --*/
@@ -593,7 +638,7 @@ void PALInitUnlock(void)
         return;
     }
 
-    CPalThread * pThread = 
+    CPalThread * pThread =
         (PALIsThreadDataInitialized() ? InternalGetCurrentThread() : NULL);
 
     InternalLeaveCriticalSection(pThread, init_critsec);
@@ -617,7 +662,7 @@ static BOOL INIT_IncreaseDescriptorLimit(void)
 #ifndef DONT_SET_RLIMIT_NOFILE
     struct rlimit rlp;
     int result;
-    
+
     result = getrlimit(RLIMIT_NOFILE, &rlp);
     if (result != 0)
     {

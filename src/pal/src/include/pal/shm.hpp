@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -30,8 +29,8 @@ Abstract:
 
 #define SHMPTR_TO_TYPED_PTR(type, shmptr) reinterpret_cast<type*>(shmptr)
 
-/* Set ptr to NULL if shmPtr == 0, else set ptr to SHMPTR_TO_TYPED_PTR(type, shmptr) 
-   return FALSE if SHMPTR_TO_TYPED_PTR returns NULL ptr from non null shmptr, 
+/* Set ptr to NULL if shmPtr == 0, else set ptr to SHMPTR_TO_TYPED_PTR(type, shmptr)
+   return FALSE if SHMPTR_TO_TYPED_PTR returns NULL ptr from non null shmptr,
    TRUE otherwise */
 #define SHMPTR_TO_TYPED_PTR_BOOL(type, ptr, shmptr) \
     ((shmptr != 0) ? ((ptr = SHMPTR_TO_TYPED_PTR(type, shmptr)) != NULL) : ((ptr = NULL) == NULL))

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *safecrt_output_l.c - implementation of the _output family for safercrt.lib
@@ -46,9 +45,9 @@ Buffer size required to be passed to _gcvt, fcvt and other fp conversion routine
 
 //------------------------------------------------------------------------------
 // This code was taken from the 'ouput.c' file located in Visual Studio 8 (i.e. 2005)
-// in the '\Microsoft Visual Studio 8\VC\crt\src' directory. It was moved into 
+// in the '\Microsoft Visual Studio 8\VC\crt\src' directory. It was moved into
 // this file to support only the '_output' function used by _vscprintf() in vsprintf.c
-// UNUSED / NON-RELEVANT PORTIONS OF THE CODE HAVE BEEN REMOVED - do not try and 
+// UNUSED / NON-RELEVANT PORTIONS OF THE CODE HAVE BEEN REMOVED - do not try and
 // use it to generate any other safecrt 'output' functions
 //
 // Noteable modifications
@@ -92,11 +91,6 @@ Buffer size required to be passed to _gcvt, fcvt and other fp conversion routine
 #define _CLDCVT _cldcvt
 #endif  /* _CLDCVT */
 
-#ifdef _MBCS
-#undef  _MBCS
-#endif  /* _MBCS */
-//#include <tchar.h>
-
 /* this macro defines a function which is private and as fast as possible: */
 /* for example, in C 6.0, it might be static _fastcall <type> near. */
 #define LOCAL(x) static x __cdecl
@@ -118,7 +112,7 @@ Buffer size required to be passed to _gcvt, fcvt and other fp conversion routine
 #define LONGLONG_IS_INT64 1     /* 1 means long long is same as int64 */
     CASSERT(sizeof(long long) == sizeof(int64_t));
 
-#if defined (_WIN64)
+#if defined (HOST_64BIT)
     #define PTR_IS_INT       0      /* 1 means ptr is same size as int */
     CASSERT(sizeof(void *) != sizeof(int));
     #if __LP64__
@@ -130,14 +124,14 @@ Buffer size required to be passed to _gcvt, fcvt and other fp conversion routine
     #endif
     #define PTR_IS_INT64     1      /* 1 means ptr is same size as int64 */
     CASSERT(sizeof(void *) == sizeof(int64_t));
-#else  /* defined (_WIN64) */
+#else  /* defined (HOST_64BIT) */
     #define PTR_IS_INT       1      /* 1 means ptr is same size as int */
     CASSERT(sizeof(void *) == sizeof(int));
     #define PTR_IS_LONG      1      /* 1 means ptr is same size as long */
     CASSERT(sizeof(void *) == sizeof(long));
     #define PTR_IS_INT64     0      /* 1 means ptr is same size as int64 */
     CASSERT(sizeof(void *) != sizeof(int64_t));
-#endif  /* defined (_WIN64) */
+#endif  /* defined (HOST_64BIT) */
 
 /* CONSTANTS */
 
@@ -209,10 +203,10 @@ enum CHARTYPE {
 /* static data (read only, since we are re-entrant) */
 #if defined (_UNICODE) || defined (CPRFLAG) || defined (FORMAT_VALIDATIONS)
 extern const char __nullstring[];  /* string to print on null ptr */
-extern const wchar_t __wnullstring[];  /* string to print on null ptr */
+extern const char16_t __wnullstring[];  /* string to print on null ptr */
 #else  /* defined (_UNICODE) || defined (CPRFLAG) || defined (FORMAT_VALIDATIONS) */
 static const char __nullstring[] = "(null)";  /* string to print on null ptr */
-static const wchar_t __wnullstring[] = { '(', 'n', 'u', 'l', 'l', ')', '\0' };/* string to print on null ptr */
+static const char16_t __wnullstring[] = { '(', 'n', 'u', 'l', 'l', ')', '\0' };/* string to print on null ptr */
 #endif  /* defined (_UNICODE) || defined (CPRFLAG) || defined (FORMAT_VALIDATIONS) */
 
 /* The state table.  This table is actually two tables combined into one. */
@@ -324,7 +318,7 @@ const char __lookuptable[] = {
 
 #else  /* FORMAT_VALIDATIONS */
 // SNIP -srs 7/3/07
-#error code has been removed 
+#error code has been removed
 #endif  /* FORMAT_VALIDATIONS */
 
 #define FIND_CHAR_CLASS(lookuptbl, c)      \
@@ -352,7 +346,7 @@ const char __lookuptable[] = {
 LOCAL(void) write_char(_TCHAR ch, int *pnumwritten);
 LOCAL(void) write_multi_char(_TCHAR ch, int num, int *pnumwritten);
 LOCAL(void) write_string(const _TCHAR *string, int len, int *numwritten);
-LOCAL(void) write_wstring(const wchar_t *string, int len, int *numwritten);
+LOCAL(void) write_wstring(const char16_t *string, int len, int *numwritten);
 
 #else  /* CPRFLAG */
 
@@ -364,7 +358,7 @@ LOCAL(void) write_wstring(const wchar_t *string, int len, int *numwritten);
 LOCAL(void) write_char(_TCHAR ch, miniFILE *f, int *pnumwritten);
 LOCAL(void) write_multi_char(_TCHAR ch, int num, miniFILE *f, int *pnumwritten);
 LOCAL(void) write_string(const _TCHAR *string, int len, miniFILE *f, int *numwritten);
-//LOCAL(void) write_wstring(const wchar_t *string, int len, miniFILE *f, int *numwritten);
+//LOCAL(void) write_wstring(const char16_t *string, int len, miniFILE *f, int *numwritten);
 
 #endif  /* CPRFLAG */
 
@@ -563,7 +557,7 @@ int __cdecl _output (
     int no_output=0;  /* non-zero = prodcue no output for this specifier */
     union {
         const char *sz;   /* pointer text to be printed, not zero terminated */
-        const wchar_t *wz;
+        const char16_t *wz;
         } text;
 
     int textlen;    /* length of the text in bytes/wchars to be printed.
@@ -571,10 +565,10 @@ int __cdecl _output (
     union {
         char sz[BUFFERSIZE];
 #ifdef _UNICODE
-        wchar_t wz[BUFFERSIZE];
+        char16_t wz[BUFFERSIZE];
 #endif  /* _UNICODE */
         } buffer;
-    wchar_t wchar;                      /* temp wchar_t */
+    char16_t wchar;                      /* temp char16_t */
     int buffersize;                     /* size of text.sz (used only for the call to _cfltcvt) */
     int bufferiswide=0;         /* non-zero = buffer contains wide chars already */
 
@@ -698,7 +692,7 @@ int __cdecl _output (
                 }
                 else
                 {
-                    flags |= FL_LONG;   /* 'l' => long int or wchar_t */
+                    flags |= FL_LONG;   /* 'l' => long int or char16_t */
                 }
                 break;
 
@@ -772,12 +766,12 @@ int __cdecl _output (
                     flags |= FL_WIDECHAR;   /* ISO std. */
 #endif  /* _UNICODE */
                 /* fall into 'c' case */
-
+                FALLTHROUGH;
             case _T('c'): {
                 /* print a single character specified by int argument */
 #ifdef _UNICODE
                 bufferiswide = 1;
-                        wchar = (wchar_t) get_int_arg(&argptr);
+                        wchar = (char16_t) get_int_arg(&argptr);
                 if (flags & FL_SHORT) {
                     /* format multibyte character */
                     /* this is an extension of ANSI */
@@ -799,13 +793,13 @@ int __cdecl _output (
                 textlen = 1;    /* print just a single character */
 #else  /* _UNICODE */
                 if (flags & (FL_LONG|FL_WIDECHAR)) {
-                    wchar = (wchar_t) get_short_arg(&argptr);
+                    wchar = (char16_t) get_short_arg(&argptr);
                         no_output = 1;
                 } else {
                     /* format multibyte character */
                     /* this is an extension of ANSI */
                     unsigned short temp;
-                        wchar = (wchar_t)get_int_arg(&argptr);
+                        wchar = (char16_t)get_int_arg(&argptr);
                         temp = (unsigned short)wchar;
                     {
                         buffer.sz[0] = (char) temp;
@@ -832,8 +826,8 @@ int __cdecl _output (
                     textlen = (int)strlen(text.sz);
                 } else {
                     if (flags & FL_WIDECHAR) {
-                        text.wz = (wchar_t *)pstr->Buffer;
-                        textlen = pstr->Length / (int)sizeof(wchar_t);
+                        text.wz = (char16_t *)pstr->Buffer;
+                        textlen = pstr->Length / (int)sizeof(char16_t);
                         bufferiswide = 1;
                     } else {
                         bufferiswide = 0;
@@ -852,6 +846,7 @@ int __cdecl _output (
                 if (!(flags & (FL_SHORT|FL_LONG|FL_WIDECHAR)))
                     flags |= FL_SHORT;
 #endif  /* _UNICODE */
+                FALLTHROUGH;
 
             case _T('s'): {
                 /* print a string --                            */
@@ -862,7 +857,7 @@ int __cdecl _output (
 
                 int i;
                 const char *p;       /* temps */
-                const wchar_t *pwch;
+                const char16_t *pwch;
 
                 /* At this point it is tempting to use strlen(), but */
                 /* if a precision is specified, we're not allowed to */
@@ -889,7 +884,7 @@ int __cdecl _output (
                     pwch = text.wz;
                     while (i-- && *pwch)
                         ++pwch;
-                    textlen = (int)(pwch - text.wz);       /* in wchar_ts */
+                    textlen = (int)(pwch - text.wz);       /* in char16_ts */
                     /* textlen now contains length in wide chars */
                 }
 #else  /* _UNICODE */
@@ -951,7 +946,7 @@ int __cdecl _output (
             case _T('A'):
                 capexp = 1;                 /* capitalize exponent */
                 ch += _T('a') - _T('A');    /* convert format char to lower */
-                /* DROP THROUGH */
+                FALLTHROUGH;
             case _T('e'):
             case _T('f'):
             case _T('g'):
@@ -1020,6 +1015,7 @@ int __cdecl _output (
                 flags |= FL_LONG;                   /* assume we're converting a long */
 #endif  /* !PTR_IS_INT */
                 /* DROP THROUGH to hex formatting */
+                FALLTHROUGH;
 
             case _T('X'):
                 /* unsigned upper hex output */
@@ -1057,7 +1053,7 @@ int __cdecl _output (
                 /* correct radix, setting text and textlen */
                 /* appropriately. */
 
-#if _INTEGRAL_MAX_BITS >= 64       
+#if _INTEGRAL_MAX_BITS >= 64
 //                unsigned __int64 number;    /* number to convert */
                 uint64_t number;      /* number to convert */
                 int digit;              /* ascii value of digit */
@@ -1069,7 +1065,7 @@ int __cdecl _output (
 #endif  /* _INTEGRAL_MAX_BITS >= 64        */
 
                 /* 1. read argument into l, sign extend as needed */
-#if _INTEGRAL_MAX_BITS >= 64       
+#if _INTEGRAL_MAX_BITS >= 64
                 if (flags & FL_I64)
                     l = get_int64_arg(&argptr);
                 else
@@ -1110,7 +1106,7 @@ int __cdecl _output (
                     number = l;
                 }
 
-#if _INTEGRAL_MAX_BITS >= 64       
+#if _INTEGRAL_MAX_BITS >= 64
                 if ( (flags & FL_I64) == 0 && (flags & FL_LONGLONG) == 0 ) {
                     /*
                      * Unless printing a full 64-bit value, insure values
@@ -1160,7 +1156,7 @@ int __cdecl _output (
                     *--sz = '0';
                     ++textlen;      /* add a zero */
                 }
-                
+
                 text.sz = sz;
             }
             break;
@@ -1272,7 +1268,7 @@ int __cdecl _output (
 /***
 *void write_char(char ch, int *pnumwritten)
 *ifdef _UNICODE
-*void write_char(wchar_t ch, FILE *f, int *pnumwritten)
+*void write_char(char16_t ch, FILE *f, int *pnumwritten)
 *endif
 *void write_char(char ch, FILE *f, int *pnumwritten)
 *
@@ -1338,7 +1334,7 @@ LOCAL(void) write_char (
 /***
 *void write_multi_char(char ch, int num, int *pnumwritten)
 *ifdef _UNICODE
-*void write_multi_char(wchar_t ch, int num, FILE *f, int *pnumwritten)
+*void write_multi_char(char16_t ch, int num, FILE *f, int *pnumwritten)
 *endif
 *void write_multi_char(char ch, int num, FILE *f, int *pnumwritten)
 *
@@ -1396,10 +1392,10 @@ LOCAL(void) write_multi_char (
 *void write_string(const char *string, int len, int *pnumwritten)
 *void write_string(const char *string, int len, FILE *f, int *pnumwritten)
 *ifdef _UNICODE
-*void write_string(const wchar_t *string, int len, FILE *f, int *pnumwritten)
+*void write_string(const char16_t *string, int len, FILE *f, int *pnumwritten)
 *endif
-*void write_wstring(const wchar_t *string, int len, int *pnumwritten)
-*void write_wstring(const wchar_t *string, int len, FILE *f, int *pnumwritten)
+*void write_wstring(const char16_t *string, int len, int *pnumwritten)
+*void write_wstring(const char16_t *string, int len, FILE *f, int *pnumwritten)
 *
 *Purpose:
 *   Writes a string of the given length to the given file.  If no error occurs,

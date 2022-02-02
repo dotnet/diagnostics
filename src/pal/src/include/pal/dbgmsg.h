@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -121,20 +120,20 @@ Using Debug channels at Run Time
     "stdout" or "stderr". If PAL_API_TRACING is not set, output will go to
     stderr.
 
-    ASSERT() messages cannot be controlled with PAL_DBG_CHANNELS; they can be 
-    globally disabled (in debug builds) by setting the environment variable 
-    PAL_DISABLE_ASSERTS to 1. In release builds, they will always be disabled                    
+    ASSERT() messages cannot be controlled with PAL_DBG_CHANNELS; they can be
+    globally disabled (in debug builds) by setting the environment variable
+    PAL_DISABLE_ASSERTS to 1. In release builds, they will always be disabled
 
-    The environment variable "PAL_API_LEVELS" determines how many levels of 
-    nesting will be allowed in ENTRY calls; if not set, the default is 1; a 
+    The environment variable "PAL_API_LEVELS" determines how many levels of
+    nesting will be allowed in ENTRY calls; if not set, the default is 1; a
     value of 0 will allow infinite nesting, but will not indent the output
 
-    It is possible to disable/enable all channels during the execution of a 
-    process; this involves using a debugger to modify a variable within the 
-    address space of the running process. the variable is named 
-    'dbg_master_switch'; if set to zero, all debug chanels will be closed; if 
+    It is possible to disable/enable all channels during the execution of a
+    process; this involves using a debugger to modify a variable within the
+    address space of the running process. the variable is named
+    'dbg_master_switch'; if set to zero, all debug chanels will be closed; if
     set to nonzero, channels will be open or closed based on PAL_DBG_CHANNELS
-    
+
     Notes :
     If _ENABLE_DEBUG_MESSAGES_ was not defined at build-time, no debug messages
     will be generated.
@@ -145,7 +144,7 @@ Using Debug channels at Run Time
     Normally, if the file specified by PAL_API_TRACING exists, its content will
     be overwritten when a PAL process starts using it. If --enable-appendtraces
     is used, debug output will be appended at the end of the file instead.
-  
+
 
 
  */
@@ -190,10 +189,11 @@ typedef enum
     DCI_POLL,
     DCI_CRYPT,
     DCI_SHFOLDER,
-#ifdef FEATURE_PAL_SXS
     DCI_SXS,
-#endif // FEATURE_PAL_SXS
     DCI_NUMA,
+    // Please make sure to update dbg_channel_names when adding entries here.
+
+    // Do not remove this line, as it indicates the end of the list
     DCI_LAST
 } DBG_CHANNEL_ID;
 
@@ -213,8 +213,8 @@ typedef enum
 
 /* extern variables */
 
-// Change W16_NULLSTRING to external variable to avoid multiple warnings showing up in prefast 
-extern LPCWSTR W16_NULLSTRING; 
+// Change W16_NULLSTRING to external variable to avoid multiple warnings showing up in prefast
+extern LPCWSTR W16_NULLSTRING;
 
 extern DWORD dbg_channel_flags[DCI_LAST];
 extern BOOL g_Dbg_asserts_enabled;
@@ -223,7 +223,7 @@ extern BOOL g_Dbg_asserts_enabled;
   output, because those functions do tracing and we need to avoid recursion */
 extern FILE *output_file;
 
-/* main switch for debug channel enablement, to be modified by debugger */
+/* master switch for debug channel enablement, to be modified by debugger */
 extern Volatile<BOOL> dbg_master_switch ;
 
 
@@ -298,7 +298,7 @@ bool DBG_ShouldCheckStackAlignment();
 
 #define LOGEXIT_(x) \
     DBG_PRINTF(DLI_EXIT, DCI_##x,TRUE)
-    
+
 #define DBGOUT \
     DBG_PRINTF(DLI_TRACE,defdbgchan,FALSE)
 
@@ -332,38 +332,32 @@ bool DBG_ShouldCheckStackAlignment();
    in tracing macros */
 #define NOTRACE(...)
 
-#if defined(__cplusplus) && defined(FEATURE_PAL_SXS)
-#define __ASSERT_ENTER()                                                \
-    /* DBG_printf_c99() and DebugBreak() need a PAL thread */           \
-    PAL_EnterHolder __holder(PALIsThreadDataInitialized() && \
-        (CorUnix::InternalGetCurrentThread() == NULL || \
-        !CorUnix::InternalGetCurrentThread()->IsInPal()));
-#else /* __cplusplus && FEATURE_PAL_SXS */
-#define __ASSERT_ENTER()
-#endif /* __cplusplus && FEATURE_PAL_SXS */
-
 #if !defined(_DEBUG)
 
 #define ASSERT(...)
-#define _ASSERT(expr) 
-#define _ASSERTE(expr) 
-#define _ASSERT_MSG(...) 
+#define _ASSERT(expr)
+#define _ASSERTE(expr)
+#define _ASSERT_MSG(...)
 
 #else /* defined(_DEBUG) */
 
+inline void ANALYZER_NORETURN AssertBreak()
+{
+    if(g_Dbg_asserts_enabled)
+    {
+        DebugBreak();
+    }
+}
+
 #define ASSERT(...)                                                     \
 {                                                                       \
-    __ASSERT_ENTER();                                                   \
     if (output_file && dbg_master_switch)                               \
     {                                                                   \
         DBG_printf(defdbgchan,DLI_ASSERT,TRUE,__FUNCTION__,__FILE__,__LINE__,__VA_ARGS__); \
     }                                                                   \
-    if(g_Dbg_asserts_enabled)                                           \
-    {                                                                   \
-        DebugBreak();                                                   \
-    }                                                                   \
+    AssertBreak();                                                     \
 }
-    
+
 #define _ASSERT(expr) do { if (!(expr)) { ASSERT(""); } } while(0)
 #define _ASSERTE(expr) do { if (!(expr)) { ASSERT("Expression: " #expr "\n"); } } while(0)
 #define _ASSERT_MSG(expr, ...) \
@@ -452,7 +446,7 @@ Notes :
 
 --*/
 #if __GNUC__ && CHECK_TRACE_SPECIFIERS
-/* if requested, use an __attribute__ feature to ask gcc to check that format 
+/* if requested, use an __attribute__ feature to ask gcc to check that format
    specifiers match their parameters */
 int DBG_printf(DBG_CHANNEL_ID channel, DBG_LEVEL_ID level, BOOL bHeader,
                LPCSTR function, LPCSTR file, INT line, LPCSTR format, ...)
@@ -489,12 +483,12 @@ Function :
 
     retrieve current ENTRY nesting level and [optionnally] modify it
 
-Parameters :                                  
+Parameters :
     int new_level : value to which the nesting level must be set, or -1
 
 Return value :
     nesting level at the time the function was called
-    
+
 Notes:
 if new_level is -1, the nesting level will not be modified
 --*/
@@ -530,3 +524,5 @@ void PAL_DisplayDialogFormatted(const char *szTitle, const char *szTextFormat, .
 #endif // __cplusplus
 
 #endif /* _PAL_DBGMSG_H_ */
+
+

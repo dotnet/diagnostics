@@ -8,7 +8,11 @@
 
 #include <pal_mstypes.h>
 
-#define MAX_PATH                         260 
+#define MAX_PATH      260 
+
+#ifndef LONG_MAX      
+#define LONG_MAX      2147483647L
+#endif
 
 // Platform-specific library naming
 // 

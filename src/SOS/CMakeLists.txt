@@ -23,6 +23,13 @@ endif(WIN32)
 
 add_definitions(-D_SECURE_SCL=0)
 
+add_compile_definitions(STRESS_LOG_ANALYZER)
+add_compile_definitions(DACCESS_COMPILE)
+
+if (NOT CLR_CMAKE_TARGET_ARCH_I386 OR NOT CLR_CMAKE_TARGET_WIN32)
+  add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:FEATURE_EH_FUNCLETS>)
+endif (NOT CLR_CMAKE_TARGET_ARCH_I386 OR NOT CLR_CMAKE_TARGET_WIN32)
+
 add_subdirectory(extensions)
 add_subdirectory(dbgutil)
 add_subdirectory(SOS.Extensions)

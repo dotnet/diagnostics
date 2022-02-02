@@ -5,7 +5,7 @@
 #ifndef __util_h__
 #define __util_h__
 
-#define LIMITED_METHOD_CONTRACT
+#define LIMITED_METHOD_CONTRACT ((void)0)
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
@@ -41,6 +41,10 @@ inline void RestoreSOToleranceState() {}
 #include "targetimpl.h"
 #include "runtimeimpl.h"
 #include "symbols.h"
+
+#ifndef COUNTOF
+#define COUNTOF(a) (sizeof(a) / sizeof(*a))
+#endif
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
@@ -99,47 +103,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #endif
 
 // PREFIX macros - Begin
-
-// SOS does not have support for Contracts.  Therefore we needed to duplicate
-// some of the PREFIX infrastructure from inc\check.h in here.
-
-// Issue - PREFast_:510  v4.51 does not support __assume(0)
-#if (defined(_MSC_VER) && !defined(_PREFAST_)) || defined(_PREFIX_)
-#if defined(_AMD64_)
-// Empty methods that consist of UNREACHABLE() result in a zero-sized declspec(noreturn) method
-// which causes the pdb file to make the next method declspec(noreturn) as well, thus breaking BBT
-// Remove when we get a VC compiler that fixes VSW 449170
-# define __UNREACHABLE() DebugBreak(); __assume(0);
-#else
-# define __UNREACHABLE() __assume(0)
-#endif
-#else
-#define __UNREACHABLE()  do { } while(true)
-#endif
-
-
-#if defined(_PREFAST_) || defined(_PREFIX_)
-#define COMPILER_ASSUME_MSG(_condition, _message) if (!(_condition)) __UNREACHABLE();
-#else
-
-#if defined(DACCESS_COMPILE)
-#define COMPILER_ASSUME_MSG(_condition, _message) do { } while (0)
-#else
-
-#if defined(_DEBUG)
-#define COMPILER_ASSUME_MSG(_condition, _message) \
-    ASSERT_CHECK(_condition, _message, "Compiler optimization assumption invalid")
-#else
-#define COMPILER_ASSUME_MSG(_condition, _message) __assume(_condition)
-#endif // _DEBUG
-
-#endif // DACCESS_COMPILE
-
-#endif // _PREFAST_ || _PREFIX_
-
-#define PREFIX_ASSUME(_condition) \
-    COMPILER_ASSUME_MSG(_condition, "")
-
+#define PREFIX_ASSUME(_condition)
 // PREFIX macros - End
 
 class MethodTable;

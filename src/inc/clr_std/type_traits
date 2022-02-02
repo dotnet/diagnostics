@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 //
 // clr_std/utility
@@ -187,6 +186,70 @@ namespace std
     };
 
     //-----------------------------------------------------------------------------------------
+    // TEMPLATE CLASS make_unsigned
+    template<typename Type1>
+    struct make_unsigned
+    {
+    };
+
+    template<>
+    struct make_unsigned<int>
+    {
+        typedef unsigned int type;
+    };
+
+#ifndef HOST_UNIX
+
+    template<>
+    struct make_unsigned<long>
+    {
+        typedef unsigned long type;
+    };
+
+#endif // !HOST_UNIX
+
+    template<>
+    struct make_unsigned<__int64>
+    {
+        typedef unsigned __int64 type;
+    };
+
+    template<>
+    struct make_unsigned<size_t>
+    {
+        typedef size_t type;
+    };
+
+    //-----------------------------------------------------------------------------------------
+    // TEMPLATE CLASS make_signed
+    template<typename Type1>
+    struct make_signed
+    {
+    };
+
+    template<>
+    struct make_signed<unsigned int>
+    {
+        typedef signed int type;
+    };
+
+#ifndef HOST_UNIX
+
+    template<>
+    struct make_signed<unsigned long>
+    {
+        typedef signed long type;
+    };
+
+#endif // !HOST_UNIX
+
+    template<>
+    struct make_signed<unsigned __int64>
+    {
+        typedef signed __int64 type;
+    };
+
+    //-----------------------------------------------------------------------------------------
     // TEMPLATE CLASS is_lvalue_reference
     template<class _Ty>
     struct is_lvalue_reference
@@ -269,14 +332,6 @@ namespace std
     {    // determine whether _Ty is integral
     };
 
- #ifdef _NATIVE_WCHAR_T_DEFINED
-    template<>
-    struct _Is_integral<wchar_t>
-        : true_type
-    {    // determine whether _Ty is integral
-    };
- #endif /* _NATIVE_WCHAR_T_DEFINED */
-
     template<>
     struct _Is_integral<unsigned short>
         : true_type
@@ -303,7 +358,7 @@ namespace std
 
 // On Unix 'long' is a 64-bit type (same as __int64) and the following two definitions
 // conflict with _Is_integral<unsigned __int64> and _Is_integral<signed __int64>.
-#ifndef PLATFORM_UNIX
+#ifndef HOST_UNIX
     template<>
     struct _Is_integral<unsigned long>
         : true_type
@@ -315,7 +370,7 @@ namespace std
         : true_type
     {    // determine whether _Ty is integral
     };
-#endif /* PLATFORM_UNIX */
+#endif /* HOST_UNIX */
 
  #if _HAS_CHAR16_T_LANGUAGE_SUPPORT
     template<>
@@ -371,7 +426,7 @@ namespace std
 
 // In PAL, we define long as int and so this becomes int double,
 // which is a nonsense
-#ifndef FEATURE_PAL  
+#ifndef HOST_UNIX
     template<>
     struct _Is_floating_point<long double>
         : true_type
@@ -460,7 +515,7 @@ namespace std
         };
 
         template <class T>
-        struct conversion<T, T>    
+        struct conversion<T, T>
         {
             static const bool exists = true;
             static const bool exists2Way = true;
@@ -468,7 +523,7 @@ namespace std
         };
 
         template <class T>
-        struct conversion<void, T>    
+        struct conversion<void, T>
         {
             static const bool exists = false;
             static const bool exists2Way = false;
@@ -476,7 +531,7 @@ namespace std
         };
 
         template <class T>
-        struct conversion<T, void>    
+        struct conversion<T, void>
         {
             static const bool exists = false;
             static const bool exists2Way = false;
@@ -484,7 +539,7 @@ namespace std
         };
 
         template <>
-        struct conversion<void, void>    
+        struct conversion<void, void>
         {
             static const bool exists = true;
             static const bool exists2Way = true;
@@ -516,22 +571,45 @@ namespace std
 
 #endif
 
-    // Use to determine if a template type parameter is a string.
-    template <typename T>
-    struct is_cstr
-        : public std::false_type
-    {};
+    namespace detail
+    {
+        template <typename...>
+        using void_t = void;
+    }
+    // Always false dependent-value for static_asserts.
+    template <typename...>
+    struct _Always_false
+    {
+        const bool value = false;
+    };
 
-    template <typename T>
-    struct is_cstr< T* >
-        : public std::conditional<
-            std::is_same<typename std::remove_cv<T>::type, char>::value ||
-                std::is_same<typename std::remove_cv<T>::type, wchar_t>::value,
-            std::true_type,
-            std::false_type>::type
-        
-    { };
+    template <class _Ty, class = void>
+    struct _Add_reference { // add reference (non-referenceable type)
+        using _Lvalue = _Ty;
+        using _Rvalue = _Ty;
+    };
 
+    template <class _Ty>
+    struct _Add_reference<_Ty, detail::void_t<_Ty&>> { // (referenceable type)
+        using _Lvalue = _Ty&;
+        using _Rvalue = _Ty&&;
+    };
+
+    template <class _Ty>
+    struct add_lvalue_reference {
+        using type = typename _Add_reference<_Ty>::_Lvalue;
+    };
+
+    template <class _Ty>
+    struct add_rvalue_reference {
+        using type = typename _Add_reference<_Ty>::_Rvalue;
+    };
+
+    template<typename _Ty>
+    typename add_rvalue_reference<_Ty>::type declval() noexcept
+    {
+        static_assert(_Always_false<_Ty>::value, "Calling declval is ill-formed, see N4892 [declval]/2.");
+    }
 } // namespace std
 
 #endif // !USE_STL

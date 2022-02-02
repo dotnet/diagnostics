@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 
 //
@@ -98,7 +97,7 @@ __ANNOTATION(SAL_failureDefault(enum __SAL_failureKind));
 #endif // ]
 
 #define __xcount(size)                                          __notnull __inexpressible_writableTo(size)
-#define __in_xcount(size)                                       __in _Pre_ __inexpressible_readableTo(size)
+#define __in_xcount(size)                                       _In_ _Pre_ __inexpressible_readableTo(size)
 #define __out_xcount(size)                                      __xcount(size) _Post_ __valid __refparam
 #define __out_xcount_part(size,length)                          __out_xcount(size) _Post_ __inexpressible_readableTo(length)
 #define __out_xcount_full(size)                                 __out_xcount_part(size,size)
@@ -114,7 +113,7 @@ __ANNOTATION(SAL_failureDefault(enum __SAL_failureKind));
 #define __inout_xcount_part_opt(size,length)                    __inout_xcount_part(size,length)            __exceptthat __maybenull
 #define __inout_xcount_full_opt(size)                           __inout_xcount_full(size)                   __exceptthat __maybenull
 #define __deref_xcount(size)                                    __ecount(1) _Post_ __elem_readableTo(1) _Post_ __deref __notnull _Post_ __deref __inexpressible_writableTo(size)
-#define __deref_in                                              __in _Pre_ __deref __deref __readonly
+#define __deref_in                                              _In_ _Pre_ __deref __deref __readonly
 #define __deref_in_ecount(size)                                 __deref_in _Pre_ __deref __elem_readableTo(size)
 #define __deref_in_bcount(size)                                 __deref_in _Pre_ __deref __byte_readableTo(size)
 #define __deref_in_xcount(size)                                 __deref_in _Pre_ __deref __inexpressible_readableTo(size)
@@ -126,7 +125,7 @@ __ANNOTATION(SAL_failureDefault(enum __SAL_failureKind));
 #define __inout_xcount_part_opt(size,length)                    __inout_xcount_part(size,length)            __exceptthat __maybenull
 #define __inout_xcount_full_opt(size)                           __inout_xcount_full(size)                   __exceptthat __maybenull
 #define __deref_xcount(size)                                    __ecount(1) _Post_ __elem_readableTo(1) _Post_ __deref __notnull _Post_ __deref __inexpressible_writableTo(size)
-#define __deref_in                                              __in _Pre_ __deref __deref __readonly
+#define __deref_in                                              _In_ _Pre_ __deref __deref __readonly
 #define __deref_in_ecount(size)                                 __deref_in _Pre_ __deref __elem_readableTo(size)
 #define __deref_in_bcount(size)                                 __deref_in _Pre_ __deref __byte_readableTo(size)
 #define __deref_in_xcount(size)                                 __deref_in _Pre_ __deref __inexpressible_readableTo(size)
@@ -310,8 +309,8 @@ __ANNOTATION(SAL_failureDefault(enum __SAL_failureKind));
 				            __byte_readableTo((expr) ? (size) : (size) * 2)
 #define __post_invalid                      _Post_ __notvalid
 /* integer related macros */
-#define __allocator                         __inner_allocator
 #ifndef PAL_STDCPP_COMPAT
+#define __allocator                         __inner_allocator
 #define __deallocate(kind)                  _Pre_ __notnull __post_invalid
 #define __deallocate_opt(kind)              _Pre_ __maybenull __post_invalid
 #endif
@@ -421,7 +420,7 @@ __inner_analysis_assume_nullterminated_dec
 // A common pattern is to pass an "_Inout_ PCHAR* ppBuf" of size "_Inout_ DWORD* pSize"
 // to a function that writes to **pBuf, incrementing *ppBuf to point to one
 // past the last written byte. Thus the length of the write is
-// (*ppBuf - Old(*ppBuf)). The size of the remaining unwritten capacity 
+// (*ppBuf - Old(*ppBuf)). The size of the remaining unwritten capacity
 // is written to *pSize.
 //
 // This pattern is frequently used when progressively filling a
@@ -463,7 +462,7 @@ __inner_analysis_assume_nullterminated_dec
 // completely accurate approximation, but reasonable.
 //
 #define _Post_equals_last_error_     _Post_satisfies_(_Curr_ != 0)
-                                
+
 #ifdef  __cplusplus
 }
 #endif
@@ -515,9 +514,6 @@ void __pfx_assume(int, const char *);
 #define __PRIMOP(type, fun)
 #endif /* !defined(_Outptr_) || _MSC_VER <= 1600 */
 
-// ROTOR doesn't need driverspecs.h
-// #include <driverspecs.h>
-
 /*
  If no SAL 2 appears to have been defined (_Outptr_ is a representative choice)
  then we must be operating in a downlevel build environment (such as VS10).
@@ -525,7 +521,7 @@ void __pfx_assume(int, const char *);
  as VS11 is the minimum required for SAL 2 support.
 
  If we are in a downlevel environment, we can go ahead and include no_sal2.h
- to make all of SAL 2 no-ops to ensure no build failures. 
+ to make all of SAL 2 no-ops to ensure no build failures.
 */
 #if (!defined(_Outptr_) || _MSC_VER <= 1600) && !( defined( MIDL_PASS ) || defined(__midl) || defined(RC_INVOKED) ) && !( defined( _SDV_ ) ) /*IFSTRIP=IGN*/
 #include <no_sal2.h>

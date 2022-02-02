@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // We would like to allow "util" collection classes to be usable both
 // from the VM and from the JIT.  The latter case presents a
@@ -11,8 +10,8 @@
 
 // To allow utilcode collection classes to deal with this, they may be
 // written to do allocation and freeing via an instance of the
-// "IAllocator" class defined in this file.  
-// 
+// "IAllocator" class defined in this file.
+//
 #ifndef _IALLOCATOR_DEFINED_
 #define _IALLOCATOR_DEFINED_
 

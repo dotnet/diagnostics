@@ -2,18 +2,30 @@ include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(CheckCXXSymbolExists)
 include(CheckFunctionExists)
+include(CheckPrototypeDefinition)
 include(CheckIncludeFiles)
 include(CheckStructHasMember)
 include(CheckTypeSize)
 include(CheckLibraryExists)
 
-if(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-  set(CMAKE_REQUIRED_INCLUDES /usr/local/include)
-elseif(CMAKE_SYSTEM_NAME STREQUAL SunOS)
+if(CLR_CMAKE_TARGET_FREEBSD)
+  set(CMAKE_REQUIRED_INCLUDES ${CROSS_ROOTFS}/usr/local/include)
+elseif(CLR_CMAKE_TARGET_SUNOS)
   set(CMAKE_REQUIRED_INCLUDES /opt/local/include)
 endif()
-if(NOT CMAKE_SYSTEM_NAME STREQUAL Darwin AND NOT CMAKE_SYSTEM_NAME STREQUAL FreeBSD AND NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+
+if(CLR_CMAKE_TARGET_OSX)
+  set(CMAKE_REQUIRED_DEFINITIONS -D_XOPEN_SOURCE)
+elseif(NOT CLR_CMAKE_TARGET_FREEBSD AND NOT CLR_CMAKE_TARGET_NETBSD)
   set(CMAKE_REQUIRED_DEFINITIONS "-D_BSD_SOURCE -D_SVID_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L")
+endif()
+
+if(CLR_CMAKE_TARGET_LINUX AND NOT CLR_CMAKE_TARGET_ANDROID)
+  set(CMAKE_RT_LIBS rt)
+elseif(CLR_CMAKE_TARGET_FREEBSD OR CLR_CMAKE_TARGET_NETBSD)
+  set(CMAKE_RT_LIBS rt)
+else()
+  set(CMAKE_RT_LIBS "")
 endif()
 
 list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_FILE_OFFSET_BITS=64)
@@ -35,24 +47,43 @@ check_include_files(runetype.h HAVE_RUNETYPE_H)
 check_include_files(semaphore.h HAVE_SEMAPHORE_H)
 check_include_files(sys/prctl.h HAVE_PRCTL_H)
 check_include_files(numa.h HAVE_NUMA_H)
-check_include_files(pthread_np.h HAVE_PTHREAD_NP_H)
 check_include_files("sys/auxv.h;asm/hwcap.h" HAVE_AUXV_HWCAP_H)
-check_include_files("libintl.h" HAVE_LIBINTL_H)
+check_include_files("sys/ptrace.h" HAVE_SYS_PTRACE_H)
+check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
 
-if(NOT CMAKE_SYSTEM_NAME STREQUAL FreeBSD AND NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
-  set(CMAKE_REQUIRED_FLAGS "-ldl")
-endif()
-check_include_files(lttng/tracepoint.h HAVE_LTTNG_TRACEPOINT_H)
-if(NOT CMAKE_SYSTEM_NAME STREQUAL FreeBSD AND NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
-  unset(CMAKE_REQUIRED_FLAGS)
-endif()
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_DL_LIBS})
 
-check_include_files(sys/sysctl.h HAVE_SYS_SYSCTL_H)
+check_cxx_source_compiles("
+#include <sys/mman.h>
+int main()
+{
+  return VM_FLAGS_SUPERPAGE_SIZE_ANY;
+}
+" HAVE_VM_FLAGS_SUPERPAGE_SIZE_ANY)
+
+check_cxx_source_compiles("
+#include <sys/mman.h>
+int main()
+{
+  return MAP_HUGETLB;
+}
+" HAVE_MAP_HUGETLB)
+
+check_cxx_source_compiles("
+#include <lttng/tracepoint.h>
+int main(int argc, char **argv) {
+  return 0;
+}" HAVE_LTTNG_TRACEPOINT_H)
+
+set(CMAKE_REQUIRED_LIBRARIES)
+
+check_function_exists(sysctlbyname HAVE_SYSCTLBYNAME)
 check_include_files(gnu/lib-names.h HAVE_GNU_LIBNAMES_H)
 
 check_function_exists(kqueue HAVE_KQUEUE)
 
 check_library_exists(c sched_getaffinity "" HAVE_SCHED_GETAFFINITY)
+check_library_exists(c sched_setaffinity "" HAVE_SCHED_SETAFFINITY)
 check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
 check_library_exists(c pthread_create "" HAVE_PTHREAD_IN_LIBC)
 
@@ -81,10 +112,14 @@ set(CMAKE_REQUIRED_LIBRARIES)
 check_function_exists(fsync HAVE_FSYNC)
 check_function_exists(futimes HAVE_FUTIMES)
 check_function_exists(utimes HAVE_UTIMES)
-check_function_exists(sysctl HAVE_SYSCTL)
+if(CLR_CMAKE_TARGET_LINUX)
+  # sysctl is deprecated on Linux
+  set(HAVE_SYSCTL 0)
+else()
+  check_function_exists(sysctl HAVE_SYSCTL)
+endif()
 check_function_exists(sysinfo HAVE_SYSINFO)
 check_function_exists(sysconf HAVE_SYSCONF)
-check_function_exists(localtime_r HAVE_LOCALTIME_R)
 check_function_exists(gmtime_r HAVE_GMTIME_R)
 check_function_exists(timegm HAVE_TIMEGM)
 check_function_exists(poll HAVE_POLL)
@@ -117,6 +152,8 @@ check_struct_has_member ("ucontext_t" uc_mcontext.gregs[0] ucontext.h HAVE_GREGS
 check_struct_has_member ("ucontext_t" uc_mcontext.__gregs[0] ucontext.h HAVE___GREGSET_T)
 check_struct_has_member ("ucontext_t" uc_mcontext.fpregs->__glibc_reserved1[0] ucontext.h HAVE_FPSTATE_GLIBC_RESERVED1)
 check_struct_has_member ("struct sysinfo" mem_unit "sys/sysinfo.h" HAVE_SYSINFO_WITH_MEM_UNIT)
+check_struct_has_member ("struct dirent" d_type dirent.h HAVE_DIRENT_D_TYPE)
+check_struct_has_member ("struct _fpchip_state" cw sys/ucontext.h HAVE_FPREGS_WITH_CW)
 
 set(CMAKE_EXTRA_INCLUDE_FILES machine/reg.h)
 check_type_size("struct reg" BSD_REGS_T)
@@ -125,7 +162,6 @@ set(CMAKE_EXTRA_INCLUDE_FILES asm/ptrace.h)
 check_type_size("struct pt_regs" PT_REGS)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 set(CMAKE_EXTRA_INCLUDE_FILES signal.h)
-check_type_size(siginfo_t SIGINFO_T)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 set(CMAKE_EXTRA_INCLUDE_FILES ucontext.h)
 check_type_size(ucontext_t UCONTEXT_T)
@@ -144,6 +180,7 @@ check_cxx_symbol_exists(CHAR_BIT limits.h HAVE_CHAR_BIT)
 check_cxx_symbol_exists(_DEBUG sys/user.h USER_H_DEFINES_DEBUG)
 check_cxx_symbol_exists(_SC_PHYS_PAGES unistd.h HAVE__SC_PHYS_PAGES)
 check_cxx_symbol_exists(_SC_AVPHYS_PAGES unistd.h HAVE__SC_AVPHYS_PAGES)
+check_cxx_symbol_exists(swapctl sys/swap.h HAVE_SWAPCTL)
 
 check_cxx_source_runs("
 #include <sys/param.h>
@@ -362,6 +399,8 @@ int main()
 
   exit(ret);
 }" HAVE_WORKING_GETTIMEOFDAY)
+
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_RT_LIBS})
 check_cxx_source_runs("
 #include <stdlib.h>
 #include <time.h>
@@ -375,6 +414,9 @@ int main()
 
   exit(ret);
 }" HAVE_WORKING_CLOCK_GETTIME)
+set(CMAKE_REQUIRED_LIBRARIES)
+
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_RT_LIBS})
 check_cxx_source_runs("
 #include <stdlib.h>
 #include <time.h>
@@ -388,9 +430,11 @@ int main()
 
   exit(ret);
 }" HAVE_CLOCK_MONOTONIC)
+set(CMAKE_REQUIRED_LIBRARIES)
 
 check_library_exists(${PTHREAD_LIBRARY} pthread_condattr_setclock "" HAVE_PTHREAD_CONDATTR_SETCLOCK)
 
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_RT_LIBS})
 check_cxx_source_runs("
 #include <stdlib.h>
 #include <time.h>
@@ -404,6 +448,8 @@ int main()
 
   exit(ret);
 }" HAVE_CLOCK_MONOTONIC_COARSE)
+set(CMAKE_REQUIRED_LIBRARIES)
+
 check_cxx_source_runs("
 #include <stdlib.h>
 #include <time.h>
@@ -414,6 +460,8 @@ int main()
   ret = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
   exit((ret == 0) ? 1 : 0);
 }" HAVE_CLOCK_GETTIME_NSEC_NP)
+
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_RT_LIBS})
 check_cxx_source_runs("
 #include <stdlib.h>
 #include <time.h>
@@ -427,26 +475,8 @@ int main()
 
   exit(ret);
 }" HAVE_CLOCK_THREAD_CPUTIME)
-check_cxx_source_runs("
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-#include <fcntl.h>
+set(CMAKE_REQUIRED_LIBRARIES)
 
-int main(void) {
-  int devzero;
-  void *retval;
-
-  devzero = open(\"/dev/zero\", O_RDWR);
-  if (-1 == devzero) {
-    exit(1);
-  }
-  retval = mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, devzero, 0);
-  if (retval == (void *)-1) {
-    exit(1);
-  }
-  exit(0);
-}" HAVE_MMAP_DEV_ZERO)
 check_cxx_source_runs("
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -494,9 +524,10 @@ check_cxx_source_runs("
 #include <string.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <algorithm>
 
 #define MEM_SIZE 1024
-
+#define TEMP_FILE_TEMPLATE \"${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/multiplemaptestXXXXXX\"
 int main(void)
 {
   char * fname;
@@ -504,10 +535,10 @@ int main(void)
   int ret;
   void * pAddr0, * pAddr1;
 
-  fname = (char *)malloc(MEM_SIZE);
+  fname = (char *)malloc(std::max((size_t)MEM_SIZE, sizeof(TEMP_FILE_TEMPLATE)));
   if (!fname)
     exit(1);
-  strcpy(fname, \"/tmp/name/multiplemaptestXXXXXX\");
+  strcpy(fname, TEMP_FILE_TEMPLATE);
 
   fd = mkstemp(fname);
   if (fd < 0)
@@ -688,7 +719,8 @@ check_cxx_source_runs("
 #include <stdlib.h>
 
 int main(void) {
-  if (!isnan(acos(10))) {
+  volatile double x = 10;
+  if (!isnan(acos(x))) {
     exit(1);
   }
   exit(0);
@@ -700,7 +732,8 @@ check_cxx_source_runs("
 #include <stdlib.h>
 
 int main(void) {
-  if (!isnan(asin(10))) {
+  volatile double arg = 10;
+  if (!isnan(asin(arg))) {
     exit(1);
   }
   exit(0);
@@ -712,29 +745,37 @@ check_cxx_source_runs("
 #include <stdlib.h>
 
 int main(void) {
-  double infinity = 1.0 / 0.0;
-  if (pow(1.0, infinity) != 1.0 || pow(1.0, -infinity) != 1.0) {
+  volatile double base = 1.0;
+  volatile double infinity = 1.0 / 0.0;
+  if (pow(base, infinity) != 1.0 || pow(base, -infinity) != 1.0) {
     exit(1);
   }
-  if (pow(-1.0, infinity) != 1.0 || pow(-1.0, -infinity) != 1.0) {
+  if (pow(-base, infinity) != 1.0 || pow(-base, -infinity) != 1.0) {
     exit(1);
   }
-  if (pow(0.0, infinity) != 0.0) {
+
+  base = 0.0;
+  if (pow(base, infinity) != 0.0) {
     exit(1);
   }
-  if (pow(0.0, -infinity) != infinity) {
+  if (pow(base, -infinity) != infinity) {
     exit(1);
   }
-  if (pow(-1.1, infinity) != infinity || pow(1.1, infinity) != infinity) {
+
+  base = 1.1;
+  if (pow(-base, infinity) != infinity || pow(base, infinity) != infinity) {
     exit(1);
   }
-  if (pow(-1.1, -infinity) != 0.0 || pow(1.1, -infinity) != 0.0) {
+  if (pow(-base, -infinity) != 0.0 || pow(base, -infinity) != 0.0) {
     exit(1);
   }
-  if (pow(-0.0, -1) != -infinity) {
+
+  base = 0.0;
+  volatile int iexp = 1;
+  if (pow(-base, -iexp) != -infinity) {
     exit(1);
   }
-  if (pow(0.0, -1) != infinity) {
+  if (pow(base, -iexp) != infinity) {
     exit(1);
   }
   exit(0);
@@ -747,8 +788,10 @@ check_cxx_source_runs("
 
 int main(int argc, char **argv) {
   double result;
+  volatile double base = 3.2e-10;
+  volatile double exp = 1 - 5e14;
 
-  result = pow(-3.2e-10, -5e14 + 1);
+  result = pow(-base, exp);
   if (result != -1.0 / 0.0) {
     exit(1);
   }
@@ -762,8 +805,10 @@ check_cxx_source_runs("
 
 int main(int argc, char **argv) {
     double result;
+    volatile double base = 3.5;
+    volatile double exp = 3e100;
 
-    result = pow(-3.5, 3e100);
+    result = pow(-base, exp);
     if (result != 1.0 / 0.0) {
         exit(1);
     }
@@ -778,23 +823,25 @@ check_cxx_source_runs("
 int main(void) {
   double pi = 3.14159265358979323846;
   double result;
+  volatile double y = 0.0;
+  volatile double x = 0.0;
 
-  result = atan2(0.0, -0.0);
+  result = atan2(y, -x);
   if (fabs(pi - result) > 0.0000001) {
     exit(1);
   }
 
-  result = atan2(-0.0, -0.0);
+  result = atan2(-y, -x);
   if (fabs(-pi - result) > 0.0000001) {
     exit(1);
   }
 
-  result = atan2 (-0.0, 0.0);
+  result = atan2 (-y, x);
   if (result != 0.0 || copysign (1.0, result) > 0) {
     exit(1);
   }
 
-  result = atan2 (0.0, 0.0);
+  result = atan2 (y, x);
   if (result != 0.0 || copysign (1.0, result) < 0) {
     exit(1);
   }
@@ -828,7 +875,34 @@ check_cxx_source_runs("
 #include <stdlib.h>
 
 int main(void) {
-  if (!isnan(log(-10000))) {
+  if (FP_ILOGB0 != -2147483648) {
+    exit(1);
+  }
+
+  exit(0);
+}" HAVE_COMPATIBLE_ILOGB0)
+set(CMAKE_REQUIRED_LIBRARIES)
+set(CMAKE_REQUIRED_LIBRARIES m)
+check_cxx_source_runs("
+#include <math.h>
+#include <stdlib.h>
+
+int main(void) {
+  if (FP_ILOGBNAN != 2147483647) {
+    exit(1);
+  }
+
+  exit(0);
+}" HAVE_COMPATIBLE_ILOGBNAN)
+set(CMAKE_REQUIRED_LIBRARIES)
+set(CMAKE_REQUIRED_LIBRARIES m)
+check_cxx_source_runs("
+#include <math.h>
+#include <stdlib.h>
+
+int main(void) {
+  volatile int arg = 10000;
+  if (!isnan(log(-arg))) {
     exit(1);
   }
   exit(0);
@@ -840,7 +914,8 @@ check_cxx_source_runs("
 #include <stdlib.h>
 
 int main(void) {
-  if (!isnan(log10(-10000))) {
+  volatile int arg = 10000;
+  if (!isnan(log10(-arg))) {
     exit(1);
   }
   exit(0);
@@ -958,8 +1033,6 @@ if(NOT CLR_CMAKE_USE_SYSTEM_LIBUNWIND)
   list(INSERT CMAKE_REQUIRED_INCLUDES 0 ${CMAKE_CURRENT_SOURCE_DIR}/libunwind/include ${CMAKE_CURRENT_BINARY_DIR}/libunwind/include)
 endif()
 
-set(CMAKE_REQUIRED_FLAGS "-c -Werror=implicit-function-declaration")
-
 check_c_source_compiles("
 #include <libunwind.h>
 #include <ucontext.h>
@@ -971,29 +1044,9 @@ int main(int argc, char **argv)
         return 0;
 }" UNWIND_CONTEXT_IS_UCONTEXT_T)
 
-check_c_source_compiles("
-#include <libunwind.h>
+check_symbol_exists(unw_get_save_loc libunwind.h HAVE_UNW_GET_SAVE_LOC)
+check_symbol_exists(unw_get_accessors libunwind.h HAVE_UNW_GET_ACCESSORS)
 
-int main(int argc, char **argv) {
-  unw_cursor_t cursor;
-  unw_save_loc_t saveLoc;
-  int reg = UNW_REG_IP;
-  unw_get_save_loc(&cursor, reg, &saveLoc);
-
-  return 0;
-}" HAVE_UNW_GET_SAVE_LOC)
-
-check_c_source_compiles("
-#include <libunwind.h>
-
-int main(int argc, char **argv) {
-  unw_addr_space_t as;
-  unw_get_accessors(as);
-
-  return 0;
-}" HAVE_UNW_GET_ACCESSORS)
-
-set(CMAKE_REQUIRED_FLAGS)
 if(NOT CLR_CMAKE_USE_SYSTEM_LIBUNWIND)
   list(REMOVE_AT CMAKE_REQUIRED_INCLUDES 0 1)
 endif()
@@ -1030,6 +1083,10 @@ int main(int argc, char **argv)
     struct _fpx_sw_bytes bytes;
     return 0;
 }" HAVE_PUBLIC_XSTATE_STRUCT)
+
+if(HAVE_PUBLIC_XSTATE_STRUCT)
+    check_struct_has_member ("struct _fpx_sw_bytes" xstate_bv "signal.h" HAVE__FPX_SW_BYTES_WITH_XSTATE_BV)
+endif()
 
 check_cxx_source_compiles("
 #include <sys/prctl.h>
@@ -1082,30 +1139,30 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
   // a child process that locks the mutex, the process process then waits to acquire the lock, and the child process abandons the
   // mutex by exiting the process while holding the lock. The parent process should then be released from its wait, be assigned
   // ownership of the lock, and be notified that the mutex was abandoned.
-  
+
   #include <sys/mman.h>
   #include <sys/time.h>
-  
+
   #include <errno.h>
   #include <pthread.h>
   #include <stdio.h>
   #include <unistd.h>
-  
+
   #include <new>
   using namespace std;
-  
+
   struct Shm
   {
       pthread_mutex_t syncMutex;
       pthread_cond_t syncCondition;
       pthread_mutex_t robustMutex;
       int conditionValue;
-  
+
       Shm() : conditionValue(0)
       {
       }
   } *shm;
-  
+
   int GetFailTimeoutTime(struct timespec *timeoutTimeRef)
   {
       int getTimeResult = clock_gettime(CLOCK_REALTIME, timeoutTimeRef);
@@ -1121,7 +1178,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
       timeoutTimeRef->tv_sec += 30;
       return 0;
   }
-  
+
   int WaitForConditionValue(int desiredConditionValue)
   {
       struct timespec timeoutTime;
@@ -1129,7 +1186,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return 1;
       if (pthread_mutex_timedlock(&shm->syncMutex, &timeoutTime) != 0)
           return 1;
-  
+
       if (shm->conditionValue != desiredConditionValue)
       {
           if (GetFailTimeoutTime(&timeoutTime) != 0)
@@ -1139,12 +1196,12 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           if (shm->conditionValue != desiredConditionValue)
               return 1;
       }
-  
+
       if (pthread_mutex_unlock(&shm->syncMutex) != 0)
           return 1;
       return 0;
   }
-  
+
   int SetConditionValue(int newConditionValue)
   {
       struct timespec timeoutTime;
@@ -1152,18 +1209,18 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return 1;
       if (pthread_mutex_timedlock(&shm->syncMutex, &timeoutTime) != 0)
           return 1;
-  
+
       shm->conditionValue = newConditionValue;
       if (pthread_cond_signal(&shm->syncCondition) != 0)
           return 1;
-  
+
       if (pthread_mutex_unlock(&shm->syncMutex) != 0)
           return 1;
       return 0;
   }
-  
+
   void DoTest_Child();
-  
+
   int DoTest()
   {
       // Map some shared memory
@@ -1171,7 +1228,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
       if (shmBuffer == MAP_FAILED)
           return 1;
       shm = new(shmBuffer) Shm;
-  
+
       // Create sync mutex
       pthread_mutexattr_t syncMutexAttributes;
       if (pthread_mutexattr_init(&syncMutexAttributes) != 0)
@@ -1182,7 +1239,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return 1;
       if (pthread_mutexattr_destroy(&syncMutexAttributes) != 0)
           return 1;
-  
+
       // Create sync condition
       pthread_condattr_t syncConditionAttributes;
       if (pthread_condattr_init(&syncConditionAttributes) != 0)
@@ -1193,7 +1250,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return 1;
       if (pthread_condattr_destroy(&syncConditionAttributes) != 0)
           return 1;
-  
+
       // Create the robust mutex that will be tested
       pthread_mutexattr_t robustMutexAttributes;
       if (pthread_mutexattr_init(&robustMutexAttributes) != 0)
@@ -1206,7 +1263,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return 1;
       if (pthread_mutexattr_destroy(&robustMutexAttributes) != 0)
           return 1;
-  
+
       // Start child test process
       int error = fork();
       if (error == -1)
@@ -1216,10 +1273,10 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           DoTest_Child();
           return -1;
       }
-  
+
       // Wait for child to take a lock
       WaitForConditionValue(1);
-  
+
       // Wait to try to take a lock. Meanwhile, child abandons the robust mutex.
       struct timespec timeoutTime;
       if (GetFailTimeoutTime(&timeoutTime) != 0)
@@ -1229,14 +1286,14 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return 1;
       if (pthread_mutex_consistent(&shm->robustMutex) != 0)
           return 1;
-  
+
       if (pthread_mutex_unlock(&shm->robustMutex) != 0)
           return 1;
       if (pthread_mutex_destroy(&shm->robustMutex) != 0)
           return 1;
       return 0;
   }
-  
+
   void DoTest_Child()
   {
       // Lock the robust mutex
@@ -1245,17 +1302,17 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
           return;
       if (pthread_mutex_timedlock(&shm->robustMutex, &timeoutTime) != 0)
           return;
-  
+
       // Notify parent that robust mutex is locked
       if (SetConditionValue(1) != 0)
           return;
-  
+
       // Wait a short period to let the parent block on waiting for a lock
       sleep(1);
-  
+
       // Abandon the mutex by exiting the process while holding the lock. Parent's wait should be released by EOWNERDEAD.
   }
-  
+
   int main()
   {
       int result = DoTest();
@@ -1264,8 +1321,7 @@ if(NOT CLR_CMAKE_HOST_ARCH_ARM AND NOT CLR_CMAKE_HOST_ARCH_ARM64)
   set(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-  set(HAVE_COREFOUNDATION 1)
+if(CLR_CMAKE_TARGET_OSX)
   set(HAVE__NSGETENVIRON 1)
   set(DEADLOCK_WHEN_THREAD_IS_SUSPENDED_WHILE_BLOCKED_ON_MUTEX 1)
   set(PAL_PTRACE "ptrace((cmd), (pid), (caddr_t)(addr), (data))")
@@ -1276,7 +1332,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
   set(HAS_FTRUNCATE_LENGTH_ISSUE 1)
   set(HAVE_SCHED_OTHER_ASSIGNABLE 1)
 
-elseif(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+elseif(CLR_CMAKE_TARGET_FREEBSD)
   set(DEADLOCK_WHEN_THREAD_IS_SUSPENDED_WHILE_BLOCKED_ON_MUTEX 0)
   set(PAL_PTRACE "ptrace((cmd), (pid), (caddr_t)(addr), (data))")
   set(PAL_PT_ATTACH PT_ATTACH)
@@ -1286,7 +1342,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
   set(HAS_FTRUNCATE_LENGTH_ISSUE 0)
   set(BSD_REGS_STYLE "((reg).r_##rr)")
   set(HAVE_SCHED_OTHER_ASSIGNABLE 1)
-elseif(CMAKE_SYSTEM_NAME STREQUAL NetBSD)
+elseif(CLR_CMAKE_TARGET_NETBSD)
   set(DEADLOCK_WHEN_THREAD_IS_SUSPENDED_WHILE_BLOCKED_ON_MUTEX 0)
   set(PAL_PTRACE "ptrace((cmd), (pid), (void*)(addr), (data))")
   set(PAL_PT_ATTACH PT_ATTACH)
@@ -1297,7 +1353,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL NetBSD)
   set(BSD_REGS_STYLE "((reg).regs[_REG_##RR])")
   set(HAVE_SCHED_OTHER_ASSIGNABLE 0)
 
-elseif(CMAKE_SYSTEM_NAME STREQUAL SunOS)
+elseif(CLR_CMAKE_TARGET_SUNOS)
   set(DEADLOCK_WHEN_THREAD_IS_SUSPENDED_WHILE_BLOCKED_ON_MUTEX 0)
   set(PAL_PTRACE "ptrace((cmd), (pid), (caddr_t)(addr), (data))")
   set(PAL_PT_ATTACH PT_ATTACH)
@@ -1318,6 +1374,32 @@ else() # Anything else is Linux
   set(PAL_PT_WRITE_D PTRACE_POKEDATA)
   set(HAS_FTRUNCATE_LENGTH_ISSUE 0)
   set(HAVE_SCHED_OTHER_ASSIGNABLE 1)
-endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+endif(CLR_CMAKE_TARGET_OSX)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+check_struct_has_member(
+    "struct statfs"
+    f_fstypename
+    "sys/mount.h"
+    HAVE_STATFS_FSTYPENAME)
+
+check_struct_has_member(
+    "struct statvfs"
+    f_fstypename
+    "sys/mount.h"
+    HAVE_STATVFS_FSTYPENAME)
+
+# statfs: Find whether this struct exists
+if (HAVE_STATFS_FSTYPENAME OR HAVE_STATVFS_FSTYPENAME)
+    set (STATFS_INCLUDES sys/mount.h)
+else ()
+    set (STATFS_INCLUDES sys/statfs.h)
+endif ()
+
+check_prototype_definition(
+    statfs
+    "int statfs(const char *path, struct statfs *buf)"
+    0
+    ${STATFS_INCLUDES}
+    HAVE_NON_LEGACY_STATFS)
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)

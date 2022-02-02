@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -19,7 +18,7 @@ Abstract:
 
 /*
 Overview of PAL Performance utilities
-  
+
  */
 
 #ifndef _PAL_PERFTRACE_H_
@@ -35,28 +34,28 @@ extern "C"
 	ULONGLONG pal_perf_start_tick = 0;\
     PERFLogFunctionEntry( PAL_PERF_##x, &pal_perf_start_tick )
 #define PERF_EXIT(x) \
-	PERFLogFunctionExit( PAL_PERF_##x, &pal_perf_start_tick ) 
+	PERFLogFunctionExit( PAL_PERF_##x, &pal_perf_start_tick )
 #define PERF_ENTRY_ONLY(x)  \
 	PERFNoLatencyProfileEntry( PAL_PERF_##x )
 
 BOOL PERFInitialize(LPWSTR command_line, LPWSTR exe_path) ;
 void PERFTerminate( );
-BOOL PERFAllocThreadInfo( ); 
+BOOL PERFAllocThreadInfo( );
 void PERFLogFunctionExit(unsigned int pal_api_id, ULONGLONG *pal_perf_start_tick);
 void PERFLogFunctionEntry(unsigned int pal_api_id, ULONGLONG *pal_perf_start_tick);
 void PERFEnableThreadProfile(BOOL isInternal);
 void PERFDisableThreadProfile(BOOL isInternal);
-void PERFEnableProcessProfile( );  
-void PERFDisableProcessProfile( ); 
+void PERFEnableProcessProfile( );
+void PERFDisableProcessProfile( );
 BOOL PERFIsProcessProfileEnabled( );
 void PERFNoLatencyProfileEntry(unsigned int pal_api_id );
 void PERFCalibrate(const char* msg);
 
 #else  /* PAL_PERF */
 
-#define PERF_ENTRY(x) 
-#define PERF_ENTRY_ONLY(x) 
-#define PERF_EXIT(x)  
+#define PERF_ENTRY(x)
+#define PERF_ENTRY_ONLY(x)
+#define PERF_EXIT(x)
 
 #endif /* PAL_PERF */
 

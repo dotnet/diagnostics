@@ -29,7 +29,7 @@ public:
         Release();
     }
 
-    void operator=(T* ptr)
+    void operator=(T *ptr)
     {
         Release();
 

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 .macro LEAF_ENTRY Name, Section
         .thumb_func
@@ -170,7 +169,7 @@ C_FUNC(\Name\()_End):
         .endif
 
         CHECK_STACK_ALIGNMENT
-        
+
         END_PROLOGUE
 
 .endm

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -30,7 +29,7 @@ extern "C"
 Function :
     MAPGetRegionInfo
 
-    Parameters: 
+    Parameters:
     lpAddress: pointer to the starting memory location, not necessary
                to be rounded to the page location
 
@@ -38,7 +37,7 @@ Function :
               the information is stored in this struct
 
     Note: This function is to be used in virtual.c
-          
+
     Returns TRUE if this function finds information about the specified address
 --*/
 

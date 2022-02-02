@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *input.c - C formatted input, used by scanf, etc.
@@ -46,31 +45,6 @@
 
 #define _CVTBUFSIZE (309+40) /* # of digits in max. dp value + slop */
 
-//#include <cruntime.h>
-//#include <stdio.h>
-//#include <ctype.h>
-//#include <cvt.h>
-//#include <conio.h>
-//#include <stdarg.h>
-//#include <string.h>
-//#include <internal.h>
-//#include <fltintrn.h>
-//#include <malloc.h>
-//#include <locale.h>
-//#include <mtdll.h>
-//#include <stdlib.h>
-//#include <setlocal.h>
-//#include <dbgint.h>
-
-//#ifndef _INC_INTERNAL_SAFECRT
-//#include <internal_securecrt.h>
-//#endif  /* _INC_INTERNAL_SAFECRT */
-
-//#ifdef _MBCS
-//#undef _MBCS
-//#endif  /* _MBCS */
-//#include <tchar.h>
-
 #define _MBTOWC(x,y,z) _minimal_chartowchar( x, y )
 
 #define _istspace(x)    isspace((unsigned char)x)
@@ -114,6 +88,9 @@ static void __cdecl _un_inc(int, miniFILE *);
 static int __cdecl _whiteout(int *, miniFILE *);
 
 #endif  /* CPRFLAG */
+
+#undef _ISDIGIT
+#undef _ISXDIGIT
 
 #ifndef _UNICODE
 #define _ISDIGIT(chr)   isdigit((unsigned char)chr)
@@ -160,7 +137,7 @@ static int __check_float_string(size_t nFloatStrUsed,
         }
 
         newSize = *pnFloatStrSz * 2 * sizeof(_TCHAR);
-        
+
         if ((*pFloatStr)==floatstring)
         {
             if (((*pFloatStr)=(_TCHAR *)_malloc_crt(newSize))==NULL)
@@ -257,7 +234,7 @@ static int __check_float_string(size_t nFloatStrUsed,
     char *table = AsciiTable;
 #endif  /* ALLOC_TABLE */
 
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
     uint64_t num64 = 0LL;             /* temp for 64-bit integers          */
 #endif  /* _INTEGRAL_MAX_BITS >= 64    */
     void *pointer=NULL;                 /* points to user data receptacle    */
@@ -265,7 +242,7 @@ static int __check_float_string(size_t nFloatStrUsed,
 
 
 #ifndef _UNICODE
-    wchar_t wctemp=L'\0';
+    char16_t wctemp=L'\0';
 #endif  /* _UNICODE */
     _TUCHAR *scanptr;                   /* for building "table" data         */
     int ch = 0;
@@ -288,10 +265,10 @@ static int __check_float_string(size_t nFloatStrUsed,
 
     char done_flag;                     /* general purpose loop monitor      */
     char longone;                       /* 0 = SHORT, 1 = LONG, 2 = L_DOUBLE */
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
     int integer64;                      /* 1 for 64-bit integer, 0 otherwise */
 #endif  /* _INTEGRAL_MAX_BITS >= 64    */
-    signed char widechar;               /* -1 = char, 0 = ????, 1 = wchar_t  */
+    signed char widechar;               /* -1 = char, 0 = ????, 1 = char16_t  */
     char reject;                        /* %[^ABC] instead of %[ABC]         */
     char negative;                      /* flag for '-' detected             */
     char suppress;                      /* don't assign anything             */
@@ -355,7 +332,7 @@ static int __check_float_string(size_t nFloatStrUsed,
 
             longone = 1;
 
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
             integer64 = 0;
 #endif  /* _INTEGRAL_MAX_BITS >= 64    */
 
@@ -376,7 +353,7 @@ static int __check_float_string(size_t nFloatStrUsed,
                             --widechar;         /* set widechar = -1 */
                             break;
 
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
                         case _T('I'):
                             if ( (*(format + 1) == _T('6')) &&
                                  (*(format + 2) == _T('4')) )
@@ -441,6 +418,7 @@ static int __check_float_string(size_t nFloatStrUsed,
                                 ++longone;
                                 /* NOBREAK */
                             }
+                            FALLTHROUGH;
                         case _T('w') :
                             ++widechar;         /* set widechar = 1 */
                             break;
@@ -510,15 +488,15 @@ DEFAULT_LABEL:
                     va_copy(arglistsave, arglist);
 
                     /* Get the next argument - size of the array in characters */
-#ifdef _WIN64
+#ifdef HOST_64BIT
                     original_array_width = array_width = (size_t)(va_arg(arglist, unsigned int));
-#else  /* _WIN64 */
+#else  /* HOST_64BIT */
                     original_array_width = array_width = va_arg(arglist, size_t);
-#endif  /* _WIN64 */
+#endif  /* HOST_64BIT */
 
                     if(array_width < 1) {
                         if (widechar > 0)
-                            *(wchar_t UNALIGNED *)pointer = L'\0';
+                            *(char16_t UNALIGNED *)pointer = L'\0';
                         else
                             *(char *)pointer = '\0';
 
@@ -681,17 +659,17 @@ scanit:
                                         }
 #endif  /* 0 */
                                         _MBTOWC(&wctemp, temp, MB_CUR_MAX);
-                                        *(wchar_t UNALIGNED *)pointer = wctemp;
+                                        *(char16_t UNALIGNED *)pointer = wctemp;
                                         /* just copy W('?') if mbtowc fails, errno is set by mbtowc */
-                                        pointer = (wchar_t *)pointer + 1;
+                                        pointer = (char16_t *)pointer + 1;
 #ifdef _SECURE_SCANF
                                         --array_width;
 #endif  /* _SECURE_SCANF */
                                     } else
 #else  /* _UNICODE */
                                     if (fl_wchar_arg) {
-                                        *(wchar_t UNALIGNED *)pointer = ch;
-                                        pointer = (wchar_t *)pointer + 1;
+                                        *(char16_t UNALIGNED *)pointer = ch;
+                                        pointer = (char16_t *)pointer + 1;
 #ifdef _SECURE_SCANF
                                         --array_width;
 #endif  /* _SECURE_SCANF */
@@ -766,7 +744,7 @@ _END_SECURE_CRT_DEPRECATION_DISABLE
                             /* In case of error, blank out the input buffer */
                             if (fl_wchar_arg)
                             {
-                                _RESET_STRING(((wchar_t UNALIGNED *)start), original_array_width);
+                                _RESET_STRING(((char16_t UNALIGNED *)start), original_array_width);
                             }
                             else
                             {
@@ -784,10 +762,10 @@ _END_SECURE_CRT_DEPRECATION_DISABLE
                                 {
                                     if (fl_wchar_arg)
                                     {
-                                        *(wchar_t UNALIGNED *)pointer = L'\0';
+                                        *(char16_t UNALIGNED *)pointer = L'\0';
 #ifdef _SECURE_SCANF
-                                        _FILL_STRING(((wchar_t UNALIGNED *)start), original_array_width,
-                                            ((wchar_t UNALIGNED *)pointer - (wchar_t UNALIGNED *)start + 1))
+                                        _FILL_STRING(((char16_t UNALIGNED *)start), original_array_width,
+                                            ((char16_t UNALIGNED *)pointer - (char16_t UNALIGNED *)start + 1))
 #endif  /* _SECURE_SCANF */
                                     }
                                     else
@@ -813,6 +791,7 @@ _END_SECURE_CRT_DEPRECATION_DISABLE
                     case _T('i') :      /* could be d, o, or x */
 
                         comchr = _T('d'); /* use as default */
+                        FALLTHROUGH;
 
                     case _T('x'):
 
@@ -862,11 +841,12 @@ x_incwidth:
                     case _T('p') :
                         /* force %hp to be treated as %p */
                         longone = 1;
-#ifdef _WIN64
+#ifdef HOST_64BIT
                         /* force %p to be 64 bit in WIN64 */
                         ++integer64;
                         num64 = 0;
-#endif  /* _WIN64 */
+#endif  /* HOST_64BIT */
+                        FALLTHROUGH;
                     case _T('o') :
                     case _T('u') :
                     case _T('d') :
@@ -885,7 +865,7 @@ d_incwidth:
                         }
 
 getnum:
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
                         if ( integer64 ) {
 
                             while (!done_flag) {
@@ -971,7 +951,7 @@ getnum:
 
                             if (negative)
                                 number = (unsigned long)(-(long)number);
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
                         }
 #endif  /* _INTEGRAL_MAX_BITS >= 64    */
                         if (_T('F')==comchr) /* expected ':' in long pointer */
@@ -982,7 +962,7 @@ getnum:
 
                                 ++count;
 assign_num:
-#if _INTEGRAL_MAX_BITS >= 64   
+#if _INTEGRAL_MAX_BITS >= 64
                                 if ( integer64 )
                                     *(__int64 UNALIGNED *)pointer = ( uint64_t )num64;
                                 else
@@ -1048,7 +1028,7 @@ f_incwidth:
                         decimal = L'.';
                         _MBTOWC(&decimal, _INTRN_LOCALE_CONV(_loc_update)->decimal_point, MB_CUR_MAX);
 #else  /* _UNICODE */
-                       
+
                         decimal=*((_INTRN_LOCALE_CONV(_loc_update))->decimal_point);
 #endif  /* _UNICODE */
 

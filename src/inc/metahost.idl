@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /**************************************************************************************
  ** Motivation for redesigning the shim APIs:                                        **
@@ -101,8 +100,8 @@ interface ICLRMetaHost : IUnknown
      **********************************************************************************/
     HRESULT GetVersionFromFile(
         [in]      LPCWSTR pwzFilePath,
-        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_(*pcchBuffer)")] 
-                  LPWSTR pwzBuffer, 
+        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_(*pcchBuffer)")]
+                  LPWSTR pwzBuffer,
         [in, out] DWORD *pcchBuffer);
 
     /**********************************************************************************
@@ -386,7 +385,7 @@ interface ICLRDebugging : IUnknown
     ** interfaces have been released and no thread is currently within a call to     **
     ** OpenVirtualProcess.                                                           **
     ** Arguments:                                                                    **
-    **   hModule - A module handle previously provided by the                        ** 
+    **   hModule - A module handle previously provided by the                        **
     **             ICLRDebuggingLibraryProvider used in OpenVirtualProcess           **
     ** Returns:                                                                      **
     **   S_OK if the module can be unloaded now                                      **
@@ -422,8 +421,8 @@ interface ICLRRuntimeInfo : IUnknown
      **     GetCORVersion                                                            **
      **********************************************************************************/
     HRESULT GetVersionString(
-        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_opt_(*pcchBuffer)")] 
-                   LPWSTR pwzBuffer, 
+        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_opt_(*pcchBuffer)")]
+                   LPWSTR pwzBuffer,
         [in, out]  DWORD *pcchBuffer);
 
     /**********************************************************************************
@@ -431,8 +430,8 @@ interface ICLRRuntimeInfo : IUnknown
      ** Supersedes: GetCORSystemDirectory                                            **
      **********************************************************************************/
     HRESULT GetRuntimeDirectory(
-        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_(*pcchBuffer)")] 
-                   LPWSTR pwzBuffer, 
+        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_(*pcchBuffer)")]
+                   LPWSTR pwzBuffer,
         [in, out]  DWORD *pcchBuffer);
 
     /**********************************************************************************
@@ -451,9 +450,9 @@ interface ICLRRuntimeInfo : IUnknown
      ** Supersedes: LoadStringRC, LoadStringRCEx                                     **
      **********************************************************************************/
     HRESULT LoadErrorString(
-        [in]       UINT iResourceID, 
-        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_(*pcchBuffer)")] 
-                   LPWSTR pwzBuffer, 
+        [in]       UINT iResourceID,
+        [out, size_is(*pcchBuffer), annotation("_Out_writes_all_(*pcchBuffer)")]
+                   LPWSTR pwzBuffer,
         [in, out]  DWORD *pcchBuffer,
         [in, lcid] LONG iLocaleID);
 
@@ -462,7 +461,7 @@ interface ICLRRuntimeInfo : IUnknown
      ** Supersedes: LoadLibraryShim                                                  **
      **********************************************************************************/
     HRESULT LoadLibrary(
-        [in]  LPCWSTR pwzDllName, 
+        [in]  LPCWSTR pwzDllName,
         [out, retval] HMODULE *phndModule);
 
     /**********************************************************************************
@@ -473,7 +472,7 @@ interface ICLRRuntimeInfo : IUnknown
      ** Supersedes: GetRealProcAddress                                               **
      **********************************************************************************/
     HRESULT GetProcAddress(
-        [in]  LPCSTR pszProcName, 
+        [in]  LPCSTR pszProcName,
         [out, retval] LPVOID *ppProc);
 
     /**********************************************************************************
@@ -522,7 +521,7 @@ interface ICLRRuntimeInfo : IUnknown
     HRESULT GetDefaultStartupFlags(
         [out]      DWORD *pdwStartupFlags,
         [out, size_is(*pcchHostConfigFile), annotation("_Out_writes_all_opt_(*pcchHostConfigFile)")]
-                   LPWSTR pwzHostConfigFile, 
+                   LPWSTR pwzHostConfigFile,
         [in, out]  DWORD *pcchHostConfigFile);
 
     /**********************************************************************************

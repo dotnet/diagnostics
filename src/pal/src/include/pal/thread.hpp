@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -23,16 +22,16 @@ Abstract:
 #include "corunix.hpp"
 #include "shm.hpp"
 #include "cs.hpp"
-#include "pal/threadinfo.hpp"
 
-#include <pthread.h>    
+#include <pthread.h>
 #include <sys/syscall.h>
+
+#include "threadsusp.hpp"
+#include "threadinfo.hpp"
 #include <errno.h>
 
 namespace CorUnix
 {
-    extern pthread_key_t thObjKey;
-
     enum PalThreadType
     {
         UserCreatedThread,
@@ -60,17 +59,11 @@ namespace CorUnix
     public:
         CHAR *       strtokContext; // Context for strtok function
         WCHAR *      wcstokContext; // Context for wcstok function
-        struct PAL_tm localtimeBuffer; // Buffer for localtime function
-        CHAR         ctimeBuffer[ STR_TIME_SIZE ]; // Buffer for ctime function
-        CHAR         ECVTBuffer[ ECVT_MAX_BUFFER_SIZE ]; // Buffer for _ecvt function.
 
         CThreadCRTInfo() :
             strtokContext(NULL),
             wcstokContext(NULL)
         {
-            ZeroMemory(&localtimeBuffer, sizeof(localtimeBuffer));
-            ZeroMemory(ctimeBuffer, sizeof(ctimeBuffer));
-            ZeroMemory(ECVTBuffer, sizeof(ECVTBuffer));
         };
     };
 
@@ -109,7 +102,7 @@ namespace CorUnix
 
         SIZE_T m_threadId;
         DWORD m_dwLwpId;
-        pthread_t m_pthreadSelf;        
+        pthread_t m_pthreadSelf;
 
     public:
 
@@ -188,7 +181,7 @@ namespace CorUnix
         {
             return m_threadId;
         };
-        
+
         DWORD
         GetLwpId(
             void
@@ -258,17 +251,6 @@ TLSCleanup(
     void
     );
 
-extern int free_threads_spinlock;
-
-#define SYNCSPINLOCK_F_ASYMMETRIC  1
-
-#define SPINLOCKInit(lock) (*(lock) = 0)
-#define SPINLOCKDestroy SPINLOCKInit
-
-void SPINLOCKAcquire (LONG * lock, unsigned int flags);
-void SPINLOCKRelease (LONG * lock);
-DWORD SPINLOCKTryAcquire (LONG * lock);
-
 /*++
 Macro:
   THREADSilentGetCurrentThreadId
@@ -287,29 +269,32 @@ Abstract:
   cache?
 
   In order to match the thread ids that debuggers use at least for
-  linux we need to use gettid(). 
+  linux we need to use gettid().
 
 --*/
 #if defined(__linux__)
-#define THREADSilentGetCurrentThreadId() (SIZE_T)syscall(SYS_gettid)
+#define PlatformGetCurrentThreadId() (SIZE_T)syscall(SYS_gettid)
 #elif defined(__APPLE__)
-inline SIZE_T THREADSilentGetCurrentThreadId() {
+inline SIZE_T PlatformGetCurrentThreadId() {
     uint64_t tid;
     pthread_threadid_np(pthread_self(), &tid);
     return (SIZE_T)tid;
 }
 #elif defined(__FreeBSD__)
-#include <sys/thr.h>
-inline SIZE_T THREADSilentGetCurrentThreadId() {
-    long tid;
-    thr_self(&tid);
-    return (SIZE_T)tid;
-}
+#include <pthread_np.h>
+#define PlatformGetCurrentThreadId() (SIZE_T)pthread_getthreadid_np()
 #elif defined(__NetBSD__)
 #include <lwp.h>
-#define THREADSilentGetCurrentThreadId() (SIZE_T)_lwp_self()
+#define PlatformGetCurrentThreadId() (SIZE_T)_lwp_self()
 #else
-#define THREADSilentGetCurrentThreadId() (SIZE_T)pthread_self()
+#define PlatformGetCurrentThreadId() (SIZE_T)pthread_self()
 #endif
+
+inline SIZE_T THREADSilentGetCurrentThreadId() {
+    static __thread SIZE_T tid;
+    if (!tid)
+        tid = PlatformGetCurrentThreadId();
+    return tid;
+}
 
 #endif // _PAL_THREAD_HPP_

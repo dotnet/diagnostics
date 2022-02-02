@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 //
 
 //
@@ -9,11 +8,6 @@
  ** Mscoree.idl - interface definitions for mscoree.dll                              **
  **                                                                                  **
  **************************************************************************************/
-
-cpp_quote("#define DECLARE_DEPRECATED ")
-cpp_quote("#define DEPRECATED_CLR_STDAPI STDAPI")
-
-cpp_quote("")
 
 //
 // Interface descriptions
@@ -28,12 +22,6 @@ interface IHostControl;
 
 cpp_quote("struct ICLRControl;")
 interface ICLRControl;
-
-// CLSID ComCallUnmarshal2
-cpp_quote("EXTERN_GUID(CLSID_ComCallUnmarshalV4, 0x45fb4600,0xe6e8,0x4928,0xb2,0x5e,0x50,0x47,0x6f,0xf7,0x94,0x25);")
-
-// CLSID CLRRuntimeHost
-cpp_quote("EXTERN_GUID(CLSID_CLRRuntimeHost, 0x90F1A06E, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);")
 
 // IID ICLRRuntimeHost: uuid(90F1A06C-7712-4762-86B5-7A5EBA6BDB02)
 cpp_quote("EXTERN_GUID(IID_ICLRRuntimeHost, 0x90F1A06C, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);")
@@ -66,27 +54,27 @@ typedef enum {
   STARTUP_SINGLE_VERSION_HOSTING_INTERFACE = 0x4000,                    // Disallow mixing hosting interface
   STARTUP_LEGACY_IMPERSONATION             = 0x10000,                        // Do not flow impersonation across async points by default
   STARTUP_DISABLE_COMMITTHREADSTACK        = 0x20000,           // Don't eagerly commit thread stack
-  STARTUP_ALWAYSFLOW_IMPERSONATION             = 0x40000,                        // Force flow impersonation across async points 
-  																// (impersonations achieved thru p/invoke and managed will flow. 
+  STARTUP_ALWAYSFLOW_IMPERSONATION             = 0x40000,                        // Force flow impersonation across async points
+  																// (impersonations achieved thru p/invoke and managed will flow.
   																// default is to flow only managed impersonation)
   STARTUP_TRIM_GC_COMMIT        = 0x80000,                      // GC uses less committed space when system memory low
   STARTUP_ETW                   = 0x100000,
   STARTUP_ARM                   = 0x400000,                     // Enable the ARM feature.
-  STARTUP_SINGLE_APPDOMAIN      = 0x800000,                      // application runs in default domain, no more domains are created 
+  STARTUP_SINGLE_APPDOMAIN      = 0x800000,                      // application runs in default domain, no more domains are created
   STARTUP_APPX_APP_MODEL        = 0x1000000,                     // jupiter app
   STARTUP_DISABLE_RANDOMIZED_STRING_HASHING     = 0x2000000      // Disable the randomized string hashing (not supported)
 } STARTUP_FLAGS;
 
 typedef enum
 {
-    APPDOMAIN_SECURITY_DEFAULT =0x0, 
+    APPDOMAIN_SECURITY_DEFAULT =0x0,
     APPDOMAIN_SECURITY_SANDBOXED = 0x1,       // appdomain is sandboxed
     APPDOMAIN_SECURITY_FORBID_CROSSAD_REVERSE_PINVOKE = 0x2,         // no cross ad reverse pinvokes
     APPDOMAIN_IGNORE_UNHANDLED_EXCEPTIONS = 0x4, //
     APPDOMAIN_FORCE_TRIVIAL_WAIT_OPERATIONS = 0x08, // do not pump messages during wait operations, do not call sync context
     // When passed by the host, this flag will allow any assembly to perform PInvoke or COMInterop operations.
     // Otherwise, by default, only platform assemblies can perform those operations.
-    APPDOMAIN_ENABLE_PINVOKE_AND_CLASSIC_COMINTEROP = 0x10, 
+    APPDOMAIN_ENABLE_PINVOKE_AND_CLASSIC_COMINTEROP = 0x10,
 
     APPDOMAIN_ENABLE_PLATFORM_SPECIFIC_APPS = 0x40,
     APPDOMAIN_ENABLE_ASSEMBLY_LOADFILE = 0x80,
@@ -100,35 +88,19 @@ typedef enum {
     WAIT_NOTINDEADLOCK = 0x4
 }WAIT_OPTION;
 
-typedef enum ETaskType
-{
-    TT_DEBUGGERHELPER = 0x1,
-    TT_GC = 0x2,
-    TT_FINALIZER = 0x4,
-    TT_THREADPOOL_TIMER = 0x8,
-    TT_THREADPOOL_GATE = 0x10,
-    TT_THREADPOOL_WORKER = 0x20,
-    TT_THREADPOOL_IOCOMPLETION = 0x40,
-    TT_ADUNLOAD = 0x80,
-    TT_USER = 0x100,
-    TT_THREADPOOL_WAIT = 0x200,
-
-    TT_UNKNOWN = 0x80000000,
-} ETaskType;
-
 typedef enum {
     // Default to minidump
         DUMP_FLAVOR_Mini = 0,
-        
+
         // Include critical CLR state
         DUMP_FLAVOR_CriticalCLRState = 1,
-        
+
         // Include critical CLR state and ngen images without including hosted heap
         // It is host's responsibility to report hosted heap.
         DUMP_FLAVOR_NonHeapCLRState = 2,
 
     DUMP_FLAVOR_Default = DUMP_FLAVOR_Mini
-        
+
 } ECustomDumpFlavor;
 
 const DWORD BucketParamsCount = 10;
@@ -155,61 +127,6 @@ typedef struct _BucketParameters
     WCHAR pszEventTypeName[BucketParamLength];                // Name of the event type.
     WCHAR pszParams[BucketParamsCount][BucketParamLength];    // Parameter strings.
 } BucketParameters;
-
-
-typedef enum
-{
-    OPR_ThreadAbort,
-    OPR_ThreadRudeAbortInNonCriticalRegion,
-    OPR_ThreadRudeAbortInCriticalRegion,
-    OPR_AppDomainUnload,
-    OPR_AppDomainRudeUnload,
-    OPR_ProcessExit,
-    OPR_FinalizerRun,
-    MaxClrOperation
-    // Do not add anything after this
-} EClrOperation;
-
-typedef enum
-{
-    FAIL_NonCriticalResource,
-    FAIL_CriticalResource,
-    FAIL_FatalRuntime,
-    FAIL_OrphanedLock,
-    FAIL_StackOverflow,
-    // In CoreCLR, we will treat AV specially, based upon the escalation policy.
-    // Currently only used in CoreCLR.
-    FAIL_AccessViolation,
-    FAIL_CodeContract,
-    MaxClrFailure
-    // Do not add anything after this
-} EClrFailure;
-
-typedef enum
-{
-        eRuntimeDeterminedPolicy,       // default
-        eHostDeterminedPolicy,          // revert back to Everett behavior, i.e. swallow all exception
-} EClrUnhandledException;
-
-typedef enum
-{
-    // !!! Please keep these ordered by severity
-    // !!! If you don't, you need to change EEPolicy::IsValidActionForOperation
-    // !!! and EEPolicy::IsValidActionForFailure
-    eNoAction,
-    eThrowException,
-    eAbortThread,
-    eRudeAbortThread,
-    eUnloadAppDomain,
-    eRudeUnloadAppDomain,
-    eExitProcess,
-        // Look at CorHost2::Stop.  For eFastExitProcess, eRudeExitProcess, eDisableRuntime,
-        // Stop bypasses finalizer run.
-    eFastExitProcess,
-    eRudeExitProcess,
-    MaxPolicyAction
-} EPolicyAction;
-
 
 //*****************************************************************************
 // New interface for hosting mscoree
@@ -276,16 +193,16 @@ interface ICLRRuntimeHost2 : ICLRRuntimeHost
     // set of properties.
     HRESULT CreateAppDomainWithManager([in] LPCWSTR wszFriendlyName,
                                 [in] DWORD dwFlags,
-                                [in] LPCWSTR wszAppDomainManagerAssemblyName, 
-                                [in] LPCWSTR wszAppDomainManagerTypeName, 
-                                [in] int nProperties, 
-                                [in] LPCWSTR* pPropertyNames, 
-                                [in] LPCWSTR* pPropertyValues, 
+                                [in] LPCWSTR wszAppDomainManagerAssemblyName,
+                                [in] LPCWSTR wszAppDomainManagerTypeName,
+                                [in] int nProperties,
+                                [in] LPCWSTR* pPropertyNames,
+                                [in] LPCWSTR* pPropertyValues,
                                 [out] DWORD* pAppDomainID);
 
     HRESULT CreateDelegate([in] DWORD appDomainID,
-                                 [in] LPCWSTR wszAssemblyName,     
-                                 [in] LPCWSTR wszClassName,     
+                                 [in] LPCWSTR wszAssemblyName,
+                                 [in] LPCWSTR wszClassName,
                                  [in] LPCWSTR wszMethodName,
                                  [out] INT_PTR* fnPtr);
 
@@ -323,7 +240,3 @@ interface ICLRRuntimeHost4 : ICLRRuntimeHost2
                                           [in] BOOL fWaitUntilDone,
                                           [out] int *pLatchedExitCode);
 };
-
-cpp_quote("#undef DEPRECATED_CLR_STDAPI")
-cpp_quote("#undef DECLARE_DEPRECATED")
-cpp_quote("#undef DEPRECATED_CLR_API_MESG")
