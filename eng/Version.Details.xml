@@ -32,13 +32,13 @@
       <Uri>https://github.com/dotnet/installer</Uri>
       <Sha>08df362ca677f73fe169b91b8a18769cae68f959</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.2-servicing.22063.3">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.3-servicing.22101.14">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>ef499fe9c33a00bb5b1ef67b14ef7acbd8b74e24</Sha>
+      <Sha>f427a33b1befec89c14b715e56c95b22838ba248</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="6.0.2">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="6.0.3">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>ef499fe9c33a00bb5b1ef67b14ef7acbd8b74e24</Sha>
+      <Sha>f427a33b1befec89c14b715e56c95b22838ba248</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="6.0.2">
       <Uri>https://github.com/dotnet/runtime</Uri>
