@@ -1134,6 +1134,9 @@ LLDBServices::GetModuleByOffset(
                             }
                             if (base)
                             {
+#if !defined(__APPLE__)
+                                baseAddress -= section.GetFileOffset();
+#endif
                                 *base = baseAddress;
                             }
                             return S_OK;
@@ -1364,6 +1367,9 @@ LLDBServices::GetModuleBase(
             lldb::addr_t baseAddress = section.GetLoadAddress(target);
             if (baseAddress != LLDB_INVALID_ADDRESS)
             {
+#if !defined(__APPLE__)
+                baseAddress -= section.GetFileOffset();
+#endif
                 return baseAddress;
             }
         }
@@ -2586,9 +2592,15 @@ LLDBServices::GetVersionStringFromSection(lldb::SBTarget& target, lldb::SBSectio
         else if (sectionType == lldb::eSectionTypeData)
         {
             lldb::addr_t address = section.GetLoadAddress(target);
-            uint32_t size = section.GetByteSize();
-            if (SearchVersionString(address, size, versionBuffer, VersionBufferSize)) {
-                return true;
+            if (address != LLDB_INVALID_ADDRESS)
+            {
+#if !defined(__APPLE__)
+                address -= section.GetFileOffset();
+#endif
+                uint32_t size = section.GetByteSize();
+                if (SearchVersionString(address, size, versionBuffer, VersionBufferSize)) {
+                    return true;
+                }
             }
         }
     }
