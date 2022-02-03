@@ -8,6 +8,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.CommandLine.IO;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -27,44 +28,86 @@ namespace Microsoft.Internal.Common.Commands
             new Command(name: "ps", 
             description: "Lists the dotnet processes that traces can be collected")
             {
-                HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler(),
-                VerboseOption()
+                HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler()
             };
-
-        public static Option VerboseOption() =>
-            new Option(
-                aliases: new[] {"-v", "--verbose"},
-                description: "Output includes commandline arguments.")
-                {
-                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
-                };
-        delegate Task<int> ProcessStatusDelegate(IConsole console, bool verbose);
-        private static string MakeFixedWidth(string text, int width, bool backwards = false)
-        {
-            int textLength = text.Length;
-            if(textLength == width)
-            {
-                return text;
-            }
-            else if(textLength > width)
-            {
-                if(backwards)
-                {
-                    return text.Substring(textLength - width, width);
-                }
-                return text.Substring(0, width);
-            }
-            else
-            {
-                return text += new string(' ', width - text.Length);
-            }
-        }
-
+        delegate Task<int> ProcessStatusDelegate(IConsole console);
+        
+        //private static string formatLength()
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis, their statuses and the command line arguments that are passed to them.
         /// </summary>
-        private static Task<int> ProcessStatus(IConsole console, bool verbose)
+        private static Task<int> ProcessStatus(IConsole console)
         {
+            StringBuilder MakeFixedWidth(string text, int width, StringBuilder sb, bool alignRight_leftPadding = false, bool alignLeft_rightPadding = false, bool backwards = false)
+            {
+                int textLength = text.Length;
+                sb.Append(" ");
+                if(textLength == width)
+                {
+                    sb.Append(text);
+                }
+                else if(textLength > width)
+                {
+                    if(backwards)
+                    {
+                        sb.Append(text.Substring(textLength - width, width));
+                    }
+                    else
+                    {
+                        sb.Append(text.Substring(0, width));
+                    }
+                }
+                else
+                {
+                    if (alignRight_leftPadding)
+                    {
+                        sb.Append(' ', width - textLength);
+                        sb.Append(text);
+                    }
+                    else if (alignLeft_rightPadding)
+                    {
+                        sb.Append(text);
+                        sb.Append(' ', width - text.Length);
+                    }
+                    else
+                    {
+                        sb.Append(text);
+                        sb.Append(' ', width - text.Length);
+                    }
+                    
+                }
+                sb.Append(" ");
+                return sb;
+            }
+
+            int getColumnWidth(IEnumerable<int> objects)
+            {
+                int largeLength = Console.WindowWidth / 2 - 16;
+                return Math.Min(objects.Max(), largeLength);
+            }
+
+            StringBuilder prepareToPrint(List<(int processId, string processName, string fileName, string cmdLineArgs)> printInfo, StringBuilder sb)
+            {
+                var processIDs = printInfo.Select(i => i.processId.ToString().Length);
+                var processNames = printInfo.Select(i => i.processName.Length);
+                var fileNames = printInfo.Select(i => i.fileName.Length);
+                var commandLineArgs = printInfo.Select(i => i.cmdLineArgs.Length);
+                int iDLength = getColumnWidth(processIDs);
+                int nameLength = getColumnWidth(processNames);
+                int fileLength = getColumnWidth(fileNames);
+                int cmdLength = getColumnWidth(commandLineArgs);
+
+                foreach(var info in printInfo)
+                {
+                    sb = MakeFixedWidth(info.processId.ToString(), iDLength,sb, true, false, true);
+                    sb = MakeFixedWidth(info.processName, nameLength, sb, false, true, true);
+                    sb = MakeFixedWidth(info.fileName, fileLength, sb, false, true, true);
+                    sb = MakeFixedWidth(info.cmdLineArgs, cmdLength, sb, false, true, true);
+                    sb.Append("\n");
+                }
+                return sb;
+            }
+
             try
             {
                 StringBuilder sb = new StringBuilder();
@@ -75,7 +118,7 @@ namespace Microsoft.Internal.Common.Commands
                     .ThenBy(process => process.Id);
 
                 var currentPid = Process.GetCurrentProcess().Id;
-
+                List<(int processId, string processName, string fileName, string cmdLineArgs)> printInfo = new ();
                 foreach (var process in processes)
                 {
                     if (process.Id == currentPid)
@@ -84,54 +127,31 @@ namespace Microsoft.Internal.Common.Commands
                     }
                     try
                     {
-                        if(verbose)
+                        String cmdLineArgs = GetArgs(process);
+                        cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
+                        string fileName = process.MainModule?.FileName ?? string.Empty;
+                        string[] cmdList = cmdLineArgs.Split(" ");
+                        foreach(string str in cmdList)
                         {
-                            int iDLength = 10;
-                            int nameLength = 10;
-                            int fileLength = 25;
-                            int cmdLength = 55;
-                            String cmdLineArgs = GetArgs(process);
-                            cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? "" : cmdLineArgs;
-                            string fileName = process.MainModule?.FileName ?? "";
-                            string[] cmdList = cmdLineArgs.Split(" ");
-                            foreach(string str in cmdList)
+                            if (str == string.Empty)
                             {
-                                string splitChar = "";
-                                if (str.Contains("/"))
-                                {
-                                    splitChar = "/";
-                                    
-                                }
-                                else if(str.Contains("\\"))
-                                {
-                                    splitChar = "\\";
-                                }
-                                else
-                                {
-                                    continue;
-                                }
-                                string[] filePath = str.Split(splitChar);
-                                fileName = filePath.LastOrDefault();
                                 break;
                             }
-                            string processID = MakeFixedWidth(process.Id.ToString(), iDLength);
-                            string processName = MakeFixedWidth(process.ProcessName, nameLength);
-                            fileName = MakeFixedWidth(fileName, fileLength);
-                            cmdLineArgs = MakeFixedWidth(cmdLineArgs, cmdLength, true);
-                            string toAppend = $"{processID, 10} {processName, -10} {fileName, -25} {cmdLineArgs, -55}\n";
-                            sb.Append(toAppend);
+                            //Assume the first string to contain the directory separation character is the filepath
+                            fileName = str;
+                            //remove the filepath from the command line arguments
+                            cmdLineArgs = string.Join(" ", cmdList.Skip(1));
+                            break;
                         }
-                        else
-                        {
-                            string fileName = process.MainModule?.FileName ?? "[Elevated process - cannot determine path]";
-                            sb.Append($"{process.Id, 10} {process.ProcessName, -10} {fileName}\n");
-                        }
+                        (int, string, string, string) commandInfo = (process.Id, process.ProcessName, fileName, cmdLineArgs);
+                        printInfo.Add(commandInfo);
                     }
                     catch (Exception ex) 
                     {
                         if (ex is Win32Exception || ex is InvalidOperationException)
                         {
-                            sb.Append($"{process.Id, 6} {process.ProcessName, -10} [Elevated process - cannot determine path]\n");
+                            (int, string, string, string) commandInfo = (process.Id, process.ProcessName, "[Elevated process - cannot determine path]", "");
+                            printInfo.Add(commandInfo);
                         }
                         else
                         {
@@ -139,6 +159,7 @@ namespace Microsoft.Internal.Common.Commands
                         }
                     }
                 }
+                sb = prepareToPrint(printInfo, sb);
                 console.Out.WriteLine(sb.ToString());
             }
             catch (InvalidOperationException ex)
@@ -192,7 +213,7 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');
-                        if (commandLineSplit.FirstOrDefault() == process.MainModule.FileName)
+                        if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
                         {
                             return String.Join(" ", commandLineSplit.Skip(1));
                         }
