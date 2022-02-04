@@ -5,7 +5,6 @@
     <ClCompile Include="debugshim.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="dbgshim.def" />
     <None Include="CMakeLists.txt" />
     <None Include="pkg\Directory.Build.props">
       <Filter>pkg</Filter>
@@ -49,6 +48,8 @@
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x86.proj">
       <Filter>pkg</Filter>
     </None>
+    <None Include="dbgshim.ntdef" />
+    <None Include="dbgshim_unixexports.src" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="dbgshim.rc" />
@@ -57,5 +58,8 @@
     <Filter Include="pkg">
       <UniqueIdentifier>{ac4ed0ef-d259-4eed-8152-b4c1db4df94c}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="debugshim.h" />
   </ItemGroup>
 </Project>

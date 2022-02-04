@@ -362,6 +362,8 @@
   <ItemGroup>
     <ClCompile Include="dbgshim.cpp" />
     <ClCompile Include="debugshim.cpp" />
+    <None Include="dbgshim.ntdef" />
+    <None Include="dbgshim_unixexports.src" />
     <None Include="pkg\Directory.Build.props" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-arm.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-arm64.proj" />
@@ -377,8 +379,10 @@
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x64.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x86.proj" />
     <ResourceCompile Include="dbgshim.rc" />
-    <None Include="dbgshim.def" />
     <None Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="debugshim.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -37,4 +37,7 @@
   <ItemGroup>
     <None Include="CMakeLists.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+  </ItemGroup>
 </Project>
