@@ -31,7 +31,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-preview.2.22080.2</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>7.0.0-preview.2.22080.2</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>6.0.102-servicing.22071.4</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>7.0.100-preview.1.22101.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
