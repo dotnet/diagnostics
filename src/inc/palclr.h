@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 // ===========================================================================
 // File: palclr.h
 //
@@ -10,7 +9,7 @@
 // ===========================================================================
 
 
-#if !defined(FEATURE_PAL)
+#if defined(HOST_WINDOWS)
 
 #ifndef __PALCLR_H__
 #define __PALCLR_H__
@@ -19,11 +18,7 @@
 // Unix L"" is UTF32, and on windows it's UTF16.  Because of built-in assumptions on the size
 // of string literals, it's important to match behaviour between Unix and Windows.  Unix will be defined
 // as u"" (char16_t)
-#ifdef PLATFORM_UNIX
-#define W(str)  u##str
-#else // PLATFORM_UNIX
 #define W(str)  L##str
-#endif // PLATFORM_UNIX
 
 #include <windef.h>
 
@@ -55,12 +50,18 @@
 
 #define ANALYZER_NORETURN
 
+#ifdef _MSC_VER
+#define EMPTY_BASES_DECL __declspec(empty_bases)
+#else
+#define EMPTY_BASES_DECL
+#endif // !_MSC_VER
+
 //
 // CPP_ASSERT() can be used within a class definition, to perform a
 // compile-time assertion involving private names within the class.
 //
 // MS compiler doesn't allow redefinition of the typedef within a template.
-// gcc doesn't allow redefinition of the typedef within a class, though 
+// gcc doesn't allow redefinition of the typedef within a class, though
 // it does at file scope.
 #define CPP_ASSERT(n, e) typedef char __C_ASSERT__##n[(e) ? 1 : -1];
 
@@ -70,11 +71,11 @@
 // usage pattern is:
 //
 // int get_scratch_register() {
-// #if defined(_TARGET_X86_)
+// #if defined(TARGET_X86)
 //     return eax;
-// #elif defined(_TARGET_AMD64_)
+// #elif defined(TARGET_AMD64)
 //     return rax;
-// #elif defined(_TARGET_ARM_)
+// #elif defined(TARGET_ARM)
 //     return r0;
 // #else
 //     PORTABILITY_ASSERT("scratch register");
@@ -91,7 +92,7 @@
 // errors. Once they fix all the places that need attention for portability,
 // they can define PORTABILITY_ASSERT and PORTABILITY_WARNING to cause
 // compile-time errors to make sure that they haven't missed anything.
-// 
+//
 // If it is reasonably possible all codepaths containing PORTABILITY_ASSERT
 // should be compilable (e.g. functions should return NULL or something if
 // they are expected to return a value).
@@ -99,14 +100,14 @@
 // The message in these two macros should not contain any keywords like TODO
 // or NYI. It should be just the brief description of the problem.
 
-#if defined(_TARGET_X86_)
+#if defined(TARGET_X86)
 // Finished ports - compile-time errors
 #define PORTABILITY_WARNING(message)    NEED_TO_PORT_THIS_ONE(NEED_TO_PORT_THIS_ONE)
 #define PORTABILITY_ASSERT(message)     NEED_TO_PORT_THIS_ONE(NEED_TO_PORT_THIS_ONE)
 #else
 // Ports in progress - run-time asserts only
 #define PORTABILITY_WARNING(message)
-#define PORTABILITY_ASSERT(message)     _ASSERTE(false && message)
+#define PORTABILITY_ASSERT(message)     _ASSERTE(false && (message))
 #endif
 
 #define DIRECTORY_SEPARATOR_CHAR_A '\\'
@@ -242,7 +243,7 @@
 // - It is not possible to directly use the local variables in the filter.
 // All the local information that the filter has to need to know about should
 // be passed through pv parameter
-//  
+//
 // - Do not use goto to jump out of the PAL_TRY block
 // (jumping out of the try block is not a good idea even on Win32, because of
 // it causes stack unwind)
@@ -270,7 +271,7 @@
 //   ....
 // }
 // PAL_ENDTRY
-// 
+//
 //
 // LONG MyFilter(PEXCEPTION_POINTERS *pExceptionInfo, PVOID pv)
 // {
@@ -403,7 +404,7 @@
         static void Run(__ParamType __paramDef)                                 \
     {                                                                           \
             PAL_TRY_HANDLER_DBG_BEGIN_DLLMAIN(__reason)
- 
+
 #define PAL_EXCEPT(Disposition)                                                 \
             PAL_TRY_HANDLER_DBG_END                                             \
         }                                                                       \
@@ -452,7 +453,7 @@
     __ParamType __paramDef; __paramDef = __param;                               \
     PAL_TRY_NAKED                                                               \
     PAL_TRY_HANDLER_DBG_BEGIN_DLLMAIN(__reason)
- 
+
 #define PAL_EXCEPT(Disposition)                                                 \
         PAL_TRY_HANDLER_DBG_END                                                 \
         PAL_EXCEPT_NAKED(Disposition)
@@ -473,7 +474,7 @@
 
 // Executes the handler if the specified exception code matches
 // the one in the exception. Otherwise, returns EXCEPTION_CONTINUE_SEARCH.
-#define PAL_EXCEPT_IF_EXCEPTION_CODE(dwExceptionCode) PAL_EXCEPT((GetExceptionCode() == dwExceptionCode)?EXCEPTION_EXECUTE_HANDLER:EXCEPTION_CONTINUE_SEARCH)
+#define PAL_EXCEPT_IF_EXCEPTION_CODE(dwExceptionCode) PAL_EXCEPT((GetExceptionCode() == (dwExceptionCode))?EXCEPTION_EXECUTE_HANDLER:EXCEPTION_CONTINUE_SEARCH)
 
 #define PAL_CPP_TRY try
 #define PAL_CPP_ENDTRY
@@ -484,32 +485,12 @@
 #define PAL_CPP_CATCH_EXCEPTION_NOARG catch (Exception *)
 
 
-//  SELECTANY macro is intended to prevent duplication of static const
-//  arrays declared in .h files in binary modules.
-//  The problem is that const variables have static internal linkage
-//  in C++.  That means that if a const variable is declared in a .h file
-//  the compiler will emit it into every translation unit that uses that .h file.
-//  That will cause duplication of the data when those translation units
-//  are linked into a binary module.
-//  SELECTANY declares a variable as extern to give it external linkage
-//  and it provides __declspec(selectany) to instruct the linker to merge
-//  duplicate external const static data copies into one.
-//  
-#if defined(SOURCE_FORMATTING)
-#define SELECTANY extern
-#else
-#if defined(__GNUC__)
-#define SELECTANY extern __attribute__((weak))
-#else
-#define SELECTANY extern __declspec(selectany)
-#endif
-#endif
 #if defined(SOURCE_FORMATTING)
 #define __annotation(x)
 #endif
-        
 
-#if defined(_DEBUG_IMPL) && !defined(JIT_BUILD) && !defined(JIT64_BUILD) && !defined(CROSS_COMPILE) && !defined(DISABLE_CONTRACTS)
+
+#if defined(_DEBUG_IMPL) && !defined(JIT_BUILD) && !defined(CROSS_COMPILE) && !defined(DISABLE_CONTRACTS)
 #define PAL_TRY_HANDLER_DBG_BEGIN                                               \
     BOOL ___oldOkayToThrowValue = FALSE;                                        \
     ClrDebugState *___pState = ::GetClrDebugState();                            \
@@ -553,8 +534,8 @@
 #define PAL_TRY_HANDLER_DBG_BEGIN                   ANNOTATION_TRY_BEGIN;
 #define PAL_TRY_HANDLER_DBG_BEGIN_DLLMAIN(_reason)  ANNOTATION_TRY_BEGIN;
 #define PAL_TRY_HANDLER_DBG_END                     ANNOTATION_TRY_END;
-#define PAL_ENDTRY_NAKED_DBG                                                          
-#endif // defined(ENABLE_CONTRACTS_IMPL) && !defined(JIT64_BUILD)
+#define PAL_ENDTRY_NAKED_DBG
+#endif // defined(ENABLE_CONTRACTS_IMPL)
 
 
 #if !BIGENDIAN
@@ -573,23 +554,23 @@
 #define GET_UNALIGNED_32(_pObject)  (*(UINT32 UNALIGNED *)(_pObject))
 #define GET_UNALIGNED_64(_pObject)  (*(UINT64 UNALIGNED *)(_pObject))
 
-// Set Value on an potentially unaligned object 
+// Set Value on an potentially unaligned object
 #define SET_UNALIGNED_16(_pObject, _Value)  (*(UNALIGNED UINT16 *)(_pObject)) = (UINT16)(_Value)
 #define SET_UNALIGNED_32(_pObject, _Value)  (*(UNALIGNED UINT32 *)(_pObject)) = (UINT32)(_Value)
-#define SET_UNALIGNED_64(_pObject, _Value)  (*(UNALIGNED UINT64 *)(_pObject)) = (UINT64)(_Value) 
+#define SET_UNALIGNED_64(_pObject, _Value)  (*(UNALIGNED UINT64 *)(_pObject)) = (UINT64)(_Value)
 
 // Get Unaligned values from a potentially unaligned object and swap the value
 #define GET_UNALIGNED_VAL16(_pObject) VAL16(GET_UNALIGNED_16(_pObject))
 #define GET_UNALIGNED_VAL32(_pObject) VAL32(GET_UNALIGNED_32(_pObject))
 #define GET_UNALIGNED_VAL64(_pObject) VAL64(GET_UNALIGNED_64(_pObject))
 
-// Set a swap Value on an potentially unaligned object 
+// Set a swap Value on an potentially unaligned object
 #define SET_UNALIGNED_VAL16(_pObject, _Value) SET_UNALIGNED_16(_pObject, VAL16((UINT16)_Value))
 #define SET_UNALIGNED_VAL32(_pObject, _Value) SET_UNALIGNED_32(_pObject, VAL32((UINT32)_Value))
 #define SET_UNALIGNED_VAL64(_pObject, _Value) SET_UNALIGNED_64(_pObject, VAL64((UINT64)_Value))
 #endif
 
-#ifdef BIT64
+#ifdef HOST_64BIT
 #define VALPTR(x) VAL64(x)
 #define GET_UNALIGNED_PTR(x) GET_UNALIGNED_64(x)
 #define GET_UNALIGNED_VALPTR(x) GET_UNALIGNED_VAL64(x)
@@ -613,10 +594,10 @@
 #endif
 
 #if !defined(MAX_LONGPATH)
-#define MAX_LONGPATH    1024        /* max. length of full pathname */
+#define MAX_LONGPATH   260 /* max. length of full pathname */
 #endif
 #if !defined(MAX_PATH_FNAME)
-#define MAX_PATH_FNAME  MAX_PATH    /* max. length of full pathname */
+#define MAX_PATH_FNAME   MAX_PATH /* max. length of full pathname */
 #endif
 
 #define __clr_reserved __reserved
@@ -625,4 +606,4 @@
 
 #include "palclr_win.h"
 
-#endif // !defined(FEATURE_PAL)
+#endif // defined(HOST_WINDOWS)

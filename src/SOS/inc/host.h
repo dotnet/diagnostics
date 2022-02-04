@@ -37,8 +37,8 @@ public:
     virtual HostType STDMETHODCALLTYPE GetHostType() = 0;
 
     /// <summary>
-    /// Returns the native service for the given interface id. There is 
-    /// only a limited set of services that can be queried through this
+    /// Returns the global native service for the given interface id. There
+    /// is only a limited set of services that can be queried through this
     /// function. Adds a reference like QueryInterface.
     /// </summary>
     /// <param name="serviceId">guid of the service</param>

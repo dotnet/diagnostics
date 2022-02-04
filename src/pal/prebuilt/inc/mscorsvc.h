@@ -1,19 +1,12 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 
 
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.01.0622 */
-/* at Mon Jan 18 19:14:07 2038
- */
-/* Compiler settings for C:/ssd/diagnostics/src/inc/mscorsvc.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
-    protocol : dce , ms_ext, c_ext, robust
-    error checks: allocation ref bounds_check enum stub_data 
-    VC __declspec() decoration level: 
-         __declspec(uuid()), __declspec(selectany), __declspec(novtable)
-         DECLSPEC_UUID(), MIDL_INTERFACE()
-*/
+ /* File created by MIDL compiler version 8.00.0603 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 #pragma warning( disable: 4049 )  /* more than 64k source lines */
@@ -29,7 +22,7 @@
 
 #ifndef __RPCNDR_H_VERSION__
 #error this stub requires an updated version of <rpcndr.h>
-#endif /* __RPCNDR_H_VERSION__ */
+#endif // __RPCNDR_H_VERSION__
 
 #ifndef COM_NO_WINDOWS_H
 #include "windows.h"
@@ -85,6 +78,13 @@ typedef interface ICorSvcSetPrivateAttributes ICorSvcSetPrivateAttributes;
 typedef interface ICorSvcRepository ICorSvcRepository;
 
 #endif 	/* __ICorSvcRepository_FWD_DEFINED__ */
+
+
+#ifndef __ICorSvcAppX_FWD_DEFINED__
+#define __ICorSvcAppX_FWD_DEFINED__
+typedef interface ICorSvcAppX ICorSvcAppX;
+
+#endif 	/* __ICorSvcAppX_FWD_DEFINED__ */
 
 
 #ifndef __ICorSvcLogger_FWD_DEFINED__
@@ -979,6 +979,96 @@ EXTERN_C const IID IID_ICorSvcRepository;
 
 
 #endif 	/* __ICorSvcRepository_INTERFACE_DEFINED__ */
+
+
+#ifndef __ICorSvcAppX_INTERFACE_DEFINED__
+#define __ICorSvcAppX_INTERFACE_DEFINED__
+
+/* interface ICorSvcAppX */
+/* [unique][uuid][object] */ 
+
+
+EXTERN_C const IID IID_ICorSvcAppX;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("5c814791-559e-4f7f-83ce-184a4ccbae24")
+    ICorSvcAppX : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE SetPackage( 
+            /* [in] */ BSTR pPackageFullName) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetLocalAppDataDirectory( 
+            /* [in] */ BSTR pLocalAppDataDirectory) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct ICorSvcAppXVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ICorSvcAppX * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ICorSvcAppX * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ICorSvcAppX * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetPackage )( 
+            ICorSvcAppX * This,
+            /* [in] */ BSTR pPackageFullName);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetLocalAppDataDirectory )( 
+            ICorSvcAppX * This,
+            /* [in] */ BSTR pLocalAppDataDirectory);
+        
+        END_INTERFACE
+    } ICorSvcAppXVtbl;
+
+    interface ICorSvcAppX
+    {
+        CONST_VTBL struct ICorSvcAppXVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ICorSvcAppX_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ICorSvcAppX_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ICorSvcAppX_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ICorSvcAppX_SetPackage(This,pPackageFullName)	\
+    ( (This)->lpVtbl -> SetPackage(This,pPackageFullName) ) 
+
+#define ICorSvcAppX_SetLocalAppDataDirectory(This,pLocalAppDataDirectory)	\
+    ( (This)->lpVtbl -> SetLocalAppDataDirectory(This,pLocalAppDataDirectory) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ICorSvcAppX_INTERFACE_DEFINED__ */
 
 
 #ifndef __ICorSvcLogger_INTERFACE_DEFINED__

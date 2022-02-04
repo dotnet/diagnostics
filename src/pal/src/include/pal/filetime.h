@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -63,7 +62,6 @@ extern "C"
 #endif /* HAVE_STAT_TIMESPEC */
 
 FILETIME FILEUnixTimeToFileTime( time_t sec, long nsec );
-time_t FILEFileTimeToUnixTime( FILETIME FileTime, long *nsec );
 
 #ifdef __APPLE__
 #include <CoreFoundation/CFDate.h>

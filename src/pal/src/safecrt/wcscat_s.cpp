@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *wcscat_s.c - contains wcscat_s()
@@ -8,7 +7,7 @@
 
 *
 *Purpose:
-*   wcscat_s() appends one wchar_t string onto another.
+*   wcscat_s() appends one char16_t string onto another.
 *
 *   wcscat() concatenates (appends) a copy of the source string to the
 *   end of the destination string.
@@ -28,7 +27,7 @@
 
 #define _FUNC_PROLOGUE
 #define _FUNC_NAME wcscat_s
-#define _CHAR wchar_t
+#define _CHAR char16_t
 #define _DEST _Dst
 #define _SIZE _SizeInBytes
 #define _SRC _Src

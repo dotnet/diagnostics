@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 //*****************************************************************************
 // File: daccess.h
 // 
@@ -43,10 +42,10 @@ typedef SIZE_T TSIZE_T;
 
 // *******************************************************
 // !!!!!!!!!!!!!!!!!!!!!!!!!NOTE!!!!!!!!!!!!!!!!!!!!!!!!!!
-// 
-// Please search this file for the type name to find the 
+//
+// Please search this file for the type name to find the
 // DAC versions of these definitions
-// 
+//
 // !!!!!!!!!!!!!!!!!!!!!!!!!NOTE!!!!!!!!!!!!!!!!!!!!!!!!!!
 // *******************************************************
 
@@ -55,7 +54,7 @@ typedef SIZE_T TSIZE_T;
 // can be done on it directly, as with the DACCESS_COMPILE definition.
 // This also helps expose pointer usage that may need to be changed.
 typedef ULONG_PTR TADDR;
-    
+
 typedef void* PTR_VOID;
 typedef LPVOID* PTR_PTR_VOID;
 typedef const void* PTR_CVOID;
@@ -85,13 +84,13 @@ typedef const void* PTR_CVOID;
 //      ?PTR(Tgt) <- TADDR     - Create PTR type (DPtr etc.) from TADDR
 //      ?PTR(Tgt) <- ?PTR(Src) - Convert one PTR type to another
 //      ?PTR(Tgt) <- Src *     - Create PTR type from dac host object instance
-//      TADDR <- ?PTR(Src)     - Get TADDR of PTR object (DPtr etc.) 
-//      TADDR <- Src *         - Get TADDR of dac host object instance 
+//      TADDR <- ?PTR(Src)     - Get TADDR of PTR object (DPtr etc.)
+//      TADDR <- Src *         - Get TADDR of dac host object instance
 //
 // Note that there is no direct convertion to other host-pointer types (because we don't
 // know if you want a DPTR or VPTR etc.).  However, due to the implicit DAC conversions,
 // you can just use dac_cast<PTR_Foo> and assign that to a Foo*.
-// 
+//
 // The beauty of this syntax is that it is consistent regardless
 // of source and target casting types. You just use dac_cast
 // and the partial template specialization will do the right thing.
@@ -117,7 +116,7 @@ typedef const void* PTR_CVOID;
 // Example comparsions of some old and new syntax, where
 //    h is a host pointer, such as "Foo *h;"
 //    p is a DPTR, such as "PTR_Foo p;"
-// 
+//
 //      PTR_HOST_TO_TADDR(h)           ==> dac_cast<TADDR>(h)
 //      PTR_TO_TADDR(p)                ==> dac_cast<TADDR>(p)
 //      PTR_Foo(PTR_HOST_TO_TADDR(h))  ==> dac_cast<PTR_Foo>(h)
@@ -129,7 +128,7 @@ inline Tgt dac_cast(Src src)
     // In non-DAC builds, dac_cast is the same as a C-style cast because we need to support:
     //  - casting away const
     //  - conversions between pointers and TADDR
-    // Perhaps we should more precisely restrict it's usage, but we get the precise 
+    // Perhaps we should more precisely restrict it's usage, but we get the precise
     // restrictions in DAC builds, so it wouldn't buy us much.
     return (Tgt)(src);
 }

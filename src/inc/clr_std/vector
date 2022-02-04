@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 //
 // clr_std/vector
@@ -43,9 +42,9 @@ namespace std
                 typedef ptrdiff_t difference_type;
                 typedef T*        pointer;
                 typedef T&        reference;
-                
+
                 typedef class vector<T>::iterator _MyIter;
-                
+
                 _MyIter &operator++()
                 {
                     m_ptr++;
@@ -140,7 +139,7 @@ namespace std
             public:
                 typedef class vector<T>::const_iterator _MyIter;
                 typedef class vector<T>::iterator _MyNonConstIter;
-                
+
                 _MyIter &operator++()
                 {
                     m_ptr++;
@@ -374,6 +373,11 @@ namespace std
                 m_size -= elements;
                 return iterator(m_pelements + (position - begin()));
             }
+            
+            T* data()
+            {
+                return m_pelements;
+            }
 
             const T* data() const
             {
@@ -408,7 +412,7 @@ namespace std
 
          private:
             size_t    m_size;       //# of elements
-            size_t    m_capacity;   //# of elements allocated 
+            size_t    m_capacity;   //# of elements allocated
             T        *m_pelements;  //actual array
                                     //  invariants:
                                     //    dimensions == m_capacity
@@ -422,7 +426,7 @@ namespace std
     };  // class vector
 
 }; // namespace std
- 
+
 #endif /* __clr_std_vector_h__ */
 
 #endif // !USE_STL

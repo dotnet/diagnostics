@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -40,11 +39,11 @@ Function:
 See MSDN doc.
 
 --*/
-char *   
-__cdecl 
+char *
+__cdecl
 _fullpath(
-          char *absPath, 
-          const char *relPath, 
+          char *absPath,
+          const char *relPath,
           size_t maxLength)
 {
     char realpath_buf[PATH_MAX+1];
@@ -57,7 +56,7 @@ _fullpath(
     PERF_ENTRY(_fullpath);
     ENTRY("_fullpath (absPath=%p, relPath=%p (%s), maxLength = %lu)\n",
           absPath, relPath ? relPath:"NULL", relPath ? relPath:"NULL", maxLength);
-    
+
     if (strncpy_s(path_copy, sizeof(path_copy), relPath ? relPath : ".", cPathCopy) != SAFECRT_SUCCESS)
     {
         TRACE("_fullpath: strncpy_s failed!\n");
@@ -71,7 +70,7 @@ _fullpath(
         ERROR("realpath() failed; problem path is '%s'. errno is %d (%s)\n",
                 realpath_buf, errno, strerror(errno));
         goto fullpathExit;
-    }   
+    }
 
     TRACE("real path is %s\n", realpath_buf);
     min_length = strlen(realpath_buf)+1; // +1 for the NULL terminator
@@ -103,7 +102,7 @@ _fullpath(
 
     strcpy_s(absPath, maxLength, realpath_buf);
     retval = absPath;
-    
+
 fullpathExit:
     LOGEXIT("_fullpath returns char * %p\n", retval);
     PERF_EXIT(_fullpath);

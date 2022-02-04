@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 //*****************************************************************************
 //
 // Define a Data-Target for a live process.
@@ -14,12 +13,12 @@
 // Does not include IXClrData definitions.
 #include <clrdata.h>
 
-#ifndef FEATURE_PAL
+#ifndef TARGET_UNIX
 
 //---------------------------------------------------------------------------------------
 //
 // Provides a simple legacy data-target implementation for a live, local, process.
-// Note that in arrowhead, most debuggers use ICorDebugDataTarget, and we have 
+// Note that in arrowhead, most debuggers use ICorDebugDataTarget, and we have
 // implementations of this in MDbg.
 //
 class LiveProcDataTarget : public ICLRDataTarget
@@ -35,7 +34,7 @@ public:
     // This class is intended to be kept on the stack
     // or as a member and does not maintain a refcount.
     //
-    
+
     STDMETHOD(QueryInterface)(
         THIS_
         IN REFIID InterfaceId,
@@ -51,20 +50,20 @@ public:
     //
     // ICLRDataTarget.
     //
-    
-    virtual HRESULT STDMETHODCALLTYPE GetMachineType( 
+
+    virtual HRESULT STDMETHODCALLTYPE GetMachineType(
         /* [out] */ ULONG32 *machine);
-    virtual HRESULT STDMETHODCALLTYPE GetPointerSize( 
+    virtual HRESULT STDMETHODCALLTYPE GetPointerSize(
         /* [out] */ ULONG32 *size);
-    virtual HRESULT STDMETHODCALLTYPE GetImageBase( 
+    virtual HRESULT STDMETHODCALLTYPE GetImageBase(
         /* [string][in] */ LPCWSTR name,
         /* [out] */ CLRDATA_ADDRESS *base);
-    virtual HRESULT STDMETHODCALLTYPE ReadVirtual( 
+    virtual HRESULT STDMETHODCALLTYPE ReadVirtual(
         /* [in] */ CLRDATA_ADDRESS address,
         /* [length_is][size_is][out] */ PBYTE buffer,
         /* [in] */ ULONG32 request,
         /* [optional][out] */ ULONG32 *done);
-    virtual HRESULT STDMETHODCALLTYPE WriteVirtual( 
+    virtual HRESULT STDMETHODCALLTYPE WriteVirtual(
         /* [in] */ CLRDATA_ADDRESS address,
         /* [size_is][in] */ PBYTE buffer,
         /* [in] */ ULONG32 request,
@@ -88,7 +87,7 @@ public:
         /* [in] */ ULONG32 threadID,
         /* [in] */ ULONG32 contextSize,
         /* [in, size_is(contextSize)] */ PBYTE context);
-    virtual HRESULT STDMETHODCALLTYPE Request( 
+    virtual HRESULT STDMETHODCALLTYPE Request(
         /* [in] */ ULONG32 reqCode,
         /* [in] */ ULONG32 inBufferSize,
         /* [size_is][in] */ BYTE *inBuffer,
@@ -101,7 +100,7 @@ private:
     CLRDATA_ADDRESS m_baseAddressOfEngine;
 };
 
-#endif // FEATURE_PAL
+#endif // TARGET_UNIX
 
 #endif // _LIVEPROC_DATATARGET_H_
 

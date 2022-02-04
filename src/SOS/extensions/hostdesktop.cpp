@@ -17,6 +17,8 @@
 
 #define CLR_VERSION     L"v4.0.30319"
 
+EXTERN_GUID(CLSID_CLRRuntimeHost, 0x90F1A06E, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);
+
 extern HMODULE g_hInstance;
 extern void TraceError(PCSTR format, ...);
 
