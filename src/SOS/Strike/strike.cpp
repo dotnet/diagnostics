@@ -10907,7 +10907,7 @@ extern char sccsid[];
 \**********************************************************************/
 DECLARE_API(EEVersion)
 {
-    INIT_API();
+    INIT_API_NO_RET_ON_FAILURE();
 
     static const int fileVersionBufferSize = 1024;
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
@@ -10949,15 +10949,20 @@ DECLARE_API(EEVersion)
         }
     }
 
-    if (!InitializeHeapData())
-        ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
-    else if (IsServerBuild())
-        ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount());
-    else
-        ExtOut("Workstation mode\n");
+    // Only print if DAC was loaded/initialized
+    if (g_sos != nullptr)
+    {
+        if (!InitializeHeapData())
+            ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
+        else if (IsServerBuild())
+            ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount());
+        else
+            ExtOut("Workstation mode\n");
 
-    if (!GetGcStructuresValid()) {
-        ExtOut("In plan phase of garbage collection\n");
+        if (!GetGcStructuresValid()) 
+        {
+            ExtOut("In plan phase of garbage collection\n");
+        }
     }
 
     // Print SOS version
