@@ -1,8 +1,6 @@
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories(${ROOT_DIR}/src)
-
 set(PALRT_SOURCES
     bstr.cpp
     coguid.cpp
