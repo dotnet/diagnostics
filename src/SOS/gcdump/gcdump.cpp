@@ -10,9 +10,6 @@
  * to the standard code-manager spec.
  */
 
-#ifndef TARGET_UNIX
-#include "utilcode.h"           // For _ASSERTE()
-#endif //!TARGET_UNIX
 #include "gcdump.h"
 
 /*****************************************************************************/

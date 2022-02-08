@@ -295,6 +295,79 @@ namespace CorUnix
             );
 
     };
+
+    class CSharedMemoryWaitableObject : public CSharedMemoryObject
+    {
+        template <class T> friend void InternalDelete(T *p);
+
+    protected:
+
+        VOID *m_pvSynchData;
+
+        virtual ~CSharedMemoryWaitableObject();
+
+    public:
+
+        CSharedMemoryWaitableObject(
+            CObjectType *pot,
+            CRITICAL_SECTION *pcsObjListLock
+            )
+            :
+            CSharedMemoryObject(pot, pcsObjListLock),
+            m_pvSynchData(NULL)
+        {
+        };
+
+        //
+        // Constructor used to import a shared object into this process. The
+        // shared memory lock must be held when calling this contstructor
+        //
+
+        CSharedMemoryWaitableObject(
+            CObjectType *pot,
+            CRITICAL_SECTION *pcsObjListLock,
+            SHMPTR shmSharedObjectData,
+            SHMObjData *psmod,
+            bool fAddRefSharedData
+            )
+            :
+            CSharedMemoryObject(pot, pcsObjListLock, shmSharedObjectData, psmod, fAddRefSharedData),
+            m_pvSynchData(psmod->pvSynchData)
+        {
+        };
+
+        virtual
+        PAL_ERROR
+        Initialize(
+            CPalThread *pthr,
+            CObjectAttributes *poa
+            );
+
+        //
+        // IPalObject routines
+        //
+
+        virtual
+        PAL_ERROR
+        GetSynchStateController(
+            CPalThread *pthr,
+            ISynchStateController **ppStateController
+            );
+
+        virtual
+        PAL_ERROR
+        GetSynchWaitController(
+            CPalThread *pthr,
+            ISynchWaitController **ppWaitController
+            );
+
+        virtual
+        PAL_ERROR
+        GetObjectSynchData(
+            VOID **ppvSynchData
+            );
+    };
+
 }
 
 #endif // _PAL_SHMOBJECT_HPP

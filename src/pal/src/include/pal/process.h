@@ -35,10 +35,57 @@ extern "C"
    calls to CreateThread from succeeding once shutdown has started
    [defined in process.c]
 */
+extern Volatile<LONG> terminator;
 
 // The process and session ID of this process, so we can avoid excessive calls to getpid() and getsid().
 extern DWORD gPID;
 extern DWORD gSID;
+
+
+/*++
+Function:
+  PROCGetProcessIDFromHandle
+
+Abstract
+  Return the process ID from a process handle
+--*/
+DWORD PROCGetProcessIDFromHandle(HANDLE hProcess);
+
+/*++
+Function:
+  PROCCleanupInitialProcess
+
+Abstract
+  Cleanup all the structures for the initial process.
+
+Parameter
+  VOID
+
+Return
+  VOID
+
+--*/
+VOID PROCCleanupInitialProcess(VOID);
+
+
+/*++
+Function:
+  PROCProcessLock
+
+Abstract
+  Enter the critical section associated to the current process
+--*/
+VOID PROCProcessLock(VOID);
+
+
+/*++
+Function:
+  PROCProcessUnlock
+
+Abstract
+  Leave the critical section associated to the current process
+--*/
+VOID PROCProcessUnlock(VOID);
 
 /*++
 Function:

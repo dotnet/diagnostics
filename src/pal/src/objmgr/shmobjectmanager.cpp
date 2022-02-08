@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -21,6 +20,7 @@ Abstract:
 #include "shmobject.hpp"
 #include "pal/cs.hpp"
 #include "pal/thread.hpp"
+#include "pal/procobj.hpp"
 #include "pal/dbgmsg.h"
 
 SET_DEFAULT_DEBUG_CHANNEL(PAL);
@@ -162,7 +162,7 @@ CSharedMemoryObjectManager::AllocateObject(
 
     if (CObjectType::WaitableObject == pot->GetSynchronizationSupport())
     {
-        _ASSERTE(FALSE);
+        pshmobj = InternalNew<CSharedMemoryWaitableObject>(pot, &m_csListLock);
     }
     else
     {
@@ -1001,7 +1001,7 @@ CSharedMemoryObjectManager::ImportSharedObjectIntoProcess(
     )
 {
     PAL_ERROR palError = NO_ERROR;
-    CSharedMemoryObject *pshmobj = NULL;
+    CSharedMemoryObject *pshmobj;
     PLIST_ENTRY pleObjectList;
 
     _ASSERTE(NULL != pthr);
@@ -1025,7 +1025,11 @@ CSharedMemoryObjectManager::ImportSharedObjectIntoProcess(
 
     if (CObjectType::WaitableObject == pot->GetSynchronizationSupport())
     {
-        _ASSERTE(FALSE);
+        pshmobj = InternalNew<CSharedMemoryWaitableObject>(pot,
+                                                           &m_csListLock,
+                                                           shmSharedObjectData,
+                                                           psmod,
+                                                           fAddRefSharedData);
     }
     else
     {
@@ -1072,14 +1076,6 @@ ImportSharedObjectIntoProcessExit:
 
     return palError;
 }
-
-static PalObjectTypeId RemotableObjectTypes[] =
-    {otiManualResetEvent, otiAutoResetEvent, otiMutex, otiProcess};
-
-static CAllowedObjectTypes aotRemotable(
-    RemotableObjectTypes,
-    sizeof(RemotableObjectTypes) / sizeof(RemotableObjectTypes[0])
-    );
 
 /*++
 Function:

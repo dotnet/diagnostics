@@ -4,9 +4,7 @@
 # Verify minimum required version
 cmake_minimum_required(VERSION 3.6.2)
 
-if(CMAKE_VERSION VERSION_EQUAL 3.0 OR CMAKE_VERSION VERSION_GREATER 3.0)
-  cmake_policy(SET CMP0042 NEW)
-endif()
+cmake_policy(SET CMP0042 NEW) # MACOSX_RPATH is enabled by default.
 
 # Set the project name
 project(diagnostics)
@@ -32,26 +30,26 @@ endif (MSVC)
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME diagnostics)
 add_component(diagnostics)
 
-if (WIN32)
+if(CLR_CMAKE_HOST_WIN32)
   message(STATUS "VS_PLATFORM_TOOLSET is ${CMAKE_VS_PLATFORM_TOOLSET}")
   message(STATUS "VS_PLATFORM_NAME is ${CMAKE_VS_PLATFORM_NAME}")
-endif (WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-if (NOT WIN32)
+if(CLR_CMAKE_HOST_UNIX)
   # Drop the static scope for SOS, so it's available outside the
   # compilation unit for external linkage; see extern declaration
   # in SOS sources.
   file(READ "${VERSION_FILE_PATH}" VERSION_FILE_CONTENTS)
   string(REPLACE "static char" "char" VERSION_LINE_WITHOUT_STATIC "${VERSION_FILE_CONTENTS}")
   file(WRITE "${VERSION_FILE_PATH}" "${VERSION_LINE_WITHOUT_STATIC}")
-endif (NOT WIN32)
+endif(CLR_CMAKE_HOST_UNIX)
 
 # Where _version.h for Windows is generated
-if (WIN32)
+if(CLR_CMAKE_HOST_WIN32)
 include_directories(${CLR_ARTIFACTS_OBJ_DIR})
-endif (WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
 set(CORECLR_SET_RPATH ON)
 if(CORECLR_SET_RPATH)
@@ -61,6 +59,17 @@ endif(CORECLR_SET_RPATH)
 
 OPTION(CLR_CMAKE_ENABLE_CODE_COVERAGE "Enable code coverage" OFF)
 OPTION(CLR_CMAKE_WARNINGS_ARE_ERRORS "Warnings are errors" ON)
+
+#----------------------------------------------------
+# Cross target Component build specific configuration
+#----------------------------------------------------
+if(CLR_CROSS_COMPONENTS_BUILD)
+  add_definitions(-DCROSS_COMPILE)
+
+  if(CLR_CMAKE_HOST_ARCH_AMD64 AND (CLR_CMAKE_TARGET_ARCH_ARM OR CLR_CMAKE_TARGET_ARCH_I386))
+    set(FEATURE_CROSSBITNESS 1)
+  endif(CLR_CMAKE_HOST_ARCH_AMD64 AND (CLR_CMAKE_TARGET_ARCH_ARM OR CLR_CMAKE_TARGET_ARCH_I386))
+endif(CLR_CROSS_COMPONENTS_BUILD)
 
 #------------------------------------
 # Definitions (for platform)
@@ -138,14 +147,17 @@ else ()
   clr_unknown_arch()
 endif (CLR_CMAKE_TARGET_ARCH_AMD64)
 
-if(WIN32)
+if(CLR_CMAKE_HOST_WIN32)
   add_definitions(-DWIN32)
   add_definitions(-D_WIN32)
   add_definitions(-DWINVER=0x0602)
   add_definitions(-D_WIN32_WINNT=0x0602)
   add_definitions(-DWIN32_LEAN_AND_MEAN=1)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif(WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
+
+add_definitions(-DUNICODE)
+add_definitions(-D_UNICODE)
 
 #--------------------------------------
 # FEATURE Defines
@@ -159,9 +171,9 @@ if(CLR_CMAKE_HOST_UNIX)
     add_definitions(-DFEATURE_PAL_ANSI)
 endif(CLR_CMAKE_HOST_UNIX)
 
-if(WIN32)
+if(CLR_CMAKE_HOST_WIN32)
     add_definitions(-DFEATURE_COMINTEROP)
-endif(WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
     add_definitions(-DFEATURE_HIJACK)

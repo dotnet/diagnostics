@@ -3,8 +3,6 @@
 
 /*++
 
-
-
 Module Name:
 
     wchar.c
@@ -13,10 +11,7 @@ Abstract:
 
     Implementation of wide char string functions.
 
-
-
 --*/
-
 
 #include "pal/palinternal.h"
 #include "pal/cruntime.h"
@@ -24,7 +19,6 @@ Abstract:
 
 #include "pal/thread.hpp"
 #include "pal/threadsusp.hpp"
-
 
 #if HAVE_CONFIG_H
 #include "config.h"

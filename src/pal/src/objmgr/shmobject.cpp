@@ -989,3 +989,240 @@ CSharedMemoryObject::GetObjectSynchData(
     ASSERT("Attempt to obtain a synch data for a non-waitable object\n");
     return ERROR_INVALID_HANDLE;
 }
+
+/*++
+Function:
+  CSharedMemoryWaitableObject::Initialize
+
+  Performs possibly-failing initialization for a newly-constructed
+  object
+
+Parameters:
+  pthr -- thread data for calling thread
+  poa -- the object attributes (e.g., name) for the object
+--*/
+
+PAL_ERROR
+CSharedMemoryWaitableObject::Initialize(
+    CPalThread *pthr,
+    CObjectAttributes *poa
+    )
+{
+    PAL_ERROR palError = NO_ERROR;
+
+    _ASSERTE(NULL != pthr);
+    _ASSERTE(NULL != poa);
+
+    ENTRY("CSharedMemoryWaitableObject::Initialize"
+        "(this = %p, pthr = %p, poa = %p)\n",
+        this,
+        pthr,
+        poa
+        );
+
+    palError = CSharedMemoryObject::Initialize(pthr, poa);
+    if (NO_ERROR != palError)
+    {
+        goto InitializeExit;
+    }
+
+    //
+    // Sanity check the passed in object type
+    //
+
+    _ASSERTE(CObjectType::WaitableObject == m_pot->GetSynchronizationSupport());
+
+    palError = g_pSynchronizationManager->AllocateObjectSynchData(
+        m_pot,
+        m_ObjectDomain,
+        &m_pvSynchData
+        );
+
+    if (NO_ERROR == palError && SharedObject == m_ObjectDomain)
+    {
+        SHMObjData *pshmod = SHMPTR_TO_TYPED_PTR(SHMObjData, m_shmod);
+        _ASSERTE(NULL != pshmod);
+
+        pshmod->pvSynchData = m_pvSynchData;
+    }
+
+InitializeExit:
+
+    LOGEXIT("CSharedMemoryWaitableObject::Initialize returns %d\n", palError);
+
+    return palError;
+}
+
+/*++
+Function:
+  CSharedMemoryWaitableObject::~CSharedMemoryWaitableObject
+
+  Destructor; should only be called from ReleaseReference
+--*/
+
+CSharedMemoryWaitableObject::~CSharedMemoryWaitableObject()
+{
+    ENTRY("CSharedMemoryWaitableObject::~CSharedMemoryWaitableObject"
+        "(this = %p)\n",
+        this
+        );
+
+    if (!m_fSharedDataDereferenced)
+    {
+        ASSERT("DereferenceSharedData not called before object destructor -- delete called directly?\n");
+        DereferenceSharedData();
+    }
+
+    if (NULL != m_pvSynchData && m_fDeleteSharedData)
+    {
+        g_pSynchronizationManager->FreeObjectSynchData(
+            m_pot,
+            m_ObjectDomain,
+            m_pvSynchData
+            );
+    }
+
+    LOGEXIT("CSharedMemoryWaitableObject::~CSharedMemoryWaitableObject\n");
+}
+
+/*++
+Function:
+  CSharedMemoryWaitableObject::GetSynchStateController
+
+  Obtain a synchronization state controller for this object.
+
+Parameters:
+  pthr -- thread data for calling thread
+  ppStateController -- on success, receives a pointer to the state controller
+    instance
+--*/
+
+PAL_ERROR
+CSharedMemoryWaitableObject::GetSynchStateController(
+    CPalThread *pthr,                // IN, OPTIONAL
+    ISynchStateController **ppStateController    // OUT
+    )
+{
+    PAL_ERROR palError = NO_ERROR;
+
+    _ASSERTE(NULL != pthr);
+    _ASSERTE(NULL != ppStateController);
+
+    ENTRY("CSharedMemoryWaitableObject::GetSynchStateController"
+        "(this = %p, pthr = %p, ppStateController = %p",
+        this,
+        pthr,
+        ppStateController
+        );
+
+    //
+    // We need to grab the local synch lock before creating the controller
+    // (otherwise we could get promoted after passing in our parameters)
+    //
+
+    g_pSynchronizationManager->AcquireProcessLock(pthr);
+
+    palError = g_pSynchronizationManager->CreateSynchStateController(
+        pthr,
+        m_pot,
+        m_pvSynchData,
+        m_ObjectDomain,
+        ppStateController
+        );
+
+    g_pSynchronizationManager->ReleaseProcessLock(pthr);
+
+    LOGEXIT("CSharedMemoryWaitableObject::GetSynchStateController returns %d\n",
+        palError
+        );
+
+    return palError;
+}
+
+/*++
+Function:
+  CSharedMemoryWaitableObject::GetSynchWaitController
+
+  Obtain a synchronization wait controller for this object.
+
+Parameters:
+  pthr -- thread data for calling thread
+  ppWaitController -- on success, receives a pointer to the wait controller
+    instance
+--*/
+
+PAL_ERROR
+CSharedMemoryWaitableObject::GetSynchWaitController(
+    CPalThread *pthr,                // IN, OPTIONAL
+    ISynchWaitController **ppWaitController    // OUT
+    )
+{
+    PAL_ERROR palError = NO_ERROR;
+
+    _ASSERTE(NULL != pthr);
+    _ASSERTE(NULL != ppWaitController);
+
+    ENTRY("CSharedMemoryWaitableObject::GetSynchWaitController"
+        "(this = %p, pthr = %p, ppWaitController = %p",
+        this,
+        pthr,
+        ppWaitController
+        );
+
+    //
+    // We need to grab the local synch lock before creating the controller
+    // (otherwise we could get promoted after passing in our parameters)
+    //
+
+    g_pSynchronizationManager->AcquireProcessLock(pthr);
+
+    palError = g_pSynchronizationManager->CreateSynchWaitController(
+        pthr,
+        m_pot,
+        m_pvSynchData,
+        m_ObjectDomain,
+        ppWaitController
+        );
+
+    g_pSynchronizationManager->ReleaseProcessLock(pthr);
+
+    LOGEXIT("CSharedMemoryWaitableObject::GetSynchWaitController returns %d\n",
+        palError
+        );
+
+    return palError;
+}
+
+/*++
+Function:
+  CSharedMemoryWaitableObject::GetObjectSynchData
+
+  Obtain the synchronization data for this object. This method should only
+  be called by the synchronization manager
+
+Parameters:
+  ppvSynchData -- on success, receives a pointer to the object's synch data
+--*/
+
+PAL_ERROR
+CSharedMemoryWaitableObject::GetObjectSynchData(
+    VOID **ppvSynchData             // OUT
+    )
+{
+    _ASSERTE(NULL != ppvSynchData);
+
+    ENTRY("CSharedMemoryWaitableObject::GetObjectSynchData"
+        "(this = %p, ppvSynchData = %p)\n",
+        this,
+        ppvSynchData
+        );
+
+    *ppvSynchData = m_pvSynchData;
+
+    LOGEXIT("CSharedMemoryWaitableObject::GetObjectSynchData returns %d\n",
+        NO_ERROR
+        );
+
+    return NO_ERROR;
+}
+

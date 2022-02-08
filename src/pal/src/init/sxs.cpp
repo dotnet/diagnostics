@@ -11,7 +11,7 @@
 
 #include "pal/dbgmsg.h"
 #include "pal/thread.hpp"
-#include "pal/init.h"
+#include "../thread/procprivate.hpp"
 #include "pal/module.h"
 #include "pal/process.h"
 
@@ -61,6 +61,22 @@ AllocatePalThread(CPalThread **ppThread)
     {
         goto exit;
     }
+
+    HANDLE hThread;
+    palError = CreateThreadObject(pThread, pThread, &hThread);
+    if (NO_ERROR != palError)
+    {
+        pthread_setspecific(thObjKey, NULL);
+        pThread->ReleaseThreadReference();
+        goto exit;
+    }
+
+    // Like CreateInitialProcessAndThreadObjects, we do not need this
+    // thread handle, since we're not returning it to anyone who will
+    // possibly release it.
+    (void)g_pObjectManager->RevokeHandle(pThread, hThread);
+
+    PROCAddThread(pThread, pThread);
 
 exit:
     *ppThread = pThread;

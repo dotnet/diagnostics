@@ -9,6 +9,7 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
+    <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
   

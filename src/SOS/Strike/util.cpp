@@ -243,8 +243,8 @@ const WCHAR GetTargetDirectorySeparatorW()
 // Check if a file exist
 BOOL FileExist (const char *filename)
 {
-    WIN32_FIND_DATA FindFileData;
-    HANDLE handle = FindFirstFile (filename, &FindFileData);
+    WIN32_FIND_DATAA FindFileData;
+    HANDLE handle = FindFirstFileA(filename, &FindFileData);
     if (handle != INVALID_HANDLE_VALUE) {
         FindClose (handle);
         return TRUE;
@@ -3604,7 +3604,7 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
             {
                 VS_FIXEDFILEINFO *pTmpFileInfo = NULL;
                 UINT uLen = 0;
-                if (VerQueryValue(pVersionInfo, "\\", (LPVOID *) &pTmpFileInfo, &uLen))
+                if (VerQueryValueA(pVersionInfo, "\\", (LPVOID *) &pTmpFileInfo, &uLen))
                 {
                     if (pFileInfo->dwFileVersionMS == (DWORD)-1) {
                         return FALSE;

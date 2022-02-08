@@ -12,6 +12,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <!-- Do not ship this package until ready to be consumed. -->
     <IsShipping>false</IsShipping>
+    <IsShippingAssembly>true</IsShippingAssembly>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- Version information -->
     <VersionPrefix>5.0.0</VersionPrefix>

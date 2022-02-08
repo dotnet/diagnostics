@@ -30,7 +30,6 @@ SET_DEFAULT_DEBUG_CHANNEL(LOADER); // some headers have code with asserts, so do
 #include "pal/file.h"
 #include "pal/utils.h"
 #include "pal/init.h"
-#include "pal/modulename.h"
 #include "pal/environ.h"
 #include "pal/virtual.h"
 #include "pal/map.hpp"
@@ -340,9 +339,10 @@ GetProcAddress(
         /* if we don't know the module's full name yet, this is our chance to obtain it */
         if (!module->lib_name && module->dl_handle)
         {
-            const char* libName = PAL_dladdr((LPVOID)ProcAddress);
-            if (libName)
+            Dl_info dl_info;
+            if (dladdr((LPVOID)ProcAddress, &dl_info) != 0)
             {
+                const char* libName = dl_info.dli_fname;
                 module->lib_name = UTIL_MBToWC_Alloc(libName, -1);
                 if (nullptr == module->lib_name)
                 {
@@ -353,6 +353,10 @@ GetProcAddress(
                     TRACE("Saving full path of module %p as %s\n",
                           module, libName);
                 }
+            }
+            else
+            {
+                TRACE("GetProcAddress: dladdr() call failed!\n");
             }
         }
     }
@@ -874,11 +878,17 @@ void LOADCallDllMain(DWORD dwReason, LPVOID lpReserved)
     MODSTRUCT *module = nullptr;
     BOOL InLoadOrder = TRUE; /* true if in load order, false for reverse */
     CPalThread *pThread;
-    
+
+    pThread = InternalGetCurrentThread();
+    if (UserCreatedThread != pThread->GetThreadType())
+    {
+        return;
+    }
+
     /* Validate dwReason */
     switch(dwReason)
     {
-    case DLL_PROCESS_ATTACH: 
+    case DLL_PROCESS_ATTACH:
         ASSERT("got called with DLL_PROCESS_ATTACH parameter! Why?\n");
         break;
     case DLL_PROCESS_DETACH:

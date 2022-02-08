@@ -30,11 +30,12 @@
 #include "log.h"
 
 #if defined(STRESS_LOG) && !defined(FEATURE_NO_STRESSLOG)
-#include "releaseholder.h"
-#include "volatile.h"
 #include "staticcontract.h"
 #include "mscoree.h"
 #include "clrinternal.h"
+#include "volatile.h"
+#ifndef STRESS_LOG_ANALYZER
+#include "holder.h"
 #ifdef STRESS_LOG_READONLY
 #include <stddef.h> // offsetof
 #else //STRESS_LOG_READONLY
@@ -44,6 +45,9 @@
 #ifndef _ASSERTE
 #define _ASSERTE(expr)
 #endif
+#else
+#include <stddef.h> // offsetof
+#endif // STRESS_LOG_ANALYZER
 
 /* The STRESS_LOG* macros work like printf.  In fact the use printf in their implementation
    so all printf format specifications work.  In addition the Stress log dumper knows
@@ -507,6 +511,21 @@ typedef USHORT
 // private: // static variables
     static StressLog theLog;    // We only have one log, and this is it
 };
+
+#ifndef STRESS_LOG_ANALYZER
+typedef Holder<CRITSEC_COOKIE, StressLog::Enter, StressLog::Leave, NULL, CompareDefault<CRITSEC_COOKIE>> StressLogLockHolder;
+#endif //!STRESS_LOG_ANALYZER
+
+#if defined(DACCESS_COMPILE)
+inline BOOL StressLog::LogOn(unsigned facility, unsigned level)
+{
+    STATIC_CONTRACT_LEAF;
+    STATIC_CONTRACT_SUPPORTS_DAC;
+
+    // StressLog isn't dacized, and besides we don't want to log to it in DAC builds.
+    return FALSE;
+}
+#endif
 
 /*************************************************************************************/
 /* private classes */

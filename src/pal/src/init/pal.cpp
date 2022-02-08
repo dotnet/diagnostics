@@ -17,13 +17,17 @@ Abstract:
 SET_DEFAULT_DEBUG_CHANNEL(PAL); // some headers have code with asserts, so do this first
 
 #include "pal/thread.hpp"
+#include "pal/synchobjects.hpp"
+#include "pal/procobj.hpp"
 #include "pal/cs.hpp"
 #include "pal/file.hpp"
 #include "pal/map.hpp"
 #include "../objmgr/shmobjectmanager.hpp"
 #include "pal/palinternal.h"
 #include "pal/sharedmemory.h"
+#include "pal/shmemory.h"
 #include "pal/process.h"
+#include "../thread/procprivate.hpp"
 #include "pal/module.h"
 #include "pal/virtual.h"
 #include "pal/misc.h"
@@ -91,6 +95,7 @@ using namespace CorUnix;
 extern "C" BOOL CRTInitStdStreams( void );
 
 Volatile<INT> init_count = 0;
+Volatile<BOOL> shutdown_intent = 0;
 static BOOL g_fThreadDataAvailable = FALSE;
 static pthread_mutex_t init_critsec_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -107,16 +112,6 @@ static PCRITICAL_SECTION init_critsec = NULL;
 static int Initialize(int argc, const char *const argv[], DWORD flags);
 static BOOL INIT_IncreaseDescriptorLimit(void);
 
-// Process and session ID of this process.
-DWORD gPID = (DWORD) -1;
-DWORD gSID = (DWORD) -1;
-
-//
-// Key used for associating CPalThread's with the underlying pthread
-// (through pthread_setspecific)
-//
-pthread_key_t CorUnix::thObjKey;
-
 #if defined(__APPLE__)
 static bool RunningNatively()
 {
@@ -131,6 +126,31 @@ static bool RunningNatively()
     return ret != 0;
 }
 #endif // __APPLE__
+
+
+/*++
+Function:
+  PAL_InitializeWithFlags
+
+Abstract:
+  This function is the first function of the PAL to be called.
+  Internal structure initialization is done here. It could be called
+  several time by the same process, a reference count is kept.
+
+Return:
+  0 if successful
+  -1 if it failed
+
+--*/
+int
+PALAPI
+PAL_InitializeWithFlags(
+    int argc,
+    const char *const argv[],
+    DWORD flags)
+{
+    return Initialize(argc, argv, flags);
+}
 
 /*++
 Function:
@@ -151,31 +171,6 @@ PAL_InitializeDLL()
     return Initialize(0, NULL, PAL_INITIALIZE_DLL);
 }
 
-#ifdef ENSURE_PRIMARY_STACK_SIZE
-/*++
-Function:
-  EnsureStackSize
-
-Abstract:
-  This fixes a problem on MUSL where the initial stack size reported by the
-  pthread_attr_getstack is about 128kB, but this limit is not fixed and
-  the stack can grow dynamically. The problem is that it makes the
-  functions ReflectionInvocation::[Try]EnsureSufficientExecutionStack
-  to fail for real life scenarios like e.g. compilation of corefx.
-  Since there is no real fixed limit for the stack, the code below
-  ensures moving the stack limit to a value that makes reasonable
-  real life scenarios work.
-
---*/
-__attribute__((noinline,NOOPT_ATTRIBUTE))
-void
-EnsureStackSize(SIZE_T stackSize)
-{
-    volatile uint8_t *s = (uint8_t *)_alloca(stackSize);
-    *s = 0;
-}
-#endif // ENSURE_PRIMARY_STACK_SIZE
-
 /*++
 Function:
   InitializeDefaultStackSize
@@ -187,20 +182,6 @@ Abstract:
 void
 InitializeDefaultStackSize()
 {
-    char* defaultStackSizeStr = getenv("COMPlus_DefaultStackSize");
-    if (defaultStackSizeStr != NULL)
-    {
-        errno = 0;
-        // Like all numeric values specific by the COMPlus_xxx variables, it is a
-        // hexadecimal string without any prefix.
-        long int size = strtol(defaultStackSizeStr, NULL, 16);
-
-        if (errno == 0)
-        {
-            g_defaultStackSize = std::max(size, (long int)PTHREAD_STACK_MIN);
-        }
-    }
-
 #ifdef ENSURE_PRIMARY_STACK_SIZE
     if (g_defaultStackSize == 0)
     {
@@ -301,14 +282,6 @@ Initialize(
 
         InitializeDefaultStackSize();
 
-#ifdef ENSURE_PRIMARY_STACK_SIZE
-        if (flags & PAL_INITIALIZE_ENSURE_STACK_SIZE)
-        {
-            EnsureStackSize(g_defaultStackSize);
-        }
-#endif // ENSURE_PRIMARY_STACK_SIZE
-
-
         // Initialize the environment.
         if (FALSE == EnvironInitialize())
         {
@@ -324,7 +297,25 @@ Initialize(
             // we use large numbers of threads or have many open files.
         }
 
+        /* initialize the shared memory infrastructure */
+        if (!SHMInitialize())
+        {
+            ERROR("Shared memory initialization failed!\n");
+            palError = ERROR_PALINIT_SHM;
+            goto CLEANUP0;
+        }
+
         //
+        // Initialize global process data
+        //
+
+        palError = InitializeProcessData();
+        if (NO_ERROR != palError)
+        {
+            ERROR("Unable to initialize process data\n");
+            goto CLEANUP1;
+        }
+
         // Allocate the initial thread data
         //
 
@@ -332,8 +323,10 @@ Initialize(
         if (NO_ERROR != palError)
         {
             ERROR("Unable to create initial thread data\n");
-            goto CLEANUP2;
+            goto CLEANUP1a;
         }
+
+        PROCAddThread(pThread, pThread);
 
         //
         // It's now safe to access our thread data
@@ -372,6 +365,19 @@ Initialize(
         }
 
         g_pObjectManager = pshmom;
+
+        //
+        // Initialize the synchronization manager
+        //
+        g_pSynchronizationManager =
+            CPalSynchMgrController::CreatePalSynchronizationManager();
+
+        if (NULL == g_pSynchronizationManager)
+        {
+            palError = ERROR_NOT_ENOUGH_MEMORY;
+            ERROR("Failure creating synchronization manager\n");
+            goto CLEANUP1c;
+        }
     }
     else
     {
@@ -382,6 +388,16 @@ Initialize(
 
     if (init_count == 0)
     {
+        //
+        // Create the initial process and thread objects
+        //
+        palError = CreateInitialProcessAndThreadObjects(pThread);
+        if (NO_ERROR != palError)
+        {
+            ERROR("Unable to create initial process and thread objects\n");
+            goto CLEANUP2;
+        }
+
         palError = ERROR_GEN_FAILURE;
 
         /* Initialize the File mapping critical section. */
@@ -399,6 +415,19 @@ Initialize(
             ERROR("Unable to initialize virtual memory support\n");
             palError = ERROR_PALINIT_VIRTUAL;
             goto CLEANUP10;
+        }
+
+        if (flags & PAL_INITIALIZE_SYNC_THREAD)
+        {
+            //
+            // Tell the synchronization manager to start its worker thread
+            //
+            palError = CPalSynchMgrController::StartWorker(pThread);
+            if (NO_ERROR != palError)
+            {
+                ERROR("Synch manager failed to start worker thread\n");
+                goto CLEANUP13;
+            }
         }
 
         if (flags & PAL_INITIALIZE_STD_HANDLES)
@@ -442,12 +471,21 @@ Initialize(
 CLEANUP15:
     FILECleanupStdHandles();
 CLEANUP14:
+CLEANUP13:
     VIRTUALCleanup();
 CLEANUP10:
     MAPCleanup();
 CLEANUP6:
+    PROCCleanupInitialProcess();
 CLEANUP2:
+    // Cleanup synchronization manager
+CLEANUP1c:
+    // Cleanup object manager
 CLEANUP1b:
+    // Cleanup initial thread data
+CLEANUP1a:
+    // Cleanup global process data
+CLEANUP1:
     SHMCleanup();
 CLEANUP0:
 CLEANUP0a:
@@ -598,6 +636,50 @@ BOOL PALIsThreadDataInitialized()
 
 /*++
 Function:
+  PALCommonCleanup
+
+  Utility function to prepare for shutdown.
+
+--*/
+void
+PALCommonCleanup()
+{
+    static bool cleanupDone = false;
+
+    // Declare the beginning of shutdown
+    PALSetShutdownIntent();
+
+    if (!cleanupDone)
+    {
+        cleanupDone = true;
+
+        //
+        // Let the synchronization manager know we're about to shutdown
+        //
+        CPalSynchMgrController::PrepareForShutdown();
+    }
+}
+
+BOOL PALIsShuttingDown()
+{
+    /* TODO: This function may be used to provide a reader/writer-like
+       mechanism (or a ref counting one) to prevent PAL APIs that need to access
+       PAL runtime data, from working when PAL is shutting down. Each of those API
+       should acquire a read access while executing. The shutting down code would
+       acquire a write lock, i.e. suspending any new incoming reader, and waiting
+       for the current readers to be done. That would allow us to get rid of the
+       dangerous suspend-all-other-threads at shutdown time */
+    return shutdown_intent;
+}
+
+void PALSetShutdownIntent()
+{
+    /* TODO: See comment in PALIsShuttingDown */
+    shutdown_intent = TRUE;
+}
+
+/*++
+Function:
   PALInitLock
 
 Take the initializaiton critical section (init_critsec). necessary to serialize
@@ -687,60 +769,3 @@ static BOOL INIT_IncreaseDescriptorLimit(void)
 #endif // !DONT_SET_RLIMIT_NOFILE
     return TRUE;
 }
-
-/*++
-Function:
-  PROCAbort()
-
-  Aborts the process after calling the shutdown cleanup handler. This function
-  should be called instead of calling abort() directly.
-  
-  Does not return
---*/
-PAL_NORETURN
-VOID
-PROCAbort()
-{
-    // Abort the process after waiting for the core dump to complete
-    abort();
-}
-
-/*++
-Function:
-  GetCurrentProcessId
-
-See MSDN doc.
---*/
-DWORD
-PALAPI
-GetCurrentProcessId(
-            VOID)
-{
-    PERF_ENTRY(GetCurrentProcessId);
-    ENTRY("GetCurrentProcessId()\n" );
-
-    LOGEXIT("GetCurrentProcessId returns DWORD %#x\n", gPID);
-    PERF_EXIT(GetCurrentProcessId);
-    return gPID;
-}
-
-
-/*++
-Function:
-  GetCurrentSessionId
-
-See MSDN doc.
---*/
-DWORD
-PALAPI
-GetCurrentSessionId(
-            VOID)
-{
-    PERF_ENTRY(GetCurrentSessionId);
-    ENTRY("GetCurrentSessionId()\n" );
-
-    LOGEXIT("GetCurrentSessionId returns DWORD %#x\n", gSID);
-    PERF_EXIT(GetCurrentSessionId);
-    return gSID;
-}
-

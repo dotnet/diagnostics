@@ -15,10 +15,6 @@
 // define this to test data safety for the DAC. See code:DataTest::TestDataSafety.
 #define TEST_DATA_CONSISTENCY
 
-#if !defined(STRESS_LOG) && !defined(FEATURE_UTILCODE_NO_DEPENDENCIES)
-#define STRESS_LOG
-#endif
-
 #if defined(_DEBUG) && !defined(DACCESS_COMPILE)
 #define USE_CHECKED_OBJECTREFS
 #endif
@@ -26,22 +22,6 @@
 #define FAT_DISPATCH_TOKENS
 
 #define FEATURE_SHARE_GENERIC_CODE
-
-#if defined(_DEBUG) && !defined(DACCESS_COMPILE)
-    #define LOGGING
-#endif
-
-#if !defined(FEATURE_UTILCODE_NO_DEPENDENCIES)
-// Failpoint support
-#if defined(_DEBUG) && !defined(DACCESS_COMPILE) && !defined(TARGET_UNIX)
-#define FAILPOINTS_ENABLED
-#endif
-#endif //!defined(FEATURE_UTILCODE_NO_DEPENDENCIES)
-
-#if 0
-    // Enable to track details of EESuspension
-    #define TIME_SUSPEND
-#endif // 0
 
 #ifndef DACCESS_COMPILE
 // Enabled to track GC statistics

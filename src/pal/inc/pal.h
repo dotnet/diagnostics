@@ -343,18 +343,13 @@ typedef __int64 time_t;
 #define PAL_INITIALIZE_SYNC_THREAD                  0x01
 #define PAL_INITIALIZE_EXEC_ALLOCATOR               0x02
 #define PAL_INITIALIZE_STD_HANDLES                  0x04
-#define PAL_INITIALIZE_REGISTER_SIGTERM_HANDLER     0x08
-#define PAL_INITIALIZE_DEBUGGER_EXCEPTIONS          0x10
-#define PAL_INITIALIZE_ENSURE_STACK_SIZE            0x20
 
 // PAL_Initialize() flags
-#define PAL_INITIALIZE                 (PAL_INITIALIZE_SYNC_THREAD | PAL_INITIALIZE_STD_HANDLES)
+#define PAL_INITIALIZE                 (PAL_INITIALIZE_SYNC_THREAD | \
+                                        PAL_INITIALIZE_STD_HANDLES)
 
-// PAL_InitializeDLL() flags - don't start any of the helper threads
-#define PAL_INITIALIZE_DLL             PAL_INITIALIZE_NONE       
-
-// PAL_InitializeCoreCLR() flags
-#define PAL_INITIALIZE_CORECLR         (PAL_INITIALIZE | PAL_INITIALIZE_EXEC_ALLOCATOR | PAL_INITIALIZE_REGISTER_SIGTERM_HANDLER | PAL_INITIALIZE_DEBUGGER_EXCEPTIONS | PAL_INITIALIZE_ENSURE_STACK_SIZE)
+// PAL_InitializeDLL() flags - don't start any of the helper threads or register any exceptions
+#define PAL_INITIALIZE_DLL              PAL_INITIALIZE_NONE
 
 typedef DWORD (PALAPI_NOEXPORT *PTHREAD_START_ROUTINE)(LPVOID lpThreadParameter);
 typedef PTHREAD_START_ROUTINE LPTHREAD_START_ROUTINE;
@@ -362,9 +357,56 @@ typedef PTHREAD_START_ROUTINE LPTHREAD_START_ROUTINE;
 /******************* PAL-Specific Entrypoints *****************************/
 
 PALIMPORT
+void
+PALAPI
+PAL_InitializeWithFlags(
+    DWORD flags);
+
+PALIMPORT
 int
 PALAPI
 PAL_InitializeDLL();
+typedef VOID (*PPAL_STARTUP_CALLBACK)(
+    char *modulePath,
+    HMODULE hModule,
+    PVOID parameter);
+
+PALIMPORT
+DWORD
+PALAPI
+PAL_RegisterForRuntimeStartup(
+    IN DWORD dwProcessId,
+    IN LPCWSTR lpApplicationGroupId,
+    IN PPAL_STARTUP_CALLBACK pfnCallback,
+    IN PVOID parameter,
+    OUT PVOID *ppUnregisterToken);
+
+PALIMPORT
+DWORD
+PALAPI
+PAL_UnregisterForRuntimeStartup(
+    IN PVOID pUnregisterToken);
+
+static const unsigned int MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH = MAX_PATH;
+PALIMPORT
+VOID
+PALAPI
+PAL_GetTransportName(
+    const unsigned int MAX_TRANSPORT_NAME_LENGTH,
+    OUT char *name,
+    IN const char *prefix,
+    IN DWORD id,
+    IN const char *applicationGroupId,
+    IN const char *suffix);
+PALIMPORT
+VOID
+PALAPI
+PAL_GetTransportPipeName(
+    OUT char *name,
+    IN DWORD id,
+    IN const char *applicationGroupId,
+    IN const char *suffix);
+
 
 PALIMPORT
 HINSTANCE
@@ -882,6 +924,10 @@ DWORD
 PALAPI
 GetCurrentSessionId();
 
+PALIMPORT
+HANDLE
+PALAPI
+GetCurrentProcess();
 
 PALIMPORT
 DWORD
@@ -925,6 +971,55 @@ typedef struct _PROCESS_INFORMATION {
     DWORD dwProcessId;
     DWORD dwThreadId_PAL_Undefined;
 } PROCESS_INFORMATION, *PPROCESS_INFORMATION, *LPPROCESS_INFORMATION;
+PALIMPORT
+BOOL
+PALAPI
+CreateProcessW(
+           IN LPCWSTR lpApplicationName,
+           IN LPWSTR lpCommandLine,
+           IN LPSECURITY_ATTRIBUTES lpProcessAttributes,
+           IN LPSECURITY_ATTRIBUTES lpThreadAttributes,
+           IN BOOL bInheritHandles,
+           IN DWORD dwCreationFlags,
+           IN LPVOID lpEnvironment,
+           IN LPCWSTR lpCurrentDirectory,
+           IN LPSTARTUPINFOW lpStartupInfo,
+           OUT LPPROCESS_INFORMATION lpProcessInformation);
+
+#define CreateProcess CreateProcessW
+PALIMPORT
+BOOL
+PALAPI
+TerminateProcess(
+         IN HANDLE hProcess,
+         IN UINT uExitCode);
+
+#define MAXIMUM_WAIT_OBJECTS  64
+#define WAIT_OBJECT_0 0
+#define WAIT_ABANDONED   0x00000080
+#define WAIT_ABANDONED_0 0x00000080
+#define WAIT_TIMEOUT 258
+#define WAIT_FAILED ((DWORD)0xFFFFFFFF)
+
+#define INFINITE 0xFFFFFFFF // Infinite timeout
+
+PALIMPORT
+DWORD
+PALAPI
+WaitForSingleObject(
+            IN HANDLE hHandle,
+            IN DWORD dwMilliseconds);
+
+#define DEBUG_PROCESS                     0x00000001
+#define DEBUG_ONLY_THIS_PROCESS           0x00000002
+#define CREATE_SUSPENDED                  0x00000004
+#define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
+PALIMPORT
+DWORD
+PALAPI
+ResumeThread(
+         IN HANDLE hThread);
+
 
 #ifdef HOST_X86
 
@@ -2257,6 +2352,15 @@ typedef struct _RUNTIME_FUNCTION {
                                    0xFFF)
 
 PALIMPORT
+HANDLE
+PALAPI
+OpenProcess(
+    IN DWORD dwDesiredAccess, /* PROCESS_DUP_HANDLE or PROCESS_ALL_ACCESS */
+    IN BOOL bInheritHandle,
+    IN DWORD dwProcessId
+    );
+
+PALIMPORT
 BOOL
 PALAPI
 EnumProcessModules(
@@ -2989,7 +3093,6 @@ GetSystemInfo(
 #define wcspbrk       PAL_wcspbrk
 #define wcscmp        PAL_wcscmp
 #define wcsncpy       PAL_wcsncpy
-#define wcstok        PAL_wcstok
 #define wcscspn       PAL_wcscspn
 #define iswprint      PAL_iswprint
 #define realloc       PAL_realloc
@@ -3182,7 +3285,6 @@ PALIMPORT DLLEXPORT const WCHAR * __cdecl PAL_wcschr(const WCHAR *, WCHAR);
 PALIMPORT DLLEXPORT const WCHAR * __cdecl PAL_wcsrchr(const WCHAR *, WCHAR);
 PALIMPORT WCHAR _WConst_return * __cdecl PAL_wcspbrk(const WCHAR *, const WCHAR *);
 PALIMPORT DLLEXPORT WCHAR _WConst_return * __cdecl PAL_wcsstr(const WCHAR *, const WCHAR *);
-PALIMPORT WCHAR * __cdecl PAL_wcstok(WCHAR *, const WCHAR *);
 PALIMPORT DLLEXPORT size_t __cdecl PAL_wcscspn(const WCHAR *, const WCHAR *);
 PALIMPORT int __cdecl PAL_swprintf(WCHAR *, const WCHAR *, ...);
 PALIMPORT int __cdecl PAL_vswprintf(WCHAR *, const WCHAR *, va_list);

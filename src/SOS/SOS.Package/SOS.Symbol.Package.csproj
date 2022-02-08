@@ -7,9 +7,10 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <IsShippingPackage>false</IsShippingPackage>
     <IncludeSymbols>true</IncludeSymbols>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
 
   <ItemGroup>
