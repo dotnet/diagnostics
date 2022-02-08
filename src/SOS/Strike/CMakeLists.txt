@@ -70,7 +70,7 @@ add_definitions(-DSTRIKE)
 
 include_directories(${ROOT_DIR}/src/SOS/inc)
 include_directories(${ROOT_DIR}/src/SOS/extensions)
-include_directories(${ROOT_DIR}/src/SOS/gcdump)
+include_directories(${CLR_SHARED_DIR}/gcdump)
 include_directories(platform)
 
 if(WIN32)

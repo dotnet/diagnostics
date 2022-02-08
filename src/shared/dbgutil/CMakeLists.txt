@@ -1,7 +1,7 @@
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(CLR_CMAKE_HOST_WIN32)
-    include_directories(${ROOT_DIR}/src/inc/llvm)
+    include_directories(${CLR_SHARED_DIR}/inc/llvm)
     #use static crt
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 endif(CLR_CMAKE_HOST_WIN32)
