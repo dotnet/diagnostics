@@ -12,9 +12,9 @@
 #include "disasm.h"
 #include <dbghelp.h>
 
-#include "../../../inc/corhdr.h"
-#include "../../../inc/cor.h"
-#include "../../../inc/dacprivate.h"
+#include "corhdr.h"
+#include "cor.h"
+#include "dacprivate.h"
 
 
 #if defined(SOS_TARGET_X86) && defined(SOS_TARGET_AMD64)

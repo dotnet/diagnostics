@@ -1,27 +1,22 @@
+set(CLR_SHARED_DIR ${ROOT_DIR}/src/shared)
+
 if (CLR_CMAKE_HOST_UNIX)
-  include_directories("${ROOT_DIR}/src/pal/inc")
-  include_directories("${ROOT_DIR}/src/pal/inc/rt")
-  include_directories("${ROOT_DIR}/src/pal/src/safecrt")
+  include_directories("${CLR_SHARED_DIR}/pal/inc")
+  include_directories("${CLR_SHARED_DIR}/pal/inc/rt")
+  include_directories("${CLR_SHARED_DIR}/pal/src/safecrt")
 endif (CLR_CMAKE_HOST_UNIX)
 
-include_directories(${ROOT_DIR}/src)
-include_directories(${ROOT_DIR}/src/pal/prebuilt/inc)
-include_directories(inc)
+include_directories(${CLR_SHARED_DIR})
+include_directories(${CLR_SHARED_DIR}/inc)
+include_directories(${CLR_SHARED_DIR}/pal/prebuilt/inc)
 
-if (CLR_CMAKE_HOST_UNIX)
-  add_subdirectory(pal)
-endif(CLR_CMAKE_HOST_UNIX)
-
-add_subdirectory(inc)
+add_subdirectory(shared)
 add_subdirectory(SOS)
 
 if (CLR_CMAKE_HOST_UNIX)
   # This prevents inclusion of standard C compiler headers
   add_compile_options(-nostdinc)
-  include_directories(${ROOT_DIR}/src/pal/inc/rt/cpp)
-
-  add_subdirectory(palrt)
+  include_directories(${CLR_SHARED_DIR}/pal/inc/rt/cpp)
 endif(CLR_CMAKE_HOST_UNIX)
 
-add_subdirectory(utilcode)
 add_subdirectory(dbgshim)

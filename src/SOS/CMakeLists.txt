@@ -28,6 +28,5 @@ if (NOT CLR_CMAKE_TARGET_ARCH_I386 OR NOT CLR_CMAKE_TARGET_WIN32)
 endif (NOT CLR_CMAKE_TARGET_ARCH_I386 OR NOT CLR_CMAKE_TARGET_WIN32)
 
 add_subdirectory(extensions)
-add_subdirectory(dbgutil)
 add_subdirectory(SOS.Extensions)
 add_subdirectory(Strike)
