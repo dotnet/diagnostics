@@ -7,6 +7,7 @@ param(
   [Parameter(Mandatory=$true)][string] $MaestroToken,
   [Parameter(Mandatory=$true)][string] $GitHubToken,
   [Parameter(Mandatory=$false)][string] $MaestroApiEndPoint = 'https://maestro-prod.westus2.cloudapp.azure.com',
+  [Parameter(Mandatory=$false)][string] $DarcVersion = $null,
   [switch] $help,
   [Parameter(ValueFromRemainingArguments=$true)][String[]]$properties
 )
@@ -45,7 +46,7 @@ try {
     }
     catch{
         . $PSScriptRoot\..\..\common\tools.ps1
-        $darc = Get-Darc "1.1.0-beta.20602.1"
+        $darc = Get-Darc $DarcVersion
     }
 
     & $darc gather-drop `
@@ -58,6 +59,7 @@ try {
         --azdev-pat $AzdoToken `
         --bar-uri $MaestroApiEndPoint `
         --password $MaestroToken `
+        --separated `
         --verbose
 
     if ($LastExitCode -ne 0) {
