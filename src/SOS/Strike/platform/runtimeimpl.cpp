@@ -520,11 +520,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         m_pCorDebugProcess->Release();
         m_pCorDebugProcess = nullptr;
     }
-#if defined(FEATURE_CORESYSTEM)
     GUID skuId = CLR_ID_ONECORE_CLR;
-#else
-    GUID skuId = CLR_ID_CORECLR;
-#endif
 #ifndef FEATURE_PAL
     if (GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
     {
