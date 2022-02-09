@@ -321,7 +321,7 @@ public:
 
     // Returns the type of processor used in the
     // current processor context.
-    virtual HRESULT STDMETHODCALLTYPE GetExecutingProcessorType(
+    virtual HRESULT STDMETHODCALLTYPE GetProcessorType(
         PULONG type) = 0;
 
     // Executes the given command string.

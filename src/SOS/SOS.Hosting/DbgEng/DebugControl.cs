@@ -56,7 +56,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new GetReturnOffsetDelegate((self, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new OutputStackTraceDelegate((self, outputControl, frames, frameSize, flags) => DebugClient.NotImplemented));
             builder.AddMethod(new GetDebuggeeTypeDelegate(soshost.GetDebuggeeType));
-            builder.AddMethod(new GetActualProcessorTypeDelegate((self, type) => DebugClient.NotImplemented));
+            builder.AddMethod(new GetActualProcessorTypeDelegate(soshost.GetExecutingProcessorType));
             builder.AddMethod(new GetExecutingProcessorTypeDelegate(soshost.GetExecutingProcessorType));
             builder.AddMethod(new GetNumberPossibleExecutingProcessorTypesDelegate((self, number) => DebugClient.NotImplemented));
             builder.AddMethod(new GetPossibleExecutingProcessorTypesDelegate((self, start, count, types) => DebugClient.NotImplemented));

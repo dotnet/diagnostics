@@ -152,6 +152,27 @@ GetTargetMachine(ULONG processorType)
         targetMachine = ARM64Machine::GetInstance();
     }
 #endif // SOS_TARGET_ARM64
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+    if (processorType == IMAGE_FILE_MACHINE_ARM64X || processorType == IMAGE_FILE_MACHINE_ARM64EC)
+    {
+        ULONG actualType;
+        if (SUCCEEDED(g_ExtControl->GetActualProcessorType(&actualType)))
+        {
+#ifdef SOS_TARGET_AMD64
+            if (actualType == IMAGE_FILE_MACHINE_AMD64)
+            {
+                targetMachine = AMD64Machine::GetInstance();
+            }
+#endif // SOS_TARGET_AMD64
+#ifdef SOS_TARGET_ARM64
+            if (actualType == IMAGE_FILE_MACHINE_ARM64)
+            {
+                targetMachine = ARM64Machine::GetInstance();
+            }
+#endif // SOS_TARGET_ARM64
+        }
+    }
+#endif // defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
 #ifdef SOS_TARGET_RISCV64
     if (processorType == IMAGE_FILE_MACHINE_RISCV64)
     {
@@ -193,6 +214,12 @@ ArchQuery(void)
             case IMAGE_FILE_MACHINE_ARM64:
                 architecture = "arm64";
                 break;
+            case IMAGE_FILE_MACHINE_ARM64EC:
+                architecture = "arm64ec";
+                break;
+            case IMAGE_FILE_MACHINE_ARM64X:
+                architecture = "arm64x";
+                break;
             case IMAGE_FILE_MACHINE_RISCV64:
                 architecture = "riscv64";
                 break;
@@ -200,8 +227,18 @@ ArchQuery(void)
                 architecture = "loongarch64";
                 break;
         }
-        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",
-            architecture, processorType);
+        const char* message = "";
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+        if (processorType == IMAGE_FILE_MACHINE_ARM64X || processorType == IMAGE_FILE_MACHINE_ARM64EC)
+        {
+            message = "arm64x/arm64ec targets require a x64 SOS and debugger.";
+        }
+        else
+#endif
+        {
+            message = "A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.";
+        }
+        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). %s\n", architecture, processorType, message);
         return E_FAIL;
     }
     return S_OK;

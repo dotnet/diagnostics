@@ -136,7 +136,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetPageSize(
         PULONG size);
 
-    HRESULT STDMETHODCALLTYPE GetExecutingProcessorType(
+    HRESULT STDMETHODCALLTYPE GetProcessorType(
         PULONG type);
 
     HRESULT STDMETHODCALLTYPE Execute(

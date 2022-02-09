@@ -55,14 +55,6 @@
 // printing CDA values.
 #define CDA_TO_UL64(cda) ((ULONG64)(TO_TADDR(cda)))
 
-#ifndef IMAGE_FILE_MACHINE_RISCV64
-#define IMAGE_FILE_MACHINE_RISCV64        0x5064  // RISCV64
-#endif // !IMAGE_FILE_MACHINE_RISCV64
-
-#ifndef IMAGE_FILE_MACHINE_LOONGARCH64
-#define IMAGE_FILE_MACHINE_LOONGARCH64        0x6264  // LOONGARCH64
-#endif // !IMAGE_FILE_MACHINE_LOONGARCH64
-
 typedef struct _TADDR_RANGE
 {
     TADDR start;
@@ -417,7 +409,7 @@ extern IMachine* g_targetMachine;
 inline BOOL IsDbgTargetX86()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_I386; }
 inline BOOL IsDbgTargetAmd64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_AMD64; }
 inline BOOL IsDbgTargetArm()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARMNT; }
-inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64; }
+inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64 || g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64EC || g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64X; }
 inline BOOL IsDbgTargetRiscV64(){ return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_RISCV64; }
 inline BOOL IsDbgTargetLoongArch64(){ return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_LOONGARCH64; }
 inline BOOL IsDbgTargetWin64()  { return IsDbgTargetAmd64(); }

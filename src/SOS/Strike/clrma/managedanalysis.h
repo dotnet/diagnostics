@@ -9,6 +9,7 @@
 #include <clrma.h> // IDL
 #include <clrmaservice.h>
 #include <dbgtargetcontext.h>
+#include <ntimageex.h>
 #include <corhdr.h>
 #include <cordebug.h>
 #include <xclrdata.h>
@@ -20,14 +21,6 @@
 #include <target.h>
 #include <runtime.h>
 #include <vector>
-
-#ifndef IMAGE_FILE_MACHINE_RISCV64
-#define IMAGE_FILE_MACHINE_RISCV64          0x5064  // RISCV64
-#endif
-
-#ifndef IMAGE_FILE_MACHINE_LOONGARCH64
-#define IMAGE_FILE_MACHINE_LOONGARCH64      0x6264  // LOONGARCH64
-#endif
 
 enum ClrmaGlobalFlags
 {

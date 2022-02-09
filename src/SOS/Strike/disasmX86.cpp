@@ -620,7 +620,14 @@ void
             //
 
 #ifdef _WIN64
-            ExtOut("%08x`%08x ", (ULONG)(InstrAddr >> 32), (ULONG)InstrAddr);
+            if (GetHost()->GetHostType() == IHost::HostType::DbgEng)
+            {
+                ExtOut("%08x`%08x ", (ULONG)(InstrAddr >> 32), (ULONG)InstrAddr);
+            }
+            else
+            {
+                ExtOut("%016llx ", InstrAddr);
+            }
 #else
             ExtOut("%08x ", (ULONG)InstrAddr);
 #endif

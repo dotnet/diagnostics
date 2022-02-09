@@ -111,7 +111,14 @@ public:
     GetExecutingProcessorType(
         PULONG type)
     {
-        return m_lldbservices->GetExecutingProcessorType(type);
+        return m_lldbservices->GetProcessorType(type);
+    }
+
+    HRESULT 
+    GetActualProcessorType(
+        PULONG type)
+    {
+        return m_lldbservices->GetProcessorType(type);
     }
 
     HRESULT 
