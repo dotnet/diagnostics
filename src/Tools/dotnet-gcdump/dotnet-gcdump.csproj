@@ -21,9 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
-    <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
-    <Compile Include="..\Common\Commands\Utils.cs" Link="Utils.cs" />
+    <Compile Include="..\Common\**\*.cs" />
   </ItemGroup>
 
 </Project>
