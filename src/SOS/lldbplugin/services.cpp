@@ -796,13 +796,17 @@ LLDBServices::ReadVirtual(
             {
                 lldb::SBSection section = module.GetSectionAtIndex(j);
                 lldb::addr_t loadAddr = section.GetLoadAddress(target);
-                lldb::addr_t byteSize = section.GetByteSize();
-                if ((loadAddr != LLDB_INVALID_ADDRESS) && (offset >= loadAddr) && (offset < loadAddr + byteSize))
+                lldb::addr_t endAddr = loadAddr + section.GetByteSize();
+                ULONG64 endOffset = offset + bufferSize;
+                if ((loadAddr != LLDB_INVALID_ADDRESS) && (offset >= loadAddr) && (endOffset < endAddr))
                 {
                     lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
-                    read = sectionData.ReadRawData(error, 0, buffer, bufferSize);
-                    found = true;
-                    break;
+                    if (sectionData.IsValid())
+                    {
+                        read = sectionData.ReadRawData(error, 0, buffer, bufferSize);
+                        found = true;
+                        break;
+                    }
                 }
             }
         }

@@ -55,8 +55,7 @@ static bool IsTargetWindows(ICorDebugDataTarget* pDataTarget)
     CorDebugPlatform targetPlatform;
 
     HRESULT result = pDataTarget->GetPlatform(&targetPlatform);
-
-    if(FAILED(result))
+    if (FAILED(result))
     {
         _ASSERTE(!"Unexpected error");
         return false;
@@ -100,19 +99,13 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     //PRECONDITION(CheckPointer(pDataTarget));
 
     HRESULT hr = S_OK;
-    ICorDebugDataTarget * pDt = NULL;
+    ClrInfo clrInfo;
+    SString dacModulePath;
+    SString dbiModulePath;
     HMODULE hDbi = NULL;
     HMODULE hDac = NULL;
-    LPWSTR pDacModulePath = NULL;
-    LPWSTR pDbiModulePath = NULL;
-    DWORD dbiTimestamp;
-    DWORD dbiSizeOfImage;
-    WCHAR dbiName[MAX_PATH_FNAME] = { 0 };
-    DWORD dacTimestamp;
-    DWORD dacSizeOfImage;
-    WCHAR dacName[MAX_PATH_FNAME] = { 0 };
+    ICorDebugDataTarget * pDt = NULL;
     CLR_DEBUGGING_VERSION version;
-    BOOL versionSupportedByCaller = FALSE;
 
     // argument checking
     if ((ppProcess != NULL || pFlags != NULL) && pLibraryProvider == NULL)
@@ -140,97 +133,43 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
         // The expectation is that new versions of the CLR will continue to use the same GUID
         // (unless there's a reason to hide them from older shims), but debuggers will tell us the
         // CLR version they're designed for and mscordbi.dll can decide whether or not to accept it.
-        version.wStructVersion = 0;
-        hr = GetCLRInfo(pDt,
-            moduleBaseAddress,
-            &version,
-            &dbiTimestamp,
-            &dbiSizeOfImage,
-            dbiName,
-            MAX_PATH_FNAME,
-            &dacTimestamp,
-            &dacSizeOfImage,
-            dacName,
-            MAX_PATH_FNAME);
+        hr = GetCLRInfo(pDt, moduleBaseAddress, &version, clrInfo);
     }
 
     // If we need to fetch either the process info or the flags info then we need to find
     // mscordbi and DAC and do the version specific OVP work
     if (SUCCEEDED(hr) && (ppProcess != NULL || pFlags != NULL))
     {
-        ICLRDebuggingLibraryProvider2* pLibraryProvider2;
-        if (SUCCEEDED(pLibraryProvider->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider2), (void**)&pLibraryProvider2)))
+        hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
+
+        // Need to load the DAC first because DBI references the PAL exports in the DAC
+        if (SUCCEEDED(hr) && hDac == NULL)
         {
-            if (FAILED(pLibraryProvider2->ProvideLibrary2(dbiName, dbiTimestamp, dbiSizeOfImage, &pDbiModulePath)) ||
-                pDbiModulePath == NULL)
+            hDac = LoadLibraryW(dacModulePath);
+            if (hDac == NULL)
             {
-                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                hr = HRESULT_FROM_WIN32(GetLastError());
             }
-
-            if (SUCCEEDED(hr))
-            {
-                hDbi = LoadLibraryW(pDbiModulePath);
-                if (hDbi == NULL)
-                {
-                    hr = HRESULT_FROM_WIN32(GetLastError());
-                }
-            }
-
-            if (SUCCEEDED(hr))
-            {
-                // Adjust the timestamp and size of image if this DAC is a known buggy version and needs to be retargeted
-                RetargetDacIfNeeded(&dacTimestamp, &dacSizeOfImage);
-
-                // Ask library provider for dac
-                if (FAILED(pLibraryProvider2->ProvideLibrary2(dacName, dacTimestamp, dacSizeOfImage, &pDacModulePath)) ||
-                    pDacModulePath == NULL)
-                {
-                    hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
-                }
-
-                if (SUCCEEDED(hr))
-                {
-                    hDac = LoadLibraryW(pDacModulePath);
-                    if (hDac == NULL)
-                    {
-                        hr = HRESULT_FROM_WIN32(GetLastError());
-                    }
-                }
-            }
-
-            pLibraryProvider2->Release();
         }
-        else {
-            // Ask library provider for dbi
-            if (FAILED(pLibraryProvider->ProvideLibrary(dbiName, dbiTimestamp, dbiSizeOfImage, &hDbi)) ||
-                hDbi == NULL)
-            {
-                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
-            }
 
-            if (SUCCEEDED(hr))
+        if (SUCCEEDED(hr) && hDbi == NULL)
+        {
+            hDbi = LoadLibraryW(dbiModulePath);
+            if (hDbi == NULL)
             {
-                // Adjust the timestamp and size of image if this DAC is a known buggy version and needs to be retargeted
-                RetargetDacIfNeeded(&dacTimestamp, &dacSizeOfImage);
-
-                // ask library provider for dac
-                if (FAILED(pLibraryProvider->ProvideLibrary(dacName, dacTimestamp, dacSizeOfImage, &hDac)) ||
-                    hDac == NULL)
-                {
-                    hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
-                }
+                hr = HRESULT_FROM_WIN32(GetLastError());
             }
         }
 
         *ppProcess = NULL;
 
-        if (SUCCEEDED(hr) && pDacModulePath != NULL)
+        if (SUCCEEDED(hr) && !dacModulePath.IsEmpty())
         {
             // Get access to the latest OVP implementation and call it
             OpenVirtualProcessImpl2FnPtr ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
             if (ovpFn != NULL)
             {
-                hr = ovpFn(moduleBaseAddress, pDataTarget, pDacModulePath, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
+                hr = ovpFn(moduleBaseAddress, pDataTarget, dacModulePath, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
                 if (FAILED(hr))
                 {
                     _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
@@ -246,7 +185,7 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
                 LoadLibraryWFnPtr loadLibraryWFn = (LoadLibraryWFnPtr)GetProcAddress(hDac, "LoadLibraryW");
                 if (loadLibraryWFn != NULL)
                 {
-                    hDac = loadLibraryWFn(pDacModulePath);
+                    hDac = loadLibraryWFn(dacModulePath);
                     if (hDac == NULL)
                     {
                         hr = E_HANDLE;
@@ -291,31 +230,10 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
         }
     }
 
-    //version is still valid in some failure cases
-    if (pVersion != NULL &&
-        (SUCCEEDED(hr) ||
-        (hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL) ||
-            (hr == CORDBG_E_UNSUPPORTED_FORWARD_COMPAT)))
+    // version is still valid in some failure cases
+    if (pVersion != NULL && (SUCCEEDED(hr) || (hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL) || (hr == CORDBG_E_UNSUPPORTED_FORWARD_COMPAT)))
     {
         memcpy(pVersion, &version, sizeof(CLR_DEBUGGING_VERSION));
-    }
-
-    if (pDacModulePath != NULL)
-    {
-#ifdef HOST_UNIX
-        free(pDacModulePath);
-#else
-        CoTaskMemFree(pDacModulePath);
-#endif
-    }
-
-    if (pDbiModulePath != NULL)
-    {
-#ifdef HOST_UNIX
-        free(pDbiModulePath);
-#else
-        CoTaskMemFree(pDbiModulePath);
-#endif
     }
 
     // free the data target we QI'ed earlier
@@ -324,6 +242,227 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
         pDt->Release();
     }
 
+    return hr;
+}
+
+// Call the library provider to get the DBI and DAC
+//
+// Arguments:
+//   clrInfo - the runtime info
+//   pLibraryProvider - a callback for locating DBI and DAC
+//   dbiModulePath - returns the DBI module path
+//   dacModulePath - returns the DAC module path
+HRESULT CLRDebuggingImpl::ProvideLibraries(
+    ClrInfo& clrInfo,
+    ICLRDebuggingLibraryProvider3* pLibraryProvider,
+    SString& dbiModulePath,
+    SString& dacModulePath)
+{
+    HMODULE hDbi = NULL;
+    HMODULE hDac = NULL;
+    HRESULT hr = CLRDebuggingImpl::ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
+    if (SUCCEEDED(hr))
+    {
+        // The dbgshim create DBI instance APIs don't support just ICLRDebuggingLibraryProvider which is what
+        // it means if the handles returned are not null. At least ICLRDebuggingLibraryProvider2 is needed and
+        // ICLRDebuggingLibraryProvider3 for Unix platforms.
+        if (hDbi != NULL || hDac != NULL)
+        {
+            hr = E_INVALIDARG;
+        }
+    }
+    return hr;
+}
+
+// Call the library provider to get the DBI and DAC
+//
+// Arguments:
+//   clrInfo - the runtime info
+//   pLibraryProvider - a callback for locating DBI and DAC
+//   dbiModulePath - returns the DBI module path
+//   dacModulePath - returns the DAC module path
+//   phDbi - returns the DBI module handle if old library provider
+//   phDac - returns the DAC module handle if old library provider
+HRESULT CLRDebuggingImpl::ProvideLibraries(
+    ClrInfo& clrInfo,
+    IUnknown* punk,
+    SString& dbiModulePath,
+    SString& dacModulePath,
+    HMODULE* phDbi,
+    HMODULE* phDac)
+{
+    ReleaseHolder<ICLRDebuggingLibraryProvider3> pLibraryProvider3;
+    ReleaseHolder<ICLRDebuggingLibraryProvider2> pLibraryProvider2;
+    ReleaseHolder<ICLRDebuggingLibraryProvider> pLibraryProvider;
+    LPWSTR pDbiModulePath = NULL;
+    LPWSTR pDacModulePath = NULL;
+    HRESULT hr = S_OK;
+
+    _ASSERTE(punk != NULL);
+    _ASSERTE(phDbi != NULL);
+    _ASSERTE(phDac != NULL);
+
+    // Validate the incoming index info
+    if (!clrInfo.IsValid())
+    {
+        hr = CORDBG_E_INCOMPATIBLE_PROTOCOL;
+        goto exit;
+    }
+
+    if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider3), (void**)&pLibraryProvider3)))
+    {
+        const WCHAR* wszRuntimeModulePath = !clrInfo.RuntimeModulePath.IsEmpty() ? clrInfo.RuntimeModulePath.GetUnicode() : NULL;
+        if (clrInfo.WindowsTarget)
+        {
+            // Ask library provider for DBI
+            if (FAILED(pLibraryProvider3->ProvideWindowsLibrary(
+                clrInfo.DbiName, 
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                clrInfo.DbiTimeStamp,
+                clrInfo.DbiSizeOfImage,
+                &pDbiModulePath)) || pDbiModulePath == NULL)
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                goto exit;
+            }
+            // Ask library provider for DAC
+            if (FAILED(pLibraryProvider3->ProvideWindowsLibrary(
+                clrInfo.DacName, 
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                clrInfo.DacTimeStamp,
+                clrInfo.DacSizeOfImage,
+                &pDacModulePath)) || pDacModulePath == NULL)
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                goto exit;
+            }
+        }
+        else 
+        {
+            BYTE* dbiBuildId = NULL;
+            ULONG dbiBuildIdSize = 0;
+            BYTE* dacBuildId = NULL;
+            ULONG dacBuildIdSize = 0;
+
+            // What kind of build id are we going to give the provider
+            switch (clrInfo.IndexType)
+            {
+                case LIBRARY_PROVIDER_INDEX_TYPE::Identity: 
+                    if (clrInfo.DbiBuildIdSize > 0)
+                    {
+                        dbiBuildId = clrInfo.DbiBuildId;
+                        dbiBuildIdSize = clrInfo.DbiBuildIdSize;
+                    }
+                    if (clrInfo.DacBuildIdSize > 0)
+                    {
+                        dacBuildId = clrInfo.DacBuildId;
+                        dacBuildIdSize = clrInfo.DacBuildIdSize;
+                    }
+                    break;
+                case LIBRARY_PROVIDER_INDEX_TYPE::Runtime: 
+                    if (clrInfo.RuntimeBuildIdSize > 0)
+                    {
+                        dbiBuildId = clrInfo.RuntimeBuildId;
+                        dbiBuildIdSize = clrInfo.RuntimeBuildIdSize;
+                        dacBuildId = clrInfo.RuntimeBuildId;
+                        dacBuildIdSize = clrInfo.RuntimeBuildIdSize;
+                    }
+                    break;
+                default:
+                    hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                    goto exit;
+            }
+            // Ask library provider for DBI
+            if (FAILED(pLibraryProvider3->ProvideUnixLibrary(
+                clrInfo.DbiName, 
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                dbiBuildId, 
+                dbiBuildIdSize,
+                &pDbiModulePath)) || pDbiModulePath == NULL)
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                goto exit;
+            }
+            // Ask library provider for DAC
+            if (FAILED(pLibraryProvider3->ProvideUnixLibrary(
+                clrInfo.DacName, 
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                dacBuildId,
+                dacBuildIdSize,
+                &pDacModulePath)) || pDacModulePath == NULL)
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                goto exit;
+            }
+        }
+    }
+    else if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider2), (void**)&pLibraryProvider2)))
+    {
+        // Ask library provider for DBI
+        if (FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, &pDbiModulePath)) || pDbiModulePath == NULL)
+        {
+            hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+            goto exit;
+        }
+
+        // Adjust the timestamp and size of image if this DAC is a known buggy version and needs to be retargeted
+        RetargetDacIfNeeded(&clrInfo.DacTimeStamp, &clrInfo.DacSizeOfImage);
+
+        // Ask library provider for DAC
+        if (FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DacName, clrInfo.DacTimeStamp, clrInfo.DacSizeOfImage, &pDacModulePath)) || pDacModulePath == NULL)
+        {
+            hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+            goto exit;
+        }
+    }
+    else if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider), (void**)&pLibraryProvider)))
+    {
+        // Ask library provider for DBI
+        if (FAILED(pLibraryProvider->ProvideLibrary(clrInfo.DbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, phDbi)) || *phDbi == NULL)
+        {
+            hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+            goto exit;
+        }
+
+        // Adjust the timestamp and size of image if this DAC is a known buggy version and needs to be retargeted
+        RetargetDacIfNeeded(&clrInfo.DacTimeStamp, &clrInfo.DacSizeOfImage);
+
+        // ask library provider for DAC
+        if (FAILED(pLibraryProvider->ProvideLibrary(clrInfo.DacName, clrInfo.DacTimeStamp, clrInfo.DacSizeOfImage, phDac)) || *phDac == NULL)
+        {
+            hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+            goto exit;
+        }
+    }
+    else 
+    {
+        hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        goto exit;
+    }
+
+exit:
+    if (pDbiModulePath != NULL)
+    {
+        dbiModulePath.Set(pDbiModulePath);
+#ifdef HOST_UNIX
+        free(pDbiModulePath);
+#else
+        CoTaskMemFree(pDbiModulePath);
+#endif
+    }
+    if (pDacModulePath != NULL)
+    {
+        dacModulePath.Set(pDacModulePath);
+#ifdef HOST_UNIX
+        free(pDacModulePath);
+#else
+        CoTaskMemFree(pDacModulePath);
+#endif
+    }
     return hr;
 }
 
@@ -395,48 +534,24 @@ VOID CLRDebuggingImpl::RetargetDacIfNeeded(DWORD* pdwTimeStamp,
 
 #define PE_FIXEDFILEINFO_SIGNATURE 0xFEEF04BD
 
-// The format of the special debugging resource we embed in CLRs starting in
-// v4
-struct CLR_DEBUG_RESOURCE
-{
-    DWORD dwVersion;
-    GUID signature;
-    DWORD dwDacTimeStamp;
-    DWORD dwDacSizeOfImage;
-    DWORD dwDbiTimeStamp;
-    DWORD dwDbiSizeOfImage;
-};
-
 // Checks to see if a module is a CLR and if so, fetches the debug data
 // from the embedded resource
 //
 // Arguments
 //   pDataTarget - dataTarget for the process we are inspecting
 //   moduleBaseAddress - base address of a module we should inspect
-//   pVersion - output, the version of the CLR detected if this is a CLR
-//   pdwDbiTimeStamp - the timestamp of DBI as embedded in the CLR image
-//   pdwDbiSizeOfImage - the SizeOfImage of DBI as embedded in the CLR image
-//   pDbiName - output, the filename of DBI (as calculated by this function but that might change)
-//   dwDbiNameCharCount - input, the number of WCHARs in the buffer pointed to by pDbiName
-//   pdwDacTimeStampe - the timestamp of DAC as embedded in the CLR image
-//   pdwDacSizeOfImage - the SizeOfImage of DAC as embedded in the CLR image
-//   pDacName - output, the filename of DAC (as calculated by this function but that might change)
-//   dwDacNameCharCount - input, the number of WCHARs in the buffer pointed to by pDacName
-HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
+//   clrInfo - various info about the runtime
+HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
                                      ULONG64 moduleBaseAddress,
                                      CLR_DEBUGGING_VERSION* pVersion,
-                                     DWORD* pdwDbiTimeStamp,
-                                     DWORD* pdwDbiSizeOfImage,
-                                     _Inout_updates_z_(dwDbiNameCharCount) WCHAR* pDbiName,
-                                     DWORD  dwDbiNameCharCount,
-                                     DWORD* pdwDacTimeStamp,
-                                     DWORD* pdwDacSizeOfImage,
-                                     _Inout_updates_z_(dwDacNameCharCount) WCHAR* pDacName,
-                                     DWORD  dwDacNameCharCount)
+                                     ClrInfo& clrInfo)
 {
+    memset(pVersion, 0, sizeof(CLR_DEBUGGING_VERSION));
 #ifdef HOST_WINDOWS
-    if(IsTargetWindows(pDataTarget))
+    if (IsTargetWindows(pDataTarget))
     {
+        clrInfo.WindowsTarget = TRUE;
+
         WORD imageFileMachine = 0;
         DWORD resourceSectionRVA = 0;
         HRESULT hr = GetMachineAndResourceSectionRVA(pDataTarget, moduleBaseAddress, &imageFileMachine, &resourceSectionRVA);
@@ -444,15 +559,14 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
         // We want the version resource which has type = RT_VERSION = 16, name = 1, language = 0x409
         DWORD versionResourceRVA = 0;
         DWORD versionResourceSize = 0;
-        if(SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
         {
-            hr = GetResourceRvaFromResourceSectionRva(pDataTarget, moduleBaseAddress, resourceSectionRVA, 16, 1, 0x409,
-                     &versionResourceRVA, &versionResourceSize);
+            hr = GetResourceRvaFromResourceSectionRva(pDataTarget, moduleBaseAddress, resourceSectionRVA, 16, 1, 0x409, &versionResourceRVA, &versionResourceSize);
         }
 
         // At last we get our version info
         VS_FIXEDFILEINFO fixedFileInfo = {0};
-        if(SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
         {
             // The version resource has 3 words, then the unicode string "VS_VERSION_INFO"
             // (16 WCHARS including the null terminator)
@@ -461,14 +575,14 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
             hr = ReadFromDataTarget(pDataTarget, moduleBaseAddress + fixedFileInfoRVA, (BYTE*)&fixedFileInfo, sizeof(fixedFileInfo));
         }
 
-        //Verify the signature on the version resource
-        if(SUCCEEDED(hr) && fixedFileInfo.dwSignature != PE_FIXEDFILEINFO_SIGNATURE)
+        // Verify the signature on the version resource
+        if (SUCCEEDED(hr) && fixedFileInfo.dwSignature != PE_FIXEDFILEINFO_SIGNATURE)
         {
             hr = CORDBG_E_NOT_CLR;
         }
 
         // Record the version information
-        if(SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
         {
             pVersion->wMajor = (WORD) (fixedFileInfo.dwProductVersionMS >> 16);
             pVersion->wMinor = (WORD) (fixedFileInfo.dwProductVersionMS & 0xFFFF);
@@ -483,7 +597,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
         DWORD debugResourceRVA = 0;
         DWORD debugResourceSize = 0;
         BOOL useCrossPlatformNaming = FALSE;
-        if(SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
         {
             // the initial state is that we haven't found a proper resource
             HRESULT hrGetResource = E_FAIL;
@@ -521,10 +635,8 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
             const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSARM");
     #endif
 
-            hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, resourceName, 0,
-                     &debugResourceRVA, &debugResourceSize);
+            hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, resourceName, 0, &debugResourceRVA, &debugResourceSize);
             useCrossPlatformNaming = SUCCEEDED(hrGetResource);
-
 
     #if defined(HOST_WINDOWS) && (defined(HOST_X86) || defined(HOST_AMD64) || defined(HOST_ARM))
       #if defined(HOST_X86)
@@ -536,70 +648,68 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
       #endif
 
             // if this is windows, and if host_arch matches target arch then we can fallback to searching for CLRDEBUGINFO on failure
-            if(FAILED(hrGetResource) && (imageFileMachine == _HOST_MACHINE_TYPE))
+            if (FAILED(hrGetResource) && (imageFileMachine == _HOST_MACHINE_TYPE))
             {
-                hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, W("CLRDEBUGINFO"), 0,
-                     &debugResourceRVA, &debugResourceSize);
+                hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, W("CLRDEBUGINFO"), 0, &debugResourceRVA, &debugResourceSize);
             }
 
       #undef _HOST_MACHINE_TYPE
     #endif
             // if the search failed, we don't recognize the CLR
             if(FAILED(hrGetResource))
+            {
                 hr = CORDBG_E_NOT_CLR;
+            }
         }
 
         CLR_DEBUG_RESOURCE debugResource;
-        if(SUCCEEDED(hr) && debugResourceSize != sizeof(debugResource))
+        if (SUCCEEDED(hr) && debugResourceSize != sizeof(debugResource))
         {
             hr = CORDBG_E_NOT_CLR;
         }
 
         // Get the special debug resource from the image and return the results
-        if(SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
         {
             hr = ReadFromDataTarget(pDataTarget, moduleBaseAddress + debugResourceRVA, (BYTE*)&debugResource, sizeof(debugResource));
         }
-        if(SUCCEEDED(hr) && (debugResource.dwVersion != 0))
+        if (SUCCEEDED(hr) && (debugResource.dwVersion != 0))
         {
             hr = CORDBG_E_NOT_CLR;
         }
 
         // The signature needs to match m_skuId exactly, except for m_skuId=CLR_ID_ONECORE_CLR which is
         // also compatible with the older CLR_ID_PHONE_CLR signature.
-        if(SUCCEEDED(hr) &&
-           (debugResource.signature != m_skuId) &&
-           !( (debugResource.signature == CLR_ID_PHONE_CLR) && (m_skuId == CLR_ID_ONECORE_CLR) ))
+        if (SUCCEEDED(hr) && (debugResource.signature != m_skuId) && !( (debugResource.signature == CLR_ID_PHONE_CLR) && (m_skuId == CLR_ID_ONECORE_CLR) ))
         {
             hr = CORDBG_E_NOT_CLR;
         }
 
-        if(SUCCEEDED(hr) &&
-           (debugResource.signature != CLR_ID_ONECORE_CLR) &&
-           useCrossPlatformNaming)
+        if (SUCCEEDED(hr) && (debugResource.signature != CLR_ID_ONECORE_CLR) && useCrossPlatformNaming)
         {
-            FormatLongDacModuleName(pDacName, dwDacNameCharCount, imageFileMachine, &fixedFileInfo);
-            swprintf_s(pDbiName, dwDbiNameCharCount, W("%s_%s.dll"), MAIN_DBI_MODULE_NAME_W, W("x86"));
+            FormatLongDacModuleName(clrInfo.DacName, MAX_PATH_FNAME, imageFileMachine, &fixedFileInfo);
+            swprintf_s(clrInfo.DbiName, MAX_PATH_FNAME, W("%s_%s.dll"), MAIN_DBI_MODULE_NAME_W, W("x86"));
         }
         else
         {
             if(m_skuId == CLR_ID_V4_DESKTOP)
-                swprintf_s(pDacName, dwDacNameCharCount, W("%s.dll"), CLR_DAC_MODULE_NAME_W);
+                swprintf_s(clrInfo.DacName, MAX_PATH_FNAME, W("%s.dll"), CLR_DAC_MODULE_NAME_W);
             else
-                swprintf_s(pDacName, dwDacNameCharCount, W("%s.dll"), CORECLR_DAC_MODULE_NAME_W);
-            swprintf_s(pDbiName, dwDbiNameCharCount, W("%s.dll"), MAIN_DBI_MODULE_NAME_W);
+                swprintf_s(clrInfo.DacName, MAX_PATH_FNAME, W("%s.dll"), CORECLR_DAC_MODULE_NAME_W);
+            swprintf_s(clrInfo.DbiName, MAX_PATH_FNAME, W("%s.dll"), MAIN_DBI_MODULE_NAME_W);
         }
 
-        if(SUCCEEDED(hr))
+        if (SUCCEEDED(hr))
         {
-            *pdwDbiTimeStamp = debugResource.dwDbiTimeStamp;
-            *pdwDbiSizeOfImage = debugResource.dwDbiSizeOfImage;
-            *pdwDacTimeStamp = debugResource.dwDacTimeStamp;
-            *pdwDacSizeOfImage = debugResource.dwDacSizeOfImage;
+            clrInfo.IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity; 
+            clrInfo.DbiTimeStamp = debugResource.dwDbiTimeStamp;
+            clrInfo.DbiSizeOfImage = debugResource.dwDbiSizeOfImage;
+            clrInfo.DacTimeStamp = debugResource.dwDacTimeStamp;
+            clrInfo.DacSizeOfImage = debugResource.dwDacSizeOfImage;
         }
 
         // any failure should be interpreted as this module not being a CLR
-        if(FAILED(hr))
+        if (FAILED(hr))
         {
             return CORDBG_E_NOT_CLR;
         }
@@ -611,18 +721,36 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget* pDataTarget,
     else
 #endif // !HOST_WINDOWS
     {
-        swprintf_s(pDacName, dwDacNameCharCount, W("%s"), MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W));
-        swprintf_s(pDbiName, dwDbiNameCharCount, W("%s"), MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W));
+        clrInfo.WindowsTarget = FALSE;
 
-        pVersion->wMajor = 0;
-        pVersion->wMinor = 0;
-        pVersion->wBuild = 0;
-        pVersion->wRevision = 0;
+        uint64_t symbolAddress;
+        if (TryGetSymbol(pDataTarget, moduleBaseAddress, RUNTIME_INFO_SIGNATURE, &symbolAddress))
+        {
+            RuntimeInfo runtimeInfo;
+            ULONG32 bytesRead;
+            if (SUCCEEDED(pDataTarget->ReadVirtual(symbolAddress, (BYTE*)&runtimeInfo, sizeof(RuntimeInfo), &bytesRead)))
+            {
+                if (strcmp(runtimeInfo.Signature, RUNTIME_INFO_SIGNATURE) == 0)
+                {
+                    clrInfo.IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity; 
 
-        *pdwDbiTimeStamp = 0;
-        *pdwDbiSizeOfImage = 0;
-        *pdwDacTimeStamp = 0;
-        *pdwDacSizeOfImage = 0;
+                    // The first byte is the number of bytes in the index
+                    clrInfo.DbiBuildIdSize = runtimeInfo.DbiModuleIndex[0];
+                    memcpy_s(&clrInfo.DbiBuildId, sizeof(clrInfo.DbiBuildId), &(runtimeInfo.DbiModuleIndex[1]), clrInfo.DbiBuildIdSize);
+
+                    clrInfo.DacBuildIdSize = runtimeInfo.DacModuleIndex[0];
+                    memcpy_s(&clrInfo.DacBuildId, sizeof(clrInfo.DacBuildId), &(runtimeInfo.DacModuleIndex[1]), clrInfo.DacBuildIdSize);
+                }
+            }
+        }
+
+        if (!clrInfo.IsValid())
+        {
+            if (TryGetBuildId(pDataTarget, moduleBaseAddress, clrInfo.RuntimeBuildId, MAX_BUILDID_SIZE, &clrInfo.RuntimeBuildIdSize)) 
+            {
+                clrInfo.IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Runtime; 
+            }
+        }
 
         return S_OK;
     }
@@ -740,8 +868,6 @@ STDMETHODIMP CLRDebuggingImpl::CanUnloadNow(HMODULE hModule)
 
     return hr;
 }
-
-
 
 STDMETHODIMP CLRDebuggingImpl::QueryInterface(REFIID riid, void **ppvObject)
 {

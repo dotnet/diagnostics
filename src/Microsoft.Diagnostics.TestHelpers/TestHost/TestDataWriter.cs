@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
-namespace Microsoft.Diagnostics.DebugServices.UnitTests
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestDataWriter
     {

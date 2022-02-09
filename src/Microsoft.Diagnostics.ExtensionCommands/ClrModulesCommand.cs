@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Regex regex = ModuleName is not null ? new Regex(ModuleName, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) : null;
             foreach (ClrModule module in Runtime.EnumerateModules())
             {
-                if (regex is null || regex.IsMatch(Path.GetFileName(module.Name)))
+                if (regex is null || !string.IsNullOrEmpty(module.Name) && regex.IsMatch(Path.GetFileName(module.Name)))
                 {
                     if (Verbose)
                     {

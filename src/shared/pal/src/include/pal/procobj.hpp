@@ -38,9 +38,14 @@ namespace CorUnix
     //
     struct ProcessModules
     {
-        ProcessModules *Next;
-        PVOID BaseAddress;
-        CHAR Name[0];
+        ProcessModules* _next;
+        PVOID _baseAddress;
+        PVOID _minimumAddress;
+        CHAR _name[0];
+
+        ProcessModules* GetNext() const { return _next; }
+        PVOID GetBaseAddress() const { return _baseAddress == 0 ? _minimumAddress : _baseAddress; }
+        const CHAR* GetName() const { return _name; }
     };
 
     //

@@ -25,4 +25,10 @@ if(NOT DEFINED CLR_CMAKE_HOST_OSX)
     )
 endif(NOT DEFINED CLR_CMAKE_HOST_OSX)
 
+if(CLR_CMAKE_TARGET_OSX)
+    list(APPEND DBGUTIL_SOURCES
+        machoreader.cpp
+    )
+endif(CLR_CMAKE_TARGET_OSX)
+
 add_library(dbgutil STATIC ${DBGUTIL_SOURCES})

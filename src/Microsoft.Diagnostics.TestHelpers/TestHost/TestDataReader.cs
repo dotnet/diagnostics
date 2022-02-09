@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using Xunit;
 
-namespace Microsoft.Diagnostics.DebugServices.UnitTests
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestDataReader
     {

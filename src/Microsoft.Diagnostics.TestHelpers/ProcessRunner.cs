@@ -115,6 +115,15 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { lock (_lock) { return _replayCommand; } }
         }
 
+        public ProcessRunner RemoveEnvironmentVariable(string key)
+        {
+            lock (_lock)
+            {
+                _p.StartInfo.Environment.Remove(key);
+            }
+            return this;
+        }
+
         public ProcessRunner WithEnvironmentVariable(string key, string value)
         {
             lock (_lock)

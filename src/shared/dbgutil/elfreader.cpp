@@ -2,10 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #include <windows.h>
+#include <clrdata.h>
+#include <cor.h>
+#include <cordebug.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#include <limits.h>
 #include "elfreader.h"
+#include "arrayholder.h"
 
 #define Elf_Ehdr   ElfW(Ehdr)
 #define Elf_Phdr   ElfW(Phdr)
@@ -32,37 +35,162 @@
 static const char ElfMagic[] = { 0x7f, 'E', 'L', 'F', '\0' };
 #endif
 
-extern bool ElfReaderReadMemory(void* address, void* buffer, size_t size);
+#ifdef HOST_UNIX
 
-class ElfReaderExport: public ElfReader
+class ElfReaderFromFile : public ElfReader
 {
+private:
+    struct ProgramHeader
+    {
+        uint64_t Start;
+        uint64_t End;
+        uint64_t FileOffset;
+    };
+    PAL_FILE* m_file;
+    std::vector<ProgramHeader> m_programHeaders;
+
 public:
-    ElfReaderExport()
+    ElfReaderFromFile() : ElfReader(true),
+        m_file(NULL)
     {
     }
 
-    virtual ~ElfReaderExport()
+    virtual ~ElfReaderFromFile()
+    {
+        if (m_file != NULL)
+        {
+            PAL_fclose(m_file);
+            m_file = NULL;
+        }
+    }
+
+    bool OpenFile(const WCHAR* modulePath)
+    {
+        _ASSERTE(m_file == NULL);
+        m_file = _wfopen(modulePath, W("rb"));
+        return m_file != NULL;
+    }
+
+    uint64_t GetFileOffset(uint64_t address)
+    {
+        for (const ProgramHeader& header : m_programHeaders)
+        {
+            if (address >= header.Start && address < header.End)
+            {
+                return address - header.Start + header.FileOffset;
+            }
+        }
+        return 0;
+    }
+
+    virtual void VisitProgramHeader(uint64_t loadbias, uint64_t baseAddress, ElfW(Phdr)* phdr)
+    {
+        switch (phdr->p_type)
+        {
+        case PT_LOAD:
+            ProgramHeader header;
+            header.Start = loadbias + phdr->p_vaddr;
+            header.End = loadbias + phdr->p_vaddr + phdr->p_memsz;
+            header.FileOffset = phdr->p_offset;
+            m_programHeaders.push_back(header);
+            break;
+        }
+    }
+
+    virtual bool ReadMemory(void* address, void* buffer, size_t size)
+    {
+        if (m_file == NULL)
+        {
+            return false;
+        }
+        if (PAL_fseek(m_file, (LONG)address, SEEK_SET) != 0)
+        {
+            return false;
+        }
+        size_t read = PAL_fread(buffer, 1, size, m_file);
+        return read > 0;
+    }
+};
+
+//
+// Entry point to get an export symbol from a module file
+//
+extern "C" bool
+TryReadSymbolFromFile(const WCHAR* modulePath, const char* symbolName, BYTE* buffer, ULONG32 size)
+{
+    ElfReaderFromFile reader;
+    if (reader.OpenFile(modulePath))
+    {
+        if (reader.PopulateForSymbolLookup(0))
+        {
+            uint64_t symbolOffset;
+            if (reader.TryLookupSymbol(symbolName, &symbolOffset))
+            {
+                symbolOffset = reader.GetFileOffset(symbolOffset);
+                if (symbolOffset != 0)
+                {
+                    return reader.ReadMemory((void*)symbolOffset, buffer, size);
+                }
+            }
+        }
+    }
+    return false;
+}
+
+//
+// Entry point to get the ELF file's build id
+//
+extern "C" bool
+TryGetBuildIdFromFile(const WCHAR* modulePath, BYTE* buffer, ULONG bufferSize, PULONG pBuildSize)
+{
+    ElfReaderFromFile reader;
+    if (reader.OpenFile(modulePath))
+    {
+        if (reader.EnumerateProgramHeaders(0, nullptr, nullptr))
+        {
+            return reader.GetBuildId(buffer, bufferSize, pBuildSize);
+        }
+    }
+    return false;
+}
+
+#endif // HOST_UNIX
+
+typedef bool (*ReadMemoryCallback)(void* address, void* buffer, size_t size);
+
+class ElfReaderWithCallback : public ElfReader
+{
+private:
+    ReadMemoryCallback m_readMemory;
+
+public:
+    ElfReaderWithCallback(ReadMemoryCallback readMemory) : ElfReader(false),
+        m_readMemory(readMemory)
+    {
+    }
+
+    virtual ~ElfReaderWithCallback()
     {
     }
 
 private:
     virtual bool ReadMemory(void* address, void* buffer, size_t size)
     {
-        return ElfReaderReadMemory(address, buffer, size);
+        return m_readMemory(address, buffer, size);
     }
 };
 
 //
-// Main entry point to get an export symbol
+// Entry point to get an export symbol
 //
 extern "C" bool
-TryGetSymbol(uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress)
+TryGetSymbolWithCallback(ReadMemoryCallback readMemory, uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress)
 {
-    ElfReaderExport elfreader;
-    if (elfreader.PopulateForSymbolLookup(baseAddress))
+    ElfReaderWithCallback reader(readMemory);
+    if (reader.PopulateForSymbolLookup(baseAddress))
     {
         uint64_t symbolOffset;
-        if (elfreader.TryLookupSymbol(symbolName, &symbolOffset))
+        if (reader.TryLookupSymbol(symbolName, &symbolOffset))
         {
             *symbolAddress = baseAddress + symbolOffset;
             return true;
@@ -72,17 +200,80 @@ TryGetSymbol(uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddre
     return false;
 }
 
+class ElfReaderExport : public ElfReader
+{
+private:
+    ICorDebugDataTarget* m_dataTarget;
+
+public:
+    ElfReaderExport(ICorDebugDataTarget* dataTarget) : ElfReader(false),
+        m_dataTarget(dataTarget)
+    {
+        dataTarget->AddRef();
+    }
+
+    virtual ~ElfReaderExport()
+    {
+        m_dataTarget->Release();
+    }
+
+private:
+    virtual bool ReadMemory(void* address, void* buffer, size_t size)
+    {
+        uint32_t read = 0;
+        return SUCCEEDED(m_dataTarget->ReadVirtual(reinterpret_cast<CLRDATA_ADDRESS>(address), reinterpret_cast<PBYTE>(buffer), (uint32_t)size, &read));
+    }
+};
+
+//
+// Main entry point to get an export symbol
+//
+extern "C" bool
+TryGetSymbol(ICorDebugDataTarget* dataTarget, uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress)
+{
+    ElfReaderExport reader(dataTarget);
+    if (reader.PopulateForSymbolLookup(baseAddress))
+    {
+        uint64_t symbolOffset;
+        if (reader.TryLookupSymbol(symbolName, &symbolOffset))
+        {
+            *symbolAddress = baseAddress + symbolOffset;
+            return true;
+        }
+    }
+    *symbolAddress = 0;
+    return false;
+}
+
+
+//
+// Get the build id of the module from a data target
+//
+extern "C" bool
+TryGetBuildId(ICorDebugDataTarget* dataTarget, uint64_t baseAddress, BYTE* buffer, ULONG bufferSize, PULONG pBuildSize)
+{
+    ElfReaderExport reader(dataTarget);
+    if (reader.EnumerateProgramHeaders(baseAddress, nullptr, nullptr))
+    {
+        return reader.GetBuildId(buffer, bufferSize, pBuildSize);
+    }
+    return false;
+}
+
 //
 // ELF reader constructor/destructor
 //
 
-ElfReader::ElfReader() :
+ElfReader::ElfReader(bool isFileLayout) :
+    m_isFileLayout(isFileLayout),
     m_gnuHashTableAddr(nullptr),
     m_stringTableAddr(nullptr),
     m_stringTableSize(0),
     m_symbolTableAddr(nullptr),
     m_buckets(nullptr),
-    m_chainsAddress(nullptr)
+    m_chainsAddress(nullptr),
+    m_noteStart(0),
+    m_noteEnd(0)
 {
     memset(&m_hashTable, 0, sizeof(m_hashTable));
 }
@@ -186,7 +377,7 @@ ElfReader::TryLookupSymbol(std::string symbolName, uint64_t* symbolOffset)
                     if (symbolName.compare(possibleName) == 0)
                     {
                         *symbolOffset = symbol.st_value;
-                        Trace("TryLookupSymbol found '%s' at offset %" PRIxA "\n", symbolName.c_str(), *symbolOffset);
+                        Trace("TryLookupSymbol found '%s' at offset %" PRIxA " in %d\n", symbolName.c_str(), *symbolOffset, symbol.st_shndx);
                         return true;
                     }
                 }
@@ -304,6 +495,50 @@ ElfReader::GetStringAtIndex(int index, std::string& result)
         index++;
     }
     return true;
+}
+
+size_t Align4(size_t x) { return (x + 3) & ~3; }
+
+bool 
+ElfReader::GetBuildId(BYTE* buffer, ULONG bufferSize, PULONG pBuildSize)
+{
+    _ASSERTE(pBuildSize != nullptr);
+
+    if (m_noteStart != 0)
+    {
+        _ASSERTE(m_noteEnd != 0);
+        uint64_t address = m_noteStart;
+        while (address < m_noteEnd)
+        {
+            Elf_Nhdr nhdr;
+            if (!ReadMemory((PVOID)address, &nhdr, sizeof(nhdr)))
+            {
+                return false;
+            }
+            size_t nhdrSize = sizeof(Elf_Nhdr) + Align4(nhdr.n_namesz) + Align4(nhdr.n_descsz);
+            Trace("GetBuildId: type %d size %08x\n", nhdr.n_type, nhdrSize);
+            if (nhdr.n_type == NT_GNU_BUILD_ID)
+            {
+                ArrayHolder<BYTE> nhdrBuffer = new BYTE[nhdrSize];
+                if (!ReadMemory((PVOID)address, nhdrBuffer, nhdrSize))
+                {
+                    return false;
+                }
+                const char* name = (const char*)(nhdrBuffer.GetPtr() + sizeof(Elf_Nhdr));
+                Trace("GetBuildId: name %s\n", name);
+                if (strncmp(name, ELF_NOTE_GNU, Align4(nhdr.n_namesz)) == 0)
+                {
+                    *pBuildSize = nhdr.n_descsz;
+                    memcpy_s(buffer, bufferSize, nhdrBuffer.GetPtr() + sizeof(Elf_Nhdr) + Align4(nhdr.n_namesz), nhdr.n_descsz);
+
+                    Trace("GetBuildId: found id size %d\n", *pBuildSize);
+                    return true;
+                }
+            }
+            address += nhdrSize;
+        }
+    }
+    return false;
 }
 
 #ifdef HOST_UNIX
@@ -483,9 +718,22 @@ ElfReader::EnumerateProgramHeaders(Elf_Phdr* phdrAddr, int phnum, uint64_t baseA
 
         switch (ph.p_type)
         {
+        case PT_NOTE:
+            m_noteStart = loadbias + ph.p_vaddr;
+            m_noteEnd = loadbias + ph.p_vaddr + ph.p_memsz;
+            break;
+
         case PT_DYNAMIC:
-            if (pdynamicAddr != nullptr) {
-                *pdynamicAddr = reinterpret_cast<Elf_Dyn*>(loadbias + ph.p_vaddr);
+            if (pdynamicAddr != nullptr)
+            {
+                if (m_isFileLayout)
+                {
+                    *pdynamicAddr = reinterpret_cast<Elf_Dyn*>(loadbias + ph.p_offset);
+                }
+                else
+                {
+                    *pdynamicAddr = reinterpret_cast<Elf_Dyn*>(loadbias + ph.p_vaddr);
+                }
             }
             break;
         }

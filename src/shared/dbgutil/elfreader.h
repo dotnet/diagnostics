@@ -32,6 +32,7 @@ typedef struct {
 class ElfReader
 {
 private:
+    bool m_isFileLayout;
     void* m_gnuHashTableAddr;               // DT_GNU_HASH
     void* m_stringTableAddr;                // DT_STRTAB
     int m_stringTableSize;                  // DT_STRSIZ
@@ -41,8 +42,11 @@ private:
     int32_t* m_buckets;                     // gnu hash table buckets    
     void* m_chainsAddress;
 
+    uint64_t m_noteStart;
+    uint64_t m_noteEnd;
+
 public:
-    ElfReader();
+    ElfReader(bool isFileLayout);
     virtual ~ElfReader();
 #ifdef HOST_UNIX
     bool EnumerateElfInfo(ElfW(Phdr)* phdrAddr, int phnum);
@@ -50,6 +54,7 @@ public:
     bool PopulateForSymbolLookup(uint64_t baseAddress);
     bool TryLookupSymbol(std::string symbolName, uint64_t* symbolOffset);
     bool EnumerateProgramHeaders(uint64_t baseAddress, uint64_t* ploadbias = nullptr, ElfW(Dyn)** pdynamicAddr = nullptr);
+    bool GetBuildId(BYTE* buffer, ULONG bufferSize, PULONG pBuildSize);
 
 private:
     bool GetSymbol(int32_t index, ElfW(Sym)* symbol);

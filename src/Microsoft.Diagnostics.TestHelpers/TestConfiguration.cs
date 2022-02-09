@@ -388,6 +388,30 @@ namespace Microsoft.Diagnostics.TestHelpers
             _configStringView = GetStringViewWithVersion(RuntimeFrameworkVersion); 
         }
 
+        public string Serialize()
+        {
+            List<XElement> nodes = new();
+            foreach (KeyValuePair<string, string> keyvalue in _settings)
+            {
+                nodes.Add(new XElement(keyvalue.Key, keyvalue.Value));
+            }
+            XElement root = new("Configuration", nodes.ToArray());
+            TextWriter writer = new StringWriter();
+            root.Save(writer);
+            return writer.ToString();
+        }
+
+        public static TestConfiguration Deserialize(string xml)
+        {
+            XElement root = XElement.Parse(xml);
+            Dictionary<string, string> settings = new();
+            foreach (XElement child in root.Elements())
+            {
+                settings.Add(child.Name.LocalName, child.Value);
+            }
+            return new TestConfiguration(settings);
+        }
+
         private string GetTruncatedRuntimeFrameworkVersion()
         {
             string version = RuntimeFrameworkVersion;

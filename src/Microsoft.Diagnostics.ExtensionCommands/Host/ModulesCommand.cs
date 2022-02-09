@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (IModule module in ModuleService.EnumerateModules().OrderBy((m) => m.ModuleIndex))
             {
                 totalSize += module.ImageSize;
-                if (regex is null || regex.IsMatch(Path.GetFileName(module.FileName)))
+                if (regex is null || !string.IsNullOrEmpty(module.FileName) && regex.IsMatch(Path.GetFileName(module.FileName)))
                 {
                     if (Verbose)
                     {

@@ -1,5 +1,6 @@
 
-set( CORGUIDS_IDL_SOURCES
+set(CORGUIDS_IDL_SOURCES
+  metahost.idl
   cordebug.idl
   xcordebug.idl
   clrdata.idl
