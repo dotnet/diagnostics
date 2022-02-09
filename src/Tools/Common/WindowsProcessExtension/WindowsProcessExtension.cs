@@ -11,7 +11,7 @@ namespace Microsoft.Internal.Common.Utils
     {
         //This code was copied from:
         //https://github.com/projectkudu/kudu/blob/787c893a9336beb498252bb2f90a06a95763f9e9/Kudu.Core/Infrastructure/ProcessExtensions.cs
-        //The error handling was modified to return a string instead of throw.
+       //The error handling was modified to return a string instead of throw.
 
         static public string GetCommandLine(Process process)
         {

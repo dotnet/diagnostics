@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tools.Trace.CommandLine;
 using System.CommandLine.Binding;
 using Microsoft.Internal.Common.Utils;
+
 namespace Microsoft.Internal.Common.Commands
 {        
     public class ProcessStatusCommandHandler
@@ -51,8 +52,7 @@ namespace Microsoft.Internal.Common.Commands
                     sb.Append(text.Substring(0, width));
                 }
            }
-
-            int getColumnWidth(IEnumerable<int> objects)
+            else
             {
                 if (leftPad)
                 {
@@ -131,14 +131,14 @@ namespace Microsoft.Internal.Common.Commands
                         string fileName = process.MainModule?.FileName ?? string.Empty;
                         string[] cmdList = cmdLineArgs.Split(" ");
                         char separator = Path.DirectorySeparatorChar;
-                        foreach(string str in cmdList)
+                       foreach(string str in cmdList)
                         {
                             if (str == string.Empty)
                             {
                                 break;
                             }
 
-                            if (str.Contains(separator))
+                           if (str.Contains(separator))
                             {
                                 //Assume the first string to contain the directory separation character is the filepath
                                 fileName = str;
@@ -155,7 +155,7 @@ namespace Microsoft.Internal.Common.Commands
                             FileName = fileName,
                             CmdLineArgs = cmdLineArgs
                         };
-                        printInfo.Add(commandInfo);
+                       printInfo.Add(commandInfo);
                     }
                     catch (Exception ex) 
                     {
@@ -168,7 +168,7 @@ namespace Microsoft.Internal.Common.Commands
                                 FileName = "[Elevated process - cannot determine path]",
                                 CmdLineArgs = ""
                             };
-                            printInfo.Add(commandInfo);
+                           printInfo.Add(commandInfo);
                         }
                         else
                         {
@@ -183,7 +183,6 @@ namespace Microsoft.Internal.Common.Commands
             {
                 console.Out.WriteLine(ex.ToString());
             }
-            return Task.FromResult(0);
         }
 
         private static Process GetProcessById(int processId)
