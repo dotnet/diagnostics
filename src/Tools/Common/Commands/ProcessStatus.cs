@@ -17,7 +17,6 @@ using Process = System.Diagnostics.Process;
 using System.IO;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Tools.Trace.CommandLine;
 using System.CommandLine.Binding;
 using Microsoft.Internal.Common.Utils;
 

@@ -240,7 +240,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
-                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored"))
+                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand())
                 .UseDefaults()
                 .Build();
 
