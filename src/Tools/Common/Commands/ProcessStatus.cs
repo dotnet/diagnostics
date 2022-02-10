@@ -130,21 +130,14 @@ namespace Microsoft.Internal.Common.Commands
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
                         string[] cmdList = cmdLineArgs.Split(" ");
-                        string separator = "";
+                        char separator = Path.DirectorySeparatorChar;
                         foreach(string str in cmdList)
                         {
                             if (str == string.Empty)
                             {
                                 break;
                             }
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            {
-                                separator = "\\";
-                            }
-                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                            {
-                                separator = "/";
-                            }
+
                             if (str.Contains(separator))
                             {
                                 //Assume the first string to contain the directory separation character is the filepath
@@ -155,23 +148,26 @@ namespace Microsoft.Internal.Common.Commands
                             break;
                             
                         }
-                       // ProcessDetails commandInfo = ProcessDetails {process.Id, process.ProcessName, fileName, cmdLineArgs};
-                        var commandInfo = new ProcessDetails();
-                        commandInfo.ProcessId = process.Id;
-                        commandInfo.ProcessName = process.ProcessName;
-                        commandInfo.FileName = fileName;
-                        commandInfo.CmdLineArgs = cmdLineArgs;
+                        var commandInfo = new ProcessDetails()
+                        {
+                            ProcessId = process.Id,
+                            ProcessName = process.ProcessName,
+                            FileName = fileName,
+                            CmdLineArgs = cmdLineArgs
+                        };
                         printInfo.Add(commandInfo);
                     }
                     catch (Exception ex) 
                     {
                         if (ex is Win32Exception || ex is InvalidOperationException)
                         {
-                            var commandInfo = new ProcessDetails();
-                            commandInfo.ProcessId = process.Id;
-                            commandInfo.ProcessName = process.ProcessName;
-                            commandInfo.FileName = "[Elevated process - cannot determine path]";
-                            commandInfo.CmdLineArgs = "";
+                            var commandInfo = new ProcessDetails()
+                            {
+                                ProcessId = process.Id,
+                                ProcessName = process.ProcessName,
+                                FileName = "[Elevated process - cannot determine path]",
+                                CmdLineArgs = ""
+                            };
                             printInfo.Add(commandInfo);
                         }
                         else

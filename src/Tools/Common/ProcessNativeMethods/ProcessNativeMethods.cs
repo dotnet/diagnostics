@@ -1,23 +1,10 @@
-// using Microsoft.Diagnostics.NETCore.Client;
-// using Microsoft.Tools.Common;
 using System;
-// using System.CommandLine;
-// using System.CommandLine.Invocation;
-// using System.CommandLine.IO;
-// using System.Collections.Generic;
-// using System.Diagnostics;
-// using System.Linq;
 using System.Runtime.InteropServices;
-// using System.Text;
-// using Process = System.Diagnostics.Process;
-// using System.IO;
-// using System.ComponentModel;
-// using System.Threading.Tasks;
-// using Microsoft.Diagnostics.Tools.Trace.CommandLine;
-// using System.CommandLine.Binding;
 
 namespace Microsoft.Internal.Common.Utils
 {
+    //This code was copied from:
+    //https://github.com/projectkudu/kudu/blob/787c893a9336beb498252bb2f90a06a95763f9e9/Kudu.Core/Infrastructure/ProcessExtensions.cs
     internal static class ProcessNativeMethods
     {
         public const int ProcessBasicInformation = 0;
