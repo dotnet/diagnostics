@@ -5975,3 +5975,88 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
 }
 
 #endif // FEATURE_PAL
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//
+// Miscellaneous helper methods
+//
+
+void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
+    DWORD_PTR workItemsConcurrentQueuePtr,
+    const char *queueName,
+    HeapStat *stats)
+{
+    // Get its head segment.
+    sos::Object workItemsConcurrentQueue = TO_TADDR(workItemsConcurrentQueuePtr);
+    int offset = GetObjFieldOffset(workItemsConcurrentQueue.GetAddress(), workItemsConcurrentQueue.GetMT(), W("_head"));
+    if (offset <= 0)
+    {
+        return;
+    }
+
+    // Now, walk from segment to segment, each of which contains an array of work items.
+    DWORD_PTR segmentPtr;
+    MOVE(segmentPtr, workItemsConcurrentQueue.GetAddress() + offset);
+    while (sos::IsObject(segmentPtr, false))
+    {
+        sos::Object segment = TO_TADDR(segmentPtr);
+
+        // Get the work items array.  It's an array of Slot structs, which starts with the T.
+        offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_slots"));
+        if (offset <= 0)
+        {
+            break;
+        }
+
+        DWORD_PTR slotsPtr;
+        MOVE(slotsPtr, segment.GetAddress() + offset);
+        if (!sos::IsObject(slotsPtr, false))
+        {
+            break;
+        }
+
+        // Walk every element in the array, outputting details on non-null work items.
+        DacpObjectData slotsArray;
+        if (slotsArray.Request(g_sos, TO_CDADDR(slotsPtr)) == S_OK && slotsArray.ObjectType == OBJ_ARRAY)
+        {
+            for (int i = 0; i < slotsArray.dwNumComponents; i++)
+            {
+                CLRDATA_ADDRESS workItemPtr;
+                MOVE(workItemPtr, TO_CDADDR(slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize))); // the item object reference is at the beginning of the Slot
+                if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                {
+                    sos::Object workItem = TO_TADDR(workItemPtr);
+                    stats->Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
+                    DMLOut("%" THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "s %s %S", queueName, DMLObject(workItem.GetAddress()), workItem.GetTypeName());
+                    if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
+                        (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
+                    {
+                        CLRDATA_ADDRESS delegatePtr;
+                        MOVE(delegatePtr, workItem.GetAddress() + offset);
+                        CLRDATA_ADDRESS md;
+                        if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
+                        {
+                            NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
+                            ExtOut(" => %S", g_mdName);
+                        }
+                    }
+                    ExtOut("\n");
+                }
+            }
+        }
+
+        // Move to the next segment.
+        DacpFieldDescData segmentField;
+        offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_nextSegment"), TRUE, &segmentField);
+        if (offset <= 0)
+        {
+            break;
+        }
+
+        MOVE(segmentPtr, segment.GetAddress() + offset);
+        if (segmentPtr == NULL)
+        {
+            break;
+        }
+    }
+}
