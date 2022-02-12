@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommand())
                 .AddCommand(AnalyzeCommand())
-                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that dumps can be collected"))
+                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand())
                 .UseDefaults()
                 .Build();
 
