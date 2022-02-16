@@ -42,11 +42,11 @@
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="6.0.3">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>4fde4c1824e644b051162b53c4fb4497a6563a13</Sha>
+      <Sha>6dd808ff7ae62512330d2f111eb1f60f1ae40125</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.6.0" Version="6.0.3-servicing.22110.6">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.6.0" Version="6.0.3-servicing.22114.8">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>4fde4c1824e644b051162b53c4fb4497a6563a13</Sha>
+      <Sha>6dd808ff7ae62512330d2f111eb1f60f1ae40125</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
