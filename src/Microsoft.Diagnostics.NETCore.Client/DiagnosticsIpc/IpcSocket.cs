@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -23,6 +22,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
+// .NET 6 implements this method directly on Socket, but for earlier runtimes we need a polyfill
+#if !NET6_0
         public async Task<Socket> AcceptAsync(CancellationToken token)
         {
             using (token.Register(() => Close(0)))
@@ -44,6 +45,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
         }
+#endif
 
         public virtual void Connect(EndPoint remoteEP, TimeSpan timeout)
         {
@@ -60,6 +62,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+// .NET 6 implements this method directly on Socket, but for earlier runtimes we need a polyfill
+#if !NET6_0
         public async Task ConnectAsync(EndPoint remoteEP, CancellationToken token)
         {
             using (token.Register(() => Close(0)))
@@ -82,6 +86,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
         }
-
+#endif
     }
 }
