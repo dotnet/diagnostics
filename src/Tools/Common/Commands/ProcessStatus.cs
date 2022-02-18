@@ -24,9 +24,8 @@ namespace Microsoft.Internal.Common.Commands
 {        
     public class ProcessStatusCommandHandler
     {
-        public static Command ProcessStatusCommand() =>
-            new Command(name: "ps", 
-            description: "Lists the dotnet processes that traces can be collected")
+        public static Command ProcessStatusCommand(string description) =>
+            new Command(name: "ps", description)
             {
                 HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler()
             };
