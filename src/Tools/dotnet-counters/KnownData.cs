@@ -12,14 +12,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     internal static class KnownData
     {
-        private static readonly string maxVersion = "5.0";
+        private const string maxVersion = "6.0";
         private static readonly IReadOnlyDictionary<string, CounterProvider> _knownProviders =
             CreateKnownProviders(maxVersion).ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
-        private static readonly string net60 = "6.0";
-        private static readonly string net50 = "5.0";
-        private static readonly string net31 = "3.1";
-        private static readonly string net30 = "3.0";
+        private const string net60 = "6.0";
+        private const string net50 = "5.0";
+        private const string net31 = "3.1";
+        private const string net30 = "3.0";
 
         private static IEnumerable<CounterProvider> CreateKnownProviders(string runtimeVersion)
         {
