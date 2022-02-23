@@ -31,7 +31,8 @@
   <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
+  <!-- The BuildProjectFrameworkLatest should be net7.0, but our Root SDK is 6.0 based. -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
@@ -45,9 +46,10 @@
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
 
   <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
-  <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
+  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
+      dotnet7=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet7/nuget/v3/index.json;
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
       dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
       dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
