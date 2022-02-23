@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -23,7 +22,9 @@ Abstract:
 #include "pal/dbgmsg.h"
 #include "pal/file.h"
 #include "pal/cruntime.h"
+
 #include "pal/thread.hpp"
+#include "pal/threadsusp.hpp"
 
 #include <unistd.h>
 #include <errno.h>
@@ -40,7 +41,7 @@ SET_DEFAULT_DEBUG_CHANNEL(CRT);
 
 /* Global variables storing the std streams.*/
 PAL_FILE PAL_Stdout;
-PAL_FILE PAL_Stdin; 
+PAL_FILE PAL_Stdin;
 PAL_FILE PAL_Stderr;
 
 /*++
@@ -99,7 +100,7 @@ static LPSTR MapFileOpenModes(LPSTR str , BOOL * bTextMode)
     }
 
     /* The PAL behaves differently for some Windows file open modes:
-    
+
     c, n, S, R, and T: these are all hints to the system that aren't supported
     by the PAL. Since the user cannot depend on this behavior, it's safe to
     simply ignore these modes.
@@ -107,14 +108,14 @@ static LPSTR MapFileOpenModes(LPSTR str , BOOL * bTextMode)
     D: specifies a file as temporary. This file is expected to be deleted when
     the last file descriptor is closed. The PAL does not support this behavior
     and asserts when this mode is used.
-    
+
     t: represents opening in text mode. Calls to fdopen on Unix don't accept
-    't' so it is silently stripped out. However, the PAL supports the mode by 
-    having the PAL wrappers do the translation of CR-LF to LF and vice versa. 
-    
+    't' so it is silently stripped out. However, the PAL supports the mode by
+    having the PAL wrappers do the translation of CR-LF to LF and vice versa.
+
     t vs. b: To get binary mode, you must explicitly use 'b'. If neither mode
-    is specified on Windows, the default mode is defined by the global 
-    variable _fmode. The PAL simply defaults to text mode. After examining 
+    is specified on Windows, the default mode is defined by the global
+    variable _fmode. The PAL simply defaults to text mode. After examining
     CLR usage patterns, the PAL behavior seems acceptable. */
 
     /* Check if the mode specifies deleting the temporary file
@@ -282,14 +283,14 @@ PAL_fopen(const char * fileName, const char * mode)
             goto done;
         }
 
-        UnixFileName = strdup(fileName);
+        UnixFileName = PAL__strdup(fileName);
         if (UnixFileName == NULL )
         {
-            ERROR("strdup() failed\n");
+            ERROR("PAL__strdup() failed\n");
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
             goto done;
         }
-        
+
         FILEDosToUnixPathA( UnixFileName );
 
         /*I am not checking for the case where stat fails
@@ -388,25 +389,6 @@ _wfopen(
 }
 
 /*++
-Function:
-_wfsopen
-
-see MSDN doc.
-
---*/
-PAL_FILE *
-__cdecl
-_wfsopen(
-    const wchar_16 *fileName,
-    const wchar_16 *mode,
-    int shflag)
-{
-    // UNIXTODO: Implement this.
-    ERROR("Needs Implementation!!!");
-    return NULL;
-}
-
-/*++
 Function
     PAL_get_stdout.
 
@@ -451,6 +433,18 @@ PAL_FILE * __cdecl PAL_get_stderr(int caller)
     return &PAL_Stderr;
 }
 
+/*++
+
+Function:
+
+    PAL_pread
+
+See msdn for more details.
+--*/
+size_t __cdecl PAL__pread(int fd, void *buf, size_t nbytes, ULONG64 offset)
+{
+    return pread(fd, buf, nbytes, offset);
+}
 
 /*++
 
@@ -474,19 +468,12 @@ int __cdecl PAL__close(int handle)
     return nRetVal;
 }
 
- int __cdecl PAL__flushall()
- {
-    return fflush(NULL);
- }
- 
-wchar_16 *
-__cdecl
-PAL_fgetws(wchar_16 *s, int n, PAL_FILE *f)
+int __cdecl PAL__flushall()
 {
-    ASSERT (0);
-    return NULL;
+    return fflush(NULL);
 }
 
+int __cdecl PAL_getc(PAL_FILE *stream);
 
 /*++
 Function :
@@ -505,7 +492,7 @@ PAL_fread(void * buffer, size_t size, size_t count, PAL_FILE * f)
     PERF_ENTRY(fread);
     ENTRY( "fread( buffer=%p, size=%d, count=%d, f=%p )\n",
            buffer, size, count, f );
-	
+
     _ASSERTE(f != NULL);
 
     CLEARERR(f);
@@ -542,7 +529,7 @@ PAL_fread(void * buffer, size_t size, size_t count, PAL_FILE * f)
         }
         nReadBytes = i;
     }
-	
+
 done:
     LOGEXIT( "fread returning size_t %d\n", nReadBytes );
     PERF_EXIT(fread);
@@ -612,28 +599,6 @@ PAL_fclose(PAL_FILE * f)
 /*++
 Function :
 
-    setbuf
-
-    See MSDN for more details.
---*/
-void
-_cdecl
-PAL_setbuf(PAL_FILE * f, char * buffer)
-{
-    PERF_ENTRY(setbuf);
-    ENTRY( "setbuf( %p, %p )\n", f, buffer );
-    
-    _ASSERTE(f != NULL);
-
-    setbuf( f->bsdFilePtr, buffer );
-    
-    LOGEXIT( "setbuf\n" );
-    PERF_EXIT(setbuf);
-}
-
-/*++
-Function :
-
     fputs
 
     See MSDN for more details.
@@ -659,56 +624,6 @@ PAL_fputs(const char * str,  PAL_FILE * f)
     return nRetVal;
 }
 
-/*--
-Function :
-
-    fputc
-
-    See MSDN for more details.
---*/
-int
-_cdecl
-PAL_fputc(int c,  PAL_FILE * f)
-{
-    INT nRetVal = 0;
-
-    PERF_ENTRY(fputc);
-    ENTRY( "fputc( 0x%x (%c), %p )\n", c, c, f);
-
-    _ASSERTE(f != NULL);
-
-    CLEARERR(f);
-
-    nRetVal = fputc( c, f->bsdFilePtr );
-
-    LOGEXIT( "fputc returning %d\n", nRetVal );
-    PERF_EXIT(fputc);
-    return nRetVal;
-}
-
-/*--
-Function :
-
-    putchar
-
-    See MSDN for more details.
---*/
-int
-_cdecl
-PAL_putchar( int c )
-{
-    INT nRetVal = 0;
-
-    PERF_ENTRY(putchar);
-    ENTRY( "putchar( 0x%x (%c) )\n", c, c);
-
-    nRetVal = putchar( c );
-
-    LOGEXIT( "putchar returning %d\n", nRetVal );
-    PERF_EXIT(putchar);
-    return nRetVal;
-}
-
 /*++
 Function :
 
@@ -728,7 +643,7 @@ PAL_ftell(PAL_FILE * f)
     _ASSERTE(f != NULL);
     lRetVal = ftell( f->bsdFilePtr );
 
-#ifdef BIT64
+#ifdef HOST_64BIT
     /* Windows does not set an error if the file pointer's position
     is greater than _I32_MAX. It just returns -1. */
     if (lRetVal > _I32_MAX)
@@ -736,41 +651,16 @@ PAL_ftell(PAL_FILE * f)
         lRetVal = -1;
     }
 #endif
-	
+
     LOGEXIT( "ftell returning %ld\n", lRetVal );
     PERF_EXIT(ftell);
     /* This explicit cast to LONG is used to silence any potential warnings
-    due to implicitly casting the native long lRetVal to LONG when returning. */    
+    due to implicitly casting the native long lRetVal to LONG when returning. */
     return (LONG)lRetVal;
 }
 
 /*++
 Function :
-
-    feof
-
-    See MSDN for more details.
---*/
-int
-_cdecl
-PAL_feof(PAL_FILE * f)
-{
-    INT nRetVal = 0;
-
-    PERF_ENTRY(feof);
-    ENTRY( "feof( %p )\n", f );
-
-    _ASSERTE(f != NULL);
-    nRetVal = feof( f->bsdFilePtr );
-
-    LOGEXIT( "feof returning %d\n", nRetVal );
-    PERF_EXIT(feof);
-    return nRetVal;
-}
-
-/*++
-Function :
-
     getc
 
     See MSDN for more details.
@@ -811,46 +701,6 @@ PAL_getc(PAL_FILE * f)
 /*++
 Function :
 
-    ungetc
-
-    See MSDN for more details.
---*/
-int
-_cdecl
-PAL_ungetc(int c, PAL_FILE * f)
-{
-    INT nRetVal = 0;
-
-    PERF_ENTRY(ungetc);
-    ENTRY( "ungetc( %c, %p )\n", c, f );
-
-    _ASSERTE(f != NULL);
-
-#if UNGETC_NOT_RETURN_EOF
-    /* On some Unix platform such as Solaris, ungetc does not return EOF
-       on write-only file. */
-    if (f->bWriteOnlyMode)
-    {
-        nRetVal = EOF;
-    }
-    else
-#endif //UNGETC_NOT_RETURN_EOF
-    {
-        CLEARERR(f);
-
-        nRetVal = ungetc( c, f->bsdFilePtr );
-    }
-
-    LOGEXIT( "ungetc returning %d\n", nRetVal );
-    PERF_EXIT(ungetc);
-    return nRetVal;
-}
-
-
-
-/*++
-Function :
-
     setvbuf
 
     See MSDN for more details.
@@ -863,11 +713,11 @@ PAL_setvbuf(PAL_FILE *f, char *buf, int type, size_t size)
 
     PERF_ENTRY(setvbuf);
     ENTRY( "setvbuf( %p, %p, %d, %ul )\n", f, buf, type, size);
-    
+
     _ASSERTE(f != NULL);
-    
+
     nRetVal = setvbuf(f->bsdFilePtr, buf, type, size);
-    
+
     LOGEXIT( "setvbuf returning %d\n", nRetVal );
     PERF_EXIT(setvbuf);
     return nRetVal;

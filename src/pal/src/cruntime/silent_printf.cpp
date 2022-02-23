@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -13,7 +12,7 @@ Module Name:
 Abstract:
 
     Implementation of a silent version of PAL_vsprintf and PAL_vfprintf function.
-    (without any reference to TRACE/ERROR/... macros, needed by the tracing macros) 
+    (without any reference to TRACE/ERROR/... macros, needed by the tracing macros)
 
 Revision History:
 
@@ -24,18 +23,17 @@ Revision History:
 
 #include "pal/palinternal.h"
 #include "pal/cruntime.h"
-#include "pal/locale.h"
 #include "pal/printfcpp.hpp"
 #include "pal/thread.hpp"
 
 /* clip strings (%s, %S) at this number of characters */
 #define MAX_STR_LEN 300
 
-static int Silent_WideCharToMultiByte(LPCWSTR lpWideCharStr, int cchWideChar, 
+static int Silent_WideCharToMultiByte(LPCWSTR lpWideCharStr, int cchWideChar,
                                       LPSTR lpMultiByteStr, int cbMultiByte);
 static BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width,
                                   LPINT Precision, LPINT Prefix, LPINT Type);
-static INT Silent_AddPaddingVfprintf(PAL_FILE *stream, LPSTR In, INT Padding, 
+static INT Silent_AddPaddingVfprintf(PAL_FILE *stream, LPSTR In, INT Padding,
                                      INT Flags);
 
 static size_t Silent_PAL_wcslen(const wchar_16 *string);
@@ -64,13 +62,13 @@ int Silent_PAL_vfprintf(PAL_FILE *stream, const char *format, va_list aparg)
     int written = 0;
     int paddingReturnValue;
     va_list ap;
-    
+
     va_copy(ap, aparg);
 
     while (*Fmt)
     {
         if (*Fmt == '%' &&
-            TRUE == Silent_ExtractFormatA(&Fmt, TempBuff, &Flags, &Width, 
+            TRUE == Silent_ExtractFormatA(&Fmt, TempBuff, &Flags, &Width,
                                           &Precision, &Prefix, &Type))
         {
             if (Prefix == PFF_PREFIX_LONG && Type == PFF_TYPE_STRING)
@@ -116,7 +114,7 @@ int Silent_PAL_vfprintf(PAL_FILE *stream, const char *format, va_list aparg)
                 }
                 else if (Precision > 0 && Precision < Length - 1)
                 {
-                    Length = Silent_WideCharToMultiByte(TempWStr, Precision, 
+                    Length = Silent_WideCharToMultiByte(TempWStr, Precision,
                                                         TempStr, Length);
                     if (!Length)
                     {
@@ -130,7 +128,7 @@ int Silent_PAL_vfprintf(PAL_FILE *stream, const char *format, va_list aparg)
                 /* copy everything */
                 else
                 {
-                    wctombResult = Silent_WideCharToMultiByte(TempWStr, -1, 
+                    wctombResult = Silent_WideCharToMultiByte(TempWStr, -1,
                                                               TempStr, Length);
                     if (!wctombResult)
                     {
@@ -310,7 +308,7 @@ int Silent_WideCharToMultiByte(LPCWSTR lpWideCharStr, int cchWideChar,
         retval = 0;
         goto EXIT;
     }
-    
+
     retval = cchWideChar;
     while(cchWideChar > 0)
     {
@@ -334,7 +332,7 @@ EXIT:
 /*******************************************************************************
 Function:
   Internal_ExtractFormatA (silent version)
-  
+
   see Internal_ExtractFormatA function in printf.c
 *******************************************************************************/
 BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width, LPINT Precision, LPINT Prefix, LPINT Type)
@@ -404,7 +402,7 @@ BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width, LPI
         if (*Width < 0)
         {
             SetLastError(ERROR_INTERNAL_ERROR);
-            return Result;
+            goto EXIT;
         }
     }
     else if (**Fmt == '*')
@@ -441,7 +439,7 @@ BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width, LPI
             if (*Precision < 0)
             {
                 SetLastError(ERROR_INTERNAL_ERROR);
-                return Result;
+                goto EXIT;
             }
         }
         else if (**Fmt == '*')
@@ -466,7 +464,7 @@ BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width, LPI
         }
     }
 
-#ifdef BIT64
+#ifdef HOST_64BIT
     if (**Fmt == 'p')
     {
         *Prefix = PFF_PREFIX_LONGLONG;
@@ -489,10 +487,10 @@ BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width, LPI
     else if (**Fmt == 'l' || **Fmt == 'w')
     {
         ++(*Fmt);
-#ifdef BIT64
+#ifdef HOST_64BIT
         // Only want to change the prefix on 64 bit when printing characters.
         if (**Fmt == 'c' || **Fmt == 's')
-#endif       
+#endif
         {
             *Prefix = PFF_PREFIX_LONG;
         }
@@ -597,6 +595,8 @@ BOOL Silent_ExtractFormatA(LPCSTR *Fmt, LPSTR Out, LPINT Flags, LPINT Width, LPI
     }
 
     *Out = 0;  /* end the string */
+
+EXIT:
     PAL_free(TempStr);
     return Result;
 }
@@ -704,7 +704,7 @@ size_t Silent_PAL_wcslen(const wchar_16 *string)
     while (*string++)
     {
         nChar++;
-    }    
-    
+    }
+
     return nChar;
 }

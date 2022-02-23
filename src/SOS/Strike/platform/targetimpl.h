@@ -80,6 +80,8 @@ public:
 
     OperatingSystem STDMETHODCALLTYPE GetOperatingSystem();
 
+    HRESULT STDMETHODCALLTYPE GetService(REFIID serviceId, PVOID* ppService);
+
     LPCSTR STDMETHODCALLTYPE GetTempDirectory();
 
     HRESULT STDMETHODCALLTYPE GetRuntime(IRuntime** pRuntime);

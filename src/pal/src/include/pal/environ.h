@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -27,8 +26,8 @@ extern "C"
 /*++
 Variables :
 
-    palEnvironment: a global variable equivalent to environ on systems on 
-                    which that exists, and a pointer to an array of environment 
+    palEnvironment: a global variable equivalent to environ on systems on
+                    which that exists, and a pointer to an array of environment
                     strings on systems without environ.
     gcsEnvironment: critical section to synchronize access to palEnvironment
 --*/

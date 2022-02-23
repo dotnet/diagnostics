@@ -1,5 +1,7 @@
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+include_directories(${ROOT_DIR}/src)
 include_directories(${ROOT_DIR}/src/pal/inc)
 include_directories(${ROOT_DIR}/src/pal/inc/rt)
 
@@ -20,12 +22,10 @@ set(PALRT_SOURCES
     guid.cpp
     memorystream.cpp
     path.cpp
-    urlpars.cpp
-    unicode.cpp
     variant.cpp
 )
 
-add_library(palrt
+add_library_clr(palrt
     STATIC
     ${PALRT_SOURCES}
 )

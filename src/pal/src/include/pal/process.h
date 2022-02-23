@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -24,15 +23,16 @@ Revision History:
 #define _PAL_PROCESS_H_
 
 #include "pal/palinternal.h"
+#include "pal/stackstring.hpp"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif // __cplusplus
 
-/* thread ID of thread that has initiated an ExitProcess (or TerminateProcess). 
-   this is to make sure only one thread cleans up the PAL, and also to prevent 
-   calls to CreateThread from succeeding once shutdown has started 
+/* thread ID of thread that has initiated an ExitProcess (or TerminateProcess).
+   this is to make sure only one thread cleans up the PAL, and also to prevent
+   calls to CreateThread from succeeding once shutdown has started
    [defined in process.c]
 */
 

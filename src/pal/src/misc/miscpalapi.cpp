@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -29,7 +28,7 @@ Revision History:
 #include "pal/stackstring.hpp"
 
 #include <errno.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <time.h>
 #include <pthread.h>
 #include <dlfcn.h>
@@ -233,8 +232,8 @@ PAL_GetPALDirectoryA(
 VOID
 PALAPI
 PAL_Random(
-   IN OUT LPVOID lpBuffer,
-   IN DWORD dwLength)
+        IN OUT LPVOID lpBuffer,
+        IN DWORD dwLength)
 {
     int rand_des = -1;
     DWORD i;
@@ -249,14 +248,14 @@ PAL_Random(
     {
         do
         {
-            rand_des = open("/dev/urandom", O_RDONLY, O_CLOEXEC);
+            rand_des = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
         }
         while ((rand_des == -1) && (errno == EINTR));
 
         if (rand_des == -1)
         {
             if (errno == ENOENT)
-            {                
+            {
                 sMissingDevURandom = TRUE;
             }
             else
@@ -271,7 +270,7 @@ PAL_Random(
             DWORD offset = 0;
             do
             {
-                DWORD n = read(rand_des, (BYTE*)lpBuffer + offset , dwLength - offset);
+                ssize_t n = read(rand_des, (BYTE*)lpBuffer + offset , dwLength - offset);
                 if (n == -1)
                 {
                     if (errno == EINTR)
@@ -291,7 +290,7 @@ PAL_Random(
 
             close(rand_des);
         }
-    }    
+    }
 
     if (!sInitializedMRand)
     {

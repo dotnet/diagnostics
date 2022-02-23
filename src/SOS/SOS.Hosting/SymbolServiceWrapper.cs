@@ -12,14 +12,9 @@ using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -36,23 +31,6 @@ namespace SOS.Hosting
             WindowsCore     = 1,
             UnixCore        = 2,
             OSXCore         = 3
-        }
-
-        private sealed class OpenedReader : IDisposable
-        {
-            public readonly MetadataReaderProvider Provider;
-            public readonly MetadataReader Reader;
-
-            public OpenedReader(MetadataReaderProvider provider, MetadataReader reader)
-            {
-                Debug.Assert(provider != null);
-                Debug.Assert(reader != null);
-
-                Provider = provider;
-                Reader = reader;
-            }
-
-            public void Dispose() => Provider.Dispose();
         }
 
         /// <summary>
@@ -73,15 +51,15 @@ namespace SOS.Hosting
 
         public static readonly Guid IID_ISymbolService = new Guid("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1");
 
-        private readonly Func<IMemoryService> _getMemoryService;
         private readonly ISymbolService _symbolService;
+        private readonly IMemoryService _memoryService;
 
-        public SymbolServiceWrapper(IHost host, Func<IMemoryService> getMemoryService)
+        public SymbolServiceWrapper(ISymbolService symbolService, IMemoryService memoryService)
         {
-            Debug.Assert(host != null);
-            Debug.Assert(getMemoryService != null);
-            _getMemoryService = getMemoryService;
-            _symbolService = host.Services.GetService<ISymbolService>();
+            Debug.Assert(symbolService != null);
+            Debug.Assert(memoryService != null);
+            _symbolService = symbolService;
+            _memoryService = memoryService;
             Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
@@ -203,19 +181,19 @@ namespace SOS.Hosting
                     KeyGenerator generator = null;
                     if (config == RuntimeConfiguration.UnixCore)
                     {
-                        Stream stream = MemoryService.CreateMemoryStream();
+                        Stream stream = _memoryService.CreateMemoryStream();
                         var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
                         generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.OSXCore)
                     {
-                        Stream stream = MemoryService.CreateMemoryStream();
+                        Stream stream = _memoryService.CreateMemoryStream();
                         var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
                         generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
                     }
                     else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
                     {
-                        Stream stream = MemoryService.CreateMemoryStream(address, size);
+                        Stream stream = _memoryService.CreateMemoryStream(address, size);
                         var peFile = new PEFile(new StreamAddressSpace(stream), true);
                         generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
                     }
@@ -325,6 +303,25 @@ namespace SOS.Hosting
         }
 
         /// <summary>
+        /// Get expression helper for native SOS.
+        /// </summary>
+        /// <param name="expression">hex number</param>
+        /// <returns>value</returns>
+        internal static ulong GetExpressionValue(
+            IntPtr self,
+            string expression)
+        {
+            if (expression != null)
+            {
+                if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
+                {
+                    return result;
+                }
+            }
+            return 0;
+        }
+
+        /// <summary>
         /// Checks availability of debugging information for given assembly.
         /// </summary>
         /// <param name="assemblyPath">
@@ -351,20 +348,20 @@ namespace SOS.Hosting
         {
             try
             {
-                Stream peStream = null;
+                ISymbolFile symbolFile = null;
                 if (loadedPeAddress != 0)
                 {
-                    peStream = MemoryService.CreateMemoryStream(loadedPeAddress, loadedPeSize);
+                    Stream peStream = _memoryService.CreateMemoryStream(loadedPeAddress, loadedPeSize);
+                    symbolFile = _symbolService.OpenSymbolFile(assemblyPath, isFileLayout, peStream);
                 }
-                Stream pdbStream = null;
                 if (inMemoryPdbAddress != 0)
                 {
-                    pdbStream = MemoryService.CreateMemoryStream(inMemoryPdbAddress, inMemoryPdbSize);
+                    Stream pdbStream = _memoryService.CreateMemoryStream(inMemoryPdbAddress, inMemoryPdbSize);
+                    symbolFile = _symbolService.OpenSymbolFile(pdbStream);
                 }
-                OpenedReader openedReader = GetReader(assemblyPath, isFileLayout, peStream, pdbStream);
-                if (openedReader != null)
+                if (symbolFile != null)
                 {
-                    GCHandle gch = GCHandle.Alloc(openedReader);
+                    GCHandle gch = GCHandle.Alloc(symbolFile);
                     return GCHandle.ToIntPtr(gch);
                 }
             }
@@ -387,32 +384,16 @@ namespace SOS.Hosting
             try
             {
                 GCHandle gch = GCHandle.FromIntPtr(symbolReaderHandle);
-                ((OpenedReader)gch.Target).Dispose();
+                if (gch.Target is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
                 gch.Free();
             }
             catch (Exception ex)
             {
                 Trace.TraceError($"Dispose: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Get expression helper for native SOS.
-        /// </summary>
-        /// <param name="expression">hex number</param>
-        /// <returns>value</returns>
-        internal static ulong GetExpressionValue(
-            IntPtr self,
-            string expression)
-        {
-            if (expression != null)
-            {
-                if (ulong.TryParse(expression.Replace("0x", ""), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong result))
-                {
-                    return result;
-                }
-            }
-            return 0;
         }
 
         /// <summary>
@@ -433,36 +414,9 @@ namespace SOS.Hosting
             out int ilOffset)
         {
             Debug.Assert(symbolReaderHandle != IntPtr.Zero);
-            methodToken = 0;
-            ilOffset = 0;
-
             GCHandle gch = GCHandle.FromIntPtr(symbolReaderHandle);
-            MetadataReader reader = ((OpenedReader)gch.Target).Reader;
-
-            try
-            {
-                string fileName = GetFileName(filePath);
-                foreach (MethodDebugInformationHandle methodDebugInformationHandle in reader.MethodDebugInformation)
-                {
-                    MethodDebugInformation methodDebugInfo = reader.GetMethodDebugInformation(methodDebugInformationHandle);
-                    SequencePointCollection sequencePoints = methodDebugInfo.GetSequencePoints();
-                    foreach (SequencePoint point in sequencePoints)
-                    {
-                        string sourceName = reader.GetString(reader.GetDocument(point.Document).Name);
-                        if (point.StartLine == lineNumber && GetFileName(sourceName) == fileName)
-                        {
-                            methodToken = MetadataTokens.GetToken(methodDebugInformationHandle.ToDefinitionHandle());
-                            ilOffset = point.Offset;
-                            return true;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError($"ResolveSequencePoint: {ex.Message}");
-            }
-            return false;
+            ISymbolFile symbolFile = (ISymbolFile)gch.Target;
+            return symbolFile.ResolveSequencePoint(filePath, lineNumber, out methodToken, out ilOffset);
         }
 
         /// <summary>
@@ -486,69 +440,13 @@ namespace SOS.Hosting
             fileName = IntPtr.Zero;
 
             GCHandle gch = GCHandle.FromIntPtr(symbolReaderHandle);
-            OpenedReader openedReader = (OpenedReader)gch.Target;
-            if (!GetSourceLineByILOffset(openedReader, methodToken, ilOffset, out lineNumber, out string sourceFileName))
+            ISymbolFile symbolFile = (ISymbolFile)gch.Target;
+            if (!symbolFile.GetSourceLineByILOffset(methodToken, ilOffset, out lineNumber, out string sourceFileName))
             {
                 return false;
             }
             fileName = Marshal.StringToBSTR(sourceFileName);
             return true;
-        }
-
-        /// <summary>
-        /// Helper method to return source line number and source file name for given IL offset and method token.
-        /// </summary>
-        /// <param name="openedReader">symbol reader returned by LoadSymbolsForModule</param>
-        /// <param name="methodToken">method token</param>
-        /// <param name="ilOffset">IL offset</param>
-        /// <param name="lineNumber">source line number return</param>
-        /// <param name="fileName">source file name return</param>
-        /// <returns> true if information is available</returns>
-        private bool GetSourceLineByILOffset(
-            OpenedReader openedReader,
-            int methodToken,
-            long ilOffset,
-            out int lineNumber,
-            out string fileName)
-        {
-            lineNumber = 0;
-            fileName = null;
-            MetadataReader reader = openedReader.Reader;
-            try
-            {
-                Handle handle = MetadataTokens.Handle(methodToken);
-                if (handle.Kind != HandleKind.MethodDefinition)
-                    return false;
-
-                MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
-                if (methodDebugHandle.IsNil)
-                    return false;
-
-                MethodDebugInformation methodDebugInfo = reader.GetMethodDebugInformation(methodDebugHandle);
-                SequencePointCollection sequencePoints = methodDebugInfo.GetSequencePoints();
-
-                SequencePoint? nearestPoint = null;
-                foreach (SequencePoint point in sequencePoints)
-                {
-                    if (point.Offset > ilOffset)
-                        break;
-
-                    if (point.StartLine != 0 && !point.IsHidden)
-                        nearestPoint = point;
-                }
-
-                if (nearestPoint.HasValue)
-                {
-                    lineNumber = nearestPoint.Value.StartLine;
-                    fileName = reader.GetString(reader.GetDocument(nearestPoint.Value.Document).Name);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError($"GetSourceLineByILOffset: {ex.Message}");
-            }
-            return false;
         }
 
         /// <summary>
@@ -570,62 +468,13 @@ namespace SOS.Hosting
             localVarName = IntPtr.Zero;
 
             GCHandle gch = GCHandle.FromIntPtr(symbolReaderHandle);
-            OpenedReader openedReader = (OpenedReader)gch.Target;
-            if (!GetLocalVariableByIndex(openedReader, methodToken, localIndex, out string localVar))
+            ISymbolFile symbolFile = (ISymbolFile)gch.Target;
+            if (!symbolFile.GetLocalVariableByIndex(methodToken, localIndex, out string localVar))
             {
                 return false;
             }
             localVarName = Marshal.StringToBSTR(localVar);
             return true;
-        }
-
-        /// <summary>
-        /// Helper method to return local variable name for given local index and IL offset.
-        /// </summary>
-        /// <param name="openedReader">symbol reader returned by LoadSymbolsForModule</param>
-        /// <param name="methodToken">method token</param>
-        /// <param name="localIndex">local variable index</param>
-        /// <param name="localVarName">local variable name return</param>
-        /// <returns>true if name has been found</returns>
-        private bool GetLocalVariableByIndex(
-            OpenedReader openedReader,
-            int methodToken,
-            int localIndex,
-            out string localVarName)
-        {
-            localVarName = null;
-            MetadataReader reader = openedReader.Reader;
-            try
-            {
-                Handle handle = MetadataTokens.Handle(methodToken);
-                if (handle.Kind != HandleKind.MethodDefinition)
-                    return false;
-
-                MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
-                LocalScopeHandleCollection localScopes = reader.GetLocalScopes(methodDebugHandle);
-                foreach (LocalScopeHandle scopeHandle in localScopes)
-                {
-                    LocalScope scope = reader.GetLocalScope(scopeHandle);
-                    LocalVariableHandleCollection localVars = scope.GetLocalVariables();
-                    foreach (LocalVariableHandle varHandle in localVars)
-                    {
-                        LocalVariable localVar = reader.GetLocalVariable(varHandle);
-                        if (localVar.Index == localIndex)
-                        {
-                            if (localVar.Attributes == LocalVariableAttributes.DebuggerHidden)
-                                return false;
-
-                            localVarName = reader.GetString(localVar.Name);
-                            return true;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError($"GetLocalVariableByIndex: {ex.Message}");
-            }
-            return false;
         }
 
         /// <summary>
@@ -653,31 +502,16 @@ namespace SOS.Hosting
             IntPtr pMetadata,
             IntPtr pMetadataSize)
         {
-            Debug.Assert(imageTimestamp != 0);
-            Debug.Assert(imageSize != 0);
-
-            if (pMetadata == IntPtr.Zero) {
-                return HResult.E_INVALIDARG;
-            }
-            int hr = HResult.S_OK;
-            int dataSize = 0;
-
-            ImmutableArray<byte> metadata = _symbolService.GetMetadata(imagePath, imageTimestamp, imageSize);
-            if (!metadata.IsEmpty)
-            {
-                dataSize = metadata.Length;
-                int size = Math.Min((int)bufferSize, dataSize);
-                Marshal.Copy(metadata.ToArray(), 0, pMetadata, size);
-            }
-            else
-            {
-                hr = HResult.E_FAIL;
-            }
-
-            if (pMetadataSize != IntPtr.Zero) {
-                Marshal.WriteInt32(pMetadataSize, dataSize);
-            }
-            return hr;
+            return _symbolService.GetMetadataLocator(
+                imagePath,
+                imageTimestamp,
+                imageSize,
+                mvid, 
+                mdRva,
+                flags,
+                bufferSize,
+                pMetadata,
+                pMetadataSize);
         }
 
         /// <summary>
@@ -699,265 +533,14 @@ namespace SOS.Hosting
             IntPtr pPathBufferSize,
             IntPtr pwszPathBuffer)
         {
-            return _symbolService.GetICorDebugMetadataLocator(imagePath, imageTimestamp, imageSize, pathBufferSize, pPathBufferSize, pwszPathBuffer);
+            return _symbolService.GetICorDebugMetadataLocator(
+                imagePath,
+                imageTimestamp,
+                imageSize,
+                pathBufferSize,
+                pPathBufferSize,
+                pwszPathBuffer);
         }
-
-        /// <summary>
-        /// Returns the portable PDB reader for the assembly path
-        /// </summary>
-        /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
-        /// <param name="isFileLayout">type of in-memory PE layout, if true, file based layout otherwise, loaded layout</param>
-        /// <param name="peStream">in-memory PE stream</param>
-        /// <param name="pdbStream">optional in-memory PDB stream</param>
-        /// <returns>reader/provider wrapper instance</returns>
-        /// <remarks>
-        /// Assumes that neither PE image nor PDB loaded into memory can be unloaded or moved around.
-        /// </remarks>
-        private OpenedReader GetReader(string assemblyPath, bool isFileLayout, Stream peStream, Stream pdbStream)
-        {
-            return (pdbStream != null) ? TryOpenReaderForInMemoryPdb(pdbStream) : TryOpenReaderFromAssembly(assemblyPath, isFileLayout, peStream);
-        }
-
-        private OpenedReader TryOpenReaderForInMemoryPdb(Stream pdbStream)
-        {
-            Debug.Assert(pdbStream != null);
-
-            byte[] buffer = new byte[sizeof(uint)];
-            if (pdbStream.Read(buffer, 0, sizeof(uint)) != sizeof(uint))
-            {
-                return null;
-            }
-            uint signature = BitConverter.ToUInt32(buffer, 0);
-
-            // quick check to avoid throwing exceptions below in common cases:
-            const uint ManagedMetadataSignature = 0x424A5342;
-            if (signature != ManagedMetadataSignature)
-            {
-                // not a Portable PDB
-                return null;
-            }
-
-            OpenedReader result = null;
-            MetadataReaderProvider provider = null;
-            try
-            {
-                pdbStream.Position = 0;
-                provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
-                result = new OpenedReader(provider, provider.GetMetadataReader());
-            }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
-            {
-                return null;
-            }
-            finally
-            {
-                if (result == null)
-                {
-                    provider?.Dispose();
-                }
-            }
-
-            return result;
-        }
-
-        private OpenedReader TryOpenReaderFromAssembly(string assemblyPath, bool isFileLayout, Stream peStream)
-        {
-            if (assemblyPath == null && peStream == null)
-                return null;
-
-            PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
-            if (peStream == null)
-            {
-                peStream = TryOpenFile(assemblyPath);
-                if (peStream == null)
-                    return null;
-                
-                options = PEStreamOptions.Default;
-            }
-
-            try
-            {
-                using (var peReader = new PEReader(peStream, options))
-                {
-                    ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
-
-                    // First try .pdb file specified in CodeView data (we prefer .pdb file on disk over embedded PDB
-                    // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
-                    if (codeViewEntry.DataSize != 0)
-                    {
-                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
-                        if (result != null)
-                        {
-                            return result;
-                        }
-                    }
-
-                    // if it failed try Embedded Portable PDB (if available):
-                    if (embeddedPdbEntry.DataSize != 0)
-                    {
-                        return TryOpenReaderFromEmbeddedPdb(peReader, embeddedPdbEntry);
-                    }
-                }
-            }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
-            {
-                // nop
-            }
-
-            return null;
-        }
-
-        private void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
-        {
-            // See spec: https://github.com/dotnet/runtime/blob/main/docs/design/specs/PE-COFF.md
-
-            codeViewEntry = default;
-            embeddedPdbEntry = default;
-
-            foreach (DebugDirectoryEntry entry in peReader.ReadDebugDirectory())
-            {
-                if (entry.Type == DebugDirectoryEntryType.CodeView)
-                {
-                    if (entry.MinorVersion != ImageDebugDirectory.PortablePDBMinorVersion)
-                    {
-                        continue;
-                    }
-                    codeViewEntry = entry;
-                }
-                else if (entry.Type == DebugDirectoryEntryType.EmbeddedPortablePdb)
-                {
-                    embeddedPdbEntry = entry;
-                }
-            }
-        }
-
-        private OpenedReader TryOpenReaderFromCodeView(PEReader peReader, DebugDirectoryEntry codeViewEntry, string assemblyPath)
-        {
-            OpenedReader result = null;
-            MetadataReaderProvider provider = null;
-            try
-            {
-                CodeViewDebugDirectoryData data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
-                string pdbPath = data.Path;
-                Stream pdbStream = null;
-
-                if (assemblyPath != null) 
-                {
-                    try
-                    {
-                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), GetFileName(pdbPath));
-                    }
-                    catch
-                    {
-                        // invalid characters in CodeView path
-                        return null;
-                    }
-                    pdbStream = TryOpenFile(pdbPath);
-                }
-
-                if (pdbStream == null)
-                {
-                    if (_symbolService.IsSymbolStoreEnabled)
-                    {
-                        Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
-                        SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
-                        pdbStream = _symbolService.GetSymbolStoreFile(key)?.Stream;
-                    }
-                    if (pdbStream == null)
-                    {
-                        return null;
-                    }
-                    // Make sure the stream is at the beginning of the pdb.
-                    pdbStream.Position = 0;
-                }
-
-                provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
-                MetadataReader reader = provider.GetMetadataReader();
-
-                // Validate that the PDB matches the assembly version
-                if (data.Age == 1 && new BlobContentId(reader.DebugMetadataHeader.Id) == new BlobContentId(data.Guid, codeViewEntry.Stamp))
-                {
-                    result = new OpenedReader(provider, reader);
-                }
-            }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
-            {
-                return null;
-            }
-            finally
-            {
-                if (result == null)
-                {
-                    provider?.Dispose();
-                }
-            }
-
-            return result;
-        }
-
-        private OpenedReader TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
-        {
-            OpenedReader result = null;
-            MetadataReaderProvider provider = null;
-
-            try
-            {
-                // TODO: We might want to cache this provider globally (across stack traces), 
-                // since decompressing embedded PDB takes some time.
-                provider = peReader.ReadEmbeddedPortablePdbDebugDirectoryData(embeddedPdbEntry);
-                result = new OpenedReader(provider, provider.GetMetadataReader());
-            }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
-            {
-                return null;
-            }
-            finally
-            {
-                if (result == null)
-                {
-                    provider?.Dispose();
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Attempt to open a file stream.
-        /// </summary>
-        /// <param name="path">file path</param>
-        /// <returns>stream or null if doesn't exist or error</returns>
-        private Stream TryOpenFile(string path)
-        {
-            if (File.Exists(path))
-            {
-                try
-                {
-                    return File.OpenRead(path);
-                }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is NotSupportedException || ex is IOException)
-                {
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Quick fix for Path.GetFileName which incorrectly handles Windows-style paths on Linux
-        /// </summary>
-        /// <param name="pathName"> File path to be processed </param>
-        /// <returns>Last component of path</returns>
-        private static string GetFileName(string pathName)
-        {
-            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
-            if (pos < 0)
-            {
-                return pathName;
-            }
-            return pathName.Substring(pos + 1);
-        }
-
-        private IMemoryService MemoryService => _getMemoryService() ?? throw new DiagnosticsException("SymbolServiceWrapper: no current target");
 
         #region Symbol service delegates
 

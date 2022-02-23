@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 
 
@@ -13,10 +12,8 @@
 // that SOS depends on.
 // ******************************************************************************
 
-// And here are the predefined slots for accessing TLS from various DLLs of the CLR.
-// Note that we want to support combinations of Debug and Retail DLLs for testing
-// purposes, so we burn the slots into the retail EE even if a debug CLR dll needs
-// them.
+// The historic location of ThreadType slot kept for compatibility with SOS
+// TODO: Introduce DAC API to make this hack unnecessary
 enum PredefinedTlsSlots
 {
     TlsIdx_ThreadType = 11 // bit flags to indicate special thread's type
@@ -39,6 +36,8 @@ enum TlsThreadTypeFlag // flag used for thread type in Tls data
     ThreadType_ProfAPI_Attach           = 0x00004000,
     ThreadType_ProfAPI_Detach           = 0x00008000,
     ThreadType_ETWRundownThread         = 0x00010000,
+    ThreadType_GenericInstantiationCompare= 0x00020000, // Used to indicate that the thread is determining if a generic instantiation in an ngen image matches a lookup.
 };
 
 #endif
+

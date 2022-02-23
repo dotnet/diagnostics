@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *sprintf_s.c - print formatted to string
@@ -65,8 +64,7 @@
 *Exceptions:
 *
 *******************************************************************************/
-
-int sprintf_s (
+DLLEXPORT int sprintf_s (
         char *string,
         size_t sizeInBytes,
         const char *format,
@@ -81,7 +79,7 @@ int sprintf_s (
         return ret;
 }
 
-int _snprintf_s (
+DLLEXPORT int _snprintf_s (
         char *string,
         size_t sizeInBytes,
         size_t count,

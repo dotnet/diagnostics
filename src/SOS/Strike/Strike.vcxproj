@@ -427,7 +427,6 @@
     <ClInclude Include="strike.h" />
     <ClInclude Include="symbols.h" />
     <ClInclude Include="util.h" />
-    <ClInclude Include="UtilCode.h" />
     <ClInclude Include="WatchCmd.h" />
     <ClInclude Include="xplat\dbgeng.h" />
     <ClInclude Include="xplat\dbghelp.h" />

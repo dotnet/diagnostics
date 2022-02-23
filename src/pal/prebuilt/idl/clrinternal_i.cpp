@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 
 
@@ -57,15 +56,9 @@ typedef IID CLSID;
 #endif // CLSID_DEFINED
 
 #define MIDL_DEFINE_GUID(type,name,l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) \
-        const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
+        EXTERN_C __declspec(selectany) const type name = {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
 
-#endif !_MIDL_USE_GUIDDEF_
-
-MIDL_DEFINE_GUID(IID, IID_IExecutionEngine,0x7AF02DAC,0x2A33,0x494b,0xA0,0x9F,0x25,0xE0,0x0A,0x93,0xC6,0xF8);
-
-
-MIDL_DEFINE_GUID(IID, IID_IEEMemoryManager,0x17713B61,0xB59F,0x4e13,0xBA,0xAF,0x91,0x62,0x3D,0xC8,0xAD,0xC0);
-
+#endif // !_MIDL_USE_GUIDDEF_
 
 MIDL_DEFINE_GUID(IID, IID_IPrivateManagedExceptionReporting,0xAD76A023,0x332D,0x4298,0x80,0x01,0x07,0xAA,0x93,0x50,0xDC,0xA4);
 

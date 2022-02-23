@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 // ---------------------------------------------------------------------------
 // static_assert.h
 //
@@ -9,7 +8,7 @@
 
 //--------------------------------------------------------------------------------
 // static_assert represents a check which should be made at compile time.  It
-// can only be done on a constant expression. 
+// can only be done on a constant expression.
 //--------------------------------------------------------------------------------
 
 #ifndef __STATIC_ASSERT_H__

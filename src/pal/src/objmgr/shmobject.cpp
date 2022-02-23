@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -49,7 +48,7 @@ CSharedMemoryObject::Initialize(
     PAL_ERROR palError = NO_ERROR;
     SHMObjData *psmod = NULL;
 
-    _ASSERTE(NULL != pthr); 
+    _ASSERTE(NULL != pthr);
     _ASSERTE(NULL != poa);
 
     ENTRY("CSharedMemoryObject::Initialize"
@@ -71,7 +70,7 @@ CSharedMemoryObject::Initialize(
     //
 
     if (0 != m_oa.sObjectName.GetStringLength())
-    {   
+    {
         m_ObjectDomain = SharedObject;
 
         palError = AllocateSharedDataItems(&m_shmod, &psmod);
@@ -82,7 +81,7 @@ CSharedMemoryObject::Initialize(
     }
 
     if (0 != m_pot->GetSharedDataSize())
-    {       
+    {
         if (SharedObject == m_ObjectDomain)
         {
             //
@@ -93,7 +92,7 @@ CSharedMemoryObject::Initialize(
                 ASSERT("psmod should not be NULL");
                 palError = ERROR_INTERNAL_ERROR;
                 goto InitializeExit;
-            } 
+            }
 
             m_pvSharedData = SHMPTR_TO_TYPED_PTR(VOID, psmod->shmObjSharedData);
             if (NULL == m_pvSharedData)
@@ -103,7 +102,7 @@ CSharedMemoryObject::Initialize(
                 goto InitializeExit;
             }
         }
-        else 
+        else
         {
             //
             // Initialize the local shared data lock.
@@ -114,8 +113,8 @@ CSharedMemoryObject::Initialize(
             {
                 ERROR("Failure initializing m_sdlSharedData\n");
                 goto InitializeExit;
-            } 
-        
+            }
+
             //
             // Allocate local memory to hold the shared data
             //
@@ -320,7 +319,7 @@ CSharedMemoryObject::AllocateSharedDataItems(
         pshmObjData,
         ppsmod
         );
-        
+
     //
     // We're about to make a number of shared memory allocations,
     // so grab the lock for the entirety of the routine.
@@ -372,7 +371,7 @@ CSharedMemoryObject::AllocateSharedDataItems(
         // The shared copy of the object's immutable data will be initialized
         // by CSharedMemoryObjectManager::RegisterObject or PromoteSharedData
         //
-        
+
         psmod->shmObjImmutableData = malloc(m_pot->GetImmutableDataSize());
         if (NULL == psmod->shmObjImmutableData)
         {
@@ -437,10 +436,10 @@ CSharedMemoryObject::FreeSharedDataAreas(
         );
 
     SHMLock();
-        
+
     psmod = SHMPTR_TO_TYPED_PTR(SHMObjData, shmObjData);
     _ASSERTE(NULL != psmod);
-    
+
     if (NULL != psmod->shmObjImmutableData)
     {
         if (NULL != psmod->pCleanupRoutine)
@@ -459,7 +458,7 @@ CSharedMemoryObject::FreeSharedDataAreas(
     {
         free(psmod->shmObjName);
     }
-    
+
     free(shmObjData);
 
     SHMRelease();
@@ -485,7 +484,7 @@ CSharedMemoryObject::CleanupForProcessShutdown(
     bool fCleanupSharedState;
 
     _ASSERTE(NULL != pthr);
-    
+
     ENTRY("CSharedMemoryObject::CleanupForProcessShutdown"
         "(this = %p, pthr = %p)\n",
         this,
@@ -527,7 +526,7 @@ CSharedMemoryObject::CleanupForProcessShutdown(
 
     m_pthrCleanup = pthr;
     pthr->AddThreadReference();
-    
+
     InternalDelete(this);
 
     pthr->ReleaseThreadReference();
@@ -553,13 +552,13 @@ CSharedMemoryObject::AcquireObjectDestructionLock(
     )
 {
     _ASSERTE(NULL != pthr);
-    
+
     ENTRY("CSharedMemoryObject::AcquireObjectDestructionLock"
         "(this = %p, pthr = $p)\n",
         this,
         pthr
         );
-    
+
     InternalEnterCriticalSection(pthr, m_pcsObjListLock);
 
     LOGEXIT("CSharedMemoryObject::AcquireObjectDestructionLock\n");
@@ -594,7 +593,7 @@ CSharedMemoryObject::ReleaseObjectDestructionLock(
         pthr,
         fDestructionPending
         );
-    
+
     if (fDestructionPending)
     {
         RemoveEntryList(&m_le);
@@ -637,16 +636,16 @@ CSharedMemoryObject::DereferenceSharedData()
         );
 
     if (!fSharedDataAlreadDereferenced)
-    {   
+    {
         if (NULL != m_shmod)
         {
             SHMObjData *psmod;
-            
+
             SHMLock();
 
             psmod = SHMPTR_TO_TYPED_PTR(SHMObjData, m_shmod);
             _ASSERTE(NULL != psmod);
-            
+
             psmod->lProcessRefCount -= 1;
             if (0 == psmod->lProcessRefCount)
             {
@@ -691,17 +690,17 @@ CSharedMemoryObject::DereferenceSharedData()
                     {
                         SHMObjData *psmodNext = SHMPTR_TO_TYPED_PTR(SHMObjData, psmod->shmNextObj);
                         _ASSERTE(NULL != psmodNext);
-                        
+
                         psmodNext->shmPrevObj = psmod->shmPrevObj;
                     }
                 }
-#if _DEBUG                
+#if _DEBUG
                 else
                 {
                     _ASSERTE(NULL == psmod->shmPrevObj);
                     _ASSERTE(NULL == psmod->shmNextObj);
                 }
-#endif                
+#endif
             }
 
             SHMRelease();
@@ -712,7 +711,7 @@ CSharedMemoryObject::DereferenceSharedData()
             // If the object is local the shared data needs to be
             // deleted by definition
             //
-            
+
             m_fDeleteSharedData = TRUE;
         }
     }
@@ -738,7 +737,7 @@ Function:
 CSharedMemoryObject::~CSharedMemoryObject()
 {
     ENTRY("CSharedMemoryObject::~CSharedMemoryObject(this = %p)\n", this);
-    
+
     if (!m_fSharedDataDereferenced)
     {
         ASSERT("DereferenceSharedData not called before object destructor -- delete called directly?\n");
@@ -751,7 +750,7 @@ CSharedMemoryObject::~CSharedMemoryObject()
     }
     else if (NULL != m_shmod && m_fDeleteSharedData)
     {
-        FreeSharedDataAreas(m_shmod);        
+        FreeSharedDataAreas(m_shmod);
     }
 
     LOGEXIT("CSharedMemoryObject::~CSharedMemoryObject\n");
@@ -792,12 +791,12 @@ CSharedMemoryObject::GetObjectFromListLink(PLIST_ENTRY ple)
     _ASSERTE(NULL != ple);
 
     ENTRY("CSharedMemoryObject::GetObjectFromListLink(ple = %p)\n", ple);
-    
+
     //
     // Ideally we'd use CONTAINING_RECORD here, but it uses offsetof (see above
     // comment
     //
-    
+
     pshmo = reinterpret_cast<CSharedMemoryObject*>(
         reinterpret_cast<size_t>(ple) - PAL_safe_offsetof(CSharedMemoryObject, m_le)
         );
@@ -850,7 +849,7 @@ CSharedMemoryObject::GetSharedData(
         );
 
     _ASSERTE(0 < m_pot->GetSharedDataSize());
-    
+
     if (ProcessLocalObject == m_ObjectDomain)
     {
         //
@@ -874,7 +873,7 @@ CSharedMemoryObject::GetSharedData(
         // A shared object can never transition back to local,
         // so there's no need to recheck the domain on this path
         //
-        
+
         m_ssmlSharedData.AcquireLock(pthr, &pDataLock);
     }
 
@@ -882,7 +881,7 @@ CSharedMemoryObject::GetSharedData(
     *ppvSharedData = m_pvSharedData;
 
     LOGEXIT("CSharedMemoryObject::GetSharedData returns %d\n", NO_ERROR);
-    
+
     return NO_ERROR;
 }
 
@@ -907,7 +906,7 @@ CSharedMemoryObject::GetSynchStateController(
 {
     _ASSERTE(NULL != pthr);
     _ASSERTE(NULL != ppStateController);
-    
+
     //
     // This is not a waitable object!
     //
@@ -937,7 +936,7 @@ CSharedMemoryObject::GetSynchWaitController(
 {
     _ASSERTE(NULL != pthr);
     _ASSERTE(NULL != ppWaitController);
-    
+
     //
     // This is not a waitable object!!!
     //
@@ -961,7 +960,7 @@ CSharedMemoryObject::GetObjectDomain(
 {
     TRACE("CSharedMemoryObject::GetObjectDomain(this = %p)\n", this);
     LOGEXIT("CSharedMemoryObject::GetObjectDomain returns %d\n", m_ObjectDomain);
-    
+
     return m_ObjectDomain;
 }
 
@@ -982,7 +981,7 @@ CSharedMemoryObject::GetObjectSynchData(
     )
 {
     _ASSERTE(NULL != ppvSynchData);
-    
+
     //
     // This is not a waitable object!!!
     //

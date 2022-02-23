@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *safecrt_woutput_s.c - implementation of the _woutput family for safercrt.lib
@@ -52,8 +51,8 @@
 #define _TCHAR CRT_TCHAR
 #define TCHAR CRTTCHAR
 
-typedef wchar_t     _TCHAR;
-typedef wchar_t     TCHAR;
+typedef char16_t     _TCHAR;
+typedef char16_t     TCHAR;
 #define _T(x)       L##x
 
 #include "output.inl"

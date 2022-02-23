@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -132,50 +131,6 @@ int Silent_PAL_vfprintf(PAL_FILE *stream, const char *format, va_list ap);
 
 
 
-/*++
-Function:
-  PAL_iswlower
-
-See MSDN
-
---*/
-int __cdecl PAL_iswlower( wchar_16 c );
-
-
-/*++
-Function:
-  PAL_iswalpha
-
-See MSDN
-
---*/
-int __cdecl PAL_iswalpha( wchar_16 c );
-
-#if HAVE_COREFOUNDATION
-/*--
-Function:
-  PAL_iswblank
-
-Returns TRUE if c is a Win32 "blank" character.
---*/
-int __cdecl PAL_iswblank(wchar_16 c);
-
-/*--
-Function:
-  PAL_iswcntrl
-
-Returns TRUE if c is a control character.
---*/
-int __cdecl PAL_iswcntrl(wchar_16 c);
-
-/*--
-Function:
-  PAL_iswcntrl
-
-Returns TRUE if c is a control character.
---*/
-int __cdecl PAL_iswpunct(wchar_16 c);
-#endif  // HAVE_COREFOUNDATION
 
 /*++
 
@@ -196,7 +151,7 @@ struct _FILE
                               fle is opened in text/binary mode*/
 #if UNGETC_NOT_RETURN_EOF
    BOOL     bWriteOnlyMode;/* Boolean variable to denote that the
-                              fle is opened in write-only mode*/ 
+                              fle is opened in write-only mode*/
 #endif //UNGETC_NOT_RETURN_EOF
 };
 
@@ -208,7 +163,7 @@ enum CRT_ERROR_CODES
 
 /* Global variables storing the std streams. Defined in cruntime/file.c. */
 extern PAL_FILE PAL_Stdout;
-extern PAL_FILE PAL_Stdin; 
+extern PAL_FILE PAL_Stdin;
 extern PAL_FILE PAL_Stderr;
 
 /*++
@@ -216,7 +171,7 @@ extern PAL_FILE PAL_Stderr;
 Functio:
 
     CRTInitStdStreams.
-    
+
     Initilizes the standard streams.
     Returns TRUE on success, FALSE otherwise.
 --*/

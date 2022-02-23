@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -44,18 +43,18 @@ typedef struct _find_handle
 
 /*++
 FILECanonicalizePath
-    Removes all instances of '/./', '/../' and '//' from an absolute path. 
-    
+    Removes all instances of '/./', '/../' and '//' from an absolute path.
+
 Parameters:
     LPSTR lpUnixPath : absolute path to modify, in Unix format
 
-(no return value)                                             
- 
+(no return value)
+
 Notes :
 -behavior is undefined if path is not absolute
--the order of steps *is* important: /one/./../two would give /one/two 
+-the order of steps *is* important: /one/./../two would give /one/two
  instead of /two if step 3 was done before step 2
--reason for this function is that GetFullPathName can't use realpath(), since 
+-reason for this function is that GetFullPathName can't use realpath(), since
  realpath() requires the given path to be valid and GetFullPathName does not.
 --*/
 void FILECanonicalizePath(LPSTR lpUnixPath);
@@ -70,34 +69,8 @@ Abstract:
 Parameter:
   IN/OUT lpPath: path to be modified
 --*/
-void 
-FILEDosToUnixPathA(LPSTR lpPath);
-
-/*++
-Function:
-  FileDosToUnixPathW
-
-Abstract:
-  Change a DOS path to a Unix path. Replace '\' by '/'.
-
-Parameter:
-  IN/OUT lpPath: path to be modified
-  --*/
 void
-FILEDosToUnixPathW(LPWSTR lpPath);
-
-/*++
-Function:
-  FileUnixToDosPathA
-
-Abstract:
-  Change a Unix path to a DOS path. Replace '/' by '\'.
-
-Parameter:
-  IN/OUT lpPath: path to be modified
---*/
-void 
-FILEUnixToDosPathA(LPSTR lpPath);
+FILEDosToUnixPathA(LPSTR lpPath);
 
 /*++
 Function:
@@ -115,16 +88,8 @@ DWORD FILEGetDirectoryFromFullPathA( LPCSTR lpFullPath,
 
 /*++
 Function:
-  FILEGetFileNameFromFullPath
-
-Given a full path, return a pointer to the first char of the filename part.
---*/
-LPCSTR FILEGetFileNameFromFullPathA( LPCSTR lpFullPath );
-
-/*++
-Function:
   FILEGetLastErrorFromErrno
-  
+
 Convert errno into the appropriate win32 error and return it.
 --*/
 DWORD FILEGetLastErrorFromErrno( void );
@@ -132,7 +97,7 @@ DWORD FILEGetLastErrorFromErrno( void );
 /*++
 Function:
   DIRGetLastErrorFromErrno
-  
+
 Convert errno into the appropriate win32 error and return it.
 --*/
 DWORD DIRGetLastErrorFromErrno( void );
@@ -160,10 +125,10 @@ void FILECleanupStdHandles(void);
 
 /*++
 
-Function : 
+Function :
     FILEGetProperNotFoundError
-    
-Returns the proper error code, based on the 
+
+Returns the proper error code, based on the
 Windows behavoir.
 
     IN LPSTR lpPath - The path to check.
@@ -172,63 +137,18 @@ Windows behavoir.
 void FILEGetProperNotFoundError( LPCSTR lpPath, LPDWORD lpErrorCode );
 
 /*++
-PAL__getcwd
-
-Calls getcwd
-
-Input parameters:
-
-char *szBuf = a copy of the absolute pathname of the current working directory
-is copied into szBuf.
-size_t nSize = size, in bytes, of the array referenced by szBuf.
-
-Return value:
-    A pointer to the pathname if successful, otherwise NULL is returned.
---*/
-char * __cdecl PAL__getcwd(char *szBuf, size_t nSize);
-
-/*++
 PAL_fflush
 
 Calls fflush
 
 Input parameters:
 
-PAL_FILE *stream = stream to be flushed. 
+PAL_FILE *stream = stream to be flushed.
 
 Return value:
     0 is returned on success, otherwise EOF is returned.
 --*/
 int _cdecl PAL_fflush( PAL_FILE *stream );
-
-/*++
-PAL_mkstemp
-    
-Calls InternalMkstemp to call mkstemp
-
-Input parameters:
-
-char *szNameTemplate = the pattern to follow when creating a new file.
-
-Return value:
-    file descriptor of opened file on success, -1 on failure.
---*/
-int __cdecl PAL_mkstemp(char *szNameTemplate);
-
-/*++
-PAL_rename
-
-Calls rename
-
-Input parameters:
-
-szOldName = pointer to the pathname of the file to be renamed
-szNewName = pointer to the new pathname of the file
-
-Return value:
-    Returns 0 on success and -1 on failure
---*/
-int __cdecl PAL_rename(const char *szOldName, const char *szNewName);
 
 /*++
 PAL_fgets

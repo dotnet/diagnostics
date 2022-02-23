@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *internal_securecrt.h - contains declarations of internal routines and variables for securecrt
@@ -24,16 +23,21 @@
 #define _INC_INTERNAL_SECURECRT
 
 /* more VS specific goodness */
-#define __out_ecount_z( x )
-#define __out_ecount( x )
-#define __in_opt
-#define __in_z_opt
-#define __out_ecount_z_opt( x )
-#define __in_z
-#define __in
+#define _In_
+#define _In_z_
+#define _In_opt_
+#define _In_opt_z_
+#define _Out_
+#define _Out_opt_
+#define _Out_writes_(size)
+#define _Out_writes_opt_(size)
+#define _Out_writes_bytes_(size)
+#define _Out_writes_bytes_opt_(size)
+#define _Out_writes_z_(size)
+#define _Out_writes_opt_z_(size)
 
-/* 
- * The original SafeCRT implemention allows runtine control over buffer checking.
+/*
+ * The original SafeCRT implemention allows runtime control over buffer checking.
  * For now we'll key this off the debug flag.
  */
 #ifdef _DEBUG
@@ -241,12 +245,6 @@
 #define _RETURN_TRUNCATE \
     return STRUNCATE
 
-#define _SET_MBCS_ERROR \
-    (errno = EILSEQ)
-
-#define _RETURN_MBCS_ERROR \
-    return _SET_MBCS_ERROR
-
 /* locale dependent */
 #define _LOCALE_ARG \
     _LocInfo
@@ -256,26 +254,6 @@
 
 #define _LOCALE_UPDATE \
     _LocaleUpdate _LocUpdate(_LOCALE_ARG)
-
-#define _ISMBBLEAD(_Character) \
-    _ismbblead_l((_Character), _LocUpdate.GetLocaleT())
-
-#define _MBSDEC(_String, _Current) \
-    _mbsdec((_String), (_Current))
-
-#define _ISMBBLEADPREFIX(_Result, _StringStart, _BytePtr)               \
-    {                                                                   \
-        unsigned char *_Tmp_VAR, *_StringStart_VAR, *_BytePtr_VAR;      \
-                                                                        \
-        _StringStart_VAR = (_StringStart);                              \
-        _BytePtr_VAR = (_BytePtr);                                      \
-        _Tmp_VAR = _BytePtr_VAR;                                        \
-        while ((_Tmp_VAR >= _StringStart_VAR) && _ISMBBLEAD(*_Tmp_VAR)) \
-        {                                                               \
-            _Tmp_VAR--;                                                 \
-        }                                                               \
-        (_Result) = ((_BytePtr_VAR - _Tmp_VAR) & 1) != 0;               \
-    }
 
 #define _LOCALE_SHORTCUT_TEST \
     _LocUpdate.GetLocaleT()->mbcinfo->ismbcodepage == 0

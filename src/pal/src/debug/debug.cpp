@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -20,10 +19,6 @@ Revision History:
 
 --*/
 
-#ifndef BIT64
-#undef _LARGEFILE64_SOURCE
-#undef _FILE_OFFSET_BITS
-#endif
 
 #include "pal/dbgmsg.h"
 SET_DEFAULT_DEBUG_CHANNEL(DEBUG); // some headers have code with asserts, so do this first
@@ -100,15 +95,15 @@ OutputDebugStringW(
     ENTRY("OutputDebugStringW (lpOutputString=%p (%S))\n",
           lpOutputString ? lpOutputString: W16_NULLSTRING,
           lpOutputString ? lpOutputString: W16_NULLSTRING);
-    
-    if (lpOutputString == NULL) 
+
+    if (lpOutputString == NULL)
     {
         OutputDebugStringA("");
         goto EXIT;
     }
 
-    if ((strLen = WideCharToMultiByte(CP_ACP, 0, lpOutputString, -1, NULL, 0, 
-                                      NULL, NULL)) 
+    if ((strLen = WideCharToMultiByte(CP_ACP, 0, lpOutputString, -1, NULL, 0,
+                                      NULL, NULL))
         == 0)
     {
         ASSERT("failed to get wide chars length\n");
@@ -124,15 +119,15 @@ OutputDebugStringW(
         goto EXIT;
     }
 
-    if(! WideCharToMultiByte(CP_ACP, 0, lpOutputString, -1, 
-                             lpOutputStringA, strLen, NULL, NULL)) 
+    if(! WideCharToMultiByte(CP_ACP, 0, lpOutputString, -1,
+                             lpOutputStringA, strLen, NULL, NULL))
     {
         ASSERT("failed to convert wide chars to multibytes\n");
         SetLastError(ERROR_INTERNAL_ERROR);
         free(lpOutputStringA);
         goto EXIT;
     }
-    
+
     OutputDebugStringA(lpOutputStringA);
     free(lpOutputStringA);
 
@@ -183,6 +178,7 @@ PAL_ProbeMemory(
     BOOL fWriteAccess)
 {
     int fds[2];
+    int flags;
 
     if (pipe(fds) != 0)
     {
@@ -190,8 +186,11 @@ PAL_ProbeMemory(
         return FALSE;
     }
 
-    fcntl(fds[0], O_NONBLOCK);
-    fcntl(fds[1], O_NONBLOCK);
+    flags = fcntl(fds[0], F_GETFL, 0);
+    fcntl(fds[0], F_SETFL, flags | O_NONBLOCK);
+    
+    flags = fcntl(fds[1], F_GETFL, 0);
+    fcntl(fds[1], F_SETFL, flags | O_NONBLOCK);
 
     PVOID pEnd = (PBYTE)pBuffer + cbBuffer;
     BOOL result = TRUE;

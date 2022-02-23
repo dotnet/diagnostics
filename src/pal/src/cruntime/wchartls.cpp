@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /*++
 
@@ -21,7 +20,6 @@ Abstract:
 #include "pal/palinternal.h"
 #include "pal/thread.hpp"
 #include "pal/dbgmsg.h"
-#include "pal/unicode_data.h"
 
 using namespace CorUnix;
 
@@ -36,8 +34,8 @@ Finds the next token in a wide character string.
 
 Return value:
 
-A pointer to the next token found in strToken.  Returns NULL when no more 
-tokens are found.  Each call modifies strToken by substituting a NULL 
+A pointer to the next token found in strToken.  Returns NULL when no more
+tokens are found.  Each call modifies strToken by substituting a NULL
 character for each delimiter that is encountered.
 
 Parameters:
@@ -57,13 +55,13 @@ PAL_wcstok(WCHAR *strToken, const WCHAR *strDelimit)
     PERF_ENTRY(wcstok);
     ENTRY("PAL_wcstok (strToken=%p (%S), strDelimit=%p (%S))\n",
           strToken?strToken:W16_NULLSTRING,
-          strToken?strToken:W16_NULLSTRING, 
-          strDelimit?strDelimit:W16_NULLSTRING, 
+          strToken?strToken:W16_NULLSTRING,
+          strDelimit?strDelimit:W16_NULLSTRING,
           strDelimit?strDelimit:W16_NULLSTRING);
 
     /* Get the per-thread buffer from the thread structure. */
     pThread = InternalGetCurrentThread();
-    
+
     if(NULL == strDelimit)
     {
         ERROR("delimiter string is NULL\n");
@@ -76,12 +74,12 @@ PAL_wcstok(WCHAR *strToken, const WCHAR *strDelimit)
         TRACE("wcstok() called with NULL string, using previous string\n");
         strToken = pThread->crtInfo.wcstokContext;
         if(NULL == strToken)
-        {            
+        {
             ERROR("wcstok called with NULL string without a previous call\n");
             goto done;
         }
     }
-    
+
     /* first, skip all leading delimiters */
     while ((*strToken != '\0') && (PAL_wcschr(strDelimit,*strToken)))
     {
@@ -100,7 +98,7 @@ PAL_wcstok(WCHAR *strToken, const WCHAR *strDelimit)
     if(NULL == delim_ptr)
     {
         TRACE("no delimiters found, this is the last token\n");
-        /* place the next context at the end of the string, so that subsequent 
+        /* place the next context at the end of the string, so that subsequent
            calls will return NULL */
         next_context = strToken+PAL_wcslen(strToken);
         retval = strToken;
@@ -113,7 +111,7 @@ PAL_wcstok(WCHAR *strToken, const WCHAR *strDelimit)
         /* place the next context right after the delimiter */
         next_context = delim_ptr+1;
         retval = strToken;
-        
+
         TRACE("found delimiter; next token will be %p\n",next_context);
     }
 

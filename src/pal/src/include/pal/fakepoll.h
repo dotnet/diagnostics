@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // fakepoll.h
 // poll using select
 // Warning: a call to this poll() takes about 4K of stack space.
 
 // Greg Parker     gparker@cs.stanford.edu     December 2000
-// This code is in the public domain and may be copied or modified without 
-// permission. 
+// This code is in the public domain and may be copied or modified without
+// permission.
 
 // Located at <http://www.sealiesoftware.com/fakepoll.h>.
 

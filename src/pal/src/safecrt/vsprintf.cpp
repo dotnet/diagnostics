@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 /***
 *vsprintf.c - print formatted data into a string from var arg list
@@ -119,7 +118,7 @@ int __cdecl _vsnprintf_helper (
         return -1;
 }
 
-int __cdecl vsprintf_s (
+DLLEXPORT int __cdecl vsprintf_s (
         char *string,
         size_t sizeInBytes,
         const char *format,
@@ -150,7 +149,7 @@ int __cdecl vsprintf_s (
     return retvalue;
 }
 
-int __cdecl _vsnprintf_s (
+DLLEXPORT int __cdecl _vsnprintf_s (
         char *string,
         size_t sizeInBytes,
         size_t count,
