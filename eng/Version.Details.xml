@@ -12,9 +12,9 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>3687f027a5bd7fbd0cbb10a9779918e9cbfae994</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="7.0.0-alpha.1.22117.4">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="7.0.0-alpha.1.22125.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>2158e8306eaae032c294d2d9f694577026b42653</Sha>
+      <Sha>75a68216dbce20b32729cbb3c6ad76a9e1623b67</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
   </ProductDependencies>
