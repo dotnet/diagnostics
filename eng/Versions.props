@@ -25,11 +25,11 @@
     <MicrosoftNETCoreApp60Version>6.0.1</MicrosoftNETCoreApp60Version>
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-preview.2.22081.2</VSRedistCommonNetCoreSharedFrameworkx6470Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-preview.2.22081.2</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-preview.3.22127.1</VSRedistCommonNetCoreSharedFrameworkx6470Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-preview.3.22127.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-preview.2.22080.2</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>7.0.0-preview.2.22080.2</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-preview.3.22128.9</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>7.0.0-preview.3.22128.9</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>7.0.100-preview.1.22101.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
