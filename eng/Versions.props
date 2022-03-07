@@ -29,7 +29,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>6.0.4-servicing.22154.6</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>6.0.4</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>6.0.103-servicing.22125.10</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>6.0.104-servicing.22156.2</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
