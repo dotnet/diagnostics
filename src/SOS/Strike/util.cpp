@@ -3078,6 +3078,9 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
             case DacpTieredVersionData::OptimizationTier_OptimizedTier1:
                 descriptor = "OptimizedTier1";
                 break;
+            case DacpTieredVersionData::OptimizationTier_OptimizedTier1OSR:
+                descriptor = "OptimizedTier1OSR";
+                break;
             case DacpTieredVersionData::OptimizationTier_ReadyToRun:
                 descriptor = "ReadyToRun";
                 break;
