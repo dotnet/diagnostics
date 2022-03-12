@@ -68,6 +68,20 @@ bool g_hostingInitialized = false;
 static LPCSTR g_hostRuntimeDirectory = nullptr;
 static ExtensionsInitializeDelegate g_extensionsInitializeFunc = nullptr;
 
+struct RuntimeVersion
+{
+    uint32_t Major;
+    uint32_t Minor;
+};
+
+constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
+    {5, 0},
+    {3, 1},
+    {6, 0}
+};
+
+constexpr size_t NumOfSupportedRuntimes = sizeof(SupportedHostRuntimeVersions) / sizeof(SupportedHostRuntimeVersions[0]);
+
 struct FileFind
 {
 #ifdef FEATURE_PAL
@@ -246,10 +260,36 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
     }
 }
 
+static std::string GetTpaListForRuntimeVersion(
+    const std::string& sosModuleDirectory,
+    const std::string& hostRuntimeDirectory,
+    const RuntimeVersion& hostRuntimeVersion)
+{
+    std::string tpaList;
+    const char* directory = sosModuleDirectory.c_str();
+
+    // TODO: This is a little brittle. At the very least we should make sure that versions
+    //       of managed assemblies used by SOS other than the framework ones aren't of a greater
+    //       assembly version than the ones in the ones in the framework. The test could just
+    //       have a list of assemblies we pack with the versions, and if we end up using a newer assembly
+    //       fail the test and point to update this list.
+    if (hostRuntimeVersion.Major < 5)
+    {
+        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
+        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
+        AddFileToTpaList(directory, "System.Runtime.CompilerServices.Unsafe.dll", tpaList);
+    }
+
+    // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
+    // components.
+    AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
+    return tpaList;
+}
+
 //
 // Searches the runtime directory for a .NET Core runtime version
 //
-static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hostRuntimeDirectory)
+static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string& hostRuntimeDirectory)
 {
     std::string versionFound;
 
@@ -266,7 +306,7 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
                 int revision = 0;
                 if (sscanf(find.FileName(), "%d.%d.%d", &major, &minor, &revision) == 3)
                 {
-                    if (major == majorFilter && minor == minorFilter)
+                    if (major == runtimeVersion.Major && minor == runtimeVersion.Minor)
                     {
                         if (revision >= highestRevision)
                         {
@@ -395,7 +435,7 @@ const char *g_linuxPaths[] = {
  * directory. Attempts to use the best installed version of the 
  * runtime, otherwise it defaults to the target's runtime version.
 \**********************************************************************/
-static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory)
+static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory, RuntimeVersion& hostRuntimeVersion)
 {
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
@@ -469,19 +509,19 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         }
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
-        // Start with the latest released version and then the LTS's.
-        if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
+        for(size_t i = 0; i < NumOfSupportedRuntimes; i++)
         {
-            // Find highest 3.1.x LTS version
-            if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
+            if (FindDotNetVersion(SupportedHostRuntimeVersions[i], hostRuntimeDirectory))
             {
-                // Find highest 6.0.x version
-                if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
-                {
-                    TraceError("Error: Failed to find runtime directory\n");
-                    return E_FAIL;
-                }
+                hostRuntimeVersion = SupportedHostRuntimeVersions[i];
+                break;
             }
+        }
+
+        if (hostRuntimeVersion.Major == 0)
+        {
+            TraceError("Error: Failed to find runtime directory\n");
+            return E_FAIL;
         }
 
         // Save away the runtime version we are going to use to host the SOS managed code
@@ -527,8 +567,9 @@ static HRESULT InitializeNetCoreHost()
         std::string sosModuleDirectory;
         std::string hostRuntimeDirectory;
         std::string coreClrPath;
+        RuntimeVersion hostRuntimeVersion = {};
 
-        hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
+        hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory, hostRuntimeVersion);
         if (FAILED(hr))
         {
             return hr;
@@ -570,16 +611,7 @@ static HRESULT InitializeNetCoreHost()
         sosModuleDirectory.erase(lastSlash);
 
         // Trust The SOS managed and dependent assemblies from the sos directory
-        std::string tpaList;
-        const char* directory = sosModuleDirectory.c_str();
-        AddFileToTpaList(directory, "System.Runtime.CompilerServices.Unsafe.dll", tpaList);
-        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
-        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-        AddFileToTpaList(directory, "Microsoft.FileFormats.dll", tpaList);
-        AddFileToTpaList(directory, "Microsoft.SymbolStore.dll", tpaList);
-
-        // Trust the runtime assemblies
-        AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
+        std::string tpaList = GetTpaListForRuntimeVersion(sosModuleDirectory, hostRuntimeDirectory, hostRuntimeVersion);
 
         std::string appPaths;
         appPaths.append(sosModuleDirectory);
