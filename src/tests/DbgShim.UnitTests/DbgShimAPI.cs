@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics
         private static IntPtr _dbgshimModuleHandle = IntPtr.Zero;
 
         public const int CorDebugVersion_2_0 = 3;
-        public const int CorDebugLatestVersion = 5;
+        public const int CorDebugVersion_4_0 = 4;
 
         public static void Initialize(string dbgshimPath)
         {

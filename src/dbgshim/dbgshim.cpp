@@ -1308,10 +1308,8 @@ GetTargetCLRMetrics(
 
     if (pEngineMetricsOut != NULL)
     {
-        //TODO: So far on POSIX systems we only support one version of debugging interface
-        // in future we might want to detect it the same way we do it on Windows.
         pEngineMetricsOut->cbSize = sizeof(*pEngineMetricsOut);
-        pEngineMetricsOut->dwDbiVersion = CorDebugLatestVersion;
+        pEngineMetricsOut->dwDbiVersion = CorDebugVersion_4_0;
         pEngineMetricsOut->phContinueStartupEvent = NULL;
     }
 

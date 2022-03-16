@@ -447,14 +447,14 @@ namespace Microsoft.Diagnostics
                             result = DbgShimAPI.CreateDebuggingInterfaceFromVersion(versionString, out corDebug);
                             break;
                         case 1:
-                            result = DbgShimAPI.CreateDebuggingInterfaceFromVersionEx(DbgShimAPI.CorDebugLatestVersion, versionString, out corDebug);
+                            result = DbgShimAPI.CreateDebuggingInterfaceFromVersionEx(DbgShimAPI.CorDebugVersion_4_0, versionString, out corDebug);
                             break;
                         case 2:
-                            result = DbgShimAPI.CreateDebuggingInterfaceFromVersion2(DbgShimAPI.CorDebugLatestVersion, versionString, applicationGroupId, out corDebug);
+                            result = DbgShimAPI.CreateDebuggingInterfaceFromVersion2(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId, out corDebug);
                             break;
                         case 3:
                             LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
-                            result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugLatestVersion, versionString, applicationGroupId, libraryProvider.ILibraryProvider, out corDebug);
+                            result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId, libraryProvider.ILibraryProvider, out corDebug);
                             break;
                         default:
                             throw new ArgumentException(nameof(api));

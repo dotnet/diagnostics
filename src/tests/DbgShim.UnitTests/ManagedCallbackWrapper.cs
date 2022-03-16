@@ -31,10 +31,10 @@ namespace Microsoft.Diagnostics
             builder.AddMethod(new EvalExceptionDelegate((self, pAppDomain, pThread, pEval) => HResult.E_NOTIMPL));
             builder.AddMethod(new CreateProcessDelegate((self, pProcess) => CreateProcess(pProcess)));
             builder.AddMethod(new ExitProcessDelegate((self, pProcess) => WriteLine("ExitProcess")));
-            builder.AddMethod(new CreateThreadDelegate((self, pAppDomain, pThread) => WriteLine("CreateThread")));
-            builder.AddMethod(new ExitThreadDelegate((self, pAppDomain, pThread) => WriteLine("ExitThread")));
-            builder.AddMethod(new LoadModuleDelegate((self, pAppDomain, pModule) => WriteLine("LoadModule")));
-            builder.AddMethod(new UnloadModuleDelegate((self, pAppDomain, pModule) => WriteLine("UnloadModule")));
+            builder.AddMethod(new CreateThreadDelegate((self, pAppDomain, pThread) => HResult.E_NOTIMPL));
+            builder.AddMethod(new ExitThreadDelegate((self, pAppDomain, pThread) => HResult.E_NOTIMPL));
+            builder.AddMethod(new LoadModuleDelegate((self, pAppDomain, pModule) => HResult.E_NOTIMPL));
+            builder.AddMethod(new UnloadModuleDelegate((self, pAppDomain, pModule) => HResult.E_NOTIMPL));
             builder.AddMethod(new LoadClassDelegate((self, pAppDomain, c) => HResult.E_NOTIMPL));
             builder.AddMethod(new UnloadClassDelegate((self, pAppDomain, c) => HResult.E_NOTIMPL));
             builder.AddMethod(new DebuggerErrorDelegate((self, pProcess, errorHR, errorCode) => WriteLine($"DebuggerError {errorHR} {errorCode:X8}")));
