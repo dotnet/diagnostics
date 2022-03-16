@@ -562,6 +562,11 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
         if (SUCCEEDED(hr))
         {
             hr = GetResourceRvaFromResourceSectionRva(pDataTarget, moduleBaseAddress, resourceSectionRVA, 16, 1, 0x409, &versionResourceRVA, &versionResourceSize);
+            if (FAILED(hr))
+            {
+                // The single-file apps are language "neutral" (0)
+                hr = GetResourceRvaFromResourceSectionRva(pDataTarget, moduleBaseAddress, resourceSectionRVA, 16, 1, 0, &versionResourceRVA, &versionResourceSize);
+            }
         }
 
         // At last we get our version info

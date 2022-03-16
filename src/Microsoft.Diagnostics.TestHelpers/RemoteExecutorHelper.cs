@@ -5,6 +5,7 @@
 using Microsoft.DotNet.RemoteExecutor;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
@@ -24,11 +25,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                 using RemoteInvokeHandle remoteInvokeHandle = RemoteExecutor.Invoke(method, config.Serialize(), options);
                 try
                 {
-                    Task<string> stdOutputTask = remoteInvokeHandle.Process.StandardOutput.ReadToEndAsync();
-                    Task<string> stdErrorTask = remoteInvokeHandle.Process.StandardError.ReadToEndAsync();
+                    Task stdOutputTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardOutput, output);
+                    Task stdErrorTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardError, output);
                     await Task.WhenAll(stdErrorTask, stdOutputTask);
-                    output.WriteLine(stdOutputTask.Result);
-                    output.WriteLine(stdErrorTask.Result);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -55,15 +54,22 @@ namespace Microsoft.Diagnostics.TestHelpers
             using RemoteInvokeHandle remoteInvokeHandle = RemoteExecutor.Invoke(testCase, options);
             try
             {
-                Task<string> stdOutputTask = remoteInvokeHandle.Process.StandardOutput.ReadToEndAsync();
-                Task<string> stdErrorTask = remoteInvokeHandle.Process.StandardError.ReadToEndAsync();
+                Task stdOutputTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardOutput, output);
+                Task stdErrorTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardError, output);
                 await Task.WhenAll(stdErrorTask, stdOutputTask);
-                output.WriteLine(stdOutputTask.Result);
-                output.WriteLine(stdErrorTask.Result);
             }
             catch (ObjectDisposedException)
             {
                 output.WriteLine("Failed to collect remote process's output");
+            }
+        }
+
+        private static async Task WriteStreamToOutput(StreamReader reader, ITestOutputHelper output)
+        {
+            while (!reader.EndOfStream)
+            {
+                string line = await reader.ReadLineAsync();
+                output.WriteLine(line);
             }
         }
     }

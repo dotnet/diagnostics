@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.Threading;
 
 class Simple
 {
@@ -15,12 +16,12 @@ class Simple
         {
             try
             {
-                var pipeStream = new NamedPipeClientStream(pipeServerName);
+                int timeout = TimeSpan.FromMinutes(5).Milliseconds;
+                using var pipeStream = new NamedPipeClientStream(pipeServerName);
 
                 Console.WriteLine("{0} SimpleDebuggee: connecting to pipe", pid);
                 Console.Out.Flush();
-
-                pipeStream.Connect();
+                pipeStream.Connect(timeout);
 
                 Console.WriteLine("{0} SimpleDebuggee: connected to pipe", pid);
                 Console.Out.Flush();

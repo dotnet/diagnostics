@@ -506,7 +506,8 @@ namespace Microsoft.Diagnostics
 
         private async Task RemoteInvoke(TestConfiguration config, string testName, Func<string, Task<int>> method)
         {
-            using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, $"DbgShim.UnitTests.{testName}");
+            string singlefile = config.PublishSingleFile ? ".SingleFile" : "";
+            using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, $"DbgShim.UnitTests{singlefile}.{testName}");
             int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, method);
             Assert.Equal(0, exitCode);
         }
