@@ -64,12 +64,13 @@
       <Options>
         <!--
             Single file (debuggees cli built)
+            TODO: Move to 7.0; currently 6.0 as there are bugs in our RT version retireval logic.
          -->
-        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+        <Option Condition="'$(RuntimeVersion60)' != ''">
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>net6.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
           <PublishSingleFile>true</PublishSingleFile>
           <!-- Add the symbol server so SOS can find DAC/DBI for single file apps which
                may not have been built with the runtime pointed by RuntimeSymbolsPath
@@ -106,10 +107,11 @@
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
-            <Option Condition="'$(RuntimeVersionLatest)' != ''">
+            <!-- TODO: Move to 7.0; currently 6.0 as there are bugs in our RT version retireval logic. -->
+            <Option Condition="'$(RuntimeVersion60)' != ''">
               <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>net6.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
               <PublishSingleFile>true</PublishSingleFile>
               <SetSymbolServer>-ms</SetSymbolServer>
               <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
@@ -148,7 +150,8 @@
             </Option>
           </Options>
           <Options>
-            <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
+            <!-- TODO: Disable these until we have a 7.0 capable SDK to run the tests. -->
+            <!-- <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
               <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
@@ -160,7 +163,7 @@
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-            </Option>
+            </Option> -->
             <Option Condition="'$(AspNetCoreVersion60)' != ''">
               <BuildProjectFramework>net6.0</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
