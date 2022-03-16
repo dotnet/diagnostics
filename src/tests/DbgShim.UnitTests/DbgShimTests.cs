@@ -47,9 +47,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Launch1(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(Launch1), static async (string xml) =>
+            await RemoteInvoke(config, nameof(Launch1), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: true);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: true);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 1);
 
                 // Once the debuggee is resumed now wait until it starts
@@ -64,9 +64,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Launch2(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(Launch2), static async (string xml) =>
+            await RemoteInvoke(config, nameof(Launch2), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: true);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: true);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 2);
 
                 // Once the debuggee is resumed now wait until it starts
@@ -86,9 +86,9 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("IsRegisterForRuntimeStartup3 not supported");
             }
-            await RemoteInvoke(config, nameof(Launch3), static async (string xml) => 
+            await RemoteInvoke(config, nameof(Launch3), static async (string configXml) => 
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: true);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: true);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 3);
 
                 // Once the debuggee is resumed now wait until it starts
@@ -103,9 +103,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Attach1(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(Attach1), static async (string xml) => 
+            await RemoteInvoke(config, nameof(Attach1), static async (string configXml) => 
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 1);
                 return 0;
             });
@@ -117,9 +117,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Attach2(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(Attach2), static async (string xml) => 
+            await RemoteInvoke(config, nameof(Attach2), static async (string configXml) => 
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 2);
                 return 0;
             });
@@ -136,9 +136,9 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("IsRegisterForRuntimeStartup3 not supported");
             }
-            await RemoteInvoke(config, nameof(Attach3), static async (string xml) => 
+            await RemoteInvoke(config, nameof(Attach3), static async (string configXml) => 
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 3);
                 return 0;
             });
@@ -150,9 +150,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task EnumerateCLRs(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(EnumerateCLRs), static async (string xml) =>
+            await RemoteInvoke(config, nameof(EnumerateCLRs), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 Trace.TraceInformation("EnumerateCLRs pid {0} START", debuggeeInfo.ProcessId);
                 HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) =>
                 {
@@ -176,9 +176,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion), static async (string xml) =>
+            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestCreateDebuggingInterface(debuggeeInfo, 0);
                 return 0;
             });
@@ -190,9 +190,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersionEx(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersionEx), static async (string xml) =>
+            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersionEx), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestCreateDebuggingInterface(debuggeeInfo, 1);
                 return 0;
             });
@@ -204,9 +204,9 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion2(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion2), static async (string xml) =>
+            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion2), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestCreateDebuggingInterface(debuggeeInfo, 2);
                 return 0;
             });
@@ -223,9 +223,9 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 not supported");
             }
-            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion3), static async (string xml) =>
+            await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion3), static async (string configXml) =>
             {
-                using DebuggeeInfo debuggeeInfo = await StartDebuggee(xml, launch: false);
+                using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestCreateDebuggingInterface(debuggeeInfo, 3);
                 return 0;
             });
@@ -238,9 +238,9 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("OpenVirtualProcessTest: No dump file");
             }
-            await RemoteInvoke(config, nameof(OpenVirtualProcess), static (string xml) =>
+            await RemoteInvoke(config, nameof(OpenVirtualProcess), static (string configXml) =>
             {
-                AfterInvoke(xml, out TestConfiguration cfg, out ITestOutputHelper output);
+                AfterInvoke(configXml, out TestConfiguration cfg, out ITestOutputHelper output);
 
                 DbgShimAPI.Initialize(cfg.DbgShimPath());
                 AssertResult(DbgShimAPI.CLRCreateInstance(out ICLRDebugging clrDebugging));
@@ -282,9 +282,9 @@ namespace Microsoft.Diagnostics
 
         #region Helper functions
 
-        private static async Task<DebuggeeInfo> StartDebuggee(string xml, bool launch)
+        private static async Task<DebuggeeInfo> StartDebuggee(string configXml, bool launch)
         {
-            AfterInvoke(xml, out TestConfiguration config, out ITestOutputHelper output);
+            AfterInvoke(configXml, out TestConfiguration config, out ITestOutputHelper output);
 
             DebuggeeInfo debuggeeInfo = new(output, config, launch);
             string debuggeeName = config.DebuggeeName();
@@ -504,6 +504,15 @@ namespace Microsoft.Diagnostics
             COMHelper.Release(icdp);
         }
 
+        /// <summary>
+        /// The reason we are running each test in it's own process using the remote executor is that the DBI/DAC are
+        /// never unloaded (and the existing dbgshim interfaces don't allow a way to do this). This is a problem on
+        /// Linux/MacOS to have multiple DAC loaded because DBI references the DAC's PAL exports and the loader gets
+        /// confused which DAC should be used for which DBI. This isn't a problem on Windows since there is no PAL.
+        /// </summary>
+        /// <param name="config">test configuration</param>
+        /// <param name="testName">name of test for the log file</param>
+        /// <param name="method">delegate to call in the remote process</param>
         private async Task RemoteInvoke(TestConfiguration config, string testName, Func<string, Task<int>> method)
         {
             string singlefile = config.PublishSingleFile ? ".SingleFile" : "";
@@ -512,9 +521,15 @@ namespace Microsoft.Diagnostics
             Assert.Equal(0, exitCode);
         }
 
-        private static void AfterInvoke(string xml, out TestConfiguration config, out ITestOutputHelper output)
+        /// <summary>
+        /// Used in the remote invoke delegate to deserialize the test configuration xml and setup test output logging.
+        /// </summary>
+        /// <param name="config">test configuration xml</param>
+        /// <param name="config">test configuration instance</param>
+        /// <param name="output">test output instance</param>
+        private static void AfterInvoke(string configXml, out TestConfiguration config, out ITestOutputHelper output)
         {
-            config = TestConfiguration.Deserialize(xml);
+            config = TestConfiguration.Deserialize(configXml);
             output = new ConsoleTestOutputHelper();
             LoggingListener.EnableListener(output, ListenerName);
         }
