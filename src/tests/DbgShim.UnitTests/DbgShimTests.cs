@@ -500,7 +500,9 @@ namespace Microsoft.Diagnostics
             AssertResult(corDebug.Initialize());
             ManagedCallbackWrapper managedCallback = new(debuggeeInfo);
             AssertResult(corDebug.SetManagedHandler(managedCallback.ICorDebugManagedCallback));
+            Trace.TraceInformation("TestICorDebug pid before DebugActiveProcess {0}", debuggeeInfo.ProcessId);
             AssertResult(corDebug.DebugActiveProcess(debuggeeInfo.ProcessId, out IntPtr process));
+            Trace.TraceInformation("TestICorDebug pid after DebugActiveProcess {0}", debuggeeInfo.ProcessId);
             AssertResult(COMHelper.QueryInterface(process, IID_ICorDebugProcess, out IntPtr icdp));
             Assert.True(icdp != IntPtr.Zero);
             COMHelper.Release(icdp);

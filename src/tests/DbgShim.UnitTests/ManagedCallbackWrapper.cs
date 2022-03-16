@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics
             builder.AddMethod(new UnloadModuleDelegate((self, pAppDomain, pModule) => HResult.E_NOTIMPL));
             builder.AddMethod(new LoadClassDelegate((self, pAppDomain, c) => HResult.E_NOTIMPL));
             builder.AddMethod(new UnloadClassDelegate((self, pAppDomain, c) => HResult.E_NOTIMPL));
-            builder.AddMethod(new DebuggerErrorDelegate((self, pProcess, errorHR, errorCode) => HResult.E_NOTIMPL));
+            builder.AddMethod(new DebuggerErrorDelegate((self, pProcess, errorHR, errorCode) => DebuggerError(pProcess, errorHR, errorCode)));
             builder.AddMethod(new LogMessageDelegate((self, pAppDomain, pThread, lLevel, pLogSwitchName, pMessage) => HResult.E_NOTIMPL));
             builder.AddMethod(new LogSwitchDelegate((self, pAppDomain, pThread, lLevel, ulReason, pLogSwitchName, pParentName) => HResult.E_NOTIMPL));
             builder.AddMethod(new CreateAppDomainDelegate((self, pProcess, pAppDomain) => HResult.E_NOTIMPL));
@@ -72,6 +72,12 @@ namespace Microsoft.Diagnostics
             _startInfo.SetCreateProcessResult(process.Continue(isOutOfBand: false));
             process.Release();
             return HResult.S_OK;
+        }
+
+        private HResult DebuggerError(IntPtr pProcess, HResult result, uint error)
+        {
+            Trace.TraceError($"DebuggerError {result} {error:X8}");
+            return HResult.E_NOTIMPL;
         }
 
         #region ICorDebugManagedCallback delegates
