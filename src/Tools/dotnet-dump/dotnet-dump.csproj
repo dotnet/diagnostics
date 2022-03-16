@@ -25,6 +25,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\Utils.cs" Link="Utils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
   </ItemGroup>
   
   <ItemGroup>

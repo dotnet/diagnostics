@@ -3277,4 +3277,16 @@ private:
     HRESULT PrintCurrentInternalFrame();
 };
 #include "sigparser.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//
+// Miscellaneous helper methods
+//
+
+#define THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "17"
+void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
+    DWORD_PTR workItemsConcurrentQueuePtr,
+    const char *queueName,
+    HeapStat *stats);
+
 #endif // __util_h__

@@ -70,7 +70,7 @@ add_definitions(-DSTRIKE)
 
 include_directories(${ROOT_DIR}/src/SOS/inc)
 include_directories(${ROOT_DIR}/src/SOS/extensions)
-include_directories(${ROOT_DIR}/src/SOS/gcdump)
+include_directories(${CLR_SHARED_DIR}/gcdump)
 include_directories(platform)
 
 if(WIN32)
@@ -144,8 +144,6 @@ else(WIN32)
   add_compile_options(-Wno-format)
 
   include_directories(BEFORE xplat)
-
-  add_compile_options(-fPIC)
 
   set(SOS_SOURCES
     disasm.cpp

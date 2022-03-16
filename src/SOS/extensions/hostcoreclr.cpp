@@ -294,7 +294,7 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
 static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
     ArrayHolder<char> hostPath = new char[MAX_LONGPATH+1];
-    if (::GetModuleFileName(NULL, hostPath, MAX_LONGPATH) == 0)
+    if (::GetModuleFileNameA(NULL, hostPath, MAX_LONGPATH) == 0)
     {
         return false;
     }

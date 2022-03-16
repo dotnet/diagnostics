@@ -1,0 +1,340 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Checked|x64">
+      <Configuration>Checked</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8C35FEF8-1101-38F6-ACD0-462A1EA53A7D}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>utilcode</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">utilcodestaticnohost.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">utilcodestaticnohost</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode\Checked\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">utilcodestaticnohost.dir\Checked\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">utilcodestaticnohost</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">utilcodestaticnohost.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">utilcodestaticnohost</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">utilcodestaticnohost.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">utilcodestaticnohost</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>Disabled</Optimization>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Debug;BUILDENV_DEBUG=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;DEBUG;_DBG;URTBLDENV_FRIENDLY=Debug;BUILDENV_DEBUG=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Debug;BUILDENV_DEBUG=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="Debug";;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="Checked";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR=\"Checked\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="Checked";;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>Full</Optimization>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="Release";;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="RelWithDebInfo";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR=\"RelWithDebInfo\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_CRTIMP=;FEATURE_UTILCODE_NO_DEPENDENCIES;SELF_NO_HOST;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;_BLD_CLR;CMAKE_INTDIR="RelWithDebInfo";;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)\Windows_NT.x64.Debug\src\utilcode;$(RepoRoot)src\utilcode;$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /IGNORE:4221</AdditionalOptions>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="clrhost_nodependencies.cpp">
+    </ClCompile>
+    <ClCompile Include="ex.cpp">
+    </ClCompile>
+    <ClCompile Include="sbuffer.cpp">
+    </ClCompile>
+    <ClCompile Include="sstring_com.cpp">
+    </ClCompile>
+    <ClCompile Include="fstring.cpp">
+    </ClCompile>
+    <ClCompile Include="namespaceutil.cpp">
+    </ClCompile>
+    <ClCompile Include="check.cpp">
+    </ClCompile>
+    <ClCompile Include="sstring.cpp">
+    </ClCompile>
+    <ClCompile Include="safewrap.cpp">
+    </ClCompile>
+    <ClCompile Include="debug.cpp">
+    </ClCompile>
+    <ClCompile Include="pedecoder.cpp">
+    </ClCompile>
+    <ClCompile Include="longfilepathwrappers.cpp">
+    </ClCompile>
+    <ClCompile Include="dlwrap.cpp">
+    </ClCompile>
+    <ClCompile Include="securitywrapper.cpp">
+    </ClCompile>
+    <ClCompile Include="securityutil.cpp">
+    </ClCompile>
+    <ClCompile Include="hostimpl.cpp">
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

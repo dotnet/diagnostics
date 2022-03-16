@@ -5,6 +5,8 @@
     <NoWarn>;1591;1701</NoWarn>
     <Description>SOS Hosting support</Description>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
   
   <ItemGroup>

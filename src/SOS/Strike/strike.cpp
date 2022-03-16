@@ -8668,6 +8668,7 @@ DECLARE_API(ThreadPool)
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Check whether the portable thread pool is being used and fill in the thread pool data
 
+    UINT64 ui64Value = 0;
     DacpObjectData vPortableTpHcLogArray;
     int portableTpHcLogEntry_tickCountOffset = 0;
     int portableTpHcLogEntry_stateOrTransitionOffset = 0;
@@ -8676,8 +8677,6 @@ DECLARE_API(ThreadPool)
     int portableTpHcLogEntry_lastHistoryMeanOffset = 0;
     do // while (false)
     {
-        UINT64 ui64Value = 0;
-
         // Determine if the portable thread pool is enabled
         if (FAILED(
                 GetNonSharedStaticFieldValueFromName(
@@ -8947,7 +8946,7 @@ DECLARE_API(ThreadPool)
         GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue", &threadPoolWorkStealingQueueMd);
 
         // Walk every heap item looking for the global queue and local queues.
-        ExtOut("\nQueued work items:\n%" POINTERSIZE "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
+        ExtOut("\nQueued work items:\n%" THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
         HeapStat stats;
         for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
         {
@@ -8960,86 +8959,31 @@ DECLARE_API(ThreadPool)
 
             if (mtdata.cl == threadPoolWorkQueueMd)
             {
-                // We found a global queue (there should be only one, given one AppDomain).
-                // Get its workItems ConcurrentQueue<IThreadPoolWorkItem>.
-                int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
+                // We found a ThreadPoolWorkQueue (there should be only one, given one AppDomain).
+
+                // Enumerate high-priority work items.
+                int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("highPriorityWorkItems"));
                 if (offset > 0)
                 {
                     DWORD_PTR workItemsConcurrentQueuePtr;
                     MOVE(workItemsConcurrentQueuePtr, itr->GetAddress() + offset);
                     if (sos::IsObject(workItemsConcurrentQueuePtr, false))
                     {
-                        // We got the ConcurrentQueue.  Get its head segment.
-                        sos::Object workItemsConcurrentQueue = TO_TADDR(workItemsConcurrentQueuePtr);
-                        offset = GetObjFieldOffset(workItemsConcurrentQueue.GetAddress(), workItemsConcurrentQueue.GetMT(), W("_head"));
-                        if (offset > 0)
-                        {
-                            // Now, walk from segment to segment, each of which contains an array of work items.
-                            DWORD_PTR segmentPtr;
-                            MOVE(segmentPtr, workItemsConcurrentQueue.GetAddress() + offset);
-                            while (sos::IsObject(segmentPtr, false))
-                            {
-                                sos::Object segment = TO_TADDR(segmentPtr);
+                        // We got the ConcurrentQueue.  Enumerate it.
+                        EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global high-pri]", &stats);
+                    }
+                }
 
-                                // Get the work items array.  It's an array of Slot structs, which starts with the T.
-                                offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_slots"));
-                                if (offset <= 0)
-                                {
-                                    break;
-                                }
-
-                                DWORD_PTR slotsPtr;
-                                MOVE(slotsPtr, segment.GetAddress() + offset);
-                                if (!sos::IsObject(slotsPtr, false))
-                                {
-                                    break;
-                                }
-
-                                // Walk every element in the array, outputting details on non-null work items.
-                                DacpObjectData slotsArray;
-                                if (slotsArray.Request(g_sos, TO_CDADDR(slotsPtr)) == S_OK && slotsArray.ObjectType == OBJ_ARRAY)
-                                {
-                                    for (int i = 0; i < slotsArray.dwNumComponents; i++)
-                                    {
-                                        CLRDATA_ADDRESS workItemPtr;
-                                        MOVE(workItemPtr, TO_CDADDR(slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize))); // the item object reference is at the beginning of the Slot
-                                        if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
-                                        {
-                                            sos::Object workItem = TO_TADDR(workItemPtr);
-                                            stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
-                                            DMLOut("%" POINTERSIZE "s %s %S", "[Global]", DMLObject(workItem.GetAddress()), workItem.GetTypeName());
-                                            if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
-                                                (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
-                                            {
-                                                CLRDATA_ADDRESS delegatePtr;
-                                                MOVE(delegatePtr, workItem.GetAddress() + offset);
-                                                CLRDATA_ADDRESS md;
-                                                if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
-                                                {
-                                                    NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
-                                                    ExtOut(" => %S", g_mdName);
-                                                }
-                                            }
-                                            ExtOut("\n");
-                                        }
-                                    }
-                                }
-
-                                // Move to the next segment.
-                                DacpFieldDescData segmentField;
-                                offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_nextSegment"), TRUE, &segmentField);
-                                if (offset <= 0)
-                                {
-                                    break;
-                                }
-
-                                MOVE(segmentPtr, segment.GetAddress() + offset);
-                                if (segmentPtr == NULL)
-                                {
-                                    break;
-                                }
-                            }
-                        }
+                // Enumerate normal-priority work items.
+                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueuePtr;
+                    MOVE(workItemsConcurrentQueuePtr, itr->GetAddress() + offset);
+                    if (sos::IsObject(workItemsConcurrentQueuePtr, false))
+                    {
+                        // We got the ConcurrentQueue.  Enumerate it.
+                        EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
                     }
                 }
             }
@@ -9063,7 +9007,7 @@ DECLARE_API(ThreadPool)
                             {
                                 sos::Object workItem = TO_TADDR(workItemPtr);
                                 stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
-                                DMLOut("%s %s %S", DMLObject(itr->GetAddress()), DMLObject(workItem.GetAddress()), workItem.GetTypeName());
+                                DMLOut("%" THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "s %s %S", DMLObject(itr->GetAddress()), DMLObject(workItem.GetAddress()), workItem.GetTypeName());
                                 if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
                                     (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                                 {
@@ -9219,14 +9163,26 @@ DECLARE_API(ThreadPool)
     ExtOut ("Number of Timers: %d\n", threadpool.NumTimers);
     ExtOut ("--------------------------------------\n");
 
-    ExtOut ("Completion Port Thread:");
-    ExtOut ("Total: %d", threadpool.NumCPThreads);
-    ExtOut (" Free: %d", threadpool.NumFreeCPThreads);
-    ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);
-    ExtOut (" CurrentLimit: %d", threadpool.CurrentLimitTotalCPThreads);
-    ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalCPThreads);
-    ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);
-    ExtOut ("\n");
+    // Determine if the portable thread pool is being used for IO. The portable thread pool does not use a separate set of
+    // threads for processing IO completions.
+    if (FAILED(
+            GetNonSharedStaticFieldValueFromName(
+                &ui64Value,
+                corelibModule,
+                "System.Threading.ThreadPool",
+                W("UsePortableThreadPoolForIO"),
+                ELEMENT_TYPE_BOOLEAN)) ||
+        ui64Value == 0)
+    {
+        ExtOut ("Completion Port Thread:");
+        ExtOut ("Total: %d", threadpool.NumCPThreads);
+        ExtOut (" Free: %d", threadpool.NumFreeCPThreads);
+        ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);
+        ExtOut (" CurrentLimit: %d", threadpool.CurrentLimitTotalCPThreads);
+        ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalCPThreads);
+        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);
+        ExtOut ("\n");
+    }
 
     return Status;
 }
@@ -10907,7 +10863,7 @@ extern char sccsid[];
 \**********************************************************************/
 DECLARE_API(EEVersion)
 {
-    INIT_API();
+    INIT_API_NO_RET_ON_FAILURE();
 
     static const int fileVersionBufferSize = 1024;
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
@@ -10949,15 +10905,20 @@ DECLARE_API(EEVersion)
         }
     }
 
-    if (!InitializeHeapData())
-        ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
-    else if (IsServerBuild())
-        ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount());
-    else
-        ExtOut("Workstation mode\n");
+    // Only print if DAC was loaded/initialized
+    if (g_sos != nullptr)
+    {
+        if (!InitializeHeapData())
+            ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
+        else if (IsServerBuild())
+            ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount());
+        else
+            ExtOut("Workstation mode\n");
 
-    if (!GetGcStructuresValid()) {
-        ExtOut("In plan phase of garbage collection\n");
+        if (!GetGcStructuresValid()) 
+        {
+            ExtOut("In plan phase of garbage collection\n");
+        }
     }
 
     // Print SOS version
@@ -11171,7 +11132,7 @@ DECLARE_API (ProcInfo)
         typedef BOOL (WINAPI *FntGetProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
         static FntGetProcessTimes pFntGetProcessTimes = (FntGetProcessTimes)-1;
         if (pFntGetProcessTimes == (FntGetProcessTimes)-1) {
-            HINSTANCE hstat = LoadLibrary ("Kernel32.dll");
+            HINSTANCE hstat = LoadLibraryA("kernel32.dll");
             if (hstat != 0)
             {
                 pFntGetProcessTimes = (FntGetProcessTimes)GetProcAddress (hstat, "GetProcessTimes");
@@ -11270,7 +11231,7 @@ DECLARE_API (ProcInfo)
 
         static FntNtQueryInformationProcess pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)-1;
         if (pFntNtQueryInformationProcess == (FntNtQueryInformationProcess)-1) {
-            HINSTANCE hstat = LoadLibrary ("ntdll.dll");
+            HINSTANCE hstat = LoadLibraryA("ntdll.dll");
             if (hstat != 0)
             {
                 pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)GetProcAddress (hstat, "NtQueryInformationProcess");

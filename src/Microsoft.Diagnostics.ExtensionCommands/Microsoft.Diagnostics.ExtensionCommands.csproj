@@ -6,12 +6,12 @@
     <NoWarn>;1591;1701</NoWarn>
     <Description>Diagnostics extension commands</Description>
     <IsPackable>true</IsPackable>
-    <IsShipping>false</IsShipping>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
-    <IsShippingAssembly>true</IsShippingAssembly>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
 
   <ItemGroup>

@@ -3,8 +3,11 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SOS.InstallHelper</AssemblyName>
     <NoWarn>;1591;1701</NoWarn>
+    <IsPackable>false</IsPackable>
     <Description>Diagnostic SOS Install Helper</Description>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackageTags>SOS</PackageTags>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
 </Project>

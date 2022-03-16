@@ -17,9 +17,9 @@
 
 #include "disasm.h"
 
-#include "../../../inc/corhdr.h"
-#include "../../../inc/cor.h"
-#include "../../../inc/dacprivate.h"
+#include "corhdr.h"
+#include "cor.h"
+#include "dacprivate.h"
 
 namespace ARM64GCDump
 {

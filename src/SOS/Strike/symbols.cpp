@@ -256,7 +256,7 @@ BOOL GetProcAddressT(PCSTR FunctionName, PCSTR DllName, T* OutFunctionPointer, H
     HMODULE DllHandle = *InOutDllHandle;
     if (DllHandle == NULL)
     {
-        DllHandle = LoadLibraryEx(DllName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        DllHandle = LoadLibraryExA(DllName, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
         if (DllHandle != NULL)
             *InOutDllHandle = DllHandle;
     }
