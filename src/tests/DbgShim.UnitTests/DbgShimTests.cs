@@ -460,6 +460,8 @@ namespace Microsoft.Diagnostics
                             throw new ArgumentException(nameof(api));
                     }
 
+                    Trace.TraceInformation("TestCreateDebuggingInterface pid {0} after API {1} call", debuggeeInfo.ProcessId, api);
+
                     switch (api)
                     {
                         case 0:
