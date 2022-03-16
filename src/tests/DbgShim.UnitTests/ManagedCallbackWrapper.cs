@@ -25,19 +25,19 @@ namespace Microsoft.Diagnostics
             VTableBuilder builder = AddInterface(IID_ICorDebugManagedCallback, validate: false);
             builder.AddMethod(new BreakpointDelegate((self, pAppDomain, pThread, pBreakpoint) => HResult.E_NOTIMPL));
             builder.AddMethod(new StepCompleteDelegate((self, pAppDomain, pThread, pStepper, reason) => HResult.E_NOTIMPL));
-            builder.AddMethod(new BreakDelegate((self, pAppDomain, pThread) => HResult.E_NOTIMPL));
-            builder.AddMethod(new ExceptionDelegate((self, pAppDomain, pThread, unhandled) => HResult.E_NOTIMPL));
+            builder.AddMethod(new BreakDelegate((self, pAppDomain, pThread) => WriteLine("Break")));
+            builder.AddMethod(new ExceptionDelegate((self, pAppDomain, pThread, unhandled) => WriteLine("Exception")));
             builder.AddMethod(new EvalCompleteDelegate((self, pAppDomain, pThread, pEval) => HResult.E_NOTIMPL));
             builder.AddMethod(new EvalExceptionDelegate((self, pAppDomain, pThread, pEval) => HResult.E_NOTIMPL));
             builder.AddMethod(new CreateProcessDelegate((self, pProcess) => CreateProcess(pProcess)));
-            builder.AddMethod(new ExitProcessDelegate((self, pProcess) => HResult.E_NOTIMPL));
-            builder.AddMethod(new CreateThreadDelegate((self, pAppDomain, pThread) => HResult.E_NOTIMPL));
-            builder.AddMethod(new ExitThreadDelegate((self, pAppDomain, pThread) => HResult.E_NOTIMPL));
-            builder.AddMethod(new LoadModuleDelegate((self, pAppDomain, pModule) => HResult.E_NOTIMPL));
-            builder.AddMethod(new UnloadModuleDelegate((self, pAppDomain, pModule) => HResult.E_NOTIMPL));
+            builder.AddMethod(new ExitProcessDelegate((self, pProcess) => WriteLine("ExitProcess")));
+            builder.AddMethod(new CreateThreadDelegate((self, pAppDomain, pThread) => WriteLine("CreateThread")));
+            builder.AddMethod(new ExitThreadDelegate((self, pAppDomain, pThread) => WriteLine("ExitThread")));
+            builder.AddMethod(new LoadModuleDelegate((self, pAppDomain, pModule) => WriteLine("LoadModule")));
+            builder.AddMethod(new UnloadModuleDelegate((self, pAppDomain, pModule) => WriteLine("UnloadModule")));
             builder.AddMethod(new LoadClassDelegate((self, pAppDomain, c) => HResult.E_NOTIMPL));
             builder.AddMethod(new UnloadClassDelegate((self, pAppDomain, c) => HResult.E_NOTIMPL));
-            builder.AddMethod(new DebuggerErrorDelegate((self, pProcess, errorHR, errorCode) => DebuggerError(pProcess, errorHR, errorCode)));
+            builder.AddMethod(new DebuggerErrorDelegate((self, pProcess, errorHR, errorCode) => WriteLine($"DebuggerError {errorHR} {errorCode:X8}")));
             builder.AddMethod(new LogMessageDelegate((self, pAppDomain, pThread, lLevel, pLogSwitchName, pMessage) => HResult.E_NOTIMPL));
             builder.AddMethod(new LogSwitchDelegate((self, pAppDomain, pThread, lLevel, ulReason, pLogSwitchName, pParentName) => HResult.E_NOTIMPL));
             builder.AddMethod(new CreateAppDomainDelegate((self, pProcess, pAppDomain) => HResult.E_NOTIMPL));
@@ -67,16 +67,16 @@ namespace Microsoft.Diagnostics
 
         private HResult CreateProcess(IntPtr pController)
         {
-            Trace.TraceInformation("CreateProcess callback");
+            Trace.TraceInformation("ManagedCallbackWrapper.CreateProcess");
             ICorDebugController process = ICorDebugController.Create(pController);
             _startInfo.SetCreateProcessResult(process.Continue(isOutOfBand: false));
             process.Release();
             return HResult.S_OK;
         }
 
-        private HResult DebuggerError(IntPtr pProcess, HResult result, uint error)
+        private HResult WriteLine(string message)
         {
-            Trace.TraceError($"DebuggerError {result} {error:X8}");
+            Trace.TraceInformation("ManagedCallbackWrapper." + message);
             return HResult.E_NOTIMPL;
         }
 
