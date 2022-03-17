@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -520,8 +521,10 @@ namespace Microsoft.Diagnostics
         private async Task RemoteInvoke(TestConfiguration config, string testName, Func<string, Task<int>> method)
         {
             string singlefile = config.PublishSingleFile ? ".SingleFile" : "";
-            using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, $"DbgShim.UnitTests{singlefile}.{testName}");
-            int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, method);
+            testName = $"DbgShim.UnitTests{singlefile}.{testName}";
+            string dumpPath = Path.Combine(config.LogDirPath, testName + ".dmp");
+            using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, testName);
+            int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, TimeSpan.FromMinutes(10), dumpPath, method);
             Assert.Equal(0, exitCode);
         }
 
