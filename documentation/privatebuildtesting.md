@@ -9,7 +9,7 @@ Here are some instructions on how to run the diagnostics repo's tests against a 
 
 On Windows:
 ```
-C:\diagnostics> test -privatebuildpath c:\runtime\artifacts\bin\coreclr\Windows_NT.x64.Debug
+C:\diagnostics> test -privatebuildpath c:\runtime\artifacts\bin\coreclr\Windows_NT.x64.Release
 ```
 
 When you are all done with the private runtime testing, run this command to remove the Windows registry entries added in the above steps.
@@ -22,9 +22,9 @@ There will be some popups from regedit asking for administrator permission to ed
 
 On Linux/MacOS:
 ```
-~/diagnostics$ ./test.sh --privatebuildpath /home/user/runtime/artifacts/bin/coreclr/Linux.x64.Debug
+~/diagnostics$ ./test.sh --privatebuildpath /home/user/runtime/artifacts/bin/coreclr/Linux.x64.Release
 ```
-The private runtime will be copied to the diagnostics repo and the tests started. It can be just the runtime binaries but this assumes that the private build is close to the latest published main build. If not, you can pass the runtime's testhost directory containing all the shared runtime bits i.e. `c:\runtime\artifacts\bin\coreclr\testhost\netcoreapp5.0-Windows_NT-Debug-x64\shared\Microsoft.NETCore.App\5.0.0` or `/home/user/runtime/artifacts/bin/coreclr/testhost/netcoreapp5.0-Linux-Release-x64/shared/Microsoft.NETCore.App/5.0.0`
+The private runtime will be copied to the diagnostics repo and the tests started. It can be just the runtime binaries but this assumes that the private build is close to the latest published main build. If not, you can pass the runtime's testhost directory containing all the shared runtime bits i.e. `c:\runtime\artifacts\bin\coreclr\testhost\netcoreapp5.0-Windows_NT-Release-x64\shared\Microsoft.NETCore.App\5.0.0` or `/home/user/runtime/artifacts/bin/coreclr/testhost/netcoreapp5.0-Linux-Release-x64/shared/Microsoft.NETCore.App/5.0.0`
 
 On Linux/MacOS it is recommended to test against Release runtime builds because of a benign assert in DAC (tracked by issue #[31897](https://github.com/dotnet/runtime/issues/31897)) that causes the tests to fail.
 
