@@ -22,10 +22,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 StartInfo = new ProcessStartInfo() { RedirectStandardOutput = true, RedirectStandardError = true }
             };
-                output.WriteLine($"RemoteExecutorHelper.RemoteInvoke {RemoteExecutor.HostRunner}");
-
-            // The remoteInvokeHandle is NOT disposed (i.e. with a using) because the RemoteExecutor dispose code uses an older (1.x) version of clrmd
-            // that conflicts with the 2.0 version diagnostics is using and throws the exception:
+            // The remoteInvokeHandle is NOT disposed (i.e. with a using) here because the RemoteExecutor dispose code uses an older (1.x) version
+            // of clrmd that conflicts with the 2.0 version diagnostics is using and throws the exception:
             //
             // "Method not found: 'Microsoft.Diagnostics.Runtime.DataTarget Microsoft.Diagnostics.Runtime.DataTarget.AttachToProcess(Int32, UInt32)'."
             //
@@ -44,7 +42,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 if (!string.IsNullOrEmpty(dumpPath))
                 {
-                    output.WriteLine($"RemoteExecutorHelper.RemoteInvoke timed out - writing dump to {dumpPath}");
+                    output.WriteLine($"RemoteExecutorHelper.RemoteInvoke timed out: writing dump to {dumpPath}");
                     DiagnosticsClient client = new(remoteInvokeHandle.Process.Id);
                     try
                     {
@@ -52,10 +50,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                     }
                     catch (Exception ex) when ( ex is ArgumentException || ex is UnsupportedCommandException || ex is ServerErrorException)
                     {
-                        output.WriteLine($"RemoteExecutorHelper.RemoteInvoke - writing dump FAILED {ex}");
+                        output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: writing dump FAILED {ex}");
                     }
                 }
-                output.WriteLine($"RemoteExecutorHelper.RemoteInvoke - killing process {remoteInvokeHandle.Process.Id}");
+                output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: killing process {remoteInvokeHandle.Process.Id}");
                 remoteInvokeHandle.Process.Kill();
                 exitCode = -2;
             }
