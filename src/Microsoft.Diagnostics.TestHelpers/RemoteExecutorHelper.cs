@@ -10,6 +10,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -17,7 +18,6 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         public static async Task<int> RemoteInvoke(ITestOutputHelper output, TestConfiguration config, TimeSpan timeout, string dumpPath, Func<string, Task<int>> method)
         {
-            int exitCode = 0;
             RemoteInvokeOptions options = new()
             {
                 StartInfo = new ProcessStartInfo() { RedirectStandardOutput = true, RedirectStandardError = true }
@@ -30,38 +30,53 @@ namespace Microsoft.Diagnostics.TestHelpers
             // When RemoteExecutor is fixed the "using" can be added and the GC.SuppressFinalize be removed.
             RemoteInvokeHandle remoteInvokeHandle = RemoteExecutor.Invoke(method, config.Serialize(), options);
             GC.SuppressFinalize(remoteInvokeHandle);
-
-            Task stdOutputTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardOutput, output);
-            Task stdErrorTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardError, output);
-            Task outputTasks = Task.WhenAll(stdErrorTask, stdOutputTask);
-
-            Task processExit = Task.Factory.StartNew(() => remoteInvokeHandle.Process.WaitForExit(), TaskCreationOptions.LongRunning);
-            Task timeoutTask = Task.Delay(timeout);
-            Task completedTask = await Task.WhenAny(outputTasks, processExit, timeoutTask);
-            if (completedTask == timeoutTask)
+            try
             {
-                if (!string.IsNullOrEmpty(dumpPath))
+                Task stdOutputTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardOutput, output);
+                Task stdErrorTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardError, output);
+                Task outputTasks = Task.WhenAll(stdErrorTask, stdOutputTask);
+
+                Task processExit = Task.Factory.StartNew(() => remoteInvokeHandle.Process.WaitForExit(), TaskCreationOptions.LongRunning);
+                Task timeoutTask = Task.Delay(timeout);
+                Task completedTask = await Task.WhenAny(outputTasks, processExit, timeoutTask);
+                if (completedTask == timeoutTask)
                 {
-                    output.WriteLine($"RemoteExecutorHelper.RemoteInvoke timed out: writing dump to {dumpPath}");
-                    DiagnosticsClient client = new(remoteInvokeHandle.Process.Id);
+                    if (!string.IsNullOrEmpty(dumpPath))
+                    {
+                        output.WriteLine($"RemoteExecutorHelper.RemoteInvoke timed out: writing dump to {dumpPath}");
+                        DiagnosticsClient client = new(remoteInvokeHandle.Process.Id);
+                        try
+                        {
+                            await client.WriteDumpAsync(DumpType.WithHeap, dumpPath, WriteDumpFlags.None, CancellationToken.None);
+                        }
+                        catch (Exception ex) when (ex is ArgumentException || ex is UnsupportedCommandException || ex is ServerErrorException)
+                        {
+                            output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: writing dump FAILED {ex}");
+                        }
+                    }
+                    throw new XunitException("RemoteExecutorHelper.RemoteInvoke timed out");
+                }
+                else
+                {
+                    return remoteInvokeHandle.ExitCode;
+                }
+            }
+            finally
+            { 
+                if (remoteInvokeHandle.Process != null)
+                {
                     try
                     {
-                        await client.WriteDumpAsync(DumpType.WithHeap, dumpPath, WriteDumpFlags.None, CancellationToken.None);
+                        output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: killing process {remoteInvokeHandle.Process.Id}");
+                        remoteInvokeHandle.Process.Kill(entireProcessTree: true);
                     }
-                    catch (Exception ex) when ( ex is ArgumentException || ex is UnsupportedCommandException || ex is ServerErrorException)
+                    catch 
                     {
-                        output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: writing dump FAILED {ex}");
                     }
+                    remoteInvokeHandle.Process.Dispose();
+                    remoteInvokeHandle.Process = null;
                 }
-                output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: killing process {remoteInvokeHandle.Process.Id}");
-                remoteInvokeHandle.Process.Kill();
-                exitCode = -2;
             }
-            else
-            {
-                exitCode = remoteInvokeHandle.ExitCode;
-            }
-            return exitCode;
         }
 
         public static async Task RemoteInvoke(ITestOutputHelper output, Action testCase)

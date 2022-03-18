@@ -524,7 +524,7 @@ namespace Microsoft.Diagnostics
             testName = $"DbgShim.UnitTests{singlefile}.{testName}";
             string dumpPath = Path.Combine(config.LogDirPath, testName + ".dmp");
             using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, testName);
-            int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, TimeSpan.FromMinutes(10), dumpPath, method);
+            int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, TimeSpan.FromMinutes(5), dumpPath, method);
             Assert.Equal(0, exitCode);
         }
 
