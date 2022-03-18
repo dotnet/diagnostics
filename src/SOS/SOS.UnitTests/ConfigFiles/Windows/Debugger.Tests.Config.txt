@@ -45,7 +45,6 @@
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
 
-  <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>

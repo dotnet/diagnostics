@@ -3,8 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -190,6 +192,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
+                WithEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR", Path.GetDirectoryName(DotNetToolPath)).
+                WithEnvironmentVariable("DOTNET_INSTALL_DIR", Path.GetDirectoryName(DotNetToolPath)).
+                RemoveEnvironmentVariable("MSBuildSDKsPath").
                 WithWorkingDirectory(DebuggeeSolutionDirPath).
                 WithLog(output).
                 WithTimeout(TimeSpan.FromMinutes(10)).                    // restore can be painfully slow
@@ -231,10 +236,15 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             output.WriteLine("Launching {0} {1}", DotNetToolPath, dotnetArgs);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, dotnetArgs).
-                      WithWorkingDirectory(DebuggeeProjectDirPath).
-                      WithLog(output).
-                      WithTimeout(TimeSpan.FromMinutes(10)). // a mac CI build of the modules debuggee is painfully slow :(
-                      WithExpectedExitCode(0);
+                WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
+                WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
+                WithEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR", Path.GetDirectoryName(DotNetToolPath)).
+                WithEnvironmentVariable("DOTNET_INSTALL_DIR", Path.GetDirectoryName(DotNetToolPath)).
+                RemoveEnvironmentVariable("MSBuildSDKsPath").
+                WithWorkingDirectory(DebuggeeProjectDirPath).
+                WithLog(output).
+                WithTimeout(TimeSpan.FromMinutes(10)). // a mac CI build of the modules debuggee is painfully slow :(
+                WithExpectedExitCode(0);
 
             if (OS.Kind != OSKind.Windows && Environment.GetEnvironmentVariable("HOME") == null)
             {

@@ -37,7 +37,6 @@
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
 
- <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
   <CliPath>$(DotNetRoot)/dotnet</CliPath>
 
   <NuGetPackageFeeds>
@@ -56,7 +55,7 @@
       <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
       <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
       <BuildProjectFramework>net6.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+      <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
       <PublishSingleFile>true</PublishSingleFile>
       <!-- Add the symbol server so SOS can find DAC/DBI for single file apps which
            may not have been built with the runtime pointed by RuntimeSymbolsPath
