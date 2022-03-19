@@ -67,6 +67,7 @@ public class SOSRunner : IDisposable
     public class TestInformation
     {
         private string _testName;
+        private bool _testLive = true;
         private bool _testDump = true;
         private bool _testCrashReport = true;
         private DumpGenerator _dumpGenerator = DumpGenerator.CreateDump; 
@@ -78,7 +79,12 @@ public class SOSRunner : IDisposable
 
         public ITestOutputHelper OutputHelper { get; set; }
 
-        public bool TestLive { get; set; }
+        public bool TestLive
+        {
+            // Don't test single file on Alpine. lldb 10.0 can't launch them.
+            get { return _testLive && !(TestConfiguration.PublishSingleFile && OS.IsAlpine); }
+            set { _testLive = value; }
+        }
 
         public bool TestDump 
         {
