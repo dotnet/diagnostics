@@ -235,6 +235,11 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
         public async Task OpenVirtualProcess(TestConfiguration config)
         {
+            // The current Linux test assets are not alpine/musl
+            if (OS.IsAlpine)
+            {
+                throw new SkipTestException("Not supported on Alpine Linux (musl)");
+            }
             if (!config.AllSettings.ContainsKey("DumpFile"))
             {
                 throw new SkipTestException("OpenVirtualProcessTest: No dump file");
