@@ -390,7 +390,7 @@ namespace Microsoft.Diagnostics
             AssertResult(result);
 
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} waiting for callback", debuggeeInfo.ProcessId);
-            Assert.True(wait.WaitOne(TimeSpan.FromMinutes(5)));
+            Assert.True(wait.WaitOne(TimeSpan.FromMinutes(3)));
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} after callback wait", debuggeeInfo.ProcessId);
             
             AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregisterToken));
@@ -524,7 +524,7 @@ namespace Microsoft.Diagnostics
             testName = $"DbgShim.UnitTests{singlefile}.{testName}";
             string dumpPath = Path.Combine(config.LogDirPath, testName + ".dmp");
             using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, testName);
-            int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, TimeSpan.FromMinutes(5), dumpPath, method);
+            int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, TimeSpan.FromMinutes(6), dumpPath, method);
             Assert.Equal(0, exitCode);
         }
 

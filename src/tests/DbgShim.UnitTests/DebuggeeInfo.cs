@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics
 
         public HResult WaitForCreateProcess()
         {
-            Assert.True(_createProcessEvent.WaitOne(TimeSpan.FromMinutes(5)));
+            Assert.True(_createProcessEvent.WaitOne(TimeSpan.FromMinutes(3)));
             return _createProcessResult;
         }
 
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics
             }
             try
             {
-                var source = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                var source = new CancellationTokenSource(TimeSpan.FromMinutes(3));
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: waiting {ProcessId}");
                 await _pipeServer.WaitForConnectionAsync(source.Token);
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: after wait {ProcessId}");

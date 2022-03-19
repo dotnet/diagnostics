@@ -67,7 +67,7 @@
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(SingleFileRuntimeVersion)</RuntimeFrameworkVersion>
         </Option>
         <!--

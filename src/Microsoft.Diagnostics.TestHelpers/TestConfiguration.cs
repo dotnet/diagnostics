@@ -77,6 +77,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TempPath"] = Path.GetTempPath(),
                 ["WorkingDir"] = GetInitialWorkingDir(),
                 ["OS"] = OS.Kind.ToString(),
+                ["IsAlpine"] = OS.IsAlpine.ToString().ToLowerInvariant(),
+                ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages
             };
@@ -86,6 +88,19 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
             Configurations = configs.Select(c => new TestConfiguration(c)).ToList();
+        }
+
+        static string GetRid()
+        {
+            string os = OS.Kind switch
+            {
+                OSKind.Linux => OS.IsAlpine ? "linux-musl" : "linux",
+                OSKind.OSX => "osx",
+                OSKind.Windows => "win",
+                _ => throw new PlatformNotSupportedException(),
+            };
+            string architecture = OS.TargetArchitecture.ToString().ToLowerInvariant();
+            return $"{os}-{architecture}";
         }
 
         Dictionary<string, string>[] ParseConfigFile(string path, Dictionary<string, string>[] templates)

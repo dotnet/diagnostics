@@ -7,9 +7,6 @@
   <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
  
-  <OSRid>linux</OSRid>
-  <OSRid Condition="$(OS) == OSX">osx</OSRid>
-
   <!-- Build the debuggee for this framework version but run it on latest -->
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
 
@@ -72,7 +69,7 @@
           <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(OSRid)-$(TargetArchitecture)</BuildProjectRuntime>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(SingleFileRuntimeVersion)</RuntimeFrameworkVersion>
         </Option>
         <!--
