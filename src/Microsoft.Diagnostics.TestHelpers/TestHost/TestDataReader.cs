@@ -305,8 +305,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                                 memberValue = memberValue?.ToString() ?? string.Empty;
                             }
                             object testDataValue = testData.Value.GetValue(memberType);
-                            Trace.TraceInformation($"CompareMembers {testData.Key}: '{memberValue}' == '{testDataValue}'");
-                            Assert.Equal(memberValue, testDataValue);
+                            Trace.TraceInformation($"CompareMembers {testData.Key}: expected '{testDataValue}' == actual '{memberValue}'");
+                            Assert.Equal(testDataValue, memberValue);
                         }
                     }
                     else 

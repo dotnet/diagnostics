@@ -387,7 +387,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // can be thrown.
                 try
                 {
-                    p.Kill();
+                    p.Kill(entireProcessTree: true);
                 }
                 catch (InvalidOperationException) { }
             }
