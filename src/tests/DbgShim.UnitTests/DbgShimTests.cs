@@ -82,6 +82,10 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Launch3(TestConfiguration config)
         {
+            if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
+            {
+                throw new SkipTestException("Launch3 single-file on MacOS");
+            }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsRegisterForRuntimeStartup3Supported)
             {
@@ -132,6 +136,10 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Attach3(TestConfiguration config)
         {
+            if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
+            {
+                throw new SkipTestException("Attach3 single-file on MacOS");
+            }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsRegisterForRuntimeStartup3Supported)
             {
@@ -219,6 +227,10 @@ namespace Microsoft.Diagnostics
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion3(TestConfiguration config)
         {
+            if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
+            {
+                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
+            }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsCreateDebuggingInterfaceFromVersion3Supported)
             {
