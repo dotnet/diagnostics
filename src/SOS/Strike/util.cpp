@@ -4335,7 +4335,8 @@ void GetAllocContextPtrs(AllocInfo *pallocInfo)
 
     ReleaseHolder<ISOSDacInterface12> sos12;
     if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) && 
-        SUCCEEDED(sos12->GetGlobalAllocationContext(&allocPtr, &allocLimit)))
+        SUCCEEDED(sos12->GetGlobalAllocationContext(&allocPtr, &allocLimit)) &&
+        allocPtr != 0)
     {
         int j = pallocInfo->num ++;
         pallocInfo->array[j].alloc_ptr = (BYTE *) allocPtr;
