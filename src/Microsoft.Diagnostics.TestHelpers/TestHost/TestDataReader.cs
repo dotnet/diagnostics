@@ -305,8 +305,21 @@ namespace Microsoft.Diagnostics.TestHelpers
                                 memberValue = memberValue?.ToString() ?? string.Empty;
                             }
                             object testDataValue = testData.Value.GetValue(memberType);
-                            Trace.TraceInformation($"CompareMembers {testData.Key}: expected '{testDataValue}' == actual '{memberValue}'");
-                            Assert.Equal(testDataValue, memberValue);
+                            Trace.TraceInformation($"CompareMembers {testData.Key}: expected '{testDataValue}' actual '{memberValue}'");
+
+                            // Disable checking the VersionData property because downloading the necessary binary to map into the address is unreliable
+                            // See issue: https://github.com/dotnet/diagnostics/issues/2955
+                            if (testData.Key == "VersionData")
+                            {
+                                if (!object.Equals(testDataValue, memberValue))
+                                {
+                                    Trace.TraceError($"CompareMembers VersionData: expected '{testDataValue}' != actual '{memberValue}'");
+                                }
+                            }
+                            else
+                            {
+                                Assert.Equal(testDataValue, memberValue);
+                            }
                         }
                     }
                     else 
