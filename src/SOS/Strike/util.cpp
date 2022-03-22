@@ -4287,7 +4287,7 @@ void GetAllocContextPtrs(AllocInfo *pallocInfo)
     int numThread = ThreadStore.threadCount;
     if (numThread)
     {
-        pallocInfo->array = new needed_alloc_context[numThread];
+        pallocInfo->array = new needed_alloc_context[numThread + 1];
         if (pallocInfo->array == NULL)
         {
             return;
@@ -4328,6 +4328,19 @@ void GetAllocContextPtrs(AllocInfo *pallocInfo)
         }
 
         CurThread = Thread.nextThread;
+    }
+
+    CLRDATA_ADDRESS allocPtr;
+    CLRDATA_ADDRESS allocLimit;
+
+    ReleaseHolder<ISOSDacInterface12> sos12;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) && 
+        SUCCEEDED(sos12->GetGlobalAllocationContext(&allocPtr, &allocLimit)) &&
+        allocPtr != 0)
+    {
+        int j = pallocInfo->num ++;
+        pallocInfo->array[j].alloc_ptr = (BYTE *) allocPtr;
+        pallocInfo->array[j].alloc_limit = (BYTE *) allocLimit;
     }
 }
 
