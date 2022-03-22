@@ -28,7 +28,8 @@
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <!-- Build the debuggee for this framework version but run it on latest -->
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
+  <!-- TODO: The BuildProjectFrameworkLatest should be net7.0, but our Root SDK is 6.0 based. -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
