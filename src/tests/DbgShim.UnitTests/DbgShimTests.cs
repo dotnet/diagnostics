@@ -407,7 +407,7 @@ namespace Microsoft.Diagnostics
             AssertResult(result);
 
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} waiting for callback", debuggeeInfo.ProcessId);
-            Assert.True(wait.WaitOne(TimeSpan.FromMinutes(5)));
+            Assert.True(wait.WaitOne());
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} after callback wait", debuggeeInfo.ProcessId);
             
             AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregisterToken));

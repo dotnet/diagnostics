@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics
 
         public HResult WaitForCreateProcess()
         {
-            Assert.True(_createProcessEvent.WaitOne(TimeSpan.FromMinutes(5)));
+            Assert.True(_createProcessEvent.WaitOne());
             return _createProcessResult;
         }
 
