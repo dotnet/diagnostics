@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -70,17 +71,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // begins to execute. Retry getting process information until entrypoint is available.
                 ProcessInfo processInfo = await GetProcessInfoWithEntrypointAsync(clientShim);
                 ValidateProcessInfo(runner.Pid, processInfo);
+
+                // This is only true if targetFramework for the tracee app is greater than 
                 Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
 
-                // Validate values before resume (except for entrypoint) are the same after resume.
                 if (suspend)
                 {
                     Assert.Equal(processInfoBeforeResume.ProcessId, processInfo.ProcessId);
                     Assert.Equal(processInfoBeforeResume.RuntimeInstanceCookie, processInfo.RuntimeInstanceCookie);
-                    Assert.Equal(processInfoBeforeResume.CommandLine, processInfo.CommandLine);
                     Assert.Equal(processInfoBeforeResume.OperatingSystem, processInfo.OperatingSystem);
                     Assert.Equal(processInfoBeforeResume.ProcessArchitecture, processInfo.ProcessArchitecture);
                     Assert.Equal(processInfoBeforeResume.ClrProductVersionString, processInfo.ClrProductVersionString);
+                    // Given we are in a .NET 5.0+ app, we should have ProcessInfo2 available. Pre and post pause should differ.
+                    Assert.Equal(processInfoBeforeResume.CommandLine, Path.GetFullPath(CommonHelper.HostExe));
+                    Assert.Equal(processInfo.CommandLine, $"{processInfoBeforeResume.CommandLine} {CommonHelper.GetTraceePath()}");
                 }
             }
             finally
