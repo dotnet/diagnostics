@@ -16,6 +16,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             internal static void CollectDump(int processId, string outputFile, DumpTypeOption type)
             {
+                // The managed Process (via Process.GetProcessById) type can not be used to get the handle for a process that is in the middle of exiting such
+                // that it has set an exit code, but not actually exited. This is because for compat reasons the Process class will throw in these circumstances.
                 using SafeProcessHandle processHandle = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_INFORMATION | NativeMethods.PROCESS_VM_READ, false, processId);
                 if (processHandle.IsInvalid)
                 {
