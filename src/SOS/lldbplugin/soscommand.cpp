@@ -198,6 +198,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("runtimes", new sosCommand("runtimes"), "List the runtimes in the target or change the default runtime.");
     g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
     g_services->AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
+    g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");
     g_services->AddCommand("verifyheap", new sosCommand("VerifyHeap"), "Checks the GC heap for signs of corruption.");
     return true;
 }
