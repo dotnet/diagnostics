@@ -7,7 +7,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -15,8 +14,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
     {
         private static class Windows
         {
-            internal static void CollectDump(Process process, string outputFile, DumpTypeOption type)
+            internal static void CollectDump(int processId, string outputFile, DumpTypeOption type)
             {
+                using SafeProcessHandle processHandle = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_INFORMATION | NativeMethods.PROCESS_VM_READ, false, processId);
+                if (processHandle.IsInvalid)
+                {
+                    throw new ArgumentException($"Invalid process id {processId} error: {Marshal.GetLastWin32Error()}");
+                }
+
                 // Open the file for writing
                 using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {
@@ -63,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     for (int i = 0; i < 5; i++)
                     {
                         // Dump the process!
-                        if (NativeMethods.MiniDumpWriteDump(process.Handle, (uint)process.Id, stream.SafeFileHandle, dumpType, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
+                        if (NativeMethods.MiniDumpWriteDump(processHandle.DangerousGetHandle(), (uint)processId, stream.SafeFileHandle, dumpType, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
                         {
                             break;
                         }
@@ -83,8 +88,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 public const int ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
 
+                public const int PROCESS_VM_READ = 0x0010;
+                public const int PROCESS_QUERY_INFORMATION = 0x0400;
+
+                [DllImport("kernel32.dll", SetLastError = true)]
+                public extern static SafeProcessHandle OpenProcess(int access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+
                 [DllImport("Dbghelp.dll", SetLastError = true)]
-                public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
+                public extern static bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
 
                 [StructLayout(LayoutKind.Sequential, Pack = 4)]
                 public struct MINIDUMP_EXCEPTION_INFORMATION
