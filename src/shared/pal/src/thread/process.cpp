@@ -2431,7 +2431,7 @@ CreateProcessModules(
         int devHi, devLo, inode;
         char moduleName[PATH_MAX];
 
-        if (sscanf_s(line, "%p-%p %*[-rwxsp] %p %x:%x %d %s\n", &startAddress, &endAddress, &offset, &devHi, &devLo, &inode, moduleName, ARRAY_SIZE(moduleName)) == 7)
+        if (sscanf_s(line, "%p-%p %*[-rwxsp] %p %x:%x %d %[^\n]", &startAddress, &endAddress, &offset, &devHi, &devLo, &inode, moduleName, ARRAY_SIZE(moduleName)) == 7)
         {
             if (inode != 0)
             {
