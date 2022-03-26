@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--netfx", Aliases = new string[] { "-netfx", "-f" }, Help = "Switches to the desktop .NET Framework if exists.")]
         public bool NetFx { get; set; }
 
-        [Option(Name = "--netcore", Aliases = new string[] { "-netcore", "-c" }, Help = "Switches to the .NET Core runtime if exists.")]
+        [Option(Name = "--netcore", Aliases = new string[] { "-netcore", "-c" }, Help = "Switches to the .NET Core or .NET 5+ runtime if exists.")]
         public bool NetCore { get; set; }
 
         public override void Invoke()

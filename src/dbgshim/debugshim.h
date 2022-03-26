@@ -64,17 +64,17 @@ struct ClrInfo
 #endif
         IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Unknown; 
 
-        memset(&RuntimeBuildId, 0, MAX_BUILDID_SIZE);
+        memset(&RuntimeBuildId, 0, sizeof(RuntimeBuildId));
         RuntimeBuildIdSize = 0;
 
         DbiTimeStamp = 0;
         DbiSizeOfImage = 0;
-        memset(&DbiBuildId, 0, MAX_BUILDID_SIZE);
+        memset(&DbiBuildId, 0, sizeof(DbiBuildId));
         DbiBuildIdSize = 0;
 
         DacTimeStamp = 0;
         DacSizeOfImage = 0;;
-        memset(&DacBuildId, 0, MAX_BUILDID_SIZE);
+        memset(&DacBuildId, 0, sizeof(DacBuildId));
         DacBuildIdSize = 0;
 
         swprintf_s(DbiName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W));

@@ -728,6 +728,9 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
     {
         clrInfo.WindowsTarget = FALSE;
 
+        //
+        // Check if it is a single-file app
+        //
         uint64_t symbolAddress;
         if (TryGetSymbol(pDataTarget, moduleBaseAddress, RUNTIME_INFO_SIGNATURE, &symbolAddress))
         {
@@ -737,6 +740,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
             {
                 if (strcmp(runtimeInfo.Signature, RUNTIME_INFO_SIGNATURE) == 0)
                 {
+                    // This is a single-file app
                     clrInfo.IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity; 
 
                     // The first byte is the number of bytes in the index
@@ -749,10 +753,14 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
             }
         }
 
+        //
+        // If it wasn't a single-file app, then fallback to getting the runtime module's index information
+        //
         if (!clrInfo.IsValid())
         {
             if (TryGetBuildId(pDataTarget, moduleBaseAddress, clrInfo.RuntimeBuildId, MAX_BUILDID_SIZE, &clrInfo.RuntimeBuildIdSize)) 
             {
+                // This is normal non-single-file app
                 clrInfo.IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Runtime; 
             }
         }
