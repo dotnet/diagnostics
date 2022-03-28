@@ -36,6 +36,18 @@
       <DumpFile>$(Package_TestAssets_Linux_x64_5_0)/LineNums/SOS.LineNums.Heap.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Linux_x64_5_0)/LineNums/SOS.LineNums.Heap.dmp.xml</TestDataFile>
     </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_6_0)/DivZero/SOS.DivZero.Heap.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_6_0)/DivZero/SOS.DivZero.Heap.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_6_0)/DivZero/SOS.DivZero.Triage.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_6_0)/DivZero/SOS.DivZero.Triage.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_6_0)/WebApp3/SOS.WebApp3.Heap.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_6_0)/WebApp3/SOS.WebApp3.Heap.dmp.xml</TestDataFile>
+    </Option>
   </Options>
 
   <!-- Linux arm64 testing -->
@@ -51,6 +63,18 @@
     <Option>
       <DumpFile>$(Package_TestAssets_Linux_arm64_5_0)/LineNums/SOS.LineNums.Heap.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Linux_arm64_5_0)/LineNums/SOS.LineNums.Heap.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_6_0)/DivZero/SOS.DivZero.Heap.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_6_0)/DivZero/SOS.DivZero.Heap.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_6_0)/DivZero/SOS.DivZero.Triage.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_6_0)/DivZero/SOS.DivZero.Triage.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_6_0)/WebApp3/SOS.WebApp3.Heap.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_6_0)/WebApp3/SOS.WebApp3.Heap.dmp.xml</TestDataFile>
     </Option>
   </Options>
   

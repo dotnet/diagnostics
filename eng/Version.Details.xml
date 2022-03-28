@@ -1,52 +1,52 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.315701">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.317101">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>8d01651a80c9d7233da2a4400f777c9edca08115</Sha>
+      <Sha>b8b308038be2431103519eb8142f7960c330ed60</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.310801">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.0.317401">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>3687f027a5bd7fbd0cbb10a9779918e9cbfae994</Sha>
+      <Sha>7bf8aae7a62e9bd49b9d517d520b95d2415e5a06</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.0.310801">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.0.317401">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>3687f027a5bd7fbd0cbb10a9779918e9cbfae994</Sha>
+      <Sha>7bf8aae7a62e9bd49b9d517d520b95d2415e5a06</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="7.0.0-alpha.1.22154.4">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="7.0.0-alpha.1.22173.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>8c072e50c9ff73a1d3ca791df7d9722004af49ce</Sha>
+      <Sha>e7f2964ac4a556d2ba99a185f52aa93dcbba4f7e</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="7.0.0-beta.22154.3">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="7.0.0-beta.22171.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>8ed47fcae6a5d2d40483ed81858f4ede8eab7ae2</Sha>
+      <Sha>c8a95297e2622251c125aa5c0ef7c822275a792d</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22154.3">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22171.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>8ed47fcae6a5d2d40483ed81858f4ede8eab7ae2</Sha>
+      <Sha>c8a95297e2622251c125aa5c0ef7c822275a792d</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.104-servicing.22156.2">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="6.0.104-servicing.22173.4">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>3406156f6c11f5d9bf0955f91b07bc9e5f93cd32</Sha>
+      <Sha>211912bd41589993a7421fd0d429daa604f0f9bc</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.4-servicing.22158.4">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="6.0.4-servicing.22171.4">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>0c41c5eb750c50fb59e30c0c59d10c005f427237</Sha>
+      <Sha>7eb15474ba995903ee9c8be0eb2b7a75b8813719</Sha>
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="6.0.4">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>0c41c5eb750c50fb59e30c0c59d10c005f427237</Sha>
+      <Sha>7eb15474ba995903ee9c8be0eb2b7a75b8813719</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="6.0.4">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>bf059d9ca96b528f86bcceb3696b363916ff159c</Sha>
+      <Sha>323bf2dd0ef1004687a8bafa10a0c66f63252dee</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.6.0" Version="6.0.4-servicing.22158.10">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.6.0" Version="6.0.4-servicing.22161.8">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>bf059d9ca96b528f86bcceb3696b363916ff159c</Sha>
+      <Sha>323bf2dd0ef1004687a8bafa10a0c66f63252dee</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

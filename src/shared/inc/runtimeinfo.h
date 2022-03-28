@@ -13,11 +13,11 @@ typedef unsigned char SYMBOL_INDEX;
 //    - Update the logic in ClrDataAccess::EnumMemCLRMainModuleInfo to ensure all needed state is in the dump.
 typedef struct _RuntimeInfo
 {
-    const char Signature[18];
+    char Signature[18];
     int Version;
-    const SYMBOL_INDEX RuntimeModuleIndex[24];
-    const SYMBOL_INDEX DacModuleIndex[24];
-    const SYMBOL_INDEX DbiModuleIndex[24];
+    SYMBOL_INDEX RuntimeModuleIndex[24];
+    SYMBOL_INDEX DacModuleIndex[24];
+    SYMBOL_INDEX DbiModuleIndex[24];
 } RuntimeInfo;
 
 extern RuntimeInfo DotNetRuntimeInfo;

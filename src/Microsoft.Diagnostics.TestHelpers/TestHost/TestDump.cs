@@ -1,12 +1,12 @@
-﻿using Microsoft.Diagnostics.DebugServices.Implementation;
+﻿using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.Diagnostics.DebugServices.UnitTests
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestDump : TestHost, IHost
     {

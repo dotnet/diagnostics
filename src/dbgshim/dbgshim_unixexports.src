@@ -6,6 +6,7 @@ ResumeProcess
 CloseResumeHandle
 RegisterForRuntimeStartup
 RegisterForRuntimeStartupEx
+RegisterForRuntimeStartup3
 UnregisterForRuntimeStartup
 GetStartupNotificationEvent
 EnumerateCLRs
@@ -14,4 +15,5 @@ CreateVersionStringFromModule
 CreateDebuggingInterfaceFromVersion
 CreateDebuggingInterfaceFromVersionEx
 CreateDebuggingInterfaceFromVersion2
+CreateDebuggingInterfaceFromVersion3
 CLRCreateInstance

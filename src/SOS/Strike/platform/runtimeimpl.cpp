@@ -54,17 +54,17 @@ typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
-#if !defined(__APPLE__)
+extern "C" bool TryGetSymbolWithCallback(
+    bool (*readMemory)(void* address, void* buffer, size_t size),
+    ULONG64 baseAddress,
+    const char* symbolName,
+    ULONG64* symbolAddress);
 
-extern "C" bool TryGetSymbol(uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress);
-
-bool ElfReaderReadMemory(void* address, void* buffer, size_t size)
+bool ReaderReadMemory(void* address, void* buffer, size_t size)
 {
     ULONG read = 0;
     return SUCCEEDED(g_ExtData->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
 }
-
-#endif // !defined(__APPLE__)
 
 /**********************************************************************\
  * Search all the modules in the process for the single-file host
@@ -96,15 +96,14 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
             return hr;
         }
         ULONG64 symbolAddress;
-#if !defined(__APPLE__)
-        if (target->GetOperatingSystem() == ITarget::OperatingSystem::Linux)
+        if (target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
+            target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
         {
-            if (!TryGetSymbol(baseAddress, symbolName, &symbolAddress)) {
+            if (!::TryGetSymbolWithCallback(ReaderReadMemory, baseAddress, symbolName, &symbolAddress)) {
                 continue;
             }
         }
         else 
-#endif // !defined(__APPLE__)
         {
             hr = debuggerServices->GetOffsetBySymbol(index, symbolName, &symbolAddress);
             if (FAILED(hr)) {
@@ -118,6 +117,9 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
             return hr;
         }
         if (strcmp(((RuntimeInfo*)buffer.GetPtr())->Signature, "DotNetRuntimeInfo") != 0) {
+            break;
+        }
+        if (((RuntimeInfo*)buffer.GetPtr())->Version <= 0) {
             break;
         }
         *pModuleIndex = index;

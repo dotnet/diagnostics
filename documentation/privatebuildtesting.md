@@ -1,11 +1,13 @@
 Private runtime build testing
 =============================
 
-Here are some instructions on how to run the diagnostics repo's tests against a locally build private .NET Core runtime. These directions will work on Windows, Linux and MacOS. 
+Here are some instructions on how to run the diagnostics repo's tests against a locally build private .NET Core runtime based on CoreCLR. These directions will work on Windows, Linux and MacOS. 
 
 1. Build the runtime repo (see [Workflow Guide](https://github.com/dotnet/runtime/blob/main/docs/workflow/README.md)).
 2. Build the diagnostics repo (see [Building the Repository](../README.md)).
 3. Run the diagnostics repo tests with the -privatebuildpath option.
+
+The following examples assume a Debug build of the runtime and diagnsotics. However any flavor can be used with the following steps:
 
 On Windows:
 ```

@@ -16,7 +16,6 @@ inline void RestoreSOToleranceState() {}
 #include <corsym.h>
 #include <clrdata.h>
 #include <palclr.h>
-#include <metahost.h>
 #include <new>
 #include <functional>
 

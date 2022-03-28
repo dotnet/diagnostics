@@ -294,6 +294,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         buildId = elfFile.BuildID;
                     }
+                    else
+                    {
+                        Trace.TraceError($"GetBuildId: invalid ELF file {address:X16}");
+                    }
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
@@ -301,6 +305,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetBuildId: invalid MachO file {address:X16}");
                     }
                 }
             }
@@ -318,7 +326,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>version string or null</returns>
         protected string GetVersionString(ulong address)
         {
-            Stream stream = RawMemoryService.CreateMemoryStream();
+            Stream stream = MemoryService.CreateMemoryStream();
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
@@ -328,7 +336,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
                         {
-                            uint flags = RawMemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
+                            uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
                             if (programHeader.Type == ELFProgramHeaderType.Load &&
                                (flags & (uint)ELFProgramHeaderAttributes.Writable) != 0)
                             {
@@ -340,6 +348,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 }
                             }
                         }
+                        Trace.TraceInformation($"GetVersionString: not found in ELF file {address:X16}");
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetVersionString: invalid ELF file {address:X16}");
                     }
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
@@ -361,6 +374,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 }
                             }
                         }
+                        Trace.TraceInformation($"GetVersionString: not found in MachO file {address:X16}");
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetVersionString: invalid MachO file {address:X16}");
                     }
                 }
                 else

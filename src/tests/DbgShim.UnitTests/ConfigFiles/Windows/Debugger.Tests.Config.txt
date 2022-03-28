@@ -1,0 +1,98 @@
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
+  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
+  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
+
+  <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
+  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\dbgshim.unittests_$(Timestamp)</LogDir>
+
+  <!-- Build the debuggee for this framework version but run it on latest -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
+
+  <TestProduct>ProjectK</TestProduct>
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\DbgShim.UnitTests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+  <DebuggeeName>SimpleDebuggee</DebuggeeName>
+
+  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
+
+  <NuGetPackageFeeds>
+      dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
+      dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
+      dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+  </NuGetPackageFeeds>
+
+  <RunTestsWindows_x64>true</RunTestsWindows_x64>
+  <RunTestsWindows_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsWindows_x64>
+  
+  <RunTestsWindows_x86>true</RunTestsWindows_x86>
+  <RunTestsWindows_x86 Condition="'$(TargetArchitecture)' != 'x86'">false</RunTestsWindows_x86>
+
+  <Options>
+    <!-- Run OpenVirtualProcess tests on Windows -->
+    <Option>
+      <TestName>OpenVirtualProcess</TestName>
+      <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+
+      <!-- Run OpenVirtualProcess tests on Windows x64 -->
+      <Options Condition="'$(RunTestsWindows_x64)' == 'true'">
+        <Option>
+          <DumpFile>$(Package_TestAssets_Windows_x64_6_0)\DivZero\SOS.DivZero.Heap.dmp</DumpFile>
+          <TestDataFile>$(Package_TestAssets_Windows_x64_6_0)\DivZero\SOS.DivZero.Heap.dmp.xml</TestDataFile>
+        </Option>
+        <Option>
+          <DumpFile>$(Package_TestAssets_Linux_x64_6_0)\WebApp3\SOS.WebApp3.Heap.dmp</DumpFile>
+          <TestDataFile>$(Package_TestAssets_Linux_x64_6_0)\WebApp3\SOS.WebApp3.Heap.dmp.xml</TestDataFile>
+        </Option>
+       </Options>
+
+      <!-- Run OpenVirtualProcess tests on Windows x86 -->
+      <Options Condition="'$(RunTestsWindows_x86)' == 'true'">
+        <Option>
+          <DumpFile>$(Package_TestAssets_Windows_x86_6_0)\DivZero\SOS.DivZero.Heap.dmp</DumpFile>
+          <TestDataFile>$(Package_TestAssets_Windows_x86_6_0)\DivZero\SOS.DivZero.Heap.dmp.xml</TestDataFile>
+        </Option>
+       </Options>
+    </Option>
+
+    <!-- Run the rest of the tests on Windows for all architectures -->
+    <Option>
+      <Options>
+        <!--
+            Single file
+         -->
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <PublishSingleFile>true</PublishSingleFile>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+          <RuntimeFrameworkVersion>$(SingleFileRuntimeVersion)</RuntimeFrameworkVersion>
+        </Option>
+        <!--
+            Default
+          -->
+        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+          <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+        </Option>
+      </Options>
+    </Option>
+  </Options>
+
+  <!-- Single-file debuggees don't need the host -->
+  <HostExe Condition="'$(PublishSingleFile)' != 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
+  <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(RuntimeFrameworkVersion)</HostArgs>
+
+  <RuntimeModuleDir>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeModuleDir>
+
+  <!--
+  <DbgShimPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)\dbgshim.dll</DbgShimPath>
+   -->
+  <DbgShimPath>$(InstallDir)\dbgshim.dll</DbgShimPath>
+  <RuntimeModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)\coreclr.dll</RuntimeModulePath>
+  <DbiModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)\mscordbi.dll</DbiModulePath>
+  <DacModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)\mscordaccore.dll</DacModulePath>
+</Configuration>
