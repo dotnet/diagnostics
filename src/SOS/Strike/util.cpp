@@ -21,7 +21,6 @@
 #include <psapi.h>
 #include <cordebug.h>
 #include <xcordebug.h>
-#include <metahost.h>
 #include <mscoree.h>
 #include <tchar.h>
 #include "gcinfo.h"

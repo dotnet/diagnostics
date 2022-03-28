@@ -6,6 +6,7 @@
 //*****************************************************************************
 
 #include <windows.h>
+#include "metahost.h"
 
 typedef VOID (*PSTARTUP_CALLBACK)(IUnknown *pCordb, PVOID parameter, HRESULT hr);
 
@@ -42,6 +43,15 @@ RegisterForRuntimeStartupEx(
     _Out_ PVOID *ppUnregisterToken);
 
 EXTERN_C HRESULT
+RegisterForRuntimeStartup3(
+    _In_ DWORD dwProcessId,
+    _In_ LPCWSTR szApplicationGroupId,
+    _In_ ICLRDebuggingLibraryProvider3* pLibraryProvider,
+    _In_ PSTARTUP_CALLBACK pfnCallback,
+    _In_ PVOID parameter,
+    _Out_ PVOID *ppUnregisterToken);
+
+EXTERN_C HRESULT
 UnregisterForRuntimeStartup(
     _In_ PVOID pUnregisterToken);
 
@@ -71,14 +81,17 @@ CreateVersionStringFromModule(
     _Out_ DWORD* pdwLength);
 
 EXTERN_C HRESULT
+CreateDebuggingInterfaceFromVersion(
+    _In_ LPCWSTR szDebuggeeVersion,
+    _Out_ IUnknown ** ppCordb);
+
+EXTERN_C HRESULT
 CreateDebuggingInterfaceFromVersionEx(
     _In_ int iDebuggerVersion,
     _In_ LPCWSTR szDebuggeeVersion,
     _Out_ IUnknown ** ppCordb);
 
-EXTERN_C
-DLLEXPORT
-HRESULT
+EXTERN_C HRESULT
 CreateDebuggingInterfaceFromVersion2(
     _In_ int iDebuggerVersion,
     _In_ LPCWSTR szDebuggeeVersion,
@@ -86,6 +99,9 @@ CreateDebuggingInterfaceFromVersion2(
     _Out_ IUnknown ** ppCordb);
 
 EXTERN_C HRESULT
-CreateDebuggingInterfaceFromVersion(
+CreateDebuggingInterfaceFromVersion3(
+    _In_ int iDebuggerVersion,
     _In_ LPCWSTR szDebuggeeVersion,
+    _In_ LPCWSTR szApplicationGroupId,
+    _In_ ICLRDebuggingLibraryProvider3* pLibraryProvider,
     _Out_ IUnknown ** ppCordb);

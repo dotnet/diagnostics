@@ -171,9 +171,13 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\inc;$(SolutionDir)src\pal\inc;$(SolutionDir)src\pal\inc\rt;$(SolutionDir)src\pal\inc\rt\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\shared\inc;$(SolutionDir)src\shared\pal\inc;$(SolutionDir)src\shared\pal\inc\rt;$(SolutionDir)src\shared\pal\inc\rt\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_AMD64_;_WIN64;AMD64;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;DBG_TARGET_AMD64_UNIX;BIT64=1;PAL_STDCPP_COMPAT;_SECURE_SCL=0;LINUX64;PLATFORM_UNIX=1;FEATURE_PAL;FEATURE_PAL_ANSI;UNIX_AMD64_ABI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
     </ClCompile>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

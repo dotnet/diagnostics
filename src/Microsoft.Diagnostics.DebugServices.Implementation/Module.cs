@@ -267,9 +267,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         catch (ArgumentException ex)
                         {
-                            Trace.TraceError($"Module.Version FAILURE: '{versionToParse}' '{versionString}' {ex}");
+                            Trace.TraceError($"Module.GetVersion FAILURE: '{versionToParse}' '{versionString}' {ex}");
                         }
                     }
+                }
+                else
+                {
+                    Trace.TraceInformation($"Module.GetVersion no version string");
                 }
             }
 

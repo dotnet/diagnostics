@@ -45,8 +45,8 @@ if(CLR_CMAKE_HOST_UNIX)
 endif(CLR_CMAKE_HOST_UNIX)
 
 set(DBGSHIM_LIBRARIES
-    corguids
     dbgutil
+    corguids
     utilcodestaticnohost
 )
 
@@ -66,8 +66,8 @@ if(CLR_CMAKE_HOST_WIN32)
     )
 else()
     list(APPEND DBGSHIM_LIBRARIES
-        coreclrpal
         palrt
+        coreclrpal
     )
 endif(CLR_CMAKE_HOST_WIN32)
 

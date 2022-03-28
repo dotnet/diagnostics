@@ -1,7 +1,6 @@
-﻿using Microsoft.Diagnostics.TestHelpers;
-using System.IO;
+﻿using Microsoft.Diagnostics.DebugServices;
 
-namespace Microsoft.Diagnostics.DebugServices.UnitTests
+namespace Microsoft.Diagnostics.TestHelpers
 {
     public abstract class TestHost
     {
@@ -13,18 +12,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public TestHost(TestConfiguration config)
         {
             Config = config;
-        }
-
-        public static TestHost CreateHost(TestConfiguration config)
-        {
-            if (config.IsTestDbgEng())
-            {
-                return new TestDbgEng(config);
-            }
-            else
-            {
-                return new TestDump(config);
-            }
         }
 
         public TestDataReader TestData

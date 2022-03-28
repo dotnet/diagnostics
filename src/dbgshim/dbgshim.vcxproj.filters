@@ -61,5 +61,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debugshim.h" />
+    <ClInclude Include="dbgshim.h" />
   </ItemGroup>
 </Project>

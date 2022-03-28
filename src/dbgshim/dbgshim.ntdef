@@ -2,17 +2,19 @@
 ; The .NET Foundation licenses this file to you under the MIT license.
 
 EXPORTS
-        CreateProcessForLaunch
-        ResumeProcess
-        CloseResumeHandle
-        RegisterForRuntimeStartup
-	RegisterForRuntimeStartupEx
-        UnregisterForRuntimeStartup
-	GetStartupNotificationEvent
-	EnumerateCLRs
-	CloseCLREnumeration
-	CreateVersionStringFromModule
-	CreateDebuggingInterfaceFromVersion
-	CreateDebuggingInterfaceFromVersionEx
-	CreateDebuggingInterfaceFromVersion2
-	CLRCreateInstance
+    CreateProcessForLaunch
+    ResumeProcess
+    CloseResumeHandle
+    RegisterForRuntimeStartup
+    RegisterForRuntimeStartupEx
+    RegisterForRuntimeStartup3
+    UnregisterForRuntimeStartup
+    GetStartupNotificationEvent
+    EnumerateCLRs
+    CloseCLREnumeration
+    CreateVersionStringFromModule
+    CreateDebuggingInterfaceFromVersion
+    CreateDebuggingInterfaceFromVersionEx
+    CreateDebuggingInterfaceFromVersion2
+    CreateDebuggingInterfaceFromVersion3
+    CLRCreateInstance

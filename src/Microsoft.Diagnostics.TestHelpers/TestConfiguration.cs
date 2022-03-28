@@ -77,6 +77,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TempPath"] = Path.GetTempPath(),
                 ["WorkingDir"] = GetInitialWorkingDir(),
                 ["OS"] = OS.Kind.ToString(),
+                ["IsAlpine"] = OS.IsAlpine.ToString().ToLowerInvariant(),
+                ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages
             };
@@ -86,6 +88,19 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
             Configurations = configs.Select(c => new TestConfiguration(c)).ToList();
+        }
+
+        static string GetRid()
+        {
+            string os = OS.Kind switch
+            {
+                OSKind.Linux => OS.IsAlpine ? "linux-musl" : "linux",
+                OSKind.OSX => "osx",
+                OSKind.Windows => "win",
+                _ => throw new PlatformNotSupportedException(),
+            };
+            string architecture = OS.TargetArchitecture.ToString().ToLowerInvariant();
+            return $"{os}-{architecture}";
         }
 
         Dictionary<string, string>[] ParseConfigFile(string path, Dictionary<string, string>[] templates)
@@ -386,6 +401,30 @@ namespace Microsoft.Diagnostics.TestHelpers
             _settings = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(initialSettings));
             _truncatedRuntimeFrameworkVersion = GetTruncatedRuntimeFrameworkVersion();
             _configStringView = GetStringViewWithVersion(RuntimeFrameworkVersion); 
+        }
+
+        public string Serialize()
+        {
+            List<XElement> nodes = new();
+            foreach (KeyValuePair<string, string> keyvalue in _settings)
+            {
+                nodes.Add(new XElement(keyvalue.Key, keyvalue.Value));
+            }
+            XElement root = new("Configuration", nodes.ToArray());
+            TextWriter writer = new StringWriter();
+            root.Save(writer);
+            return writer.ToString();
+        }
+
+        public static TestConfiguration Deserialize(string xml)
+        {
+            XElement root = XElement.Parse(xml);
+            Dictionary<string, string> settings = new();
+            foreach (XElement child in root.Elements())
+            {
+                settings.Add(child.Name.LocalName, child.Value);
+            }
+            return new TestConfiguration(settings);
         }
 
         private string GetTruncatedRuntimeFrameworkVersion()
