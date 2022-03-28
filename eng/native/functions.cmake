@@ -401,7 +401,7 @@ function(strip_symbols targetName outputFilename)
         TARGET ${targetName}
         POST_BUILD
         VERBATIM
-        COMMAND ${DSYMUTIL} --flat --minimize ${strip_source_file}
+        COMMAND ${DSYMUTIL} --flat ${strip_source_file}
         COMMAND ${strip_command}
         COMMENT "Stripping symbols from ${strip_source_file} into file ${strip_destination_file}"
         )

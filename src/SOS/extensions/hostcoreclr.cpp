@@ -76,18 +76,21 @@ struct RuntimeVersion
     uint32_t Minor;
 };
 
-struct RuntimeHostingConstants
+namespace RuntimeHostingConstants
 {
-    constexpr static RuntimeVersion SupportedHostRuntimeVersions[] = {
-        {5, 0},
+    // This list is in probing order.
+    constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
+        {6, 0},
+#if !(defined(HOST_OSX) && defined(HOST_ARM64))
         {3, 1},
-        {6, 0}
+        {5, 0},
+#endif
+        {7, 0}
     };
-    constexpr static size_t NumOfSupportedRuntimes = sizeof(SupportedHostRuntimeVersions) / sizeof(SupportedHostRuntimeVersions[0]);
 
-    constexpr static char DotnetRootEnvVar[] = "DOTNET_ROOT";
+    constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
 
-    constexpr static char DotnetRootArchSpecificEnvVar[] =
+    constexpr char DotnetRootArchSpecificEnvVar[] =
 #if defined(HOST_X86)
         "DOTNET_ROOT_X86";
 #elif defined(HOST_AMD64)
@@ -102,12 +105,12 @@ struct RuntimeHostingConstants
 #endif
 
 #ifdef HOST_WINDOWS
-    constexpr static char RuntimeSubDir[] = "\\shared\\Microsoft.NETCore.App";
+    constexpr char RuntimeSubDir[] = "\\shared\\Microsoft.NETCore.App";
 #else
-    constexpr static char RuntimeSubDir[] = "/shared/Microsoft.NETCore.App";
+    constexpr char RuntimeSubDir[] = "/shared/Microsoft.NETCore.App";
 
-    constexpr static char RuntimeInstallMarkerFile[] = "/etc/dotnet/install_location";
-    constexpr static char RuntimeArchSpecificInstallMarkerFile[] =
+    constexpr char RuntimeInstallMarkerFile[] = "/etc/dotnet/install_location";
+    constexpr char RuntimeArchSpecificInstallMarkerFile[] =
 #if defined(HOST_X86)
         "/etc/dotnet/install_location_x86";
 #elif defined(HOST_AMD64)
@@ -121,22 +124,24 @@ struct RuntimeHostingConstants
 #error Hosting layer doesn't support target arch
 #endif
 
-    constexpr static char* UnixInstallPaths[] = {
+    constexpr char const * UnixInstallPaths[] = {
 #if defined(HOST_OSX)
 #if defined(HOST_AMD64)
-        "/usr/local/share/dotnet/x64/shared/Microsoft.NETCore.App"
+        "/usr/local/share/dotnet/x64",
 #endif
-        "/usr/local/share/dotnet/shared/Microsoft.NETCore.App"
+        "/usr/local/share/dotnet"
 #else
-        "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-        "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-        "/usr/share/dotnet/shared/Microsoft.NETCore.App",
+        "/rh-dotnet60/root/usr/bin/dotnet",
+        "/rh-dotnet31/root/usr/bin/dotnet",
+        "/rh-dotnet50/root/usr/bin/dotnet",
+        "/rh-dotnet70/root/usr/bin/dotnet",
+        "/usr/share/dotnet",
 #endif
     };
 #if defined(TARGET_LINUX)
-    constexpr static char SymlinkEntrypointExecutable[] = "/proc/self/exe";
+    constexpr char SymlinkEntrypointExecutable[] = "/proc/self/exe";
 #elif !defined(TARGET_OSX)
-    constexpr static char *SymlinkEntrypointExecutable[] = "/proc/curproc/exe";
+    constexpr char SymlinkEntrypointExecutable[] = "/proc/curproc/exe";
 #endif
 #endif
 };
@@ -488,11 +493,13 @@ static HRESULT ProbeInstallationMarkerFile(const char* const markerName, std::st
     }
 
     hostRuntimeDirectory.assign(line);
+
     size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
     if (newLinePostion != std::string::npos) {
         hostRuntimeDirectory.erase(newLinePostion);
-        hostRuntimeDirectory.append(RuntimeHostingConstants::RuntimeSubDir);
     }
+
+    hostRuntimeDirectory.append(RuntimeHostingConstants::RuntimeSubDir);
     free(line);
 
     return hostRuntimeDirectory.empty() ? S_FALSE : S_OK;
@@ -593,11 +600,11 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
-        for(size_t i = 0; i < RuntimeHostingConstants::NumOfSupportedRuntimes; i++)
+        for (const RuntimeVersion& version: RuntimeHostingConstants::SupportedHostRuntimeVersions)
         {
-            if (FindDotNetVersion(RuntimeHostingConstants::SupportedHostRuntimeVersions[i], hostRuntimeDirectory))
+            if (FindDotNetVersion(version, hostRuntimeDirectory))
             {
-                hostRuntimeVersion = RuntimeHostingConstants::SupportedHostRuntimeVersions[i];
+                hostRuntimeVersion = version;
                 break;
             }
         }
