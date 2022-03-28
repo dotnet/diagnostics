@@ -143,6 +143,8 @@ public:
         ULONG moduleIndex,
         PCSTR name,
         PULONG64 offset) = 0;
+
+    virtual ULONG STDMETHODCALLTYPE GetOutputWidth() = 0;
 };
 
 #ifdef __cplusplus

@@ -2343,6 +2343,12 @@ exit:
     return hr;
 }
 
+ULONG
+LLDBServices::GetOutputWidth()
+{
+    return m_debugger.GetTerminalWidth();
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------

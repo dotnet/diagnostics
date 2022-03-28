@@ -439,6 +439,17 @@ DbgEngServices::GetOffsetBySymbol(
     return m_symbols->GetOffsetByName(symbolName.c_str(), offset);
 }
 
+ULONG
+DbgEngServices::GetOutputWidth()
+{
+    ULONG width;
+    if (FAILED(m_client->GetOutputWidth(&width)) || width == 80)
+    {
+        width = INT_MAX;
+    }
+    return width;
+}
+
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
 //----------------------------------------------------------------------------
