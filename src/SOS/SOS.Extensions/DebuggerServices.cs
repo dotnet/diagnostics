@@ -327,6 +327,8 @@ namespace SOS
             }
         }
 
+        public int GetOutputWidth() => (int)VTable.GetOutputWidth(Self);
+
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
@@ -352,6 +354,7 @@ namespace SOS
             public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, HResult> GetSymbolPath;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, HResult> GetSymbolByOffset;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, HResult> GetOffsetBySymbol;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint> GetOutputWidth;
         }
     }
 }

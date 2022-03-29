@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -550,6 +551,21 @@ namespace Microsoft.Diagnostics.Repl
         void IConsoleService.WriteError(string text) => WriteOutput(OutputType.Error, text);
 
         CancellationToken IConsoleService.CancellationToken { get; set; }
+
+        int IConsoleService.WindowWidth
+        {
+            get
+            {
+                try
+                {
+                    return Console.WindowWidth;
+                }
+                catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is IOException)
+                {
+                    return int.MaxValue;
+                }
+            }
+        }
 
         #endregion
     }

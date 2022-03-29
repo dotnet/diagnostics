@@ -507,7 +507,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 if (useHelpBuilder)
                 {
-                    var helpBuilder = new HelpBuilder(_console, maxWidth: Console.WindowWidth);
+                    var helpBuilder = new HelpBuilder(_console, maxWidth: LocalConsole.ToConsoleService(_console).WindowWidth);
                     helpBuilder.Write(command);
                 }
             }
@@ -520,15 +520,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         class LocalConsole : IConsole
         {
-            public static IServiceProvider ToServices(IConsole console) => ((LocalConsole)console).Services;
+            public static IServiceProvider ToServices(IConsole console) => ((LocalConsole)console)._services;
 
-            public readonly IServiceProvider Services;
+            public static IConsoleService ToConsoleService(IConsole console) => ((LocalConsole)console)._console;
 
+            private readonly IServiceProvider _services;
             private readonly IConsoleService _console;
 
             public LocalConsole(IServiceProvider services)
             {
-                Services = services;
+                _services = services;
                 _console = services.GetService<IConsoleService>();
                 Debug.Assert(_console != null);
                 Out = new StandardStreamWriter((text) => _console.Write(text));

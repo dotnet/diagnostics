@@ -439,6 +439,13 @@ DbgEngServices::GetOffsetBySymbol(
     return m_symbols->GetOffsetByName(symbolName.c_str(), offset);
 }
 
+ULONG
+DbgEngServices::GetOutputWidth()
+{
+    // m_client->GetOutputWidth() always returns 80 as the width under windbg, windbgx and cdb so just return the max.
+    return INT_MAX;
+}
+
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
 //----------------------------------------------------------------------------
