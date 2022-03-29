@@ -15,8 +15,10 @@
 #include <unistd.h>
 #endif // FEATURE_PAL
 
+#include <functional>
 #include <set>
 #include <string>
+#include <vector>
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -67,6 +69,82 @@ static HostRuntimeFlavor g_hostRuntimeFlavor = HostRuntimeFlavor::NetCore;
 bool g_hostingInitialized = false;
 static LPCSTR g_hostRuntimeDirectory = nullptr;
 static ExtensionsInitializeDelegate g_extensionsInitializeFunc = nullptr;
+
+struct RuntimeVersion
+{
+    uint32_t Major;
+    uint32_t Minor;
+};
+
+namespace RuntimeHostingConstants
+{
+    // This list is in probing order.
+    constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
+        {6, 0},
+#if !(defined(HOST_OSX) && defined(HOST_ARM64))
+        {3, 1},
+        {5, 0},
+#endif
+        {7, 0}
+    };
+
+    constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
+
+    constexpr char DotnetRootArchSpecificEnvVar[] =
+#if defined(HOST_X86)
+        "DOTNET_ROOT_X86";
+#elif defined(HOST_AMD64)
+        "DOTNET_ROOT_X64";
+#elif defined(HOST_ARM) || defined(HOST_ARMV6)
+        "DOTNET_ROOT_ARM";
+#elif defined(HOST_ARM64)
+        "DOTNET_ROOT_ARM64";
+#else
+        "Error";
+#error Hosting layer doesn't support target arch
+#endif
+
+#ifdef HOST_WINDOWS
+    constexpr char RuntimeSubDir[] = "\\shared\\Microsoft.NETCore.App";
+#else
+    constexpr char RuntimeSubDir[] = "/shared/Microsoft.NETCore.App";
+
+    constexpr char RuntimeInstallMarkerFile[] = "/etc/dotnet/install_location";
+    constexpr char RuntimeArchSpecificInstallMarkerFile[] =
+#if defined(HOST_X86)
+        "/etc/dotnet/install_location_x86";
+#elif defined(HOST_AMD64)
+        "/etc/dotnet/install_location_x64";
+#elif defined(HOST_ARM) || defined(HOST_ARMV6)
+        "/etc/dotnet/install_location_arm";
+#elif defined(HOST_ARM64)
+        "/etc/dotnet/install_location_arm64";
+#else
+        "ERROR";
+#error Hosting layer doesn't support target arch
+#endif
+
+    constexpr char const * UnixInstallPaths[] = {
+#if defined(HOST_OSX)
+#if defined(HOST_AMD64)
+        "/usr/local/share/dotnet/x64",
+#endif
+        "/usr/local/share/dotnet"
+#else
+        "/rh-dotnet60/root/usr/bin/dotnet",
+        "/rh-dotnet31/root/usr/bin/dotnet",
+        "/rh-dotnet50/root/usr/bin/dotnet",
+        "/rh-dotnet70/root/usr/bin/dotnet",
+        "/usr/share/dotnet",
+#endif
+    };
+#if defined(TARGET_LINUX)
+    constexpr char SymlinkEntrypointExecutable[] = "/proc/self/exe";
+#elif !defined(TARGET_OSX)
+    constexpr char SymlinkEntrypointExecutable[] = "/proc/curproc/exe";
+#endif
+#endif
+};
 
 struct FileFind
 {
@@ -246,10 +324,36 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
     }
 }
 
+static std::string GetTpaListForRuntimeVersion(
+    const std::string& sosModuleDirectory,
+    const std::string& hostRuntimeDirectory,
+    const RuntimeVersion& hostRuntimeVersion)
+{
+    std::string tpaList;
+    const char* directory = sosModuleDirectory.c_str();
+
+    // TODO: This is a little brittle. At the very least we should make sure that versions
+    //       of managed assemblies used by SOS other than the framework ones aren't of a greater
+    //       assembly version than the ones in the ones in the framework. The test could just
+    //       have a list of assemblies we pack with the versions, and if we end up using a newer assembly
+    //       fail the test and point to update this list.
+    if (hostRuntimeVersion.Major < 5)
+    {
+        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
+        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
+        AddFileToTpaList(directory, "System.Runtime.CompilerServices.Unsafe.dll", tpaList);
+    }
+
+    // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
+    // components.
+    AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
+    return tpaList;
+}
+
 //
 // Searches the runtime directory for a .NET Core runtime version
 //
-static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hostRuntimeDirectory)
+static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string& hostRuntimeDirectory)
 {
     std::string versionFound;
 
@@ -266,7 +370,7 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
                 int revision = 0;
                 if (sscanf(find.FileName(), "%d.%d.%d", &major, &minor, &revision) == 3)
                 {
-                    if (major == majorFilter && minor == minorFilter)
+                    if (major == runtimeVersion.Major && minor == runtimeVersion.Minor)
                     {
                         if (revision >= highestRevision)
                         {
@@ -289,7 +393,7 @@ static bool FindDotNetVersion(int majorFilter, int minorFilter, std::string& hos
     return false;
 }
 
-#ifndef FEATURE_PAL
+#ifdef HOST_WINDOWS
 
 static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
@@ -303,23 +407,17 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
     return true;
 }
 
-#else // FEATURE_PAL
-
-#if defined(__linux__)
-#define symlinkEntrypointExecutable "/proc/self/exe"
-#elif !defined(__APPLE__)
-#define symlinkEntrypointExecutable "/proc/curproc/exe"
-#endif
+#else // HOST_WINDOWS
 
 static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
 {
     bool result = false;
-    
+
     entrypointExecutable.clear();
 
     // Get path to the executable for the current process using
     // platform specific means.
-#if defined(__APPLE__)
+#if defined(TARGET_OSX)
     // On Mac, we ask the OS for the absolute path to the entrypoint executable
     uint32_t lenActualPath = 0;
     if (_NSGetExecutablePath(nullptr, &lenActualPath) == -1)
@@ -334,7 +432,7 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
             result = true;
         }
     }
-#elif defined (__FreeBSD__)
+#elif defined (TARGET_FREEBSD)
     static const int name[] = {
         CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1
     };
@@ -352,7 +450,7 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
         // ENOMEM
         result = false;
     }
-#elif defined(__NetBSD__) && defined(KERN_PROC_PATHNAME)
+#elif defined(TARGET_NETBSD) && defined(KERN_PROC_PATHNAME)
     static const int name[] = {
         CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME,
     };
@@ -372,116 +470,149 @@ static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutabl
 #else
     // On other OSs, return the symlink that will be resolved by GetAbsolutePath
     // to fetch the entrypoint EXE absolute path, inclusive of filename.
-    result = GetAbsolutePath(symlinkEntrypointExecutable, entrypointExecutable);
+    result = GetAbsolutePath(RuntimeHostingConstants::SymlinkEntrypointExecutable, entrypointExecutable);
 #endif 
 
     return result;
 }
 
-const char *g_linuxPaths[] = {
-#if defined(__APPLE__)
-    "/usr/local/share/dotnet/shared/Microsoft.NETCore.App"
-#else
-    "/rh-dotnet31/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-    "/rh-dotnet30/root/usr/bin/dotnet/shared/Microsoft.NETCore.App",
-    "/usr/share/dotnet/shared/Microsoft.NETCore.App",
-#endif
-};
+static HRESULT ProbeInstallationMarkerFile(const char* const markerName, std::string &hostRuntimeDirectory)
+{
+    char* line = nullptr;
+    size_t lineLen = 0;
+    FILE* locationFile = fopen(markerName, "r");
+    if (locationFile == nullptr)
+    {
+        return S_FALSE;
+    }
 
-#endif // FEATURE_PAL
+    if (getline(&line, &lineLen, locationFile) == -1)
+    {
+        TraceError("Unable to read .NET installation marker at %s\n", markerName);
+        return E_FAIL;
+    }
+
+    hostRuntimeDirectory.assign(line);
+
+    size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
+    if (newLinePostion != std::string::npos) {
+        hostRuntimeDirectory.erase(newLinePostion);
+    }
+
+    hostRuntimeDirectory.append(RuntimeHostingConstants::RuntimeSubDir);
+    free(line);
+
+    return hostRuntimeDirectory.empty() ? S_FALSE : S_OK;
+}
+
+#endif // HOST_WINDOWS
+
+static HRESULT ProbeInstallationDir(const char* const installPath, std::string& hostRuntimeDirectory)
+{
+    hostRuntimeDirectory.assign(installPath);
+    hostRuntimeDirectory.append(RuntimeHostingConstants::RuntimeSubDir);
+#ifdef HOST_UNIX
+    if (access(hostRuntimeDirectory.c_str(), F_OK) != 0)
+#else
+    if (GetFileAttributesA(hostRuntimeDirectory.c_str()) == INVALID_FILE_ATTRIBUTES)
+#endif
+    {
+        return S_FALSE;
+    }
+    return S_OK;
+}
+
+static HRESULT ProbeEnvVarInstallationHint(const char* const varName, std::string &hostRuntimeDirectory)
+{
+    char* dotnetRoot = getenv(varName);
+    if (dotnetRoot == nullptr)
+    {
+        return S_FALSE;
+    }
+
+    HRESULT Status = ProbeInstallationDir(dotnetRoot, hostRuntimeDirectory);
+
+    return Status == S_OK ? S_OK : E_FAIL;
+}
+
+struct ProbingStrategy
+{
+    std::function<HRESULT(const char* const, std::string&)> strategyDelegate;
+    const char* const strategyHint;
+
+    HRESULT Execute(std::string& hostRutimeDirectory) const
+    {
+        return strategyDelegate(strategyHint, hostRutimeDirectory);
+    }
+};
 
 /**********************************************************************\
  * Returns the path to the coreclr to use for hosting and it's
  * directory. Attempts to use the best installed version of the 
  * runtime, otherwise it defaults to the target's runtime version.
 \**********************************************************************/
-static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory)
+static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory, RuntimeVersion& hostRuntimeVersion)
 {
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
     {
-        char* dotnetRoot = getenv("DOTNET_ROOT");
-        if (dotnetRoot != nullptr)
-        {
-            hostRuntimeDirectory.assign(dotnetRoot);
-            hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
-            hostRuntimeDirectory.append("shared");
-            hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
-            hostRuntimeDirectory.append("Microsoft.NETCore.App");
-#ifdef FEATURE_PAL
-            if (access(hostRuntimeDirectory.c_str(), F_OK) != 0)
+#if defined(HOST_FREEBSD)
+        TraceError("Hosting on NetBSD not supported\n");
+        return E_FAIL;
 #else
-            if (GetFileAttributesA(hostRuntimeDirectory.c_str()) == INVALID_FILE_ATTRIBUTES)
-#endif
-            {
-                TraceError("DOTNET_ROOT (%s) path doesn't exist\n", hostRuntimeDirectory.c_str());
-                return E_FAIL;
-            }
-        }
-        else 
-        {
-#ifdef FEATURE_PAL
-#if defined(__NetBSD__)
-            TraceError("Hosting on NetBSD not supported\n");
-            return E_FAIL;
-#else
-            char* line = nullptr;
-            size_t lineLen = 0;
 
-            // Start with Linux location file if exists
-            FILE* locationFile = fopen("/etc/dotnet/install_location", "r");
-            if (locationFile != nullptr)
-            {
-                if (getline(&line, &lineLen, locationFile) != -1)
-                {
-                    hostRuntimeDirectory.assign(line);
-                    size_t newLinePostion = hostRuntimeDirectory.rfind('\n');
-                    if (newLinePostion != std::string::npos) {
-                        hostRuntimeDirectory.erase(newLinePostion);
-                        hostRuntimeDirectory.append("/shared/Microsoft.NETCore.App");
-                    }
-                    free(line);
-                }
-            }
-            if (hostRuntimeDirectory.empty())
-            {
-                // Now try the possible runtime locations
-                for (int i = 0; i < _countof(g_linuxPaths); i++)
-                {
-                    hostRuntimeDirectory.assign(g_linuxPaths[i]);
-                    if (access(hostRuntimeDirectory.c_str(), F_OK) == 0)
-                    {
-                        break;
-                    }
-                }
-            }
-#endif // defined(__NetBSD__)
-#else
-            ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
-            if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
-            {
-                TraceError("PROGRAMFILES environment variable not found\n");
-                return E_FAIL;
-            }
-            hostRuntimeDirectory.assign(programFiles);
-            hostRuntimeDirectory.append("\\dotnet\\shared\\Microsoft.NETCore.App");
-#endif // FEATURE_PAL
+        HRESULT Status = E_FAIL;
+        std::vector<ProbingStrategy> strategyList = {
+             { ProbeEnvVarInstallationHint, RuntimeHostingConstants::DotnetRootArchSpecificEnvVar }
+            ,{ ProbeEnvVarInstallationHint, RuntimeHostingConstants::DotnetRootEnvVar }
+#if defined(HOST_UNIX)
+            ,{ ProbeInstallationMarkerFile, RuntimeHostingConstants::RuntimeArchSpecificInstallMarkerFile }
+            ,{ ProbeInstallationMarkerFile, RuntimeHostingConstants::RuntimeInstallMarkerFile }
+#endif
+        };
+
+#if defined(HOST_UNIX)
+        for (int i = 0; i < _countof(RuntimeHostingConstants::UnixInstallPaths); i++)
+        {
+            strategyList.push_back({ ProbeInstallationDir, RuntimeHostingConstants::UnixInstallPaths[i] });
         }
+#else
+        ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
+        if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
+        {
+            TraceError("PROGRAMFILES environment variable not found\n");
+            return E_FAIL;
+        }
+        std::string windowsInstallPath(programFiles);
+        windowsInstallPath.append("\\dotnet");
+        strategyList.push_back({ ProbeInstallationDir, windowsInstallPath.c_str() });
+#endif
+        for (auto it = strategyList.cbegin(); it != strategyList.cend() && Status != S_OK; it++)
+        {
+            IfFailRet(it->Execute(hostRuntimeDirectory));
+        }
+
+        if (Status != S_OK)
+        {
+            TraceError("Error: Failed to find runtime directory\n");
+            return E_FAIL;
+        }
+
         hostRuntimeDirectory.append(DIRECTORY_SEPARATOR_STR_A);
 
-        // Start with the latest released version and then the LTS's.
-        if (!FindDotNetVersion(5, 0, hostRuntimeDirectory))
+        for (const RuntimeVersion& version: RuntimeHostingConstants::SupportedHostRuntimeVersions)
         {
-            // Find highest 3.1.x LTS version
-            if (!FindDotNetVersion(3, 1, hostRuntimeDirectory))
+            if (FindDotNetVersion(version, hostRuntimeDirectory))
             {
-                // Find highest 6.0.x version
-                if (!FindDotNetVersion(6, 0, hostRuntimeDirectory))
-                {
-                    TraceError("Error: Failed to find runtime directory\n");
-                    return E_FAIL;
-                }
+                hostRuntimeVersion = version;
+                break;
             }
+        }
+
+        if (hostRuntimeVersion.Major == 0)
+        {
+            TraceError("Error: Failed to find runtime directory within %s\n", hostRuntimeDirectory.c_str());
+            return E_FAIL;
         }
 
         // Save away the runtime version we are going to use to host the SOS managed code
@@ -492,6 +623,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
     coreClrPath.append(MAKEDLLNAME_A("coreclr"));
     return S_OK;
+#endif
 }
 
 /**********************************************************************\
@@ -527,8 +659,9 @@ static HRESULT InitializeNetCoreHost()
         std::string sosModuleDirectory;
         std::string hostRuntimeDirectory;
         std::string coreClrPath;
+        RuntimeVersion hostRuntimeVersion = {};
 
-        hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory);
+        hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory, hostRuntimeVersion);
         if (FAILED(hr))
         {
             return hr;
@@ -570,16 +703,7 @@ static HRESULT InitializeNetCoreHost()
         sosModuleDirectory.erase(lastSlash);
 
         // Trust The SOS managed and dependent assemblies from the sos directory
-        std::string tpaList;
-        const char* directory = sosModuleDirectory.c_str();
-        AddFileToTpaList(directory, "System.Runtime.CompilerServices.Unsafe.dll", tpaList);
-        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
-        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-        AddFileToTpaList(directory, "Microsoft.FileFormats.dll", tpaList);
-        AddFileToTpaList(directory, "Microsoft.SymbolStore.dll", tpaList);
-
-        // Trust the runtime assemblies
-        AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
+        std::string tpaList = GetTpaListForRuntimeVersion(sosModuleDirectory, hostRuntimeDirectory, hostRuntimeVersion);
 
         std::string appPaths;
         appPaths.append(sosModuleDirectory);
