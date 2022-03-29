@@ -442,12 +442,8 @@ DbgEngServices::GetOffsetBySymbol(
 ULONG
 DbgEngServices::GetOutputWidth()
 {
-    ULONG width;
-    if (FAILED(m_client->GetOutputWidth(&width)) || width == 80)
-    {
-        width = INT_MAX;
-    }
-    return width;
+    // m_client->GetOutputWidth() always returns 80 as the width under windbg, windbgx and cdb so just return the max.
+    return INT_MAX;
 }
 
 //----------------------------------------------------------------------------
