@@ -445,7 +445,7 @@ namespace SOS.Hosting
                 if (_symbolService is null)
                 {
                     _symbolService = new SymbolService(this);
-                    _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
+                    _symbolService.AddSymbolServer(msdl: true, symweb: false, timeoutInMinutes: 6, retryCount: 5);
                     _symbolService.AddCachePath(SymbolService.DefaultSymbolCache);
                 }
                 return _symbolService;

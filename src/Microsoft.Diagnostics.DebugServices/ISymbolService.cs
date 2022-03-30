@@ -41,6 +41,11 @@ namespace Microsoft.Diagnostics.DebugServices
         string DefaultSymbolCache { get; set; }
 
         /// <summary>
+        /// Reset any HTTP symbol stores marked with a client failure
+        /// </summary>
+        void Reset();
+
+        /// <summary>
         /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
         /// </summary>
         /// <param name="symbolPath">Windows symbol path</param>
@@ -53,10 +58,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="msdl">if true, use the public Microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
-        /// <param name="authToken"></param>
+        /// <param name="authToken">PAT for secure symbol server (optional)</param>
         /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
+        /// <param name="retryCount">number of retries (optional)</param>
         /// <returns>if false, failure</returns>
-        bool AddSymbolServer(bool msdl, bool symweb, string symbolServerPath, string authToken, int timeoutInMinutes);
+        bool AddSymbolServer(bool msdl, bool symweb, string symbolServerPath = null, string authToken = null, int timeoutInMinutes = 0, int retryCount = 0);
 
         /// <summary>
         /// Add cache path to symbol search path
