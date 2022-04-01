@@ -476,8 +476,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
-                    bool useWindows = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-                    bool useAnsi = vTerm.IsEnabled && useWindows;
+                    bool useAnsi = vTerm.IsEnabled && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
                     if (holder == null)
                     {
                         return ReturnCode.Ok;
