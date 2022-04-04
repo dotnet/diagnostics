@@ -81,7 +81,17 @@ namespace Microsoft.Internal.Common.Commands
         {
             int GetColumnWidth(IEnumerable<int> fieldWidths)
             {
-                int largeLength = Console.WindowWidth / 2 - 16;
+                int consoleWidth = 0;
+                if (Console.IsOutputRedirected)
+                {
+                    consoleWidth = Int32.MaxValue;
+                }
+                else
+                {
+                    consoleWidth = Console.WindowWidth;
+                }
+                int extra = (int)Math.Ceiling(consoleWidth*0.05);
+                int largeLength = consoleWidth / 2 - 16 - extra;
                 return Math.Min(fieldWidths.Max(), largeLength);
             }
 
@@ -127,25 +137,7 @@ namespace Microsoft.Internal.Common.Commands
                         String cmdLineArgs = GetArgs(process);
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
-                        string[] cmdList = cmdLineArgs.Split(" ");
-                        char separator = Path.DirectorySeparatorChar;
-                        foreach(string str in cmdList)
-                        {
-                            if (str == string.Empty)
-                            {
-                                break;
-                            }
 
-                            if (str.Contains(separator))
-                            {
-                                //Assume the first string to contain the directory separation character is the filepath
-                                fileName = str;
-                                //remove the filepath from the command line arguments
-                                cmdLineArgs = string.Join(" ", cmdList.Skip(1));
-                            }
-                            break;
-                            
-                        }
                         var commandInfo = new ProcessDetails()
                         {
                             ProcessId = process.Id,
