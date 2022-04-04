@@ -97,6 +97,11 @@ namespace Microsoft.Internal.Common.Commands
 
             void FormatTableRows(List<ProcessDetails> rows, StringBuilder tableText)
             {
+                if (rows.Count == 0)
+                {
+                    tableText.Append("No supported managed processes were found");
+                    return;
+                }
                 var processIDs = rows.Select(i => i.ProcessId.ToString().Length);
                 var processNames = rows.Select(i => i.ProcessName.Length);
                 var fileNames = rows.Select(i => i.FileName.Length);
