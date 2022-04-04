@@ -20,6 +20,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -475,7 +476,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
-                    bool useAnsi = vTerm.IsEnabled;
+                    bool useAnsi = vTerm.IsEnabled && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
                     if (holder == null)
                     {
                         return ReturnCode.Ok;
