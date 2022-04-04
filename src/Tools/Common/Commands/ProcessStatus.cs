@@ -99,7 +99,7 @@ namespace Microsoft.Internal.Common.Commands
             {
                 if (rows.Count == 0)
                 {
-                    tableText.Append("No supported managed processes were found");
+                    tableText.Append("No supported .NET processes were found");
                     return;
                 }
                 var processIDs = rows.Select(i => i.ProcessId.ToString().Length);
