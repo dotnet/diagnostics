@@ -7,6 +7,7 @@
 *.sln.docstates
 .vs/
 *.VC.db
+.venv/
 
 # Build results
 [Aa]rtifacts/
@@ -22,6 +23,7 @@ x64/
 .packages/
 .tools/
 .vscode/
+build/
 
 # Per-user project properties
 launchSettings.json
