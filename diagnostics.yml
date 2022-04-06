@@ -254,9 +254,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Fedora_28
+          name: Fedora_34
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-28-09ca40b-20190508143249
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-34-helix-20220331150839-4f64125
           dependsOn: CentOS_7
           testOnly: true
           requiresCapPtraceContainer: true
@@ -268,36 +268,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Fedora_29
+          name: OpenSuse_15_2
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-29-09ca40b-20190508143249
-          dependsOn: CentOS_7
-          testOnly: true
-          requiresCapPtraceContainer: true
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-                _BuildArch: x64
-
-      - template: /eng/build.yml
-        parameters:
-          name: OpenSuse_42_1
-          osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-42.1-c103199-20180628122439
-          dependsOn: CentOS_7
-          testOnly: true
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-                _BuildArch: x64
-
-      - template: /eng/build.yml
-        parameters:
-          name: OpenSuse_42_3
-          osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-42.3-3e800f1-20190501005344
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-15.2-helix-amd64-20211018152525-9cc02fe
           dependsOn: CentOS_7
           testOnly: true
           strategy:
