@@ -48,10 +48,7 @@ namespace Microsoft.Tools.Common
                     ret &= Regex.IsMatch(data.EventName.ToLowerInvariant(), eventNameInclude);
                 }
 
-                if (keywordInclude != 0)
-                {
-                    ret &= ((long)data.Keywords & keywordInclude) != 0;
-                }
+                ret &= ((long)data.Keywords & keywordInclude) != 0;
 
                 if (eventIdInclude.Count != 0)
                 {
@@ -176,9 +173,8 @@ namespace Microsoft.Tools.Common
 
             PredicateBuilder builder = new();
 
-            string[] filters = filter.Split(';', StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string f in filters)
+            foreach (string f in filter.Split(';', StringSplitOptions.RemoveEmptyEntries);
+)
             {
                 string filterSection = f;
                 bool exclude = false;

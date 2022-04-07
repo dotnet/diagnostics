@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly List<string> UnwantedMethodNames = new() { "ROOT", "Process"};
 
         //Create an extension function to help 
-        private  static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
+        private static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
         {
             var ret = new List<CallTreeNodeBase>(callTree.ByID);
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
