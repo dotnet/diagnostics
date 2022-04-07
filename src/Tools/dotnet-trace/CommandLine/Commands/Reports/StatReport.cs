@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private delegate Task<int> StatReportDelegate(CancellationToken ct, IConsole console, string traceFile, string filter, bool verbose);
         private static async Task<int> StatReport(CancellationToken ct, IConsole console, string traceFile, string filter, bool verbose) 
         {
-            SimpleLogger.Log.Enabled = verbose;
+            SimpleLogger.Log.MinimumLevel = verbose ? Microsoft.Extensions.Logging.LogLevel.Information : Microsoft.Extensions.Logging.LogLevel.Error;
 
             // Validate
             if (!File.Exists(traceFile))

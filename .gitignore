@@ -128,6 +128,3 @@ StressLog.txt
 *.binlog
 *.pubxml
 **/.idea/
-
-# except for test nettrace files
-!**/TEST_*.nettrace

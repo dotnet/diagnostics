@@ -3,19 +3,23 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Tools.Common
 {
     internal class SimpleLogger
     {
-        public static SimpleLogger Log = new();
+        public static SimpleLogger Log { get; private set; } = new();
+        public LogLevel MinimumLevel { get; set; } = LogLevel.Error;
 
-        public bool Enabled { get; set; } = false;
+        public void LogError(string message) => WriteLine(LogLevel.Error, "ERROR", message);
 
-        public void WriteLine(string message)
+        public void LogInfo(string message) => WriteLine(LogLevel.Information, "INFO", message);
+
+        private void WriteLine(LogLevel level, string prefix, string message)
         {
-            if (Enabled)
-                Console.WriteLine($"[{DateTime.Now:hh:mm:ss.fff}] {message}");
+            if (level >= MinimumLevel)
+                Console.WriteLine($"[{DateTime.Now:hh:mm:ss.fff}] {prefix} :: {message}");
         }
     }
 }
