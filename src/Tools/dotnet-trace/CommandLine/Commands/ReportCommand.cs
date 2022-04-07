@@ -25,8 +25,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     //Handler
                     HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
                     //Options
-                    FileNameArgument(),
-                    TopNReportHandler.TopNCommand
+                    // FileNameArgument(),
+                    TopNReportHandler.TopNCommand,
+                    StatReportHandler.StatCommand
                 };
 
         public static Argument<string> FileNameArgument() =>
@@ -36,13 +37,5 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Description = "The file path for the trace being analyzed.",
                 Arity = new ArgumentArity(1, 1)
             };
-
-        public static Option VerboseOption() =>
-            new Option(
-                aliases: new[] {"-v", "--verbose"},
-                description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
-                {
-                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
-                };
     }
 }

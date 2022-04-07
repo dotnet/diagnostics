@@ -107,6 +107,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
                 };
 
+        public static Option VerboseOption() =>
+            new Option(
+                aliases: new[] {"-v", "--verbose"},
+                description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
+                {
+                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+                };
+
         public static Command TopNCommand =>
             new Command(
                 name: "topN",
@@ -116,7 +124,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
                     TopNOption(),
                     InclusiveOption(),
-                    ReportCommandHandler.VerboseOption(),
+                    VerboseOption(),
+                    ReportCommandHandler.FileNameArgument()
                 };
 }
 }
