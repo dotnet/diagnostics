@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 public void IncludeEventName(string pattern)
                 {
-                    eventNameInclude = $"{pattern}|{eventNameInclude}";
+                    eventNameInclude = $"{pattern.ToLowerInvariant()}{(string.IsNullOrEmpty(eventNameInclude) ? "" : $"|{eventNameInclude}")}";
                 }
 
                 public void IncludeKeyword(long keyword)
@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         if (!string.IsNullOrEmpty(eventNameInclude))
                         {
-                            ret &= Regex.IsMatch(data.EventName.ToLowerInvariant(), eventNameInclude.ToLowerInvariant());
+                            ret &= Regex.IsMatch(data.EventName.ToLowerInvariant(), eventNameInclude);
                         }
 
                         if (keywordInclude != 0)
@@ -90,40 +90,43 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             public PredicateBuilder ExcludeProviderPattern(string pattern)
             {
-                providerNameExcludePattern = $"{pattern}|{providerNameExcludePattern}";
+                providerNameExcludePattern = $"{pattern.ToLowerInvariant()}{(string.IsNullOrEmpty(providerNameExcludePattern) ? "" : $"|{providerNameExcludePattern}")}";
                 return this;
             }
 
             public PredicateBuilder IncludeProviderPattern(string pattern)
             {
-                providerNameIncludePattern = $"{pattern}|{providerNameIncludePattern}";
+                providerNameIncludePattern = $"{pattern.ToLowerInvariant()}{(string.IsNullOrEmpty(providerNameIncludePattern) ? "" : $"|{providerNameIncludePattern}")}";
                 return this;
             }
 
             public PredicateBuilder AddProviderFilter(string providerName, string eventNamePattern)
             {
-                if (!providerPredicates.ContainsKey(providerName))
-                    providerPredicates[providerName] = new ProviderPredicate(providerName);
+                string key = providerName.ToLowerInvariant();
+                if (!providerPredicates.ContainsKey(key))
+                    providerPredicates[key] = new ProviderPredicate(key);
 
-                providerPredicates[providerName].IncludeEventName(eventNamePattern);
+                providerPredicates[key].IncludeEventName(eventNamePattern);
                 return this;
             }
 
             public PredicateBuilder AddProviderFilter(string providerName, int eventId)
             {
-                if (!providerPredicates.ContainsKey(providerName))
-                    providerPredicates[providerName] = new ProviderPredicate(providerName);
+                string key = providerName.ToLowerInvariant();
+                if (!providerPredicates.ContainsKey(key))
+                    providerPredicates[key] = new ProviderPredicate(key);
 
-                providerPredicates[providerName].IncludeEventId(eventId);
+                providerPredicates[key].IncludeEventId(eventId);
                 return this;
             }
 
             public PredicateBuilder AddProviderFilter(string providerName, long keyword)
             {
-                if (!providerPredicates.ContainsKey(providerName))
-                    providerPredicates[providerName] = new ProviderPredicate(providerName);
+                string key = providerName.ToLowerInvariant();
+                if (!providerPredicates.ContainsKey(key))
+                    providerPredicates[key] = new ProviderPredicate(key);
 
-                providerPredicates[providerName].IncludeKeyword(keyword);
+                providerPredicates[key].IncludeKeyword(keyword);
                 return this;
             }
 
@@ -133,6 +136,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (string.IsNullOrEmpty(providerNameIncludePattern) && string.IsNullOrEmpty(providerNameExcludePattern) && providerPredicates.Count == 0)
                     return predicate;
+
+                // TODO
 
                 return predicate;
             }
@@ -203,13 +208,47 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 string[] filterParts = f.Split(':', StringSplitOptions.RemoveEmptyEntries);
-                if (filterParts[0].Contains('*'))
+                if (filterParts[0].Contains('*') || filterParts.Length == 1)
                 {
                     builder.AddProviderPattern(filterParts[0], exclude);
                 }
-                else
+                else if (filterParts.Length == 2)
                 {
                     // Regular name
+                    string[] subfilterParts = filterParts[1].Split('=', StringSplitOptions.RemoveEmptyEntries);
+                    // TODO: DEBUG.ASSERT(length == 2)
+                    if (subfilterParts.Length != 2)
+                    {
+                        // TODO error
+                    }
+
+                    switch (subfilterParts[0].ToLowerInvariant())
+                    {
+                        case "id":
+                            if (int.TryParse(subfilterParts[1], out int id))
+                                builder.AddProviderFilter(filterParts[0], id);
+                            else
+                            {
+                                // TODO error
+                            }
+                            break;
+                        case "name":
+                            builder.AddProviderFilter(filterParts[0], subfilterParts[1]);
+                            break;
+                        case "keyword":
+                            if (subfilterParts[1].StartsWith("0x") || subfilterParts[1].StartsWith("0X"))
+                            {
+
+                            }
+                            break;
+                        default:
+                            // TODO error, unknown subfilter type
+                            break;
+                    }
+                }
+                else
+                {
+                    // TODO: log parse error
                 }
 
 
@@ -218,11 +257,23 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return builder.Build();
         }
 
-        private static Func<TraceEvent, bool> MakeProviderNameWildcardPredicate(bool negate, string pattern, Func<TraceEvent, bool> previousPredicate) => negate switch
+        private static bool TryParseExtended(this long n, string str, out long x)
         {
-            true => (TraceEvent data) => !Regex.IsMatch(data.ProviderName.ToLowerInvariant(), pattern.ToLowerInvariant()) && previousPredicate(data),
-            false => (TraceEvent data) => !Regex.IsMatch(data.ProviderName.ToLowerInvariant(), pattern) && previousPredicate(data)
-        };
+            x = 0;
+            if (str.StartsWith("0x") || str.StartsWith("0X"))
+            {
+                // Parse Hex
+            }
+            else if (str.StartsWith("0b") || str.StartsWith("0B"))
+            {
+                // Parse Binary
+            }
+            else
+            {
+                // Try regular parse
+            }
+            return true;
+        }
 
         private static void PrintStats(EventPipeEventSource source, Dictionary<string, int> stats)
         {
