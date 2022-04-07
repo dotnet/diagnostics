@@ -48,7 +48,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 public void IncludeEventName(string pattern)
                 {
-                    eventNameInclude = $"{pattern.ToLowerInvariant()}{(string.IsNullOrEmpty(eventNameInclude) ? "" : $"|{eventNameInclude}")}";
+                    string sanitizedPattern = pattern.Replace("*", ".*");
+                    eventNameInclude = $"{sanitizedPattern.ToLowerInvariant()}{(string.IsNullOrEmpty(eventNameInclude) ? "" : $"|{eventNameInclude}")}";
                 }
 
                 public void IncludeKeyword(long keyword)
@@ -63,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 public bool CheckPredicate(TraceEvent data)
                 {
-                    bool ret = false;
+                    bool ret = true;
                     if (!string.IsNullOrEmpty(eventNameInclude))
                     {
                         ret &= Regex.IsMatch(data.EventName.ToLowerInvariant(), eventNameInclude);
@@ -97,15 +98,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             public PredicateBuilder ExcludeProviderPattern(string pattern)
             {
-                Logger.Log.WriteLine($"Adding exclude pattern: '{pattern}'");
-                providerNameExcludePattern = $"{pattern.ToLowerInvariant()}{(string.IsNullOrEmpty(providerNameExcludePattern) ? "" : $"|{providerNameExcludePattern}")}";
+                string sanitizedPattern = pattern.Replace("*", ".*");
+                Logger.Log.WriteLine($"Adding exclude pattern: '{sanitizedPattern}'");
+                providerNameExcludePattern = $"{sanitizedPattern.ToLowerInvariant()}{(string.IsNullOrEmpty(providerNameExcludePattern) ? "" : $"|{providerNameExcludePattern}")}";
                 return this;
             }
 
             public PredicateBuilder IncludeProviderPattern(string pattern)
             {
-                Logger.Log.WriteLine($"Adding include pattern: '{pattern}'");
-                providerNameIncludePattern = $"{pattern.ToLowerInvariant()}{(string.IsNullOrEmpty(providerNameIncludePattern) ? "" : $"|{providerNameIncludePattern}")}";
+                string sanitizedPattern = pattern.Replace("*", ".*");
+                Logger.Log.WriteLine($"Adding include pattern: '{sanitizedPattern}'");
+                providerNameIncludePattern = $"{sanitizedPattern.ToLowerInvariant()}{(string.IsNullOrEmpty(providerNameIncludePattern) ? "" : $"|{providerNameIncludePattern}")}";
                 return this;
             }
 
@@ -114,6 +117,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string key = providerName.ToLowerInvariant();
                 if (!providerPredicates.ContainsKey(key))
                     providerPredicates[key] = new ProviderPredicate(key);
+
+                Logger.Log.WriteLine($"Adding event name filter: Provider={providerName}, pattern={eventNamePattern}");
 
                 providerPredicates[key].IncludeEventName(eventNamePattern);
                 return this;
@@ -125,6 +130,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (!providerPredicates.ContainsKey(key))
                     providerPredicates[key] = new ProviderPredicate(key);
 
+                Logger.Log.WriteLine($"Adding event id filter: Provider={providerName}, id={eventId}");
+
                 providerPredicates[key].IncludeEventId(eventId);
                 return this;
             }
@@ -134,6 +141,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string key = providerName.ToLowerInvariant();
                 if (!providerPredicates.ContainsKey(key))
                     providerPredicates[key] = new ProviderPredicate(key);
+
+                Logger.Log.WriteLine($"Adding event keyword filter: Provider={providerName}, keyword={keyword:X}");
 
                 providerPredicates[key].IncludeKeyword(keyword);
                 return this;
@@ -151,26 +160,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 // 2. include regex
                 // 3. subfilters
                 // effectively: exclude & include & (subfilters OR'd together)
-                // so we need to build the higher order function backwards to get the correct behavior
-
-                if (providerPredicates.Count != 0)
+                predicate = (TraceEvent data) =>
                 {
-                    predicate = And((TraceEvent data) =>
+                    bool ret = true;
+                    if (!string.IsNullOrEmpty(providerNameExcludePattern))
+                        ret &= !Regex.IsMatch(data.ProviderName.ToLowerInvariant(), providerNameExcludePattern);
+
+                    if (!string.IsNullOrEmpty(providerNameIncludePattern))
+                        ret &= Regex.IsMatch(data.ProviderName.ToLowerInvariant(), providerNameIncludePattern);
+
+                    if (providerPredicates.Count != 0)
                     {
-                        bool ret = false;
                         string key = data.ProviderName.ToLowerInvariant();
-                        if (providerPredicates.TryGetValue(key, out ProviderPredicate providerPredicate))
-                            ret = providerPredicate.CheckPredicate(data);
+                        if (ret &= providerPredicates.TryGetValue(key, out ProviderPredicate providerPredicate))
+                        {
+                            ret &= providerPredicate.CheckPredicate(data);
+                        }
+                    }
 
-                        return ret;
-                    }, predicate);
-                }
-
-                if (!string.IsNullOrEmpty(providerNameIncludePattern))
-                    predicate = And((TraceEvent data) => Regex.IsMatch(data.ProviderName.ToLowerInvariant(), providerNameIncludePattern), predicate);
-
-                if (!string.IsNullOrEmpty(providerNameExcludePattern))
-                    predicate = And((TraceEvent data) => !Regex.IsMatch(data.ProviderName.ToLowerInvariant(), providerNameExcludePattern), predicate);
+                    return ret;
+                };
 
 
                 Logger.Log.WriteLine($"Include regex: {providerNameIncludePattern}");
@@ -263,14 +272,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             foreach (string f in filters)
             {
+                string filterSection = f;
                 bool exclude = false;
-                if (f.StartsWith('-'))
+                if (filterSection.StartsWith('-'))
                 {
                     exclude = true;
-                    f.TrimStart('-');
+                    filterSection = filterSection.TrimStart('-');
                 }
 
-                string[] filterParts = f.Split(':', StringSplitOptions.RemoveEmptyEntries);
+                string[] filterParts = filterSection.Split(':', StringSplitOptions.RemoveEmptyEntries);
                 if (filterParts[0].Contains('*') || filterParts.Length == 1)
                 {
                     builder.AddProviderPattern(filterParts[0], exclude);
@@ -357,11 +367,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.Out.WriteLine($"{"Commandline:",headerKeyAlignment}{commandline,headerValAlignment}");
             console.Out.WriteLine($"{"OS:",headerKeyAlignment}{osInformation,headerValAlignment}");
             console.Out.WriteLine($"{"Architecture:",headerKeyAlignment}{archInformation,headerValAlignment}");
-            console.Out.WriteLine($"{"Trace start time:",headerKeyAlignment}{source.SessionStartTime,headerValAlignment}");
+            console.Out.WriteLine($"{"Trace start time:",headerKeyAlignment}{source.SessionStartTime.ToLocalTime(),headerValAlignment}");
             console.Out.WriteLine($"{"Trace Duration:",headerKeyAlignment}{source.SessionDuration,headerValAlignment:c}");
             console.Out.WriteLine($"{"Number of processors:",headerKeyAlignment}{source.NumberOfProcessors,headerValAlignment}");
             console.Out.WriteLine($"{"Events Lost:",headerKeyAlignment}{source.EventsLost,headerValAlignment}");
-            console.Out.WriteLine($"{"Events:",headerKeyAlignment}{total,headerValAlignment}");
+            console.Out.WriteLine($"{"Total Events:",headerKeyAlignment}{total,headerValAlignment}");
+            console.Out.WriteLine($"{"Filtered Events:",headerKeyAlignment}{stats.Values.Sum(),headerValAlignment}");
             console.Out.WriteLine(divider);
             console.Out.WriteLine();
 
