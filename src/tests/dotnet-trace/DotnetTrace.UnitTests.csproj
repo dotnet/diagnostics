@@ -10,4 +10,10 @@
     <ProjectReference Include="..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+   <Content Include="Traces\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+   </Content>
+</ItemGroup>  
+
 </Project>
