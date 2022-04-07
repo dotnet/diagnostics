@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class TopNReportHandler
     {
-        private static readonly List<string> UnwantedMethodNames = new() { "ROOT", "Process"};
+        private static readonly HashSet<string> UnwantedMethodNames = new() { "ROOT", "Process"};
 
         //Create an extension function to help 
         private static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             CallTreeNodeBase node = callTreeNodes[index];
                             index++;
-                            if(!UnwantedMethodNames.Any(node.Name.Contains))
+                            if(!UnwantedMethodNames.Contains(node.Name))
                             {
                                 nodesToReport.Add(node);
                                 count++;
