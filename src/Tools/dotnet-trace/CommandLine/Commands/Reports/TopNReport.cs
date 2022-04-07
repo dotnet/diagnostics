@@ -127,5 +127,5 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     VerboseOption(),
                     ReportCommandHandler.FileNameArgument()
                 };
-}
+    }
 }
