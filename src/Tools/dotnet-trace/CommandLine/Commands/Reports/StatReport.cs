@@ -18,8 +18,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class StatReportHandler
     {
-        private delegate Task<int> StatReportDelegate(CancellationToken ct, IConsole console, string traceFile, string filter, bool verbose);
-        private static async Task<int> StatReport(CancellationToken ct, IConsole console, string traceFile, string filter, bool verbose) 
+        private delegate int StatReportDelegate(CancellationToken ct, IConsole console, string traceFile, string filter, bool verbose);
+        private static int StatReport(CancellationToken ct, IConsole console, string traceFile, string filter, bool verbose) 
         {
             SimpleLogger.Log.MinimumLevel = verbose ? Microsoft.Extensions.Logging.LogLevel.Information : Microsoft.Extensions.Logging.LogLevel.Error;
 
@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (!File.Exists(traceFile))
             {
                 console.Error.WriteLine($"The file '{traceFile}' doesn't exist.");
-                return await Task.FromResult(-1);
+                return -1;
             }
 
             // Parse the filter string
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             (Dictionary<string, int> stats, int total, string commandline, string osInformation, string archInformation) = CollectStats(source, predicate);
 
             PrintStats(console, source, stats, traceFile, total, commandline, osInformation, archInformation);
-            return await Task.FromResult(0);
+            return 0;
         }
 
         public static (Dictionary<string, int>, int, string, string, string) CollectStats(EventPipeEventSource source, Func<TraceEvent, bool> predicate)
