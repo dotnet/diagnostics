@@ -2,19 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -204,316 +200,80 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
-        /// <param name="pdbFileInfo">the pdb record or null</param>
-        /// <param name="flags">module flags</param>
+        /// <param name="pdbFileInfos">the pdb records or null</param>
+        /// <param name="moduleFlags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        internal PEImage GetPEInfo(ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
+        internal PEFile GetPEInfo(ulong address, ulong size, out IEnumerable<PdbFileInfo> pdbFileInfos, ref Module.Flags moduleFlags)
         {
-            PEImage peImage = null;
+            PEFile peFile = null;
+
+            // Start off with no pdb infos and as a native non-PE non-managed module
+            pdbFileInfos = Array.Empty<PdbFileInfo>();
+            moduleFlags &= ~(Module.Flags.IsPEImage | Module.Flags.IsManaged | Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
 
             // None of the modules that lldb (on either Linux/MacOS) provides are PEs
             if (Target.Host.HostType != HostType.Lldb)
             {
-                // First try getting the PE info as load layout (native Windows DLLs and most managed PEs on Linux/MacOS).
-                peImage = GetPEInfo(isVirtual: true, address: address, size: size, pdbFileInfo: ref pdbFileInfo, flags: ref flags);
-                if (peImage == null)
+                // First try getting the PE info as loaded layout (native Windows DLLs and most managed PEs).
+                peFile = GetPEInfo(isVirtual: true, address, size, out List<PdbFileInfo> pdbs, out Module.Flags flags);
+                if (peFile is null || pdbs.Count == 0)
                 {
-                    if (Target.OperatingSystem != OSPlatform.Windows)
+                    // If PE file is invalid or there are no PDB records, try getting the PE info as file layout. No PDB records can mean
+                    // that either the layout is wrong or that there really no PDB records. If file layout doesn't have any pdb records
+                    // either default to loaded layout PEFile.
+                    PEFile peFileLayout = GetPEInfo(isVirtual: false, address, size, out List<PdbFileInfo> pdbsFileLayout, out Module.Flags flagsFileLayout);
+                    if (peFileLayout is not null && (peFile is null || pdbsFileLayout.Count > 0))
                     {
-                        // Then try getting the PE info as file layout (some managed PEs on Linux/MacOS).
-                        peImage = GetPEInfo(isVirtual: false, address: address, size: size, pdbFileInfo: ref pdbFileInfo, flags: ref flags);
+                        flags = flagsFileLayout;
+                        pdbs = pdbsFileLayout;
+                        peFile = peFileLayout;
                     }
                 }
+                if (peFile is not null)
+                {
+                    moduleFlags |= flags;
+                    pdbFileInfos = pdbs;
+                }
             }
-            return peImage;
+
+            return peFile;
         }
 
         /// <summary>
-        /// Returns information about the PE file.
+        /// Returns information about the PE file for a specific layout.
         /// </summary>
         /// <param name="isVirtual">the memory layout of the module</param>
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
-        /// <param name="pdbFileInfo">the pdb record or null</param>
+        /// <param name="pdbs">pdb infos</param>
         /// <param name="flags">module flags</param>
-        /// 
-        /// <returns>PEImage instance or null</returns>
-        private PEImage GetPEInfo(bool isVirtual, ulong address, ulong size, ref PdbFileInfo pdbFileInfo, ref Module.Flags flags)
+        /// <returns>PEFile instance or null</returns>
+        private PEFile GetPEInfo(bool isVirtual, ulong address, ulong size, out List<PdbFileInfo> pdbs, out Module.Flags flags)
         {
-            Stream stream = RawMemoryService.CreateMemoryStream(address, size);
+            pdbs = null;
+            flags = 0;
             try
             {
-                stream.Position = 0;
-                var peImage = new PEImage(stream, leaveOpen: false, isVirtual);
-                if (peImage.IsValid)
+                Stream stream = RawMemoryService.CreateMemoryStream(address, size);
+                PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
+                if (peFile.IsValid())
                 {
                     flags |= Module.Flags.IsPEImage;
-                    flags |= peImage.IsManaged ? Module.Flags.IsManaged : Module.Flags.None;
-                    pdbFileInfo = peImage.DefaultPdb?.ToPdbFileInfo();
-                    flags &= ~(Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
+                    flags |= peFile.IsILImage ? Module.Flags.IsManaged : Module.Flags.None;
+                    pdbs = peFile.Pdbs.Select((pdb) => pdb.ToPdbFileInfo()).ToList();
                     flags |= isVirtual ? Module.Flags.IsLoadedLayout : Module.Flags.IsFileLayout;
-                    return peImage;
+                    return peFile;
                 }
                 else
                 {
                     Trace.TraceError($"GetPEInfo: PE invalid {address:X16} isVirtual {isVirtual}");
                 }
             }
-            catch (Exception ex) when (ex is BadImageFormatException || ex is EndOfStreamException || ex is IOException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
             {
                 Trace.TraceError($"GetPEInfo: {address:X16} isVirtual {isVirtual} exception {ex.Message}");
             }
             return null;
-        }
-
-        /// <summary>
-        /// Finds or downloads the module and creates a PEReader for it.
-        /// </summary>
-        /// <param name="module">module instance</param>
-        /// <returns>reader or null</returns>
-        internal PEReader GetPEReader(IModule module)
-        {
-            if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
-            {
-                Trace.TraceWarning($"GetPEReader: module {module.FileName} has no index timestamp/filesize");
-                return null;
-            }
-
-            SymbolStoreKey moduleKey = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
-            if (moduleKey is null)
-            {
-                Trace.TraceWarning($"GetPEReader: no index generated for module {module.FileName} ");
-                return null;
-            }
-
-            if (File.Exists(module.FileName))
-            {
-                Stream stream = OpenFile(module.FileName);
-                if (stream is not null)
-                {
-                    var peFile = new PEFile(new StreamAddressSpace(stream), false);
-                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, module.FileName);
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                    foreach (SymbolStoreKey key in keys)
-                    {
-                        if (moduleKey.Equals(key))
-                        {
-                            Trace.TraceInformation("GetPEReader: local file match {0}", module.FileName);
-                            return OpenPEReader(module.FileName);
-                        }
-                    }
-                }
-            }
-
-            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = SymbolService.DownloadFile(moduleKey);
-            if (!string.IsNullOrEmpty(downloadFilePath))
-            {
-                Trace.TraceInformation("GetPEReader: downloaded {0}", downloadFilePath);
-                return OpenPEReader(downloadFilePath);
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Opens and returns an PEReader instance from the local file path
-        /// </summary>
-        /// <param name="filePath">PE file to open</param>
-        /// <returns>PEReader instance or null</returns>
-        private PEReader OpenPEReader(string filePath)
-        {
-            Stream stream = OpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    var reader = new PEReader(stream);
-                    if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
-                    {
-                        Trace.TraceError($"OpenPEReader: PEReader invalid headers");
-                        return null;
-                    }
-                    return reader;
-                }
-                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Finds or downloads the ELF module and creates a ELFFile instance for it.
-        /// </summary>
-        /// <param name="module">module instance</param>
-        /// <returns>ELFFile instance or null</returns>
-        internal ELFFile GetELFFile(IModule module)
-        {
-            if (module.BuildId.IsDefaultOrEmpty)
-            {
-                Trace.TraceWarning($"GetELFFile: module {module.FileName} has no build id");
-                return null;
-            }
-
-            SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-            if (moduleKey is null)
-            {
-                Trace.TraceWarning($"GetELFFile: no index generated for module {module.FileName} ");
-                return null;
-            }
-
-            if (File.Exists(module.FileName))
-            {
-                ELFFile elfFile = OpenELFFile(module.FileName);
-                if (elfFile is not null)
-                {
-                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, module.FileName);
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                    foreach (SymbolStoreKey key in keys)
-                    {
-                        if (moduleKey.Equals(key))
-                        {
-                            Trace.TraceInformation("GetELFFile: local file match {0}", module.FileName);
-                            return elfFile;
-                        }
-                    }
-                }
-            }
-
-            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = SymbolService.DownloadFile(moduleKey);
-            if (!string.IsNullOrEmpty(downloadFilePath))
-            {
-                Trace.TraceInformation("GetELFFile: downloaded {0}", downloadFilePath);
-                return OpenELFFile(downloadFilePath);
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Opens and returns an ELFFile instance from the local file path
-        /// </summary>
-        /// <param name="filePath">ELF file to open</param>
-        /// <returns>ELFFile instance or null</returns>
-        private ELFFile OpenELFFile(string filePath)
-        {
-            Stream stream = OpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    ELFFile elfFile = new ELFFile(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false);
-                    if (!elfFile.IsValid())
-                    {
-                        Trace.TraceError($"OpenELFFile: not a valid file");
-                        return null;
-                    }
-                    return elfFile;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenELFFile: exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Finds or downloads the ELF module and creates a MachOFile instance for it.
-        /// </summary>
-        /// <param name="module">module instance</param>
-        /// <returns>MachO file instance or null</returns>
-        internal MachOFile GetMachOFile(IModule module)
-        {
-            if (module.BuildId.IsDefaultOrEmpty)
-            {
-                Trace.TraceWarning($"GetMachOFile: module {module.FileName} has no build id");
-                return null;
-            }
-
-            SymbolStoreKey moduleKey = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-            if (moduleKey is null)
-            {
-                Trace.TraceWarning($"GetMachOFile: no index generated for module {module.FileName} ");
-                return null;
-            }
-
-            if (File.Exists(module.FileName))
-            {
-                MachOFile machOFile = OpenMachOFile(module.FileName);
-                if (machOFile is not null)
-                {
-                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, module.FileName);
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                    foreach (SymbolStoreKey key in keys)
-                    {
-                        if (moduleKey.Equals(key))
-                        {
-                            Trace.TraceInformation("GetMachOFile: local file match {0}", module.FileName);
-                            return machOFile;
-                        }
-                    }
-                }
-            }
-
-            // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = SymbolService.DownloadFile(moduleKey);
-            if (!string.IsNullOrEmpty(downloadFilePath))
-            {
-                Trace.TraceInformation("GetMachOFile: downloaded {0}", downloadFilePath);
-                return OpenMachOFile(downloadFilePath);
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Opens and returns an MachOFile instance from the local file path
-        /// </summary>
-        /// <param name="filePath">MachO file to open</param>
-        /// <returns>MachOFile instance or null</returns>
-        private MachOFile OpenMachOFile(string filePath)
-        {
-            Stream stream = OpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    var machoFile = new MachOFile(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false);
-                    if (!machoFile.IsValid())
-                    {
-                        Trace.TraceError($"OpenMachOFile: not a valid file");
-                        return null;
-                    }
-                    return machoFile;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenMachOFile: exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Opens and returns a file stream
-        /// </summary>
-        /// <param name="filePath">file to open</param>
-        /// <returns>stream or null</returns>
-        private Stream OpenFile(string filePath)
-        {
-            try
-            {
-                return File.OpenRead(filePath);
-            }
-            catch (Exception ex) when (ex is DirectoryNotFoundException || ex is FileNotFoundException || ex is UnauthorizedAccessException || ex is IOException)
-            {
-                Trace.TraceError($"OpenFile: OpenRead exception {ex.Message}");
-                return null;
-            }
         }
 
         /// <summary>
@@ -534,6 +294,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         buildId = elfFile.BuildID;
                     }
+                    else
+                    {
+                        Trace.TraceError($"GetBuildId: invalid ELF file {address:X16}");
+                    }
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
@@ -541,6 +305,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetBuildId: invalid MachO file {address:X16}");
                     }
                 }
             }
@@ -558,7 +326,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>version string or null</returns>
         protected string GetVersionString(ulong address)
         {
-            Stream stream = RawMemoryService.CreateMemoryStream();
+            Stream stream = MemoryService.CreateMemoryStream();
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
@@ -568,7 +336,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
                         {
-                            uint flags = RawMemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
+                            uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
                             if (programHeader.Type == ELFProgramHeaderType.Load &&
                                (flags & (uint)ELFProgramHeaderAttributes.Writable) != 0)
                             {
@@ -580,6 +348,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 }
                             }
                         }
+                        Trace.TraceInformation($"GetVersionString: not found in ELF file {address:X16}");
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetVersionString: invalid ELF file {address:X16}");
                     }
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
@@ -601,6 +374,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 }
                             }
                         }
+                        Trace.TraceInformation($"GetVersionString: not found in MachO file {address:X16}");
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetVersionString: invalid MachO file {address:X16}");
                     }
                 }
                 else
@@ -626,9 +404,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             byte[] buffer = new byte[s_versionString.Length];
 
-            if (_versionCache == null) {
+            if (_versionCache == null)
+            {
                 // We use the possibly mapped memory service to find the version string in case it isn't in the dump.
-                _versionCache = new ReadVirtualCache(Target.Services.GetService<IMemoryService>());
+                _versionCache = new ReadVirtualCache(MemoryService);
             }
             _versionCache.Clear();
 

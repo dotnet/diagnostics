@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace SOS.Hosting
 {
-    internal sealed unsafe class CorDebugDataTargetWrapper : COMCallableIUnknown
+    public sealed unsafe class CorDebugDataTargetWrapper : COMCallableIUnknown
     {
         private static readonly Guid IID_ICorDebugDataTarget = new Guid("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
         private static readonly Guid IID_ICorDebugDataTarget4 = new Guid("E799DC06-E099-4713-BDD9-906D3CC02CF2");
@@ -26,7 +26,7 @@ namespace SOS.Hosting
 
         public IntPtr ICorDebugDataTarget { get; }
 
-        internal CorDebugDataTargetWrapper(IServiceProvider services)
+        public CorDebugDataTargetWrapper(IServiceProvider services)
         {
             Debug.Assert(services != null);
             _target = services.GetService<ITarget>();

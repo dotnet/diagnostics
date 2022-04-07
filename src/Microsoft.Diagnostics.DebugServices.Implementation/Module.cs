@@ -8,12 +8,12 @@ using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
-using FileVersionInfo = Microsoft.Diagnostics.Runtime.Utilities.FileVersionInfo;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -37,23 +37,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IDisposable _onChangeEvent;
         private Flags _flags;
-        private PdbFileInfo _pdbFileInfo;
+        private IEnumerable<PdbFileInfo> _pdbFileInfos;
         protected ImmutableArray<byte> _buildId;
-        private PEImage _peImage;
+        private PEFile _peFile;
 
         public readonly ServiceProvider ServiceProvider;
 
         public Module(ITarget target)
         {
             ServiceProvider = new ServiceProvider();
-            ServiceProvider.AddServiceFactoryWithNoCaching<PEImage>(() => GetPEInfo());
+            ServiceProvider.AddServiceFactoryWithNoCaching<PEFile>(() => GetPEInfo());
 
-            ServiceProvider.AddServiceFactory<PEReader>(() => ModuleService.GetPEReader(this));
+            ServiceProvider.AddServiceFactory<PEReader>(() => Utilities.OpenPEReader(ModuleService.SymbolService.DownloadModule(this)));
             if (target.OperatingSystem == OSPlatform.Linux) {
-                ServiceProvider.AddServiceFactory<ELFFile>(() => ModuleService.GetELFFile(this));
+                ServiceProvider.AddServiceFactory<ELFFile>(() => Utilities.OpenELFFile(ModuleService.SymbolService.DownloadModule(this)));
             }
             if (target.OperatingSystem == OSPlatform.OSX) {
-                ServiceProvider.AddServiceFactory<MachOFile>(() => ModuleService.GetMachOFile(this));
+                ServiceProvider.AddServiceFactory<MachOFile>(() => Utilities.OpenMachOFile(ModuleService.SymbolService.DownloadModule(this)));
             }
             _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() => {
                 ServiceProvider.RemoveService(typeof(MachOFile)); 
@@ -116,35 +116,31 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             get
             {
-                // For Windows targets we can assume that the file layout is always "loaded". The
-                // ImageMappingMemoryService depends on no recursion memory access for this property
-                // i.e. calling GetPEInfo().
-                if (Target.OperatingSystem == OSPlatform.Windows)
+                GetPEInfo();
+                if ((_flags & Flags.IsFileLayout) != 0)
+                {
+                    return true;
+                }
+                if ((_flags & Flags.IsLoadedLayout) != 0)
                 {
                     return false;
                 }
-                else
+                // Native Windows dlls default to file layout
+                if ((_flags & Flags.IsManaged) == 0 && Target.OperatingSystem == OSPlatform.Windows)
                 {
-                    GetPEInfo();
-                    if ((_flags & Flags.IsFileLayout) != 0)
-                    {
-                        return true;
-                    }
-                    if ((_flags & Flags.IsLoadedLayout) != 0)
-                    {
-                        return false;
-                    }
-                    return null;
+                    return false;
                 }
+                return null;
             }
         }
 
-        public PdbFileInfo PdbFileInfo
+        public IEnumerable<PdbFileInfo> PdbFileInfos
         {
             get
             {
                 GetPEInfo();
-                return _pdbFileInfo;
+                Debug.Assert(_pdbFileInfos is not null);
+                return _pdbFileInfos;
             }
         }
 
@@ -229,13 +225,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             VersionData versionData = null;
 
-            PEImage peImage = GetPEInfo();
-            if (peImage != null)
+            PEFile peFile = GetPEInfo();
+            if (peFile != null)
             {
-                FileVersionInfo fileVersionInfo = peImage.GetFileVersionInfo();
-                if (fileVersionInfo != null)
+                try
                 {
-                    versionData = fileVersionInfo.VersionInfo.ToVersionData();
+                    VsFixedFileInfo fileInfo = peFile.VersionInfo;
+                    if (fileInfo != null)
+                    {
+                        versionData = fileInfo.ToVersionData();
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+                {
+                    Trace.TraceError($"GetVersion: exception {ex.Message}");
                 }
             }
             else 
@@ -264,21 +267,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         catch (ArgumentException ex)
                         {
-                            Trace.TraceError($"Module.Version FAILURE: '{versionToParse}' '{versionString}' {ex}");
+                            Trace.TraceError($"Module.GetVersion FAILURE: '{versionToParse}' '{versionString}' {ex}");
                         }
                     }
+                }
+                else
+                {
+                    Trace.TraceInformation($"Module.GetVersion no version string");
                 }
             }
 
             return versionData;
         }
 
-        protected PEImage GetPEInfo()
+        protected PEFile GetPEInfo()
         {
-            if (InitializeValue(Flags.InitializePEInfo)) {
-                _peImage = ModuleService.GetPEInfo(ImageBase, ImageSize, ref _pdbFileInfo, ref _flags);
+            if (InitializeValue(Flags.InitializePEInfo))
+            {
+                _peFile = ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags);
             }
-            return _peImage;
+            return _peFile;
         }
 
         protected bool InitializeValue(Flags flag)

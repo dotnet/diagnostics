@@ -22,9 +22,11 @@ namespace SOS.Hosting
             OSX             = 3,
         }
 
-        public IntPtr ITarget { get; }
-
         public static readonly Guid IID_ITarget = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
+
+        public ServiceWrapper ServiceWrapper { get; } = new ServiceWrapper();
+
+        public IntPtr ITarget { get; }
 
         private readonly IServiceProvider _services;
         private readonly ITarget _target;
@@ -38,6 +40,7 @@ namespace SOS.Hosting
             VTableBuilder builder = AddInterface(IID_ITarget, validate: false);
 
             builder.AddMethod(new GetOperatingSystemDelegate(GetOperatingSystem));
+            builder.AddMethod(new HostWrapper.GetServiceDelegate(ServiceWrapper.GetService));
             builder.AddMethod(new GetTempDirectoryDelegate(GetTempDirectory));
             builder.AddMethod(new GetRuntimeDelegate(GetRuntime));
             builder.AddMethod(new FlushDelegate(Flush));
@@ -50,6 +53,7 @@ namespace SOS.Hosting
         protected override void Destroy()
         {
             Trace.TraceInformation("TargetWrapper.Destroy");
+            ServiceWrapper.Dispose();
             foreach (RuntimeWrapper wrapper in _wrappers.Values)
             {
                 wrapper.Release();

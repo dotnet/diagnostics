@@ -94,7 +94,7 @@ void DisassembleToken(IMetaDataImport *i,
     class MethodSigArgPrettyPrinter
     {
         SigParser sigParser;
-        ULONG cParamTypes = 0;
+        uint32_t cParamTypes = 0;
         bool isField = true;
         IMetaDataImport *pMDImport;
 
@@ -106,7 +106,7 @@ void DisassembleToken(IMetaDataImport *i,
         void HandleReturnType()
         {
             HRESULT hr;
-            ULONG callConv;
+            uint32_t callConv;
             hr = sigParser.GetCallingConvInfo(&callConv);
             if (SUCCEEDED(hr))
             {
@@ -117,7 +117,7 @@ void DisassembleToken(IMetaDataImport *i,
                     // Discard generic arg count
                     if ((callConv & IMAGE_CEE_CS_CALLCONV_GENERIC) == IMAGE_CEE_CS_CALLCONV_GENERIC)
                     {
-                        ULONG unused;
+                        uint32_t unused;
                         hr = sigParser.GetData(&unused);
                     }
                 }

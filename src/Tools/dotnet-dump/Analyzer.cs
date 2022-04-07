@@ -2,30 +2,29 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Repl;
 using Microsoft.Diagnostics.Runtime;
 using SOS.Hosting;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security;
-using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
     public class Analyzer : IHost
     {
         private readonly ServiceProvider _serviceProvider;
-        private readonly ConsoleProvider _consoleProvider;
-        private readonly CommandProcessor _commandProcessor;
+        private readonly ConsoleService _consoleProvider;
+        private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly ContextService _contextService;
         private int _targetIdFactory;
@@ -36,14 +35,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             LoggingCommand.Initialize();
 
             _serviceProvider = new ServiceProvider();
-            _consoleProvider = new ConsoleProvider();
-            _commandProcessor = new CommandProcessor();
+            _consoleProvider = new ConsoleService();
+            _commandService = new CommandService();
             _symbolService = new SymbolService(this);
             _contextService = new ContextService(this);
 
             _serviceProvider.AddService<IHost>(this);
             _serviceProvider.AddService<IConsoleService>(_consoleProvider);
-            _serviceProvider.AddService<ICommandService>(_commandProcessor);
+            _serviceProvider.AddService<ICommandService>(_commandService);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
             _serviceProvider.AddService<IContextService>(_contextService);
             _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
@@ -53,11 +52,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
             });
 
-            _commandProcessor.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
-            _commandProcessor.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
-            _commandProcessor.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
-            _commandProcessor.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandProcessor, services));
-            _commandProcessor.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
+            _commandService.AddCommands(new Assembly[] { typeof(Analyzer).Assembly });
+            _commandService.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
+            _commandService.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
+            _commandService.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandService, services));
+            _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
         }
 
         public Task<int> Analyze(FileInfo dump_path, string[] command)
@@ -112,7 +111,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     foreach (string cmd in command)
                     {
-                        _commandProcessor.Execute(cmd, _contextService.Services);
+                        _commandService.Execute(cmd, _contextService.Services);
                         if (_consoleProvider.Shutdown) {
                             break;
                         }
@@ -125,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
                     _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
-                        _commandProcessor.Execute(commandLine, _contextService.Services);
+                        _commandService.Execute(commandLine, _contextService.Services);
                     });
                 }
             }
@@ -228,7 +227,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             if (assembly is not null)
             {
-                _commandProcessor.AddCommands(assembly);
+                _commandService.AddCommands(assembly);
                 _consoleProvider.WriteLine($"Extension loaded {extensionPath}");
             }
         }

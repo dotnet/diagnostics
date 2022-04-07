@@ -17,9 +17,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             var parser = new CommandLineBuilder()
                 .AddCommand(CollectCommandHandler.CollectCommand())
-                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that traces can be collected"))
+                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that traces can be collected from."))
                 .AddCommand(ListProfilesCommandHandler.ListProfilesCommand())
                 .AddCommand(ConvertCommandHandler.ConvertCommand())
+                .AddCommand(ReportCommandHandler.ReportCommand())
                 .UseDefaults()
                 .Build();
             ParseResult parseResult = parser.Parse(args);

@@ -396,6 +396,8 @@ public:
         PCSTR name,
         PULONG64 offset);
 
+    ULONG STDMETHODCALLTYPE GetOutputWidth();
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------

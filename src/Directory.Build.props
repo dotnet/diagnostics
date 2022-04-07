@@ -3,8 +3,7 @@
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
-    <IsShipping>true</IsShipping>
-    <IsShippingAssembly>false</IsShippingAssembly>
+    <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <DebugSymbols>true</DebugSymbols>

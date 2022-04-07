@@ -33,5 +33,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Cancellation token for current command
         /// </summary>
         CancellationToken CancellationToken { get; set; }
+
+        /// <summary>
+        /// Screen or window width or 0.
+        /// </summary>
+        int WindowWidth { get; }
     }
 }

@@ -1,0 +1,396 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Checked|x64">
+      <Configuration>Checked</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{BD779298-8631-3F5D-AA59-82897E5454A7}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>dbgshim</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\dbgshim\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">dbgshim.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">dbgshim</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\dbgshim\Checked\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">dbgshim.dir\Checked\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">dbgshim</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">false</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\dbgshim\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">dbgshim.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">dbgshim</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\dbgshim\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">dbgshim.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">dbgshim</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src\shared;$(RepoRoot)src\shared\inc;$(RepoRoot)src\shared\pal\prebuilt\inc;$(RepoRoot)src\shared\pal\inc;$(RepoRoot)src\shared\pal\inc\rt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Debug;BUILDENV_DEBUG=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="Debug";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <BrowseInformation>true</BrowseInformation>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG;_DBG;URTBLDENV_FRIENDLY=Debug;BUILDENV_DEBUG=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR=\"Debug\";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Debug;BUILDENV_DEBUG=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="Debug";dbgshim_EXPORTS;;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\inc\Debug\corguids.lib;..\SOS\dbgutil\Debug\dbgutil.lib;..\utilcode\Debug\utilcodestaticnohost.lib;kernel32.lib;libcmtd.lib;libvcruntimed.lib;uuid.lib;user32.lib;advapi32.lib;ole32.lib;oleaut32.lib;WtsApi32.lib;version.lib;psapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /guard:cf /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /SUBSYSTEM:WINDOWS,6.01 /guard:ehcont /CETCOMPAT</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/Debug/dbgshim.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/dbgshim.def</ModuleDefinitionFile>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/Debug/dbgshim.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="Checked";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR=\"Checked\";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="Checked";dbgshim_EXPORTS;;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\inc\Checked\corguids.lib;..\SOS\dbgutil\Checked\dbgutil.lib;..\utilcode\Checked\utilcodestaticnohost.lib;kernel32.lib;libcmtd.lib;libvcruntimed.lib;uuid.lib;user32.lib;advapi32.lib;ole32.lib;oleaut32.lib;WtsApi32.lib;version.lib;psapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /guard:cf /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /SUBSYSTEM:WINDOWS,6.01 /guard:ehcont /CETCOMPAT</AdditionalOptions>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/Checked/dbgshim.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/dbgshim.def</ModuleDefinitionFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/Checked/dbgshim.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>Full</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="Release";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR=\"Release\";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="Release";dbgshim_EXPORTS;;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\inc\Release\corguids.lib;..\SOS\dbgutil\Release\dbgutil.lib;..\utilcode\Release\utilcodestaticnohost.lib;kernel32.lib;libcmt.lib;libvcruntime.lib;uuid.lib;user32.lib;advapi32.lib;ole32.lib;oleaut32.lib;WtsApi32.lib;version.lib;psapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /guard:cf /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /SUBSYSTEM:WINDOWS,6.01 /guard:ehcont /CETCOMPAT /DEFAULTLIB:ucrt.lib</AdditionalOptions>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/Release/dbgshim.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/dbgshim.def</ModuleDefinitionFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/Release/dbgshim.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont /Zm200 /Zc:strictStrings /w34092 /w34121 /w34125 /w34130 /w34132 /w34212 /w34530 /w35038 /w44177 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4065;4100;4127;4189;4200;4201;4245;4291;4456;4457;4458;4733;4838;4960;4961;5105;4603;4627;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel>Precise</FloatingPointModel>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="RelWithDebInfo";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR=\"RelWithDebInfo\";dbgshim_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;HOST_AMD64;HOST_64BIT;HOST_WINDOWS;_FILE_OFFSET_BITS=64;TARGET_AMD64;TARGET_64BIT;TARGET_WINDOWS;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE;;FEATURE_COMINTEROP;FEATURE_HIJACK;FEATURE_NO_HOST;SELF_NO_HOST;_BLD_CLR;FX_VER_INTERNALNAME_STR=dbgshim.dll;CMAKE_INTDIR="RelWithDebInfo";dbgshim_EXPORTS;;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <IncludePaths>$(RepoRoot)artifacts\obj;$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(IncludePaths)</IncludePaths>
+      <AdditionalOptions>%(AdditionalOptions) /guard:ehcont</AdditionalOptions>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir);$(RepoRoot)src;$(RepoRoot)src\pal\prebuilt\inc;$(RepoRoot)src\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\inc\RelWithDebInfo\corguids.lib;..\SOS\dbgutil\RelWithDebInfo\dbgutil.lib;..\utilcode\RelWithDebInfo\utilcodestaticnohost.lib;kernel32.lib;libcmt.lib;libvcruntime.lib;uuid.lib;user32.lib;advapi32.lib;ole32.lib;oleaut32.lib;WtsApi32.lib;version.lib;psapi.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /guard:cf /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /SUBSYSTEM:WINDOWS,6.01 /guard:ehcont /CETCOMPAT</AdditionalOptions>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/RelWithDebInfo/dbgshim.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/dbgshim.def</ModuleDefinitionFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/dbgshim/RelWithDebInfo/dbgshim.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="dbgshim.cpp" />
+    <ClCompile Include="debugshim.cpp" />
+    <None Include="dbgshim.ntdef" />
+    <None Include="dbgshim_unixexports.src" />
+    <None Include="pkg\Directory.Build.props" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-arm.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-arm64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-musl-arm64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-musl-x64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-x64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.osx-arm64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.osx-x64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.props" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x64.proj" />
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x86.proj" />
+    <ResourceCompile Include="dbgshim.rc" />
+    <None Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dbgshim.h" />
+    <ClInclude Include="debugshim.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

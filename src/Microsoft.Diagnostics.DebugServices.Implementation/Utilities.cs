@@ -2,6 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection.PortableExecutable;
+
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
@@ -25,7 +34,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from CLRMD VersionInfo to DebugServices VersionData
+        /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
+        /// </summary>
+        public static VersionData ToVersionData(this VsFixedFileInfo fileInfo)
+        { 
+            return new VersionData(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionRevision, fileInfo.FileVersionBuild);
+        }
+
+        /// <summary>
+        /// Convert from clrmd VersionInfo to DebugServices VersionData
         /// </summary>
         public static VersionData ToVersionData(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
         { 
@@ -33,7 +50,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from DebugServices VersionData to CLRMD VersionInfo
+        /// Convert from DebugServices VersionData to clrmd VersionInfo
         /// </summary>
         public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionData versionData)
         { 
@@ -41,11 +58,148 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Convert from CLRMD PdbInfo to DebugServices PdbFileInfo
+        /// Convert from symstore PEPdbRecord to DebugServices PdbFileInfo
         /// </summary>
-        public static PdbFileInfo ToPdbFileInfo(this Microsoft.Diagnostics.Runtime.PdbInfo pdbInfo)
+        public static PdbFileInfo ToPdbFileInfo(this PEPdbRecord pdbInfo)
         {
-            return new PdbFileInfo(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
+            return new PdbFileInfo(pdbInfo.Path, pdbInfo.Signature, pdbInfo.Age, pdbInfo.IsPortablePDB);
+        }
+
+        /// <summary>
+        /// Opens and returns an PEReader instance from the local file path
+        /// </summary>
+        /// <param name="filePath">PE file to open</param>
+        /// <returns>PEReader instance or null</returns>
+        public static PEReader OpenPEReader(string filePath)
+        {
+            Stream stream = TryOpenFile(filePath);
+            if (stream is not null)
+            {
+                try
+                {
+                    var reader = new PEReader(stream);
+                    if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
+                    {
+                        Trace.TraceError($"OpenPEReader: PEReader invalid headers");
+                        return null;
+                    }
+                    return reader;
+                }
+                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
+                {
+                    Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Disposable ELFFile wrapper
+        /// </summary>
+        public class ELFModule : ELFFile, IDisposable
+        {
+            private readonly Stream _stream;
+
+            public ELFModule(Stream stream) :
+                base(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false)
+            {
+                _stream = stream;
+            }
+
+            public void Dispose() => _stream.Dispose();
+        }
+
+        /// <summary>
+        /// Opens and returns an ELFFile instance from the local file path
+        /// </summary>
+        /// <param name="filePath">ELF file to open</param>
+        /// <returns>ELFFile instance or null</returns>
+        public static ELFModule OpenELFFile(string filePath)
+        {
+            Stream stream = TryOpenFile(filePath);
+            if (stream is not null)
+            {
+                try
+                {
+                    ELFModule elfModule = new (stream);
+                    if (!elfModule.IsValid())
+                    {
+                        Trace.TraceError($"OpenELFFile: not a valid file");
+                        return null;
+                    }
+                    return elfModule;
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+                {
+                    Trace.TraceError($"OpenELFFile: exception {ex.Message}");
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Disposable MachOFile wrapper
+        /// </summary>
+        public class MachOModule : MachOFile, IDisposable
+        {
+            private readonly Stream _stream;
+
+            public MachOModule(Stream stream) :
+                base(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false)
+            {
+                _stream = stream;
+            }
+
+            public void Dispose() => _stream.Dispose();
+        }
+
+        /// <summary>
+        /// Opens and returns an MachOFile instance from the local file path
+        /// </summary>
+        /// <param name="filePath">MachO file to open</param>
+        /// <returns>MachOFile instance or null</returns>
+        public static MachOModule OpenMachOFile(string filePath)
+        {
+            Stream stream = TryOpenFile(filePath);
+            if (stream is not null)
+            {
+                try
+                {
+                    var machoModule = new MachOModule(stream);
+                    if (!machoModule.IsValid())
+                    {
+                        Trace.TraceError($"OpenMachOFile: not a valid file");
+                        return null;
+                    }
+                    return machoModule;
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+                {
+                    Trace.TraceError($"OpenMachOFile: exception {ex.Message}");
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Attempt to open a file stream.
+        /// </summary>
+        /// <param name="path">file path</param>
+        /// <returns>stream or null if doesn't exist or error</returns>
+        public static Stream TryOpenFile(string path)
+        {
+            if (path is not null && File.Exists(path))
+            {
+                try
+                {
+                    return File.OpenRead(path);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is NotSupportedException || ex is IOException)
+                {
+                    Trace.TraceError($"TryOpenFile: {ex.Message}");
+                }
+            }
+            return null;
         }
     }
 }

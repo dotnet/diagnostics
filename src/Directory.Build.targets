@@ -1,21 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
-  <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-  
-  <!-- Work around https://github.com/dotnet/sourcelink/issues/572
+    <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
+    <!-- Work around https://github.com/dotnet/sourcelink/issues/572
   Remove once we build using an SDK that contains https://github.com/dotnet/sdk/pull/10613 -->
   <PropertyGroup>
-    <TargetFrameworkMonikerAssemblyAttributesPath>$([System.IO.Path]::Combine('$(IntermediateOutputPath)','$(TargetFrameworkMoniker).AssemblyAttributes$(DefaultLanguageSourceExtension)'))</TargetFrameworkMonikerAssemblyAttributesPath>
+      <TargetFrameworkMonikerAssemblyAttributesPath>$([System.IO.Path]::Combine('$(IntermediateOutputPath)','$(TargetFrameworkMoniker).AssemblyAttributes$(DefaultLanguageSourceExtension)'))</TargetFrameworkMonikerAssemblyAttributesPath>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)"/>
+      <EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)"/>
   </ItemGroup>
 
   <!-- We need this for the binplacing for testing assets.
   This should be removed at some point as it's brittle (harcodes versions and creates native-managed coupling). -->
   <Target Name="_PublishPackageReferences"
-          AfterTargets="PostBuildEvent"
-          Condition="$(NeedsPublishing) == 'true'"
-          DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
+      AfterTargets="PostBuildEvent"
+      Condition="$(NeedsPublishing) == 'true'"
+      DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
+
+  <Target Name="InvokeInstallRuntimes"
+      Condition="'$(IsUnitTestProject)' == 'true'"
+      BeforeTargets="RunTests;VSTest">
+      <MSBuild Projects="$(RepositoryEngineeringDir)InstallRuntimes.proj" Targets="InstallTestRuntimes" />
+  </Target>
 
 </Project>

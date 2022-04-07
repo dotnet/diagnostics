@@ -4,6 +4,8 @@
 
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -162,22 +164,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             bool isVirtual = module.Layout != ModuleLayout.Flat;
             try
             {
-                ulong size = module.Size;
-                if (size == 0) {
-                    size = 4096;
-                }
-                Stream stream = _memoryService.CreateMemoryStream(module.ImageBase, size);
-                var peImage = new PEImage(stream, leaveOpen: false, isVirtual);
-                if (peImage.IsValid)
+                Stream stream = _memoryService.CreateMemoryStream(module.ImageBase, module.Size > 0 ? module.Size : 4096);
+                PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
+                if (peFile.IsValid())
                 {
-                    metadata = SymbolService.GetMetadata(module.Name, (uint)peImage.IndexTimeStamp, (uint)peImage.IndexFileSize);
+                    metadata = SymbolService.GetMetadata(module.Name, peFile.Timestamp, peFile.SizeOfImage);
                 }
                 else
                 {
                     Trace.TraceError($"GetMetaData: {module.ImageBase:X16} not valid PE");
                 }
             }
-            catch (Exception ex) when (ex is BadImageFormatException || ex is EndOfStreamException || ex is IOException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
             {
                 Trace.TraceError($"GetMetaData: loaded {module.ImageBase:X16} exception {ex.Message}");
             }
