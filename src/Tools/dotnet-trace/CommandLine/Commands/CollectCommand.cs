@@ -21,6 +21,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
+        internal static bool IsQuiet
+        {get; set; }
+        static void ConsoleWriteLine(string str)
+        {
+            if (!IsQuiet)
+            {
+                Console.Out.WriteLine(str);
+            }
+        }
         delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
 
         /// <summary>
@@ -50,6 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
             int ret = ReturnCode.Ok;
+            IsQuiet = showchildio;
 
             try
             {
@@ -98,7 +108,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
-                    Console.Out.WriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
+                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
                     profile = "cpu-sampling";
                 }
 
@@ -129,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
                     if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
                     {
-                        Console.WriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
+                        ConsoleWriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
                     }
                     else
                     {
@@ -258,11 +268,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
                         {
-                            Console.Out.WriteLine($"Process        : {processMainModuleFileName}");
-                            Console.Out.WriteLine($"Output File    : {fs.Name}");
+                            ConsoleWriteLine($"Process        : {processMainModuleFileName}");
+                            ConsoleWriteLine($"Output File    : {fs.Name}");
                             if (shouldStopAfterDuration)
-                                Console.Out.WriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
-                            Console.Out.WriteLine("\n\n");
+                                ConsoleWriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                            ConsoleWriteLine("\n\n");
 
                             var fileInfo = new FileInfo(output.FullName);
                             Task copyTask = session.EventStream.CopyToAsync(fs);
@@ -280,12 +290,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 {
                                     rewriter?.RewriteConsoleLine();
                                     fileInfo.Refresh();
-                                    Console.Out.WriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
-                                    Console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                    ConsoleWriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                    ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                 }
 
                                 if (rundownRequested)
-                                    Console.Out.WriteLine("Stopping the trace. This may take several minutes depending on the application being traced.");
+                                    ConsoleWriteLine("Stopping the trace. This may take several minutes depending on the application being traced.");
                             };
 
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
@@ -318,7 +328,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             shouldExitTask.Wait();
                         }
 
-                        Console.Out.WriteLine($"\nTrace completed.");
+                        ConsoleWriteLine($"\nTrace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
                             TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
@@ -332,7 +342,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (ProcessLauncher.Launcher.HasChildProc && ProcessLauncher.Launcher.ChildProc.WaitForExit(5000))
                         {
                             ret = ProcessLauncher.Launcher.ChildProc.ExitCode;
-                            Console.WriteLine($"Process exited with code '{ret}'.");
+                            ConsoleWriteLine($"Process exited with code '{ret}'.");
                             collectionStopped = true;
                         }
                     }
@@ -371,16 +381,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
-            Console.Out.WriteLine("");
-            Console.Out.Write(String.Format("{0, -40}","Provider Name"));  // +4 is for the tab
-            Console.Out.Write(String.Format("{0, -20}","Keywords"));
-            Console.Out.Write(String.Format("{0, -20}","Level"));
-            Console.Out.Write("Enabled By\r\n");
+            ConsoleWriteLine("");
+            ConsoleWriteLine(String.Format("{0, -40}","Provider Name") + String.Format("{0, -20}","Keywords") +
+                String.Format("{0, -20}","Level") + "Enabled By");  // +4 is for the tab
             foreach (var provider in providers)
             {
-                Console.Out.WriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
+                ConsoleWriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }
-            Console.Out.WriteLine();
+            ConsoleWriteLine("");
         }
         private static string GetProviderDisplayString(EventPipeProvider provider) =>
             String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");

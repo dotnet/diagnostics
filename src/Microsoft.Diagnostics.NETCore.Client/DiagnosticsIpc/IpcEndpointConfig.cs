@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
@@ -18,13 +17,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public enum TransportType
         {
             NamedPipe,
-            UnixDomainSocket
+            UnixDomainSocket,
+#if DIAGNOSTICS_RUNTIME
+            TcpSocket
+#endif
         }
 
         PortType _portType;
 
         TransportType _transportType;
 
+        // For TcpSocket TransportType, the address format will be <hostname_or_ip>:<port>
         public string Address { get; }
 
         public bool IsConnectConfig => _portType == PortType.Connect;
@@ -57,6 +60,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         throw new PlatformNotSupportedException($"{UnixDomainSocketSchema} is not supported on Windows, use {NamedPipeSchema}.");
                     break;
                 }
+#if DIAGNOSTICS_RUNTIME
+                case TransportType.TcpSocket:
+                {
+                    break;
+                }
+#endif
                 default:
                 {
                     throw new NotSupportedException($"{transportType} not supported.");

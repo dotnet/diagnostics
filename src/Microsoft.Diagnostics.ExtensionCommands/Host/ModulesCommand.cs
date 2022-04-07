@@ -25,7 +25,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--segments", Aliases = new string[] { "-s" }, Help = "Displays the module segments.")]
         public bool Segment { get; set; }
 
-
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]
         public string ModuleName { get; set; }
 
@@ -39,7 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (IModule module in ModuleService.EnumerateModules().OrderBy((m) => m.ModuleIndex))
             {
                 totalSize += module.ImageSize;
-                if (regex is null || regex.IsMatch(Path.GetFileName(module.FileName)))
+                if (regex is null || !string.IsNullOrEmpty(module.FileName) && regex.IsMatch(Path.GetFileName(module.FileName)))
                 {
                     if (Verbose)
                     {
@@ -57,7 +56,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         {
                             WriteLine("                     {0}", versionString);
                         }
-                        WriteLine("    PdbInfo:         {0}", module.PdbFileInfo?.ToString() ?? "<none>");
+                        foreach (PdbFileInfo pdbFileInfo in module.PdbFileInfos)
+                        {
+                            WriteLine("    PdbInfo:         {0}", pdbFileInfo);
+                        }
                         WriteLine("    BuildId:         {0}", !module.BuildId.IsDefaultOrEmpty ? string.Concat(module.BuildId.Select((b) => b.ToString("x2"))) : "<none>");
                     }
                     else

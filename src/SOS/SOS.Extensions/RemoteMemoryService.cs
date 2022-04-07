@@ -13,7 +13,7 @@ namespace SOS
 {
     internal unsafe class RemoteMemoryService : CallableCOMWrapper, IRemoteMemoryService
     {
-        internal static Guid IID_IRemoteMemoryService = new Guid("CD6A0F22-8BCF-4297-9366-F440C2D1C781");
+        private static Guid IID_IRemoteMemoryService = new Guid("CD6A0F22-8BCF-4297-9366-F440C2D1C781");
 
         private ref readonly IRemoteMemoryServiceVTable VTable => ref Unsafe.AsRef<IRemoteMemoryServiceVTable>(_vtable);
 
@@ -31,12 +31,12 @@ namespace SOS
         {
             return VTable.FreeVirtual(Self, address, size, typeFlags) == HResult.S_OK;
         }
-    }
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal readonly unsafe struct IRemoteMemoryServiceVTable
-    {
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, uint, out ulong, HResult> AllocVirtual;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, HResult> FreeVirtual;
+        [StructLayout(LayoutKind.Sequential)]
+        private readonly unsafe struct IRemoteMemoryServiceVTable
+        {
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, uint, out ulong, HResult> AllocVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, HResult> FreeVirtual;
+        }
     }
 }

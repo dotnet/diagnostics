@@ -21,9 +21,6 @@
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
 
-  <OSRid>linux</OSRid>
-  <OSRid Condition="$(OS) == OSX">osx</OSRid>
-
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
@@ -59,7 +56,7 @@
            may not have been built with the runtime pointed by RuntimeSymbolsPath
            since we use the arcade provided SDK (in .dotnet) to build them. -->
       <SetSymbolServer>-ms</SetSymbolServer>
-      <BuildProjectRuntime>$(OSRid)-$(TargetArchitecture)</BuildProjectRuntime>
+      <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
     </Option>
     <!--
         Default (prebuilt)
@@ -92,7 +89,7 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <PublishSingleFile>true</PublishSingleFile>
           <SetSymbolServer>-ms</SetSymbolServer>
-          <BuildProjectRuntime>$(OSRid)-$(TargetArchitecture)</BuildProjectRuntime>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
         </Option>
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>

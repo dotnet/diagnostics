@@ -1,5 +1,5 @@
 <!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
-<Project>
+<Project Sdk="Microsoft.Build.NoTargets">
   <!--
      $(BuildArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
      $(PrivateBuildPath) - if non-empty, path to private runtime build to copy/test
@@ -24,6 +24,8 @@
      $(MicrosoftNETCoreApp50Version) $(MicrosoftAspNetCoreApp50Version)  - 5.0 version
      $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
 
+     $(SingleFileRuntimeVersion) - The version of the runtime used to build single-file apps
+
      From Arcade:
 
      $(RepoRoot) - the root of the diagnostics repo
@@ -33,9 +35,10 @@
 
   <PropertyGroup>
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
-    <BuildArch Condition="'$(BuildArch)' == ''">x64</BuildArch>
+    <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
     <PrivateBuildTesting>false</PrivateBuildTesting>
     <PrivateBuildTesting Condition="'$(PrivateBuildPath)' != ''">true</PrivateBuildTesting>
+    <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
     <InternalReleaseTesting>false</InternalReleaseTesting>
     <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
@@ -96,7 +99,6 @@
 -->
 
   <Target Name="InstallTestRuntimes" 
-          BeforeTargets="RunTests"
           DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;CopyPrivateBuild;WriteTestVersionManifest;" />
 
 <!--
@@ -173,6 +175,8 @@
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
   <AspNetCoreVersionLatest>$(AspNetCoreVersionLatest)</AspNetCoreVersionLatest>
+
+  <SingleFileRuntimeVersion>$(SingleFileRuntimeVersion)</SingleFileRuntimeVersion>
 </Configuration>
 ]]>
       </TestConfigFileLines>

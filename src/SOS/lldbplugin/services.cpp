@@ -778,6 +778,40 @@ LLDBServices::ReadVirtual(
 
     read = process.ReadMemory(offset, buffer, bufferSize, error);
 
+    if (!error.Success())
+    {
+        lldb::SBTarget target = process.GetTarget();
+        if (!target.IsValid())
+        {
+            goto exit;
+        }
+
+        int numModules = target.GetNumModules();
+        bool found = false;
+        for (int i = 0; !found && i < numModules; i++)
+        {
+            lldb::SBModule module = target.GetModuleAtIndex(i);
+            int numSections = module.GetNumSections();
+            for (int j = 0; j < numSections; j++)
+            {
+                lldb::SBSection section = module.GetSectionAtIndex(j);
+                lldb::addr_t loadAddr = section.GetLoadAddress(target);
+                lldb::addr_t endAddr = loadAddr + section.GetByteSize();
+                ULONG64 endOffset = offset + bufferSize;
+                if ((loadAddr != LLDB_INVALID_ADDRESS) && (offset >= loadAddr) && (endOffset < endAddr))
+                {
+                    lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
+                    if (sectionData.IsValid())
+                    {
+                        read = sectionData.ReadRawData(error, 0, buffer, bufferSize);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
 exit:
     if (bytesRead)
     {
@@ -910,16 +944,19 @@ LLDBServices::GetNameByOffset(
     if (symbol.IsValid())
     {
         lldb::SBAddress startAddress = symbol.GetStartAddress();
-        disp = address.GetOffset() - startAddress.GetOffset();
-
-        const char *name = symbol.GetName();
-        if (name)
+        if (startAddress.IsValid())
         {
-            if (file.IsValid())
+            disp = address.GetOffset() - startAddress.GetOffset();
+
+            const char *name = symbol.GetName();
+            if (name)
             {
-                str.append("!");
+                if (file.IsValid())
+                {
+                    str.append("!");
+                }
+                str.append(name);
             }
-            str.append(name);
         }
     }
 
@@ -1101,7 +1138,10 @@ LLDBServices::GetModuleByOffset(
                             }
                             if (base)
                             {
-                                *base = baseAddress - section.GetFileOffset();
+#if !defined(__APPLE__)
+                                baseAddress -= section.GetFileOffset();
+#endif
+                                *base = baseAddress;
                             }
                             return S_OK;
                         }
@@ -1242,7 +1282,10 @@ LLDBServices::GetLineByOffset(
         if (symbol.IsValid())
         {
             lldb::SBAddress startAddress = symbol.GetStartAddress();
-            disp = address.GetOffset() - startAddress.GetOffset();
+            if (startAddress.IsValid())
+            {
+                disp = address.GetOffset() - startAddress.GetOffset();
+            }
         }
     }
 
@@ -1328,16 +1371,22 @@ LLDBServices::GetModuleBase(
             lldb::addr_t baseAddress = section.GetLoadAddress(target);
             if (baseAddress != LLDB_INVALID_ADDRESS)
             {
-                return baseAddress - section.GetFileOffset();
+#if !defined(__APPLE__)
+                baseAddress -= section.GetFileOffset();
+#endif
+                return baseAddress;
             }
         }
     }
 
     lldb::SBAddress headerAddress = module.GetObjectFileHeaderAddress();
-    lldb::addr_t moduleAddress = headerAddress.GetLoadAddress(target);
-    if (moduleAddress != 0)
+    if (headerAddress.IsValid())
     {
-        return moduleAddress;
+        lldb::addr_t moduleAddress = headerAddress.GetLoadAddress(target);
+        if (moduleAddress != 0)
+        {
+            return moduleAddress;
+        }
     }
 
     return UINT64_MAX;
@@ -2265,21 +2314,18 @@ LLDBServices::GetOffsetBySymbol(
         hr = E_INVALIDARG;
         goto exit;
     }
-
     target = m_debugger.GetSelectedTarget();
     if (!target.IsValid())
     {
         hr = E_FAIL;
         goto exit;
     }
-
     module = target.GetModuleAtIndex(moduleIndex);
     if (!module.IsValid())
     {
         hr = E_INVALIDARG;
         goto exit;
     }
-
     symbol = module.FindSymbol(name);
     if (!symbol.IsValid())
     {
@@ -2287,9 +2333,20 @@ LLDBServices::GetOffsetBySymbol(
         goto exit;
     }
     startAddress = symbol.GetStartAddress();
+    if (!startAddress.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
     *offset = startAddress.GetLoadAddress(target);
 exit:
     return hr;
+}
+
+ULONG
+LLDBServices::GetOutputWidth()
+{
+    return m_debugger.GetTerminalWidth();
 }
 
 //----------------------------------------------------------------------------
@@ -2545,9 +2602,15 @@ LLDBServices::GetVersionStringFromSection(lldb::SBTarget& target, lldb::SBSectio
         else if (sectionType == lldb::eSectionTypeData)
         {
             lldb::addr_t address = section.GetLoadAddress(target);
-            uint32_t size = section.GetByteSize();
-            if (SearchVersionString(address, size, versionBuffer, VersionBufferSize)) {
-                return true;
+            if (address != LLDB_INVALID_ADDRESS)
+            {
+#if !defined(__APPLE__)
+                address -= section.GetFileOffset();
+#endif
+                uint32_t size = section.GetByteSize();
+                if (SearchVersionString(address, size, versionBuffer, VersionBufferSize)) {
+                    return true;
+                }
             }
         }
     }

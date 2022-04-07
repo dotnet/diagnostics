@@ -1,5 +1,6 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Interop;
+using System;
 using System.Threading;
 
 namespace SOS.Extensions
@@ -22,6 +23,8 @@ namespace SOS.Extensions
         public void WriteError(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
 
         public CancellationToken CancellationToken { get; set; }
+
+        int IConsoleService.WindowWidth => _debuggerServices.GetOutputWidth();
 
         #endregion
     }

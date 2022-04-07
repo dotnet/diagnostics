@@ -297,10 +297,11 @@ OPTIONS
 
 COMMANDS
 
-    collect         Collects a diagnostic trace from a currently running process
+    collect         Collects a diagnostic trace from a currently running process.
     ps              Lists dotnet processes that can be attached to.
     list-profiles   Lists pre-built tracing profiles with a description of what providers and filters are in each profile.
-    convert         Converts traces to alternate formats for use with alternate trace analysis tools
+    convert         Converts traces to alternate formats for use with alternate trace analysis tools.
+    report          Generate a report into stdout from a previously generated trace.
 
 COLLECT
 
@@ -397,6 +398,47 @@ CONVERT
       > dotnet-trace convert trace.nettrace -f speedscope
       Writing:       ./trace.speedscope.json
       Conversion complete
+
+REPORT
+
+    dotnet-trace report [-h|--help]
+
+                        <trace_file_path>
+
+    Generate report into stdout from a previously generated trace.
+
+    -h, --help
+        Show command line help, including available report types  
+
+    <trace_file_path>
+        The path to the trace file that will be read to generate the report.
+
+        TOPN
+
+        dotnet-trace report topN [-h|--help]
+                                 [-n|--number]
+                                 [--inclusive]
+                                 <trace_file_path>
+        Generate a report containing the top N methods that were on the stack the longest.
+
+        -h, --help
+            Show command line help;
+
+        -n, --number
+            Number of top methods(methods that have inclusively/exclusively been on the stack the longest) to display in the report
+
+        --inclusive
+            Output the top n methods based on inclusive time. If not specified, exclusive time is used by default.
+
+        Examples:
+        > dotnet-trace report topN -n 3 --inclusive ./mytrace.nettrace
+
+        Top 3 Functions (Inclusive):
+        Function                                   Inclusive       Exclusive
+        1. FirstFunction(...) <IL offset etc.>     75% (430,842)   22% (103,436)
+        2. ...
+        3. ...
+
 
 ### dotnet-stack
 

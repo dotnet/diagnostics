@@ -1,5 +1,4 @@
-﻿using Microsoft.Diagnostics.Repl;
-using Microsoft.Diagnostics.Runtime;
+﻿using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
@@ -25,9 +24,21 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             _configurations ??= TestRunConfiguration.Instance.Configurations
                 .Where((config) => config.AllSettings.ContainsKey("DumpFile"))
-                .Select((config) => TestHost.CreateHost(config))
+                .Select((config) => CreateHost(config))
                 .Select((host) => new[] { host }).ToImmutableArray();
             return _configurations;
+        }
+
+        private static TestHost CreateHost(TestConfiguration config)
+        {
+            if (config.IsTestDbgEng())
+            {
+                return new TestDbgEng(config);
+            }
+            else
+            {
+                return new TestDump(config);
+            }
         }
 
         ITestOutputHelper Output { get; set; }
@@ -35,12 +46,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public DebugServicesTests(ITestOutputHelper output)
         {
             Output = output;
-
-            if (Trace.Listeners[ListenerName] == null) 
-            {
-                Trace.Listeners.Add(new LoggingListener(output));
-                Trace.AutoFlush = true;
-            }
+            LoggingListener.EnableListener(output, ListenerName);
         }
 
         void IDisposable.Dispose() => Trace.Listeners.Remove(ListenerName);
@@ -65,10 +71,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ModuleTests(TestHost host)
         {
-            if (OS.Kind == OSKind.Windows)
-            {
-                throw new SkipTestException("Test unstable on Windows. Issue: https://github.com/dotnet/diagnostics/issues/2709");
-            }
             var moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
 
@@ -241,10 +243,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void RuntimeTests(TestHost host)
         {
-            if (OS.Kind == OSKind.Windows)
-            {
-                throw new SkipTestException("Test unstable on Windows. Issue: https://github.com/dotnet/diagnostics/issues/2709");
-            }
             // The current Linux test assets are not alpine/musl
             if (OS.IsAlpine)
             {
@@ -279,29 +277,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         Assert.NotEmpty(clrRuntime.EnumerateHandles());
                     }
                 }
-            }
-        }
-
-        class LoggingListener : TraceListener
-        {
-            private readonly CharToLineConverter _converter;
-
-            internal LoggingListener(ITestOutputHelper output)
-                : base(ListenerName)
-            {
-                _converter = new CharToLineConverter((text) => {
-                    output.WriteLine(text);
-                });
-            }
-
-            public override void Write(string message)
-            {
-                _converter.Input(message);
-            }
-
-            public override void WriteLine(string message)
-            {
-                _converter.Input(message + Environment.NewLine);
             }
         }
     }

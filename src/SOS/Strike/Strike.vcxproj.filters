@@ -45,7 +45,6 @@
     <ClInclude Include="sos_stacktrace.h" />
     <ClInclude Include="strike.h" />
     <ClInclude Include="util.h" />
-    <ClInclude Include="UtilCode.h" />
     <ClInclude Include="WatchCmd.h" />
     <ClInclude Include="xplat\dbgeng.h">
       <Filter>xplat</Filter>

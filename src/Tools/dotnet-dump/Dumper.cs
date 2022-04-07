@@ -92,10 +92,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         return 0;
                     }
 
-                    // Get the process
-                    Process process = Process.GetProcessById(processId);
-
-                    Windows.CollectDump(process, output, type);
+                    Windows.CollectDump(processId, output, type);
                 }
                 else
                 {
@@ -133,6 +130,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             catch (Exception ex) when 
                 (ex is FileNotFoundException || 
+                 ex is ArgumentException || 
                  ex is DirectoryNotFoundException || 
                  ex is UnauthorizedAccessException || 
                  ex is PlatformNotSupportedException || 

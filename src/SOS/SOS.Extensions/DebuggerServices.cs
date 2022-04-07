@@ -26,9 +26,9 @@ namespace SOS
             OSX = 3,
         };
 
-        internal static Guid IID_IDebuggerServices = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
+        private static Guid IID_IDebuggerServices = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
-        private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable >(_vtable);
+        private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 
         private readonly HostType _hostType;
 
@@ -166,7 +166,8 @@ namespace SOS
             fixed (byte* versionBufferPtr = versionBuffer)
             {
                 HResult hr = VTable.GetModuleVersionInformation(Self, (uint)index, 0, getVersionInfoPtr, versionBufferPtr, (uint)versionBufferSize, null);
-                if (hr == HResult.S_OK) {
+                if (hr == HResult.S_OK)
+                {
                     fileInfo = *((VS_FIXEDFILEINFO*)versionBufferPtr);
                 }
                 return hr;
@@ -184,7 +185,8 @@ namespace SOS
             fixed (byte* versionBufferPtr = versionBuffer)
             {
                 int hr = VTable.GetModuleVersionInformation(Self, (uint)index, 0, getVersionStringPtr, versionBufferPtr, (uint)versionBuffer.Length, null);
-                if (hr == HResult.S_OK) {
+                if (hr == HResult.S_OK)
+                {
                     version = Marshal.PtrToStringAnsi(new IntPtr(versionBufferPtr));
                 }
                 return hr;
@@ -298,7 +300,8 @@ namespace SOS
                             if (_hostType == HostType.DbgEng)
                             {
                                 int index = symbol.IndexOf('!');
-                                if (index != -1) {
+                                if (index != -1)
+                                {
                                     symbol = symbol.Remove(0, index + 1);
                                 }
                             }
@@ -323,32 +326,35 @@ namespace SOS
                 return VTable.GetOffsetBySymbol(Self, moduleIndex, symbolPtr, out address);
             }
         }
-    }
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal readonly unsafe struct IDebuggerServicesVTable
-    {
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out DebuggerServices.OperatingSystem, HResult> GetOperatingSystem;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, HResult> GetDebuggeeType;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, HResult> GetExecutingProcessorType;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, HResult> AddCommand;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputString;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, HResult> ReadVirtual;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, HResult> WriteVirtual;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, HResult> GetNumberModules;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, uint, out uint, byte*, uint, uint*, byte*, uint, uint*, HResult> GetModuleNames;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, out ulong, out uint, out uint, HResult> GetModuleInfo;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, HResult> GetModuleVersionInformation; 
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetNumberThreads;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint*, uint*, HResult> GetThreadIdsByIndex;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint, byte*, HResult> GetThreadContextBySystemId;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetCurrentProcessSystemId;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetCurrentThreadSystemId;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, HResult> SetCurrentThreadSystemId;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, HResult> GetThreadTeb;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, byte*, HResult> VirtualUnwind;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, HResult> GetSymbolPath;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, HResult> GetSymbolByOffset;
-        public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, HResult> GetOffsetBySymbol;
+        public int GetOutputWidth() => (int)VTable.GetOutputWidth(Self);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private readonly unsafe struct IDebuggerServicesVTable
+        {
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DebuggerServices.OperatingSystem, HResult> GetOperatingSystem;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, HResult> GetDebuggeeType;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, HResult> GetExecutingProcessorType;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, HResult> AddCommand;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputString;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, HResult> ReadVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, HResult> WriteVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, HResult> GetNumberModules;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, uint, out uint, byte*, uint, uint*, byte*, uint, uint*, HResult> GetModuleNames;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, out ulong, out uint, out uint, HResult> GetModuleInfo;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, HResult> GetModuleVersionInformation;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetNumberThreads;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint*, uint*, HResult> GetThreadIdsByIndex;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint, byte*, HResult> GetThreadContextBySystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetCurrentProcessSystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetCurrentThreadSystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, HResult> SetCurrentThreadSystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, HResult> GetThreadTeb;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, byte*, HResult> VirtualUnwind;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, HResult> GetSymbolPath;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, HResult> GetSymbolByOffset;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, HResult> GetOffsetBySymbol;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint> GetOutputWidth;
+        }
     }
 }

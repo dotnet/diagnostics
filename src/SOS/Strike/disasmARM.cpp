@@ -2,21 +2,23 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-// ==++==
-// 
- 
-// 
-// ==--==
-
+#undef _TARGET_X86_
 #ifndef _TARGET_ARM_
 #define _TARGET_ARM_
 #endif
 
+#undef TARGET_X86
+#ifndef TARGET_ARM
+#define TARGET_ARM
+#endif
+
+#ifndef FEATURE_EH_FUNCLETS
+#define FEATURE_EH_FUNCLETS
+#endif
 
 #include "strike.h"
 #include "util.h"
 #include <dbghelp.h>
-
 
 #include "disasm.h"
 
@@ -26,11 +28,10 @@
 
 namespace ARMGCDump
 {
-#undef _TARGET_X86_
-#define WIN64EXCEPTIONS
+#undef TARGET_X86
 #undef LIMITED_METHOD_CONTRACT
-#define LIMITED_METHOD_DAC_CONTRACT
-#define SUPPORTS_DAC
+#define LIMITED_METHOD_DAC_CONTRACT ((void)0)
+#define SUPPORTS_DAC ((void)0)
 #define LF_GCROOTS
 #define LL_INFO1000
 #define LOG(x)

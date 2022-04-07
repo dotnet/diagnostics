@@ -224,7 +224,6 @@ EXPORTS
     VerifyStackTrace
     WatsonBuckets
 
-#ifdef FEATURE_CORESYSTEM
 // Only documented for Apollo internal usage
     Watch
     watch=Watch
@@ -243,7 +242,6 @@ EXPORTS
     getCodeTypeFlags=GetCodeTypeFlags
     TraceToCode
     tracetocode=TraceToCode
-#endif
 
     SOSInitializeByHost
     SOSUninitializeByHost

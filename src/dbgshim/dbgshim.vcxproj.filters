@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="dbgshim.cpp" />
+    <ClCompile Include="debugshim.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt" />
+    <None Include="pkg\Directory.Build.props">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-arm.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-arm64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-musl-arm64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-musl-x64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.linux-x64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.osx-arm64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.osx-x64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.props">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x64.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x86.proj">
+      <Filter>pkg</Filter>
+    </None>
+    <None Include="dbgshim.ntdef" />
+    <None Include="dbgshim_unixexports.src" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="dbgshim.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="pkg">
+      <UniqueIdentifier>{ac4ed0ef-d259-4eed-8152-b4c1db4df94c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="debugshim.h" />
+    <ClInclude Include="dbgshim.h" />
+  </ItemGroup>
+</Project>

@@ -13,7 +13,21 @@ if (CORECLR_SET_RPATH)
   endif(CLR_CMAKE_HOST_OSX)
 endif (CORECLR_SET_RPATH)
 
+if(CLR_CMAKE_TARGET_ARCH_AMD64)
+    message(STATUS "CLR_CMAKE_TARGET_ARCH_AMD64")
+endif()
+if(CLR_CMAKE_TARGET_ARCH_I386)
+    message(STATUS "CLR_CMAKE_TARGET_ARCH_I386")
+endif()
+if(CLR_CMAKE_TARGET_ARCH_ARM)
+    message(STATUS "CLR_CMAKE_TARGET_ARCH_ARM")
+endif()
+if(CLR_CMAKE_TARGET_ARCH_ARM64)
+    message(STATUS "CLR_CMAKE_TARGET_ARCH_ARM64")
+endif()
+
 if(CLR_CMAKE_HOST_ARCH_AMD64)
+  message(STATUS "CLR_CMAKE_HOST_ARCH_AMD64")
   add_definitions(-DSOS_TARGET_AMD64=1)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
@@ -25,18 +39,22 @@ if(CLR_CMAKE_HOST_ARCH_AMD64)
   add_definitions(-D_TARGET_AMD64_)
   add_definitions(-DDBG_TARGET_AMD64)
 elseif(CLR_CMAKE_HOST_ARCH_I386)
+  message(STATUS "CLR_CMAKE_HOST_ARCH_I386")
   add_definitions(-DSOS_TARGET_X86=1)
   add_definitions(-D_TARGET_X86_=1)
+  add_definitions(-DTARGET_X86)
   add_definitions(-DDBG_TARGET_32BIT)
   if(WIN32)
     add_definitions(-DSOS_TARGET_ARM=1)
   endif(WIN32)
 elseif(CLR_CMAKE_HOST_ARCH_ARM)
+  message(STATUS "CLR_CMAKE_HOST_ARCH_ARM")
   add_definitions(-DSOS_TARGET_ARM=1)
   add_definitions(-D_TARGET_WIN32_=1)
   add_definitions(-D_TARGET_ARM_=1)
   add_definitions(-DDBG_TARGET_32BIT)
 elseif(CLR_CMAKE_HOST_ARCH_ARM64)
+  message(STATUS "CLR_CMAKE_HOST_ARCH_ARM64")
   add_definitions(-DSOS_TARGET_ARM64=1)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
@@ -52,7 +70,7 @@ add_definitions(-DSTRIKE)
 
 include_directories(${ROOT_DIR}/src/SOS/inc)
 include_directories(${ROOT_DIR}/src/SOS/extensions)
-include_directories(${ROOT_DIR}/src/SOS/gcdump)
+include_directories(${CLR_SHARED_DIR}/gcdump)
 include_directories(platform)
 
 if(WIN32)
@@ -127,8 +145,6 @@ else(WIN32)
 
   include_directories(BEFORE xplat)
 
-  add_compile_options(-fPIC)
-
   set(SOS_SOURCES
     disasm.cpp
     eeheap.cpp
@@ -155,19 +171,10 @@ else(WIN32)
 
   if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD OR CMAKE_SYSTEM_NAME STREQUAL NetBSD)
       set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Xlinker -Bsymbolic -Xlinker -Bsymbolic-functions")
-
-      # These options are used to force every object to be included even if it's unused.
-      set(START_WHOLE_ARCHIVE -Wl,--whole-archive)
-      set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
-
       set(EXPORTS_LINKER_OPTION -Wl,--version-script=${EXPORTS_FILE})
   endif(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD OR CMAKE_SYSTEM_NAME STREQUAL NetBSD)
 
   if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-      # These options are used to force every object to be included even if it's unused.
-      set(START_WHOLE_ARCHIVE -force_load)
-      set(END_WHOLE_ARCHIVE )
-
       set(EXPORTS_LINKER_OPTION -Wl,-exported_symbols_list,${EXPORTS_FILE})
   endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
@@ -175,10 +182,8 @@ else(WIN32)
     extensions
     corguids
     dbgutil
-    ${START_WHOLE_ARCHIVE} # force all PAL objects to be included so all exports are available
-    coreclrpal
-    ${END_WHOLE_ARCHIVE}
     palrt
+    coreclrpal
   )
 
 endif(WIN32)

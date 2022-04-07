@@ -12,9 +12,9 @@
 #include "disasm.h"
 #include <dbghelp.h>
 
-#include "../../../inc/corhdr.h"
-#include "../../../inc/cor.h"
-#include "../../../inc/dacprivate.h"
+#include "corhdr.h"
+#include "cor.h"
+#include "dacprivate.h"
 
 
 #if defined(SOS_TARGET_X86) && defined(SOS_TARGET_AMD64)
@@ -405,7 +405,7 @@ void HandleCall(TADDR callee, Register *reg)
     ctx.Rip = callee;
 
     CLRDATA_ADDRESS ip = 0, md = 0;
-    if (S_OK == g_sos->GetJumpThunkTarget(&ctx, &ip, &md))
+    if (S_OK == g_sos->GetJumpThunkTarget((T_CONTEXT*)&ctx, &ip, &md))
     {
         if (md)
         {
@@ -829,7 +829,7 @@ eTargetType GetFinalTarget(TADDR callee, TADDR* finalMDorIP)
     ctx.Rip = callee;
 
     CLRDATA_ADDRESS ip = 0, md = 0;
-    if (S_OK == g_sos->GetJumpThunkTarget(&ctx, &ip, &md))
+    if (S_OK == g_sos->GetJumpThunkTarget((T_CONTEXT*)&ctx, &ip, &md))
     {
         if (md)
         {

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <IsShipping>false</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+    <PreReleaseVersionLabel></PreReleaseVersionLabel>
+    <VersionPrefix></VersionPrefix>
+    <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <NoBuild>true</NoBuild>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NuspecProperties></NuspecProperties>
+    <NuspecBasePath>$(USERPROFILE)\.nuget\packages\</NuspecBasePath>
+  </PropertyGroup>
+</Project>

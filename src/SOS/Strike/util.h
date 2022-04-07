@@ -5,7 +5,7 @@
 #ifndef __util_h__
 #define __util_h__
 
-#define LIMITED_METHOD_CONTRACT
+#define LIMITED_METHOD_CONTRACT ((void)0)
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
@@ -16,7 +16,6 @@ inline void RestoreSOToleranceState() {}
 #include <corsym.h>
 #include <clrdata.h>
 #include <palclr.h>
-#include <metahost.h>
 #include <new>
 #include <functional>
 
@@ -41,6 +40,10 @@ inline void RestoreSOToleranceState() {}
 #include "targetimpl.h"
 #include "runtimeimpl.h"
 #include "symbols.h"
+
+#ifndef COUNTOF
+#define COUNTOF(a) (sizeof(a) / sizeof(*a))
+#endif
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
@@ -99,47 +102,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #endif
 
 // PREFIX macros - Begin
-
-// SOS does not have support for Contracts.  Therefore we needed to duplicate
-// some of the PREFIX infrastructure from inc\check.h in here.
-
-// Issue - PREFast_:510  v4.51 does not support __assume(0)
-#if (defined(_MSC_VER) && !defined(_PREFAST_)) || defined(_PREFIX_)
-#if defined(_AMD64_)
-// Empty methods that consist of UNREACHABLE() result in a zero-sized declspec(noreturn) method
-// which causes the pdb file to make the next method declspec(noreturn) as well, thus breaking BBT
-// Remove when we get a VC compiler that fixes VSW 449170
-# define __UNREACHABLE() DebugBreak(); __assume(0);
-#else
-# define __UNREACHABLE() __assume(0)
-#endif
-#else
-#define __UNREACHABLE()  do { } while(true)
-#endif
-
-
-#if defined(_PREFAST_) || defined(_PREFIX_)
-#define COMPILER_ASSUME_MSG(_condition, _message) if (!(_condition)) __UNREACHABLE();
-#else
-
-#if defined(DACCESS_COMPILE)
-#define COMPILER_ASSUME_MSG(_condition, _message) do { } while (0)
-#else
-
-#if defined(_DEBUG)
-#define COMPILER_ASSUME_MSG(_condition, _message) \
-    ASSERT_CHECK(_condition, _message, "Compiler optimization assumption invalid")
-#else
-#define COMPILER_ASSUME_MSG(_condition, _message) __assume(_condition)
-#endif // _DEBUG
-
-#endif // DACCESS_COMPILE
-
-#endif // _PREFAST_ || _PREFIX_
-
-#define PREFIX_ASSUME(_condition) \
-    COMPILER_ASSUME_MSG(_condition, "")
-
+#define PREFIX_ASSUME(_condition)
 // PREFIX macros - End
 
 class MethodTable;
@@ -577,28 +540,29 @@ namespace Output
     * of addr.                                                             *
     *                                                                      *
     * Params:                                                              *
+    *   disp - the display address of the object                           *
     *   mt - the method table of the ValueClass                            *
     *   addr - the address of the ValueClass                               *
     *   type - the format type to use to output this object                *
     *   fill - whether or not to pad the hex value with zeros              *
     *                                                                      *
     \**********************************************************************/
-    CachedString BuildVCValue(CLRDATA_ADDRESS mt, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
-
+    CachedString BuildVCValue(CLRDATA_ADDRESS disp, CLRDATA_ADDRESS mt, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
 
     /**********************************************************************\
-    * This function builds a DML string for an object.  If DML is enabled, *
+    * This function builds a DML string with a display name.  If DML is enabled,  *
     * this function returns a DML string based on the format type.         *
     * Otherwise this returns a string containing only the hex value of     *
     * addr.                                                                *
     *                                                                      *
     * Params:                                                              *
+    *   disp - the display address of the object                           *
     *   addr - the address of the object                                   *
     *   type - the format type to use to output this object                *
     *   fill - whether or not to pad the hex value with zeros              *
     *                                                                      *
     \**********************************************************************/
-    CachedString BuildHexValue(CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
+    CachedString BuildHexValue(CLRDATA_ADDRESS disp, CLRDATA_ADDRESS addr, FormatType type, bool fill = true);
 
     /**********************************************************************\
     * This function builds a DML string for an object.  If DML is enabled, *
@@ -671,25 +635,27 @@ inline void DecrementIndent()  { if (Output::g_Indent > 0) Output::g_Indent--; }
 inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 
 // DML Generation Methods
-#define DMLListNearObj(addr) Output::BuildHexValue(addr, Output::DML_ListNearObj).GetPtr()
-#define DMLDumpHeapMT(addr) Output::BuildHexValue(addr, Output::DML_DumpHeapMT).GetPtr()
-#define DMLMethodTable(addr) Output::BuildHexValue(addr, Output::DML_MethodTable).GetPtr()
-#define DMLMethodDesc(addr) Output::BuildHexValue(addr, Output::DML_MethodDesc).GetPtr()
-#define DMLClass(addr) Output::BuildHexValue(addr, Output::DML_EEClass).GetPtr()
-#define DMLModule(addr) Output::BuildHexValue(addr, Output::DML_Module).GetPtr()
-#define DMLIP(ip) Output::BuildHexValue(ip, Output::DML_IP).GetPtr()
-#define DMLObject(addr) Output::BuildHexValue(addr, Output::DML_Object).GetPtr()
-#define DMLDomain(addr) Output::BuildHexValue(addr, Output::DML_Domain).GetPtr()
-#define DMLAssembly(addr) Output::BuildHexValue(addr, Output::DML_Assembly).GetPtr()
-#define DMLThreadID(id) Output::BuildHexValue(id, Output::DML_ThreadID, false).GetPtr()
-#define DMLValueClass(mt, addr) Output::BuildVCValue(mt, addr, Output::DML_ValueClass).GetPtr()
-#define DMLRCWrapper(addr) Output::BuildHexValue(addr, Output::DML_RCWrapper).GetPtr()
-#define DMLCCWrapper(addr) Output::BuildHexValue(addr, Output::DML_CCWrapper).GetPtr()
+#define DMLListNearObj(addr) Output::BuildHexValue(addr, addr, Output::DML_ListNearObj).GetPtr()
+#define DMLDumpHeapMT(addr) Output::BuildHexValue(addr, addr, Output::DML_DumpHeapMT).GetPtr()
+#define DMLMethodTable(addr) Output::BuildHexValue(addr, addr, Output::DML_MethodTable).GetPtr()
+#define DMLMethodDesc(addr) Output::BuildHexValue(addr, addr, Output::DML_MethodDesc).GetPtr()
+#define DMLClass(addr) Output::BuildHexValue(addr, addr, Output::DML_EEClass).GetPtr()
+#define DMLModule(addr) Output::BuildHexValue(addr, addr, Output::DML_Module).GetPtr()
+#define DMLIP(ip) Output::BuildHexValue(ip, ip, Output::DML_IP).GetPtr()
+#define DMLObject(addr) Output::BuildHexValue(addr, addr, Output::DML_Object).GetPtr()
+#define DMLByRefObject(byref, addr) Output::BuildHexValue(byref, addr, Output::DML_Object).GetPtr()
+#define DMLDomain(addr) Output::BuildHexValue(addr, addr, Output::DML_Domain).GetPtr()
+#define DMLAssembly(addr) Output::BuildHexValue(addr, addr, Output::DML_Assembly).GetPtr()
+#define DMLThreadID(id) Output::BuildHexValue(id, id, Output::DML_ThreadID, false).GetPtr()
+#define DMLValueClass(mt, addr) Output::BuildVCValue(addr, mt, addr, Output::DML_ValueClass).GetPtr()
+#define DMLByRefValueClass(byref, mt, addr) Output::BuildVCValue(byref, mt, addr, Output::DML_ValueClass).GetPtr()
+#define DMLRCWrapper(addr) Output::BuildHexValue(addr, addr, Output::DML_RCWrapper).GetPtr()
+#define DMLCCWrapper(addr) Output::BuildHexValue(addr, addr, Output::DML_CCWrapper).GetPtr()
 #define DMLManagedVar(expansionName,frame,simpleName) Output::BuildManagedVarValue(expansionName, frame, simpleName, Output::DML_ManagedVar).GetPtr()
-#define DMLAsync(addr) Output::BuildHexValue(addr, Output::DML_Async).GetPtr()
-#define DMLIL(addr) Output::BuildHexValue(addr, Output::DML_IL).GetPtr()
-#define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperRCW).GetPtr()
-#define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, Output::DML_ComWrapperCCW).GetPtr()
+#define DMLAsync(addr) Output::BuildHexValue(addr, addr, Output::DML_Async).GetPtr()
+#define DMLIL(addr) Output::BuildHexValue(addr, addr, Output::DML_IL).GetPtr()
+#define DMLComWrapperRCW(addr) Output::BuildHexValue(addr, addr, Output::DML_ComWrapperRCW).GetPtr()
+#define DMLComWrapperCCW(addr) Output::BuildHexValue(addr, addr, Output::DML_ComWrapperCCW).GetPtr()
 #define DMLTaggedMemory(addr, len) Output::BuildHexValueWithLength(addr, len, Output::DML_TaggedMemory).GetPtr()
 
 bool IsDMLEnabled();
@@ -3310,4 +3276,16 @@ private:
     HRESULT PrintCurrentInternalFrame();
 };
 #include "sigparser.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//
+// Miscellaneous helper methods
+//
+
+#define THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "17"
+void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
+    DWORD_PTR workItemsConcurrentQueuePtr,
+    const char *queueName,
+    HeapStat *stats);
+
 #endif // __util_h__

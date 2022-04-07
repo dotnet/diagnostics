@@ -72,7 +72,7 @@
                may not have been built with the runtime pointed by RuntimeSymbolsPath
                since we use the arcade provided SDK (in .dotnet) to build them. -->
           <SetSymbolServer>-ms</SetSymbolServer>
-          <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
         </Option>
         <!--
             Default (prebuilt)
@@ -105,7 +105,7 @@
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <PublishSingleFile>true</PublishSingleFile>
               <SetSymbolServer>-ms</SetSymbolServer>
-              <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
             </Option>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
@@ -144,7 +144,7 @@
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <PublishSingleFile>true</PublishSingleFile>
               <SetSymbolServer>-ms</SetSymbolServer>
-              <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
             </Option>
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
@@ -189,7 +189,7 @@
       <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
       <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
       <BuildProjectFramework>$(DesktopFramework)</BuildProjectFramework>
-      <BuildProjectRuntime>win-$(TargetArchitecture)</BuildProjectRuntime>
+      <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
       <DebugType>full</DebugType>
       <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
       <SetHostRuntime>-netfx</SetHostRuntime>

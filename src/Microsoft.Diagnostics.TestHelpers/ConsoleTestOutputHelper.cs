@@ -12,11 +12,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         public void WriteLine(string message)
         {
             Console.WriteLine(message);
+            Console.Out.Flush();
         }
 
         public void WriteLine(string format, params object[] args)
         {
             Console.WriteLine(format, args);
+            Console.Out.Flush();
         }
     }
 }
