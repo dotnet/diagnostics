@@ -61,7 +61,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.UnitTests", "src\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{298AE119-6625-4604-BDE5-0765DC34C856}"
 	ProjectSection(SolutionItems) = preProject
-		src\Tools\Common\CommandExtensions.cs = src\Tools\Common\CommandExtensions.cs
+		src\Tools\Common\Extensions.cs = src\Tools\Common\Extensions.cs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Commands", "Commands", "{C457CBCD-3A8D-4402-9A2B-693A0390D3F9}"

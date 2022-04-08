@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
+    <Compile Include="..\Common\Extensions.cs" Link="Extensions.cs" />
     <Compile Include="..\Common\ReversedServerHelpers\ReversedServerHelpers.cs" Link="ReversedServerHelpers.cs" />
   </ItemGroup>
 

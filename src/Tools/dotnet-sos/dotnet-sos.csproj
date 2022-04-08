@@ -9,7 +9,7 @@
     <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\Common\CommandExtensions.cs" Link="CommandExtensions.cs" />
+    <Compile Include="..\Common\Extensions.cs" Link="Extensions.cs" />
   </ItemGroup>
 
   <ItemGroup>
