@@ -89,8 +89,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             string divider = new('-', 120);
             // Print header info
-            const int headerKeyAlignment = -30;
-            const int headerValAlignment = 90;
+            const int headerKeyAlignment = -25;
+            const int headerValAlignment = -95;
             console.Out.WriteLine($"{"Trace name:",headerKeyAlignment}{traceFile,headerValAlignment}");
             console.Out.WriteLine($"{"Commandline:",headerKeyAlignment}{commandline,headerValAlignment}");
             console.Out.WriteLine($"{"OS:",headerKeyAlignment}{osInformation,headerValAlignment}");
@@ -104,10 +104,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.Out.WriteLine(divider);
             console.Out.WriteLine();
 
-            const int bodyKeyAlignment = -100;
-            const int bodyValAlignment = 20;
+            const int bodyKeyAlignment = -80;
+            const int bodyValAlignment = 10;
             foreach ((string key, int val) in stats)
-                console.Out.WriteLine($"{$"{key}:",bodyKeyAlignment}{val,bodyValAlignment}");
+                console.Out.WriteLine($"{$"{key}:",bodyKeyAlignment}{val,bodyValAlignment:N0}");
         }
 
         private const string DescriptionString = @$"Filter the report output. Syntax:

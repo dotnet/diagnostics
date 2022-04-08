@@ -16,6 +16,7 @@ using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Diagnostics.Tracing;
 using Diagnostics.Tracing.StackSources;
 using Microsoft.Diagnostics.Tools.Trace.CommandLine;
+using System.CommandLine.IO;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -31,10 +32,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ret;
         }
 
-        private delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
-        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose) 
-        {          
-            try 
+        private delegate int TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
+        private static int TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose) 
+        {
+            try
             {
                 string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(traceFile);
                 int count = 0;
@@ -83,16 +84,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             }
                         }
 
-                    PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
+                    PrintReportHelper.TopNWriteToStdOut(console, nodesToReport, inclusive, verbose);
                 }
-                return await Task.FromResult(0);
+                return 0;
             }
             catch(Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex}");
+                console.Error.WriteLine($"[ERROR] {ex}");
             }
 
-            return await Task.FromResult(0);
+            return 0;
         }
 
         private static Option TopNOption() =>

@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using Microsoft.Diagnostics.Tracing.Stacks;
 using System.Text.RegularExpressions;
+using System.CommandLine;
+using System.CommandLine.IO;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 {
@@ -17,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
             else if(text.Length > width)
             {
-                return text.Substring(0, width);
+                return text[..width];
             }
             else
             {
@@ -63,19 +66,19 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 return new List<string> {shortName};
             }
 
-            if (String.IsNullOrEmpty(str) || n < 1)
+            if (string.IsNullOrEmpty(str) || n < 1)
             {
                 throw new ArgumentException();
             }
             IEnumerable<string> uniformName = Enumerable.Range(0, length / n).Select(i => str.Substring(i * n, n));
             List<string> strList = uniformName.ToList<string>();
             int remainder = (length / n)*n; 
-            strList.Add(str.Substring(remainder, length - remainder));
+            strList.Add(str[remainder..length]);
             return strList;
         }
 
 
-        internal static void TopNWriteToStdOut(List<CallTreeNodeBase> nodesToReport, bool isInclusive, bool isVerbose) 
+        internal static void TopNWriteToStdOut(IConsole console, List<CallTreeNodeBase> nodesToReport, bool isInclusive, bool isVerbose) 
         {
             const int functionColumnWidth = 70;
             const int measureColumnWidth = 20;
@@ -101,10 +104,10 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 
             string exclusive = "Exclusive";
             string uniformExclusive = MakeFixedWidth(exclusive, measureColumnWidth);
-            Console.WriteLine(uniformHeader + extra + uniformInclusive + uniformExclusive);
+            console.Out.WriteLine(uniformHeader + extra + uniformInclusive + uniformExclusive);
 
             int numLines;
-            for(int i = 0; i < n; i++)
+            for (int i = 0; i < n; i++)
             {
 
                 int iLength = (i+1).ToString().Count();
@@ -115,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 string formatName = FormatFunction(name);
                 List<string> nameList = SplitInto(formatName, functionColumnWidth);
 
-                if(isVerbose)
+                if (isVerbose)
                 {
                     numLines = nameList.Count;
                 }
@@ -124,22 +127,22 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                     numLines = 1;
                 }
 
-                for(int j = 0; j < numLines; j++)
+                for (int j = 0; j < numLines; j++)
                 {
                     string inclusiveMeasure = "";
                     string exclusiveMeasure = "";
                     string number = new string(' ', maxDigit + 2); //+2 lines 130 and 137 account for '. '
 
-                    if(j == 0)
+                    if (j == 0)
                     {
                         inclusiveMeasure = Math.Round(node.InclusiveMetricPercent, 2).ToString() + "%";
                         exclusiveMeasure = Math.Round(node.ExclusiveMetricPercent, 2).ToString() + "%";
-                        number = (i + 1).ToString() + "." + number.Substring(maxDigit - numSpace + 2);
+                        number = (i + 1).ToString() + "." + number[(maxDigit - numSpace + 2)..];
                     }
 
                     string uniformIMeasure = MakeFixedWidth(inclusiveMeasure, measureColumnWidth).PadLeft(measureColumnWidth+4);
                     string uniformEMeasure = MakeFixedWidth(exclusiveMeasure, measureColumnWidth);
-                    Console.WriteLine(number + nameList[j] + uniformIMeasure + uniformEMeasure);
+                    console.Out.WriteLine(number + nameList[j] + uniformIMeasure + uniformEMeasure);
                 }
                 
             }
