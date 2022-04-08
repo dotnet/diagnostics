@@ -550,6 +550,10 @@ namespace Microsoft.Diagnostics.Repl
 
         void IConsoleService.WriteError(string text) => WriteOutput(OutputType.Error, text);
 
+        bool IConsoleService.SupportsDml => false;
+
+        void IConsoleService.WriteDml(string text) => throw new NotSupportedException();
+
         CancellationToken IConsoleService.CancellationToken { get; set; }
 
         int IConsoleService.WindowWidth

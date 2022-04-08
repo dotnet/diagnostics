@@ -329,6 +329,27 @@ namespace SOS
 
         public int GetOutputWidth() => (int)VTable.GetOutputWidth(Self);
 
+        public bool SupportsDml
+        {
+            get
+            {
+                uint supported = 0;
+                VTable.SupportsDml(Self, &supported);
+                return supported != 0;
+            }
+        }
+
+        public void OutputDmlString(DEBUG_OUTPUT mask, string message)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+
+            byte[] messageBytes = Encoding.ASCII.GetBytes(message + "\0");
+            fixed (byte* messagePtr = messageBytes)
+            {
+                VTable.OutputDmlString(Self, mask, messagePtr);
+            }
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
@@ -355,6 +376,8 @@ namespace SOS
             public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, HResult> GetSymbolByOffset;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, HResult> GetOffsetBySymbol;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint> GetOutputWidth;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint*, HResult> SupportsDml;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputDmlString;
         }
     }
 }

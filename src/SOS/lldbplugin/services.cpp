@@ -2349,6 +2349,21 @@ LLDBServices::GetOutputWidth()
     return m_debugger.GetTerminalWidth();
 }
 
+HRESULT
+LLDBServices::SupportsDml(PULONG supported)
+{
+    supported = 0;
+    return S_OK;
+}
+
+void
+LLDBServices::OutputDmlString(
+    ULONG mask,
+    PCSTR str)
+{
+    OutputString(mask, str);
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------

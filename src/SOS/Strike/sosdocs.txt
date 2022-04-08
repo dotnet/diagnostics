@@ -26,15 +26,14 @@ Object Inspection                  Examining code and stacks
 DumpObj (do)                       Threads (clrthreads)
 DumpALC (dumpalc)                  ThreadState
 DumpArray (da)                     IP2MD
-DumpAsync                          U
-DumpDelegate                       DumpStack
-DumpStackObjects (dso)             EEStack
-DumpHeap                           ClrStack
-DumpVC                             GCInfo
-GCRoot                             EHInfo
-ObjSize                            BPMD (bpmd)
-FinalizeQueue                      COMState
-PrintException (pe)
+DumpDelegate                       U
+DumpStackObjects (dso)             DumpStack
+DumpHeap                           EEStack
+DumpVC                             ClrStack
+GCRoot                             GCInfo
+ObjSize                            EHInfo
+FinalizeQueue                      BPMD (bpmd)
+PrintException (pe)                COMState
 TraverseHeap
 
 Examining CLR data structures      Diagnostic Utilities
@@ -359,23 +358,6 @@ specified object was loaded.
         0000000000000000  4000eb0      b30                       0   static 0000000000000000 s_asyncLocalCurrent
         00007ff7c9cb26d0  4000001       48 ...ependencyResolver  0 instance 000001c28000d1c0 _resolver
 
-\\
-
-COMMAND: dumpasync.
-!DumpAsync [-addr <Object Address>]
-           [-mt <MethodTable address>]
-           [-type <partial type name>]
-           [-tasks]
-           [-completed]
-           [-fields]
-           [-stacks]
-           [-roots]
-
-!DumpAsync traverses the garbage collected heap, looking for objects representing
-async state machines as created when an async method's state is transferred to the
-heap.  This command recognizes async state machines defined as "async void", "async Task",
-"async Task<T>", "async ValueTask", and "async ValueTask<T>".  It also optionally supports
-any other tasks.
 \\
 
 COMMAND: dso.
