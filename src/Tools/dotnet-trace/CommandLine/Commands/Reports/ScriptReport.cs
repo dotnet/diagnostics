@@ -262,7 +262,7 @@ Examples:
             // writer.Out.WriteLine(data.ToString());
             writer.Write($"\"RelativeTimeMS\": {data.TimeStampRelativeMSec}, \"ProviderName\": \"{data.ProviderName}\", \"EventName\", \"{data.EventName}\"");
             foreach (string name in data.PayloadNames)
-                writer.Write($", \"{name}\": \"{data.PayloadByName(name)}\"");
+                writer.Write($", \"{name}\": {System.Text.Json.JsonSerializer.Serialize(data.PayloadByName(name))}");
 
             string formattedMessage = data.GetFormattedMessage(new CultureInfo("en-US"));
             if (!string.IsNullOrEmpty(formattedMessage))
@@ -277,13 +277,8 @@ Examples:
 
         public void WriteKeyValuePair<T>(string key, T value)
         {
-            writer.WriteLine($"\t\"{key}\": \"{value}\",");
+            writer.WriteLine($"\t\"{key}\": {System.Text.Json.JsonSerializer.Serialize(value)},");
         }
-
-        public void WriteKeyValuePair(string key, int value) => writer.WriteLine($"\t\"{key}\": {value},");
-        public void WriteKeyValuePair(string key, long value) => writer.WriteLine($"\t\"{key}\": {value},");
-        public void WriteKeyValuePair(string key, double value) => writer.WriteLine($"\t\"{key}\": {value},");
-        public void WriteKeyValuePair(string key, float value) => writer.WriteLine($"\t\"{key}\": {value},");
 
         public void WritePrologue() => writer.WriteLine("{");
     }
