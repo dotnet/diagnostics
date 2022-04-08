@@ -30,7 +30,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
                     //Options
                     TopNReportHandler.TopNCommand,
-                    StatReportHandler.StatCommand
+                    StatReportHandler.StatCommand,
+                    ScriptReportHandler.ScriptCommand
                 };
 
         public static Argument<string> FileNameArgument() =>
