@@ -118,15 +118,7 @@ VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 !VERIFY:.*UNKNOWN.*
 
 SOSCOMMAND:DumpAsync
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+VERIFY:\s*STACK 1\s*
 
-SOSCOMMAND:DumpAsync -mt <POUT>\s+MT\s+Count\s+TotalSize\s+Class Name\s+(<HEXVAL>)\s+<DECVAL>\s+<DECVAL>\s+.*<POUT>
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
-
-SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields
+SOSCOMMAND:DumpAsync --coalesce
+VERIFY:\s*STACKS 1\s*
