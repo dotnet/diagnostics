@@ -46,14 +46,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 _ => throw new ArgumentException("Invalid format", nameof(format))
             };
 
-            await ProcessEvents(source, predicate, serializer);
+            await ProcessEvents(source, predicate, serializer, traceFile, filter);
 
             return 0;
         }
 
-        public static async Task ProcessEvents(EventPipeEventSource source, Func<TraceEvent, bool> predicate, IEventSerializer writer)
+        public static async Task ProcessEvents(EventPipeEventSource source, Func<TraceEvent, bool> predicate, IEventSerializer writer, string traceFile, string filter)
         {
             int total = 0;
+            int filteredTotal = 0;
             string commandline = "";
             string osInformation = "";
             string archInformation = "";
@@ -75,6 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     if (predicate(data))
                     {
+                        filteredTotal++;
                         workQueue.Add(data.Clone());
                     }
                 }
@@ -89,9 +91,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 var rundownParser = new Tracing.Parsers.Clr.ClrRundownTraceEventParser(source);
                 rundownParser.All += HandleData;
 
-                source.Process();
+                try
+                {
+                    source.Process();
+                }
+                catch (Exception e)
+                {
+                    SimpleLogger.Log.LogError(e.ToString());
+                }
+                finally
+                {
+                    workQueue.CompleteAdding();
+                }
 
-                workQueue.CompleteAdding();
             });
 
             Task eventSerializerTask = Task.Run(() =>
@@ -111,35 +123,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // An InvalidOperationException means that Take() was called on a completed collection
                     writer.WriteEventsEnd();
                 }
+                writer.WriteKeyValuePair("Trace name", traceFile);
+                writer.WriteKeyValuePair("Commandline",commandline);
+                writer.WriteKeyValuePair("OS", osInformation);
+                writer.WriteKeyValuePair("Architecture", archInformation);
+                writer.WriteKeyValuePair("Trace start time", source.SessionStartTime.ToLocalTime());
+                writer.WriteKeyValuePair("Trace Duration", $"{source.SessionDuration:c}");
+                writer.WriteKeyValuePair("Number of processors", source.NumberOfProcessors);
+                writer.WriteKeyValuePair("Events Lost", source.EventsLost);
+                writer.WriteKeyValuePair("Total Events", total);
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    writer.WriteKeyValuePair("Filtered Events", filteredTotal);
+                    writer.WriteKeyValuePair("Filter", filter);
+                }
                 writer.WriteEpilogue();
             });
 
             await Task.WhenAll(eventReaderTask, eventSerializerTask);
-        }
-
-        private static void PrintStats(IConsole console, EventPipeEventSource source, Dictionary<string, int> stats, string traceFile, int total, string commandline, string osInformation, string archInformation)
-        {
-            string divider = new('-', 120);
-            // Print header info
-            const int headerKeyAlignment = -25;
-            const int headerValAlignment = -95;
-            console.Out.WriteLine($"{"Trace name:",headerKeyAlignment}{traceFile,headerValAlignment}");
-            console.Out.WriteLine($"{"Commandline:",headerKeyAlignment}{commandline,headerValAlignment}");
-            console.Out.WriteLine($"{"OS:",headerKeyAlignment}{osInformation,headerValAlignment}");
-            console.Out.WriteLine($"{"Architecture:",headerKeyAlignment}{archInformation,headerValAlignment}");
-            console.Out.WriteLine($"{"Trace start time:",headerKeyAlignment}{source.SessionStartTime.ToLocalTime(),headerValAlignment}");
-            console.Out.WriteLine($"{"Trace Duration:",headerKeyAlignment}{source.SessionDuration,headerValAlignment:c}");
-            console.Out.WriteLine($"{"Number of processors:",headerKeyAlignment}{source.NumberOfProcessors,headerValAlignment}");
-            console.Out.WriteLine($"{"Events Lost:",headerKeyAlignment}{source.EventsLost,headerValAlignment}");
-            console.Out.WriteLine($"{"Total Events:",headerKeyAlignment}{total,headerValAlignment}");
-            console.Out.WriteLine($"{"Filtered Events:",headerKeyAlignment}{stats.Values.Sum(),headerValAlignment}");
-            console.Out.WriteLine(divider);
-            console.Out.WriteLine();
-
-            const int bodyKeyAlignment = -80;
-            const int bodyValAlignment = 10;
-            foreach ((string key, int val) in stats)
-                console.Out.WriteLine($"{$"{key}:",bodyKeyAlignment}{val,bodyValAlignment:N0}");
         }
 
         private const string DescriptionString = @$"Filter the report output. Syntax:
