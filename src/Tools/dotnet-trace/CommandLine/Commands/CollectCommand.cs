@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
-                    string processMainModuleFileName = "";
+                    string processMainModuleFileName = "dotnet-trace-collect";
 
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
@@ -200,16 +200,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 processMainModuleFileName = process.MainModule.FileName;
                                 break;
                             }
-                            catch
+
+                            catch (Exception ex)
                             {
-                                if (attempts > 10)
+                                if (ex is System.ComponentModel.Win32Exception)
                                 {
-                                    Console.Error.WriteLine("Unable to examine process.");
-                                    return ReturnCode.SessionCreationError;
+                                    Console.Error.WriteLine("Warning: The process being traced is running on a different architecture than dotnet-trace's architecture.");
+                                    break;
                                 }
-                                Thread.Sleep(200);
+                                else
+                                {
+                                    if (attempts > 10)
+                                    {
+                                        Console.Error.WriteLine("Unable to examine process.");
+                                        return ReturnCode.SessionCreationError;
+                                    }
+                                    Thread.Sleep(200);
+                                }
                             }
                         }
+
                     }
 
                     if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
