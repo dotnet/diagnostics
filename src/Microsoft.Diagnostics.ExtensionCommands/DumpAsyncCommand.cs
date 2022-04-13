@@ -554,6 +554,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         continue;
                     }
 
+                    // This is currently working around an issue that result in enumerating
+                    // segments multiple times.
+                    if (found.ContainsKey(obj))
+                    {
+                        continue;
+                    }
+
                     // If we're only going to render a summary (which only considers objects individually and not
                     // as part of chains) and if this object shouldn't be included, we don't need to do anything more.
                     if (Summarize &&
@@ -561,7 +568,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         continue;
                     }
-                    
+
                     // If we couldn't get state flags for the task, something's wrong; skip it.
                     if (!TryGetTaskStateFlags(obj, out int taskStateFlags))
                     {
