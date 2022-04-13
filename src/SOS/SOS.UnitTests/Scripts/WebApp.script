@@ -117,8 +117,24 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 !VERIFY:.*UNKNOWN.*
 
-SOSCOMMAND:DumpAsync
-VERIFY:\s*STACK 1\s*
+SOSCOMMAND:DumpAsync --completed
+VERIFY:\s*STACK <DECVAL>\s*
+VERIFY?:\s*<< Awaiting: <HEXVAL>\s+<HEXVAL>\s+.* >>\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
+
+SOSCOMMAND:DumpAsync --stats
+VERIFY:\s+MT\s+Count\s+Type\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+.*
+!VERIFY:.*UNKNOWN.*
+
+SOSCOMMAND:DumpAsync --methodtable 0x<POUT>\s+MT\s+Count\s+Type\s+(<HEXVAL>)\s+<DECVAL>\s+.*<POUT>
+VERIFY:\s*STACK <DECVAL>\s*
+VERIFY?:\s*<< Awaiting: <HEXVAL>\s+<HEXVAL>\s+.* >>\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
+
+SOSCOMMAND:DumpMT --stats <PREVPOUT>
+!VERIFY:\s*<HEXVAL> is not a MethodTable
 
 SOSCOMMAND:DumpAsync --coalesce
-VERIFY:\s*STACKS 1\s*
+VERIFY:\s*STACKS <DECVAL>\s*
+VERIFY:\s*\[<DECVAL>\]\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
