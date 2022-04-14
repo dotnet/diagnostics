@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -107,14 +107,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            ClrStaticField? taskCompletedSentinnelType = taskType.GetStaticFieldByName("s_taskCompletionSentinel");
+            ClrStaticField? taskCompletionSentinelType = taskType.GetStaticFieldByName("s_taskCompletionSentinel");
 
-            ClrObject taskCompletedSentinnel = default;
+            ClrObject taskCompletionSentinel = default;
 
-            if (taskCompletedSentinnelType is not null)
+            if (taskCompletionSentinelType is not null)
             {
-                Debug.Assert(taskCompletedSentinnelType.IsObjectReference);
-                taskCompletedSentinnel = taskCompletedSentinnelType.ReadObject(runtime.BaseClassLibrary.AppDomain);
+                Debug.Assert(taskCompletionSentinelType.IsObjectReference);
+                taskCompletionSentinel = taskCompletionSentinelType.ReadObject(runtime.BaseClassLibrary.AppDomain);
             }
 
             // Enumerate the heap, gathering up all relevant async-related objects.
@@ -511,7 +511,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         description = $"{description} {{{method!.Signature}}}";
                     }
                 }
-                else if (obj.Address != 0 && taskCompletedSentinnel.Address == obj.Address)
+                else if (obj.Address != 0 && taskCompletionSentinel.Address == obj.Address)
                 {
                     description = "TaskCompletionSentinel";
                 }
@@ -568,8 +568,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         continue;
                     }
 
-                    // This is currently working around an issue that result in enumerating
-                    // segments multiple times.
+                    // This is currently working around an issue that result in enumerating segments multiple times in 6.0 runtimes
+                    // up to 6.0.5. The PR that fixes it is https://github.com/dotnet/runtime/pull/67995, but we have this here for back compat.
                     if (found.ContainsKey(obj))
                     {
                         continue;
