@@ -278,7 +278,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     // If the top-level frame is an async method that's paused at an await, it must be waiting on
                     // something.  Try to synthesize a frame to represent that thing, just to provide a little more information.
-                    if (top.IsStateMachine && top.AwaitState >= 0 &&
+                    if (top.IsStateMachine && top.AwaitState >= 0 && !IsCompleted(top.TaskStateFlags) &&
                         top.StateMachine is IAddressableTypedEntity stateMachine &&
                         stateMachine.Type is not null)
                     {
