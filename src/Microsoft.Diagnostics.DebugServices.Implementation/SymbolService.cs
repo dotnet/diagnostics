@@ -91,6 +91,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Reset any HTTP symbol stores marked with a client failure
+        /// </summary>
+        public void Reset() => ForEachSymbolStore<HttpSymbolStore>((httpSymbolStore) => httpSymbolStore.ResetClientFailure());
+
+        /// <summary>
         /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
         /// </summary>
         /// <param name="symbolPath">Windows symbol path</param>
@@ -186,7 +191,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     if (symbolServerPath != null)
                     {
-                        if (!AddSymbolServer(msdl: false, symweb: false, symbolServerPath.Trim(), authToken: null, timeoutInMinutes: 0))
+                        if (!AddSymbolServer(msdl: false, symweb: false, symbolServerPath.Trim()))
                         {
                             return false;
                         }
@@ -211,15 +216,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="msdl">if true, use the public Microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
-        /// <param name="authToken"></param>
+        /// <param name="authToken">PAT for secure symbol server (optional)</param>
         /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
+        /// <param name="retryCount">number of retries (optional)</param>
         /// <returns>if false, failure</returns>
         public bool AddSymbolServer(
             bool msdl,
             bool symweb,
-            string symbolServerPath,
-            string authToken,
-            int timeoutInMinutes)
+            string symbolServerPath = null,
+            string authToken = null,
+            int timeoutInMinutes = 0,
+            int retryCount = 0)
         {
             bool internalServer = false;
 
@@ -277,6 +284,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (timeoutInMinutes != 0)
                     {
                         httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
+                    }
+                    if (retryCount != 0)
+                    {
+                        httpSymbolStore.RetryCount = retryCount;
                     }
                     SetSymbolStore(httpSymbolStore);
                 }
@@ -815,12 +826,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
-            while (symbolStore != null)
-            {
-                sb.AppendLine(symbolStore.ToString());
-                symbolStore = symbolStore.BackingStore;
-            }
+            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
             return sb.ToString();
         }
 
@@ -872,6 +878,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 symbolStore = symbolStore.BackingStore;
             }
             return false;
+        }
+
+        protected void ForEachSymbolStore<T>(Action<T> callback)
+            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+        {
+            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
+            while (symbolStore != null)
+            {
+                if (symbolStore is T store)
+                {
+                    callback(store);
+                }
+                symbolStore = symbolStore.BackingStore;
+            }
         }
 
         /// <summary>
