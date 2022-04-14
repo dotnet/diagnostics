@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
-                    string processMainModuleFileName = "dotnet-trace-collect";
+                    string processMainModuleFileName = $"Process{processId}";
 
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         // Reading the process MainModule filename can fail if the target process closes
                         // or isn't fully setup. Retry a few times to attempt to address the issue
-                        for (int attempts = 0; true; attempts++)
+                        for (int attempts = 0; attempts < 10; attempts++)
                         {
                             try
                             {
@@ -201,22 +201,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 break;
                             }
 
-                            catch (Exception ex)
+                            catch
                             {
-                                if (ex is System.ComponentModel.Win32Exception)
-                                {
-                                    Console.Error.WriteLine("Warning: The process being traced is running on a different architecture than dotnet-trace's architecture.");
-                                    break;
-                                }
-                                else
-                                {
-                                    if (attempts > 10)
-                                    {
-                                        Console.Error.WriteLine("Unable to examine process.");
-                                        return ReturnCode.SessionCreationError;
-                                    }
-                                    Thread.Sleep(200);
-                                }
+                                Thread.Sleep(200);
                             }
                         }
 
@@ -252,9 +239,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
                             }
                         }
-                        catch (DiagnosticsClientException e)
+                        catch (Exception ex) when (ex is DiagnosticsClientException || ex is System.UnauthorizedAccessException)
                         {
-                            Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                            if (ex is DiagnosticsClientException)
+                            {
+                                Console.Error.WriteLine($"Unable to start a tracing session: {ex.ToString()}");
+                            }
+                            else 
+                            {
+                                Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {ex.GetType()}");
+                                return ReturnCode.SessionCreationError;
+                            }
+                            
                         }
 
                         if (session == null)
