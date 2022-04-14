@@ -1,6 +1,5 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Interop;
-using System;
 using System.Threading;
 
 namespace SOS.Extensions
@@ -8,6 +7,7 @@ namespace SOS.Extensions
     internal class ConsoleServiceFromDebuggerServices : IConsoleService
     {
         private readonly DebuggerServices _debuggerServices;
+        private bool? _supportsDml;
 
         public ConsoleServiceFromDebuggerServices(DebuggerServices debuggerServices)
         {
@@ -21,6 +21,10 @@ namespace SOS.Extensions
         public void WriteWarning(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.WARNING, text);
 
         public void WriteError(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
+
+        public void WriteDml(string text) => _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);
+
+        public bool SupportsDml => _supportsDml ??= _debuggerServices.SupportsDml;
 
         public CancellationToken CancellationToken { get; set; }
 
