@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -105,6 +105,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 WriteLineError("Unable to find required type.");
                 return;
+            }
+
+            ClrStaticField? taskCompletedSentinnelType = taskType.GetStaticFieldByName("s_taskCompletionSentinel");
+
+            ClrObject taskCompletedSentinnel = default;
+
+            if (taskCompletedSentinnelType is not null)
+            {
+                Debug.Assert(taskCompletedSentinnelType.IsObjectReference);
+                taskCompletedSentinnel = taskCompletedSentinnelType.ReadObject(runtime.BaseClassLibrary.AppDomain);
             }
 
             // Enumerate the heap, gathering up all relevant async-related objects.
@@ -500,6 +510,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         description = $"{description} {{{method!.Signature}}}";
                     }
+                }
+                else if (obj.Address != 0 && taskCompletedSentinnel.Address == obj.Address)
+                {
+                    description = "TaskCompletionSentinel";
                 }
 
                 return description;
