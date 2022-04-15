@@ -239,18 +239,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
                             }
                         }
-                        catch (Exception ex) when (ex is DiagnosticsClientException || ex is System.UnauthorizedAccessException)
+                        catch (DiagnosticsClientException e)
                         {
-                            if (ex is DiagnosticsClientException)
-                            {
-                                Console.Error.WriteLine($"Unable to start a tracing session: {ex.ToString()}");
-                            }
-                            else 
-                            {
-                                Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {ex.GetType()}");
-                                return ReturnCode.SessionCreationError;
-                            }
-                            
+                            Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                            return ReturnCode.SessionCreationError;
+                        }
+                        catch (UnauthorizedAccessException e)
+                        {
+                            Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
+                            return ReturnCode.SessionCreationError;
                         }
 
                         if (session == null)
