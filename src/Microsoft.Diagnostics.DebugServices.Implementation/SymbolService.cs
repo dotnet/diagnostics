@@ -227,8 +227,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
         /// <param name="authToken">PAT for secure symbol server (optional)</param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses DefaultTimeout if null)</param>
-        /// <param name="retryCount">number of retries (optional uses DefaultRetryCount if null)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
         public bool AddSymbolServer(
             bool msdl,
