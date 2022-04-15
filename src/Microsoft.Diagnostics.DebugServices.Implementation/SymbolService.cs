@@ -91,6 +91,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// The time out in minutes passed to the HTTP symbol store when not overridden in AddSymbolServer.
+        /// </summary>
+        public int DefaultTimeout { get; set; } = 4;
+
+        /// <summary>
+        /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
+        /// </summary>
+        public int DefaultRetryCount { get; set; } = 0;
+
+        /// <summary>
         /// Reset any HTTP symbol stores marked with a client failure
         /// </summary>
         public void Reset() => ForEachSymbolStore<HttpSymbolStore>((httpSymbolStore) => httpSymbolStore.ResetClientFailure());
@@ -217,16 +227,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
         /// <param name="authToken">PAT for secure symbol server (optional)</param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
-        /// <param name="retryCount">number of retries (optional)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses DefaultTimeout if null)</param>
+        /// <param name="retryCount">number of retries (optional uses DefaultRetryCount if null)</param>
         /// <returns>if false, failure</returns>
         public bool AddSymbolServer(
             bool msdl,
             bool symweb,
             string symbolServerPath = null,
             string authToken = null,
-            int timeoutInMinutes = 0,
-            int retryCount = 0)
+            int? timeoutInMinutes = null,
+            int? retryCount = null)
         {
             bool internalServer = false;
 
@@ -281,14 +291,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         httpSymbolStore = new HttpSymbolStore(Tracer.Instance, store, uri, personalAccessToken: authToken);
                     }
-                    if (timeoutInMinutes != 0)
-                    {
-                        httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
-                    }
-                    if (retryCount != 0)
-                    {
-                        httpSymbolStore.RetryCount = retryCount;
-                    }
+                    httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes.GetValueOrDefault(DefaultTimeout));
+                    httpSymbolStore.RetryCount = retryCount.GetValueOrDefault(DefaultRetryCount);
                     SetSymbolStore(httpSymbolStore);
                 }
             }
