@@ -116,7 +116,7 @@ namespace SOS.Hosting
                 {
                     symbolCachePath = _symbolService.DefaultSymbolCache;
                 }
-                if (!_symbolService.AddSymbolServer(msdl, symweb, symbolServerPath, authToken, timeoutInMinutes))
+                if (!_symbolService.AddSymbolServer(msdl, symweb, symbolServerPath, authToken, timeoutInMinutes != 0 ? timeoutInMinutes : null))
                 {
                     return false;
                 }
