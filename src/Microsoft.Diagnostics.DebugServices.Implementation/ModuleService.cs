@@ -216,23 +216,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 // First try getting the PE info as loaded layout (native Windows DLLs and most managed PEs).
                 peFile = GetPEInfo(isVirtual: true, address, size, out List<PdbFileInfo> pdbs, out Module.Flags flags);
-                if (peFile is null || pdbs.Count == 0)
+
+                // Continue only if marked as a PE. This bit regardless of the layout if the module has a PE header/signature.
+                if ((flags & Module.Flags.IsPEImage) != 0)
                 {
-                    // If PE file is invalid or there are no PDB records, try getting the PE info as file layout. No PDB records can mean
-                    // that either the layout is wrong or that there really no PDB records. If file layout doesn't have any pdb records
-                    // either default to loaded layout PEFile.
-                    PEFile peFileLayout = GetPEInfo(isVirtual: false, address, size, out List<PdbFileInfo> pdbsFileLayout, out Module.Flags flagsFileLayout);
-                    if (peFileLayout is not null && (peFile is null || pdbsFileLayout.Count > 0))
+                    if (peFile is null || pdbs.Count == 0)
                     {
-                        flags = flagsFileLayout;
-                        pdbs = pdbsFileLayout;
-                        peFile = peFileLayout;
+                        // If PE file is invalid or there are no PDB records, try getting the PE info as file layout. No PDB records can mean
+                        // that either the layout is wrong or that there really no PDB records. If file layout doesn't have any pdb records
+                        // either default to loaded layout PEFile.
+                        PEFile peFileLayout = GetPEInfo(isVirtual: false, address, size, out List<PdbFileInfo> pdbsFileLayout, out Module.Flags flagsFileLayout);
+                        Debug.Assert((flagsFileLayout & Module.Flags.IsPEImage) != 0);
+                        if (peFileLayout is not null && (peFile is null || pdbsFileLayout.Count > 0))
+                        {
+                            flags = flagsFileLayout;
+                            pdbs = pdbsFileLayout;
+                            peFile = peFileLayout;
+                        }
                     }
-                }
-                if (peFile is not null)
-                {
-                    moduleFlags |= flags;
-                    pdbFileInfos = pdbs;
+                    if (peFile is not null)
+                    {
+                        moduleFlags |= flags;
+                        pdbFileInfos = pdbs;
+                    }
                 }
             }
 
@@ -264,10 +270,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     flags |= isVirtual ? Module.Flags.IsLoadedLayout : Module.Flags.IsFileLayout;
                     return peFile;
                 }
-                else
-                {
-                    Trace.TraceError($"GetPEInfo: PE invalid {address:X16} isVirtual {isVirtual}");
-                }
             }
             catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
             {
@@ -283,6 +285,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>build id or null</returns>
         internal byte[] GetBuildId(ulong address)
         {
+            // This code is called by the image mapping memory service so it needs to use the
+            // original or raw memory service to prevent recursion so it can't use the ELFFile
+            // or MachOFile instance that is available from the IModule.Services provider.
             Stream stream = RawMemoryService.CreateMemoryStream();
             byte[] buildId = null;
             try
@@ -294,10 +299,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         buildId = elfFile.BuildID;
                     }
-                    else
-                    {
-                        Trace.TraceError($"GetBuildId: invalid ELF file {address:X16}");
-                    }
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
@@ -305,10 +306,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
-                    }
-                    else
-                    {
-                        Trace.TraceError($"GetBuildId: invalid MachO file {address:X16}");
                     }
                 }
             }
@@ -322,48 +319,40 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Get the version string from a Linux or MacOS image
         /// </summary>
-        /// <param name="address">image base</param>
+        /// <param name="module">module to get version string</param>
         /// <returns>version string or null</returns>
-        protected string GetVersionString(ulong address)
+        protected string GetVersionString(IModule module)
         {
-            Stream stream = MemoryService.CreateMemoryStream();
             try
             {
-                if (Target.OperatingSystem == OSPlatform.Linux)
+                ELFFile elfFile = module.Services.GetService<ELFFile>();
+                if (elfFile is not null)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
-                    if (elfFile.IsValid())
+                    foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
                     {
-                        foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
+                        uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
+                        if (programHeader.Type == ELFProgramHeaderType.Load &&
+                           (flags & (uint)ELFProgramHeaderAttributes.Writable) != 0)
                         {
-                            uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
-                            if (programHeader.Type == ELFProgramHeaderType.Load &&
-                               (flags & (uint)ELFProgramHeaderAttributes.Writable) != 0)
+                            ulong loadAddress = programHeader.VirtualAddress.Value;
+                            long loadSize = (long)programHeader.VirtualSize;
+                            if (SearchVersionString(module.ImageBase + loadAddress, loadSize, out string productVersion))
                             {
-                                ulong loadAddress = programHeader.VirtualAddress.Value;
-                                long loadSize = (long)programHeader.VirtualSize;
-                                if (SearchVersionString(address + loadAddress, loadSize, out string productVersion))
-                                {
-                                    return productVersion;
-                                }
+                                return productVersion;
                             }
                         }
-                        Trace.TraceInformation($"GetVersionString: not found in ELF file {address:X16}");
                     }
-                    else
-                    {
-                        Trace.TraceError($"GetVersionString: invalid ELF file {address:X16}");
-                    }
+                    Trace.TraceInformation($"GetVersionString: not found in ELF file {module}");
                 }
-                else if (Target.OperatingSystem == OSPlatform.OSX)
+                else
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
-                    if (machOFile.IsValid())
+                    MachOFile machOFile = module.Services.GetService<MachOFile>();
+                    if (machOFile is not null)
                     {
                         foreach (MachSegmentLoadCommand loadCommand in machOFile.Segments.Select((segment) => segment.LoadCommand))
                         {
                             if (loadCommand.Command == LoadCommandType.Segment64 &&
-                               (loadCommand.InitProt & VmProtWrite) != 0 && 
+                               (loadCommand.InitProt & VmProtWrite) != 0 &&
                                 loadCommand.SegName.ToString() != "__LINKEDIT")
                             {
                                 ulong loadAddress = loadCommand.VMAddress + machOFile.PreferredVMBaseAddress;
@@ -374,21 +363,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 }
                             }
                         }
-                        Trace.TraceInformation($"GetVersionString: not found in MachO file {address:X16}");
+                        Trace.TraceInformation($"GetVersionString: not found in MachO file {module}");
                     }
                     else
                     {
-                        Trace.TraceError($"GetVersionString: invalid MachO file {address:X16}");
+                        Trace.TraceError($"GetVersionString: unsupported module {module} or platform {Target.OperatingSystem}");
                     }
-                }
-                else
-                {
-                    Trace.TraceError("GetVersionString: unsupported platform {0}", Target.OperatingSystem);
                 }
             }
             catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
             {
-                Trace.TraceError($"GetVersionString: {address:X16} exception {ex.Message}");
+                Trace.TraceError($"GetVersionString: {module} exception {ex.Message}");
             }
             return null;
         }

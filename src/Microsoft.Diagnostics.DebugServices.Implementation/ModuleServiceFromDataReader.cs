@@ -68,41 +68,40 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            public override VersionData VersionData
+            public override VersionData GetVersionData()
             {
-                get 
+                if (InitializeValue(Module.Flags.InitializeVersion))
                 {
-                    if (InitializeValue(Module.Flags.InitializeVersion))
+                    if (_moduleInfo.Version != EmptyVersionInfo)
                     {
-                        if (_moduleInfo.Version != EmptyVersionInfo)
+                        _versionData = _moduleInfo.Version.ToVersionData();
+                    }
+                    else
+                    {
+                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
                         {
-                            _versionData = _moduleInfo.Version.ToVersionData();
-                        }
-                        else
-                        {
-                            if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
-                            {
-                                _versionData = GetVersion();
-                            }
+                            _versionData = GetVersion();
                         }
                     }
-                    return _versionData;
                 }
+                return _versionData;
             }
 
-            public override string VersionString
+            public override string GetVersionString()
             {
-                get
+                if (InitializeValue(Module.Flags.InitializeProductVersion))
                 {
-                    if (InitializeValue(Module.Flags.InitializeProductVersion))
+                    if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
                     {
-                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
-                        {
-                            _versionString = _moduleService.GetVersionString(ImageBase);
-                        }
+                        _versionString = _moduleService.GetVersionString(this);
                     }
-                    return _versionString;
                 }
+                return _versionString;
+            }
+
+            public override string LoadSymbols()
+            {
+                return _moduleService.SymbolService.DownloadSymbolFile(this);
             }
 
             #endregion

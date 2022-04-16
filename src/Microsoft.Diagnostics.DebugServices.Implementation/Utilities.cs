@@ -2,9 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using System;
 using System.Diagnostics;
@@ -80,7 +77,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     var reader = new PEReader(stream);
                     if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
-                        Trace.TraceError($"OpenPEReader: PEReader invalid headers");
+                        Trace.TraceWarning($"OpenPEReader: PEReader invalid headers");
                         return null;
                     }
                     return reader;
@@ -88,94 +85,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
                 {
                     Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Disposable ELFFile wrapper
-        /// </summary>
-        public class ELFModule : ELFFile, IDisposable
-        {
-            private readonly Stream _stream;
-
-            public ELFModule(Stream stream) :
-                base(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false)
-            {
-                _stream = stream;
-            }
-
-            public void Dispose() => _stream.Dispose();
-        }
-
-        /// <summary>
-        /// Opens and returns an ELFFile instance from the local file path
-        /// </summary>
-        /// <param name="filePath">ELF file to open</param>
-        /// <returns>ELFFile instance or null</returns>
-        public static ELFModule OpenELFFile(string filePath)
-        {
-            Stream stream = TryOpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    ELFModule elfModule = new (stream);
-                    if (!elfModule.IsValid())
-                    {
-                        Trace.TraceError($"OpenELFFile: not a valid file");
-                        return null;
-                    }
-                    return elfModule;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenELFFile: exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Disposable MachOFile wrapper
-        /// </summary>
-        public class MachOModule : MachOFile, IDisposable
-        {
-            private readonly Stream _stream;
-
-            public MachOModule(Stream stream) :
-                base(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false)
-            {
-                _stream = stream;
-            }
-
-            public void Dispose() => _stream.Dispose();
-        }
-
-        /// <summary>
-        /// Opens and returns an MachOFile instance from the local file path
-        /// </summary>
-        /// <param name="filePath">MachO file to open</param>
-        /// <returns>MachOFile instance or null</returns>
-        public static MachOModule OpenMachOFile(string filePath)
-        {
-            Stream stream = TryOpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    var machoModule = new MachOModule(stream);
-                    if (!machoModule.IsValid())
-                    {
-                        Trace.TraceError($"OpenMachOFile: not a valid file");
-                        return null;
-                    }
-                    return machoModule;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenMachOFile: exception {ex.Message}");
                 }
             }
             return null;
