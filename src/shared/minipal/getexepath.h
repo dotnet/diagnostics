@@ -70,7 +70,7 @@ static inline char* minipal_getexepath(void)
         return NULL;
     }
 
-    return strdup(path);
+    return _strdup(path);
 #elif defined(TARGET_WASM)
     // This is a packaging convention that our tooling should enforce.
     return strdup("/managed");
