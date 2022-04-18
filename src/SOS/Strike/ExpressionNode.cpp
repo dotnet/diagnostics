@@ -2153,23 +2153,23 @@ HRESULT ExpressionNode::IsTokenValueTypeOrEnum(mdToken token, IMetaDataImport* p
     {
         ULONG chTypeDef;
         pMetadata->GetTypeRefProps(token, NULL, NULL, 0, &chTypeDef);
-        if(chTypeDef > _countof(nameBuffer))
+        if(chTypeDef > ARRAY_SIZE(nameBuffer))
         {
             *pResult = FALSE;
             return Status;
         }
-        IfFailRet(pMetadata->GetTypeRefProps(token, NULL, nameBuffer, _countof(nameBuffer), &chTypeDef));
+        IfFailRet(pMetadata->GetTypeRefProps(token, NULL, nameBuffer, ARRAY_SIZE(nameBuffer), &chTypeDef));
     }
     else if(type == mdtTypeDef)
     {
         ULONG chTypeDef;
         pMetadata->GetTypeDefProps(token, NULL, 0, &chTypeDef, NULL, NULL);
-        if(chTypeDef > _countof(nameBuffer))
+        if(chTypeDef > ARRAY_SIZE(nameBuffer))
         {
             *pResult = FALSE;
             return Status;
         }
-        IfFailRet(pMetadata->GetTypeDefProps(token, nameBuffer, _countof(nameBuffer), &chTypeDef, NULL, NULL));
+        IfFailRet(pMetadata->GetTypeDefProps(token, nameBuffer, ARRAY_SIZE(nameBuffer), &chTypeDef, NULL, NULL));
     }
 
     if(_wcscmp(nameBuffer, L"System.ValueType") == 0 ||

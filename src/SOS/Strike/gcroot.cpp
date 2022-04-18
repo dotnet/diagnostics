@@ -220,7 +220,7 @@ void GCRootImpl::GetDependentHandleMap(std::unordered_map<TADDR, std::list<TADDR
 
     do
     {
-        hr = handles->Next(_countof(data), data, &fetched);
+        hr = handles->Next(ARRAY_SIZE(data), data, &fetched);
 
         if (FAILED(hr))
         {
@@ -240,7 +240,7 @@ void GCRootImpl::GetDependentHandleMap(std::unordered_map<TADDR, std::list<TADDR
                 map[obj].push_back(target);
             }
         }
-    } while (fetched == _countof(data));
+    } while (fetched == ARRAY_SIZE(data));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -791,7 +791,7 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
     do
     {
         // Fetch more handles
-        hr = pEnum->Next(_countof(handles), handles, &fetched);
+        hr = pEnum->Next(ARRAY_SIZE(handles), handles, &fetched);
         if (FAILED(hr))
         {
             ExtOut("Failed to request more handles.\n");
@@ -833,7 +833,7 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
             }
         }
     }
-    while (_countof(handles) == fetched);
+    while (ARRAY_SIZE(handles) == fetched);
 
     return total;
 }
@@ -1244,7 +1244,7 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
 
     do
     {
-        hr = handles->Next(_countof(data), data, &fetched);
+        hr = handles->Next(ARRAY_SIZE(data), data, &fetched);
 
         if (FAILED(hr))
         {
@@ -1265,7 +1265,7 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
                 handlearray[pos++] = (DWORD_PTR)data[i].Handle;
             }
         }
-    } while (fetched == _countof(data));
+    } while (fetched == ARRAY_SIZE(data));
 
     return pos;
 }
@@ -2190,14 +2190,14 @@ void HeapTraverser::TraceHandles()
 
     do
     {
-        hr = handles->Next(_countof(data), data, &fetched);
+        hr = handles->Next(ARRAY_SIZE(data), data, &fetched);
 
         if (FAILED(hr))
             break;
 
         for (unsigned int i = 0; i < fetched; ++i)
             PrintRoot(W("handle"), (size_t)data[i].Handle);
-    } while (fetched == _countof(data));
+    } while (fetched == ARRAY_SIZE(data));
 }
 
 /* static */ void HeapTraverser::GatherTypes(DWORD_PTR objAddr,size_t Size,

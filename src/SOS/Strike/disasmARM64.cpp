@@ -163,7 +163,7 @@ void ARM64Machine::Unassembly (
     while(PC < PCEnd)
     {
         ULONG_PTR currentPC = PC;
-        DisasmAndClean (PC, line, _countof(line));
+        DisasmAndClean (PC, line, ARRAY_SIZE(line));
 
         // This is the closing of the previous run. 
         // Check the next instruction. if it's not a the last movk, handle the accumulated value
@@ -265,7 +265,7 @@ void ARM64Machine::Unassembly (
             ULONG_PTR OrigInstrAddr = GCStressCodeCopy + (InstrAddr - PCBegin);
             ULONG_PTR OrigPC = OrigInstrAddr;
 
-            DisasmAndClean(OrigPC, line, _countof(line));
+            DisasmAndClean(OrigPC, line, ARRAY_SIZE(line));
 
             //
             // Increment the real PC based on the size of the unmodifed

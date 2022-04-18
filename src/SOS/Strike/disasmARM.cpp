@@ -419,7 +419,7 @@ void ARMMachine::Unassembly (
         }
 
         ULONG_PTR prevPC = PC;
-        DisasmAndClean (PC, line, _countof(line));
+        DisasmAndClean (PC, line, ARRAY_SIZE(line));
 
         // look at the disassembled bytes
         ptr = line;
@@ -451,7 +451,7 @@ void ARMMachine::Unassembly (
             ULONG_PTR OrigInstrAddr = GCStressCodeCopy + (InstrAddr - PCBegin);
             ULONG_PTR OrigPC = OrigInstrAddr;
 
-            DisasmAndClean(OrigPC, line, _countof(line));
+            DisasmAndClean(OrigPC, line, ARRAY_SIZE(line));
 
             //
             // Increment the real PC based on the size of the unmodifed

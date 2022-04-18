@@ -36,7 +36,7 @@ const char *        RegName(unsigned reg)
         "EDI"
     };
 
-    _ASSERTE(reg < (sizeof(regNames)/sizeof(regNames[0])));
+    _ASSERTE(reg < ARRAY_SIZE(regNames));
 
     return regNames[reg];
 }
@@ -51,7 +51,7 @@ const char *        CalleeSavedRegName(unsigned reg)
         "EBP"
     };
 
-    _ASSERTE(reg < (sizeof(regNames)/sizeof(regNames[0])));
+    _ASSERTE(reg < ARRAY_SIZE(regNames));
 
     return regNames[reg];
 }

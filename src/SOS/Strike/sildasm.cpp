@@ -182,7 +182,7 @@ void DisassembleToken(IMetaDataImport *i,
             hr = i->GetTypeDefProps(token, szName, 49, &cLen, NULL, NULL);
 
             if (FAILED(hr))
-                StringCchCopyW(szName, COUNTOF(szName), W("<unknown type def>"));
+                StringCchCopyW(szName, ARRAY_SIZE(szName), W("<unknown type def>"));
 
             printf("%S", szName);
         }
@@ -196,7 +196,7 @@ void DisassembleToken(IMetaDataImport *i,
             hr = i->GetTypeRefProps(token, NULL, szName, 49, &cLen);
 
             if (FAILED(hr))
-                StringCchCopyW(szName, COUNTOF(szName), W("<unknown type ref>"));
+                StringCchCopyW(szName, ARRAY_SIZE(szName), W("<unknown type ref>"));
 
             printf("%S", szName);
         }
@@ -213,13 +213,13 @@ void DisassembleToken(IMetaDataImport *i,
                                   NULL, NULL, NULL, NULL, NULL, NULL);
 
             if (FAILED(hr))
-                StringCchCopyW(szFieldName, COUNTOF(szFieldName), W("<unknown field def>"));
+                StringCchCopyW(szFieldName, ARRAY_SIZE(szFieldName), W("<unknown field def>"));
 
             hr = i->GetTypeDefProps(mdClass, szClassName, 49, &cLen,
                                     NULL, NULL);
 
             if (FAILED(hr))
-                StringCchCopyW(szClassName, COUNTOF(szClassName), W("<unknown type def>"));
+                StringCchCopyW(szClassName, ARRAY_SIZE(szClassName), W("<unknown type def>"));
 
             printf("%S::%S", szClassName, szFieldName);
         }
@@ -240,7 +240,7 @@ void DisassembleToken(IMetaDataImport *i,
             MethodSigArgPrettyPrinter methodPrettyPrinter(sig, cbSigBlob, i);
 
             if (FAILED(hr))
-                StringCchCopyW(szFieldName, COUNTOF(szFieldName), W("<unknown method def>"));
+                StringCchCopyW(szFieldName, ARRAY_SIZE(szFieldName), W("<unknown method def>"));
             else
                 methodPrettyPrinter.HandleReturnType();
 
@@ -248,7 +248,7 @@ void DisassembleToken(IMetaDataImport *i,
                                     NULL, NULL);
 
             if (FAILED(hr))
-                StringCchCopyW(szClassName, COUNTOF(szClassName), W("<unknown type def>"));
+                StringCchCopyW(szClassName, ARRAY_SIZE(szClassName), W("<unknown type def>"));
 
             printf("%S::%S", szClassName, szFieldName);
             methodPrettyPrinter.HandleArguments(); // Safe to call in all cases if HandleReturnType hasn't been called. Will do nothing.
@@ -286,7 +286,7 @@ void DisassembleToken(IMetaDataImport *i,
             {
                 if (FAILED(i->GetTypeRefProps(cr, NULL, szName, 50, &cLen)))
                 {
-                    StringCchCopyW(szName, COUNTOF(szName), W("<unknown type ref>"));
+                    StringCchCopyW(szName, ARRAY_SIZE(szName), W("<unknown type ref>"));
                 }
             }
             else if (TypeFromToken(cr) == mdtTypeDef)
@@ -294,7 +294,7 @@ void DisassembleToken(IMetaDataImport *i,
                 if (FAILED(i->GetTypeDefProps(cr, szName, 49, &cLen,
                     NULL, NULL)))
                 {
-                    StringCchCopyW(szName, COUNTOF(szName), W("<unknown type def>"));
+                    StringCchCopyW(szName, ARRAY_SIZE(szName), W("<unknown type def>"));
                 }
             }
             else if (TypeFromToken(cr) == mdtTypeSpec)
@@ -304,7 +304,7 @@ void DisassembleToken(IMetaDataImport *i,
                 PCCOR_SIGNATURE sig;
                 if (FAILED(i->GetTypeSpecFromToken(cr, &sig, &cSig)))
                 {
-                    StringCchCopyW(szName, COUNTOF(szName), W("<Invalid record>"));
+                    StringCchCopyW(szName, ARRAY_SIZE(szName), W("<Invalid record>"));
                 }
                 else
                 {
@@ -314,7 +314,7 @@ void DisassembleToken(IMetaDataImport *i,
             }
             else
             {
-                StringCchCopyW(szName, COUNTOF(szName), W("<unknown type token>"));
+                StringCchCopyW(szName, ARRAY_SIZE(szName), W("<unknown type token>"));
             }
 
             printf("%S::%S", szName, pMemberName);
@@ -708,7 +708,7 @@ static void insertStr(CQuickBytes *out, const char* str) {
 
 static void appendStrNum(CQuickBytes *out, int num) {
     char buff[16];  
-    sprintf_s(buff, COUNTOF(buff), "%d", num);   
+    sprintf_s(buff, ARRAY_SIZE(buff), "%d", num);   
     appendStr(out, buff);   
 }
 
@@ -944,7 +944,7 @@ PCCOR_SIGNATURE PrettyPrintType(
                 if(typ)
                 {
                     char sz[64];
-                    sprintf_s(sz,COUNTOF(sz),"/* UNKNOWN TYPE (0x%X)*/",typ);
+                    sprintf_s(sz,ARRAY_SIZE(sz),"/* UNKNOWN TYPE (0x%X)*/",typ);
                     appendStr(out, sz);
                 }
                 break;  
@@ -979,7 +979,7 @@ const char* PrettyPrintClass(
     if (!pIMD->IsValidToken(tk))
     {
         char str[1024];
-        sprintf_s(str,COUNTOF(str)," [ERROR: INVALID TOKEN 0x%8.8X] ",tk);
+        sprintf_s(str,ARRAY_SIZE(str)," [ERROR: INVALID TOKEN 0x%8.8X] ",tk);
         appendStr(out, str);
         return(asString(out));
     }
@@ -997,7 +997,7 @@ const char* PrettyPrintClass(
                     if (((formatFlags & FormatAssembly) && FAILED(pIMD->GetTypeRefProps(tk, &tkEncloser, nameComplete, MAX_TYPE_NAME_LEN, &unused))))
                     {
                         char str[1024];
-                        sprintf_s(str, COUNTOF(str), " [ERROR: Invalid TypeRef record 0x%8.8X] ", tk);
+                        sprintf_s(str, ARRAY_SIZE(str), " [ERROR: Invalid TypeRef record 0x%8.8X] ", tk);
                         appendStr(out, str);
                         return asString(out);
                     }
@@ -1010,7 +1010,7 @@ const char* PrettyPrintClass(
                     if (FAILED(pIMD->GetTypeDefProps(tk, nameComplete, MAX_TYPE_NAME_LEN, &unused, &typeDefFlags, &tkExtends)))
                     {
                         char str[1024];
-                        sprintf_s(str, COUNTOF(str), " [ERROR: Invalid TypeDef record 0x%8.8X] ", tk);
+                        sprintf_s(str, ARRAY_SIZE(str), " [ERROR: Invalid TypeDef record 0x%8.8X] ", tk);
                         appendStr(out, str);
                         return asString(out);
                     }
@@ -1115,7 +1115,7 @@ const char* PrettyPrintClass(
                 if (FAILED(pIMD->GetTypeSpecFromToken(tk, &sig, &cSig)))
                 {
                     char str[128];
-                    sprintf_s(str, COUNTOF(str), " [ERROR: Invalid token 0x%8.8X] ", tk);
+                    sprintf_s(str, ARRAY_SIZE(str), " [ERROR: Invalid token 0x%8.8X] ", tk);
                     appendStr(out, str);
                 }
                 else
@@ -1131,7 +1131,7 @@ const char* PrettyPrintClass(
         default:
             {
                 char str[128];
-                sprintf_s(str,COUNTOF(str)," [ERROR: INVALID TOKEN TYPE 0x%8.8X] ",tk);
+                sprintf_s(str,ARRAY_SIZE(str)," [ERROR: INVALID TOKEN TYPE 0x%8.8X] ",tk);
                 appendStr(out, str);
             }
     }
