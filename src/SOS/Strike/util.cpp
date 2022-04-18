@@ -111,7 +111,7 @@ DWORD_PTR GetValueFromExpression(___in __in_z const char *const instr)
     else if (hr == S_FALSE && dwAddr)
         return (DWORD_PTR)dwAddr;
 
-    strcpy_s (name, _countof(name), str);
+    strcpy_s (name, ARRAY_SIZE(name), str);
     char *ptr;
     if ((ptr = strstr (name, "__")) != NULL)
     {
@@ -866,7 +866,7 @@ const char * ElementTypeName(unsigned type)
         return "MVAR";
         break;
     default:
-        if ((type >= _countof(CorElementTypeName)) || (CorElementTypeName[type] == NULL))
+        if ((type >= ARRAY_SIZE(CorElementTypeName)) || (CorElementTypeName[type] == NULL))
         {
             return "";
         }
@@ -877,7 +877,7 @@ const char * ElementTypeName(unsigned type)
 
 const char * ElementTypeNamespace(unsigned type)
 {
-    if ((type >= _countof(CorElementTypeName)) || (CorElementTypeNamespace[type] == NULL))
+    if ((type >= ARRAY_SIZE(CorElementTypeName)) || (CorElementTypeNamespace[type] == NULL))
     {
         return "";
     }
@@ -1017,7 +1017,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                 // If ET type from signature is different from fielddesc, then the signature one is more descriptive.
                 // For example, E_T_STRING in field desc will be E_T_CLASS. In minidump's case, we won't have
                 // the method table for it.
-                ComposeName_s(vFieldDesc.Type != vFieldDesc.sigType ? vFieldDesc.sigType : vFieldDesc.Type, ElementName, sizeof(ElementName)/sizeof(ElementName[0]));
+                ComposeName_s(vFieldDesc.Type != vFieldDesc.sigType ? vFieldDesc.sigType : vFieldDesc.Type, ElementName, ARRAY_SIZE(ElementName));
                 ExtOut("%20.20s ", ElementName);
             }
         }
@@ -3179,7 +3179,7 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, DacpReJi
     BOOL bFailed = FALSE;
     if (g_sos->GetMethodDescName(pMethodDescData->MethodDescPtr, 1024, wszNameBuffer, NULL) != S_OK)
     {
-        wcscpy_s(wszNameBuffer, _countof(wszNameBuffer), W("UNKNOWN"));
+        wcscpy_s(wszNameBuffer, ARRAY_SIZE(wszNameBuffer), W("UNKNOWN"));
         bFailed = TRUE;
     }
 
@@ -3272,7 +3272,7 @@ void DumpMDInfo(DWORD_PTR dwMethodDescAddr, CLRDATA_ADDRESS dwRequestedIP /* = 0
         TO_CDADDR(dwMethodDescAddr),
         dwRequestedIP,
         &MethodDescData,
-        _countof(revertedRejitData),
+        ARRAY_SIZE(revertedRejitData),
         revertedRejitData,
         &cNeededRevertedRejitData) != S_OK)
     {
@@ -3593,7 +3593,7 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
     _ASSERTE(pFileInfo);
 
     WCHAR wszFullPath[MAX_LONGPATH];
-    DWORD cchFullPath = GetModuleFileNameW(g_hInstance, wszFullPath, _countof(wszFullPath));
+    DWORD cchFullPath = GetModuleFileNameW(g_hInstance, wszFullPath, ARRAY_SIZE(wszFullPath));
 
     DWORD dwHandle = 0;
     DWORD infoSize = GetFileVersionInfoSizeW(wszFullPath, &dwHandle);
@@ -3744,7 +3744,7 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
                 toRead = count;
 
             ULONG bytesRead;
-            wcsncpy_s(buffer,_countof(buffer),(LPWSTR) dwAddr, toRead);
+            wcsncpy_s(buffer,ARRAY_SIZE(buffer),(LPWSTR) dwAddr, toRead);
             bytesRead = toRead*sizeof(WCHAR);
             DWORD wcharsRead = bytesRead/2;
             buffer[wcharsRead] = L'\0';
@@ -4042,7 +4042,7 @@ BOOL GetCMDOption(const char *string, CMDOption *option, size_t nOption,
                 ExtOut ("Invalid option %s\n", ptr);
                 return FALSE;
             }
-            strncpy_s (buffer,_countof(buffer), ptr, end-ptr);
+            strncpy_s (buffer,ARRAY_SIZE(buffer), ptr, end-ptr);
 
             size_t n;
             for (n = 0; n < nOption; n ++)
@@ -4860,10 +4860,10 @@ CachedString Output::BuildHexValue(CLRDATA_ADDRESS disp, CLRDATA_ADDRESS addr, F
         char hex2[POINTERSIZE_BYTES*2 + 1];
         char* d = hex1;
         char* a = hex1;
-        GetHex(addr, hex1, _countof(hex1), fill);
+        GetHex(addr, hex1, ARRAY_SIZE(hex1), fill);
         if (disp != addr)
         {
-            GetHex(disp, hex2, _countof(hex2), fill);
+            GetHex(disp, hex2, ARRAY_SIZE(hex2), fill);
             d = hex2;
         }
 
@@ -4889,7 +4889,7 @@ CachedString Output::BuildHexValueWithLength(CLRDATA_ADDRESS addr, size_t len, F
     if (IsDMLEnabled())
     {
         char hex[POINTERSIZE_BYTES*2 + 1];
-        GetHex(addr, hex, _countof(hex), fill);
+        GetHex(addr, hex, ARRAY_SIZE(hex), fill);
         sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], hex, len, hex);
     }
     else
@@ -4918,13 +4918,13 @@ CachedString Output::BuildVCValue(CLRDATA_ADDRESS disp, CLRDATA_ADDRESS mt, CLRD
         char* d = hexaddr1;
         char* a = hexaddr1;
 
-        GetHex(addr, hexaddr1, _countof(hexaddr1), fill);
+        GetHex(addr, hexaddr1, ARRAY_SIZE(hexaddr1), fill);
         if (disp != addr)
         {
-            GetHex(disp, hexaddr2, _countof(hexaddr2), fill);
+            GetHex(disp, hexaddr2, ARRAY_SIZE(hexaddr2), fill);
             d = hexaddr2;
         }
-        GetHex(mt, hexmt, _countof(hexmt), fill);
+        GetHex(mt, hexmt, ARRAY_SIZE(hexmt), fill);
 
         sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], hexmt, a, d);
     }
@@ -4988,7 +4988,7 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
 CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG frame, int indexInArray, FormatType type)
 {
     WCHAR indexString[24];
-    swprintf_s(indexString, _countof(indexString), W("[%d]"), indexInArray);
+    swprintf_s(indexString, ARRAY_SIZE(indexString), W("[%d]"), indexInArray);
     return BuildManagedVarValue(expansionName, frame, indexString, type);
 }
 
@@ -5079,7 +5079,7 @@ GetLastMethodIlOffset(
     HRESULT Status;
     CLRDATA_IL_ADDRESS_MAP MapLocal[16];
     CLRDATA_IL_ADDRESS_MAP* Map = MapLocal;
-    ULONG32 MapCount = _countof(MapLocal);
+    ULONG32 MapCount = ARRAY_SIZE(MapLocal);
     ULONG32 MapNeeded;
     ULONG32 HighestOffset;
 
@@ -5342,7 +5342,7 @@ const char *TableOutput::GetWhitespace(int amount)
 
     if (count == 0)
     {
-        count = _countof(WhiteSpace);
+        count = ARRAY_SIZE(WhiteSpace);
         for (int i = 0; i < count-1; ++i)
             WhiteSpace[i] = ' ';
         WhiteSpace[count-1] = 0;
@@ -5612,7 +5612,7 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
 
                 if (SUCCEEDED(g_ExtSymbols->GetModuleNames(Index, moduleBase, NULL, 0, NULL, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL)))
                 {
-                    MultiByteToWideChar (CP_ACP, 0, szModuleName, MAX_LONGPATH, g_mdName, _countof(g_mdName));
+                    MultiByteToWideChar (CP_ACP, 0, szModuleName, MAX_LONGPATH, g_mdName, ARRAY_SIZE(g_mdName));
                     methodOutput += g_mdName;
                     methodOutput += W("!");
                 }
@@ -5700,7 +5700,7 @@ HRESULT InternalFrameManager::Init(ICorDebugThread3 * pThread3)
     _ASSERTE(pThread3 != NULL);
 
     return pThread3->GetActiveInternalFrames(
-        _countof(m_rgpInternalFrame2),
+        ARRAY_SIZE(m_rgpInternalFrame2),
         &m_cInternalFramesActual,
         &(m_rgpInternalFrame2[0]));
 }

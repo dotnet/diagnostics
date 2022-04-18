@@ -10,9 +10,7 @@
 #ifndef __strike_h__
 #define __strike_h__
 
-#ifndef _countof
-#define _countof(x) (sizeof(x)/sizeof(x[0]))
-#endif
+#include <minipal/utils.h>
 
 #if defined(_MSC_VER)
 #pragma warning(disable:4245)   // signed/unsigned mismatch

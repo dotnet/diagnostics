@@ -191,14 +191,10 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
 
     };
 
-    const UINT nCONTEXTRegisters = sizeof(rgRegisters)/sizeof(rgRegisters[0]);
-
     UINT iFirstRegister;
     UINT iSPRegister;
-    UINT nRegisters;
 
     iFirstRegister = 0;
-    nRegisters = nCONTEXTRegisters;
 #ifdef TARGET_AMD64
     iSPRegister = (FIELD_OFFSET(CONTEXT, Rsp) - FIELD_OFFSET(CONTEXT, Rax)) / sizeof(ULONGLONG);
 #elif defined(TARGET_ARM64)
@@ -218,7 +214,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
     {
         SIZE_T *pReg = NULL;
 
-        for (UINT iReg = 0; iReg < nRegisters; iReg++)
+        for (UINT iReg = 0; iReg < ARRAY_SIZE(rgRegisters); iReg++)
         {
             UINT iEncodedReg = iFirstRegister + iReg;
 #ifdef TARGET_ARM
@@ -278,7 +274,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             }
 #endif
             {
-                _ASSERTE(iReg < nCONTEXTRegisters);
+                _ASSERTE(iReg < ARRAY_SIZE(rgRegisters));
 #ifdef TARGET_ARM
                 pReg = *(SIZE_T**)(pContext + rgRegisters[iReg].cbContextOffset);
                 if (iEncodedReg == 12)

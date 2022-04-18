@@ -188,7 +188,7 @@ char* PrintOneLine (__in_z char *begin, __in_z char *limit)
                 if (n > 127) {
                     n = 127;
                 }
-                strncpy_s (line,_countof(line), begin, n);
+                strncpy_s (line,ARRAY_SIZE(line), begin, n);
                 line[n] = '\0';
                 ExtOut ("%s", line);
                 begin += n;
@@ -839,7 +839,7 @@ void PrintNativeStack(DWORD_PTR ip, BOOL bSuppressLines)
     char symbol[1024];
     ULONG64 displacement;
 
-    HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(ip), symbol, _countof(symbol), NULL, &displacement);
+    HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(ip), symbol, ARRAY_SIZE(symbol), NULL, &displacement);
     if (SUCCEEDED(hr) && symbol[0] != '\0')
     {
         ExtOut("%s", symbol);
@@ -852,7 +852,7 @@ void PrintNativeStack(DWORD_PTR ip, BOOL bSuppressLines)
         if (!bSuppressLines)
         {
             ULONG line;
-            hr = g_ExtSymbols->GetLineByOffset(TO_CDADDR(ip), &line, filename, _countof(filename), NULL, NULL);
+            hr = g_ExtSymbols->GetLineByOffset(TO_CDADDR(ip), &line, filename, ARRAY_SIZE(filename), NULL, NULL);
             if (SUCCEEDED(hr))
             {
                 ExtOut(" [%s:%d]", filename, line);

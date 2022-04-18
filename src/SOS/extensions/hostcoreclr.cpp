@@ -25,10 +25,8 @@
 #include "coreclrhost.h"
 #include "extensions.h"
 
-#ifndef _countof
-#define _countof(x) (sizeof(x)/sizeof(x[0]))
-#endif
 #include <minipal/getexepath.h>
+#include <minipal/utils.h>
 
 #ifndef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
@@ -478,7 +476,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         };
 
 #if defined(HOST_UNIX)
-        for (int i = 0; i < _countof(RuntimeHostingConstants::UnixInstallPaths); i++)
+        for (int i = 0; i < ARRAY_SIZE(RuntimeHostingConstants::UnixInstallPaths); i++)
         {
             strategyList.push_back({ ProbeInstallationDir, RuntimeHostingConstants::UnixInstallPaths[i] });
         }
@@ -644,8 +642,7 @@ static HRESULT InitializeNetCoreHost()
 
         void* hostHandle;
         unsigned int domainId;
-        hr = initializeCoreCLR(exePath, "sos",
-            sizeof(propertyKeys) / sizeof(propertyKeys[0]), propertyKeys, propertyValues, &hostHandle, &domainId);
+        hr = initializeCoreCLR(exePath, "sos", ARRAY_SIZE(propertyKeys), propertyKeys, propertyValues, &hostHandle, &domainId);
 
         free(exePath);
         if (FAILED(hr))

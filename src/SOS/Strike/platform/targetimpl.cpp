@@ -264,7 +264,7 @@ LPCSTR Target::GetTempDirectory()
             pid = ::GetCurrentProcessId();
         }
         char pidstr[128];
-        sprintf_s(pidstr, _countof(pidstr), "sos%d", pid);
+        sprintf_s(pidstr, ARRAY_SIZE(pidstr), "sos%d", pid);
         strcat_s(tmpPath, MAX_LONGPATH, pidstr);
         strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
 

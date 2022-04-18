@@ -234,7 +234,7 @@ DECLARE_API (MinidumpMode)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -286,7 +286,7 @@ DECLARE_API(IP2MD)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -321,7 +321,7 @@ DECLARE_API(IP2MD)
     }
 
     if (symlines != 0 &&
-        SUCCEEDED(GetLineByOffset(TO_CDADDR(IP), &linenum, filename, _countof(filename))))
+        SUCCEEDED(GetLineByOffset(TO_CDADDR(IP), &linenum, filename, ARRAY_SIZE(filename))))
     {
         ExtOut("Source file:  %S @ %d\n", filename, linenum);
     }
@@ -465,7 +465,7 @@ DECLARE_API(DumpStack)
         {&DSFlag.end, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
         return Status;
 
     // symlines will be non-zero only if SYMOPT_LOAD_LINES was set in the symbol options
@@ -518,7 +518,7 @@ DECLARE_API (EEStack)
         {"/d", &dml, COBOOL, FALSE}
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -703,7 +703,7 @@ DECLARE_API(DumpStackObjects)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -738,7 +738,7 @@ DECLARE_API(DumpMD)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -857,7 +857,7 @@ DECLARE_API(DumpIL)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1058,7 +1058,7 @@ DECLARE_API(DumpSig)
         {&moduleExpr.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1106,7 +1106,7 @@ DECLARE_API(DumpSigElem)
         {&moduleExpr.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1155,7 +1155,7 @@ DECLARE_API(DumpClass)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1275,7 +1275,7 @@ DECLARE_API(DumpMT)
         {&dwStartAddr, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1914,7 +1914,7 @@ DECLARE_API(DumpArray)
         {&flags.strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -2130,7 +2130,7 @@ DECLARE_API(DumpObj)
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -2188,7 +2188,7 @@ DECLARE_API(DumpALC)
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -2241,7 +2241,7 @@ DECLARE_API(DumpDelegate)
             {&dwAddr, COHEX}
         };
         size_t nArg;
-        if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
         {
             return Status;
         }
@@ -2512,7 +2512,7 @@ BOOL IsAsyncException(CLRDATA_ADDRESS taObj, CLRDATA_ADDRESS mtObj)
                 xcode = EXCEPTION_COMPLUS;
                 goto Done;
             }
-            for (size_t idx = 0; idx < _countof(AsyncHResultValues); ++idx)
+            for (size_t idx = 0; idx < ARRAY_SIZE(AsyncHResultValues); ++idx)
             {
                 if (ehr == AsyncHResultValues[idx])
                 {
@@ -2533,7 +2533,7 @@ BOOL IsAsyncException(const DacpExceptionObjectData & excData)
         return TRUE;
 
     HRESULT ehr = excData.HResult;
-    for (size_t idx = 0; idx < _countof(AsyncHResultValues); ++idx)
+    for (size_t idx = 0; idx < ARRAY_SIZE(AsyncHResultValues); ++idx)
     {
         if (ehr == AsyncHResultValues[idx])
         {
@@ -2653,13 +2653,13 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most
                 // cases. This means that the printed IP and the printed line number often will not map to one another
                 // and this is intentional.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, _countof(filename), !bAsync || i > 0)))
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, ARRAY_SIZE(filename), !bAsync || i > 0)))
             {
-                swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
+                swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
             else
             {
-                swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s\n"), so.String());
+                swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %s\n"), so.String());
             }
 
             Length += _wcslen(wszLineBuffer);
@@ -2960,7 +2960,7 @@ DECLARE_API(PrintException)
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3126,7 +3126,7 @@ DECLARE_API(DumpVC)
         {&p_Object, COHEX},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3168,7 +3168,7 @@ DECLARE_API(DumpRCW)
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3296,7 +3296,7 @@ DECLARE_API(DumpCCW)
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3552,7 +3552,7 @@ DECLARE_API(DumpPermissionSet)
         {&p_Object, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3595,7 +3595,7 @@ DECLARE_API(EEHeap)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -3641,7 +3641,7 @@ DECLARE_API(EEHeap)
                 break;
 
             char domain[16];
-            sprintf_s(domain, _countof(domain), "Domain %d", n+1);
+            sprintf_s(domain, ARRAY_SIZE(domain), "Domain %d", n+1);
 
             IfFailRet(PrintDomainHeapInfo(domain, pArray[n], &allHeapSize, &wasted));
 
@@ -3819,7 +3819,7 @@ DECLARE_API(TraverseHeap)
         {&Filename.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3949,7 +3949,7 @@ DECLARE_API(DumpRuntimeTypes)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
         return Status;
 
     EnableDMLHolder dmlHolder(dml);
@@ -4038,7 +4038,7 @@ public:
         };
 
         size_t nArgs = 0;
-        if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArgs))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArgs))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
         if (mStart == 0)
@@ -4171,7 +4171,7 @@ private:
         if (mVerify)
         {
             char buffer[1024];
-            if (!itr.Verify(buffer, _countof(buffer)))
+            if (!itr.Verify(buffer, ARRAY_SIZE(buffer)))
             {
                 ExtOut(buffer);
                 return false;
@@ -4327,7 +4327,7 @@ private:
 
                 // Don't bother calculating the size of the string, just read the full 64 characters of the buffer.  The null
                 // terminator we read will terminate the string.
-                HRESULT hr = g_ExtData->ReadVirtual(TO_CDADDR(addr+offset), tmp.str, sizeof(WCHAR)*(_countof(tmp.str)-1), &fetched);
+                HRESULT hr = g_ExtData->ReadVirtual(TO_CDADDR(addr+offset), tmp.str, sizeof(WCHAR)*(ARRAY_SIZE(tmp.str)-1), &fetched);
                 if (SUCCEEDED(hr))
                 {
                     // Ensure we null terminate the string.  Note that this will not overrun the buffer as we only
@@ -4512,7 +4512,7 @@ DECLARE_API(VerifyHeap)
 
         while (itr)
         {
-            if (itr.Verify(buffer, _countof(buffer)))
+            if (itr.Verify(buffer, ARRAY_SIZE(buffer)))
             {
                 ++itr;
             }
@@ -4727,7 +4727,7 @@ DECLARE_API(VerifyObj)
         {&taddrObj, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -4789,7 +4789,7 @@ DECLARE_API(ListNearObj)
         {&taddrArg, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || nArg != 1)
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || nArg != 1)
     {
         ExtOut("Usage: !ListNearObj <obj_address>\n");
         return Status;
@@ -4974,7 +4974,7 @@ DECLARE_API(GCHeapStat)
         {"/d",            &dml, COBOOL, FALSE}
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -5188,7 +5188,7 @@ DECLARE_API(SyncBlk)
         {&nbAsked, COSIZE_T}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -5467,7 +5467,7 @@ DECLARE_API(FinalizeQueue)
         {"-mt",       &taddrMT,   COHEX,  TRUE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -5662,7 +5662,7 @@ DECLARE_API(DumpModule)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -5833,7 +5833,7 @@ DECLARE_API(DumpDomain)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -5954,7 +5954,7 @@ DECLARE_API(DumpAssembly)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -6484,7 +6484,7 @@ DECLARE_API(ThreadState)
     if (state)
     {
 
-        for (unsigned int i = 0; i < _countof(ThreadStates); ++i)
+        for (unsigned int i = 0; i < ARRAY_SIZE(ThreadStates); ++i)
             if (state & ThreadStates[i].State)
             {
                 ExtOut("    %s\n", ThreadStates[i].Name);
@@ -6516,7 +6516,7 @@ DECLARE_API(Threads)
         {"-managedexception", &bSwitchToManagedExceptionThread, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE},
     };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -6690,13 +6690,13 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
         if (g_sos->GetMethodDescPtrFromIP(addr, &pMD) != S_OK
             || g_sos->GetMethodDescName(pMD, 1024, wszNameBuffer, NULL) != S_OK)
         {
-            wcscpy_s(wszNameBuffer, _countof(wszNameBuffer), W("UNKNOWN"));
+            wcscpy_s(wszNameBuffer, ARRAY_SIZE(wszNameBuffer), W("UNKNOWN"));
         }
 
 #ifndef FEATURE_PAL
-        sprintf_s(buffer, _countof(buffer), "bp %p", SOS_PTR(addr));
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -7456,9 +7456,9 @@ public:
             {
                 CHAR buffer[100];
 #ifndef FEATURE_PAL
-                sprintf_s(buffer, _countof(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
 #endif
                 g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
             }
@@ -7486,7 +7486,7 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
 
     if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface4), (void**) &psos4)))
     {
-        int count = _countof(arguments);
+        int count = ARRAY_SIZE(arguments);
         int countNeeded = 0;
 
         Status = psos4->GetClrNotification(arguments, count, &countNeeded);
@@ -7677,7 +7677,7 @@ DECLARE_API(bpmd)
         {&Offset, COSIZE_T},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -7963,7 +7963,7 @@ DECLARE_API(bpmd)
             ExtOut("This DynamicMethodDesc is not yet JITTED. Placing memory breakpoint at %p\n",
                 SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
-            sprintf_s(buffer, _countof(buffer),
+            sprintf_s(buffer, ARRAY_SIZE(buffer),
 #ifdef _TARGET_WIN64_
                 "ba w8"
 #else
@@ -8036,7 +8036,7 @@ DECLARE_API(ThreadPool)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return E_FAIL;
     }
@@ -8603,7 +8603,7 @@ DECLARE_API(FindAppDomain)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -8873,7 +8873,7 @@ DECLARE_API(EHInfo)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (0 == nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (0 == nArg))
     {
         return Status;
     }
@@ -8954,7 +8954,7 @@ DECLARE_API(GCInfo)
         {&taStartAddr, COHEX},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (0 == nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (0 == nArg))
     {
         return Status;
     }
@@ -9261,7 +9261,7 @@ DECLARE_API(u)
     {   // vptr, type
         {&dwStartAddr, COHEX},
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (nArg < 1))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (nArg < 1))
     {
         return Status;
     }
@@ -9796,7 +9796,7 @@ DECLARE_API(DumpLog)
         {&sFileName.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -10369,7 +10369,7 @@ DECLARE_API(SOSStatus)
             {"--reset", &bReset, COBOOL, FALSE},
             {"-r", &bReset, COBOOL, FALSE},
         };
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
         {
             return Status;
         }
@@ -10494,7 +10494,7 @@ DECLARE_API (ProcInfo)
                 end = _wcschr (pt, L'\0');
                 if (end == NULL) {
                     char format[20];
-                    sprintf_s (format,_countof (format), "%dS", &buffer[DT_OS_PAGE_SIZE/2] - pt);
+                    sprintf_s (format, ARRAY_SIZE(format), "%dS", &buffer[DT_OS_PAGE_SIZE/2] - pt);
                     ExtOut(format, pt);
                     break;
                 }
@@ -10694,7 +10694,7 @@ DECLARE_API(Token2EE)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args,option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args,option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -10786,7 +10786,7 @@ DECLARE_API(Name2EE)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -10907,7 +10907,7 @@ DECLARE_API(PathTo)
         {&root, COHEX},
         {&target, COHEX},
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -10957,7 +10957,7 @@ DECLARE_API(GCRoot)
     {   // vptr, type
         {&obj, COHEX}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11003,7 +11003,7 @@ DECLARE_API(GCWhere)
     {   // vptr, type
         {&taddrObj, COHEX}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11132,7 +11132,7 @@ DECLARE_API(FindRoots)
     {   // vptr, type
         {&taObj, COHEX}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11355,7 +11355,7 @@ public:
             {"/d", &mDML, COBOOL, FALSE},
         };
 
-        if (!GetCMDOption(args,option,_countof(option),NULL,0,NULL))
+        if (!GetCMDOption(args,option,ARRAY_SIZE(option),NULL,0,NULL))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
         if (type != NULL)
@@ -11453,14 +11453,14 @@ private:
         HRESULT hr = S_OK;
         do
         {
-            if (FAILED(hr = handles->Next(_countof(data), data, &fetched)))
+            if (FAILED(hr = handles->Next(ARRAY_SIZE(data), data, &fetched)))
             {
                 ExtOut("Error %x while walking the handle table.\n", hr);
                 break;
             }
 
             WalkHandles(data, fetched);
-        } while (_countof(data) == fetched);
+        } while (ARRAY_SIZE(data) == fetched);
     }
 
     void WalkHandles(SOSHandleData data[], unsigned int count)
@@ -11739,7 +11739,7 @@ DECLARE_API(GetCodeTypeFlags)
         {&PReg.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11755,7 +11755,7 @@ DECLARE_API(GetCodeTypeFlags)
         }
     }
 
-    sprintf_s(buffer,_countof (buffer),
+    sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=0",
         preg);
     Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer ,0);
@@ -11806,7 +11806,7 @@ DECLARE_API(GetCodeTypeFlags)
         codeType = 16;
     }
 
-    sprintf_s(buffer,_countof (buffer),
+    sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=%x",
         preg, codeType);
     Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -11847,7 +11847,7 @@ DECLARE_API(StopOnException)
         {&PReg.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11875,7 +11875,7 @@ DECLARE_API(StopOnException)
         }
     }
 
-    sprintf_s(buffer,_countof (buffer),
+    sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=0",
         preg);
     Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -11887,7 +11887,7 @@ DECLARE_API(StopOnException)
 
     if (fCreate1 || fCreate2)
     {
-        sprintf_s(buffer,_countof (buffer),
+        sprintf_s(buffer, ARRAY_SIZE(buffer),
             "sxe %s \"!soe %s %s %d;.if(@$t%d==0) {g} .else {.echo '%s hit'}\" %x",
             fCreate1 ? "-c" : "-c2",
             fDerived ? "-derived" : "",
@@ -11941,7 +11941,7 @@ DECLARE_API(StopOnException)
             if ((_wcscmp(g_mdName,typeNameWide) == 0) ||
                 (fDerived && IsDerivedFrom(taMT, typeNameWide)))
             {
-                sprintf_s(buffer,_countof (buffer),
+                sprintf_s(buffer, ARRAY_SIZE(buffer),
                     "r$t%d=1",
                     preg);
                 Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -11982,7 +11982,7 @@ DECLARE_API(ObjSize)
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -12039,7 +12039,7 @@ DECLARE_API(GCHandleLeaks)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -13264,7 +13264,7 @@ public:
 
                 WCHAR wszModuleName[MAX_LONGPATH];
                 ULONG32 cchModuleNameActual;
-                IfFailRet(pModule->GetName(_countof(wszModuleName), &cchModuleNameActual, wszModuleName));
+                IfFailRet(pModule->GetName(ARRAY_SIZE(wszModuleName), &cchModuleNameActual, wszModuleName));
 
                 ToRelease<IUnknown> pMDUnknown;
                 ToRelease<IMetaDataImport> pMD;
@@ -13311,7 +13311,7 @@ WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj)
     if (ref.HasRegisterInformation)
     {
         WCHAR reg[32];
-        HRESULT hr = g_sos->GetRegisterName(ref.Register, _countof(reg), reg, NULL);
+        HRESULT hr = g_sos->GetRegisterName(ref.Register, ARRAY_SIZE(reg), reg, NULL);
         if (SUCCEEDED(hr))
             res = reg;
         else
@@ -13367,7 +13367,7 @@ void PrintRef(const SOSStackRefData &ref, TableOutput &out)
     if (ref.Object && (ref.Flags & SOSRefInterior) == 0)
     {
         WCHAR type[128];
-        sos::BuildTypeWithExtraInfo(TO_TADDR(ref.Object), _countof(type), type);
+        sos::BuildTypeWithExtraInfo(TO_TADDR(ref.Object), ARRAY_SIZE(type), type);
 
         res += WString(W(" - ")) + type;
     }
@@ -13660,7 +13660,7 @@ public:
         out.WriteColumn(0, frame->StackOffset);
         out.WriteColumn(1, NativePtr(ip));
 
-        HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(ip), symbol, _countof(symbol), NULL, &displacement);
+        HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(ip), symbol, ARRAY_SIZE(symbol), NULL, &displacement);
         if (SUCCEEDED(hr) && symbol[0] != '\0')
         {
             String frameOutput;
@@ -13675,7 +13675,7 @@ public:
             if (!bSuppressLines)
             {
                 ULONG line;
-                hr = g_ExtSymbols->GetLineByOffset(TO_CDADDR(ip), &line, filename, _countof(filename), NULL, NULL);
+                hr = g_ExtSymbols->GetLineByOffset(TO_CDADDR(ip), &line, filename, ARRAY_SIZE(filename), NULL, NULL);
                 if (SUCCEEDED(hr))
                 {
                     frameOutput += " at ";
@@ -14045,7 +14045,7 @@ DECLARE_API(Watch)
     {   // vptr, type
         {&expression.data, COSTRING}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -14178,7 +14178,7 @@ DECLARE_API(ClrStack)
         {&cvariableName.data, COSTRING},
         {&frameToDumpVariablesFor, COSIZE_T},
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -14319,7 +14319,7 @@ DECLARE_API(SaveModule)
         {&Location.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -14509,7 +14509,7 @@ DECLARE_API(dbgout)
         {"-off", &bOff, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -15045,7 +15045,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
     UINT Length = 0;
     while(1)
     {
-        if (_wcsncmp(pwszPointer, PSZSEP, _countof(PSZSEP)-1) != 0)
+        if (_wcsncmp(pwszPointer, PSZSEP, ARRAY_SIZE(PSZSEP)-1) != 0)
         {
             delete [] pwszBuf;
             return bRet;
@@ -15068,7 +15068,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
         WCHAR wszLineBuffer[mdNameLen + 8 + sizeof(size_t)*2];
 
         // Note that we don't add a newline because we have this embedded in wszLineBuffer
-        swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), SOS_PTR(-1), SOS_PTR(-1), pwszPointer);
+        swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %p %p %s"), SOS_PTR(-1), SOS_PTR(-1), pwszPointer);
         Length += (UINT)_wcslen(wszLineBuffer);
 
         if (wszBuffer)
@@ -15282,7 +15282,7 @@ DECLARE_API(VerifyStackTrace)
         {"-ManagedExcepStack", &bVerifyManagedExcepStack, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL,0,NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL,0,NULL))
     {
         return Status;
     }
@@ -15488,7 +15488,7 @@ DECLARE_API(SaveState)
         {&filePath.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return E_FAIL;
     }
@@ -15528,7 +15528,7 @@ DECLARE_API(SuppressJitOptimization)
         {&onOff.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return E_FAIL;
     }
@@ -15865,7 +15865,7 @@ DECLARE_API(VerifyGMT)
         };
         size_t nArg;
 
-        if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+        if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
         {
             return Status;
         }
@@ -15948,7 +15948,7 @@ DECLARE_API(SetHostRuntime)
         {&hostRuntimeDirectory.data, COSTRING},
     };
     size_t narg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &narg))
     {
         return E_FAIL;
     }
@@ -16049,7 +16049,7 @@ DECLARE_API(SetSymbolServer)
         {&symbolServer.data, COSTRING},
     };
     size_t narg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &narg))
     {
         return E_FAIL;
     }
@@ -16152,7 +16152,7 @@ DECLARE_API(SetClrPath)
             {&runtimeModulePath.data, COSTRING},
         };
         size_t narg;
-        if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+        if (!GetCMDOption(args, nullptr, 0, arg, ARRAY_SIZE(arg), &narg))
         {
             return E_FAIL;
         }
@@ -16197,7 +16197,7 @@ DECLARE_API(runtimes)
             {"-netfx", &bNetFx, COBOOL, FALSE},
             {"-netcore", &bNetCore, COBOOL, FALSE},
         };
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
         {
             return Status;
         }
@@ -16316,8 +16316,8 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
         }
 
         char lpFilename[MAX_LONGPATH + 12]; // + 12 to make enough room for strcat function.
-        strcpy_s(lpFilename, _countof(lpFilename), szSOSModulePath);
-        strcat_s(lpFilename, _countof(lpFilename), "sosdocsunix.txt");
+        strcpy_s(lpFilename, ARRAY_SIZE(lpFilename), szSOSModulePath);
+        strcat_s(lpFilename, ARRAY_SIZE(lpFilename), "sosdocsunix.txt");
 
         HANDLE hSosDocFile = CreateFileA(lpFilename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
         if (hSosDocFile == INVALID_HANDLE_VALUE) {
@@ -16344,7 +16344,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
 
     // Find our line in the text file
     char searchString[MAX_LONGPATH];
-    sprintf_s(searchString, _countof(searchString), "COMMAND: %s.", pszCmdName);
+    sprintf_s(searchString, ARRAY_SIZE(searchString), "COMMAND: %s.", pszCmdName);
 
     LPSTR pStart = strstr(pText, searchString);
     LPSTR pEnd = NULL;
@@ -16404,7 +16404,7 @@ DECLARE_API(Help)
         {&commandName.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
