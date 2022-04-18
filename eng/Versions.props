@@ -58,7 +58,7 @@
     <SystemTextEncodingsWebVersion>4.7.2</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22206.10</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22215.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>12.0.2</NewtonSoftJsonVersion>
   </PropertyGroup>
