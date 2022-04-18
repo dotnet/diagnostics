@@ -20,15 +20,6 @@
 #include <string>
 #include <vector>
 
-#if defined(__APPLE__)
-#include <mach-o/dyld.h>
-#endif
-
-#if defined(__FreeBSD__)
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#endif
-
 #include "palclr.h"
 #include "arrayholder.h"
 #include "coreclrhost.h"
@@ -37,6 +28,7 @@
 #ifndef _countof
 #define _countof(x) (sizeof(x)/sizeof(x[0]))
 #endif
+#include <minipal/getexepath.h>
 
 #ifndef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
@@ -138,11 +130,6 @@ namespace RuntimeHostingConstants
         "/usr/share/dotnet",
 #endif
     };
-#if defined(TARGET_LINUX)
-    constexpr char SymlinkEntrypointExecutable[] = "/proc/self/exe";
-#elif !defined(TARGET_OSX)
-    constexpr char SymlinkEntrypointExecutable[] = "/proc/curproc/exe";
-#endif
 #endif
 };
 
@@ -393,88 +380,7 @@ static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string&
     return false;
 }
 
-#ifdef HOST_WINDOWS
-
-static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
-{
-    ArrayHolder<char> hostPath = new char[MAX_LONGPATH+1];
-    if (::GetModuleFileNameA(NULL, hostPath, MAX_LONGPATH) == 0)
-    {
-        return false;
-    }
-    entrypointExecutable.clear();
-    entrypointExecutable.append(hostPath);
-    return true;
-}
-
-#else // HOST_WINDOWS
-
-static bool GetEntrypointExecutableAbsolutePath(std::string& entrypointExecutable)
-{
-    bool result = false;
-
-    entrypointExecutable.clear();
-
-    // Get path to the executable for the current process using
-    // platform specific means.
-#if defined(TARGET_OSX)
-    // On Mac, we ask the OS for the absolute path to the entrypoint executable
-    uint32_t lenActualPath = 0;
-    if (_NSGetExecutablePath(nullptr, &lenActualPath) == -1)
-    {
-        // OSX has placed the actual path length in lenActualPath,
-        // so re-attempt the operation
-        std::string resizedPath(lenActualPath, '\0');
-        char *pResizedPath = const_cast<char *>(resizedPath.c_str());
-        if (_NSGetExecutablePath(pResizedPath, &lenActualPath) == 0)
-        {
-            entrypointExecutable.assign(pResizedPath);
-            result = true;
-        }
-    }
-#elif defined (TARGET_FREEBSD)
-    static const int name[] = {
-        CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1
-    };
-    char path[PATH_MAX];
-    size_t len;
-
-    len = sizeof(path);
-    if (sysctl(name, 4, path, &len, nullptr, 0) == 0)
-    {
-        entrypointExecutable.assign(path);
-        result = true;
-    }
-    else
-    {
-        // ENOMEM
-        result = false;
-    }
-#elif defined(TARGET_NETBSD) && defined(KERN_PROC_PATHNAME)
-    static const int name[] = {
-        CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME,
-    };
-    char path[MAXPATHLEN];
-    size_t len;
-
-    len = sizeof(path);
-    if (sysctl(name, __arraycount(name), path, &len, NULL, 0) != -1)
-    {
-        entrypointExecutable.assign(path);
-        result = true;
-    }
-    else
-    {
-        result = false;
-    }
-#else
-    // On other OSs, return the symlink that will be resolved by GetAbsolutePath
-    // to fetch the entrypoint EXE absolute path, inclusive of filename.
-    result = GetAbsolutePath(RuntimeHostingConstants::SymlinkEntrypointExecutable, entrypointExecutable);
-#endif 
-
-    return result;
-}
+#ifdef HOST_UNIX
 
 static HRESULT ProbeInstallationMarkerFile(const char* const markerName, std::string &hostRuntimeDirectory)
 {
@@ -505,7 +411,7 @@ static HRESULT ProbeInstallationMarkerFile(const char* const markerName, std::st
     return hostRuntimeDirectory.empty() ? S_FALSE : S_OK;
 }
 
-#endif // HOST_WINDOWS
+#endif // HOST_UNIX
 
 static HRESULT ProbeInstallationDir(const char* const installPath, std::string& hostRuntimeDirectory)
 {
@@ -729,8 +635,8 @@ static HRESULT InitializeNetCoreHost()
             "UseLatestBehaviorWhenTFMNotSpecified"
         };
 
-        std::string entryPointExecutablePath;
-        if (!GetEntrypointExecutableAbsolutePath(entryPointExecutablePath))
+        char* exePath = minipal_getexepath();
+        if (!exePath)
         {
             TraceError("Could not get full path to current executable");
             return E_FAIL;
@@ -738,9 +644,10 @@ static HRESULT InitializeNetCoreHost()
 
         void* hostHandle;
         unsigned int domainId;
-        hr = initializeCoreCLR(entryPointExecutablePath.c_str(), "sos",
+        hr = initializeCoreCLR(exePath, "sos",
             sizeof(propertyKeys) / sizeof(propertyKeys[0]), propertyKeys, propertyValues, &hostHandle, &domainId);
 
+        free(exePath);
         if (FAILED(hr))
         {
             TraceError("Error: Fail to initialize coreclr %08x\n", hr);
