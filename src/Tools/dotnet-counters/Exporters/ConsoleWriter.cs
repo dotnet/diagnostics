@@ -61,6 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int maxNameLength = 40; // Allow room for 40 character counter names by default.
 
         private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
+        private int Top_Row;
         private bool paused = false;
         private bool initialized = false;
         private string _errorText = null;
@@ -93,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             if (this.useAnsi) 
             {
-                Console.Write($"\u001b[{row + 1};{col + 1}H");
+                Console.Write($"\u001b[{row + 1 - Top_Row};{col + 1}H");
             }
             else 
             {
@@ -126,6 +127,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Clear();
             
             int row = Console.CursorTop;
+            Top_Row = row;
             Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
             Console.WriteLine($"    Status: {GetStatus()}");                STATUS_ROW = row++;
             if (_errorText != null)
