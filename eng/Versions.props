@@ -25,8 +25,8 @@
     <MicrosoftNETCoreApp50Version>5.0.9</MicrosoftNETCoreApp50Version>
     <MicrosoftAspNetCoreApp50Version>$(MicrosoftNETCoreApp50Version)</MicrosoftAspNetCoreApp50Version>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.5-servicing.22213.11</VSRedistCommonNetCoreSharedFrameworkx6460Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.5</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.6-servicing.22253.10</VSRedistCommonNetCoreSharedFrameworkx6460Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.6</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>6.0.5-servicing.22213.12</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>6.0.5</MicrosoftAspNetCoreAppRefVersion>
