@@ -273,20 +273,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                 }
             }
-            else if (Target.OperatingSystem == OSPlatform.OSX)
-            {
-                MachOFile machOFile = Services.GetService<MachOFile>();
-                if (machOFile is not null)
-                {
-                    if (machOFile.Symtab.TryLookupSymbol(name, out ulong offset))
-                    {
-                        address = machOFile.PreferredVMBaseAddress + offset;
-                        return true;
-                    }
-                    address = 0;
-                    return false;
-                }
-            }
             return TryGetSymbolAddressInner(name, out address);
         }
 
