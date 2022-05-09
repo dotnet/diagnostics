@@ -53,6 +53,7 @@ namespace SOS.Hosting
 
         private readonly ISymbolService _symbolService;
         private readonly IMemoryService _memoryService;
+        private readonly ulong _ignoreAddressBitsMask;
 
         public SymbolServiceWrapper(ISymbolService symbolService, IMemoryService memoryService)
         {
@@ -60,6 +61,7 @@ namespace SOS.Hosting
             Debug.Assert(memoryService != null);
             _symbolService = symbolService;
             _memoryService = memoryService;
+            _ignoreAddressBitsMask = memoryService.SignExtensionMask();
             Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
@@ -147,11 +149,13 @@ namespace SOS.Hosting
                 ISymbolFile symbolFile = null;
                 if (loadedPeAddress != 0)
                 {
+                    loadedPeAddress &= _ignoreAddressBitsMask;
                     Stream peStream = _memoryService.CreateMemoryStream(loadedPeAddress, loadedPeSize);
                     symbolFile = _symbolService.OpenSymbolFile(assemblyPath, isFileLayout, peStream);
                 }
                 if (inMemoryPdbAddress != 0)
                 {
+                    inMemoryPdbAddress &= _ignoreAddressBitsMask;
                     Stream pdbStream = _memoryService.CreateMemoryStream(inMemoryPdbAddress, inMemoryPdbSize);
                     symbolFile = _symbolService.OpenSymbolFile(pdbStream);
                 }
