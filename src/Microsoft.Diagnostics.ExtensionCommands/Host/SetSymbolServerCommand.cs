@@ -3,17 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using System;
-using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "setsymbolserver", Aliases = new string[] { "SetSymbolServer" }, Help = "Enable and set symbol server support for symbols and module download")]
+    [Command(
+        Name = "setsymbolserver",
+        Aliases = new string[] { "SetSymbolServer" },
+        Help = "Enable and set symbol server support for symbols and module download",
+        Platform = CommandPlatform.Global)]
     public class SetSymbolServerCommand : CommandBase
     {
         public ISymbolService SymbolService { get; set; }
