@@ -352,8 +352,10 @@ namespace SOS
 
         public HResult AddModuleSymbol(string symbolFileName)
         {
-            if (symbolFileName == null) throw new ArgumentNullException(nameof(symbolFileName));
-
+            if (symbolFileName == null) 
+            {
+                throw new ArgumentNullException(nameof(symbolFileName));
+            }
             byte[] symbolFileNameBytes = Encoding.ASCII.GetBytes(symbolFileName + "\0");
             fixed (byte* ptr = symbolFileNameBytes)
             {
