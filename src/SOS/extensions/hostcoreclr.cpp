@@ -345,14 +345,14 @@ static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string&
     FileFind find;
     if (find.Open(hostRuntimeDirectory.c_str()))
     {
-        int highestRevision = 0;
+        uint32_t highestRevision = 0;
         do
         {
             if (find.IsDirectory())
             {
-                int major = 0;
-                int minor = 0;
-                int revision = 0;
+                uint32_t major = 0;
+                uint32_t minor = 0;
+                uint32_t revision = 0;
                 if (sscanf(find.FileName(), "%d.%d.%d", &major, &minor, &revision) == 3)
                 {
                     if (major == runtimeVersion.Major && minor == runtimeVersion.Minor)

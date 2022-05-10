@@ -68,7 +68,7 @@ typedef enum
 }
 PPFormatFlags;
 
-char* asString(CQuickBytes *out);
+static char* asString(CQuickBytes *out);
 
 PCCOR_SIGNATURE PrettyPrintType(
     PCCOR_SIGNATURE typePtr,            // type to convert,     
@@ -98,4 +98,3 @@ void PrettyPrintClassFromToken(
     DWORD formatFlags = FormatCSharp);  // the format flags for the types
 
 #endif
-

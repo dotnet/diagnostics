@@ -8498,7 +8498,6 @@ DECLARE_API(ThreadPool)
                         TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + (index * sizeof(HillClimbingLogEntry)));
                     INT32 i32Value = 0;
                     float f32Value = 0;
-                    int fieldOffset = 0;
 
                     if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
                     {
@@ -12946,7 +12945,6 @@ private:
             ExtOut("\nLOCALS:\n");
             for (ULONG i=0; i < cLocals; i++)
             {
-                ULONG paramNameLen = 0;
                 WCHAR paramName[mdNameLen] = W("\0");
 
                 ToRelease<ICorDebugValue> pValue;
@@ -14013,7 +14011,6 @@ WatchCmd g_watchCmd;
 DECLARE_API(Watch)
 {
     INIT_API_NOEE();
-    BOOL bExpression = FALSE;
     StringHolder addExpression;
     StringHolder aExpression;
     StringHolder saveName;
@@ -16025,7 +16022,6 @@ DECLARE_API(SetSymbolServer)
     size_t timeoutInMinutes = 0;
     std::string resolvedSearchDirectory;
     BOOL disable = FALSE;
-    BOOL loadNative = FALSE;
     BOOL msdl = FALSE;
     BOOL symweb = FALSE;
     CMDOption option[] =

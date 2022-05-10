@@ -106,11 +106,13 @@ struct ClrRuntimeInfo
     }
 };
 
+static
 HRESULT
 GetRuntime(
     DWORD debuggeePID,
     ClrRuntimeInfo& clrRuntimeInfo);
 
+static
 HRESULT
 GetTargetCLRMetrics(
     LPCWSTR wszModulePath,
@@ -118,10 +120,12 @@ GetTargetCLRMetrics(
     ClrInfo* pClrInfoOut = NULL,
     DWORD *pdwRVAContinueStartupEvent = NULL);
 
+static
 void
 AppendDbiDllName(
     SString & szFullDbiPath);
 
+static
 bool
 CheckDbiAndRuntimeVersion(
     SString & szFullDbiPath,
@@ -1868,7 +1872,6 @@ GetDbiFilenameNextToRuntime(
 // Return Value:
 //    true if the versions match
 //
-static
 bool
 CheckDbiAndRuntimeVersion(
     SString & szFullDbiPath,

@@ -922,7 +922,7 @@ HRESULT ExpressionNode::PopulateTextValueHelper()
 
     BOOL isNull = TRUE;
     ToRelease<ICorDebugValue> pInnerValue;
-    CorElementType corElemType;
+    CorElementType corElemType = ELEMENT_TYPE_MAX;
     ULONG32 cbSize = 0;
     if(pValue != NULL)
     {
@@ -954,7 +954,7 @@ HRESULT ExpressionNode::PopulateTextValueHelper()
         // one piece of data ICorDebugType will tell us if needed.
         if(FAILED(GetCanonicalElementTypeForTypeName(GetTypeName(), &corElemType)))
         {
-            pTypeCast->GetType(&corElemType);
+            IfFailRet(pTypeCast->GetType(&corElemType));
         }
 
         switch(corElemType)
