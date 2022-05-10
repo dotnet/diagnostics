@@ -50,13 +50,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         WriteLine("    IsFileLayout:    {0}", module.IsFileLayout?.ToString() ?? "<unknown>");
                         WriteLine("    IndexFileSize:   {0}", module.IndexFileSize?.ToString("X8") ?? "<none>");
                         WriteLine("    IndexTimeStamp:  {0}", module.IndexTimeStamp?.ToString("X8") ?? "<none>");
-                        WriteLine("    Version:         {0}", module.VersionData?.ToString() ?? "<none>");
-                        string versionString = module.VersionString;
+                        WriteLine("    Version:         {0}", module.GetVersionData()?.ToString() ?? "<none>");
+                        string versionString = module.GetVersionString();
                         if (!string.IsNullOrEmpty(versionString))
                         {
                             WriteLine("                     {0}", versionString);
                         }
-                        foreach (PdbFileInfo pdbFileInfo in module.PdbFileInfos)
+                        foreach (PdbFileInfo pdbFileInfo in module.GetPdbFileInfos())
                         {
                             WriteLine("    PdbInfo:         {0}", pdbFileInfo);
                         }
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     if (Segment)
                     {
-                        DisplaySegments(module.ImageBase);
+                        DisplaySegments(module);
                     }
                 }
             }
@@ -79,32 +79,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryService MemoryService { get; set; }
 
-        void DisplaySegments(ulong address)
+        void DisplaySegments(IModule module)
         {
             try
             {
-                if (Target.OperatingSystem == OSPlatform.Linux)
+                ELFFile elfFile = module.Services.GetService<ELFFile>();
+                if (elfFile is not null)
                 {
-                    Stream stream = MemoryService.CreateMemoryStream();
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
-                    if (elfFile.IsValid())
+                    foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
                     {
-                        foreach (ELFProgramHeader programHeader in elfFile.Segments.Select((segment) => segment.Header))
-                        {
-                            uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
-                            ulong loadAddress = programHeader.VirtualAddress;
-                            ulong loadSize = programHeader.VirtualSize;
-                            ulong fileOffset = programHeader.FileOffset;
-                            string type = programHeader.Type.ToString();
-                            WriteLine($"        Segment: {loadAddress:X16} {loadSize:X16} {fileOffset:X16} {flags:x2} {type}");
-                        }
+                        uint flags = MemoryService.PointerSize == 8 ? programHeader.Flags : programHeader.Flags32;
+                        ulong loadAddress = programHeader.VirtualAddress;
+                        ulong loadSize = programHeader.VirtualSize;
+                        ulong fileOffset = programHeader.FileOffset;
+                        string type = programHeader.Type.ToString();
+                        WriteLine($"        Segment: {loadAddress:X16} {loadSize:X16} {fileOffset:X16} {flags:x2} {type}");
                     }
                 }
-                else if (Target.OperatingSystem == OSPlatform.OSX)
+                else
                 {
-                    Stream stream = MemoryService.CreateMemoryStream();
-                    MachOFile machOFile = new(new StreamAddressSpace(stream), address, true);
-                    if (machOFile.IsValid())
+                    MachOFile machOFile = module.Services.GetService<MachOFile>();
+                    if (machOFile is not null)
                     {
                         WriteLine("    LoadAddress:     {0:X16}", machOFile.LoadAddress);
                         WriteLine("    LoadBias:        {0:X16}", machOFile.PreferredVMBaseAddress);

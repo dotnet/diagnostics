@@ -3,9 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -105,12 +107,14 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         #endregion
     }
+
     public static class SymbolServiceExtensions
     {
-        public static string FormatSymbolStores(
-            this ISymbolService symbolService)
+        public static string FormatSymbolStores(this SymbolService symbolService)
         {
-            return symbolService.ToString().Replace(Environment.NewLine, " ").TrimEnd();
+            StringBuilder sb = new StringBuilder();
+            symbolService.ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
+            return sb.ToString().Replace(Environment.NewLine, " ").TrimEnd();
         }
     }
 }

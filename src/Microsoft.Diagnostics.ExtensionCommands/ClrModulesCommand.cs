@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         VersionData version = null;
                         try
                         {
-                            version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).VersionData;
+                            version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).GetVersionData();
                         }
                         catch (DiagnosticsException)
                         {

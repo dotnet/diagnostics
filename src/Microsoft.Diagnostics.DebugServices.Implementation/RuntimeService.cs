@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             try
             {
-                VersionData versionData = ModuleService.GetModuleFromBaseAddress(baseAddress).VersionData;
+                VersionData versionData = ModuleService.GetModuleFromBaseAddress(baseAddress).GetVersionData();
                 if (versionData is not null)
                 {
                     version = versionData.ToVersionInfo();
