@@ -123,6 +123,7 @@ namespace Microsoft.Internal.Common.Commands
             try
             {
                 StringBuilder sb = new StringBuilder();
+                Console.WriteLine("Going to GetPublishedProcess, then Select, Where, Orderby and Thenby");
                 var processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
@@ -130,19 +131,24 @@ namespace Microsoft.Internal.Common.Commands
                     .ThenBy(process => process.Id);
 
                 var currentPid = Process.GetCurrentProcess().Id;
+                Console.WriteLine($"We now have the current process id {currentPid}");
                 List<Microsoft.Internal.Common.Commands.ProcessStatusCommandHandler.ProcessDetails> printInfo = new ();
                 foreach (var process in processes)
                 {
+                    Console.WriteLine($"Going through another process with a pid of {process.Id}");
                     if (process.Id == currentPid)
                     {
+                        Console.WriteLine($"The currentPid it is {currentPid}");
                         continue;
                     }
                     try
                     {
+                        Console.WriteLine("Going to GetArgs");
                         String cmdLineArgs = GetArgs(process);
+                        Console.WriteLine("We are back from GetArgs");
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
-
+                        Console.WriteLine($"We have cmdLineArgs: {cmdLineArgs} and fileName: {fileName}");
                         var commandInfo = new ProcessDetails()
                         {
                             ProcessId = process.Id,
@@ -167,16 +173,28 @@ namespace Microsoft.Internal.Common.Commands
                         }
                         else
                         {
+                            Console.WriteLine(ex.ToString());
                             Debug.WriteLine($"[PrintProcessStatus] {ex.ToString()}");
                         }
                     }
                 }
                 FormatTableRows(printInfo, sb);
+                Console.WriteLine("Back from formatting table rows");
                 console.Out.WriteLine(sb.ToString());
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
-                console.Out.WriteLine(ex.ToString());
+                if (ex is InvalidOperationException)
+                {
+                    Console.WriteLine("This is OK");
+                    console.Out.WriteLine(ex.ToString());
+                }
+                else
+                {
+                    Console.WriteLine("This is a problem!!!!");
+                    console.Out.WriteLine(ex.ToString());
+                }
+                
             }
         }
 
