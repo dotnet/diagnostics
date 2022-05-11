@@ -218,6 +218,11 @@ if [[ "$__NativeBuild" == 1 ]]; then
     fi
 
     build_native "$__TargetOS" "$__BuildArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
+
+    if [ "$?" != 0 ]; then
+        echo "Native build FAILED"
+        exit 1
+    fi
 fi
 
 #

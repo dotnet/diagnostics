@@ -12,6 +12,11 @@ set __ThisScriptDir="%~dp0"
 call "%__ThisScriptDir%"\native\init-vs-env.cmd
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithError
 
+if defined VS170COMNTOOLS (
+    set "__VSToolsRoot=%VS170COMNTOOLS%"
+    set "__VCToolsRoot=%VS170COMNTOOLS%\..\..\VC\Auxiliary\Build"
+    set __VSVersion=vs2022
+)
 if defined VS160COMNTOOLS (
     set "__VSToolsRoot=%VS160COMNTOOLS%"
     set "__VCToolsRoot=%VS160COMNTOOLS%\..\..\VC\Auxiliary\Build"
@@ -137,7 +142,7 @@ echo %__MsgPrefix%Commencing diagnostics repo build
 
 echo %__MsgPrefix%Checking prerequisites
 :: Eval the output from probe-win1.ps1
-for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& ""%__ProjectDir%\eng\set-cmake-path.ps1"""') do %%a
+for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& ""%__ProjectDir%\eng\native\set-cmake-path.ps1"""') do %%a
 
 REM =========================================================================================
 REM ===
@@ -148,11 +153,7 @@ REM ============================================================================
 @if defined _echo @echo on
 
 :: Parse the optdata package versions out of msbuild so that we can pass them on to CMake
-set __DotNetCli=%__ProjectDir%\.dotnet\dotnet.exe
-if not exist "%__DotNetCli%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
-    goto ExitWithError
-)
+set __DotNetCli=%__ProjectDir%\dotnet.cmd
 
 REM =========================================================================================
 REM ===
@@ -198,7 +199,7 @@ if /i %__BuildCrossArch% EQU 1 (
     popd
 
 :SkipConfigureCrossBuild
-    if not exist "%__CrossCompIntermediatesDir%\install.vcxproj" (
+    if not exist "%__CrossCompIntermediatesDir%\CMakeCache.txt" (
         echo %__MsgPrefix%Error: failed to generate cross-arch components build project!
         goto ExitWithError
     )
@@ -206,8 +207,8 @@ if /i %__BuildCrossArch% EQU 1 (
 
     set __BuildLog="%__LogDir%\Cross.Build.binlog"
 
-    :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /bl:!__BuildLog! %__CommonBuildArgs%
+    echo running "%CMakePath%" --build %__CrossCompIntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
+    "%CMakePath%" --build %__CrossCompIntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
@@ -273,14 +274,14 @@ if %__Build% EQU 1 (
 :SkipConfigure
     if defined __ConfigureOnly goto SkipNativeBuild
 
-    if not exist "%__IntermediatesDir%\install.vcxproj" (
+    if not exist "%__IntermediatesDir%\CMakeCache.txt" (
         echo %__MsgPrefix%Error: failed to generate native component build project!
         goto ExitWithError
     )
     set __BuildLog="%__LogDir%\Native.Build.binlog"
 
-    :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__IntermediatesDir%\install.vcxproj /bl:!__BuildLog! %__CommonBuildArgs%
+    echo running "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
+    "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
