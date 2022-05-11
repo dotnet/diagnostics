@@ -645,7 +645,7 @@ HRESULT ExpressionNode::ExpandFields(ICorDebugValue* pInnerValue, __in_z WCHAR* 
 
     if(varToExpand[0] == L'(' && pEndCast != NULL)
     {
-        int cchCastTypeName = ((int)(pEndCast-1-varToExpand))/2;
+        size_t cchCastTypeName = ((size_t)(pEndCast-1-varToExpand))/2;
         PopulateType();
         if(_wcslen(pTypeName) != (cchCastTypeName) ||
             _wcsncmp(varToExpand+1, pTypeName, cchCastTypeName) != 0)

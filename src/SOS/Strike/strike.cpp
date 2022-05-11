@@ -7874,7 +7874,7 @@ DECLARE_API(bpmd)
                             TypeName.data = new NOTHROW char[buffSize];
                             if (TypeName.data != NULL)
                             {
-                                int bytesWritten = WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, buffSize, NULL, NULL);
+                                INDEBUG(int bytesWritten =) WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, buffSize, NULL, NULL);
                                 _ASSERTE(bytesWritten == buffSize);
                             }
                         }
@@ -16024,6 +16024,9 @@ DECLARE_API(SetSymbolServer)
     BOOL disable = FALSE;
     BOOL msdl = FALSE;
     BOOL symweb = FALSE;
+#ifdef FEATURE_PAL
+    BOOL loadNative = FALSE;
+#endif
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-disable", &disable, COBOOL, FALSE},
