@@ -1,0 +1,37 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.192.0/containers/dotnet
+{
+	"name": "C# (.NET)",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			// Update 'VARIANT' to pick a .NET Core version: 2.1, 3.1, 5.0, 6.0
+			"VARIANT": "6.0-focal",
+		}
+	},
+
+	"settings": {
+		// Loading projects on demand is better for larger codebases
+		"omnisharp.enableMsBuildLoadProjectsOnDemand": true,
+		"omnisharp.enableRoslynAnalyzers": true,
+		"omnisharp.enableEditorConfigSupport": true,
+		"omnisharp.enableAsyncCompletion": true,
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-dotnettools.csharp",
+		"ms-vscode.cpptools-extension-pack"
+	],
+
+	// Add the locally installed dotnet to the path to ensure that it is activated
+	// This allows developers to just use 'dotnet build' on the command-line, and the local dotnet version will be used.
+	// Add the global tools dir to the PATH so that globally installed tools will work
+	"remoteEnv": {
+		"PATH": "${containerWorkspaceFolder}/.dotnet:${containerWorkspaceFolder}/.dotnet-tools-global:${containerEnv:PATH}",
+		"DOTNET_MULTILEVEL_LOOKUP": "0"
+	},
+
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}

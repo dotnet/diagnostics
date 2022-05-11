@@ -463,6 +463,14 @@ DbgEngServices::OutputDmlString(
     m_control->ControlledOutput(DEBUG_OUTCTL_AMBIENT_DML, mask, "%s", message);
 }
 
+HRESULT 
+DbgEngServices::AddModuleSymbol(
+    void* param,
+    const char* symbolFileName)
+{
+    return S_OK;
+}
+
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
 //----------------------------------------------------------------------------
@@ -682,8 +690,6 @@ DbgEngServices::InitializeSymbolStoreFromSymPath()
             {
                 if (strlen(symbolPath) > 0)
                 {
-                    symbolService->DisableSymbolStore();
-
                     if (!symbolService->ParseSymbolPath(symbolPath))
                     {
                         m_control->Output(DEBUG_OUTPUT_ERROR, "Windows symbol path parsing FAILED %s\n", symbolPath.GetPtr());

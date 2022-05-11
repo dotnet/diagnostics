@@ -480,7 +480,8 @@ namespace SOS.Hosting
                 {
                     return HResult.E_INVALIDARG;
                 }
-                if (module.VersionData is null)
+                VersionData versionData = module.GetVersionData();
+                if (versionData is null)
                 {
                     return HResult.E_FAIL;
                 }
@@ -489,15 +490,13 @@ namespace SOS.Hosting
                 fileInfo->dwStrucVersion = 0;
                 fileInfo->dwFileFlagsMask = 0;
                 fileInfo->dwFileFlags = 0;
-
-                VersionData versionData = module.VersionData;
                 fileInfo->dwFileVersionMS = (uint)versionData.Minor | (uint)versionData.Major << 16;
                 fileInfo->dwFileVersionLS = (uint)versionData.Patch | (uint)versionData.Revision << 16;
             }
             else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
             {
                 *buffer = 0;
-                string versionString = module.VersionString;
+                string versionString = module.GetVersionString();
                 if (versionString == null)
                 {
                     return HResult.E_FAIL;

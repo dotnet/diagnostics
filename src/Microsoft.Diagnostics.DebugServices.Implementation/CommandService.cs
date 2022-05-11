@@ -485,13 +485,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         class LocalHelpBuilder : IHelpBuilder
         {
             private readonly CommandService _commandService;
-            private readonly IConsole _console;
+            private readonly LocalConsole _console;
             private readonly bool _useHelpBuilder;
 
             public LocalHelpBuilder(CommandService commandService, IConsole console, bool useHelpBuilder)
             {
                 _commandService = commandService;
-                _console = console;
+                _console = (LocalConsole)console;
                 _useHelpBuilder = useHelpBuilder;
             }
 
@@ -500,14 +500,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 bool useHelpBuilder = _useHelpBuilder;
                 if (_commandService._commandHandlers.TryGetValue(command.Name, out CommandHandler handler))
                 {
-                    if (handler.InvokeHelp(_commandService.Parser, LocalConsole.ToServices(_console))) {
+                    if (handler.InvokeHelp(_commandService.Parser, _console.Services)) {
                         return;
                     }
                     useHelpBuilder = true;
                 }
                 if (useHelpBuilder)
                 {
-                    var helpBuilder = new HelpBuilder(_console, maxWidth: LocalConsole.ToConsoleService(_console).WindowWidth);
+                    var helpBuilder = new HelpBuilder(_console, maxWidth: _console.ConsoleService.WindowWidth);
                     helpBuilder.Write(command);
                 }
             }
@@ -520,20 +520,27 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         class LocalConsole : IConsole
         {
-            public static IServiceProvider ToServices(IConsole console) => ((LocalConsole)console)._services;
-
-            public static IConsoleService ToConsoleService(IConsole console) => ((LocalConsole)console)._console;
-
-            private readonly IServiceProvider _services;
-            private readonly IConsoleService _console;
+            private IConsoleService _console;
 
             public LocalConsole(IServiceProvider services)
             {
-                _services = services;
-                _console = services.GetService<IConsoleService>();
-                Debug.Assert(_console != null);
-                Out = new StandardStreamWriter((text) => _console.Write(text));
-                Error = new StandardStreamWriter((text) => _console.WriteError(text));
+                Services = services;
+                Out = new StandardStreamWriter((text) => ConsoleService.Write(text));
+                Error = new StandardStreamWriter((text) => ConsoleService.WriteError(text));
+            }
+
+            internal readonly IServiceProvider Services;
+
+            internal IConsoleService ConsoleService
+            {
+                get
+                {
+                    if (_console is null)
+                    {
+                        _console = Services.GetService<IConsoleService>();
+                    }
+                    return _console;
+                }
             }
 
             #region IConsole

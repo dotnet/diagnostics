@@ -7874,7 +7874,7 @@ DECLARE_API(bpmd)
                             TypeName.data = new NOTHROW char[buffSize];
                             if (TypeName.data != NULL)
                             {
-                                int bytesWritten = WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, buffSize, NULL, NULL);
+                                INDEBUG(int bytesWritten =) WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, buffSize, NULL, NULL);
                                 _ASSERTE(bytesWritten == buffSize);
                             }
                         }
@@ -8498,7 +8498,6 @@ DECLARE_API(ThreadPool)
                         TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + (index * sizeof(HillClimbingLogEntry)));
                     INT32 i32Value = 0;
                     float f32Value = 0;
-                    int fieldOffset = 0;
 
                     if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
                     {
@@ -10380,7 +10379,6 @@ DECLARE_API(SOSStatus)
             return S_OK;
         }
         Target::DisplayStatus();
-        DisplaySymbolStore();
     }
     return Status;
 }
@@ -12946,7 +12944,6 @@ private:
             ExtOut("\nLOCALS:\n");
             for (ULONG i=0; i < cLocals; i++)
             {
-                ULONG paramNameLen = 0;
                 WCHAR paramName[mdNameLen] = W("\0");
 
                 ToRelease<ICorDebugValue> pValue;
@@ -14013,7 +14010,6 @@ WatchCmd g_watchCmd;
 DECLARE_API(Watch)
 {
     INIT_API_NOEE();
-    BOOL bExpression = FALSE;
     StringHolder addExpression;
     StringHolder aExpression;
     StringHolder saveName;
@@ -16012,123 +16008,6 @@ exit:
 #endif // FEATURE_PAL
 
 //
-// Sets the symbol server path.
-//
-DECLARE_API(SetSymbolServer)
-{
-    INIT_API_EXT();
-
-    StringHolder symbolCache;
-    StringHolder searchDirectory;
-    StringHolder windowsSymbolPath;
-    StringHolder authToken;
-    size_t timeoutInMinutes = 0;
-    std::string resolvedSearchDirectory;
-    BOOL disable = FALSE;
-    BOOL loadNative = FALSE;
-    BOOL msdl = FALSE;
-    BOOL symweb = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-disable", &disable, COBOOL, FALSE},
-        {"-cache", &symbolCache.data, COSTRING, TRUE},
-        {"-directory", &searchDirectory.data, COSTRING, TRUE},
-        {"-pat", &authToken.data, COSTRING, TRUE},
-        {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
-        {"-ms", &msdl, COBOOL, FALSE},
-#ifdef FEATURE_PAL
-        {"-loadsymbols", &loadNative, COBOOL, FALSE},
-        {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
-#else
-        {"-mi", &symweb, COBOOL, FALSE},
-#endif
-    };
-    StringHolder symbolServer;
-    CMDValue arg[] =
-    {
-        {&symbolServer.data, COSTRING},
-    };
-    size_t narg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &narg))
-    {
-        return E_FAIL;
-    }
-
-    if (msdl && symweb)
-    {
-        ExtErr("Cannot have both -ms and -mi options\n");
-        return E_FAIL;
-    }
-
-    if ((msdl || symweb) && symbolServer.data != nullptr)
-    {
-        ExtErr("Cannot have -ms or -mi option and a symbol server path\n");
-        return E_FAIL;
-    }
-
-    if (disable) {
-        DisableSymbolStore();
-    }
-
-    if (searchDirectory.data != nullptr) {
-        if (!GetAbsolutePath(searchDirectory.data, resolvedSearchDirectory))
-        {
-            ExtErr("Invalid runtime directory %s\n", resolvedSearchDirectory.c_str());
-            return E_FAIL;
-        }
-    }
-
-    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || !resolvedSearchDirectory.empty() || windowsSymbolPath.data != nullptr)
-    {
-        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, (resolvedSearchDirectory.empty() ? nullptr : resolvedSearchDirectory.c_str()), windowsSymbolPath.data);
-        if (FAILED(Status))
-        {
-            return Status;
-        }
-        if (msdl)
-        {
-            ExtOut("Added Microsoft public symbol server\n");
-        }
-        if (symweb)
-        {
-            ExtOut("Added internal symweb symbol server\n");
-        }
-        if (symbolServer.data != nullptr)
-        {
-            ExtOut("Added symbol server: %s\n", symbolServer.data);
-        }
-        if (symbolCache.data != nullptr)
-        {
-            ExtOut("Added symbol cache path: %s\n", symbolCache.data);
-        }
-        if (!resolvedSearchDirectory.empty())
-        {
-            ExtOut("Added symbol directory path: %s\n", resolvedSearchDirectory.c_str());
-        }
-        if (windowsSymbolPath.data != nullptr)
-        {
-            ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
-        }
-    }
-#ifdef FEATURE_PAL
-    else if (loadNative)
-    {
-        Status = LoadNativeSymbols();
-        if (FAILED(Status))
-        {
-            ExtErr("Symbol server not set\n");
-        }
-    }
-#endif
-    else
-    {
-        DisplaySymbolStore();
-    }
-
-    return Status;
-}
-
-//
 // Sets the runtime module path
 //
 DECLARE_API(SetClrPath)
@@ -16254,6 +16133,15 @@ HRESULT ExecuteCommand(PCSTR command, PCSTR args)
         return E_FAIL;
     }
     return S_OK;
+}
+
+//
+// Sets the symbol server path.
+//
+DECLARE_API(SetSymbolServer)
+{
+    INIT_API_EXT();
+    return ExecuteCommand("setsymbolserver", args);
 }
 
 //
