@@ -130,15 +130,6 @@ private:
 
     virtual ~Runtime();
 
-    void LoadRuntimeModules();
-
-    void SymbolFileCallback(const char* moduleFileName, const char* symbolFilePath);
-
-    static void SymbolFileCallback(void* param, const char* moduleFileName, const char* symbolFilePath)
-    {
-        ((Runtime*)param)->SymbolFileCallback(moduleFileName, symbolFilePath);
-    }
-
     void SetDacFilePath(LPCSTR dacFilePath)
     { 
         if (m_dacFilePath == nullptr && dacFilePath != nullptr) {

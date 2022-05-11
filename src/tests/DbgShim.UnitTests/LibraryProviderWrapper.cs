@@ -396,7 +396,7 @@ namespace SOS.Hosting
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    using Utilities.ELFModule elfModule = Utilities.OpenELFFile(filePath);
+                    using ELFModule elfModule = ELFModule.OpenFile(filePath);
                     if (elfModule is not null)
                     {
                         return elfModule.BuildID.ToImmutableArray();
@@ -405,7 +405,7 @@ namespace SOS.Hosting
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    using Utilities.MachOModule machOModule = Utilities.OpenMachOFile(filePath);
+                    using MachOModule machOModule = MachOModule.OpenFile(filePath);
                     if (machOModule is not null)
                     {
                         return machOModule.Uuid.ToImmutableArray();
