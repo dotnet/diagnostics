@@ -2017,18 +2017,45 @@ int GCHeapSnapshot::GetGeneration(CLRDATA_ADDRESS objectPointer)
     }
 
     TADDR taObj = TO_TADDR(objectPointer);
-    // The DAC doesn't fill the generation table with true CLRDATA_ADDRESS values
-    // but rather with ULONG64 values (i.e. non-sign-extended 64-bit values)
-    // We use the TO_TADDR below to ensure we won't break if this will ever
-    // be fixed in the DAC.
-    if (taObj >= TO_TADDR(pDetails->generation_table[0].allocation_start) &&
-        taObj <= TO_TADDR(pDetails->alloc_allocated))
-        return 0;
+    if (pDetails->has_regions)
+    {
+        for (int gen_num = 0; gen_num <= 1; gen_num++)
+        {
+            CLRDATA_ADDRESS dwAddrSeg = pDetails->generation_table[gen_num].start_segment;
+            while (dwAddrSeg != 0)
+            {
+                DacpHeapSegmentData segment;
+                if (segment.Request(g_sos, dwAddrSeg, pDetails->original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                    return 0;
+                }
+                // The DAC doesn't fill the generation table with true CLRDATA_ADDRESS values
+                // but rather with ULONG64 values (i.e. non-sign-extended 64-bit values)
+                // We use the TO_TADDR below to ensure we won't break if this will ever
+                // be fixed in the DAC.
+                if (TO_TADDR(segment.mem) <= taObj && taObj < TO_TADDR(segment.committed))
+                {
+                    return gen_num;
+                }
+                dwAddrSeg = segment.next;
+            }
+        }
+    }
+    else
+    {
+        // The DAC doesn't fill the generation table with true CLRDATA_ADDRESS values
+        // but rather with ULONG64 values (i.e. non-sign-extended 64-bit values)
+        // We use the TO_TADDR below to ensure we won't break if this will ever
+        // be fixed in the DAC.
+        if (taObj >= TO_TADDR(pDetails->generation_table[0].allocation_start) &&
+            taObj <= TO_TADDR(pDetails->alloc_allocated))
+            return 0;
 
-    if (taObj >= TO_TADDR(pDetails->generation_table[1].allocation_start) &&
-        taObj <= TO_TADDR(pDetails->generation_table[0].allocation_start))
-        return 1;
-
+        if (taObj >= TO_TADDR(pDetails->generation_table[1].allocation_start) &&
+            taObj <= TO_TADDR(pDetails->generation_table[0].allocation_start))
+            return 1;
+    }
     return 2;
 }
 
