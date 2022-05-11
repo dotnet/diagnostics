@@ -151,6 +151,10 @@ public:
     virtual void STDMETHODCALLTYPE OutputDmlString(
         ULONG mask,
         PCSTR message) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE AddModuleSymbol(
+        void* param,
+        const char* symbolFileName) = 0;
 };
 
 #ifdef __cplusplus

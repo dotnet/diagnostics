@@ -189,6 +189,10 @@ public:
         ULONG mask,
         PCSTR message);
 
+    HRESULT STDMETHODCALLTYPE AddModuleSymbol(
+        void* param,
+        const char* symbolFileName);
+
     //----------------------------------------------------------------------------
     // IRemoteMemoryService
     //----------------------------------------------------------------------------

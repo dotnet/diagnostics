@@ -311,12 +311,6 @@ LPCSTR Runtime::GetDacFilePath()
                 m_dacFilePath = _strdup(dacModulePath.c_str());
             }
         }
-
-        if (m_dacFilePath == nullptr)
-        {
-            // Attempt to only load the DAC/DBI modules
-            LoadRuntimeModules();
-        }
     }
     return m_dacFilePath;
 }
@@ -341,12 +335,6 @@ LPCSTR Runtime::GetDbiFilePath()
             {
                 m_dbiFilePath = _strdup(dbiModulePath.c_str());
             }
-        }
-
-        if (m_dbiFilePath == nullptr)
-        {
-            // Attempt to only load the DAC/DBI modules
-            LoadRuntimeModules();
         }
     }
     return m_dbiFilePath;
@@ -646,12 +634,6 @@ HRESULT Runtime::GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuff
     _ASSERTE(pFileInfo);
     _ASSERTE(g_ExtSymbols2 != nullptr);
 
-#ifdef FEATURE_PAL
-    // Load the symbols for runtime. On Linux we are looking for the "sccsid" 
-    // global so "libcoreclr.so/.dylib" symbols need to be loaded.
-    LoadNativeSymbols(true);
-#endif
-
     HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(
         m_index, 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
 
@@ -695,55 +677,5 @@ void Runtime::DisplayStatus()
     }
     if (m_dbiFilePath != nullptr) {
         ExtOut("    DBI file path: %s\n", m_dbiFilePath);
-    }
-}
-
-/**********************************************************************\
- * Attempt to download the runtime modules (runtime, DAC and DBI)
-\**********************************************************************/
-void Runtime::LoadRuntimeModules()
-{
-    ISymbolService* symbolService = GetSymbolService();
-    if (symbolService != nullptr)
-    {
-        if (m_runtimeInfo != nullptr)
-        {
-            symbolService->LoadNativeSymbolsFromIndex(
-                SymbolFileCallback,
-                this,
-                GetRuntimeConfiguration(),
-                GetRuntimeDllName(),
-                true,                                   // special keys (runtime, DAC and DBI)
-                m_runtimeInfo->RuntimeModuleIndex[0],   // size of module index
-                &m_runtimeInfo->RuntimeModuleIndex[1]); // beginning of index 
-        }
-        else
-        {
-            symbolService->LoadNativeSymbols(
-                SymbolFileCallback,
-                this,
-                GetRuntimeConfiguration(),
-                m_name,
-                m_address,
-                (int)m_size);
-        }
-    }
-}
-
-/**********************************************************************\
- * Called by LoadRuntimeModules to set the DAC and DBI file paths
-\**********************************************************************/
-void Runtime::SymbolFileCallback(const char* moduleFileName, const char* symbolFilePath)
-{
-    if (strcmp(moduleFileName, GetRuntimeDllName()) == 0) {
-        return;
-    }
-    if (strcmp(moduleFileName, GetDacDllName()) == 0) {
-        SetDacFilePath(symbolFilePath);
-        return;
-    }
-    if (strcmp(moduleFileName, NET_DBI_DLL_NAME_A) == 0) {
-        SetDbiFilePath(symbolFilePath);
-        return;
     }
 }

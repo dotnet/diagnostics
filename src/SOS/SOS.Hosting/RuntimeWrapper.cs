@@ -252,7 +252,8 @@ namespace SOS.Hosting
             {
                 return HResult.E_FAIL;
             }
-            if (module.VersionData is null)
+            VersionData versionData = module.GetVersionData();
+            if (versionData is null)
             {
                 return HResult.E_FAIL;
             }
@@ -260,8 +261,6 @@ namespace SOS.Hosting
             pFileInfo->dwStrucVersion = 0;
             pFileInfo->dwFileFlagsMask = 0;
             pFileInfo->dwFileFlags = 0;
-
-            VersionData versionData = module.VersionData;
             pFileInfo->dwFileVersionMS = (uint)versionData.Minor | (uint)versionData.Major << 16;
             pFileInfo->dwFileVersionLS = (uint)versionData.Patch | (uint)versionData.Revision << 16;
 
@@ -271,7 +270,7 @@ namespace SOS.Hosting
                 if (fileVersionBufferSizeInBytes > 0) {
                     *fileVersionBuffer = 0;
                 }
-                string versionString = module.VersionString;
+                string versionString = module.GetVersionString();
                 if (versionString != null)
                 {
                     try

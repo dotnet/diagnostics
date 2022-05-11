@@ -42,7 +42,6 @@ namespace SOS.Hosting
     [Command(Name = "histobj",          DefaultOptions = "HistObj",             Help = "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.")]
     [Command(Name = "histobjfind",      DefaultOptions = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
     [Command(Name = "histroot",         DefaultOptions = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
-    [Command(Name = "setsymbolserver",  DefaultOptions = "SetSymbolServer",     Help = "Enables the symbol server support.")]
     [Command(Name = "verifyheap",       DefaultOptions = "VerifyHeap",          Help = "Checks the GC heap for signs of corruption.")]
     [Command(Name = "threadpool",       DefaultOptions = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
     [Command(Name = "soshelp",          DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
