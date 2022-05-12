@@ -65,8 +65,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         {
                             if (clrInfo.SingleFileRuntimeInfo.HasValue)
                             {
-                                RuntimeInfo runtimeInfo = clrInfo.SingleFileRuntimeInfo.Value;
-                                WriteLine("    Signature:   {0}", Encoding.ASCII.GetString(runtimeInfo.Signature, RuntimeInfo.SignatureValueLength - 1));
+                                ClrRuntimeInfo runtimeInfo = clrInfo.SingleFileRuntimeInfo.Value;
+                                WriteLine("    Signature:   {0}", Encoding.ASCII.GetString(runtimeInfo.Signature, ClrRuntimeInfo.SignatureValueLength - 1));
                                 WriteLine("    Version:     {0}", runtimeInfo.Version);
                                 if (Target.OperatingSystem == OSPlatform.Windows)
                                 {
