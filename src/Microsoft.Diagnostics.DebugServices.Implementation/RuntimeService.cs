@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (_dataTarget is null)
                 {
                     _dataTarget = new DataTarget(new CustomDataTarget(this)) {
-                        BinaryLocator = null
+                        FileLocator = null
                     };
                 }
                 if (_dataTarget is not null)
