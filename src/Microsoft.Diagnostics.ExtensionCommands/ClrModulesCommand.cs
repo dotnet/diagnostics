@@ -39,7 +39,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         WriteLine("    AssemblyName:    {0}", module.AssemblyName);
                         WriteLine("    ImageBase:       {0:X16}", module.ImageBase);
                         WriteLine("    Size:            {0:X8}", module.Size);
-                        WriteLine("    Address:         {0:X16}", module.Address);
+                        WriteLine("    ModuleAddress:   {0:X16}", module.Address);
+                        WriteLine("    AssemblyAddress: {0:X16}", module.AssemblyAddress);
                         WriteLine("    IsPEFile:        {0}", module.IsPEFile);
                         WriteLine("    Layout:          {0}", module.Layout);
                         WriteLine("    IsDynamic:       {0}", module.IsDynamic);

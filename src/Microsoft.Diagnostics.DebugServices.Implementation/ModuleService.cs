@@ -367,7 +367,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        Trace.TraceError($"GetVersionString: unsupported module {module} or platform {Target.OperatingSystem}");
+                        Trace.TraceError($"GetVersionString: unsupported module {module} on platform {Target.OperatingSystem}");
                     }
                 }
             }
