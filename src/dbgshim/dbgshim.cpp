@@ -598,12 +598,9 @@ public:
                 SetEvent(clrRuntimeInfo.ContinueStartupEvent);
             }
         }
-        if (FAILED(hr))
+        if (FAILED(hr) && (pCordb != NULL))
         {
-            if (pCordb != NULL)
-            {
-                pCordb->Release();
-            }
+            pCordb->Release();
         }
         return hr;
     }
