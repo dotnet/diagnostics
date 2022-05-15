@@ -104,6 +104,11 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
+        /// Version 1.0.0 constant
+        /// </summary>
+        public static readonly Version Version100 = new Version("1.0.0");
+
+        /// <summary>
         /// Test data file version
         /// </summary>
         public readonly Version Version;
@@ -187,6 +192,111 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             return members.ToImmutableDictionary();
         }
+
+        /// <summary>
+        /// Compares the test data values with the properties in the instance with the same name. This is
+        /// used to compare ITarget, IModule, IThread, RegiserInfo instances to the test data.
+        /// </summary>
+        /// <param name="values">test data for the item</param>
+        /// <param name="instance">object to compare</param>
+        public void CompareMembers(ImmutableDictionary<string, TestDataReader.Value> values, object instance)
+        {
+            foreach (KeyValuePair<string, TestDataReader.Value> testData in values)
+            {
+                string testDataKey = testData.Key;
+                if (Version <= Version100 && testDataKey == "VersionData")
+                {
+                    testDataKey = "GetVersionData";
+                }
+                MemberInfo[] members = instance.GetType().GetMember(
+                    testDataKey,
+                    MemberTypes.Field | MemberTypes.Property | MemberTypes.Method,
+                    BindingFlags.Public | BindingFlags.Instance);
+
+                if (members.Length > 0)
+                {
+                    MemberInfo member = members.Single();
+                    object memberValue = null;
+                    Type memberType = null;
+
+                    switch (member.MemberType)
+                    {
+                        case MemberTypes.Property:
+                            memberValue = ((PropertyInfo)member).GetValue(instance);
+                            memberType = ((PropertyInfo)member).PropertyType;
+                            break;
+                        case MemberTypes.Field:
+                            memberValue = ((FieldInfo)member).GetValue(instance);
+                            memberType = ((FieldInfo)member).FieldType;
+                            break;
+                        case MemberTypes.Method:
+                            if (((MethodInfo)member).GetParameters().Length == 0)
+                            {
+                                memberValue = ((MethodInfo)member).Invoke(instance, null);
+                                memberType = ((MethodInfo)member).ReturnType;
+                            }
+                            break;
+                    }
+                    if (memberType != null)
+                    {
+                        if (testData.Value.IsSubValue)
+                        {
+                            Trace.TraceInformation($"CompareMembers {testDataKey} sub value:");
+                            CompareMembers(testData.Value.Values.Single(), memberValue);
+                        }
+                        else
+                        {
+                            Type nullableType = Nullable.GetUnderlyingType(memberType);
+                            memberType = nullableType ?? memberType;
+
+                            if (nullableType != null && memberValue == null)
+                            {
+                                memberValue = string.Empty;
+                            }
+                            else if (memberType == typeof(string))
+                            {
+                                memberValue ??= string.Empty;
+                            }
+                            else if (memberValue is ImmutableArray<byte> buildId)
+                            {
+                                memberType = typeof(string);
+                                memberValue = !buildId.IsDefaultOrEmpty ? string.Concat(buildId.Select((b) => b.ToString("x2"))) : string.Empty;
+                            }
+                            else if (!memberType.IsPrimitive && !memberType.IsEnum)
+                            {
+                                memberType = typeof(string);
+                                memberValue = memberValue?.ToString() ?? string.Empty;
+                            }
+                            object testDataValue = testData.Value.GetValue(memberType);
+                            Trace.TraceInformation($"CompareMembers {testDataKey}: expected '{testDataValue}' actual '{memberValue}'");
+
+                            // Disable checking the VersionData property because downloading the necessary binary to map into the address is unreliable
+                            // See issue: https://github.com/dotnet/diagnostics/issues/2955
+                            if (testDataKey == "GetVersionData")
+                            {
+                                if (!object.Equals(testDataValue, memberValue))
+                                {
+                                    Trace.TraceError($"CompareMembers GetVersionData(): expected '{testDataValue}' != actual '{memberValue}'");
+                                }
+                            }
+                            else
+                            {
+                                Assert.Equal(testDataValue, memberValue);
+                            }
+                        }
+                    }
+                    else 
+                    { 
+                        Trace.TraceWarning($"CompareMembers {testDataKey} member not found");
+                        return;
+                    }
+                }
+                else
+                {
+                    Trace.TraceWarning($"CompareMembers {testDataKey} not found");
+                }
+            }
+        }
     }
 
     public static class TestDataExtensions
@@ -232,107 +342,6 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
             return default;
-        }
-
-        /// <summary>
-        /// Compares the test data values with the properties in the instance with the same name. This is
-        /// used to compare ITarget, IModule, IThread, RegiserInfo instances to the test data.
-        /// </summary>
-        /// <param name="values">test data for the item</param>
-        /// <param name="instance">object to compare</param>
-        public static void CompareMembers(
-            this ImmutableDictionary<string, TestDataReader.Value> values, object instance)
-        {
-            foreach (KeyValuePair<string, TestDataReader.Value> testData in values)
-            {
-                MemberInfo[] members = instance.GetType().GetMember(
-                    testData.Key,
-                    MemberTypes.Field | MemberTypes.Property | MemberTypes.Method,
-                    BindingFlags.Public | BindingFlags.Instance);
-
-                if (members.Length > 0)
-                {
-                    MemberInfo member = members.Single();
-                    object memberValue = null;
-                    Type memberType = null;
-
-                    switch (member.MemberType)
-                    {
-                        case MemberTypes.Property:
-                            memberValue = ((PropertyInfo)member).GetValue(instance);
-                            memberType = ((PropertyInfo)member).PropertyType;
-                            break;
-                        case MemberTypes.Field:
-                            memberValue = ((FieldInfo)member).GetValue(instance);
-                            memberType = ((FieldInfo)member).FieldType;
-                            break;
-                        case MemberTypes.Method:
-                            if (((MethodInfo)member).GetParameters().Length == 0)
-                            {
-                                memberValue = ((MethodInfo)member).Invoke(instance, null);
-                                memberType = ((MethodInfo)member).ReturnType;
-                            }
-                            break;
-                    }
-                    if (memberType != null)
-                    {
-                        if (testData.Value.IsSubValue)
-                        {
-                            Trace.TraceInformation($"CompareMembers {testData.Key} sub value:");
-                            CompareMembers(testData.Value.Values.Single(), memberValue);
-                        }
-                        else
-                        {
-                            Type nullableType = Nullable.GetUnderlyingType(memberType);
-                            memberType = nullableType ?? memberType;
-
-                            if (nullableType != null && memberValue == null)
-                            {
-                                memberValue = string.Empty;
-                            }
-                            else if (memberType == typeof(string))
-                            {
-                                memberValue ??= string.Empty;
-                            }
-                            else if (memberValue is ImmutableArray<byte> buildId)
-                            {
-                                memberType = typeof(string);
-                                memberValue = !buildId.IsDefaultOrEmpty ? string.Concat(buildId.Select((b) => b.ToString("x2"))) : string.Empty;
-                            }
-                            else if (!memberType.IsPrimitive && !memberType.IsEnum)
-                            {
-                                memberType = typeof(string);
-                                memberValue = memberValue?.ToString() ?? string.Empty;
-                            }
-                            object testDataValue = testData.Value.GetValue(memberType);
-                            Trace.TraceInformation($"CompareMembers {testData.Key}: expected '{testDataValue}' actual '{memberValue}'");
-
-                            // Disable checking the VersionData property because downloading the necessary binary to map into the address is unreliable
-                            // See issue: https://github.com/dotnet/diagnostics/issues/2955
-                            if (testData.Key == "VersionData")
-                            {
-                                if (!object.Equals(testDataValue, memberValue))
-                                {
-                                    Trace.TraceError($"CompareMembers VersionData: expected '{testDataValue}' != actual '{memberValue}'");
-                                }
-                            }
-                            else
-                            {
-                                Assert.Equal(testDataValue, memberValue);
-                            }
-                        }
-                    }
-                    else 
-                    { 
-                        Trace.TraceWarning($"CompareMembers {testData.Key} member not found");
-                        return;
-                    }
-                }
-                else
-                {
-                    Trace.TraceWarning($"CompareMembers {testData.Key} not found");
-                }
-            }
         }
     }
 }
