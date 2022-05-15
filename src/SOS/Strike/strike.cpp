@@ -8371,6 +8371,29 @@ DECLARE_API(ThreadPool)
                     }
                 }
 
+                // Enumerate assignable normal-priority work items.
+                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("assignableWorkItemQueues"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueueArrayPtr;
+                    MOVE(workItemsConcurrentQueueArrayPtr, itr->GetAddress() + offset);
+                    DacpObjectData workItemsConcurrentQueueArray;
+                    if (workItemsConcurrentQueueArray.Request(g_sos, TO_CDADDR(workItemsConcurrentQueueArrayPtr)) == S_OK &&
+                        workItemsConcurrentQueueArray.ObjectType == OBJ_ARRAY)
+                    {
+                        for (int i = 0; i < workItemsConcurrentQueueArray.dwNumComponents; i++)
+                        {
+                            CLRDATA_ADDRESS workItemsConcurrentQueuePtr;
+                            MOVE(workItemsConcurrentQueuePtr, TO_CDADDR(workItemsConcurrentQueueArray.ArrayDataPtr + (i * workItemsConcurrentQueueArray.dwComponentSize)));
+                            if (workItemsConcurrentQueuePtr != NULL && sos::IsObject(workItemsConcurrentQueuePtr, false))
+                            {
+                                // We got the ConcurrentQueue.  Enumerate it.
+                                EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
+                            }
+                        }
+                    }
+                }
+
                 // Enumerate normal-priority work items.
                 offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
                 if (offset > 0)
