@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
-    <SingleFileRuntimeVersion>6.0.4</SingleFileRuntimeVersion>
+    <SingleFileRuntimeVersion>6.0.5</SingleFileRuntimeVersion>
     <!-- Latest symstore version updated by darc -->
     <MicrosoftSymbolStoreVersion>1.0.325901</MicrosoftSymbolStoreVersion>
     <!-- Runtime versions to test -->
