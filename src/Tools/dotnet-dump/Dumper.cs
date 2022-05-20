@@ -84,17 +84,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
-                //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                //{
-                //    if (crashreport)
-                //    {
-                //        Console.WriteLine("Crash reports not supported on Windows.");
-                //        return 0;
-                //    }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    if (crashreport)
+                    {
+                        Console.WriteLine("Crash reports not supported on Windows.");
+                        return 0;
+                    }
 
-                //    Windows.CollectDump(processId, output, type);
-                //}
-                //else
+                    Windows.CollectDump(processId, output, type);
+                }
+                else
                 {
                     var client = new DiagnosticsClient(processId);
 
