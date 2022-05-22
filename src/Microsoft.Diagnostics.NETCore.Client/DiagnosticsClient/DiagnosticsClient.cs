@@ -134,11 +134,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             IpcMessage request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
             IpcMessage response = IpcClient.SendMessage(_endpoint, request);
-            if (!ValidateWriteDumpResponseMessage(response, errorMessage: true))
+            if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
             {
                 request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
                 response = IpcClient.SendMessage(_endpoint, request);
-                if (!ValidateWriteDumpResponseMessage(response, errorMessage: false))
+                if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse))
                 {
                     if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
                     {
@@ -146,10 +146,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
                     response = IpcClient.SendMessage(_endpoint, request);
-                    if (!ValidateWriteDumpResponseMessage(response, errorMessage: false))
-                    {
-                        throw new UnsupportedCommandException($"Write dump failed - command is not supported.");
-                    }
+                    ValidateResponseMessage(response, "Write dump");
                 }
             }
         }
@@ -177,11 +174,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             IpcMessage request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-            if (!ValidateWriteDumpResponseMessage(response, errorMessage: true))
+            if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
             {
                 request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
                 response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-                if (!ValidateWriteDumpResponseMessage(response, errorMessage: false))
+                if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse))
                 {
                     if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
                     {
@@ -189,56 +186,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
                     response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-                    if (!ValidateWriteDumpResponseMessage(response, errorMessage: false))
-                    {
-                        throw new UnsupportedCommandException($"Write dump failed - command is not supported.");
-                    }
+                    ValidateResponseMessage(response, "Write dump");
                 }
-            }
-        }
-
-        private static bool ValidateWriteDumpResponseMessage(IpcMessage response, bool errorMessage)
-        {
-            switch ((DiagnosticsServerResponseId)response.Header.CommandId)
-            {
-                case DiagnosticsServerResponseId.OK:
-                    return true;
-
-                case DiagnosticsServerResponseId.Error:
-                    int index = 0;
-                    uint hr = BitConverter.ToUInt32(response.Payload, index);
-                    index += sizeof(UInt32);
-                    string message = null;
-                    switch (hr)
-                    {
-                        case (uint)DiagnosticsIpcError.UnknownCommand:
-                            return false;
-
-                        case (uint)DiagnosticsIpcError.InvalidArgument:
-                            throw new UnsupportedCommandException("Write dump failed - Invalid command argument.");
-
-                        case (uint)DiagnosticsIpcError.NotSupported:
-                            throw new NotSupportedException("Write dump failed - Not supported by this runtime.");
-
-                        // Only this error code (E_FAIL) can have a error message
-                        case (uint)DiagnosticsIpcError.Fail:
-                            if (errorMessage)
-                            {
-                                message = IpcHelpers.ReadString(response.Payload, ref index);
-                            }
-                            break;
-
-                        default:
-                            break;
-                    }
-                    if (string.IsNullOrWhiteSpace(message))
-                    {
-                        message = $"Write dump failed - HRESULT: 0x{hr:X8}.";
-                    }
-                    throw new ServerErrorException(message);
-
-                default:
-                    throw new ServerErrorException("Write dump failed - Server responded with unknown response.");
             }
         }
 
@@ -613,8 +562,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             switch ((DiagnosticsServerResponseId)responseMessage.Header.CommandId)
             {
+                case DiagnosticsServerResponseId.OK:
+                    return true;
+
                 case DiagnosticsServerResponseId.Error:
                     uint hr = BitConverter.ToUInt32(responseMessage.Payload, 0);
+                    int index = sizeof(uint);
+                    string message = null;
                     switch (hr)
                     {
                         case (uint)DiagnosticsIpcError.UnknownCommand:
@@ -623,18 +577,37 @@ namespace Microsoft.Diagnostics.NETCore.Client
                                 return false;
                             }
                             throw new UnsupportedCommandException($"{operationName} failed - Command is not supported.");
+
                         case (uint)DiagnosticsIpcError.ProfilerAlreadyActive:
                             throw new ProfilerAlreadyActiveException($"{operationName} failed - A profiler is already loaded.");
+
                         case (uint)DiagnosticsIpcError.InvalidArgument:
                             if (options.HasFlag(ValidateResponseOptions.InvalidArgumentIsRequiresSuspension))
                             {
                                 throw new ServerErrorException($"{operationName} failed - The runtime must be suspended for this command.");
                             }
                             throw new UnsupportedCommandException($"{operationName} failed - Invalid command argument.");
+
+                        case (uint)DiagnosticsIpcError.NotSupported:
+                            throw new NotSupportedException($"{operationName} - Not supported by this runtime.");
+
+                        // Only this error code (E_FAIL) can have a error message
+                        case (uint)DiagnosticsIpcError.Fail:
+                            if (options.HasFlag(ValidateResponseOptions.ErrorMessageReturned))
+                            {
+                                message = IpcHelpers.ReadString(responseMessage.Payload, ref index);
+                            }
+                            break;
+
+                        default:
+                            break;
                     }
-                    throw new ServerErrorException($"{operationName} failed - HRESULT: 0x{hr:X8}");
-                case DiagnosticsServerResponseId.OK:
-                    return true;
+                    if (string.IsNullOrWhiteSpace(message))
+                    {
+                        message = $"{operationName} - HRESULT: 0x{hr:X8}.";
+                    }
+                    throw new ServerErrorException(message);
+
                 default:
                     throw new ServerErrorException($"{operationName} failed - Server responded with unknown response.");
             }
@@ -646,6 +619,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             None = 0x0,
             UnknownCommandReturnsFalse = 0x1,
             InvalidArgumentIsRequiresSuspension = 0x2,
+            ErrorMessageReturned = 0x4,
         }
     }
 }
