@@ -64,13 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
             // Attempt to load the persisted command history
-            string dotnetHome;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), ".dotnet");
-            }
-            else { 
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet");
-            }
+            string dotnetHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
             string historyFileName = Path.Combine(dotnetHome, "dotnet-dump.history");
             try
             {

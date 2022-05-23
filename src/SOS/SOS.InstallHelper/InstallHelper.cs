@@ -57,21 +57,10 @@ namespace SOS
         {
             m_writeLine = writeLine;
             string rid = GetRid(architecture);
-            string home;
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
             {
-                home = Environment.GetEnvironmentVariable("USERPROFILE");
-                if (string.IsNullOrEmpty(home)) {
-                    throw new SOSInstallerException("USERPROFILE environment variable not found");
-                }
-            }
-            else
-            {
-                home = Environment.GetEnvironmentVariable("HOME");
-                if (string.IsNullOrEmpty(home)) {
-                    throw new SOSInstallerException("HOME environment variable not found");
-                }
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
             }
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
