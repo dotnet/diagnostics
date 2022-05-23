@@ -807,7 +807,7 @@ struct MSLAYOUT DacpHeapSegmentData
     {
         HRESULT hr = sos->GetHeapSegmentData(addr, this);
 
-        // if this is the start segment, and the Dac hasn't set it, set highAllocMark too.
+        // if this is the start segment, and the Dac hasn't set highAllocMark, set it here.
         if (SUCCEEDED(hr) && this->highAllocMark == 0)
         {
             if (this->segmentAddr == heap.generation_table[0].start_segment)
