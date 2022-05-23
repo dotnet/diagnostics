@@ -1,7 +1,7 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.props"/>
   <PropertyGroup>
-    <IsShipping>false</IsShipping>
+    <IsShipping>true</IsShipping>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <PackageDescription>Internal implementation package not meant for direct consumption. Please do not reference directly.</PackageDescription>
   </PropertyGroup>

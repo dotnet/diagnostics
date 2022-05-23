@@ -62,6 +62,16 @@ namespace SOS.Extensions
         public static HostServices Instance { get; private set; }
 
         /// <summary>
+        /// The time out in minutes passed to the HTTP symbol store
+        /// </summary>
+        public static int DefaultTimeout { get; set; } = 4;
+
+        /// <summary>
+        /// The retry count passed to the HTTP symbol store
+        /// </summary>
+        public static int DefaultRetryCount { get; set; } = 0;
+
+        /// <summary>
         /// This is the main managed entry point that the native hosting code calls. It needs to be a single function
         /// and is restricted to just a string parameter because host APIs (i.e. desktop clr) have this narrow interface.
         /// </summary>
@@ -97,6 +107,8 @@ namespace SOS.Extensions
         {
             _serviceProvider = new ServiceProvider();
             _symbolService = new SymbolService(this);
+            _symbolService.DefaultTimeout = DefaultTimeout;
+            _symbolService.DefaultRetryCount = DefaultRetryCount;
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!ext" : null);
             _commandService.AddCommands(new Assembly[] { typeof(HostServices).Assembly });
             _commandService.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });

@@ -125,6 +125,7 @@ namespace Microsoft.Diagnostics.DebugServices
         {
             Debug.Assert(address != 0);
             Debug.Assert(size != 0);
+            Debug.Assert((address & ~memoryService.SignExtensionMask()) == 0);
             return new TargetStream(memoryService, address, size);
         }
 

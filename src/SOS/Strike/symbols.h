@@ -8,23 +8,6 @@
 
 extern HMODULE g_hInstance;
 
-#ifdef FEATURE_PAL
-extern HRESULT LoadNativeSymbols(bool runtimeOnly = false);
-#endif
-
-extern HRESULT InitializeSymbolStore(
-    BOOL msdl,
-    BOOL symweb,
-    const char* symbolServer,
-    const char* authToken,
-    int timeoutInMinutes,
-    const char* cacheDirectory,
-    const char* searchDirectory,
-    const char* windowsSymbolPath);
-
-extern void DisplaySymbolStore();
-extern void DisableSymbolStore();
-
 extern HRESULT GetMetadataLocator(
     LPCWSTR imagePath,
     ULONG32 imageTimestamp,

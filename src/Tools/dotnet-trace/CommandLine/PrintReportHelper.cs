@@ -32,6 +32,10 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             Match match = nameRx.Match(name);
             string functionList = match.Groups[1].Value;
             string arguments = match.Groups[2].Value;
+            if (functionList == string.Empty && arguments == string.Empty)
+            {
+                return name;
+            }
             string[] usingStatement = functionList.Split(".");
             int length = usingStatement.Length;
 
@@ -113,6 +117,10 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 CallTreeNodeBase node = nodesToReport[i];
                 string name = node.Name;
                 string formatName = FormatFunction(name);
+                if (formatName == "?!?")
+                {
+                    formatName = "Missing Symbol";
+                }
                 List<string> nameList = SplitInto(formatName, functionColumnWidth);
 
                 if(isVerbose)
@@ -128,7 +136,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 {
                     string inclusiveMeasure = "";
                     string exclusiveMeasure = "";
-                    string number = new string(' ', maxDigit + 2); //+2 lines 130 and 137 account for '. '
+                    string number = new string(' ', maxDigit + 2); //+2 to account for '. '
 
                     if(j == 0)
                     {

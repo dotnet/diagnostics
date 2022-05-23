@@ -645,7 +645,7 @@ HRESULT ExpressionNode::ExpandFields(ICorDebugValue* pInnerValue, __in_z WCHAR* 
 
     if(varToExpand[0] == L'(' && pEndCast != NULL)
     {
-        int cchCastTypeName = ((int)(pEndCast-1-varToExpand))/2;
+        size_t cchCastTypeName = ((size_t)(pEndCast-1-varToExpand))/2;
         PopulateType();
         if(_wcslen(pTypeName) != (cchCastTypeName) ||
             _wcsncmp(varToExpand+1, pTypeName, cchCastTypeName) != 0)
@@ -922,7 +922,7 @@ HRESULT ExpressionNode::PopulateTextValueHelper()
 
     BOOL isNull = TRUE;
     ToRelease<ICorDebugValue> pInnerValue;
-    CorElementType corElemType;
+    CorElementType corElemType = ELEMENT_TYPE_MAX;
     ULONG32 cbSize = 0;
     if(pValue != NULL)
     {
@@ -954,7 +954,7 @@ HRESULT ExpressionNode::PopulateTextValueHelper()
         // one piece of data ICorDebugType will tell us if needed.
         if(FAILED(GetCanonicalElementTypeForTypeName(GetTypeName(), &corElemType)))
         {
-            pTypeCast->GetType(&corElemType);
+            IfFailRet(pTypeCast->GetType(&corElemType));
         }
 
         switch(corElemType)
@@ -2153,23 +2153,23 @@ HRESULT ExpressionNode::IsTokenValueTypeOrEnum(mdToken token, IMetaDataImport* p
     {
         ULONG chTypeDef;
         pMetadata->GetTypeRefProps(token, NULL, NULL, 0, &chTypeDef);
-        if(chTypeDef > _countof(nameBuffer))
+        if(chTypeDef > ARRAY_SIZE(nameBuffer))
         {
             *pResult = FALSE;
             return Status;
         }
-        IfFailRet(pMetadata->GetTypeRefProps(token, NULL, nameBuffer, _countof(nameBuffer), &chTypeDef));
+        IfFailRet(pMetadata->GetTypeRefProps(token, NULL, nameBuffer, ARRAY_SIZE(nameBuffer), &chTypeDef));
     }
     else if(type == mdtTypeDef)
     {
         ULONG chTypeDef;
         pMetadata->GetTypeDefProps(token, NULL, 0, &chTypeDef, NULL, NULL);
-        if(chTypeDef > _countof(nameBuffer))
+        if(chTypeDef > ARRAY_SIZE(nameBuffer))
         {
             *pResult = FALSE;
             return Status;
         }
-        IfFailRet(pMetadata->GetTypeDefProps(token, nameBuffer, _countof(nameBuffer), &chTypeDef, NULL, NULL));
+        IfFailRet(pMetadata->GetTypeDefProps(token, nameBuffer, ARRAY_SIZE(nameBuffer), &chTypeDef, NULL, NULL));
     }
 
     if(_wcscmp(nameBuffer, L"System.ValueType") == 0 ||

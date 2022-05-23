@@ -16,6 +16,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 
 using Process = System.Diagnostics.Process;
+using System.Runtime.Versioning;
 
 namespace Orchestrator
 {
@@ -191,6 +192,10 @@ namespace Orchestrator
             };
         }
 
+        [SupportedOSPlatformGuard("Windows")]
+        [SupportedOSPlatformGuard("Linux")]
+        static bool IsWindowsOrLinux => OperatingSystem.IsLinux() || OperatingSystem.IsWindows();
+
         static async Task<int> Orchestrate(
             IConsole console,
             CancellationToken ct,
@@ -254,7 +259,8 @@ namespace Orchestrator
                 eventWritingProc.Start();
 
                 Console.WriteLine($"Executing: {eventWritingProc.StartInfo.FileName} {eventWritingProc.StartInfo.Arguments}");
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+
+                if (IsWindowsOrLinux)
                 {
                     // Set affinity and priority
                     ulong affinityMask = 0;
@@ -263,7 +269,6 @@ namespace Orchestrator
                         affinityMask |= ((ulong)1 << j);
                     }
                     eventWritingProc.ProcessorAffinity = (IntPtr)((ulong)eventWritingProc.ProcessorAffinity & affinityMask);
-                    eventWritingProc.PriorityClass = ProcessPriorityClass.RealTime; // Set the process priority to highest possible
                 }
 
                 // Start listening to the event.

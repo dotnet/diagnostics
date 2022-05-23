@@ -382,7 +382,7 @@ void MDInfo::GetMethodName(mdTypeDef token, CQuickBytes *fullName)
     WCHAR szFunctionName[1024];
 
     hr = m_pImport->GetMethodProps(token, &memTypeDef, 
-                                   szFunctionName, _countof(szFunctionName), &nameLen, 
+                                   szFunctionName, ARRAY_SIZE(szFunctionName), &nameLen, 
                                    &flags, &pbSigBlob, &ulSigBlob, &ulCodeRVA, &ulImplFlags);
     if (FAILED (hr))
     {
@@ -393,12 +393,12 @@ void MDInfo::GetMethodName(mdTypeDef token, CQuickBytes *fullName)
     m_szName[0] = L'\0';
     if (memTypeDef != mdTypeDefNil)
     {
-        hr = NameForTypeDef_s (memTypeDef, m_pImport, m_szName, _countof(m_szName));
+        hr = NameForTypeDef_s (memTypeDef, m_pImport, m_szName, ARRAY_SIZE(m_szName));
         if (SUCCEEDED (hr)) {
-            wcscat_s (m_szName, _countof(m_szName), W("."));
+            wcscat_s (m_szName, ARRAY_SIZE(m_szName), W("."));
         }
     }
-    wcscat_s (m_szName, _countof(m_szName), szFunctionName);
+    wcscat_s (m_szName, ARRAY_SIZE(m_szName), szFunctionName);
 
     LONG lSigBlobRemaining;
     hr = GetFullNameForMD(pbSigBlob, ulSigBlob, &lSigBlobRemaining);
