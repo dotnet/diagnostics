@@ -13,6 +13,7 @@ This signs and publishes the following packages to the tools feed (https://pkgs.
  - dotnet-counters
  - dotnet-monitor
  - Microsoft.Diagnostics.NETCore.Client
+ - Microsoft.Diagnostics.DbgShim
 
 To release the latest tools:
 
