@@ -602,7 +602,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     if (string.IsNullOrWhiteSpace(message))
                     {
-                        message = $"{operationName} - HRESULT: 0x{hr:X8}.";
+                        message = $"{operationName} failed - HRESULT: 0x{hr:X8}.";
                     }
                     throw new ServerErrorException(message);
 
