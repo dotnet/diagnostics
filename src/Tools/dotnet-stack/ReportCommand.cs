@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <returns></returns>
         private static async Task<int> Report(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration)
         {
-            string tempNetTraceFilename = Path.GetRandomFileName() + ".nettrace";
+            string tempNetTraceFilename = Path.Join(Path.GetTempPath(), Path.GetRandomFileName() + ".nettrace");
             string tempEtlxFilename = "";
 
             try

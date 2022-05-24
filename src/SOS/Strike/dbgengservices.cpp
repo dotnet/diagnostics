@@ -446,6 +446,31 @@ DbgEngServices::GetOutputWidth()
     return INT_MAX;
 }
 
+HRESULT
+DbgEngServices::SupportsDml(PULONG supported)
+{
+    ULONG opts = 0;
+    HRESULT hr = m_control->GetEngineOptions(&opts);
+    *supported = (SUCCEEDED(hr) && (opts & DEBUG_ENGOPT_PREFER_DML) == DEBUG_ENGOPT_PREFER_DML) ? 1 : 0;
+    return hr;
+}
+
+void
+DbgEngServices::OutputDmlString(
+    ULONG mask,
+    PCSTR message)
+{
+    m_control->ControlledOutput(DEBUG_OUTCTL_AMBIENT_DML, mask, "%s", message);
+}
+
+HRESULT 
+DbgEngServices::AddModuleSymbol(
+    void* param,
+    const char* symbolFileName)
+{
+    return S_OK;
+}
+
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
 //----------------------------------------------------------------------------
@@ -665,8 +690,6 @@ DbgEngServices::InitializeSymbolStoreFromSymPath()
             {
                 if (strlen(symbolPath) > 0)
                 {
-                    symbolService->DisableSymbolStore();
-
                     if (!symbolService->ParseSymbolPath(symbolPath))
                     {
                         m_control->Output(DEBUG_OUTPUT_ERROR, "Windows symbol path parsing FAILED %s\n", symbolPath.GetPtr());

@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void AddModuleMembers(XElement element, IModule module, string symbolModuleName)
         {
-            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.PdbFileInfos), nameof(IModule.VersionString));
+            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.GetPdbFileInfos), nameof(IModule.GetVersionString));
 
             if (symbolModuleName != null && IsModuleEqual(module, symbolModuleName))
             {

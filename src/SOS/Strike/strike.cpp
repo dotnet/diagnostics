@@ -234,7 +234,7 @@ DECLARE_API (MinidumpMode)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -286,7 +286,7 @@ DECLARE_API(IP2MD)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -321,7 +321,7 @@ DECLARE_API(IP2MD)
     }
 
     if (symlines != 0 &&
-        SUCCEEDED(GetLineByOffset(TO_CDADDR(IP), &linenum, filename, _countof(filename))))
+        SUCCEEDED(GetLineByOffset(TO_CDADDR(IP), &linenum, filename, ARRAY_SIZE(filename))))
     {
         ExtOut("Source file:  %S @ %d\n", filename, linenum);
     }
@@ -465,7 +465,7 @@ DECLARE_API(DumpStack)
         {&DSFlag.end, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
         return Status;
 
     // symlines will be non-zero only if SYMOPT_LOAD_LINES was set in the symbol options
@@ -518,7 +518,7 @@ DECLARE_API (EEStack)
         {"/d", &dml, COBOOL, FALSE}
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -703,7 +703,7 @@ DECLARE_API(DumpStackObjects)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -738,7 +738,7 @@ DECLARE_API(DumpMD)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -857,7 +857,7 @@ DECLARE_API(DumpIL)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1058,7 +1058,7 @@ DECLARE_API(DumpSig)
         {&moduleExpr.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1106,7 +1106,7 @@ DECLARE_API(DumpSigElem)
         {&moduleExpr.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1155,7 +1155,7 @@ DECLARE_API(DumpClass)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1275,7 +1275,7 @@ DECLARE_API(DumpMT)
         {&dwStartAddr, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -1914,7 +1914,7 @@ DECLARE_API(DumpArray)
         {&flags.strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -2130,7 +2130,7 @@ DECLARE_API(DumpObj)
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -2188,7 +2188,7 @@ DECLARE_API(DumpALC)
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -2241,7 +2241,7 @@ DECLARE_API(DumpDelegate)
             {&dwAddr, COHEX}
         };
         size_t nArg;
-        if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
         {
             return Status;
         }
@@ -2512,7 +2512,7 @@ BOOL IsAsyncException(CLRDATA_ADDRESS taObj, CLRDATA_ADDRESS mtObj)
                 xcode = EXCEPTION_COMPLUS;
                 goto Done;
             }
-            for (size_t idx = 0; idx < _countof(AsyncHResultValues); ++idx)
+            for (size_t idx = 0; idx < ARRAY_SIZE(AsyncHResultValues); ++idx)
             {
                 if (ehr == AsyncHResultValues[idx])
                 {
@@ -2533,7 +2533,7 @@ BOOL IsAsyncException(const DacpExceptionObjectData & excData)
         return TRUE;
 
     HRESULT ehr = excData.HResult;
-    for (size_t idx = 0; idx < _countof(AsyncHResultValues); ++idx)
+    for (size_t idx = 0; idx < ARRAY_SIZE(AsyncHResultValues); ++idx)
     {
         if (ehr == AsyncHResultValues[idx])
         {
@@ -2653,13 +2653,13 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most
                 // cases. This means that the printed IP and the printed line number often will not map to one another
                 // and this is intentional.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, _countof(filename), !bAsync || i > 0)))
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, ARRAY_SIZE(filename), !bAsync || i > 0)))
             {
-                swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
+                swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
             else
             {
-                swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %s\n"), so.String());
+                swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %s\n"), so.String());
             }
 
             Length += _wcslen(wszLineBuffer);
@@ -2960,7 +2960,7 @@ DECLARE_API(PrintException)
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3126,7 +3126,7 @@ DECLARE_API(DumpVC)
         {&p_Object, COHEX},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3168,7 +3168,7 @@ DECLARE_API(DumpRCW)
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3296,7 +3296,7 @@ DECLARE_API(DumpCCW)
         {&strObject, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3552,7 +3552,7 @@ DECLARE_API(DumpPermissionSet)
         {&p_Object, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3595,7 +3595,7 @@ DECLARE_API(EEHeap)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -3641,7 +3641,7 @@ DECLARE_API(EEHeap)
                 break;
 
             char domain[16];
-            sprintf_s(domain, _countof(domain), "Domain %d", n+1);
+            sprintf_s(domain, ARRAY_SIZE(domain), "Domain %d", n+1);
 
             IfFailRet(PrintDomainHeapInfo(domain, pArray[n], &allHeapSize, &wasted));
 
@@ -3819,7 +3819,7 @@ DECLARE_API(TraverseHeap)
         {&Filename.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -3949,7 +3949,7 @@ DECLARE_API(DumpRuntimeTypes)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
         return Status;
 
     EnableDMLHolder dmlHolder(dml);
@@ -4038,7 +4038,7 @@ public:
         };
 
         size_t nArgs = 0;
-        if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArgs))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArgs))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
         if (mStart == 0)
@@ -4171,7 +4171,7 @@ private:
         if (mVerify)
         {
             char buffer[1024];
-            if (!itr.Verify(buffer, _countof(buffer)))
+            if (!itr.Verify(buffer, ARRAY_SIZE(buffer)))
             {
                 ExtOut(buffer);
                 return false;
@@ -4327,7 +4327,7 @@ private:
 
                 // Don't bother calculating the size of the string, just read the full 64 characters of the buffer.  The null
                 // terminator we read will terminate the string.
-                HRESULT hr = g_ExtData->ReadVirtual(TO_CDADDR(addr+offset), tmp.str, sizeof(WCHAR)*(_countof(tmp.str)-1), &fetched);
+                HRESULT hr = g_ExtData->ReadVirtual(TO_CDADDR(addr+offset), tmp.str, sizeof(WCHAR)*(ARRAY_SIZE(tmp.str)-1), &fetched);
                 if (SUCCEEDED(hr))
                 {
                     // Ensure we null terminate the string.  Note that this will not overrun the buffer as we only
@@ -4461,609 +4461,6 @@ private:
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function dumps async state machines on GC heap,              *
-*    displaying details about each async operation found.              *
-*    (May not work if GC is in progress.)                              *
-*                                                                      *
-\**********************************************************************/
-
-void ResolveContinuation(CLRDATA_ADDRESS* contAddr)
-{
-    // Ideally this continuation is itself an async method box.
-    sos::Object contObj = TO_TADDR(*contAddr);
-    if (GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("StateMachine")) == 0)
-    {
-        // It was something else.
-
-        // If it's a standard task continuation, get its task field.
-        int offset;
-        if ((offset = GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("m_task"))) != 0)
-        {
-            MOVE(*contAddr, contObj.GetAddress() + offset);
-            if (sos::IsObject(*contAddr, false))
-            {
-                contObj = TO_TADDR(*contAddr);
-            }
-        }
-        else
-        {
-            // If it's storing an action wrapper, try to follow to that action's target.
-            if ((offset = GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("m_action"))) != 0)
-            {
-                MOVE(*contAddr, contObj.GetAddress() + offset);
-                if (sos::IsObject(*contAddr, false))
-                {
-                    contObj = TO_TADDR(*contAddr);
-                }
-            }
-
-            // If we now have an Action, try to follow through to the delegate's target.
-            if ((offset = GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("_target"))) != 0)
-            {
-                MOVE(*contAddr, contObj.GetAddress() + offset);
-                if (sos::IsObject(*contAddr, false))
-                {
-                    contObj = TO_TADDR(*contAddr);
-
-                    // In some cases, the delegate's target might be a ContinuationWrapper, in which case we want to unwrap that as well.
-                    if (_wcsncmp(contObj.GetTypeName(), W("System.Runtime.CompilerServices.AsyncMethodBuilderCore+ContinuationWrapper"), 74) == 0 &&
-                       (offset = GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("_continuation"))) != 0)
-                    {
-                        MOVE(*contAddr, contObj.GetAddress() + offset);
-                        if (sos::IsObject(*contAddr, false))
-                        {
-                            contObj = TO_TADDR(*contAddr);
-                            if ((offset = GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("_target"))) != 0)
-                            {
-                                MOVE(*contAddr, contObj.GetAddress() + offset);
-                                if (sos::IsObject(*contAddr, false))
-                                {
-                                    contObj = TO_TADDR(*contAddr);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Use whatever object we ended with.
-        *contAddr = contObj.GetAddress();
-    }
-}
-
-bool TryGetContinuation(CLRDATA_ADDRESS addr, CLRDATA_ADDRESS mt, CLRDATA_ADDRESS* contAddr)
-{
-    // Get the continuation field from the task.
-    int offset = GetObjFieldOffset(addr, mt, W("m_continuationObject"));
-    if (offset != 0)
-    {
-        DWORD_PTR contObjPtr;
-        MOVE(contObjPtr, addr + offset);
-        if (sos::IsObject(contObjPtr, false))
-        {
-            *contAddr = TO_CDADDR(contObjPtr);
-            ResolveContinuation(contAddr);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-struct AsyncRecord
-{
-    CLRDATA_ADDRESS Address;
-    CLRDATA_ADDRESS MT;
-    DWORD Size;
-    CLRDATA_ADDRESS StateMachineAddr;
-    CLRDATA_ADDRESS StateMachineMT;
-    BOOL FilteredByOptions;
-    BOOL IsStateMachine;
-    BOOL IsValueType;
-    BOOL IsTopLevel;
-    int TaskStateFlags;
-    int StateValue;
-    std::vector<CLRDATA_ADDRESS> Continuations;
-};
-
-bool AsyncRecordIsCompleted(AsyncRecord& ar)
-{
-    const int TASK_STATE_COMPLETED_MASK = 0x1600000;
-    return (ar.TaskStateFlags & TASK_STATE_COMPLETED_MASK) != 0;
-}
-
-const char* GetAsyncRecordStatusDescription(AsyncRecord& ar)
-{
-    const int TASK_STATE_RAN_TO_COMPLETION = 0x1000000;
-    const int TASK_STATE_FAULTED = 0x200000;
-    const int TASK_STATE_CANCELED = 0x400000;
-
-    if ((ar.TaskStateFlags & TASK_STATE_RAN_TO_COMPLETION) != 0) return "Success";
-    if ((ar.TaskStateFlags & TASK_STATE_FAULTED) != 0) return "Failed";
-    if ((ar.TaskStateFlags & TASK_STATE_CANCELED) != 0) return "Canceled";
-    return "Pending";
-}
-
-void ExtOutTaskDelegateMethod(sos::Object& obj)
-{
-    DacpFieldDescData actionField;
-    int offset = GetObjFieldOffset(obj.GetAddress(), obj.GetMT(), W("m_action"), TRUE, &actionField);
-    if (offset != 0)
-    {
-        CLRDATA_ADDRESS actionAddr;
-        MOVE(actionAddr, obj.GetAddress() + offset);
-        CLRDATA_ADDRESS actionMD;
-        if (actionAddr != NULL && TryGetMethodDescriptorForDelegate(actionAddr, &actionMD))
-        {
-            NameForMD_s((DWORD_PTR)actionMD, g_mdName, mdNameLen);
-            ExtOut("(%S) ", g_mdName);
-        }
-    }
-}
-
-void ExtOutTaskStateFlagsDescription(int stateFlags)
-{
-    if (stateFlags == 0) return;
-
-    ExtOut("State Flags: ");
-
-    // TaskCreationOptions.*
-    if ((stateFlags & 0x01) != 0) ExtOut("PreferFairness ");
-    if ((stateFlags & 0x02) != 0) ExtOut("LongRunning ");
-    if ((stateFlags & 0x04) != 0) ExtOut("AttachedToParent ");
-    if ((stateFlags & 0x08) != 0) ExtOut("DenyChildAttach ");
-    if ((stateFlags & 0x10) != 0) ExtOut("HideScheduler ");
-    if ((stateFlags & 0x40) != 0) ExtOut("RunContinuationsAsynchronously ");
-
-    // InternalTaskOptions.*
-    if ((stateFlags & 0x0200) != 0) ExtOut("ContinuationTask ");
-    if ((stateFlags & 0x0400) != 0) ExtOut("PromiseTask ");
-    if ((stateFlags & 0x1000) != 0) ExtOut("LazyCancellation ");
-    if ((stateFlags & 0x2000) != 0) ExtOut("QueuedByRuntime ");
-    if ((stateFlags & 0x4000) != 0) ExtOut("DoNotDispose ");
-
-    // TASK_STATE_*
-    if ((stateFlags & 0x10000) != 0) ExtOut("STARTED ");
-    if ((stateFlags & 0x20000) != 0) ExtOut("DELEGATE_INVOKED ");
-    if ((stateFlags & 0x40000) != 0) ExtOut("DISPOSED ");
-    if ((stateFlags & 0x80000) != 0) ExtOut("EXCEPTIONOBSERVEDBYPARENT ");
-    if ((stateFlags & 0x100000) != 0) ExtOut("CANCELLATIONACKNOWLEDGED ");
-    if ((stateFlags & 0x200000) != 0) ExtOut("FAULTED ");
-    if ((stateFlags & 0x400000) != 0) ExtOut("CANCELED ");
-    if ((stateFlags & 0x800000) != 0) ExtOut("WAITING_ON_CHILDREN ");
-    if ((stateFlags & 0x1000000) != 0) ExtOut("RAN_TO_COMPLETION ");
-    if ((stateFlags & 0x2000000) != 0) ExtOut("WAITINGFORACTIVATION ");
-    if ((stateFlags & 0x4000000) != 0) ExtOut("COMPLETION_RESERVED ");
-    if ((stateFlags & 0x8000000) != 0) ExtOut("THREAD_WAS_ABORTED ");
-    if ((stateFlags & 0x10000000) != 0) ExtOut("WAIT_COMPLETION_NOTIFICATION ");
-    if ((stateFlags & 0x20000000) != 0) ExtOut("EXECUTIONCONTEXT_IS_NULL ");
-    if ((stateFlags & 0x40000000) != 0) ExtOut("TASKSCHEDULED_WAS_FIRED ");
-
-    ExtOut("\n");
-}
-
-void ExtOutStateMachineFields(AsyncRecord& ar)
-{
-    DacpMethodTableData mtabledata;
-    DacpMethodTableFieldData vMethodTableFields;
-    if (mtabledata.Request(g_sos, ar.StateMachineMT) == S_OK &&
-        vMethodTableFields.Request(g_sos, ar.StateMachineMT) == S_OK &&
-        vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
-    {
-        DisplayFields(ar.StateMachineMT, &mtabledata, &vMethodTableFields, (DWORD_PTR)ar.StateMachineAddr, TRUE, ar.IsValueType);
-    }
-}
-
-void FindStateMachineTypes(DWORD_PTR* corelibModule, mdTypeDef* stateMachineBox, mdTypeDef* debugStateMachineBox, mdTypeDef* task)
-{
-    int numModule;
-    ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
-    if (moduleList != NULL && numModule == 1)
-    {
-        *corelibModule = moduleList[0];
-        GetInfoFromName(*corelibModule, "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+AsyncStateMachineBox`1", stateMachineBox);
-        GetInfoFromName(*corelibModule, "System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1+DebugFinalizableAsyncStateMachineBox`1", debugStateMachineBox);
-        GetInfoFromName(*corelibModule, "System.Threading.Tasks.Task", task);
-    }
-    else
-    {
-        *corelibModule = 0;
-        *stateMachineBox = 0;
-        *debugStateMachineBox = 0;
-    }
-}
-
-DECLARE_API(DumpAsync)
-{
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return E_FAIL;
-    }
-
-    try
-    {
-        // Process command-line arguments.
-        size_t nArg = 0;
-        TADDR mt = NULL, addr = NULL;
-        ArrayHolder<char> ansiType = NULL;
-        ArrayHolder<WCHAR> type = NULL;
-        BOOL dml = FALSE, includeCompleted = FALSE, includeStacks = FALSE, includeRoots = FALSE, includeAllTasks = FALSE, dumpFields = FALSE;
-        CMDOption option[] =
-        {   // name, vptr, type, hasValue
-            { "-addr", &addr, COHEX, TRUE },                // dump only the async object at the specified address
-            { "-mt", &mt, COHEX, TRUE },                        // dump only async objects with a given MethodTable
-            { "-type", &ansiType, COSTRING, TRUE },             // dump only async objects that contain the specified type substring
-            { "-tasks", &includeAllTasks, COBOOL, FALSE },      // include all tasks that can be found on the heap, not just async methods
-            { "-completed", &includeCompleted, COBOOL, FALSE }, // include async objects that are in a completed state
-            { "-fields", &dumpFields, COBOOL, FALSE },          // show relevant fields of found async objects
-            { "-stacks", &includeStacks, COBOOL, FALSE },       // gather and output continuation/stack information
-            { "-roots", &includeRoots, COBOOL, FALSE },         // gather and output GC root information
-            { "/d", &dml, COBOOL, FALSE },                      // Debugger Markup Language
-        };
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, &nArg) || nArg != 0)
-        {
-            sos::Throw<sos::Exception>(
-                "Usage: DumpAsync [-addr ObjectAddr] [-mt MethodTableAddr] [-type TypeName] [-tasks] [-completed] [-fields] [-stacks] [-roots]\n"
-                "[-addr ObjectAddr]     => Only display the async object at the specified address.\n"
-                "[-mt MethodTableAddr]  => Only display top-level async objects with the specified method table address.\n"
-                "[-type TypeName]       => Only display top-level async objects whose type name includes the specified substring.\n"
-                "[-tasks]               => Include Task and Task-derived objects, in addition to any state machine objects found.\n"
-                "[-completed]           => Include async objects that represent completed operations but that are still on the heap.\n"
-                "[-fields]              => Show the fields of state machines.\n"
-                "[-stacks]              => Gather, output, and consolidate based on continuation chains / async stacks for discovered async objects.\n"
-                "[-roots]               => Perform a gcroot on each rendered async object.\n"
-                );
-        }
-        if (ansiType != NULL)
-        {
-            size_t ansiTypeLen = strlen(ansiType) + 1;
-            type = new WCHAR[ansiTypeLen];
-            MultiByteToWideChar(CP_ACP, 0, ansiType, -1, type, (int)ansiTypeLen);
-        }
-
-        EnableDMLHolder dmlHolder(dml);
-        BOOL hasTypeFilter = mt != NULL || ansiType != NULL || addr != NULL;
-
-        // Display a message if the heap isn't verified.
-        sos::GCHeap gcheap;
-        if (!gcheap.AreGCStructuresValid())
-        {
-            DisplayInvalidStructuresMessage();
-        }
-
-        // Find the state machine types
-        DWORD_PTR corelibModule;
-        mdTypeDef stateMachineBoxMd, debugStateMachineBoxMd, taskMd;
-        FindStateMachineTypes(&corelibModule, &stateMachineBoxMd, &debugStateMachineBoxMd, &taskMd);
-
-        // Walk each heap object looking for async state machine objects.  As we're targeting .NET Core 2.1+, all such objects
-        // will be Task or Task-derived types.
-        std::map<CLRDATA_ADDRESS, AsyncRecord> asyncRecords;
-        for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
-        {
-            // Skip objects too small to be state machines or tasks, avoiding some compiler-generated caching data structures.
-            if (itr->GetSize() <= 24)
-            {
-                continue;
-            }
-
-            // Match only async objects.
-            if (includeAllTasks)
-            {
-                // If the user has selected to include all tasks and not just async state machine boxes, we simply need to validate
-                // that this is Task or Task-derived, and if it's not, skip it.
-                if (!IsDerivedFrom(itr->GetMT(), corelibModule, taskMd))
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                // Otherwise, we only care about AsyncStateMachineBox`1 as well as the DebugFinalizableAsyncStateMachineBox`1
-                // that's used when certain ETW events are set.
-                DacpMethodTableData mtdata;
-                if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
-                    mtdata.Module != corelibModule ||
-                    (mtdata.cl != stateMachineBoxMd && mtdata.cl != debugStateMachineBoxMd))
-                {
-                    continue;
-                }
-            }
-
-            // Create an AsyncRecord to store the state for this instance.  We're likely going to keep the object at this point,
-            // though we may still discard/skip it with a few checks later; to do that, though, we'll need some of the info
-            // gathered here, so we construct the record to store the data.
-            AsyncRecord ar;
-            ar.Address = itr->GetAddress();
-            ar.MT = itr->GetMT();
-            ar.Size = (DWORD)itr->GetSize();
-            ar.StateMachineAddr = itr->GetAddress();
-            ar.StateMachineMT = itr->GetMT();
-            ar.IsValueType = false;
-            ar.IsTopLevel = true;
-            ar.IsStateMachine = false;
-            ar.TaskStateFlags = 0;
-            ar.StateValue = 0;
-            ar.FilteredByOptions = // we process all objects to support forming proper chains, but then only display ones that match the user's request
-                (mt == NULL || mt == itr->GetMT()) && // Match only MTs the user requested.
-                (type == NULL || _wcsstr(itr->GetTypeName(), type) != NULL) && // Match only type name substrings the user requested.
-                (addr == NULL || addr == itr->GetAddress()); // Match only the object at the specified address.
-
-            // Get the state flags for the task.  This is used to determine whether async objects are completed (and thus should
-            // be culled by default).  It avoids our needing to depend on interpreting the compiler's "<>1__state" field, and also lets
-            // us display state information for non-async state machine objects.
-            DacpFieldDescData stateFlagsField;
-            int offset = GetObjFieldOffset(ar.Address, ar.MT, W("m_stateFlags"), TRUE, &stateFlagsField);
-            if (offset != 0)
-            {
-                MOVE(ar.TaskStateFlags, ar.Address + offset);
-            }
-
-            // Get the async state machine object's StateMachine field.
-            DacpFieldDescData stateMachineField;
-            int stateMachineFieldOffset = GetObjFieldOffset(TO_CDADDR(itr->GetAddress()), itr->GetMT(), W("StateMachine"), TRUE, &stateMachineField);
-            if (stateMachineFieldOffset != 0)
-            {
-                ar.IsStateMachine = true;
-                ar.IsValueType = stateMachineField.Type == ELEMENT_TYPE_VALUETYPE;
-
-                // Get the address and method table of the state machine.  While it'll generally be a struct, it is valid for it to be a
-                // class (the C# compiler generates a class in debug builds to better support Edit-And-Continue), so we accommodate both.
-                DacpFieldDescData stateField;
-                int stateFieldOffset = -1;
-                if (ar.IsValueType)
-                {
-                    ar.StateMachineAddr = itr->GetAddress() + stateMachineFieldOffset;
-                    ar.StateMachineMT = stateMachineField.MTOfType;
-                    stateFieldOffset = GetValueFieldOffset(ar.StateMachineMT, W("<>1__state"), &stateField);
-                }
-                else
-                {
-                    MOVE(ar.StateMachineAddr, itr->GetAddress() + stateMachineFieldOffset);
-                    DacpObjectData objData;
-                    if (objData.Request(g_sos, ar.StateMachineAddr) == S_OK)
-                    {
-                        ar.StateMachineMT = objData.MethodTable; // update from Canon to actual type
-                        stateFieldOffset = GetObjFieldOffset(ar.StateMachineAddr, ar.StateMachineMT, W("<>1__state"), TRUE, &stateField);
-                    }
-                }
-
-                if (stateFieldOffset >= 0 && (ar.IsValueType || stateFieldOffset != 0))
-                {
-                    MOVE(ar.StateValue, ar.StateMachineAddr + stateFieldOffset);
-                }
-            }
-
-            // If we only want to include incomplete async objects, skip this one if it's completed.
-            if (!includeCompleted && AsyncRecordIsCompleted(ar))
-            {
-                continue;
-            }
-
-            // If the user has asked to include "async stacks" information, resolve any continuation
-            // that might be registered with it.  This could be a single continuation, or it could
-            // be a list of continuations in the case of the same task being awaited multiple times.
-            CLRDATA_ADDRESS nextAddr;
-            if (includeStacks && TryGetContinuation(itr->GetAddress(), itr->GetMT(), &nextAddr))
-            {
-                sos::Object contObj = TO_TADDR(nextAddr);
-                if (_wcsncmp(contObj.GetTypeName(), W("System.Collections.Generic.List`1"), 33) == 0)
-                {
-                    // The continuation is a List<object>.  Iterate through its internal object[]
-                    // looking for non-null objects, and adding each one as a continuation.
-                    int itemsOffset = GetObjFieldOffset(contObj.GetAddress(), contObj.GetMT(), W("_items"));
-                    if (itemsOffset != 0)
-                    {
-                        DWORD_PTR listItemsPtr;
-                        MOVE(listItemsPtr, contObj.GetAddress() + itemsOffset);
-                        if (sos::IsObject(listItemsPtr, false))
-                        {
-                            DacpObjectData objData;
-                            if (objData.Request(g_sos, TO_CDADDR(listItemsPtr)) == S_OK && objData.ObjectType == OBJ_ARRAY)
-                            {
-                                for (int i = 0; i < objData.dwNumComponents; i++)
-                                {
-                                    CLRDATA_ADDRESS elementPtr;
-                                    MOVE(elementPtr, TO_CDADDR(objData.ArrayDataPtr + (i * objData.dwComponentSize)));
-                                    if (elementPtr != NULL && sos::IsObject(elementPtr, false))
-                                    {
-                                        ResolveContinuation(&elementPtr);
-                                        ar.Continuations.push_back(elementPtr);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    ar.Continuations.push_back(contObj.GetAddress());
-                }
-            }
-
-            // We've gathered all of the needed information for this heap object.  Add it to our list of async records.
-            asyncRecords.insert(std::pair<CLRDATA_ADDRESS, AsyncRecord>(ar.Address, ar));
-        }
-
-        // As with DumpHeap, output a summary table about all of the objects we found.  In contrast, though, his is based on the filtered
-        // list of async records we gathered rather than everything on the heap.
-        if (addr == NULL) // no point in stats if we're only targeting a single object
-        {
-            HeapStat stats;
-            for (std::map<CLRDATA_ADDRESS, AsyncRecord>::iterator arIt = asyncRecords.begin(); arIt != asyncRecords.end(); ++arIt)
-            {
-                if (!hasTypeFilter || arIt->second.FilteredByOptions)
-                {
-                    stats.Add((DWORD_PTR)arIt->second.MT, (DWORD)arIt->second.Size);
-                }
-            }
-            stats.Sort();
-            stats.Print();
-        }
-
-        // If the user has asked for "async stacks" and if there's not MT/type name filter, look through all of our async records
-        // to find the "top-level" nodes that start rather than that are a part of a continuation chain.  When we then iterate through
-        // async records, we only print ones out that are still classified as top-level.  We don't do this if there's a type filter
-        // because in that case we consider those and only those objects to be top-level.
-        if (includeStacks && !hasTypeFilter)
-        {
-            size_t uniqueChains = asyncRecords.size();
-            for (std::map<CLRDATA_ADDRESS, AsyncRecord>::iterator arIt = asyncRecords.begin(); arIt != asyncRecords.end(); ++arIt)
-            {
-                for (std::vector<CLRDATA_ADDRESS>::iterator contIt = arIt->second.Continuations.begin(); contIt != arIt->second.Continuations.end(); ++contIt)
-                {
-                    std::map<CLRDATA_ADDRESS, AsyncRecord>::iterator found = asyncRecords.find(*contIt);
-                    if (found != asyncRecords.end())
-                    {
-                        if (found->second.IsTopLevel)
-                        {
-                            found->second.IsTopLevel = false;
-                            uniqueChains--;
-                        }
-                    }
-                }
-            }
-
-            ExtOut("In %d chains.\n", uniqueChains);
-        }
-
-        // Print out header for the main line of each result.
-        ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %8s ", "Address", "MT", "Size");
-        if (includeCompleted) ExtOut("%8s ", "Status");
-        ExtOut("%10s %s\n", "State", "Description");
-
-        // Output each top-level async record.
-        int counter = 0;
-        for (std::map<CLRDATA_ADDRESS, AsyncRecord>::iterator arIt = asyncRecords.begin(); arIt != asyncRecords.end(); ++arIt)
-        {
-            if (!arIt->second.IsTopLevel || (hasTypeFilter && !arIt->second.FilteredByOptions))
-            {
-                continue;
-            }
-
-            // Output the state machine's details as a single line.
-            sos::Object obj = TO_TADDR(arIt->second.Address);
-            if (arIt->second.IsStateMachine)
-            {
-                // This has a StateMachine.  Output its details.
-                sos::MethodTable mt = TO_TADDR(arIt->second.StateMachineMT);
-                DMLOut("%s %s %8d ", DMLAsync(obj.GetAddress()), DMLDumpHeapMT(obj.GetMT()), obj.GetSize());
-                if (includeCompleted) ExtOut("%8s ", GetAsyncRecordStatusDescription(arIt->second));
-                ExtOut("%10d %S\n", arIt->second.StateValue, mt.GetName());
-                if (dumpFields) ExtOutStateMachineFields(arIt->second);
-            }
-            else
-            {
-                // This does not have a StateMachine.  Output the details of the Task itself.
-                DMLOut("%s %s %8d ", DMLAsync(obj.GetAddress()), DMLDumpHeapMT(obj.GetMT()), obj.GetSize());
-                if (includeCompleted) ExtOut("%8s ", GetAsyncRecordStatusDescription(arIt->second));
-                ExtOut("[%08x] %S ", arIt->second.TaskStateFlags, obj.GetTypeName());
-                ExtOutTaskDelegateMethod(obj);
-                ExtOut("\n");
-                if (dumpFields) ExtOutTaskStateFlagsDescription(arIt->second.TaskStateFlags);
-            }
-
-            // If we gathered any continuations for this record, output the chains now.
-            if (includeStacks && arIt->second.Continuations.size() > 0)
-            {
-                ExtOut(includeAllTasks ? "Continuation chains:\n" : "Async \"stack\":\n");
-                std::vector<std::pair<int, CLRDATA_ADDRESS>> continuationChainToExplore;
-                continuationChainToExplore.push_back(std::pair<int, CLRDATA_ADDRESS>(1, obj.GetAddress()));
-
-                // Do a depth-first traversal of continuations, outputting each continuation found and then
-                // looking in our gathered objects list for its continuations.
-                std::set<CLRDATA_ADDRESS> seen;
-                while (continuationChainToExplore.size() > 0)
-                {
-                    // Pop the next continuation from the stack.
-                    std::pair<int, CLRDATA_ADDRESS> cur = continuationChainToExplore.back();
-                    continuationChainToExplore.pop_back();
-
-                    // Get the async record for this continuation.  It should be one we already know about.
-                    std::map<CLRDATA_ADDRESS, AsyncRecord>::iterator curAsyncRecord = asyncRecords.find(cur.second);
-                    if (curAsyncRecord == asyncRecords.end())
-                    {
-                        continue;
-                    }
-
-                    // Make sure to avoid cycles in the rare case where async records may refer to each other.
-                    if (seen.find(cur.second) != seen.end())
-                    {
-                        continue;
-                    }
-                    seen.insert(cur.second);
-
-                    // Iterate through all continuations from this object.
-                    for (std::vector<CLRDATA_ADDRESS>::iterator contIt = curAsyncRecord->second.Continuations.begin(); contIt != curAsyncRecord->second.Continuations.end(); ++contIt)
-                    {
-                        sos::Object cont = TO_TADDR(*contIt);
-
-                        // Print out the depth of the continuation with dots, then its address.
-                        for (int i = 0; i < cur.first; i++) ExtOut(".");
-                        DMLOut("%s ", DMLObject(cont.GetAddress()));
-
-                        // Print out the name of the method for this task's delegate if it has one (state machines won't, but others tasks may).
-                        ExtOutTaskDelegateMethod(cont);
-
-                        // Find the async record for this continuation, and output its name.  If it's a state machine,
-                        // also output its current state value so that a user can see at a glance its status.
-                        std::map<CLRDATA_ADDRESS, AsyncRecord>::iterator contAsyncRecord = asyncRecords.find(cont.GetAddress());
-                        if (contAsyncRecord != asyncRecords.end())
-                        {
-                            sos::MethodTable contMT = TO_TADDR(contAsyncRecord->second.StateMachineMT);
-                            if (contAsyncRecord->second.IsStateMachine) ExtOut("(%d) ", contAsyncRecord->second.StateValue);
-                            ExtOut("%S\n", contMT.GetName());
-                            if (contAsyncRecord->second.IsStateMachine && dumpFields) ExtOutStateMachineFields(contAsyncRecord->second);
-                        }
-                        else
-                        {
-                            ExtOut("%S\n", cont.GetTypeName());
-                        }
-
-                        // Add this continuation to the stack to explore.
-                        continuationChainToExplore.push_back(std::pair<int, CLRDATA_ADDRESS>(cur.first + 1, *contIt));
-                    }
-                }
-            }
-
-            // Finally, output gcroots, as they can serve as alternative/more detailed "async stacks", and also help to highlight
-            // state machines that aren't being kept alive.  However, they're more expensive to compute, so they're opt-in.
-            if (includeRoots)
-            {
-                ExtOut("GC roots:\n");
-                IncrementIndent();
-                GCRootImpl gcroot;
-                int numRoots = gcroot.PrintRootsForObject(obj.GetAddress(), FALSE, FALSE);
-                DecrementIndent();
-                if (numRoots == 0 && !AsyncRecordIsCompleted(arIt->second))
-                {
-                    ExtOut("Incomplete state machine or task with 0 roots.\n");
-                }
-            }
-
-            // If we're rendering more than one line per entry, output a separator to help distinguish the entries.
-            if (dumpFields || includeStacks || includeRoots)
-            {
-                ExtOut("--------------------------------------------------------------------------------\n");
-            }
-        }
-
-        return S_OK;
-    }
-    catch (const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
 *    This function dumps all objects on GC heap. It also displays      *
 *    statistics of objects.  If GC heap is corrupted, it will stop at
 *    the bad place.  (May not work if GC is in progress.)              *
@@ -5115,7 +4512,7 @@ DECLARE_API(VerifyHeap)
 
         while (itr)
         {
-            if (itr.Verify(buffer, _countof(buffer)))
+            if (itr.Verify(buffer, ARRAY_SIZE(buffer)))
             {
                 ++itr;
             }
@@ -5330,7 +4727,7 @@ DECLARE_API(VerifyObj)
         {&taddrObj, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -5392,7 +4789,7 @@ DECLARE_API(ListNearObj)
         {&taddrArg, COHEX}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || nArg != 1)
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || nArg != 1)
     {
         ExtOut("Usage: !ListNearObj <obj_address>\n");
         return Status;
@@ -5577,7 +4974,7 @@ DECLARE_API(GCHeapStat)
         {"/d",            &dml, COBOOL, FALSE}
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -5791,7 +5188,7 @@ DECLARE_API(SyncBlk)
         {&nbAsked, COSIZE_T}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -6070,7 +5467,7 @@ DECLARE_API(FinalizeQueue)
         {"-mt",       &taddrMT,   COHEX,  TRUE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -6265,7 +5662,7 @@ DECLARE_API(DumpModule)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -6436,7 +5833,7 @@ DECLARE_API(DumpDomain)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -6557,7 +5954,7 @@ DECLARE_API(DumpAssembly)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -7087,7 +6484,7 @@ DECLARE_API(ThreadState)
     if (state)
     {
 
-        for (unsigned int i = 0; i < _countof(ThreadStates); ++i)
+        for (unsigned int i = 0; i < ARRAY_SIZE(ThreadStates); ++i)
             if (state & ThreadStates[i].State)
             {
                 ExtOut("    %s\n", ThreadStates[i].Name);
@@ -7119,7 +6516,7 @@ DECLARE_API(Threads)
         {"-managedexception", &bSwitchToManagedExceptionThread, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE},
     };
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -7293,13 +6690,13 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
         if (g_sos->GetMethodDescPtrFromIP(addr, &pMD) != S_OK
             || g_sos->GetMethodDescName(pMD, 1024, wszNameBuffer, NULL) != S_OK)
         {
-            wcscpy_s(wszNameBuffer, _countof(wszNameBuffer), W("UNKNOWN"));
+            wcscpy_s(wszNameBuffer, ARRAY_SIZE(wszNameBuffer), W("UNKNOWN"));
         }
 
 #ifndef FEATURE_PAL
-        sprintf_s(buffer, _countof(buffer), "bp %p", SOS_PTR(addr));
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, _countof(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -8059,9 +7456,9 @@ public:
             {
                 CHAR buffer[100];
 #ifndef FEATURE_PAL
-                sprintf_s(buffer, _countof(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, _countof(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
 #endif
                 g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
             }
@@ -8089,7 +7486,7 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
 
     if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface4), (void**) &psos4)))
     {
-        int count = _countof(arguments);
+        int count = ARRAY_SIZE(arguments);
         int countNeeded = 0;
 
         Status = psos4->GetClrNotification(arguments, count, &countNeeded);
@@ -8280,7 +7677,7 @@ DECLARE_API(bpmd)
         {&Offset, COSIZE_T},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -8477,7 +7874,7 @@ DECLARE_API(bpmd)
                             TypeName.data = new NOTHROW char[buffSize];
                             if (TypeName.data != NULL)
                             {
-                                int bytesWritten = WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, buffSize, NULL, NULL);
+                                INDEBUG(int bytesWritten =) WideCharToMultiByte(CP_ACP, 0, FunctionName, -1, TypeName.data, buffSize, NULL, NULL);
                                 _ASSERTE(bytesWritten == buffSize);
                             }
                         }
@@ -8566,7 +7963,7 @@ DECLARE_API(bpmd)
             ExtOut("This DynamicMethodDesc is not yet JITTED. Placing memory breakpoint at %p\n",
                 SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
-            sprintf_s(buffer, _countof(buffer),
+            sprintf_s(buffer, ARRAY_SIZE(buffer),
 #ifdef _TARGET_WIN64_
                 "ba w8"
 #else
@@ -8639,7 +8036,7 @@ DECLARE_API(ThreadPool)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return E_FAIL;
     }
@@ -9101,7 +8498,6 @@ DECLARE_API(ThreadPool)
                         TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + (index * sizeof(HillClimbingLogEntry)));
                     INT32 i32Value = 0;
                     float f32Value = 0;
-                    int fieldOffset = 0;
 
                     if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
                     {
@@ -9206,7 +8602,7 @@ DECLARE_API(FindAppDomain)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -9476,7 +8872,7 @@ DECLARE_API(EHInfo)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (0 == nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (0 == nArg))
     {
         return Status;
     }
@@ -9557,7 +8953,7 @@ DECLARE_API(GCInfo)
         {&taStartAddr, COHEX},
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (0 == nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (0 == nArg))
     {
         return Status;
     }
@@ -9864,7 +9260,7 @@ DECLARE_API(u)
     {   // vptr, type
         {&dwStartAddr, COHEX},
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg) || (nArg < 1))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (nArg < 1))
     {
         return Status;
     }
@@ -10399,7 +9795,7 @@ DECLARE_API(DumpLog)
         {&sFileName.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -10972,7 +10368,7 @@ DECLARE_API(SOSStatus)
             {"--reset", &bReset, COBOOL, FALSE},
             {"-r", &bReset, COBOOL, FALSE},
         };
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
         {
             return Status;
         }
@@ -10983,7 +10379,6 @@ DECLARE_API(SOSStatus)
             return S_OK;
         }
         Target::DisplayStatus();
-        DisplaySymbolStore();
     }
     return Status;
 }
@@ -11097,7 +10492,7 @@ DECLARE_API (ProcInfo)
                 end = _wcschr (pt, L'\0');
                 if (end == NULL) {
                     char format[20];
-                    sprintf_s (format,_countof (format), "%dS", &buffer[DT_OS_PAGE_SIZE/2] - pt);
+                    sprintf_s (format, ARRAY_SIZE(format), "%dS", &buffer[DT_OS_PAGE_SIZE/2] - pt);
                     ExtOut(format, pt);
                     break;
                 }
@@ -11297,7 +10692,7 @@ DECLARE_API(Token2EE)
     };
 
     size_t nArg;
-    if (!GetCMDOption(args,option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args,option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11389,7 +10784,7 @@ DECLARE_API(Name2EE)
     };
     size_t nArg;
 
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11510,7 +10905,7 @@ DECLARE_API(PathTo)
         {&root, COHEX},
         {&target, COHEX},
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11560,7 +10955,7 @@ DECLARE_API(GCRoot)
     {   // vptr, type
         {&obj, COHEX}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11606,7 +11001,7 @@ DECLARE_API(GCWhere)
     {   // vptr, type
         {&taddrObj, COHEX}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11735,7 +11130,7 @@ DECLARE_API(FindRoots)
     {   // vptr, type
         {&taObj, COHEX}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -11958,7 +11353,7 @@ public:
             {"/d", &mDML, COBOOL, FALSE},
         };
 
-        if (!GetCMDOption(args,option,_countof(option),NULL,0,NULL))
+        if (!GetCMDOption(args,option,ARRAY_SIZE(option),NULL,0,NULL))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
         if (type != NULL)
@@ -12056,14 +11451,14 @@ private:
         HRESULT hr = S_OK;
         do
         {
-            if (FAILED(hr = handles->Next(_countof(data), data, &fetched)))
+            if (FAILED(hr = handles->Next(ARRAY_SIZE(data), data, &fetched)))
             {
                 ExtOut("Error %x while walking the handle table.\n", hr);
                 break;
             }
 
             WalkHandles(data, fetched);
-        } while (_countof(data) == fetched);
+        } while (ARRAY_SIZE(data) == fetched);
     }
 
     void WalkHandles(SOSHandleData data[], unsigned int count)
@@ -12342,7 +11737,7 @@ DECLARE_API(GetCodeTypeFlags)
         {&PReg.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -12358,7 +11753,7 @@ DECLARE_API(GetCodeTypeFlags)
         }
     }
 
-    sprintf_s(buffer,_countof (buffer),
+    sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=0",
         preg);
     Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer ,0);
@@ -12409,7 +11804,7 @@ DECLARE_API(GetCodeTypeFlags)
         codeType = 16;
     }
 
-    sprintf_s(buffer,_countof (buffer),
+    sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=%x",
         preg, codeType);
     Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -12450,7 +11845,7 @@ DECLARE_API(StopOnException)
         {&PReg.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -12478,7 +11873,7 @@ DECLARE_API(StopOnException)
         }
     }
 
-    sprintf_s(buffer,_countof (buffer),
+    sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=0",
         preg);
     Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -12490,7 +11885,7 @@ DECLARE_API(StopOnException)
 
     if (fCreate1 || fCreate2)
     {
-        sprintf_s(buffer,_countof (buffer),
+        sprintf_s(buffer, ARRAY_SIZE(buffer),
             "sxe %s \"!soe %s %s %d;.if(@$t%d==0) {g} .else {.echo '%s hit'}\" %x",
             fCreate1 ? "-c" : "-c2",
             fDerived ? "-derived" : "",
@@ -12544,7 +11939,7 @@ DECLARE_API(StopOnException)
             if ((_wcscmp(g_mdName,typeNameWide) == 0) ||
                 (fDerived && IsDerivedFrom(taMT, typeNameWide)))
             {
-                sprintf_s(buffer,_countof (buffer),
+                sprintf_s(buffer, ARRAY_SIZE(buffer),
                     "r$t%d=1",
                     preg);
                 Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
@@ -12585,7 +11980,7 @@ DECLARE_API(ObjSize)
         {&str_Object.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -12642,7 +12037,7 @@ DECLARE_API(GCHandleLeaks)
         {"/d", &dml, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -13549,7 +12944,6 @@ private:
             ExtOut("\nLOCALS:\n");
             for (ULONG i=0; i < cLocals; i++)
             {
-                ULONG paramNameLen = 0;
                 WCHAR paramName[mdNameLen] = W("\0");
 
                 ToRelease<ICorDebugValue> pValue;
@@ -13867,7 +13261,7 @@ public:
 
                 WCHAR wszModuleName[MAX_LONGPATH];
                 ULONG32 cchModuleNameActual;
-                IfFailRet(pModule->GetName(_countof(wszModuleName), &cchModuleNameActual, wszModuleName));
+                IfFailRet(pModule->GetName(ARRAY_SIZE(wszModuleName), &cchModuleNameActual, wszModuleName));
 
                 ToRelease<IUnknown> pMDUnknown;
                 ToRelease<IMetaDataImport> pMD;
@@ -13914,7 +13308,7 @@ WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj)
     if (ref.HasRegisterInformation)
     {
         WCHAR reg[32];
-        HRESULT hr = g_sos->GetRegisterName(ref.Register, _countof(reg), reg, NULL);
+        HRESULT hr = g_sos->GetRegisterName(ref.Register, ARRAY_SIZE(reg), reg, NULL);
         if (SUCCEEDED(hr))
             res = reg;
         else
@@ -13970,7 +13364,7 @@ void PrintRef(const SOSStackRefData &ref, TableOutput &out)
     if (ref.Object && (ref.Flags & SOSRefInterior) == 0)
     {
         WCHAR type[128];
-        sos::BuildTypeWithExtraInfo(TO_TADDR(ref.Object), _countof(type), type);
+        sos::BuildTypeWithExtraInfo(TO_TADDR(ref.Object), ARRAY_SIZE(type), type);
 
         res += WString(W(" - ")) + type;
     }
@@ -14263,7 +13657,7 @@ public:
         out.WriteColumn(0, frame->StackOffset);
         out.WriteColumn(1, NativePtr(ip));
 
-        HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(ip), symbol, _countof(symbol), NULL, &displacement);
+        HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(ip), symbol, ARRAY_SIZE(symbol), NULL, &displacement);
         if (SUCCEEDED(hr) && symbol[0] != '\0')
         {
             String frameOutput;
@@ -14278,7 +13672,7 @@ public:
             if (!bSuppressLines)
             {
                 ULONG line;
-                hr = g_ExtSymbols->GetLineByOffset(TO_CDADDR(ip), &line, filename, _countof(filename), NULL, NULL);
+                hr = g_ExtSymbols->GetLineByOffset(TO_CDADDR(ip), &line, filename, ARRAY_SIZE(filename), NULL, NULL);
                 if (SUCCEEDED(hr))
                 {
                     frameOutput += " at ";
@@ -14616,7 +14010,6 @@ WatchCmd g_watchCmd;
 DECLARE_API(Watch)
 {
     INIT_API_NOEE();
-    BOOL bExpression = FALSE;
     StringHolder addExpression;
     StringHolder aExpression;
     StringHolder saveName;
@@ -14648,7 +14041,7 @@ DECLARE_API(Watch)
     {   // vptr, type
         {&expression.data, COSTRING}
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -14781,7 +14174,7 @@ DECLARE_API(ClrStack)
         {&cvariableName.data, COSTRING},
         {&frameToDumpVariablesFor, COSIZE_T},
     };
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -14922,7 +14315,7 @@ DECLARE_API(SaveModule)
         {&Location.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }
@@ -15112,7 +14505,7 @@ DECLARE_API(dbgout)
         {"-off", &bOff, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return Status;
     }
@@ -15648,7 +15041,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
     UINT Length = 0;
     while(1)
     {
-        if (_wcsncmp(pwszPointer, PSZSEP, _countof(PSZSEP)-1) != 0)
+        if (_wcsncmp(pwszPointer, PSZSEP, ARRAY_SIZE(PSZSEP)-1) != 0)
         {
             delete [] pwszBuf;
             return bRet;
@@ -15671,7 +15064,7 @@ BOOL FormatFromRemoteString(DWORD_PTR strObjPointer, __out_ecount(cchString) PWS
         WCHAR wszLineBuffer[mdNameLen + 8 + sizeof(size_t)*2];
 
         // Note that we don't add a newline because we have this embedded in wszLineBuffer
-        swprintf_s(wszLineBuffer, _countof(wszLineBuffer), W("    %p %p %s"), SOS_PTR(-1), SOS_PTR(-1), pwszPointer);
+        swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %p %p %s"), SOS_PTR(-1), SOS_PTR(-1), pwszPointer);
         Length += (UINT)_wcslen(wszLineBuffer);
 
         if (wszBuffer)
@@ -15885,7 +15278,7 @@ DECLARE_API(VerifyStackTrace)
         {"-ManagedExcepStack", &bVerifyManagedExcepStack, COBOOL, FALSE},
     };
 
-    if (!GetCMDOption(args, option, _countof(option), NULL,0,NULL))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL,0,NULL))
     {
         return Status;
     }
@@ -16091,7 +15484,7 @@ DECLARE_API(SaveState)
         {&filePath.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return E_FAIL;
     }
@@ -16131,7 +15524,7 @@ DECLARE_API(SuppressJitOptimization)
         {&onOff.data, COSTRING},
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return E_FAIL;
     }
@@ -16468,7 +15861,7 @@ DECLARE_API(VerifyGMT)
         };
         size_t nArg;
 
-        if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+        if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
         {
             return Status;
         }
@@ -16551,7 +15944,7 @@ DECLARE_API(SetHostRuntime)
         {&hostRuntimeDirectory.data, COSTRING},
     };
     size_t narg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &narg))
     {
         return E_FAIL;
     }
@@ -16615,123 +16008,6 @@ exit:
 #endif // FEATURE_PAL
 
 //
-// Sets the symbol server path.
-//
-DECLARE_API(SetSymbolServer)
-{
-    INIT_API_EXT();
-
-    StringHolder symbolCache;
-    StringHolder searchDirectory;
-    StringHolder windowsSymbolPath;
-    StringHolder authToken;
-    size_t timeoutInMinutes = 0;
-    std::string resolvedSearchDirectory;
-    BOOL disable = FALSE;
-    BOOL loadNative = FALSE;
-    BOOL msdl = FALSE;
-    BOOL symweb = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-disable", &disable, COBOOL, FALSE},
-        {"-cache", &symbolCache.data, COSTRING, TRUE},
-        {"-directory", &searchDirectory.data, COSTRING, TRUE},
-        {"-pat", &authToken.data, COSTRING, TRUE},
-        {"-timeout", &timeoutInMinutes, COSIZE_T, TRUE},
-        {"-ms", &msdl, COBOOL, FALSE},
-#ifdef FEATURE_PAL
-        {"-loadsymbols", &loadNative, COBOOL, FALSE},
-        {"-sympath", &windowsSymbolPath.data, COSTRING, TRUE},
-#else
-        {"-mi", &symweb, COBOOL, FALSE},
-#endif
-    };
-    StringHolder symbolServer;
-    CMDValue arg[] =
-    {
-        {&symbolServer.data, COSTRING},
-    };
-    size_t narg;
-    if (!GetCMDOption(args, option, _countof(option), arg, _countof(arg), &narg))
-    {
-        return E_FAIL;
-    }
-
-    if (msdl && symweb)
-    {
-        ExtErr("Cannot have both -ms and -mi options\n");
-        return E_FAIL;
-    }
-
-    if ((msdl || symweb) && symbolServer.data != nullptr)
-    {
-        ExtErr("Cannot have -ms or -mi option and a symbol server path\n");
-        return E_FAIL;
-    }
-
-    if (disable) {
-        DisableSymbolStore();
-    }
-
-    if (searchDirectory.data != nullptr) {
-        if (!GetAbsolutePath(searchDirectory.data, resolvedSearchDirectory))
-        {
-            ExtErr("Invalid runtime directory %s\n", resolvedSearchDirectory.c_str());
-            return E_FAIL;
-        }
-    }
-
-    if (msdl || symweb || symbolServer.data != nullptr || symbolCache.data != nullptr || !resolvedSearchDirectory.empty() || windowsSymbolPath.data != nullptr)
-    {
-        Status = InitializeSymbolStore(msdl, symweb, symbolServer.data, authToken.data, (int)timeoutInMinutes, symbolCache.data, (resolvedSearchDirectory.empty() ? nullptr : resolvedSearchDirectory.c_str()), windowsSymbolPath.data);
-        if (FAILED(Status))
-        {
-            return Status;
-        }
-        if (msdl)
-        {
-            ExtOut("Added Microsoft public symbol server\n");
-        }
-        if (symweb)
-        {
-            ExtOut("Added internal symweb symbol server\n");
-        }
-        if (symbolServer.data != nullptr)
-        {
-            ExtOut("Added symbol server: %s\n", symbolServer.data);
-        }
-        if (symbolCache.data != nullptr)
-        {
-            ExtOut("Added symbol cache path: %s\n", symbolCache.data);
-        }
-        if (!resolvedSearchDirectory.empty())
-        {
-            ExtOut("Added symbol directory path: %s\n", resolvedSearchDirectory.c_str());
-        }
-        if (windowsSymbolPath.data != nullptr)
-        {
-            ExtOut("Added Windows symbol path: %s\n", windowsSymbolPath.data);
-        }
-    }
-#ifdef FEATURE_PAL
-    else if (loadNative)
-    {
-        Status = LoadNativeSymbols();
-        if (FAILED(Status))
-        {
-            ExtErr("Symbol server not set\n");
-        }
-    }
-#endif
-    else
-    {
-        DisplaySymbolStore();
-    }
-
-    return Status;
-}
-
-//
 // Sets the runtime module path
 //
 DECLARE_API(SetClrPath)
@@ -16755,7 +16031,7 @@ DECLARE_API(SetClrPath)
             {&runtimeModulePath.data, COSTRING},
         };
         size_t narg;
-        if (!GetCMDOption(args, nullptr, 0, arg, _countof(arg), &narg))
+        if (!GetCMDOption(args, nullptr, 0, arg, ARRAY_SIZE(arg), &narg))
         {
             return E_FAIL;
         }
@@ -16800,7 +16076,7 @@ DECLARE_API(runtimes)
             {"-netfx", &bNetFx, COBOOL, FALSE},
             {"-netcore", &bNetCore, COBOOL, FALSE},
         };
-        if (!GetCMDOption(args, option, _countof(option), NULL, 0, NULL))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
         {
             return Status;
         }
@@ -16860,12 +16136,30 @@ HRESULT ExecuteCommand(PCSTR command, PCSTR args)
 }
 
 //
+// Sets the symbol server path.
+//
+DECLARE_API(SetSymbolServer)
+{
+    INIT_API_EXT();
+    return ExecuteCommand("setsymbolserver", args);
+}
+
+//
 // Dumps the managed assemblies
 //
 DECLARE_API(clrmodules)
 {
     INIT_API_EXT();
     return ExecuteCommand("clrmodules", args);
+}
+
+//
+// Dumps async stacks
+//
+DECLARE_API(DumpAsync)
+{
+    INIT_API_EXT();
+    return ExecuteCommand("dumpasync", args);
 }
 
 //
@@ -16910,8 +16204,8 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
         }
 
         char lpFilename[MAX_LONGPATH + 12]; // + 12 to make enough room for strcat function.
-        strcpy_s(lpFilename, _countof(lpFilename), szSOSModulePath);
-        strcat_s(lpFilename, _countof(lpFilename), "sosdocsunix.txt");
+        strcpy_s(lpFilename, ARRAY_SIZE(lpFilename), szSOSModulePath);
+        strcat_s(lpFilename, ARRAY_SIZE(lpFilename), "sosdocsunix.txt");
 
         HANDLE hSosDocFile = CreateFileA(lpFilename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
         if (hSosDocFile == INVALID_HANDLE_VALUE) {
@@ -16938,7 +16232,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
 
     // Find our line in the text file
     char searchString[MAX_LONGPATH];
-    sprintf_s(searchString, _countof(searchString), "COMMAND: %s.", pszCmdName);
+    sprintf_s(searchString, ARRAY_SIZE(searchString), "COMMAND: %s.", pszCmdName);
 
     LPSTR pStart = strstr(pText, searchString);
     LPSTR pEnd = NULL;
@@ -16998,7 +16292,7 @@ DECLARE_API(Help)
         {&commandName.data, COSTRING}
     };
     size_t nArg;
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
         return Status;
     }

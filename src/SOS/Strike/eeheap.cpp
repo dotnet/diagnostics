@@ -593,7 +593,7 @@ void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_all
     }
 }
 
-void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR total_committed_size)
+void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR& total_committed_size)
 {
     DWORD_PTR dwAddrSeg;
     DacpHeapSegmentData segment;
@@ -1922,7 +1922,7 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
     // this loop will get information for all the heap segments in this heap. The outer loop iterates once
     // for the "normal" generation segments and once for the large object heap. The inner loop follows the chain
     // of segments rooted at AddrSegs[i]
-    for (unsigned int i = 0; i < sizeof(AddrSegs)/sizeof(AddrSegs[0]); ++i)
+    for (unsigned int i = 0; i < ARRAY_SIZE(AddrSegs); ++i)
     {
         if (AddrSegs[i] == NULL)
         {

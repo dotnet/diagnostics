@@ -105,7 +105,7 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     HMODULE hDbi = NULL;
     HMODULE hDac = NULL;
     ICorDebugDataTarget * pDt = NULL;
-    CLR_DEBUGGING_VERSION version;
+    CLR_DEBUGGING_VERSION version = {};
 
     // argument checking
     if ((ppProcess != NULL || pFlags != NULL) && pLibraryProvider == NULL)
@@ -667,7 +667,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
             }
         }
 
-        CLR_DEBUG_RESOURCE debugResource;
+        CLR_DEBUG_RESOURCE debugResource = {};
         if (SUCCEEDED(hr) && debugResourceSize != sizeof(debugResource))
         {
             hr = CORDBG_E_NOT_CLR;

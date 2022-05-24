@@ -150,7 +150,7 @@ inline RegIndex FindReg (___in __in_z char *ptr, __out_opt int *plen = NULL, __o
 
     };
 
-    for (size_t i = 0; i < sizeof(rgRegNames)/sizeof(rgRegNames[0]); i++)
+    for (size_t i = 0; i < ARRAY_SIZE(rgRegNames); i++)
     {
         if (!strncmp(ptr, rgRegNames[i].pszName, rgRegNames[i].cchName))
         {
@@ -577,7 +577,7 @@ void
 
         ULONG_PTR InstrAddr = IP;
 
-        DisasmAndClean (IP, line, _countof(line));
+        DisasmAndClean (IP, line, ARRAY_SIZE(line));
 
         // look at key word
         ptr = line;
@@ -605,7 +605,7 @@ void
             ULONG_PTR OrigInstrAddr = GCStressCodeCopy + (InstrAddr - IPBegin);
             ULONG_PTR OrigIP = OrigInstrAddr;
 
-            DisasmAndClean(OrigIP, line, _countof(line));
+            DisasmAndClean(OrigIP, line, ARRAY_SIZE(line));
 
             //
             // Increment the real IP based on the size of the unmodifed

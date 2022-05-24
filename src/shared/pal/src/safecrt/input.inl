@@ -220,10 +220,10 @@ static int __check_float_string(size_t nFloatStrUsed,
 #endif  /* _UNICODE */
 {
     _TCHAR floatstring[_CVTBUFSIZE + 1];
-    _TCHAR *pFloatStr=floatstring;
-    size_t nFloatStrUsed=0;
-    size_t nFloatStrSz=sizeof(floatstring)/sizeof(floatstring[0]);
-    int malloc_FloatStrFlag=0;
+    _TCHAR *pFloatStr = floatstring;
+    size_t nFloatStrUsed = 0;
+    size_t nFloatStrSz = ARRAY_SIZE(floatstring);
+    int malloc_FloatStrFlag = 0;
 
     unsigned long number;               /* temp hold-value                   */
 #if ALLOC_TABLE

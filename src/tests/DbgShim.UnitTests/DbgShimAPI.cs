@@ -85,43 +85,60 @@ namespace Microsoft.Diagnostics
 
         public delegate void RuntimeStartupCallbackDelegate(ICorDebug cordbg, object parameter, HResult hresult);
 
-        public static HResult RegisterForRuntimeStartup(int pid, object parameter, out IntPtr unregisterToken, RuntimeStartupCallbackDelegate callback)
+        public static HResult RegisterForRuntimeStartup(int pid, object parameter, out (IntPtr, GCHandle) unregister, RuntimeStartupCallbackDelegate callback)
         {
-            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out IntPtr nativeParameter);
-            return _registerForRuntimeStartup((uint)pid, nativeCallback, nativeParameter, out unregisterToken);
+            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out GCHandle gchNativeCallback, out IntPtr nativeParameter);
+            HResult hr = _registerForRuntimeStartup((uint)pid, nativeCallback, nativeParameter, out IntPtr unregisterToken);
+            unregister = (unregisterToken, gchNativeCallback);
+            return hr;
         }
 
-        public static HResult RegisterForRuntimeStartupEx(int pid, string applicationGroupId, object parameter, out IntPtr unregisterToken, RuntimeStartupCallbackDelegate callback)
+        public static HResult RegisterForRuntimeStartupEx(int pid, string applicationGroupId, object parameter, out (IntPtr, GCHandle) unregister, RuntimeStartupCallbackDelegate callback)
         {
-            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out IntPtr nativeParameter);
-            return _registerForRuntimeStartupEx((uint)pid, applicationGroupId, nativeCallback, nativeParameter, out unregisterToken);
+            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter);
+            HResult hr = _registerForRuntimeStartupEx((uint)pid, applicationGroupId, nativeCallback, nativeParameter, out IntPtr unregisterToken);
+            unregister = (unregisterToken, nativeCallbackHandle);
+            return hr;
         }
 
-        public static HResult RegisterForRuntimeStartup3(int pid, string applicationGroupId, object parameter, IntPtr libraryProvider, out IntPtr unregisterToken, RuntimeStartupCallbackDelegate callback)
+        public static HResult RegisterForRuntimeStartup3(int pid, string applicationGroupId, object parameter, IntPtr libraryProvider, out (IntPtr, GCHandle) unregister, RuntimeStartupCallbackDelegate callback)
         {
             if (_registerForRuntimeStartup3 == default)
             {
                 throw new NotSupportedException("RegisterForRuntimeStartup3 not supported");
             }
-            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out IntPtr nativeParameter);
-            return _registerForRuntimeStartup3((uint)pid, applicationGroupId, libraryProvider, nativeCallback, nativeParameter, out unregisterToken);
+            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter);
+            HResult hr = _registerForRuntimeStartup3((uint)pid, applicationGroupId, libraryProvider, nativeCallback, nativeParameter, out IntPtr unregisterToken);
+            unregister = (unregisterToken, nativeCallbackHandle);
+            return hr;
         }
 
         private delegate void NativeRuntimeStartupCallbackDelegate(IntPtr cordbg, IntPtr parameter, HResult hresult);
 
-        private static IntPtr RuntimeStartupCallback(object parameter, RuntimeStartupCallbackDelegate callback, out IntPtr nativeParameter)
+        private static IntPtr RuntimeStartupCallback(object parameter, RuntimeStartupCallbackDelegate callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter)
         {
             NativeRuntimeStartupCallbackDelegate native = (IntPtr cordbg, IntPtr param, HResult hresult) => {
                 GCHandle gch = GCHandle.FromIntPtr(param);
                 callback(ICorDebug.Create(cordbg), gch.Target, hresult);
                 gch.Free();
             };
+            // Need to keep native callback delegate alive until UnregisterForRuntimeStartup
+            nativeCallbackHandle = GCHandle.Alloc(native);
+
+            // Need to keep parameter alive until the callback is invoked
             GCHandle gchParameter = GCHandle.Alloc(parameter);
             nativeParameter = GCHandle.ToIntPtr(gchParameter);
+
+            // Return the function pointer for the native callback
             return Marshal.GetFunctionPointerForDelegate(native);
         }
 
-        public static HResult UnregisterForRuntimeStartup(IntPtr unregisterToken) =>  _unregisterForRuntimeStartup(unregisterToken);
+        public static HResult UnregisterForRuntimeStartup((IntPtr unregisterToken, GCHandle nativeCallbackHandle) unregister)
+        {
+            HResult hr = _unregisterForRuntimeStartup(unregister.unregisterToken);
+            unregister.nativeCallbackHandle.Free();
+            return hr;
+        }
 
         private const int HRESULT_ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
         private const int HRESULT_ERROR_BAD_LENGTH = unchecked((int)0x80070018);

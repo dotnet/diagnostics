@@ -1441,11 +1441,8 @@ public:
         // Don't need to wait for the worker thread if unregister called on it
         if (m_threadId != (DWORD)THREADSilentGetCurrentThreadId())
         {
-            // Wait for work thread to exit
-            if (WaitForSingleObject(m_threadHandle, INFINITE) != WAIT_OBJECT_0)
-            {
-                ASSERT("WaitForSingleObject\n");
-            }
+            // Wait for work thread to exit for 60 seconds
+            WaitForSingleObject(m_threadHandle, 60 * 1000);
         }
     }
 

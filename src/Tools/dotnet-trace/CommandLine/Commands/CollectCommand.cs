@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
-                    string processMainModuleFileName = "";
+                    string processMainModuleFileName = $"Process{processId}";
 
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
@@ -193,23 +193,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         // Reading the process MainModule filename can fail if the target process closes
                         // or isn't fully setup. Retry a few times to attempt to address the issue
-                        for (int attempts = 0; true; attempts++)
+                        for (int attempts = 0; attempts < 10; attempts++)
                         {
                             try
                             {
                                 processMainModuleFileName = process.MainModule.FileName;
                                 break;
                             }
+
                             catch
                             {
-                                if (attempts > 10)
-                                {
-                                    Console.Error.WriteLine("Unable to examine process.");
-                                    return ReturnCode.SessionCreationError;
-                                }
                                 Thread.Sleep(200);
                             }
                         }
+
                     }
 
                     if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
@@ -245,6 +242,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         catch (DiagnosticsClientException e)
                         {
                             Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                            return ReturnCode.SessionCreationError;
+                        }
+                        catch (UnauthorizedAccessException e)
+                        {
+                            Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
+                            return ReturnCode.SessionCreationError;
                         }
 
                         if (session == null)

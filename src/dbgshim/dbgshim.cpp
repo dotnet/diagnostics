@@ -98,7 +98,11 @@ struct ClrRuntimeInfo
     ClrRuntimeInfo()
     {
         ModuleHandle = NULL;
+#ifdef TARGET_UNIX
+        ContinueStartupEvent = NULL;
+#else
         ContinueStartupEvent = INVALID_HANDLE_VALUE;
+#endif
 
         EngineMetrics.cbSize = sizeof(EngineMetrics);
         EngineMetrics.dwDbiVersion = CorDebugLatestVersion;
@@ -106,11 +110,13 @@ struct ClrRuntimeInfo
     }
 };
 
+static
 HRESULT
 GetRuntime(
     DWORD debuggeePID,
     ClrRuntimeInfo& clrRuntimeInfo);
 
+static
 HRESULT
 GetTargetCLRMetrics(
     LPCWSTR wszModulePath,
@@ -118,10 +124,12 @@ GetTargetCLRMetrics(
     ClrInfo* pClrInfoOut = NULL,
     DWORD *pdwRVAContinueStartupEvent = NULL);
 
+static
 void
 AppendDbiDllName(
     SString & szFullDbiPath);
 
+static
 bool
 CheckDbiAndRuntimeVersion(
     SString & szFullDbiPath,
@@ -392,8 +400,10 @@ public:
     exit:
         if (FAILED(hr))
         {
-            _ASSERTE(pCordb == NULL);
-
+            if (pCordb != NULL)
+            {
+                pCordb->Release();
+            }
             // Invoke the callback on error
             m_callback(NULL, m_parameter, hr);
         }
@@ -498,19 +508,19 @@ public:
         // Don't need to wake up and wait for the worker thread if called on it
         if (m_threadId != GetCurrentThreadId())
         {
-            // Wait for work thread to exit
-            WaitForSingleObject(m_threadHandle, INFINITE);
+            // Wait for work thread to exit for 60 seconds
+            WaitForSingleObject(m_threadHandle, 60 * 1000);
         }
     }
 
     HRESULT InvokeStartupCallback(bool *pCoreClrExists)
     {
         ClrRuntimeInfo clrRuntimeInfo;
+        IUnknown *pCordb = NULL;
         HRESULT hr = S_OK;
 
         PAL_CPP_TRY
         {
-            IUnknown *pCordb = NULL;
 
             *pCoreClrExists = FALSE;
 
@@ -588,7 +598,10 @@ public:
                 SetEvent(clrRuntimeInfo.ContinueStartupEvent);
             }
         }
-
+        if (FAILED(hr) && (pCordb != NULL))
+        {
+            pCordb->Release();
+        }
         return hr;
     }
 
@@ -1868,7 +1881,6 @@ GetDbiFilenameNextToRuntime(
 // Return Value:
 //    true if the versions match
 //
-static
 bool
 CheckDbiAndRuntimeVersion(
     SString & szFullDbiPath,

@@ -41,10 +41,6 @@ inline void RestoreSOToleranceState() {}
 #include "runtimeimpl.h"
 #include "symbols.h"
 
-#ifndef COUNTOF
-#define COUNTOF(a) (sizeof(a) / sizeof(*a))
-#endif
-
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
 
@@ -1025,8 +1021,8 @@ namespace Output
                 char buffer[64];
                 if (mFormat == Formats::Default || mFormat == Formats::Pointer)
                 {
-                    sprintf_s(buffer, _countof(buffer), "%p", (int *)(SIZE_T)mValue);
-                    ConvertToLower(buffer, _countof(buffer));
+                    sprintf_s(buffer, ARRAY_SIZE(buffer), "%p", (int *)(SIZE_T)mValue);
+                    ConvertToLower(buffer, ARRAY_SIZE(buffer));
                 }
                 else
                 {
@@ -1038,8 +1034,8 @@ namespace Output
                     else if (mFormat == Formats::Decimal)
                         format = "%d";
 
-                    sprintf_s(buffer, _countof(buffer), format, (__int32)mValue);
-                    ConvertToLower(buffer, _countof(buffer));
+                    sprintf_s(buffer, ARRAY_SIZE(buffer), format, (__int32)mValue);
+                    ConvertToLower(buffer, ARRAY_SIZE(buffer));
                 }
 
                 return buffer;
@@ -1095,7 +1091,7 @@ namespace Output
         static void BuildDMLCol(__out_ecount(len) char *result, int len, CLRDATA_ADDRESS value, Formats::Format format, Output::FormatType dmlType, bool leftAlign, int width)
         {
             char hex[64];
-            int count = GetHex(value, hex, _countof(hex), format != Formats::Hex);
+            int count = GetHex(value, hex, ARRAY_SIZE(hex), format != Formats::Hex);
             int i = 0;
 
             if (!leftAlign)
@@ -1534,7 +1530,7 @@ public:
 
         va_list list;
         va_start(list, fmt);
-        vsprintf_s(result, _countof(result), fmt, list);
+        vsprintf_s(result, ARRAY_SIZE(result), fmt, list);
         va_end(list);
 
         WriteColumn(col, result);
@@ -1546,7 +1542,7 @@ public:
 
         va_list list;
         va_start(list, fmt);
-        vswprintf_s(result, _countof(result), fmt, list);
+        vswprintf_s(result, ARRAY_SIZE(result), fmt, list);
         va_end(list);
 
         WriteColumn(col, result);
@@ -2890,7 +2886,7 @@ public:
     {
 #ifdef _DEBUG
         char buffer[1024];
-        sprintf_s(buffer, _countof(buffer), "Cache (%s): %d reads (%2.1f%% hits), %d misses (%2.1f%%), %d misaligned (%2.1f%%).\n",
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "Cache (%s): %d reads (%2.1f%% hits), %d misses (%2.1f%%), %d misaligned (%2.1f%%).\n",
                                              func, mReads, 100*(mReads-mMisses)/(float)(mReads+mMisaligned), mMisses,
                                              100*mMisses/(float)(mReads+mMisaligned), mMisaligned, 100*mMisaligned/(float)(mReads+mMisaligned));
         OutputDebugStringA(buffer);

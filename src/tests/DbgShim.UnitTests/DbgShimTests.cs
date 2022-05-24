@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -347,15 +348,15 @@ namespace Microsoft.Diagnostics
                 Assert.True(await debuggeeInfo.WaitForDebuggee());
             }
             Trace.TraceInformation("CreateProcessForLaunch pid {0} DONE", processId);
-            return debuggeeInfo;
+            return debuggeeInfo; 
         }
 
         private static void TestRegisterForRuntimeStartup(DebuggeeInfo debuggeeInfo, int api)
         {
             TestConfiguration config = debuggeeInfo.TestConfiguration;
             AutoResetEvent wait = new AutoResetEvent(false);
+            (IntPtr, GCHandle) unregister = (IntPtr.Zero, default);
             string applicationGroupId =  null;
-            IntPtr unregisterToken = IntPtr.Zero;
             HResult result = HResult.S_OK;
             HResult callbackResult = HResult.S_OK;
             Exception callbackException = null;
@@ -386,14 +387,14 @@ namespace Microsoft.Diagnostics
             switch (api)
             {
                 case 1:
-                    result = DbgShimAPI.RegisterForRuntimeStartup(debuggeeInfo.ProcessId, parameter: IntPtr.Zero, out unregisterToken, callback);
+                    result = DbgShimAPI.RegisterForRuntimeStartup(debuggeeInfo.ProcessId, parameter: IntPtr.Zero, out unregister, callback);
                     break;
                 case 2:
-                    result = DbgShimAPI.RegisterForRuntimeStartupEx(debuggeeInfo.ProcessId, applicationGroupId, parameter: IntPtr.Zero, out unregisterToken, callback);
+                    result = DbgShimAPI.RegisterForRuntimeStartupEx(debuggeeInfo.ProcessId, applicationGroupId, parameter: IntPtr.Zero, out unregister, callback);
                     break;
                 case 3:
                     LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
-                    result = DbgShimAPI.RegisterForRuntimeStartup3(debuggeeInfo.ProcessId, applicationGroupId, parameter: IntPtr.Zero, libraryProvider.ILibraryProvider, out unregisterToken, callback);
+                    result = DbgShimAPI.RegisterForRuntimeStartup3(debuggeeInfo.ProcessId, applicationGroupId, parameter: IntPtr.Zero, libraryProvider.ILibraryProvider, out unregister, callback);
                     break;
                 default:
                     throw new ArgumentException(nameof(api));
@@ -410,7 +411,7 @@ namespace Microsoft.Diagnostics
             Assert.True(wait.WaitOne());
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} after callback wait", debuggeeInfo.ProcessId);
             
-            AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregisterToken));
+            AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
             Assert.Null(callbackException);
 
             switch (api)

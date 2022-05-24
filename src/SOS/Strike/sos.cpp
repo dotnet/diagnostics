@@ -976,7 +976,7 @@ namespace sos
             else if (isString)
             {
                 WCHAR str[32];
-                obj.GetStringData(str, _countof(str));
+                obj.GetStringData(str, ARRAY_SIZE(str));
 
                 _snwprintf_s(buffer, size, _TRUNCATE, W("%s: \"%s\""), mt.GetName(), str);
             }

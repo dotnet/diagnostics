@@ -12,16 +12,6 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface ISymbolService
     {
         /// <summary>
-        /// Symbol file reader instance
-        /// </summary>
-        public class SymbolFile : IDisposable
-        {
-            public virtual void Dispose() 
-            { 
-            }
-        }
-
-        /// <summary>
         /// Invoked when anything changes in the symbol service (adding servers, caches, or directories, clearing store, etc.)
         /// </summary>
         IServiceEvent OnChangeEvent { get; }
@@ -41,6 +31,21 @@ namespace Microsoft.Diagnostics.DebugServices
         string DefaultSymbolCache { get; set; }
 
         /// <summary>
+        /// The time out in minutes passed to the HTTP symbol store when not overridden in AddSymbolServer.
+        /// </summary>
+        int DefaultTimeout { get; set; }
+
+        /// <summary>
+        /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
+        /// </summary>
+        int DefaultRetryCount { get; set; }
+
+        /// <summary>
+        /// Reset any HTTP symbol stores marked with a client failure
+        /// </summary>
+        void Reset();
+
+        /// <summary>
         /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
         /// </summary>
         /// <param name="symbolPath">Windows symbol path</param>
@@ -53,10 +58,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="msdl">if true, use the public Microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
-        /// <param name="authToken"></param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
+        /// <param name="authToken">PAT for secure symbol server (optional)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
-        bool AddSymbolServer(bool msdl, bool symweb, string symbolServerPath, string authToken, int timeoutInMinutes);
+        bool AddSymbolServer(bool msdl, bool symweb, string symbolServerPath = null, string authToken = null, int? timeoutInMinutes = null, int? retryCount = null);
 
         /// <summary>
         /// Add cache path to symbol search path
@@ -76,11 +82,18 @@ namespace Microsoft.Diagnostics.DebugServices
         void DisableSymbolStore();
 
         /// <summary>
-        /// Downloads module file
+        /// Downloads the module file
         /// </summary>
         /// <param name="module">module interface</param>
         /// <returns>module path or null</returns>
-        string DownloadModule(IModule module);
+        string DownloadModuleFile(IModule module);
+
+        /// <summary>
+        /// Downloads the symbol file for module
+        /// </summary>
+        /// <param name="module">module interface</param>
+        /// <returns>module path or null</returns>
+        string DownloadSymbolFile(IModule module);
         
         /// <summary>
         /// Download a file from the symbol stores/server.

@@ -46,7 +46,7 @@ namespace sos
     public:
         Exception(const char *format, va_list args)
         {
-            vsprintf_s(mMsg, _countof(mMsg), format, args);
+            vsprintf_s(mMsg, ARRAY_SIZE(mMsg), format, args);
 
             va_end(args);
         }

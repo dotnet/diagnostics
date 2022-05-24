@@ -398,6 +398,12 @@ public:
 
     ULONG STDMETHODCALLTYPE GetOutputWidth();
 
+    HRESULT STDMETHODCALLTYPE SupportsDml(PULONG supported);
+
+    void STDMETHODCALLTYPE OutputDmlString(
+        ULONG mask,
+        PCSTR str);
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------

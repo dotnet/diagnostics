@@ -182,6 +182,17 @@ public:
 
     ULONG STDMETHODCALLTYPE GetOutputWidth();
 
+    HRESULT STDMETHODCALLTYPE SupportsDml(
+        PULONG supported);
+
+    void STDMETHODCALLTYPE OutputDmlString(
+        ULONG mask,
+        PCSTR message);
+
+    HRESULT STDMETHODCALLTYPE AddModuleSymbol(
+        void* param,
+        const char* symbolFileName);
+
     //----------------------------------------------------------------------------
     // IRemoteMemoryService
     //----------------------------------------------------------------------------

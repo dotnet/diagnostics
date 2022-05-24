@@ -52,7 +52,7 @@ Revision History:
 #define PRINTF_FORMAT_HEAD  "%-7s  %*s  %*s  %*s %*s  %*s\n"
 #define PRINTF_FORMAT       "%-7s %*sK %*sK %*sK %*s %*sK\n"
 
-#define CCH_ULONGLONG_COMMAS   _countof("18,446,744,073,709,551,616")
+#define CCH_ULONGLONG_COMMAS   ARRAY_SIZE("18,446,744,073,709,551,616")
 #define CCH_ULONGLONG_MINIMUM_COMMAS (CCH_ULONGLONG_COMMAS - 3)
 #define CCH_ULONGLONG_BLOCKCOUNT_COMMAS    sizeof("1,000,000")
 
@@ -144,12 +144,9 @@ PROTECT_MASK ProtectMasks[] =
         }
     };
 
-#define NUM_PROTECT_MASKS (sizeof(ProtectMasks) / sizeof(ProtectMasks[0]))
-
 //
 // Private functions.
 //
-
 
 PSTR
 ULongLongToString(
@@ -157,7 +154,6 @@ ULongLongToString(
     __out_ecount (CCH_ULONGLONG_COMMAS) OUT PSTR Buffer
     )
 {
-
     PSTR p1;
     PSTR p2;
     CHAR ch;
@@ -407,7 +403,7 @@ VmProtectToString(
     Buffer[0] = '\0';
 
     for( i = 0, mask = &ProtectMasks[0] ;
-        (i < NUM_PROTECT_MASKS) && (Protect != 0) ;
+        (i < ARRAY_SIZE(ProtectMasks)) && (Protect != 0) ;
         i++, mask++ ) {
         if( mask->Bit & Protect ) {
             Protect &= ~mask->Bit;
@@ -461,7 +457,7 @@ VmStateToString(
         break;
 
     default:
-        sprintf_s(invalidStr,_countof(invalidStr), "%08lx", State );
+        sprintf_s(invalidStr,ARRAY_SIZE(invalidStr), "%08lx", State );
         result = invalidStr;
         break;
     }
@@ -500,7 +496,7 @@ VmTypeToString(
         break;
 
     default:
-        sprintf_s(invalidStr,_countof(invalidStr), "%08lx", Type );
+        sprintf_s(invalidStr,ARRAY_SIZE(invalidStr), "%08lx", Type );
         result = invalidStr;
         break;
     }
@@ -698,10 +694,10 @@ Return Value:
             SOS_PTR(memInfo.BaseAddress),
             SOS_PTR(((ULONG_PTR)memInfo.BaseAddress + memInfo.RegionSize - 1)),
             SOS_PTR(memInfo.RegionSize),
-            VmProtectToString( memInfo.AllocationProtect, aprotectStr, _countof(aprotectStr) ),
-            VmProtectToString( memInfo.Protect, protectStr, _countof(protectStr)  ),
-            VmStateToString( memInfo.State, stateStr, _countof(stateStr) ),
-            VmTypeToString( memInfo.Type, typeStr , _countof(typeStr))
+            VmProtectToString( memInfo.AllocationProtect, aprotectStr, ARRAY_SIZE(aprotectStr) ),
+            VmProtectToString( memInfo.Protect, protectStr, ARRAY_SIZE(protectStr)  ),
+            VmStateToString( memInfo.State, stateStr, ARRAY_SIZE(stateStr) ),
+            VmTypeToString( memInfo.Type, typeStr , ARRAY_SIZE(typeStr))
             );
 
         //
