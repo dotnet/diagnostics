@@ -4,7 +4,7 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
-using System.Diagnostics;
+using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -21,7 +21,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 using SafeProcessHandle processHandle = NativeMethods.OpenProcess(NativeMethods.PROCESS_QUERY_INFORMATION | NativeMethods.PROCESS_VM_READ, false, processId);
                 if (processHandle.IsInvalid)
                 {
-                    throw new ArgumentException($"Invalid process id {processId} error: {Marshal.GetLastWin32Error()}");
+                    int error = Marshal.GetLastWin32Error();
+                    string errorText = new Win32Exception(error).Message;
+                    throw new ArgumentException($"Invalid process id {processId} - {errorText} ({error})");
                 }
 
                 // Open the file for writing
@@ -77,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         else
                         {
                             int err = Marshal.GetHRForLastWin32Error();
-                            if (err != NativeMethods.ERROR_PARTIAL_COPY)
+                            if (err != NativeMethods.HR_ERROR_PARTIAL_COPY)
                             {
                                 Marshal.ThrowExceptionForHR(err);
                             }
@@ -88,7 +90,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             private static class NativeMethods
             {
-                public const int ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
+                public const int HR_ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
 
                 public const int PROCESS_VM_READ = 0x0010;
                 public const int PROCESS_QUERY_INFORMATION = 0x0400;
