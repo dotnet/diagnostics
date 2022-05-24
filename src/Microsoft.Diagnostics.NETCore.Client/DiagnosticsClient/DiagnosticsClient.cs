@@ -294,9 +294,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-            static IEnumerable<int> GetAllPublishedProcesses()
+            static IEnumerable<int> GetAllPublishedProcesses(string[] files)
             {
-                foreach (var port in Directory.GetFiles(PidIpcEndpoint.IpcRootPath))
+                foreach (var port in files)
                 {
                     var fileName = new FileInfo(port).Name;
                     var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
@@ -308,8 +308,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     yield return processId;
                 }
             }
-
-            return GetAllPublishedProcesses().Distinct();
+            try 
+            {
+                string[] files = Directory.GetFiles(PidIpcEndpoint.IpcRootPath);
+                return GetAllPublishedProcesses(files).Distinct();
+            }
+            catch ( System.UnauthorizedAccessException ex)
+            {
+                Console.Error.WriteLine("The user that ran this tool does not have access to the NamedPipes pseudo-filesystem. As a result, this tool will not work.");
+            }
         }
 
         internal ProcessInfo GetProcessInfo()
