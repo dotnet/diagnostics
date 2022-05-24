@@ -589,7 +589,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             throw new UnsupportedCommandException($"{operationName} failed - Invalid command argument.");
 
                         case (uint)DiagnosticsIpcError.NotSupported:
-                            throw new NotSupportedException($"{operationName} - Not supported by this runtime.");
+                            message = $"{operationName} - Not supported by this runtime.";
+                            break;
 
                         default:
                             break;
