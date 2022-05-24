@@ -45,7 +45,7 @@ lldb 10.0 is the only version of lldb that works with SOS for Arm32 on Ubuntu 18
 
 To install the lldb packages:
 
-    sudo get-get update
+    sudo apt-get update
     sudo apt-get install lldb
 
 This installs lldb version 10.0.

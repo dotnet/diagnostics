@@ -78,6 +78,11 @@ if (MSVC)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /PDBCOMPRESS")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:1572864")
 
+  if(EXISTS ${CLR_SOURCELINK_FILE_PATH})
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /sourcelink:${CLR_SOURCELINK_FILE_PATH}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /sourcelink:${CLR_SOURCELINK_FILE_PATH}")
+  endif(EXISTS ${CLR_SOURCELINK_FILE_PATH})
+
   # Checked build specific flags
   add_linker_flag(/INCREMENTAL:NO CHECKED) # prevent "warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:REF' specification"
   add_linker_flag(/OPT:REF CHECKED)
@@ -390,6 +395,10 @@ if (CLR_CMAKE_HOST_UNIX)
 
   add_compile_options(-Wno-unused-but-set-variable)
 
+  # Turn off floating point expression contraction because it is considered a value changing
+  # optimization in the IEEE 754 specification and is therefore considered unsafe.
+  add_compile_options(-ffp-contract=off)
+
   if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wno-unknown-warning-option)
 
@@ -489,10 +498,16 @@ if(CLR_CMAKE_TARGET_UNIX)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_ANDROID>)
   elseif(CLR_CMAKE_TARGET_LINUX)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_LINUX>)
+    if(CLR_CMAKE_TARGET_LINUX_MUSL)
+        add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_LINUX_MUSL>)
+    endif()
   elseif(CLR_CMAKE_TARGET_NETBSD)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_NETBSD>)
   elseif(CLR_CMAKE_TARGET_SUNOS)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_SUNOS>)
+    if(CLR_CMAKE_TARGET_OS_ILLUMOS)
+      add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_ILLUMOS>)
+    endif()
   endif()
 else(CLR_CMAKE_TARGET_UNIX)
   add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_WINDOWS>)
@@ -541,8 +556,10 @@ if (MSVC)
   # /W3 is added by default by CMake, so remove it
   string(REPLACE "/W3" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "/W3" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-  # set default warning level to 3 but allow targets to override it.
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/W$<GENEX_EVAL:$<IF:$<BOOL:$<TARGET_PROPERTY:MSVC_WARNING_LEVEL>>,$<TARGET_PROPERTY:MSVC_WARNING_LEVEL>,3>>>)
+
+  # [[! Microsoft.Security.SystemsADM.10086 !]] - SDL required warnings
+  # set default warning level to 4 but allow targets to override it.
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/W$<GENEX_EVAL:$<IF:$<BOOL:$<TARGET_PROPERTY:MSVC_WARNING_LEVEL>>,$<TARGET_PROPERTY:MSVC_WARNING_LEVEL>,4>>>)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/WX>) # treat warnings as errors
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Oi>) # enable intrinsics
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Oy->) # disable suppressing of the creation of frame pointers on the call stack for quicker function calls
@@ -577,6 +594,7 @@ if (MSVC)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4456>) # declaration of 'identifier' hides previous local declaration
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4457>) # declaration of 'identifier' hides function parameter
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4458>) # declaration of 'identifier' hides class member
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4702>) # unreachable code
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4733>) # Inline asm assigning to 'FS:0' : handler not registered as safe handler
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4838>) # conversion from 'type_1' to 'type_2' requires a narrowing conversion
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4960>) # 'function' is too big to be profiled
@@ -586,11 +604,30 @@ if (MSVC)
   # Treat Warnings as Errors:
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4007>) # 'main' : must be __cdecl.
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4013>) # 'function' undefined - assuming extern returning int.
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4018>) # 'expression' : signed/unsigned mismatch
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4055>) # 'conversion' : from data pointer 'type1' to function pointer 'type2'
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4102>) # "'%$S' : unreferenced label".
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4146>) # unary minus operator applied to unsigned type, result still unsigned
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4242>) # 'identifier' : conversion from 'type1' to 'type2', possible loss of data
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4244>) # 'conversion' conversion from 'type1' to 'type2', possible loss of data
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4267>) # 'var' : conversion from 'size_t' to 'type', possible loss of data
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4302>) # 'conversion' : truncation from 'type 1' to 'type 2'
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4308>) # negative integral constant converted to unsigned type
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4509>) # nonstandard extension used: 'function' uses SEH and 'object' has destructor
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4510>) # 'class' : default constructor could not be generated
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4532>) # 'continue' : jump out of __finally/finally block has undefined behavior during termination handling
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4533>) # initialization of 'variable' is skipped by 'instruction'
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4551>) # Function call missing argument list.
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4700>) # Local used w/o being initialized.
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4610>) # object 'class' can never be instantiated - user-defined constructor required
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4611>) # interaction between 'function' and C++ object destruction is non-portable
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4640>) # 'instance' : construction of local static object is not thread-safe
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4700>) # Local used w/o being initialized.
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4701>) # Potentially uninitialized local variable 'name' used
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4703>) # Potentially uninitialized local pointer variable 'name' used
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4789>) # destination of memory copy is too small
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4806>) # Unsafe operation involving type 'bool'.
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4995>) # 'function': name was marked as #pragma deprecated
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4996>) # 'function': was declared deprecated also 'std::': Function call with parameters that are potentially unsafe - this call relies on the caller to check that the passed values are correct. To disable this warning, use -D_SCL_SECURE_NO_WARNINGS. See documentation on how to use Visual C++ 'Checked Iterators'
 
   # Set Warning Level 3:
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/w34092>) # Sizeof returns 'unsigned long'.

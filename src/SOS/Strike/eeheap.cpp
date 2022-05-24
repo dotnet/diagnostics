@@ -593,7 +593,7 @@ void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_all
     }
 }
 
-void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR total_committed_size)
+void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_size, DWORD_PTR& total_committed_size)
 {
     DWORD_PTR dwAddrSeg;
     DacpHeapSegmentData segment;
