@@ -79,12 +79,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        _defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
+                        _defaultSymbolCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "symbolcache");
                     }
                 }
                 return _defaultSymbolCache;
             }
-            set 
+            set
             {
                 _defaultSymbolCache = value;
             }
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             symbolCachePaths.Add(DefaultSymbolCache);
                                         }
                                     }
-                                    else 
+                                    else
                                     {
                                         symbolCachePaths.Add(parts[i]);
                                     }
@@ -461,10 +461,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception ex) when 
-                (ex is UnauthorizedAccessException || 
-                 ex is BadImageFormatException || 
-                 ex is InvalidVirtualAddressException || 
+            catch (Exception ex) when
+                (ex is UnauthorizedAccessException ||
+                 ex is BadImageFormatException ||
+                 ex is InvalidVirtualAddressException ||
                  ex is IOException)
             {
                 Trace.TraceError($"GetMetaData: {ex.Message}");
@@ -493,7 +493,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 peStream = Utilities.TryOpenFile(assemblyPath);
                 if (peStream == null)
                     return null;
-                
+
                 options = PEStreamOptions.Default;
             }
 
@@ -606,7 +606,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceWarning($"DownLoadPE: no key generated for module {fileName} ");
                     return null;
                 }
-            } 
+            }
             else if ((flags & KeyTypeFlags.SymbolKey) != 0)
             {
                 IEnumerable<PdbFileInfo> pdbInfos = module.GetPdbFileInfos();
@@ -647,7 +647,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return null;
                 }
             }
-            else 
+            else
             {
                 throw new ArgumentException($"Key flag not supported {flags}");
             }
@@ -829,7 +829,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 string pdbPath = data.Path;
                 Stream pdbStream = null;
 
-                if (assemblyPath != null) 
+                if (assemblyPath != null)
                 {
                     try
                     {
@@ -916,7 +916,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => 
+            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
             {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
@@ -962,7 +962,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match) 
+        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
             where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
         {
             while (symbolStore != null)
@@ -1006,7 +1006,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>Last component of path</returns>
         internal static string GetFileName(string pathName)
         {
-            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
+            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\' });
             if (pos < 0)
             {
                 return pathName;
@@ -1019,11 +1019,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private static bool IsPathEqual(string path1, string path2)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return StringComparer.OrdinalIgnoreCase.Equals(path1, path2);
             }
-            else 
+            else
             {
                 return string.Equals(path1, path2);
             }
