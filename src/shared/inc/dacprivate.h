@@ -805,7 +805,7 @@ struct MSLAYOUT DacpHeapSegmentData
 
     HRESULT Request(ISOSDacInterface *sos, CLRDATA_ADDRESS addr, const DacpGcHeapDetails& heap)
     {
-        // clear this hear to make sure we don't get stale values
+        // clear this here to make sure we don't get stale values
         this->highAllocMark = 0;
 
         HRESULT hr = sos->GetHeapSegmentData(addr, this);
