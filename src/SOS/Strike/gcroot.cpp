@@ -1656,8 +1656,7 @@ BOOL FindSegment(const GCHeapDetails &heap, DacpHeapSegmentData &seg, CLRDATA_AD
                     ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
                     return FALSE;
                 }
-                if (addr >= TO_TADDR(seg.mem) &&
-                    addr < (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
+                if (addr >= TO_TADDR(seg.mem) && addr < seg.highAllocMark)
                 {
                     return TRUE;
                 }
