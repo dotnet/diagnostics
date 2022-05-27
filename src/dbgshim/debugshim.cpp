@@ -643,13 +643,15 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
             hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, resourceName, 0, &debugResourceRVA, &debugResourceSize);
             useCrossPlatformNaming = SUCCEEDED(hrGetResource);
 
-    #if defined(HOST_WINDOWS) && (defined(HOST_X86) || defined(HOST_AMD64) || defined(HOST_ARM))
+    #if defined(HOST_WINDOWS) && (defined(HOST_X86) || defined(HOST_AMD64) || defined(HOST_ARM) || defined(HOST_ARM64))
       #if defined(HOST_X86)
         #define _HOST_MACHINE_TYPE IMAGE_FILE_MACHINE_I386
       #elif defined(HOST_AMD64)
         #define _HOST_MACHINE_TYPE IMAGE_FILE_MACHINE_AMD64
       #elif defined(HOST_ARM)
         #define _HOST_MACHINE_TYPE IMAGE_FILE_MACHINE_ARMNT
+      #elif defined(HOST_ARM64)
+        #define _HOST_MACHINE_TYPE IMAGE_FILE_MACHINE_ARM64
       #endif
 
             // if this is windows, and if host_arch matches target arch then we can fallback to searching for CLRDEBUGINFO on failure
@@ -661,7 +663,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
       #undef _HOST_MACHINE_TYPE
     #endif
             // if the search failed, we don't recognize the CLR
-            if(FAILED(hrGetResource))
+            if (FAILED(hrGetResource))
             {
                 hr = CORDBG_E_NOT_CLR;
             }
