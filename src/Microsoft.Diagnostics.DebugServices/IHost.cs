@@ -46,5 +46,14 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Enumerates all the targets
         /// </summary>
         IEnumerable<ITarget> EnumerateTargets();
+
+        /// <summary>
+        /// Add this target to the host. It is left up to the target
+        /// implementation to fire the OnTargetCreate event when the
+        /// it is completely instaniated.
+        /// </summary>
+        /// <param name="target">target instance</param>
+        /// <returns>target id</returns>
+        int AddTarget(ITarget target);
     }
 }

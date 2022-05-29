@@ -9,7 +9,7 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "runtimes", Help = "Lists the runtimes in the target or changes the default runtime.")]
+    [Command(Name = "runtimes", Aliases = new string[] { "setruntime" }, Help = "Lists the runtimes in the target or changes the default runtime.")]
     public class RuntimesCommand : CommandBase
     {
         [ServiceImport]

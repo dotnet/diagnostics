@@ -26,8 +26,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Clear the current context when a target is flushed or destroyed
             host.OnTargetCreate.Register((target) => {
-                target.OnFlushEvent.Register(() => ClearCurrentTarget(target));
-                target.OnDestroyEvent.Register(() => ClearCurrentTarget(target));
+                target.OnFlushEvent.Register(() => {
+                    if (IsTargetEqual(target, _currentTarget))
+                    {
+                        _currentThread = null;
+                        _currentRuntime = null;
+                        _serviceContainer.DisposeServices();
+                        OnContextChange.Fire();
+                    }
+                });
+                target.OnDestroyEvent.Register(() => {
+                    if (IsTargetEqual(target, _currentTarget))
+                    {
+                        SetCurrentTarget(null);
+                    }
+                });
             });
         }
 
@@ -102,18 +115,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Returns the current target.
         /// </summary>
         protected virtual ITarget GetCurrentTarget() => _currentTarget ??= _host.EnumerateTargets().FirstOrDefault();
-
-        /// <summary>
-        /// Clears the context service state if the target is current
-        /// </summary>
-        /// <param name="target"></param>
-        private void ClearCurrentTarget(ITarget target)
-        {
-            if (IsTargetEqual(target, _currentTarget))
-            {
-                SetCurrentTarget(null);
-            }
-        }
 
         /// <summary>
         /// Allows hosts to set the current target. Fires the context change event if the current target has changed.

@@ -3,6 +3,7 @@
 
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -11,20 +12,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class TargetFromDataReader : Target
     {
-        private readonly IDataReader _dataReader;
+        private readonly DataTarget _dataTarget;
 
         /// <summary>
         /// Create a target instance from IDataReader
         /// </summary>
-        /// <param name="dataReader">IDataReader</param>
+        /// <param name="dataTarget">data target from clrmd</param>
         /// <param name="targetOS">target operating system</param>
         /// <param name="host">the host instance</param>
-        /// <param name="id">target id</param>
         /// <param name="dumpPath">path of dump for this target</param>
-        public TargetFromDataReader(IDataReader dataReader, OSPlatform targetOS, IHost host, int id, string dumpPath)
-            : base(host, id, dumpPath)
+        /// <exception cref="DiagnosticsException">can not construct target instance</exception>
+        public TargetFromDataReader(DataTarget dataTarget, OSPlatform targetOS, IHost host, string dumpPath)
+            : base(host, dumpPath)
         {
-            _dataReader = dataReader;
+            _dataTarget = dataTarget;
+            IDataReader dataReader = dataTarget.DataReader;
 
             OperatingSystem = targetOS;
             IsDump = true;
@@ -37,11 +39,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             OnFlushEvent.Register(dataReader.FlushCachedData);
 
+            if (dataReader is not IThreadReader)
+            {
+                throw new DiagnosticsException("The required IThreadReader is not implemented on data target");
+            }
+
             // Add the thread, memory, and module services
-            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, _dataReader));
-            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, _dataReader));
+            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, dataReader));
+            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, dataReader));
             _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) => {
-                IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
+                IMemoryService memoryService = new MemoryServiceFromDataReader(dataReader);
                 if (IsDump)
                 {
                     // The target container factory needs to be cloned for the memory services so the original IMemoryService
@@ -71,6 +78,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
             Finished();
+        }
+
+        public override void Destroy()
+        {
+            base.Destroy();
+            _dataTarget.Dispose();
         }
     }
 }
