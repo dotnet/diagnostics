@@ -173,8 +173,16 @@ namespace Microsoft.Internal.Common.Commands
                 FormatTableRows(printInfo, sb);
                 console.Out.WriteLine(sb.ToString());
             }
-            catch (InvalidOperationException  ex)
+            catch (Exception  ex)
             {
+                if (ex is InvalidOperationException)
+                {
+                    console.Out.WriteLine(ex.ToString());
+                }
+                else if (ex is NamedPipeEnumerationUnauthorizedException)
+                {
+                    console.Out.WriteLine(ex.ToString());
+                }
                 console.Out.WriteLine(ex.ToString());
             }
         }

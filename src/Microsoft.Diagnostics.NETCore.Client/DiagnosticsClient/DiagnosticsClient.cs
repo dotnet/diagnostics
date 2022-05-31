@@ -315,7 +315,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch ( System.UnauthorizedAccessException ex)
             {
-                Console.Error.WriteLine("The user that ran this tool does not have access to the NamedPipes pseudo-filesystem. As a result, this tool will not work.");
+                if (PidIpcEndpoint.IpcRootPath.StartsWith(@"\\.\pipe"))
+                {
+                    throw new NamedPipeEnumerationUnauthorizedException($"Enumerating {PidIpcEndpoint.IpcRootPath} is not authorized", ex);
+                }
+                else
+                {
+                    throw;
+                }
             }
         }
 
