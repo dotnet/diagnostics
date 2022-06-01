@@ -47,7 +47,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceProvider.AddService<IContextService>(_contextService);
             _serviceProvider.AddServiceFactory<SOSLibrary>(() => SOSLibrary.Create(this));
 
-            _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
+            _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() =>
+            {
                 ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
                 return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
             });
@@ -64,23 +65,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
 
             // Attempt to load the persisted command history
-            string dotnetHome;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), ".dotnet");
-            }
-            else { 
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet");
-            }
+            string dotnetHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
             string historyFileName = Path.Combine(dotnetHome, "dotnet-dump.history");
             try
             {
                 string[] history = File.ReadAllLines(historyFileName);
                 _consoleProvider.AddCommandHistory(history);
             }
-            catch (Exception ex) when 
-                (ex is IOException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is NotSupportedException || 
+            catch (Exception ex) when
+                (ex is IOException ||
+                 ex is UnauthorizedAccessException ||
+                 ex is NotSupportedException ||
                  ex is SecurityException)
             {
             }
@@ -89,11 +84,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             LoadExtensions();
 
             try
-            { 
+            {
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
 
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib"))
+                {
                     targetPlatform = OSPlatform.OSX;
                 }
                 _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
@@ -112,7 +108,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     foreach (string cmd in command)
                     {
                         _commandService.Execute(cmd, _contextService.Services);
-                        if (_consoleProvider.Shutdown) {
+                        if (_consoleProvider.Shutdown)
+                        {
                             break;
                         }
                     }
@@ -123,7 +120,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
+                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) =>
+                    {
                         _commandService.Execute(commandLine, _contextService.Services);
                     });
                 }
@@ -152,10 +150,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     File.WriteAllLines(historyFileName, _consoleProvider.GetCommandHistory());
                 }
-                catch (Exception ex) when 
-                    (ex is IOException || 
-                     ex is UnauthorizedAccessException || 
-                     ex is NotSupportedException || 
+                catch (Exception ex) when
+                    (ex is IOException ||
+                     ex is UnauthorizedAccessException ||
+                     ex is NotSupportedException ||
                      ex is SecurityException)
                 {
                 }
@@ -177,14 +175,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public void DestroyTarget(ITarget target)
         {
-            if (target == null) {
+            if (target == null)
+            {
                 throw new ArgumentNullException(nameof(target));
             }
             if (target == _target)
             {
                 _target = null;
                 _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable) {
+                if (target is IDisposable disposable)
+                {
                     disposable.Dispose();
                 }
             }
@@ -221,7 +221,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 assembly = Assembly.LoadFrom(extensionPath);
             }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException  || ex is BadImageFormatException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is BadImageFormatException || ex is System.Security.SecurityException)
             {
                 _consoleProvider.WriteLineError($"Extension load {extensionPath} FAILED {ex.Message}");
             }

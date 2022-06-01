@@ -503,12 +503,12 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
                 }
                 ExtOut("%p  %p  %p  %p  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE"d)  0x%" POINTERSIZE_TYPE "x(%" POINTERSIZE_TYPE "d)\n",
                     SOS_PTR(dwAddrSeg),
-                    SOS_PTR(segment.mem), SOS_PTR(segment.allocated), SOS_PTR(segment.committed),
-                    (ULONG_PTR)(segment.allocated - segment.mem),
-                    (ULONG_PTR)(segment.allocated - segment.mem),
+                    SOS_PTR(segment.mem), SOS_PTR(segment.highAllocMark), SOS_PTR(segment.committed),
+                    (ULONG_PTR)(segment.highAllocMark - segment.mem),
+                    (ULONG_PTR)(segment.highAllocMark - segment.mem),
                     (ULONG_PTR)(segment.committed - segment.mem),
                     (ULONG_PTR)(segment.committed - segment.mem));
-                total_allocated_size += (DWORD_PTR)(segment.allocated - segment.mem);
+                total_allocated_size += (DWORD_PTR)(segment.highAllocMark - segment.mem);
                 total_committed_size += (DWORD_PTR)(segment.committed - segment.mem);
                 dwAddrSeg = (DWORD_PTR)segment.next;
             }
@@ -700,16 +700,11 @@ BOOL GCObjInSegment(TADDR taddrObj, const GCHeapDetails &heap,
                     ExtOut("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
                     return FALSE;
                 }
-                TADDR allocated = TO_TADDR(dacpSeg.allocated);
-                if (taddrSeg == TO_TADDR(heap.ephemeral_heap_segment))
-                {
-                    allocated = TO_TADDR(heap.alloc_allocated);
-                }
-                if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < allocated)
+                if (taddrObj >= TO_TADDR(dacpSeg.mem) && taddrObj < dacpSeg.highAllocMark)
                 {
                     rngSeg.segAddr = (TADDR)dacpSeg.segmentAddr;
                     rngSeg.start = (TADDR)dacpSeg.mem;
-                    rngSeg.end = (TADDR)dacpSeg.allocated;
+                    rngSeg.end = (TADDR)dacpSeg.highAllocMark;
                     gen = gen_num;
                     return TRUE;
                 }
@@ -983,7 +978,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
                     return FALSE;
                 }
 #ifndef FEATURE_PAL
-                GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
+                GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.highAllocMark, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
 #endif
                 taddrSeg = (TADDR)dacpSeg.next;
             }
@@ -1268,7 +1263,6 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
     DacpHeapSegmentData segment;
     if (heap.has_regions)
     {
-        DWORD_PTR end_youngest = (DWORD_PTR)heap.alloc_allocated;
         BOOL bPrevFree = FALSE;
         for (UINT n = 0; n <= GetMaxGeneration(); n++)
         {
@@ -1286,15 +1280,11 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                     return FALSE;
                 }
                 dwAddrCurrObj = (DWORD_PTR)segment.mem;
-                DWORD_PTR end_of_segment = (DWORD_PTR)segment.allocated;
-                if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment)
-                {
-                    end_of_segment = end_youngest;
-                }
+                DWORD_PTR end_of_segment = (DWORD_PTR)segment.highAllocMark;
 
                 while (true)
                 {
-                    if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_youngest - Align(min_obj_size))
+                    if (dwAddrCurrObj - SIZEOF_OBJHEADER == end_of_segment - Align(min_obj_size))
                         break;
 
                     if (dwAddrCurrObj >= (DWORD_PTR)end_of_segment)
@@ -1314,13 +1304,13 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                     }
 
                     if (dwAddrSeg == (DWORD_PTR)heap.ephemeral_heap_segment
-                        && dwAddrCurrObj >= end_youngest)
+                        && dwAddrCurrObj >= end_of_segment)
                     {
-                        if (dwAddrCurrObj > end_youngest)
+                        if (dwAddrCurrObj > end_of_segment)
                         {
                             // prev_object length is too long
-                            ExtOut("curr_object: %p > end_youngest: %p\n",
-                                SOS_PTR(dwAddrCurrObj), SOS_PTR(end_youngest));
+                            ExtOut("curr_object: %p > end_of_segment: %p\n",
+                                SOS_PTR(dwAddrCurrObj), SOS_PTR(end_of_segment));
                             if (dwAddrPrevObj) 
                             {
                                 DMLOut("Last good object: %s\n", DMLObject(dwAddrPrevObj));
@@ -2017,18 +2007,45 @@ int GCHeapSnapshot::GetGeneration(CLRDATA_ADDRESS objectPointer)
     }
 
     TADDR taObj = TO_TADDR(objectPointer);
-    // The DAC doesn't fill the generation table with true CLRDATA_ADDRESS values
-    // but rather with ULONG64 values (i.e. non-sign-extended 64-bit values)
-    // We use the TO_TADDR below to ensure we won't break if this will ever
-    // be fixed in the DAC.
-    if (taObj >= TO_TADDR(pDetails->generation_table[0].allocation_start) &&
-        taObj <= TO_TADDR(pDetails->alloc_allocated))
-        return 0;
+    if (pDetails->has_regions)
+    {
+        for (int gen_num = 0; gen_num <= 1; gen_num++)
+        {
+            CLRDATA_ADDRESS dwAddrSeg = pDetails->generation_table[gen_num].start_segment;
+            while (dwAddrSeg != 0)
+            {
+                DacpHeapSegmentData segment;
+                if (segment.Request(g_sos, dwAddrSeg, pDetails->original_heap_details) != S_OK)
+                {
+                    ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
+                    return 0;
+                }
+                // The DAC doesn't fill the generation table with true CLRDATA_ADDRESS values
+                // but rather with ULONG64 values (i.e. non-sign-extended 64-bit values)
+                // We use the TO_TADDR below to ensure we won't break if this will ever
+                // be fixed in the DAC.
+                if (TO_TADDR(segment.mem) <= taObj && taObj < TO_TADDR(segment.highAllocMark))
+                {
+                    return gen_num;
+                }
+                dwAddrSeg = segment.next;
+            }
+        }
+    }
+    else
+    {
+        // The DAC doesn't fill the generation table with true CLRDATA_ADDRESS values
+        // but rather with ULONG64 values (i.e. non-sign-extended 64-bit values)
+        // We use the TO_TADDR below to ensure we won't break if this will ever
+        // be fixed in the DAC.
+        if (taObj >= TO_TADDR(pDetails->generation_table[0].allocation_start) &&
+            taObj <= TO_TADDR(pDetails->alloc_allocated))
+            return 0;
 
-    if (taObj >= TO_TADDR(pDetails->generation_table[1].allocation_start) &&
-        taObj <= TO_TADDR(pDetails->generation_table[0].allocation_start))
-        return 1;
-
+        if (taObj >= TO_TADDR(pDetails->generation_table[1].allocation_start) &&
+            taObj <= TO_TADDR(pDetails->generation_table[0].allocation_start))
+            return 1;
+    }
     return 2;
 }
 
