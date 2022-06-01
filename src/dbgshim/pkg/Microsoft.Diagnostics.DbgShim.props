@@ -5,12 +5,10 @@
       <!-- IncludeBuildOutput needs to be set to true to make NuGet include the passed in debug symbol files. -->
       <IncludeBuildOutput>false</IncludeBuildOutput>
       <IncludeSymbols>true</IncludeSymbols>
-      <DebugSymbols>false</DebugSymbols>
-      <DebugType>none</DebugType>
       <IsPackable>true</IsPackable>
-      <AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>.pdb;.dbg;.dwarf</AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>
+      <AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>$(SymbolsSuffix)</AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>
       <!-- When KeepNativeSymbols is set, debug symbols are kept in the .so files.  Separate symbol files do not exist that need to be packed. -->
-      <!-- <TargetsForTfmSpecificDebugSymbolsInPackage Condition="'$(KeepNativeSymbols)' != 'true'">$(TargetsForTfmSpecificDebugSymbolsInPackage);AddRuntimeSpecificNativeSymbolToPackage</TargetsForTfmSpecificDebugSymbolsInPackage> -->
+      <TargetsForTfmSpecificDebugSymbolsInPackage Condition="'$(KeepNativeSymbols)' != 'true'">$(TargetsForTfmSpecificDebugSymbolsInPackage);AddRuntimeSpecificNativeSymbolToPackage</TargetsForTfmSpecificDebugSymbolsInPackage>
       <UseRuntimePackageDisclaimer>true</UseRuntimePackageDisclaimer>
       <!-- This is a native package and doesn't contain any ref/lib assets. -->
       <NoWarn>$(NoWarn);NU5128</NoWarn>
@@ -24,7 +22,13 @@
 
     <Target Name="AddRuntimeSpecificNativeSymbolToPackage">
       <ItemGroup>
-        <TfmSpecificDebugSymbolsFile Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)$(SymbolsSuffix)"
+        <TfmSpecificDebugSymbolsFile Condition="$(OutputRid.StartsWith('win'))"
+                                     Include="$(NativeBinDir)PDB\$(LibPrefix)dbgshim$(SymbolsSuffix)"
+                                     TargetPath="/runtimes/$(OutputRid)/native"
+                                     TargetFramework="$(TargetFramework)" />
+
+        <TfmSpecificDebugSymbolsFile Condition="!$(OutputRid.StartsWith('win'))"
+                                     Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)$(SymbolsSuffix)"
                                      TargetPath="/runtimes/$(OutputRid)/native"
                                      TargetFramework="$(TargetFramework)" />
       </ItemGroup>

@@ -596,9 +596,7 @@ namespace sos
         }
 
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
-        mSegmentEnd = (segStart == TO_TADDR(mHeaps[0].ephemeral_heap_segment)) ?
-                            TO_TADDR(mHeaps[0].alloc_allocated) :
-                            TO_TADDR(mSegment.allocated);
+        mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
 
         CheckSegmentRange();
     }
@@ -661,9 +659,7 @@ namespace sos
 
         mLastObj = 0;
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
-        mSegmentEnd = (next == TO_TADDR(mHeaps[mCurrHeap].ephemeral_heap_segment)) ?
-                            TO_TADDR(mHeaps[mCurrHeap].alloc_allocated) :
-                            TO_TADDR(mSegment.allocated);
+        mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
         return CheckSegmentRange();
     }
 
