@@ -48,7 +48,8 @@
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>2.0.325901</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsLoggingVersion>2.1.1</MicrosoftExtensionsLoggingVersion>
+    <!-- Use pinned version to avoid picking up latest (which doesn't support netcoreapp3.1) during source-build -->
+    <MicrosoftExtensionsLoggingPinnedVersion>2.1.1</MicrosoftExtensionsLoggingPinnedVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
