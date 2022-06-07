@@ -8371,6 +8371,29 @@ DECLARE_API(ThreadPool)
                     }
                 }
 
+                // Enumerate assignable normal-priority work items.
+                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("_assignableWorkItemQueues"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueueArrayPtr;
+                    MOVE(workItemsConcurrentQueueArrayPtr, itr->GetAddress() + offset);
+                    DacpObjectData workItemsConcurrentQueueArray;
+                    if (workItemsConcurrentQueueArray.Request(g_sos, TO_CDADDR(workItemsConcurrentQueueArrayPtr)) == S_OK &&
+                        workItemsConcurrentQueueArray.ObjectType == OBJ_ARRAY)
+                    {
+                        for (int i = 0; i < workItemsConcurrentQueueArray.dwNumComponents; i++)
+                        {
+                            DWORD_PTR workItemsConcurrentQueuePtr;
+                            MOVE(workItemsConcurrentQueuePtr, workItemsConcurrentQueueArray.ArrayDataPtr + (i * workItemsConcurrentQueueArray.dwComponentSize));
+                            if (workItemsConcurrentQueuePtr != NULL && sos::IsObject(TO_CDADDR(workItemsConcurrentQueuePtr), false))
+                            {
+                                // We got the ConcurrentQueue.  Enumerate it.
+                                EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
+                            }
+                        }
+                    }
+                }
+
                 // Enumerate normal-priority work items.
                 offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
                 if (offset > 0)
@@ -8398,9 +8421,9 @@ DECLARE_API(ThreadPool)
                     {
                         for (int i = 0; i < workItemArray.dwNumComponents; i++)
                         {
-                            CLRDATA_ADDRESS workItemPtr;
-                            MOVE(workItemPtr, TO_CDADDR(workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize)));
-                            if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                            DWORD_PTR workItemPtr;
+                            MOVE(workItemPtr, workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize));
+                            if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
                             {
                                 sos::Object workItem = TO_TADDR(workItemPtr);
                                 stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
@@ -8408,10 +8431,10 @@ DECLARE_API(ThreadPool)
                                 if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
                                     (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                                 {
-                                    CLRDATA_ADDRESS delegatePtr;
+                                    DWORD_PTR delegatePtr;
                                     MOVE(delegatePtr, workItem.GetAddress() + offset);
                                     CLRDATA_ADDRESS md;
-                                    if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
+                                    if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
                                     {
                                         NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
                                         ExtOut(" => %S", g_mdName);

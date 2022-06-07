@@ -6035,9 +6035,9 @@ void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
         {
             for (int i = 0; i < slotsArray.dwNumComponents; i++)
             {
-                CLRDATA_ADDRESS workItemPtr;
-                MOVE(workItemPtr, TO_CDADDR(slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize))); // the item object reference is at the beginning of the Slot
-                if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                DWORD_PTR workItemPtr;
+                MOVE(workItemPtr, slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize)); // the item object reference is at the beginning of the Slot
+                if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
                 {
                     sos::Object workItem = TO_TADDR(workItemPtr);
                     stats->Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
@@ -6045,10 +6045,10 @@ void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
                     if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
                         (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                     {
-                        CLRDATA_ADDRESS delegatePtr;
+                        DWORD_PTR delegatePtr;
                         MOVE(delegatePtr, workItem.GetAddress() + offset);
                         CLRDATA_ADDRESS md;
-                        if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
+                        if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
                         {
                             NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
                             ExtOut(" => %S", g_mdName);
