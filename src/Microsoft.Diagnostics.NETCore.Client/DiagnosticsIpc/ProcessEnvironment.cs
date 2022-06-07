@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -18,8 +19,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             ProcessEnvironmentHelper helper = new ProcessEnvironmentHelper();
 
-            helper.ExpectedSizeInBytes = BitConverter.ToUInt32(payload, 0);
-            helper.Future = BitConverter.ToUInt16(payload, 4);
+            helper.ExpectedSizeInBytes = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(payload, 0, 4));
+            helper.Future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(payload, 4, 2));
 
             return helper;
         }
@@ -48,7 +49,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             var env = new Dictionary<string, string>();
             int cursor = 0;
-            UInt32 nElements = BitConverter.ToUInt32(envBlock, cursor);
+            UInt32 nElements = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(envBlock, cursor, 4));
             cursor += sizeof(UInt32);
             while (cursor < envBlock.Length)
             {
