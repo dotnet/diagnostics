@@ -19,7 +19,7 @@
     </Option>
     
     <!-- Can currently only have one TestDbgEng test -->
-    <!-- Disable TestDbgEng testing because of problems loading dbgeng.dll
+    <!-- Disable TestDbgEng testing see https://github.com/dotnet/diagnostics/issues/3111
     <Option>
       <TestDbgEng>true</TestDbgEng>
       <DumpFile>$(Package_TestAssets_Windows_x64_5_0)\DualRuntimes\SOS.DualRuntimes.Heap.dmp</DumpFile>
@@ -116,7 +116,7 @@
     </Option>
     
     <!-- Can currently only have one TestDbgEng test -->
-    <!-- Disable TestDbgEng testing because of problems loading dbgeng.dll
+    <!-- Disable TestDbgEng testing see https://github.com/dotnet/diagnostics/issues/3111
     <Option>
       <TestDbgEng>true</TestDbgEng>
       <DumpFile>$(Package_TestAssets_Windows_x86_5_0)\DualRuntimes\SOS.DualRuntimes.Heap.dmp</DumpFile>
