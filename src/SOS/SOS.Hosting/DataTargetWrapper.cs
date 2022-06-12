@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.Linq;

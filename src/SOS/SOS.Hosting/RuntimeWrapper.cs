@@ -4,8 +4,8 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -252,8 +252,8 @@ namespace SOS.Hosting
             {
                 return HResult.E_FAIL;
             }
-            VersionData versionData = module.GetVersionData();
-            if (versionData is null)
+            Version version = module.GetVersionData();
+            if (version is null)
             {
                 return HResult.E_FAIL;
             }
@@ -261,8 +261,8 @@ namespace SOS.Hosting
             pFileInfo->dwStrucVersion = 0;
             pFileInfo->dwFileFlagsMask = 0;
             pFileInfo->dwFileFlags = 0;
-            pFileInfo->dwFileVersionMS = (uint)versionData.Minor | (uint)versionData.Major << 16;
-            pFileInfo->dwFileVersionLS = (uint)versionData.Patch | (uint)versionData.Revision << 16;
+            pFileInfo->dwFileVersionMS = (uint)version.Minor & 0xffff | (uint)version.Major << 16;
+            pFileInfo->dwFileVersionLS = (uint)version.Revision & 0xffff | (uint)version.Build << 16;
 
             // Attempt to get the FileVersion string that contains version and the "built by" and commit id info
             if (fileVersionBuffer != null)

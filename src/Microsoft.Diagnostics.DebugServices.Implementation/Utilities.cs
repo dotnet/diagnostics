@@ -4,14 +4,26 @@
 
 using Microsoft.FileFormats.PE;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection.PortableExecutable;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
-    {
+    { 
+        /// <summary>
+        /// An empty Version instance.
+        /// </summary>
+        public static readonly Version EmptyVersion = new();
+
+        /// <summary>
+        /// Format a immutable array of bytes into hex (i.e build id).
+        /// </summary>
+        public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
+
         /// <summary>
         /// Combines two hash codes into a single hash code, in an order-dependent manner.
         /// </summary>
@@ -33,25 +45,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
         /// </summary>
-        public static VersionData ToVersionData(this VsFixedFileInfo fileInfo)
+        public static Version ToVersion(this VsFixedFileInfo fileInfo)
         { 
-            return new VersionData(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionRevision, fileInfo.FileVersionBuild);
-        }
-
-        /// <summary>
-        /// Convert from clrmd VersionInfo to DebugServices VersionData
-        /// </summary>
-        public static VersionData ToVersionData(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
-        { 
-            return new VersionData(versionInfo.Major, versionInfo.Minor, versionInfo.Revision, versionInfo.Patch);
-        }
-
-        /// <summary>
-        /// Convert from DebugServices VersionData to clrmd VersionInfo
-        /// </summary>
-        public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionData versionData)
-        { 
-            return new Microsoft.Diagnostics.Runtime.VersionInfo(versionData.Major, versionData.Minor, versionData.Revision, versionData.Patch);
+            return new Version(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionBuild, fileInfo.FileVersionRevision);
         }
 
         /// <summary>
@@ -108,6 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceError($"TryOpenFile: {ex.Message}");
                 }
             }
+
             return null;
         }
     }

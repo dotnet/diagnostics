@@ -31,20 +31,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             OperatingSystem = targetOS;
             IsDump = true;
-            OnFlushEvent.Register(dataReader.FlushCachedData);
-
-            Architecture = dataReader.Architecture switch
-            {
-                Microsoft.Diagnostics.Runtime.Architecture.Amd64 => Architecture.X64,
-                Microsoft.Diagnostics.Runtime.Architecture.X86 => Architecture.X86,
-                Microsoft.Diagnostics.Runtime.Architecture.Arm => Architecture.Arm,
-                Microsoft.Diagnostics.Runtime.Architecture.Arm64 => Architecture.Arm64,
-                _ => throw new PlatformNotSupportedException($"{dataReader.Architecture}"),
-            };
+            Architecture = dataReader.Architecture;
 
             if (dataReader.ProcessId != -1) {
                 ProcessId = (uint)dataReader.ProcessId;
             }
+
+            OnFlushEvent.Register(dataReader.FlushCachedData);
 
             // Add the thread, memory, and module services
             IMemoryService rawMemoryService = new MemoryServiceFromDataReader(_dataReader);

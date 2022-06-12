@@ -1,5 +1,5 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Interop;
+using SOS.Hosting.DbgEng.Interop;
 using System.Threading;
 
 namespace SOS.Extensions
