@@ -3,7 +3,7 @@
       <TargetFramework>netstandard2.0</TargetFramework>
       <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
       <!-- IncludeBuildOutput needs to be set to true to make NuGet include the passed in debug symbol files. -->
-      <IncludeBuildOutput>false</IncludeBuildOutput>
+      <IncludeBuildOutput>true</IncludeBuildOutput>
       <IncludeSymbols>true</IncludeSymbols>
       <IsPackable>true</IsPackable>
       <AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>$(SymbolsSuffix)</AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>
@@ -16,20 +16,22 @@
 
     <ItemGroup>
       <None Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)"
-            PackagePath="runtimes/$(OutputRid)/native"
+            PackagePath="runtimes/$(PackageRID)/native"
             Pack="true" />
     </ItemGroup>
 
     <Target Name="AddRuntimeSpecificNativeSymbolToPackage">
-      <ItemGroup>
-        <TfmSpecificDebugSymbolsFile Condition="$(OutputRid.StartsWith('win'))"
-                                     Include="$(NativeBinDir)PDB\$(LibPrefix)dbgshim$(SymbolsSuffix)"
-                                     TargetPath="/runtimes/$(OutputRid)/native"
-                                     TargetFramework="$(TargetFramework)" />
+      <PropertyGroup>
+        <_SymbolFilePath>$([MSBuild]::NormalizePath('$(NativeBinDir)', '$(LibPrefix)dbgshim$(LibSuffix)$(SymbolsSuffix)'))</_SymbolFilePath>
+        <_SymbolFilePath Condition="$(PackageRID.StartsWith('win'))">$([MSBuild]::NormalizePath('$(NativeBinDir)', 'PDB', '$(LibPrefix)dbgshim$(SymbolsSuffix)'))</_SymbolFilePath>
+      </PropertyGroup>
 
-        <TfmSpecificDebugSymbolsFile Condition="!$(OutputRid.StartsWith('win'))"
-                                     Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)$(SymbolsSuffix)"
-                                     TargetPath="/runtimes/$(OutputRid)/native"
+      <Error Condition="!Exists('$(_SymbolFilePath)')"
+            Text="Symbol file to package not found at: $(_SymbolFilePath)"/>
+
+      <ItemGroup>
+        <TfmSpecificDebugSymbolsFile Include="$(_SymbolFilePath)"
+                                     TargetPath="/runtimes/$(PackageRID)/native"
                                      TargetFramework="$(TargetFramework)" />
       </ItemGroup>
     </Target>

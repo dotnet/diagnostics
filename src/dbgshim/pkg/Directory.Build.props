@@ -1,43 +1,18 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.props"/>
+
   <PropertyGroup>
     <IsShipping>true</IsShipping>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <PackageDescription>Internal implementation package not meant for direct consumption. Please do not reference directly.</PackageDescription>
+    <ExeSuffix Condition="$(PackageRID.StartsWith('win'))">.exe</ExeSuffix>
+    <OsFolderName Condition="$(PackageRID.StartsWith('win'))">Windows_NT</OsFolderName>
+    <OsFolderName Condition="$(PackageRID.StartsWith('linux-musl'))">Linux-musl</OsFolderName>
+    <OsFolderName Condition="$(PackageRID.StartsWith('linux')) and '$(OsFolderName)' == ''">Linux</OsFolderName>
+    <OsFolderName Condition="$(PackageRID.StartsWith('osx'))">OSX</OsFolderName>
   </PropertyGroup>
 
-  <Choose>
-    <When Condition="$(OutputRid.StartsWith('win'))">
-      <PropertyGroup>
-        <OsFolderName>Windows_NT</OsFolderName>
-        <ExeSuffix>.exe</ExeSuffix>
-        <LibSuffix>.dll</LibSuffix>
-        <StaticLibSuffix>.lib</StaticLibSuffix>
-        <SymbolsSuffix>.pdb</SymbolsSuffix>
-      </PropertyGroup>
-    </When>
-    <When Condition="$(OutputRid.StartsWith('osx'))">
-      <PropertyGroup>
-        <OsFolderName>OSX</OsFolderName>
-        <LibPrefix>lib</LibPrefix>
-        <LibSuffix>.dylib</LibSuffix>
-        <StaticLibSuffix>.a</StaticLibSuffix>
-        <SymbolsSuffix>.dwarf</SymbolsSuffix>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <OsFolderName>Linux</OsFolderName>
-        <OsFolderName Condition="$(OutputRid.StartsWith('linux-musl'))">Linux-musl</OsFolderName>
-        <LibPrefix>lib</LibPrefix>
-        <LibSuffix>.so</LibSuffix>
-        <StaticLibSuffix>.a</StaticLibSuffix>
-        <SymbolsSuffix>.dbg</SymbolsSuffix>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
-
   <PropertyGroup>
-    <NativeBinDir>$(ArtifactsBinDir)\$(OsFolderName).$(PackageArch).$(Configuration)\</NativeBinDir>
+    <NativeBinDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', '$(OsFolderName).$(PackageArch).$(Configuration)'))</NativeBinDir>
   </PropertyGroup>
 </Project>

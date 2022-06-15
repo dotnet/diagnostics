@@ -26,6 +26,7 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
 
+  <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
   <Import Condition="'$(DotNetBuildFromSource)' != 'true'"
           Project="$(RepositoryEngineeringDir)Analyzers.props" />
 </Project>
