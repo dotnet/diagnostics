@@ -128,6 +128,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override int IndexTimeStamp => unchecked((int)_module.IndexTimeStamp.GetValueOrDefault(0));
 
+            public override ModuleKind Kind => ModuleKind.Unknown;
+
             public override Version Version
             {
                 get 
