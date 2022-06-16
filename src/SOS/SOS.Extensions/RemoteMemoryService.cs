@@ -35,8 +35,8 @@ namespace SOS
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IRemoteMemoryServiceVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, uint, out ulong, HResult> AllocVirtual;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, HResult> FreeVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, uint, out ulong, int> AllocVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, uint, uint, int> FreeVirtual;
         }
     }
 }
