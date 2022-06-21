@@ -121,13 +121,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             int bytesRead = 0;
 
             if (offset + count > buffer.Length)
-                throw new InvalidOperationException ($"Potential write beyond end of buffer");
+                throw new InvalidOperationException ("Potential write beyond end of buffer");
 
             if (offset < 0)
-                throw new InvalidOperationException ($"Write before beginning of buffer");
+                throw new InvalidOperationException ("Write before beginning of buffer");
 
             if (count < 0)
-                throw new InvalidOperationException ($"Negative read count");
+                throw new InvalidOperationException ("Negative read count");
 
             while (true)
             {
