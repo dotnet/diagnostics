@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-      <GitHubRepositoryName>diagnostics</GitHubRepositoryName>
+    <GitHubRepositoryName>diagnostics</GitHubRepositoryName>
     <SourceBuildManagedOnly>true</SourceBuildManagedOnly>
   </PropertyGroup>
 
