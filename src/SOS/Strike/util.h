@@ -526,7 +526,9 @@ namespace Output
         DML_IL,
         DML_ComWrapperRCW,
         DML_ComWrapperCCW,
-        DML_TaggedMemory
+        DML_TaggedMemory,
+
+        DML_Last
     };
 
     /**********************************************************************\

@@ -4333,7 +4333,7 @@ void GetAllocContextPtrs(AllocInfo *pallocInfo)
     CLRDATA_ADDRESS allocLimit;
 
     ReleaseHolder<ISOSDacInterface12> sos12;
-    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) && 
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) &&
         SUCCEEDED(sos12->GetGlobalAllocationContext(&allocPtr, &allocLimit)) &&
         allocPtr != 0)
     {
@@ -4822,11 +4822,14 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!DumpRCW /d %s\">%s</exec>",       // DML_RCWrapper
     "<exec cmd=\"!DumpCCW /d %s\">%s</exec>",       // DML_CCWrapper
     "<exec cmd=\"!ClrStack -i %S %d\">%S</exec>",   // DML_ManagedVar
+    "<exec cmd=\"!DumpObj /d %s\">%s</exec>",       // DML_Async
     "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
     "<exec cmd=\"!DumpRCW -cw /d %s\">%s</exec>",    // DML_ComWrapperRCW
     "<exec cmd=\"!DumpCCW -cw /d %s\">%s</exec>",    // DML_ComWrapperCCW
     "<exec cmd=\"dps %s L%d\">%s</exec>",            // DML_TaggedMemory
 };
+
+static_assert(ARRAY_SIZE(DMLFormats) == Output::DML_Last, "Output types and formats must match in length");
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len)
 {
