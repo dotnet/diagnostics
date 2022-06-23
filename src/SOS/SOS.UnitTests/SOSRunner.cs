@@ -905,9 +905,8 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"!SetHostRuntime {setHostRuntime}");
                 }
-                // If there is no host runtime and a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI.
-                if ((isHostRuntimeNone && _config.PublishSingleFile) || 
-                    (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
+                // If a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI locally.
+                if (_config.PublishSingleFile || (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
@@ -925,8 +924,8 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
-                // If there is no host runtime and a single-file app, add the path to runtime so SOS can find DAC/DBI.
-                if (isHostRuntimeNone && _config.PublishSingleFile)
+                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
+                if (_config.PublishSingleFile)
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
@@ -942,6 +941,14 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Gdb:
                 break;
             case NativeDebugger.DotNetDump:
+                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
+                if (_config.PublishSingleFile)
+                {
+                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
+                    {
+                        commands.Add($"setclrpath {runtimeSymbolsPath}");
+                    }
+                }
                 if (!string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"setsymbolserver {setSymbolServer}");
