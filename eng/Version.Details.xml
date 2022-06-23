@@ -14,7 +14,7 @@
     </Dependency>
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="7.0.0-alpha.1.22327.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>993b067a1849e4884360b4548cbf74f0bfaa2f35</Sha>
+      <Sha>3dbb19f76474f2f22749b2e64d34c15178381ffb</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
   </ProductDependencies>

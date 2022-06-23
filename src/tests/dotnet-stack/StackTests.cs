@@ -78,22 +78,13 @@ namespace Microsoft.Diagnostics.Tools.Stack
             runner.WriteLine($"REPORT_START\n{report}REPORT_END");
             Assert.True(!string.IsNullOrEmpty(report));
 
-            string correctStack = null;
-            switch (config.RuntimeFrameworkVersionMajor)
+            string correctStack = config.RuntimeFrameworkVersionMajor switch
             {
-                case 7:
-                    correctStack = _correctStack70;
-                    break;
-                case 6:
-                    correctStack = _correctStack60;
-                    break;
-                case 3:
-                    correctStack = _correctStack31;
-                    break;
-                default:
-                    throw new NotSupportedException($"Runtime version {config.RuntimeFrameworkVersionMajor} not supported");
-            }
-
+                7 => _correctStack70,
+                6 => _correctStack60,
+                3 => _correctStack31,
+                _ => throw new NotSupportedException($"Runtime version {config.RuntimeFrameworkVersionMajor} not supported")
+            };
             string[] correctStackParts = correctStack.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
             string[] stackParts = report.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 

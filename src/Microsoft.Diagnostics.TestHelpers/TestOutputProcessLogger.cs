@@ -79,19 +79,13 @@ namespace Microsoft.Diagnostics.TestHelpers
             lock (this)
             {
                 TimeSpan offset = runner.StartTime - DateTime.Now;
-                string reasonText = "";
-                switch (reason)
+                string reasonText = reason switch
                 {
-                    case KillReason.TimedOut:
-                        reasonText = "Process timed out";
-                        break;
-                    case KillReason.Stopped:
-                        reasonText = "Process was stopped";
-                        break;
-                    case KillReason.Unknown:
-                        reasonText = "Kill() was called";
-                        break;
-                }
+                    KillReason.TimedOut => "Process timed out",
+                    KillReason.Stopped => "Process was stopped",
+                    KillReason.Unknown => "Kill() was called",
+                    _ => "Reason Unknown"
+                };
                 _output.WriteLine($"Killing process {runner.ProcessId}: {offset.ToString(_timeFormat)} - {reasonText}");
             }
         }

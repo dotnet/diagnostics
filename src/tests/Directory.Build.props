@@ -9,8 +9,8 @@
     <Enable31Testing>true</Enable31Testing>
     <Enable31Testing Condition="'$(BuildArch)' == 'arm64'">false</Enable31Testing>
 
-    <UnitTestTargetFrameworks Condition="$(Enable31Testing)">netcoreapp3.1;net6.0</UnitTestTargetFrameworks>
-    <UnitTestTargetFrameworks Condition="!$(Enable31Testing)">net6.0</UnitTestTargetFrameworks>
+    <UnitTestTargetFrameworks Condition="$(Enable31Testing)">netcoreapp3.1;net6.0;net7.0</UnitTestTargetFrameworks>
+    <UnitTestTargetFrameworks Condition="!$(Enable31Testing)">net6.0;net7.0</UnitTestTargetFrameworks>
   </PropertyGroup>
 
 </Project>

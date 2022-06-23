@@ -20,7 +20,7 @@ class Simple
 
                 Console.WriteLine("{0} SimpleDebuggee: connecting to pipe", pid);
                 Console.Out.Flush();
-                pipeStream.Connect(5 * 60 * 1000);
+                pipeStream.Connect((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
 
                 Console.WriteLine("{0} SimpleDebuggee: connected to pipe", pid);
                 Console.Out.Flush();

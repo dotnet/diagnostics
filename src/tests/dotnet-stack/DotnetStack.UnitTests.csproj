@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFrameworks>$(UnitTestTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../Tools/dotnet-stack/dotnet-stack.csproj" />
-    <ProjectReference Include="../Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
-    <ProjectReference Include="..\CommonTestRunner\CommonTestRunner.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Tools\dotnet-stack\dotnet-stack.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\CommonTestRunner\CommonTestRunner.csproj" />
   </ItemGroup>
 
 </Project>
