@@ -7,7 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Tools\dotnet-trace\dotnet-trace.csproj" />
     <ProjectReference Include="..\CommonTestRunner\CommonTestRunner.csproj" />
-    <ProjectReference Include="..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
   </ItemGroup>
 
 </Project>
