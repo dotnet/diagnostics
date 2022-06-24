@@ -192,6 +192,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     List<string> testList = new List<string>();
                     for (int i = 0; i < 100_000_000; i ++)
                     {
+                        // This test was failing (no GCFreeSegment callbacks) on x86 until this GC Collects happened.
                         if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
                         {
                             if (i % 1_000_000 == 0)
@@ -225,7 +226,9 @@ namespace EventPipe.UnitTests.GCEventsValidation
 
                         Logger.logger.Log("GCCreateSegmentEvents: " + GCCreateSegmentEvents);
                         Logger.logger.Log("GCFreeSegmentEvents: " + GCFreeSegmentEvents);
-                        bool GCSegmentResult = GCCreateSegmentEvents > 0 && GCFreeSegmentEvents > 0;
+
+                        // Disable checking GCFreeSegmentEvents on .NET 7.0 issue: https://github.com/dotnet/diagnostics/issues/3143 
+                        bool GCSegmentResult = GCCreateSegmentEvents > 0 && (GCFreeSegmentEvents > 0 || Environment.Version.Major >= 7);
                         Logger.logger.Log("GCSegmentResult: " + GCSegmentResult); 
 
                         Logger.logger.Log("GCAllocationTickEvents: " + GCAllocationTickEvents);

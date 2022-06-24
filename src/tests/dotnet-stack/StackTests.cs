@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
     {
         private readonly ITestOutputHelper _output;
 
-        private readonly string _correctStack70 = @"  [Native Frames]
+        private const string _correctStack70 = @"  [Native Frames]
   System.Console.il!Interop+Kernel32.ReadFile(int,unsigned int8*,int32,int32&,int)
   System.Console.il!System.ConsolePal+WindowsConsoleStream.ReadFileNative(int,value class System.Span`1<unsigned int8>,bool,int32&,bool)
   System.Console.il!System.ConsolePal+WindowsConsoleStream.Read(value class System.Span`1<unsigned int8>)
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
   System.Console.il!System.Console.Read()
   ?!?";
 
-        private readonly string _correctStack60 = @"  [Native Frames]
+        private const string _correctStack60 = @"  [Native Frames]
   System.Console.il!System.ConsolePal+WindowsConsoleStream.ReadFileNative(int,value class System.Span`1<unsigned int8>,bool,int32&,bool)
   System.Console.il!System.ConsolePal+WindowsConsoleStream.Read(value class System.Span`1<unsigned int8>)
   System.Console.il!System.IO.ConsoleStream.Read(unsigned int8[],int32,int32)
@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
   System.Console.il!System.Console.Read()
   StackTracee!Tracee.Program.Main(class System.String[])";
 
-        private readonly string _correctStack31 = @"  [Native Frames]
+        private const string _correctStack31 = @"  [Native Frames]
   System.Console.il!System.ConsolePal+WindowsConsoleStream.ReadFileNative(int,unsigned int8[],int32,int32,bool,int32&,bool)
   System.Console.il!System.ConsolePal+WindowsConsoleStream.Read(unsigned int8[],int32,int32)
   System.Private.CoreLib.il!System.IO.StreamReader.ReadBuffer()
