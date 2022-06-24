@@ -454,6 +454,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                 sb.Append(".");
                 sb.Append(debuggeeBuildProcess);
             }
+            if (PublishSingleFile)
+            {
+                sb.Append(".singlefile");
+            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append(".");
