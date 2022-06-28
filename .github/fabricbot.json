@@ -1,0 +1,86 @@
+{
+  "version": "1.0",
+  "tasks": [
+    {
+      "taskType": "trigger",
+      "capabilityId": "AutoMerge",
+      "subCapability": "AutoMerge",
+      "version": "1.0",
+      "config": {
+        "taskName": "Automatically merge pull requests",
+        "label": "auto-merge",
+        "silentMode": false,
+        "minMinutesOpen": "1",
+        "mergeType": "squash",
+        "deleteBranches": true,
+        "allowAutoMergeInstructionsWithoutLabel": true,
+        "enforceDMPAsStatus": true,
+        "removeLabelOnPush": true,
+        "usePrDescriptionAsCommitMessage": false,
+        "conditionalMergeTypes": [],
+        "requireAllStatuses": true,
+        "requireSpecificCheckRuns": true,
+        "requireSpecificCheckRunsList": [
+          "diagnostics-public-ci"
+        ],
+        "minimumNumberOfStatuses": 1,
+        "minimumNumberOfCheckRuns": 1,
+        "requireAllStatuses_exemptList": [
+          "codecov",
+          "Dependabot",
+          "DotNet Maestro",
+          "DotNet Maestro - Int"
+        ]
+      },
+      "id": "9xknvk-BFN"
+    },
+    {
+      "taskType": "trigger",
+      "capabilityId": "IssueResponder",
+      "subCapability": "PullRequestResponder",
+      "version": "1.0",
+      "id": "DGPtO9UQd",
+      "config": {
+        "conditions": {
+          "operator": "and",
+          "operands": [
+            {
+              "name": "isAction",
+              "parameters": {
+                "action": "opened"
+              }
+            },
+            {
+              "name": "titleContains",
+              "parameters": {
+                "titlePattern": "Update dependencies"
+              }
+            },
+            {
+              "name": "isActivitySender",
+              "parameters": {
+                "user": "dotnet-maestro[bot]"
+              }
+            }
+          ]
+        },
+        "eventType": "pull_request",
+        "eventNames": [
+          "pull_request",
+          "issues",
+          "project_card"
+        ],
+        "taskName": "Auto approve dependencies",
+        "actions": [
+          {
+            "name": "approvePullRequest",
+            "parameters": {
+              "comment": "Automatically approving dependency update."
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "userGroups": []
+}
