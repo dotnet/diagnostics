@@ -108,7 +108,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
         private static Option RunCommand() =>
             new Option(
                 aliases: new[] { "-c", "--command" }, 
-                description: "Runs the command on start. Multiple instances of this can be used in a command to chain commands, they will be run in the order they are provided on the commandline.") 
+                description: "Runs the command on start. Multiple instances of this parameter can be used in an invocation to chain commands. They will get run in the order that they are provided on the commandline.") 
             {
                 Argument = new Argument<string[]>(name: "command", getDefaultValue: () => Array.Empty<string>()) { Arity = ArgumentArity.ZeroOrMore }
             };
