@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics
                 await _pipeServer.WaitForConnectionAsync(source.Token);
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: after wait {ProcessId}");
             }
-            catch (OperationCanceledException ex)
+            catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
             {
                 Trace.TraceError($"DebuggeeInfo.WaitForDebuggee: canceled {ex}");
                 return false;

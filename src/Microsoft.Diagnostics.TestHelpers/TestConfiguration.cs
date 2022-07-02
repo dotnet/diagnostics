@@ -454,6 +454,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                 sb.Append(".");
                 sb.Append(debuggeeBuildProcess);
             }
+            if (PublishSingleFile)
+            {
+                sb.Append(".singlefile");
+            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append(".");
@@ -779,6 +783,18 @@ namespace Microsoft.Diagnostics.TestHelpers
         public string LinkerPackageVersion
         {
             get { return GetValue("LinkerPackageVersion"); }
+        }
+
+        /// <summary>
+        /// The root of the dotnet install to use to run the test (i.e. $(RepoRootDir)/.dotnet-test)
+        /// </summary>
+        public string DotNetRoot
+        {
+            get
+            {
+                string dotnetRoot = GetValue("DotNetRoot");
+                return MakeCanonicalPath(dotnetRoot);
+            }
         }
 
         #region Runtime Features properties

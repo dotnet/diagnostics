@@ -421,7 +421,7 @@ public class SOS
 
             // Create the python script process runner
             ProcessRunner processRunner = new ProcessRunner(program, arguments.ToString()).
-                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
+                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                 WithTimeout(TimeSpan.FromMinutes(10)).
                 WithExpectedExitCode(0).

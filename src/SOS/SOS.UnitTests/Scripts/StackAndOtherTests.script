@@ -82,9 +82,12 @@ ENDIF:DESKTOP
 
 SOSCOMMAND:SOSStatus
 
+# Issue:https://github.com/dotnet/diagnostics/issues/3155
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 
 # Verify that ClrStack with managed/native mixed works
 SOSCOMMAND:ClrStack -f

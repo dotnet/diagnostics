@@ -2,84 +2,85 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client.UnitTests;
+using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
+using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     internal static class PipelineTestUtilities
     {
-        private static readonly TimeSpan DefaultPipelineRunTimeout = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan DefaultPipelineRunTimeout = TimeSpan.FromMinutes(2);
 
-        public static async Task ExecutePipelineWithDebugee(
-            ITestOutputHelper outputHelper,
+        public static async Task<TestRunner> StartProcess(TestConfiguration config, string testArguments, ITestOutputHelper outputHelper, int testProcessTimeout = 60_000)
+        {
+            TestRunner runner = await TestRunner.Create(config, outputHelper, "EventPipeTracee", testArguments);
+            await runner.Start(testProcessTimeout);
+            return runner;
+        }
+
+        public static async Task ExecutePipelineWithTracee(
             Pipeline pipeline,
-            RemoteTestExecution testExecution,
+            TestRunner testRunner,
             TaskCompletionSource<object> waitTaskSource = null)
         {
             using var cancellation = new CancellationTokenSource(DefaultPipelineRunTimeout);
 
-            await ExecutePipelineWithDebugee(
-                outputHelper,
+            await ExecutePipelineWithTracee(
                 pipeline,
-                testExecution,
+                testRunner,
                 cancellation.Token,
                 waitTaskSource);
         }
 
-        public static async Task ExecutePipelineWithDebugee<T>(
-            ITestOutputHelper outputHelper,
+        public static async Task ExecutePipelineWithTracee<T>(
             EventSourcePipeline<T> pipeline,
-            RemoteTestExecution testExecution,
+            TestRunner testRunner,
             TaskCompletionSource<object> waitTaskSource = null)
             where T : EventSourcePipelineSettings
         {
             using var cancellation = new CancellationTokenSource(DefaultPipelineRunTimeout);
 
-            await ExecutePipelineWithDebugee(
-                outputHelper,
+            await ExecutePipelineWithTracee(
                 pipeline,
                 (p, t) => p.StartAsync(t),
-                testExecution,
+                testRunner,
                 cancellation.Token,
                 waitTaskSource);
         }
 
-        public static Task ExecutePipelineWithDebugee(
-            ITestOutputHelper outputHelper,
+        public static Task ExecutePipelineWithTracee(
             Pipeline pipeline,
-            RemoteTestExecution testExecution,
+            TestRunner testRunner,
             CancellationToken token,
             TaskCompletionSource<object> waitTaskSource = null)
         {
-            return ExecutePipelineWithDebugee(
-                outputHelper,
+            return ExecutePipelineWithTracee(
                 pipeline,
                 (p, t) => Task.FromResult(p.RunAsync(t)),
-                testExecution,
+                testRunner,
                 token,
                 waitTaskSource);
         }
 
-        private static async Task ExecutePipelineWithDebugee<TPipeline>(
-            ITestOutputHelper outputHelper,
+        private static async Task ExecutePipelineWithTracee<TPipeline>(
             TPipeline pipeline,
             Func<TPipeline, CancellationToken, Task<Task>> startPipelineAsync,
-            RemoteTestExecution testExecution,
+            TestRunner testRunner,
             CancellationToken token,
             TaskCompletionSource<object> waitTaskSource = null)
             where TPipeline : Pipeline
         {
             Task runTask = await startPipelineAsync(pipeline, token);
 
-            //Begin event production
-            testExecution.SendSignal();
+            // Begin event production
+            testRunner.WakeupTracee();
 
-            //Wait for event production to be done
-            testExecution.WaitForSignal();
+            // Wait for event production to be done
+            testRunner.WaitForSignal();
 
             try
             {
@@ -88,7 +89,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 {
                     using var _ = token.Register(() =>
                     {
-                        outputHelper.WriteLine("Did not receive completion signal before cancellation.");
+                        testRunner.WriteLine("Did not receive completion signal before cancellation.");
                         waitTaskSource.TrySetCanceled(token);
                     });
 
@@ -103,8 +104,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
             finally
             {
-                //Signal for debugee that's ok to end/move on.
-                testExecution.SendSignal();
+                // Signal for debugee that's ok to end/move on.
+                testRunner.WakeupTracee();
             }
         }
     }

@@ -15,23 +15,26 @@
     <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
-    <SingleFileRuntimeVersion>6.0.5</SingleFileRuntimeVersion>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.331001</MicrosoftSymbolStoreVersion>
-    <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp31Version>3.1.18</MicrosoftNETCoreApp31Version>
-    <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
-    <MicrosoftNETCoreApp50Version>5.0.9</MicrosoftNETCoreApp50Version>
-    <MicrosoftAspNetCoreApp50Version>$(MicrosoftNETCoreApp50Version)</MicrosoftAspNetCoreApp50Version>
+    <MicrosoftSymbolStoreVersion>1.0.332901</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6460Version>6.0.5-servicing.22213.11</VSRedistCommonNetCoreSharedFrameworkx6460Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>6.0.5</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-preview.6.22329.5</VSRedistCommonNetCoreSharedFrameworkx6470Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-preview.6.22329.5</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>6.0.7-servicing.22313.13</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>6.0.7</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-preview.7.22330.6</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>7.0.0-preview.7.22330.6</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>7.0.100-preview.7.22351.3</MicrosoftDotnetSdkInternalVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Runtime versions to test -->
+    <MicrosoftNETCoreApp31Version>3.1.25</MicrosoftNETCoreApp31Version>
+    <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
+    <MicrosoftNETCoreApp60Version>6.0.6</MicrosoftNETCoreApp60Version>
+    <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
+    <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
+    <SingleFileRuntime60Version>6.0.6</SingleFileRuntime60Version>
+    <SingleFileRuntimeLatestVersion>7.0.0-preview.6.22329.5</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -44,7 +47,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.2.331701</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.2.332302</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <!-- Use pinned version to avoid picking up latest (which doesn't support netcoreapp3.1) during source-build -->
@@ -58,7 +61,7 @@
     <SystemTextEncodingsWebVersion>4.7.2</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22313.1</MicrosoftDotNetRemoteExecutorVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>12.0.2</NewtonSoftJsonVersion>
   </PropertyGroup>
