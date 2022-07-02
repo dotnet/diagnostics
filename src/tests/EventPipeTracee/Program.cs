@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO.Pipes;
 using System.Linq;
 
 namespace EventPipeTracee
@@ -14,16 +16,29 @@ namespace EventPipeTracee
     {
         private const string AppLoggerCategoryName = "AppLoggerCategory";
 
-        static void Main(string[] args)
+        public static int Main(string[] args)
         {
-            bool spinWait10 = args.Length > 1 && "SpinWait10".Equals(args[1], StringComparison.Ordinal);
-            TestBody(args[0], spinWait10);
-        }
+            int pid = Process.GetCurrentProcess().Id;
+            string pipeServerName = args.Length > 0 ? args[0] : null;
+            if (pipeServerName == null) 
+            {
+                Console.Error.WriteLine($"{pid} EventPipeTracee: no pipe name");
+                Console.Error.Flush();
+                return -1;
+            }
+            using var pipeStream = new NamedPipeClientStream(pipeServerName);
+            bool spinWait10 = args.Length > 2 && "SpinWait10".Equals(args[2], StringComparison.Ordinal);
+            string loggerCategory = args[1];
 
-        private static void TestBody(string loggerCategory, bool spinWait10)
-        {
-            Console.Error.WriteLine("Starting remote test process");
-            Console.Error.Flush();
+            Console.WriteLine($"{pid} EventPipeTracee: start process");
+            Console.Out.Flush();
+
+            // Signal that the tracee has started
+            Console.WriteLine($"{pid} EventPipeTracee: connecting to pipe");
+            Console.Out.Flush();
+            pipeStream.Connect(5 * 60 * 1000);
+            Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
+            Console.Out.Flush();
 
             ServiceCollection serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(builder =>
@@ -38,19 +53,20 @@ namespace EventPipeTracee
             var customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
             var appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
 
-            Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting start");
-            Console.Error.Flush();
-            if (Console.Read() == -1)
-            {
-                throw new InvalidOperationException("Unable to receive start signal");
-            }
+            Console.WriteLine($"{pid} EventPipeTracee: {DateTime.UtcNow} Awaiting start");
+            Console.Out.Flush();
 
-            Console.Error.WriteLine($"{DateTime.UtcNow} Starting test body");
-            Console.Error.Flush();
+            // Wait for server to send something
+            int input = pipeStream.ReadByte();
+
+            Console.WriteLine($"{pid} {DateTime.UtcNow} Starting test body '{input}'");
+            Console.Out.Flush();
+
             TestBodyCore(customCategoryLogger, appCategoryLogger);
 
-            //Signal end of test data
-            Console.WriteLine("1");
+            Console.WriteLine($"{pid} EventPipeTracee: signal end of test data");
+            Console.Out.Flush();
+            pipeStream.WriteByte(31);
 
             if (spinWait10)
             {
@@ -62,22 +78,22 @@ namespace EventPipeTracee
                     acc++;
                     if (acc % 1_000_000 == 0)
                     {
-                        Console.Error.WriteLine("Spin waiting...");
+                        Console.WriteLine($"{pid} Spin waiting...");
                     }
                 }
             }
 
-            Console.Error.WriteLine($"{DateTime.UtcNow} Awaiting end");
-            Console.Error.Flush();
-            if (Console.Read() == -1)
-            {
-                throw new InvalidOperationException("Unable to receive end signal");
-            }
+            Console.WriteLine($"{pid} {DateTime.UtcNow} Awaiting end");
+            Console.Out.Flush();
 
-            Console.Error.WriteLine($"{DateTime.UtcNow} Ending remote test process");
+            // Wait for server to send something
+            input = pipeStream.ReadByte();
+
+            Console.WriteLine($"{pid} EventPipeTracee {DateTime.UtcNow} Ending remote test process '{input}'");
+            return 0;
         }
 
-        //TODO At some point we may want parameters to choose different test bodies.
+        // TODO At some point we may want parameters to choose different test bodies.
         private static void TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
         {
             //Json data is always converted to strings for ActivityStart events.

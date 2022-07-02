@@ -317,7 +317,7 @@ public class SOSRunner : IDisposable
                 // Create the debuggee process runner
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
                     WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
-                    WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
+                    WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                     WithEnvironmentVariable("COMPlus_DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
@@ -672,7 +672,7 @@ public class SOSRunner : IDisposable
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
-                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
+                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
@@ -681,6 +681,10 @@ public class SOSRunner : IDisposable
             {
                 processRunner.WithExpectedExitCode(0);
             }
+
+            // Disable W^E so that the bpmd command and the tests pass
+            // Issue: https://github.com/dotnet/diagnostics/issues/3126
+            processRunner.WithEnvironmentVariable("COMPlus_EnableWriteXorExecute", "0");
 
             DumpType? dumpType = null;
             if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
@@ -901,9 +905,8 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"!SetHostRuntime {setHostRuntime}");
                 }
-                // If there is no host runtime and a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI.
-                if ((isHostRuntimeNone && _config.PublishSingleFile) || 
-                    (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
+                // If a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI locally.
+                if (_config.PublishSingleFile || (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
@@ -921,8 +924,8 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
-                // If there is no host runtime and a single-file app, add the path to runtime so SOS can find DAC/DBI.
-                if (isHostRuntimeNone && _config.PublishSingleFile)
+                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
+                if (_config.PublishSingleFile)
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
@@ -938,6 +941,14 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Gdb:
                 break;
             case NativeDebugger.DotNetDump:
+                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
+                if (_config.PublishSingleFile)
+                {
+                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
+                    {
+                        commands.Add($"setclrpath {runtimeSymbolsPath}");
+                    }
+                }
                 if (!string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"setsymbolserver {setSymbolServer}");
@@ -1580,12 +1591,6 @@ public static class TestConfigurationExtensions
             gdbPath = Environment.GetEnvironmentVariable("GDB_PATH");
         }
         return TestConfiguration.MakeCanonicalPath(gdbPath);
-    }
-
-    public static string DotNetRoot(this TestConfiguration config)
-    {
-        string dotnetRoot = config.GetValue("DotNetRoot");
-        return TestConfiguration.MakeCanonicalPath(dotnetRoot);
     }
 
     public static string DotNetDumpHost(this TestConfiguration config)

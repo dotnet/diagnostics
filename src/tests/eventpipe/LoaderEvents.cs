@@ -54,7 +54,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                     GetAssemblyPath();
                     try
                     {
-                        for(int i=0; i<100; i++)
+                        for (int i = 0; i < 100; i++)
                         {
                             if (i % 10 == 0)
                                 Logger.logger.Log($"Load/Unload Assembly {i} times...");
@@ -62,6 +62,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                             assemblyLoad.LoadFromAssemblyPath(assemblyPath+"\\Microsoft.Diagnostics.Runtime.dll");
                             assemblyLoad.Unload();
                         }
+                        GC.Collect();
                     }
                     catch(Exception ex)
                     {

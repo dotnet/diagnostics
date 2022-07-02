@@ -1,16 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>$(UnitTestTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
-    <ProjectReference Include="..\EventPipeTracee\EventPipeTracee.csproj" PrivateAssets="all">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\CommonTestRunner\CommonTestRunner.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,27 +3,50 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Threading;
+using System.Diagnostics;
+using System.IO.Pipes;
 
 namespace Tracee
 {
     class Program
     {
-        private const int LoopCount = 30;
-
-        static void Main(string[] args)
+        public static int Main(string[] args)
         {
-            Console.WriteLine("Sleep in loop for {0} seconds.", LoopCount);
-
-            // Runs for max of 30 sec
-            for (var i = 0; i < LoopCount; i++)
+            int pid = Process.GetCurrentProcess().Id;
+            string pipeServerName = args.Length > 0 ? args[0] : null;
+            if (pipeServerName == null) 
             {
-                Console.WriteLine("Iteration #{0}", i);
-                Thread.Sleep(1000);
+                Console.Error.WriteLine($"{pid} Tracee: no pipe name");
+                Console.Error.Flush();
+                return -1;
             }
+            Console.WriteLine($"{pid} Tracee: pipe server: {pipeServerName}");
+            Console.Out.Flush();
+            try
+            {
+                using var pipeStream = new NamedPipeClientStream(pipeServerName);
 
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
+                Console.WriteLine("{0} Tracee: connecting to pipe", pid);
+                Console.Out.Flush();
+                pipeStream.Connect(5 * 60 * 1000);
+                Console.WriteLine("{0} Tracee: connected to pipe", pid);
+                Console.Out.Flush();
+
+                // Wait for server to send something
+                int input = pipeStream.ReadByte();
+
+                Console.WriteLine("{0} Tracee: waking up {1}", pid, input);
+                Console.Out.Flush();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.ToString());
+                Console.Error.Flush();
+                return -1;
+            }
+            Console.WriteLine("{0} Tracee: exiting normally", pid);
+            Console.Out.Flush();
+            return 0;
         }
     }
 }

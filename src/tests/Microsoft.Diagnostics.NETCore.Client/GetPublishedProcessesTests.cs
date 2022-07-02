@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -9,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Extensions;
+using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -18,76 +21,75 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public class GetPublishedProcessesTest
     {
-        private readonly ITestOutputHelper output;
+        private readonly ITestOutputHelper _output;
+
+        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
 
         public GetPublishedProcessesTest(ITestOutputHelper outputHelper)
         {
-            output = outputHelper;
+            _output = outputHelper;
         }
 
-        [Fact]
-        public void PublishedProcessTest1()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task PublishedProcessTest1(TestConfiguration config)
         {
-            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(timeoutInMSPipeCreation: 3000);
-            // On Windows, runner.Start will not wait for named pipe creation since for other tests, NamedPipeClientStream will
-            // just wait until the named pipe is created.
-            // For these tests, we need to sleep an arbitrary time before pipe is created.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Thread.Sleep(5000);
-            }
+            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
+            await runner.Start();
+
             List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             foreach (int p in publishedProcesses)
             {
-                output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
+                runner.WriteLine($"Saw published process {p}");
             }
             Assert.Contains(publishedProcesses, p => p == runner.Pid);
-            runner.Stop();
+            runner.WakeupTracee();
         }
 
-        [Fact]
-        public void MultiplePublishedProcessTest()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task MultiplePublishedProcessTest(TestConfiguration config)
         {
             TestRunner[] runner = new TestRunner[3];
             int[] pids = new int[3];
 
-            for (var i = 0; i < 3; i++)
+            try
             {
-                runner[i] = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-                runner[i].Start();
-                pids[i] = runner[i].Pid;
-            }
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Thread.Sleep(5000);
-            }
-            List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-            foreach (int p in publishedProcesses)
-            {
-                output.WriteLine($"[{DateTime.Now.ToString()}] Saw published process {p}");
-            }
+                for (var i = 0; i < 3; i++)
+                {
+                    runner[i] = await TestRunner.Create(config, _output, "Tracee");
+                    await runner[i].Start();
+                    pids[i] = runner[i].Pid;
+                }
 
-            for (var i = 0; i < 3; i++)
-            {
-                Assert.Contains(publishedProcesses, p => p == pids[i]);
-            }
+                List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+                foreach (int p in publishedProcesses)
+                {
+                    _output.WriteLine($"[{DateTime.Now}] Saw published process {p}");
+                }
 
-            for (var i = 0 ; i < 3; i++)
+                for (var i = 0; i < 3; i++)
+                {
+                    Assert.Contains(publishedProcesses, p => p == pids[i]);
+                }
+
+                for (var i = 0; i < 3; i++)
+                {
+                    runner[i].WakeupTracee();
+                }
+            }
+            finally
             {
-                runner[i].Stop();
+                for (var i = 0; i < 3; i++)
+                {
+                    await runner[i].DisposeAsync();
+                }
             }
         }
 
-        [Fact]
-        public async Task WaitForConnectionTest()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task WaitForConnectionTest(TestConfiguration config)
         {
-            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
-            runner.Start(timeoutInMSPipeCreation: 3000);
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Thread.Sleep(5000);
-            }
+            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
+            await runner.Start();
 
             var client = new DiagnosticsClient(runner.Pid);
             using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
@@ -97,7 +99,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             finally
             {
-                runner.Stop();
+                runner.WakeupTracee();
             }
         }
     }

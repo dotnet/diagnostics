@@ -2,10 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.CommonTestRunner;
+using Microsoft.Diagnostics.TestHelpers;
 using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Extensions;
+using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -13,43 +19,49 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private readonly ITestOutputHelper _output;
 
+        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
+
         public GetProcessInfoTests(ITestOutputHelper outputHelper)
         {
             _output = outputHelper;
         }
 
-        [Fact]
-        public Task BasicProcessInfoNoSuspendTest()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public Task BasicProcessInfoNoSuspendTest(TestConfiguration config)
         {
-            return BasicProcessInfoTestCore(useAsync: false, suspend: false);
+            return BasicProcessInfoTestCore(config, useAsync: false, suspend: false);
         }
 
-        [Fact]
-        public Task BasicProcessInfoNoSuspendTestAsync()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public Task BasicProcessInfoNoSuspendTestAsync(TestConfiguration config)
         {
-            return BasicProcessInfoTestCore(useAsync: true, suspend: false);
+            return BasicProcessInfoTestCore(config, useAsync: true, suspend: false);
         }
 
-        [Fact]
-        public Task BasicProcessInfoSuspendTest()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public Task BasicProcessInfoSuspendTest(TestConfiguration config)
         {
-            return BasicProcessInfoTestCore(useAsync: false, suspend: true);
+            return BasicProcessInfoTestCore(config, useAsync: false, suspend: true);
         }
 
-        [Fact]
-        public Task BasicProcessInfoSuspendTestAsync()
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public Task BasicProcessInfoSuspendTestAsync(TestConfiguration config)
         {
-            return BasicProcessInfoTestCore(useAsync: true, suspend: true);
+            return BasicProcessInfoTestCore(config, useAsync: true, suspend: true);
         }
 
-        private async Task BasicProcessInfoTestCore(bool useAsync, bool suspend)
+        private async Task BasicProcessInfoTestCore(TestConfiguration config, bool useAsync, bool suspend)
         {
-            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _output);
+            if (config.RuntimeFrameworkVersionMajor < 5)
+            {
+                throw new SkipTestException("Not supported on < .NET 5.0");
+            }
+            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             if (suspend)
             {
                 runner.SuspendDefaultDiagnosticPort();
             }
-            runner.Start();
+            await runner.Start(testProcessTimeout: 60_000, waitForTracee: !suspend);
 
             try
             {
@@ -64,23 +76,36 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     Assert.True(string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
 
                     await clientShim.ResumeRuntime();
+
+                    await runner.WaitForTracee();
                 }
 
                 // The entrypoint information is available some short time after the runtime
                 // begins to execute. Retry getting process information until entrypoint is available.
                 ProcessInfo processInfo = await GetProcessInfoWithEntrypointAsync(clientShim);
                 ValidateProcessInfo(runner.Pid, processInfo);
+
+                // This is only true if targetFramework for the tracee app is greater than 
                 Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
 
-                // Validate values before resume (except for entrypoint) are the same after resume.
                 if (suspend)
                 {
                     Assert.Equal(processInfoBeforeResume.ProcessId, processInfo.ProcessId);
                     Assert.Equal(processInfoBeforeResume.RuntimeInstanceCookie, processInfo.RuntimeInstanceCookie);
-                    Assert.Equal(processInfoBeforeResume.CommandLine, processInfo.CommandLine);
                     Assert.Equal(processInfoBeforeResume.OperatingSystem, processInfo.OperatingSystem);
                     Assert.Equal(processInfoBeforeResume.ProcessArchitecture, processInfo.ProcessArchitecture);
                     Assert.Equal(processInfoBeforeResume.ClrProductVersionString, processInfo.ClrProductVersionString);
+                    // Given we are in a .NET 6.0+ app, we should have ProcessInfo2 available. Pre and post pause should differ.
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        Assert.Equal($"\"{runner.ExePath}\" {runner.Arguments}", processInfoBeforeResume.CommandLine);
+                        Assert.Equal($"\"{runner.ExePath}\" {runner.Arguments}", processInfo.CommandLine);
+                    }
+                    else
+                    {
+                        Assert.Equal($"{runner.ExePath}", processInfoBeforeResume.CommandLine);
+                        Assert.Equal($"{runner.ExePath} {runner.ManagedArguments}", processInfo.CommandLine);
+                    }
                 }
             }
             finally
