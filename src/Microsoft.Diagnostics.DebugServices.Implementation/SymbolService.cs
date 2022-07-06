@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Symbol server URLs
         /// </summary>
         public const string MsdlSymbolServer = "https://msdl.microsoft.com/download/symbols/";
-        public const string SymwebSymbolServer = "https://symweb.corp.microsoft.com/";
+        public const string SymwebSymbolServer = "https://symweb/";
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
