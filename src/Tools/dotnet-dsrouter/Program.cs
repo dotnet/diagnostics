@@ -22,6 +22,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
         delegate Task<int> DiagnosticsServerIpcClientTcpClientRouterDelegate(CancellationToken ct, string ipcClient, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
 
+        delegate Task<int> DiagnosticsServerIpcServerWebSocketServerRouterDelegate(CancellationToken ct, string ipcServer, string webSocket, int runtimeTimeoutS, string verbose, string forwardPort);
+
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
                 name: "client-server",
@@ -60,6 +62,18 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Options
                 IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
             };
+
+        private static Command IpcServerWebSocketServerRouterCommand() =>
+        new Command(
+            name: "server-websocket",
+            description: "Starts a .NET application Diagnostic Server routing local IPC client <--> remote WebSocket client. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                "and a WebSocket server (accepting runtime WebSocket client).")
+        {
+            HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerWebSocketServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerWebSocketServerRouter).GetCommandHandler(),
+            // Options
+            IpcServerAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+        };
 
         private static Command IpcClientTcpClientRouterCommand() =>
             new Command(
@@ -115,6 +129,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 Argument = new Argument<string>(name: "tcpServer", getDefaultValue: () => "")
             };
 
+        private static Option WebSocketURLAddressOption() =>
+            new Option(
+                aliases: new[] { "--web-socket", "-ws" },
+                description: "The router WebSocket address using format ws://[host]:[port] or wss://[host]:[port]. " +
+                                "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url")
+            {
+                Argument = new Argument<string>(name: "webSocket", getDefaultValue: () => "")
+            };
+
         private static Option RuntimeTimeoutOption() =>
             new Option(
                 aliases: new[] { "--runtime-timeout", "-rt" },
@@ -154,6 +177,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 .AddCommand(IpcServerTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpClientRouterCommand())
                 .AddCommand(IpcClientTcpClientRouterCommand())
+                .AddCommand(IpcServerWebSocketServerRouterCommand())
                 .UseDefaults()
                 .Build();
 

@@ -293,6 +293,36 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
+        public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocketURL, int runtimeTimeout, string verbose, string forwardPort)
+        {
+            checkLoopbackOnly(webSocketURL);
+
+            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+
+            LogLevel logLevel = LogLevel.Information;
+            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Debug;
+            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                logLevel = LogLevel.Trace;
+
+            using var factory = new LoggerFactory();
+            factory.AddConsole(logLevel, false);
+
+            Launcher.SuspendProcess = false;
+            Launcher.ConnectMode = true;
+            Launcher.Verbose = logLevel != LogLevel.Information;
+            Launcher.CommandToken = token;
+
+            var logger = factory.CreateLogger("dotnet-dsrouter");
+
+            Console.WriteLine("blah webSocketURL is '{0}'", webSocketURL == null ? "null" : webSocketURL);
+            logger.LogInformation("started with options: '{ipcServer}' '{webSocketURL}' '{runtimeTimeout}' '{verbose}' '{forwardPort}'", ipcServer, webSocketURL, runtimeTimeout, verbose, forwardPort);
+
+            await Task.Delay(0);
+            return 0;
+        }
+
         static string GetDefaultIpcServerPath(ILogger logger)
         {
             int processId = Process.GetCurrentProcess().Id;
