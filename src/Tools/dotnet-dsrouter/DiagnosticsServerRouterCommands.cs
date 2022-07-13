@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Configuration;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
@@ -64,8 +65,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
                 logLevel = LogLevel.Trace;
 
-            using var factory = new LoggerFactory();
-            factory.AddConsole(logLevel, false);
+            using var factory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(logLevel);
+                builder.AddConsole();
+            });
 
             Launcher.SuspendProcess = true;
             Launcher.ConnectMode = true;
@@ -122,8 +126,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
                 logLevel = LogLevel.Trace;
 
-            using var factory = new LoggerFactory();
-            factory.AddConsole(logLevel, false);
+            using var factory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(logLevel);
+                builder.AddSimpleConsole(configure =>
+                {
+                    configure.IncludeScopes = true;
+                });
+            });
 
             Launcher.SuspendProcess = false;
             Launcher.ConnectMode = true;
@@ -181,8 +191,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
                 logLevel = LogLevel.Trace;
 
-            using var factory = new LoggerFactory();
-            factory.AddConsole(logLevel, false);
+            using var factory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(logLevel);
+                builder.AddSimpleConsole(configure =>
+                {
+                    configure.IncludeScopes = true;
+                });
+            });
+
 
             Launcher.SuspendProcess = false;
             Launcher.ConnectMode = false;
@@ -244,8 +261,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
                 logLevel = LogLevel.Trace;
 
-            using var factory = new LoggerFactory();
-            factory.AddConsole(logLevel, false);
+            using var factory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(logLevel);
+                builder.AddSimpleConsole(configure =>
+                {
+                    configure.IncludeScopes = true;
+                });
+            });
 
             Launcher.SuspendProcess = true;
             Launcher.ConnectMode = false;
@@ -293,9 +316,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return routerTask.Result;
         }
 
-        public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocketURL, int runtimeTimeout, string verbose, string forwardPort)
+        public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocket, int runtimeTimeout, string verbose)
         {
-            checkLoopbackOnly(webSocketURL);
+            // checkLoopbackOnly(webSocket);
+
+            const string magicEnv = "DIAGNOSTICS_SERVER_WEBSOCKET_SERVER_TYPE";
+            string serverType = typeof(Microsoft.Diagnostics.NETCore.Client.WebSocketServer.WebSocketServerImpl).AssemblyQualifiedName;
+            Console.WriteLine("Setting env var to {0}", serverType);
+            Environment.SetEnvironmentVariable(magicEnv, serverType);
 
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
@@ -306,8 +334,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
                 logLevel = LogLevel.Trace;
 
-            using var factory = new LoggerFactory();
-            factory.AddConsole(logLevel, false);
+            using var factory = LoggerFactory.Create(builder =>
+            {
+                builder.SetMinimumLevel(logLevel);
+                builder.AddSimpleConsole(configure =>
+                {
+                    configure.IncludeScopes = true;
+                });
+            });
 
             Launcher.SuspendProcess = false;
             Launcher.ConnectMode = true;
@@ -316,11 +350,33 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             var logger = factory.CreateLogger("dotnet-dsrouter");
 
-            Console.WriteLine("blah webSocketURL is '{0}'", webSocketURL == null ? "null" : webSocketURL);
-            logger.LogInformation("started with options: '{ipcServer}' '{webSocketURL}' '{runtimeTimeout}' '{verbose}' '{forwardPort}'", ipcServer, webSocketURL, runtimeTimeout, verbose, forwardPort);
+            logger.LogInformation("started with options: '{ipcServer}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcServer, webSocket, runtimeTimeout, verbose);
 
-            await Task.Delay(0);
-            return 0;
+            WebSocketServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
+
+            if (string.IsNullOrEmpty(ipcServer))
+                ipcServer = GetDefaultIpcServerPath(logger);
+
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerWebSocketServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
+
+            while (!linkedCancelToken.IsCancellationRequested)
+            {
+                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
+                    break;
+
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
+                {
+                    ConsoleKey cmd = Console.ReadKey(true).Key;
+                    if (cmd == ConsoleKey.Q)
+                    {
+                        cancelRouterTask.Cancel();
+                        break;
+                    }
+                }
+            }
+
+            return routerTask.Result;
         }
 
         static string GetDefaultIpcServerPath(ILogger logger)

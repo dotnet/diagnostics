@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
         delegate Task<int> DiagnosticsServerIpcClientTcpClientRouterDelegate(CancellationToken ct, string ipcClient, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
 
-        delegate Task<int> DiagnosticsServerIpcServerWebSocketServerRouterDelegate(CancellationToken ct, string ipcServer, string webSocket, int runtimeTimeoutS, string verbose, string forwardPort);
+        delegate Task<int> DiagnosticsServerIpcServerWebSocketServerRouterDelegate(CancellationToken ct, string ipcServer, string webSocket, int runtimeTimeoutS, string verbose);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerWebSocketServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerWebSocketServerRouter).GetCommandHandler(),
             // Options
-            IpcServerAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+            IpcServerAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption()
         };
 
         private static Command IpcClientTcpClientRouterCommand() =>
@@ -132,10 +132,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option WebSocketURLAddressOption() =>
             new Option(
                 aliases: new[] { "--web-socket", "-ws" },
-                description: "The router WebSocket address using format ws://[host]:[port] or wss://[host]:[port]. " +
+                description: "The router WebSocket address using format ws://[host]:[port]/[path] or wss://[host]:[port]/[path]. " +
                                 "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url")
             {
-                Argument = new Argument<string>(name: "webSocket", getDefaultValue: () => "")
+                Argument = new Argument<string>(name: "webSocketURI", getDefaultValue: () => "")
             };
 
         private static Option RuntimeTimeoutOption() =>

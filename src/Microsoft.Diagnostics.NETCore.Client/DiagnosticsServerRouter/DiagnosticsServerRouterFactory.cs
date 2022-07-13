@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (runtimeTimeoutMs != Timeout.Infinite)
                 RuntimeTimeoutMs = runtimeTimeoutMs;
 
-            _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, enableTcpIpProtocol : true);
+            _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, ReversedDiagnosticsServer.Kind.Tcp);
             _tcpServerEndpointInfo = new IpcEndpointInfo();
             _tcpServer.TransportCallback = this;
         }
@@ -280,6 +280,149 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (localEP is IPEndPoint ipEP)
                 _tcpServerAddress = _tcpServerAddress.Replace(":0", string.Format(":{0}", ipEP.Port));
         }
+    }
+
+    /// <summary>
+    /// This class represent a WebSocket server endpoint used when building up router instances.
+    /// </summary>
+    internal class WebSocketServerRouterFactory : IIpcServerTransportCallbackInternal
+    {
+        protected readonly ILogger _logger;
+
+        IpcWebSocketEndPoint _webSocketEndPoint;
+
+        ReversedDiagnosticsServer _webSocketServer;
+        IpcEndpointInfo _webSocketEndpointInfo;
+
+        bool _auto_shutdown;
+
+        int RuntimeTimeoutMs { get; set; } = 60000;
+        int TcpServerTimeoutMs { get; set; } = 5000;
+
+        public Guid RuntimeInstanceId
+        {
+            get { return _webSocketEndpointInfo.RuntimeInstanceCookie; }
+        }
+
+        public int RuntimeProcessId
+        {
+            get { return _webSocketEndpointInfo.ProcessId; }
+        }
+
+        public Uri WebSocketURL
+        {
+            get { return _webSocketEndPoint.EndPoint; }
+        }
+
+        public delegate WebSocketServerRouterFactory CreateInstanceDelegate(string webSocketURL, int runtimeTimeoutMs, ILogger logger);
+
+        public static WebSocketServerRouterFactory CreateDefaultInstance(string webSocketURL, int runtimeTimeoutMs, ILogger logger)
+        {
+            return new WebSocketServerRouterFactory(webSocketURL, runtimeTimeoutMs, logger);
+        }
+
+        public WebSocketServerRouterFactory(string webSocketURL, int runtimeTimeoutMs, ILogger logger)
+        {
+            _logger = logger;
+
+            _webSocketEndPoint = new IpcWebSocketEndPoint(string.IsNullOrEmpty(webSocketURL) ? "ws://127.0.0.1:8088/diagnostics" : webSocketURL);
+
+            _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
+            if (runtimeTimeoutMs != Timeout.Infinite)
+                RuntimeTimeoutMs = runtimeTimeoutMs;
+
+            _webSocketServer = new ReversedDiagnosticsServer(_webSocketEndPoint.EndPoint.ToString(), ReversedDiagnosticsServer.Kind.WebSocket);
+            _webSocketEndpointInfo = new IpcEndpointInfo();
+            _webSocketServer.TransportCallback = this;
+        }
+
+        public virtual void Start()
+        {
+            _logger.LogInformation("Starting web socket server");
+            _webSocketServer.Start();
+        }
+
+        public virtual async Task Stop()
+        {
+            _logger.LogInformation("Stopping web socket server");
+            await _webSocketServer.DisposeAsync().ConfigureAwait(false);
+        }
+
+        public void Reset()
+        {
+            if (_webSocketEndpointInfo.Endpoint != null)
+            {
+                _logger.LogInformation("Resetting the web socket server");
+                _webSocketServer.RemoveConnection(_webSocketEndpointInfo.RuntimeInstanceCookie);
+                _webSocketEndpointInfo = new IpcEndpointInfo();
+            }
+        }
+
+        public async Task<Stream> AcceptWebSocketStreamAsync(CancellationToken token)
+        {
+            Stream tcpServerStream;
+
+            _logger?.LogDebug($"Waiting for a new WebSocket connection at endpoint \"{WebSocketURL}\".");
+
+            if (_webSocketEndpointInfo.Endpoint == null)
+            {
+                using var acceptTimeoutTokenSource = new CancellationTokenSource();
+                using var acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
+
+                try
+                {
+                    // If no new runtime instance connects, timeout.
+                    acceptTimeoutTokenSource.CancelAfter(RuntimeTimeoutMs);
+                    _webSocketEndpointInfo = await _webSocketServer.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (acceptTimeoutTokenSource.IsCancellationRequested)
+                    {
+                        _logger?.LogDebug("No runtime instance connected before timeout.");
+
+                        if (_auto_shutdown)
+                            throw new RuntimeTimeoutException(RuntimeTimeoutMs);
+                    }
+
+                    throw;
+                }
+            }
+
+            using var connectTimeoutTokenSource = new CancellationTokenSource();
+            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+
+            try
+            {
+                // Get next connected tcp stream. Should timeout if no endpoint appears within timeout.
+                // If that happens we need to remove endpoint since it might indicate a unresponsive runtime.
+                connectTimeoutTokenSource.CancelAfter(TcpServerTimeoutMs);
+                tcpServerStream = await _webSocketEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                if (connectTimeoutTokenSource.IsCancellationRequested)
+                {
+                    _logger?.LogDebug("No tcp stream connected before timeout.");
+                    throw new BackendStreamTimeoutException(TcpServerTimeoutMs);
+                }
+
+                throw;
+            }
+
+            if (tcpServerStream != null)
+                _logger?.LogDebug($"Successfully connected tcp stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
+
+            return tcpServerStream;
+        }
+
+        public void CreatedNewServer(EndPoint localEP)
+        {
+            // FIXME: anything to do here?
+            //if (localEP is IPEndPoint ipEP)
+            //    _webSocketEndPoint = _webSocketEndPoint.Replace(":0", string.Format(":{0}", ipEP.Port));
+        }
+
     }
 
     /// <summary>
@@ -445,7 +588,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _logger = logger;
             _ipcServerPath = ipcServer;
 
-            _ipcServer = IpcServerTransport.Create(_ipcServerPath, IpcServerTransport.MaxAllowedConnections, false);
+            _ipcServer = IpcServerTransport.Create(_ipcServerPath, IpcServerTransport.MaxAllowedConnections, ReversedDiagnosticsServer.Kind.Ipc);
         }
 
         public void Start()
@@ -1291,6 +1434,201 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _updateRuntimeInfo = false;
         }
     }
+
+    /// <summary>
+    /// This class creates IPC Server - WebSocket Server router instances.
+    /// Supports NamedPipes/UnixDomainSocket server and WebSocket server.
+    /// </summary>
+    internal class IpcServerWebSocketServerRouterFactory : DiagnosticsServerRouterFactory
+    {
+        ILogger _logger;
+        WebSocketServerRouterFactory _webSocketServerRouterFactory;
+        IpcServerRouterFactory _ipcServerRouterFactory;
+
+        public IpcServerWebSocketServerRouterFactory(string ipcServer, string webSocketURL, int runtimeTimeoutMs, WebSocketServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
+        {
+            _logger = logger;
+            _webSocketServerRouterFactory = factory(webSocketURL, runtimeTimeoutMs, logger);
+            _ipcServerRouterFactory = new IpcServerRouterFactory(ipcServer, logger);
+        }
+
+        public override string IpcAddress
+        {
+            get
+            {
+                return _ipcServerRouterFactory.IpcServerPath;
+            }
+        }
+
+        public Uri WebSocketURL
+        {
+            get
+            {
+                return _webSocketServerRouterFactory.WebSocketURL;
+            }
+        }
+
+        public override string TcpAddress => WebSocketURL.ToString();
+
+        public override ILogger Logger
+        {
+            get
+            {
+                return _logger;
+            }
+        }
+
+        public override Task Start(CancellationToken token)
+        {
+            _webSocketServerRouterFactory.Start();
+            _ipcServerRouterFactory.Start();
+
+            _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> WebSocket server ({_webSocketServerRouterFactory.WebSocketURL}) router.");
+
+            return Task.CompletedTask;
+        }
+
+        public override Task Stop()
+        {
+            _logger?.LogInformation($"Stopping IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> WebSocket server ({_webSocketServerRouterFactory.WebSocketURL}) router.");
+            _ipcServerRouterFactory.Stop();
+            return _webSocketServerRouterFactory.Stop();
+        }
+
+        public override void Reset()
+        {
+            _webSocketServerRouterFactory.Reset();
+        }
+
+        public override async Task<Router> CreateRouterAsync(CancellationToken token)
+        {
+            Stream websocketServerStream = null;
+            Stream ipcServerStream = null;
+
+            _logger?.LogDebug($"Trying to create new router instance.");
+
+            try
+            {
+                using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
+
+                // Get new tcp server endpoint.
+                using var webSocketServerStreamTask = _webSocketServerRouterFactory.AcceptWebSocketStreamAsync(cancelRouter.Token);
+
+                // Get new ipc server endpoint.
+                using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
+
+                await Task.WhenAny(ipcServerStreamTask, webSocketServerStreamTask).ConfigureAwait(false);
+
+                if (IsCompletedSuccessfully(ipcServerStreamTask) && IsCompletedSuccessfully(webSocketServerStreamTask))
+                {
+                    ipcServerStream = ipcServerStreamTask.Result;
+                    websocketServerStream = webSocketServerStreamTask.Result;
+                }
+                else if (IsCompletedSuccessfully(ipcServerStreamTask))
+                {
+                    ipcServerStream = ipcServerStreamTask.Result;
+
+                    // We have a valid ipc stream and a pending tcp accept. Wait for completion
+                    // or disconnect of ipc stream.
+                    using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
+
+                    // Wait for at least completion of one task.
+                    await Task.WhenAny(webSocketServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
+
+                    // Cancel out any pending tasks not yet completed.
+                    cancelRouter.Cancel();
+
+                    try
+                    {
+                        await Task.WhenAll(webSocketServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        // Check if we have an accepted tcp stream.
+                        if (IsCompletedSuccessfully(webSocketServerStreamTask))
+                            webSocketServerStreamTask.Result?.Dispose();
+
+                        if (checkIpcStreamTask.IsFaulted)
+                        {
+                            _logger?.LogInformation("Broken ipc connection detected, aborting web socket connection.");
+                            checkIpcStreamTask.GetAwaiter().GetResult();
+                        }
+
+                        throw;
+                    }
+
+                    websocketServerStream = webSocketServerStreamTask.Result;
+                }
+                else if (IsCompletedSuccessfully(webSocketServerStreamTask))
+                {
+                    websocketServerStream = webSocketServerStreamTask.Result;
+
+                    // We have a valid tcp stream and a pending ipc accept. Wait for completion
+                    // or disconnect of tcp stream.
+                    using var checkWebSocketStreamTask = IsStreamConnectedAsync(websocketServerStream, cancelRouter.Token);
+
+                    // Wait for at least completion of one task.
+                    await Task.WhenAny(ipcServerStreamTask, checkWebSocketStreamTask).ConfigureAwait(false);
+
+                    // Cancel out any pending tasks not yet completed.
+                    cancelRouter.Cancel();
+
+                    try
+                    {
+                        await Task.WhenAll(ipcServerStreamTask, checkWebSocketStreamTask).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        // Check if we have an accepted ipc stream.
+                        if (IsCompletedSuccessfully(ipcServerStreamTask))
+                            ipcServerStreamTask.Result?.Dispose();
+
+                        if (checkWebSocketStreamTask.IsFaulted)
+                        {
+                            _logger?.LogInformation("Broken webSocekt connection detected, aborting ipc connection.");
+                            checkWebSocketStreamTask.GetAwaiter().GetResult();
+                        }
+
+                        throw;
+                    }
+
+                    ipcServerStream = ipcServerStreamTask.Result;
+                }
+                else
+                {
+                    // Error case, cancel out. wait and throw exception.
+                    cancelRouter.Cancel();
+                    try
+                    {
+                        await Task.WhenAll(ipcServerStreamTask, webSocketServerStreamTask).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        // Check if we have an ipc stream.
+                        if (IsCompletedSuccessfully(ipcServerStreamTask))
+                            ipcServerStreamTask.Result?.Dispose();
+                        throw;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                _logger?.LogDebug("Failed creating new router instance.");
+
+                // Cleanup and rethrow.
+                ipcServerStream?.Dispose();
+                websocketServerStream?.Dispose();
+
+                throw;
+            }
+
+            // Create new router.
+            _logger?.LogDebug("New router instance successfully created.");
+
+            return new Router(ipcServerStream, websocketServerStream, _logger);
+        }
+    }
+
 
     internal class Router : IDisposable
     {
