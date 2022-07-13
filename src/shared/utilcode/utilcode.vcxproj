@@ -102,7 +102,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>true</UseFullPaths>
@@ -158,7 +158,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>true</UseFullPaths>
@@ -211,7 +211,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>true</UseFullPaths>
@@ -266,7 +266,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4007;4013;4102;4551;4700;4640;4806</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UseFullPaths>true</UseFullPaths>
