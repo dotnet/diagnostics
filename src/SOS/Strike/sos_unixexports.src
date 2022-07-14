@@ -48,6 +48,7 @@ HistStats
 IP2MD
 logging
 Name2EE
+ObjectSize
 PrintException
 PathTo
 StopOnCatch

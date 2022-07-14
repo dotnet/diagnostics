@@ -190,6 +190,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("histobj", new sosCommand("HistObj"), "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.");
     g_services->AddCommand("histobjfind", new sosCommand("HistObjFind"), "Displays all the log entries that reference an object at the specified address.");
     g_services->AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
+    g_services->AddCommand("objsize", new sosCommand("ObjSize"), "Displays the size of the specified object.");
     g_services->AddCommand("setclrpath", new sosCommand("SetClrPath"), "Set the path to load the runtime DAC/DBI files.");
     g_services->AddCommand("setsymbolserver", new sosCommand("SetSymbolServer"), "Enables the symbol server support ");
     g_services->AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");

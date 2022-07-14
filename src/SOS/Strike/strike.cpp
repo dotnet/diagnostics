@@ -11985,10 +11985,8 @@ DECLARE_API(StopOnException)
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
-#ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
     StringHolder str_Object;
@@ -12031,10 +12029,6 @@ DECLARE_API(ObjSize)
         ExtOut("sizeof(%p) = %d (0x%x) bytes (%S)\n", SOS_PTR(obj), size, size, methodTable.GetName());
     }
     return Status;
-#else
-    return E_NOTIMPL;
-#endif
-
 }
 
 #ifndef FEATURE_PAL

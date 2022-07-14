@@ -39,8 +39,8 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
     DumpHeap (dumpheap)                DumpStack (dumpstack)
     DumpVC                             EEStack (eestack)
     GCRoot (gcroot)                    CLRStack (clrstack)
-    PrintException (pe)                GCInfo
-                                       EHInfo
+    ObjSize                            GCInfo
+    PrintException (pe)                EHInfo
                                        bpmd (bpmd)
 
     Examining CLR data structures      Diagnostic Utilities
@@ -110,6 +110,7 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
 |**HistRoot** *\<root>*|Displays information related to both promotions and relocations of the specified root.<br /><br /> The root value can be used to track the movement of an object through the garbage collections.|
 |**IP2MD** (**ip2md**) \<*Code address*>|Displays the `MethodDesc` structure at the specified address in code that has been JIT-compiled.|
 |**Name2EE** (**name2ee**) \<*module name*> \<*type or method name*><br /><br /> -or-<br /><br /> **Name2EE** \<*module name*>**!**\<*type or method name*>|Displays the `MethodTable` structure and `EEClass` structure for the specified type or method in the specified module.<br /><br /> The specified module must be loaded in the process.<br /><br /> To get the proper type name you can browse the module by using the an IL reflection tool like Ildasm or ILSpy. You can also pass `*` as the module name parameter to search all loaded managed modules. The *module name* parameter can also be the debugger's name for a module, such as `mscorlib` or `image00400000`.<br /><br /> This command supports the Windows debugger syntax of <`module`>`!`<`type`>. The type must be fully qualified.|
+|**ObjSize** [\<*Object address*>] &#124; [**-aggregate**] [**-stat**]|Displays the size of the specified object. If you do not specify any parameters, the **ObjSize** command displays the size of all objects found on managed threads, displays all garbage collector handles in the process, and totals the size of any objects pointed to by those handles. The **ObjSize** command includes the size of all child objects in addition to the parent.<br /><br /> The **-aggregate** option can be used in conjunction with the **-stat** argument to get a detailed view of the types that are still rooted. By using **!dumpheap -stat** and **!objsize -aggregate -stat**, you can determine which objects are no longer rooted and diagnose various memory issues.|
 |**PrintException** [**-nested**] [**-lines**] [\<*Exception object address*>]<br /><br /> -or-<br /><br /> **PE** [**-nested**] [\<*Exception object address*>]|Displays and formats fields of any object derived from the <xref:System.Exception> class at the specified address. If you do not specify an address, the **PrintException** command displays the last exception thrown on the current thread.<br /><br /> The **-nested** option displays details about nested exception objects.<br /><br /> The **-lines** option displays source information, if available.<br /><br /> You can use this command to format and view the `_stackTrace` field, which is a binary array.|
 |**SyncBlk** [**-all** &#124; \<*syncblk number*>]|Displays the specified `SyncBlock` structure or all `SyncBlock` structures.  If you do not pass any arguments, the **SyncBlk** command displays the `SyncBlock` structure corresponding to objects that are owned by a thread.<br /><br /> A `SyncBlock` structure is a container for extra information that does not need to be created for every object. It can hold COM interop data, hash codes, and locking information for thread-safe operations.|
 |**SOSFlush**|Flushes an internal SOS cache.|
