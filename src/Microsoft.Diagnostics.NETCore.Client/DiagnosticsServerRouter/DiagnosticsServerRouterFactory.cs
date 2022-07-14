@@ -360,7 +360,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public async Task<Stream> AcceptWebSocketStreamAsync(CancellationToken token)
         {
-            Stream tcpServerStream;
+            Stream webSocketServerStream;
 
             _logger?.LogDebug($"Waiting for a new WebSocket connection at endpoint \"{WebSocketURL}\".");
 
@@ -397,23 +397,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Get next connected tcp stream. Should timeout if no endpoint appears within timeout.
                 // If that happens we need to remove endpoint since it might indicate a unresponsive runtime.
                 connectTimeoutTokenSource.CancelAfter(TcpServerTimeoutMs);
-                tcpServerStream = await _webSocketEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
+                webSocketServerStream = await _webSocketEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
                 if (connectTimeoutTokenSource.IsCancellationRequested)
                 {
-                    _logger?.LogDebug("No tcp stream connected before timeout.");
+                    _logger?.LogDebug("No WebSocket stream connected before timeout.");
                     throw new BackendStreamTimeoutException(TcpServerTimeoutMs);
                 }
 
                 throw;
             }
 
-            if (tcpServerStream != null)
-                _logger?.LogDebug($"Successfully connected tcp stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
+            if (webSocketServerStream != null)
+                _logger?.LogDebug($"Successfully connected WebSocket stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
 
-            return tcpServerStream;
+            return webSocketServerStream;
         }
 
         public void CreatedNewServer(EndPoint localEP)
@@ -1565,6 +1565,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     // We have a valid tcp stream and a pending ipc accept. Wait for completion
                     // or disconnect of tcp stream.
+                    _logger?.LogInformation("webSocketServerStreamTask completed successfully.");
                     using var checkWebSocketStreamTask = IsStreamConnectedAsync(websocketServerStream, cancelRouter.Token);
 
                     // Wait for at least completion of one task.

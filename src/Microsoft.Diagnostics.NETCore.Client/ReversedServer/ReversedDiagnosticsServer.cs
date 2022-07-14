@@ -381,6 +381,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     IntPtr.Zero,
                     IntPtr.Zero);
             }
+            else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
+            {
+                bool connected = adapter.IsConnected;
 
             return false;
         }

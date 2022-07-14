@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 
-internal class WebSocketStreamAdapter : Stream
+internal class WebSocketStreamAdapter : Stream, IWebSocketStreamAdapter
 {
     private readonly WebSocket _webSocket;
     private readonly Action _onDispose;
@@ -96,5 +96,7 @@ internal class WebSocketStreamAdapter : Stream
             _webSocket.Dispose();
         }
     }
+
+    bool IWebSocketStreamAdapter.IsConnected => _webSocket.State == WebSocketState.Open;
 
 }
