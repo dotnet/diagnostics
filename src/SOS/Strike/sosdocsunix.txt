@@ -38,10 +38,10 @@ Examining CLR data structures      Diagnostic Utilities
 -----------------------------      -----------------------------
 DumpDomain (dumpdomain)            VerifyHeap
 EEHeap (eeheap)                    FindAppDomain          
-Name2EE (name2ee)                  DumpLog (dumplog)
-SyncBlk (syncblk)                  SuppressJitOptimization
-DumpMT (dumpmt)                    ThreadPool (threadpool)
-DumpClass (dumpclass)
+Name2EE (name2ee)                  GCHandles
+SyncBlk (syncblk)                  DumpLog (dumplog)
+DumpMT (dumpmt)                    SuppressJitOptimization
+DumpClass (dumpclass)              ThreadPool (threadpool)
 DumpMD (dumpmd)                    
 Token2EE                           
 DumpModule (dumpmodule)
@@ -1761,6 +1761,84 @@ You can find out more about the AppDomain with the DumpDomain command. Not
 every object has enough clues about it's origin to determine the AppDomain. 
 Objects with Finalizers are the easiest case, as the CLR needs to be able to 
 call those when an AppDomain shuts down.
+\\
+
+COMMAND: gchandles.
+GCHandles [-type handletype] [-stat] [-perdomain]
+
+GCHandles provides statistics about GCHandles in the process.
+
+Paremeters:
+    stat - Only display the statistics and not the list of handles and
+           what they point to.
+    perdomain - Break down the statistics by the app domain in which
+                the handles reside.
+    type - A type of handle to filter it by.  The handle types are:
+           Pinned
+           RefCounted
+           WeakShort
+           WeakLong
+           Strong
+           Variable
+           AsyncPinned
+           SizedRef
+
+Sometimes the  source of a memory leak is a GCHandle leak. For example, code
+might keep a 50 Megabyte array alive because a strong GCHandle points to it,
+and the handle was discarded without freeing it.
+
+The most common handles are "Strong Handles," which keep the object they point 
+to alive until the handle is explicitly freed. "Pinned Handles" are used to 
+prevent the garbage collector from moving an object during collection. These 
+should be used sparingly, and for short periods of time. If you don't follow 
+that precept, the gc heap can become very fragmented.
+
+Here is sample output from a very simple program.  Note that the "RefCount"
+field only applies to RefCount Handles, and this field will contain the
+reference count:
+
+    0:000> !GCHandles
+      Handle Type          Object     Size RefCount Type
+    001611c0 Strong      01d00b58       84          System.IndexOutOfRangeException
+    001611c4 Strong      01d00b58       84          System.IndexOutOfRangeException
+    001611c8 Strong      01d1b48c       40          System.Diagnostics.LogSwitch
+    001611d0 Strong      01cfd2c0       36          System.Security.PermissionSet
+    001611d4 Strong      01cf7484       56          System.Object[]
+    001611d8 Strong      01cf1238       32          System.SharedStatics
+    001611dc Strong      01cf11c8       84          System.Threading.ThreadAbortException
+    001611e0 Strong      01cf1174       84          System.Threading.ThreadAbortException
+    001611e4 Strong      01cf1120       84          System.ExecutionEngineException
+    001611e8 Strong      01cf10cc       84          System.StackOverflowException
+    001611ec Strong      01cf1078       84          System.OutOfMemoryException
+    001611f0 Strong      01cf1024       84          System.Exception
+    001611f8 Strong      01cf2068       48          System.Threading.Thread
+    001611fc Strong      01cf1328      112          System.AppDomain
+    001613ec Pinned      02cf3268     8176          System.Object[]
+    001613f0 Pinned      02cf2258     4096          System.Object[]
+    001613f4 Pinned      02cf2038      528          System.Object[]
+    001613f8 Pinned      01cf121c       12          System.Object
+    001613fc Pinned      02cf1010     4116          System.Object[]
+
+    Statistics:
+          MT    Count    TotalSize Class Name
+    563266dc        1           12 System.Object
+    56329708        1           32 System.SharedStatics
+    5632bc38        1           36 System.Security.PermissionSet
+    5635f934        1           40 System.Diagnostics.LogSwitch
+    5632759c        1           48 System.Threading.Thread
+    5632735c        1           84 System.ExecutionEngineException
+    56327304        1           84 System.StackOverflowException
+    563272ac        1           84 System.OutOfMemoryException
+    563270c4        1           84 System.Exception
+    56328914        1          112 System.AppDomain
+    56335f78        2          168 System.IndexOutOfRangeException
+    563273b4        2          168 System.Threading.ThreadAbortException
+    563208d0        5        16972 System.Object[]
+    Total 19 objects
+
+    Handles:
+        Strong Handles:       14
+        Pinned Handles:       5
 \\
 
 COMMAND: histinit.

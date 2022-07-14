@@ -46,11 +46,11 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
     Examining CLR data structures      Diagnostic Utilities
     -----------------------------      -----------------------------
     DumpDomain (dumpdomain)            VerifyHeap
-    EEHeap (eeheap)                    FindAppDomain          
-    Name2EE (name2ee)                  DumpLog (dumplog)
-    DumpMT (dumpmt)
-    DumpClass (dumpclass)
-    DumpMD (dumpmd)                    
+    EEHeap (eeheap)                    FindAppDomain
+    Name2EE (name2ee)                  GCHandles
+    DumpMT (dumpmt)                    DumpLog (dumplog)
+    DumpClass (dumpclass)              SuppressJitOptimization
+    DumpMD (dumpmd)                    ThreadPool (threadpool)
     Token2EE                           
     DumpModule (dumpmodule)
     DumpAssembly
@@ -98,6 +98,7 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
 |**EHInfo** [\<*MethodDesc address*>] [\<*Code address*>]|Displays the exception handling blocks in a specified method.  This command displays the code addresses and offsets for the clause block (the `try` block) and the handler block (the `catch` block).|
 |**FAQ**|Displays frequently asked questions.|
 |**FindAppDomain** \<*Object address*>|Determines the application domain of an object at the specified address.|
+|**GCHandles** [**-perdomain**]|Displays statistics about garbage collector handles in the process.<br /><br /> The **-perdomain** option arranges the statistics by application domain.<br /><br /> Use the **GCHandles** command to find memory leaks caused by garbage collector handle leaks. For example, a memory leak occurs when code retains a large array because a strong garbage collector handle still points to it, and the handle is discarded without freeing it.|
 |**GCInfo** \<*MethodDesc address*>\<*Code address*>|Displays data that indicates when registers or stack locations contain managed objects. If a garbage collection occurs, the collector must know the locations of references to objects so it can update them with new object pointer values.|
 |**GCRoot** [**-nostacks**] [**-all**] \<*Object address*>|Displays information about references (or roots) to an object at the specified address.<br /><br /> The **GCRoot** command examines the entire managed heap and the handle table for handles within other objects and handles on the stack. Each stack is then searched for pointers to objects, and the finalizer queue is also searched.<br /><br /> This command does not determine whether a stack root is valid or is discarded. Use the **clrstack** and **U** commands to disassemble the frame that the local or argument value belongs to in order to determine if the stack root is still in use.<br /><br /> The **-nostacks** option restricts the search to garbage collector handles and reachable objects.<br /><br /> The **-all** option forces all roots to be displayed instead of just the unique roots.|
 |**GCWhere**  *\<object address>*|Displays the location and size in the garbage collection heap of the argument passed in. When the argument lies in the managed heap but is not a valid object address, the size is displayed as 0 (zero).|
