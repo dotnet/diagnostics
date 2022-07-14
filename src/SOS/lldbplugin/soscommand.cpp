@@ -178,6 +178,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
     g_services->AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime version.");
     g_services->AddCommand("finalizequeue", new sosCommand("FinalizeQueue"), "Displays all objects registered for finalization.");
+    g_services->AddCommand("gchandles", new sosCommand("GCHandles"), "Displays statistics about garbage collector handles in the process.");
     g_services->AddCommand("gcroot", new sosCommand("GCRoot"), "Displays info about references (or roots) to an object at the specified address.");
     g_services->AddCommand("gcwhere", new sosCommand("GCWhere"), "Displays the location in the GC heap of the argument passed in.");
     g_services->AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
