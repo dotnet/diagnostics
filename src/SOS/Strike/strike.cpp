@@ -11404,7 +11404,7 @@ public:
                 mType = HNDTYPE_WEAK_WINRT;
             else
                 sos::Throw<sos::Exception>("Unknown handle type '%s'.", type.GetPtr());
-	}
+        }
     }
 
     void Run()
