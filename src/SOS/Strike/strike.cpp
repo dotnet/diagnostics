@@ -11237,6 +11237,8 @@ DECLARE_API(FindRoots)
 #endif
 }
 
+#endif // FEATURE_PAL
+
 class GCHandleStatsForDomains
 {
 public:
@@ -11379,7 +11381,7 @@ public:
         if (!GetCMDOption(args,option,ARRAY_SIZE(option),NULL,0,NULL))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
-        if (type != NULL)
+        if (type != NULL) {
             if (_stricmp(type, "Pinned") == 0)
                 mType = HNDTYPE_PINNED;
             else if (_stricmp(type, "RefCounted") == 0)
@@ -11402,6 +11404,7 @@ public:
                 mType = HNDTYPE_WEAK_WINRT;
             else
                 sos::Throw<sos::Exception>("Unknown handle type '%s'.", type.GetPtr());
+	}
     }
 
     void Run()
@@ -12231,7 +12234,6 @@ DECLARE_API(GCHandleLeaks)
 }
 #endif // FEATURE_PAL
 
-#endif // FEATURE_PAL
 
 class ClrStackImplWithICorDebug
 {
