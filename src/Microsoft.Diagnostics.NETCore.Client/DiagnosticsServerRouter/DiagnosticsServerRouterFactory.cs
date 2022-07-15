@@ -1612,9 +1612,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                _logger?.LogDebug("Failed creating new router instance.");
+                _logger?.LogDebug("Failed creating new router instance. {exn}", e);
 
                 // Cleanup and rethrow.
                 ipcServerStream?.Dispose();
