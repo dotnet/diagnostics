@@ -76,18 +76,20 @@ public:
     /// <summary>
     /// Dispatches the command line to managed extension
     /// </summary>
-    /// <param name="commandLine">full command line</param>
+    /// <param name="commandName">command name</param>
+    /// <param name="arguments">command arguments</param>
     /// <returns>error code</returns>
     virtual HRESULT STDMETHODCALLTYPE DispatchCommand( 
-        PCSTR commandLine) = 0;
+        PCSTR commandName,
+        PCSTR arguments) = 0;
 
     /// <summary>
     /// Displays the help for a managed extension command
     /// </summary>
-    /// <param name="command"></param>
+    /// <param name="commandName"></param>
     /// <returns>error code</returns>
     virtual HRESULT STDMETHODCALLTYPE DisplayHelp( 
-        PCSTR command) = 0;
+        PCSTR commandName) = 0;
 
     /// <summary>
     /// Uninitialize the extension infrastructure

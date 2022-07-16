@@ -105,6 +105,7 @@
 #include "cordebug.h"
 #include "dacprivate.h"
 #include "corexcep.h"
+#include <dumpcommon.h>
 
 #define  CORHANDLE_MASK 0x1
 #define SWITCHED_OUT_FIBER_OSID 0xbaadf00d;
@@ -10357,9 +10358,7 @@ DECLARE_API(SOSStatus)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string command("sosstatus ");
-        command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
+        Status = hostServices->DispatchCommand("sosstatus", args);
     }
     else
     {
@@ -15697,6 +15696,95 @@ DECLARE_API(StopOnCatch)
     return S_OK;
 }
 
+class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback
+{
+private:
+    LONG m_ref;
+    bool m_log;
+
+public:
+    EnumMemoryCallback(bool log) :
+        m_ref(1),
+        m_log(log)
+    {
+    }
+
+    virtual ~EnumMemoryCallback()
+    {
+    }
+
+    STDMETHODIMP QueryInterface(
+        ___in REFIID InterfaceId,
+        ___out PVOID* Interface)
+    {
+        if (InterfaceId == IID_IUnknown ||
+            InterfaceId == IID_ICLRDataEnumMemoryRegionsCallback)
+        {
+            *Interface = (ICLRDataEnumMemoryRegionsCallback*)this;
+            AddRef();
+            return S_OK;
+        }
+        else
+        {
+            *Interface = nullptr;
+            return E_NOINTERFACE;
+        }
+    }
+
+    STDMETHODIMP_(ULONG) AddRef()
+    {
+        LONG ref = InterlockedIncrement(&m_ref);
+        return ref;
+    }
+
+    STDMETHODIMP_(ULONG) Release()
+    {
+        LONG ref = InterlockedDecrement(&m_ref);
+        if (ref == 0)
+        {
+            delete this;
+        }
+        return ref;
+    }
+
+    HRESULT STDMETHODCALLTYPE EnumMemoryRegion(
+        /* [in] */ CLRDATA_ADDRESS address,
+        /* [in] */ ULONG32 size)
+    {
+        if (m_log)
+        {
+            ExtOut("%016llx %08x\n", address, size);
+        }
+        return S_OK;
+    }
+};
+
+DECLARE_API(enummemory)
+{
+    INIT_API();
+
+    ToRelease<ICLRDataEnumMemoryRegions> enumMemoryRegions;
+    Status = g_clrData->QueryInterface(__uuidof(ICLRDataEnumMemoryRegions), (void**)&enumMemoryRegions);
+    if (SUCCEEDED(Status))
+    {
+        ToRelease<ICLRDataEnumMemoryRegionsCallback> callback = new EnumMemoryCallback(false);
+        ULONG32 minidumpType = 
+           (MiniDumpWithPrivateReadWriteMemory |
+            MiniDumpWithDataSegs |
+            MiniDumpWithHandleData |
+            MiniDumpWithUnloadedModules |
+            MiniDumpWithFullMemoryInfo |
+            MiniDumpWithThreadInfo |
+            MiniDumpWithTokenInformation);
+        Status = enumMemoryRegions->EnumMemoryRegions(callback, minidumpType, CLRDataEnumMemoryFlags::CLRDATA_ENUM_MEM_DEFAULT);
+        if (FAILED(Status))
+        {
+            ExtErr("EnumMemoryRegions FAILED %08x\n", Status);
+        }
+    }
+    return Status;
+}
+
 #ifndef FEATURE_PAL
 
 // This is an undocumented SOS extension command intended to help test SOS
@@ -16008,9 +16096,7 @@ DECLARE_API(SetClrPath)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string command("setclrpath ");
-        command.append(args);
-        return hostServices->DispatchCommand(command.c_str());
+        return hostServices->DispatchCommand("setclrpath", args);
     }
     else
     {
@@ -16054,9 +16140,7 @@ DECLARE_API(runtimes)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string command("runtimes ");
-        command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
+        Status = hostServices->DispatchCommand("runtimes", args);
     }
     else
     {
@@ -16099,31 +16183,22 @@ DECLARE_API(runtimes)
     return Status;
 }
 
+#ifdef HOST_WINDOWS
+
 //
 // Executes managed extension commands
 //
-HRESULT ExecuteCommand(PCSTR command, PCSTR args)
+HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
 {
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string commandLine(command);
-        if (args != nullptr && strlen(args) > 0)
+        if (commandName != nullptr && strlen(commandName) > 0)
         {
-            commandLine.append(" ");
-            commandLine.append(args);
-        }
-        if (!commandLine.empty())
-        {
-            return hostServices->DispatchCommand(commandLine.c_str());
+            return hostServices->DispatchCommand(commandName, args);
         }
     }
-    else
-    {
-        ExtErr("Command not loaded\n");
-        return E_FAIL;
-    }
-    return S_OK;
+    return E_NOTIMPL;
 }
 
 //
@@ -16162,14 +16237,43 @@ DECLARE_API(logging)
     return ExecuteCommand("logging", args);
 }
 
+typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);
+
 //
 // Executes managed extension commands
 //
 DECLARE_API(ext)
 {
     INIT_API_EXT();
-    return ExecuteCommand("", args);
+
+    if (args == nullptr || strlen(args) <= 0)
+    {
+        args = "Help";
+    }
+    std::string arguments(args);
+    size_t pos = arguments.find(' ');
+    std::string commandName = arguments.substr(0, pos);
+    if (pos != std::string::npos)
+    {
+        arguments = arguments.substr(pos + 1);
+    }
+    else
+    {
+        arguments.clear();
+    }
+    Status = ExecuteCommand(commandName.c_str(), arguments.c_str());
+    if (Status == E_NOTIMPL)
+    {
+        PFN_COMMAND commandFunc = (PFN_COMMAND)GetProcAddress(g_hInstance, commandName.c_str());
+        if (commandFunc != nullptr)
+        {
+            Status = (*commandFunc)(client, arguments.c_str());
+        }
+    }
+    return Status;
 }
+
+#endif // HOST_WINDOWS
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
 {

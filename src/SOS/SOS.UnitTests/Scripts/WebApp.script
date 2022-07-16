@@ -34,8 +34,16 @@ EXTCOMMAND:parallelstacks
 EXTCOMMAND:timerinfo
 VERIFY:\s*<DECVAL>\s*timers\s*
 
+SOSCOMMAND:runtimes
+
+EXTCOMMAND:runtimes
+
 # Verify that ClrStack with no options works
 SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+EXTCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 

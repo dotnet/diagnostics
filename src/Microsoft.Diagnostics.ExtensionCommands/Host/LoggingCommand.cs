@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "logging", Help = "Enable/disable internal logging", Platform = CommandPlatform.Global)]
+    [Command(Name = "logging", Help = "Enable/disable internal logging", Flags = CommandFlags.Global)]
     public class LoggingCommand : CommandBase
     {
         [Option(Name = "enable", Help = "Enable internal logging.")]

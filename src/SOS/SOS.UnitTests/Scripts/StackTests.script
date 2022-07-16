@@ -151,7 +151,6 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 
 # Issue: https://github.com/dotnet/diagnostics/issues/2947
-!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 !IFDEF:DOTNETDUMP
 !IFDEF:ARM
 
@@ -174,4 +173,3 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+Ne
 
 ENDIF:ARM
 ENDIF:DOTNETDUMP
-ENDIF:MAJOR_RUNTIME_VERSION_GE_7

@@ -4,13 +4,11 @@
 
 AnalyzeOOM
 bpmd
-clrmodules
 ClrStack
 dbgout
 DumpALC
 DumpArray
 DumpAssembly
-DumpAsync
 DumpClass
 DumpDelegate
 DumpDomain
@@ -32,7 +30,7 @@ EEHeap
 EEVersion
 EEStack
 EHInfo
-ext
+enummemory
 FinalizeQueue
 FindAppDomain
 FindRoots
@@ -50,7 +48,6 @@ HistRoot
 HistStats
 IP2MD
 ListNearObj
-logging
 Name2EE
 ObjSize
 PrintException
@@ -58,9 +55,9 @@ PathTo
 runtimes
 StopOnCatch
 SetClrPath
-SetSymbolServer
 SOSFlush
 SOSStatus
+runtimes
 SuppressJitOptimization
 SyncBlk
 Threads

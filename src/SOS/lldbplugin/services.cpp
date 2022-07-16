@@ -2113,19 +2113,17 @@ public:
             result.SetStatus(lldb::eReturnStatusFailed);
             return false;
         }
-        std::string commandLine;
-        commandLine.append(m_commandName);
-        commandLine.append(" ");
+        std::string commandArguments;
         if (arguments != nullptr)
         {
-            for (const char* arg = *arguments; arg; arg = *(++arguments))
+            for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))
             {
-                commandLine.append(arg);
-                commandLine.append(" ");
+                commandArguments.append(arg);
+                commandArguments.append(" ");
             }
         }
         g_services->FlushCheck();
-        HRESULT hr = hostservices->DispatchCommand(commandLine.c_str());
+        HRESULT hr = hostservices->DispatchCommand(m_commandName, commandArguments.c_str());
         if (hr != S_OK)
         {
             result.SetStatus(lldb::eReturnStatusFailed);
@@ -2782,6 +2780,66 @@ LLDBServices::AddCommand(
         m_commands.insert(name);
     }
     return command;
+}
+
+void
+LLDBServices::AddManagedCommand(
+    const char* name,
+    const char* help)
+{
+    HRESULT hr = AddCommand(name, help, nullptr, 0);
+    if (FAILED(hr))
+    {
+        Output(DEBUG_OUTPUT_ERROR, "AddManagedCommand FAILED %08x\n", hr);
+    }
+}
+
+bool
+LLDBServices::ExecuteCommand(
+    const char* commandName,
+    char** arguments,
+    lldb::SBCommandReturnObject &result)
+{
+    // Build all the possible arguments into a string
+    std::string commandArguments;
+    for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))
+    {
+        commandArguments.append(arg);
+        commandArguments.append(" ");
+    }
+    // Load and initialize the managed extensions and commands before we check the m_commands list. 
+    IHostServices* hostservices = GetHostServices();
+
+    // If the command is a native SOS or managed extension command execute it through the lldb command added.
+    if (m_commands.find(commandName) != m_commands.end())
+    {
+        std::string commandLine;
+        commandLine.append(commandName);
+        if (!commandArguments.empty())
+        {
+            commandLine.append(" ");
+            commandLine.append(commandArguments);
+        }
+        lldb::ReturnStatus status = m_interpreter.HandleCommand(commandLine.c_str(), result);
+        result.SetStatus(status);
+        return true;
+    }
+
+    // Fallback to dispatch it as a managed command for those commands that couldn't be added 
+    // directly to the lldb interpreter because of existing commands or aliases.
+    if (hostservices != nullptr)
+    {
+        g_services->FlushCheck();
+        HRESULT hr = hostservices->DispatchCommand(commandName, commandArguments.c_str());
+        if (hr != E_NOTIMPL)
+        {
+            result.SetStatus(hr == S_OK ? lldb::eReturnStatusSuccessFinishResult : lldb::eReturnStatusFailed);
+            return true;
+        }
+    }
+
+    // Command not found; attempt dispatch to native SOS module
+    return false;
 }
 
 HRESULT 

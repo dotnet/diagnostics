@@ -60,13 +60,13 @@ namespace SOS.Hosting
     [Command(Name = "threadpool",       DefaultOptions = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
     [Command(Name = "verifyheap",       DefaultOptions = "VerifyHeap",          Help = "Checks the GC heap for signs of corruption.")]
     [Command(Name = "verifyobj",        DefaultOptions = "VerifyObj",           Help = "Checks the object for signs of corruption.")]
-    [Command(Name = "dumprcw",          DefaultOptions = "DumpRCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
-    [Command(Name = "dumpccw",          DefaultOptions = "DumpCCW",             Platform = CommandPlatform.Windows, Help = "Displays information about a COM Callable Wrapper.")]
-    [Command(Name = "dumppermissionset",DefaultOptions = "DumpPermissionSet",   Platform = CommandPlatform.Windows, Help = "Displays a PermissionSet object (debug build only).")]
-    [Command(Name = "traverseheap",     DefaultOptions = "TraverseHeap",        Platform = CommandPlatform.Windows, Help = "Writes out a file in a format understood by the CLR Profiler.")]
-    [Command(Name = "watsonbuckets",    DefaultOptions = "WatsonBuckets",       Platform = CommandPlatform.Windows, Help = "Displays the Watson buckets.")]
-    [Command(Name = "comstate",         DefaultOptions = "COMState",            Platform = CommandPlatform.Windows, Help = "Lists the COM apartment model for each thread.")]
-    [Command(Name = "gchandleleaks",    DefaultOptions = "GCHandleLeaks",       Platform = CommandPlatform.Windows, Help = "Helps in tracking down GCHandle leaks")]
+    [Command(Name = "comstate",         DefaultOptions = "COMState",            Flags = CommandFlags.Windows, Help = "Lists the COM apartment model for each thread.")]
+    [Command(Name = "dumprcw",          DefaultOptions = "DumpRCW",             Flags = CommandFlags.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
+    [Command(Name = "dumpccw",          DefaultOptions = "DumpCCW",             Flags = CommandFlags.Windows, Help = "Displays information about a COM Callable Wrapper.")]
+    [Command(Name = "dumppermissionset",DefaultOptions = "DumpPermissionSet",   Flags = CommandFlags.Windows, Help = "Displays a PermissionSet object (debug build only).")]
+    [Command(Name = "gchandleleaks",    DefaultOptions = "GCHandleLeaks",       Flags = CommandFlags.Windows, Help = "Helps in tracking down GCHandle leaks")]
+    [Command(Name = "traverseheap",     DefaultOptions = "TraverseHeap",        Flags = CommandFlags.Windows, Help = "Writes out a file in a format understood by the CLR Profiler.")]
+    [Command(Name = "watsonbuckets",    DefaultOptions = "WatsonBuckets",       Flags = CommandFlags.Windows, Help = "Displays the Watson buckets.")]
     public class SOSCommand : CommandBase
     {
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
@@ -78,7 +78,7 @@ namespace SOS.Hosting
         {
             try {
                 Debug.Assert(Arguments != null && Arguments.Length > 0);
-                string arguments = string.Concat(Arguments.Skip(1).Select((arg) => arg + " "));
+                string arguments = string.Concat(Arguments.Skip(1).Select((arg) => arg + " ")).Trim();
                 SOSHost.ExecuteCommand(Arguments[0], arguments);
             }
             catch (Exception ex) when (ex is FileNotFoundException || ex is EntryPointNotFoundException || ex is InvalidOperationException) {

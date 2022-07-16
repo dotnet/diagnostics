@@ -149,17 +149,21 @@ namespace SOS.Hosting
             ulong address,
             IntPtr buffer,
             uint bytesRequested,
-            uint* bytesRead)
+            uint* pbytesRead)
         {
             Debug.Assert(address != MagicCallbackConstant);
-            address &= _ignoreAddressBitsMask;
-            if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int read))
+            int read = 0;
+            if (bytesRequested > 0)
             {
-                Trace.TraceError("DataTargetWrapper.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
-                SOSHost.Write(bytesRead);
-                return HResult.E_FAIL;
+                address &= _ignoreAddressBitsMask;
+                if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out read))
+                {
+                    Trace.TraceError("DataTargetWrapper.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
+                    SOSHost.Write(pbytesRead);
+                    return HResult.E_FAIL;
+                }
             }
-            SOSHost.Write(bytesRead, (uint)read);
+            SOSHost.Write(pbytesRead, (uint)read);
             return HResult.S_OK;
         }
 
