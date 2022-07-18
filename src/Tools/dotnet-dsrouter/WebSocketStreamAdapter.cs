@@ -61,29 +61,23 @@ internal class WebSocketStreamAdapter : Stream, IWebSocketStreamAdapter
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        Console.WriteLine("WebSocket stream adapter ReadAsync");
         var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, count), cancellationToken);
-        Console.WriteLine("WebSocket stream adapter read {0} bytes", result.Count);
         return result.Count;
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
-        Console.WriteLine("WebSocket stream adapter ReadAsync");
         var result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
-        Console.WriteLine("WebSocket stream adapter read {0} bytes", result.Count);
         return result.Count;
     }
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        Console.WriteLine("WebSocket stream adapter WriteAsync {0} bytes", count);
         return _webSocket.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, true, cancellationToken);
     }
 
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> memory, CancellationToken cancellationToken)
     {
-        Console.WriteLine("WebSocket stream adapter WriteAsync {0} bytes", memory.Length);
         return _webSocket.SendAsync(memory, WebSocketMessageType.Binary, true, cancellationToken);
     }
 

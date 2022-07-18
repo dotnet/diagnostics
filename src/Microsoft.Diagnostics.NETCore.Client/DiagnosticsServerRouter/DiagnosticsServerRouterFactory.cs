@@ -109,13 +109,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
             {
-                Console.WriteLine("Testing WebSocket stream.");
                 connected = adapter.IsConnected;
-                Console.WriteLine("WebSocket stream is {0}connected.", connected ? string.Empty : "not ");
             }
             else
             {
-                Console.WriteLine("Unkonwn stream type {0}, assuming disconnected", stream.GetType());
                 connected = false;
             }
 

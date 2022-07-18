@@ -47,7 +47,6 @@ public class WebSocketServerImpl : IWebSocketServer
 
     public async Task StopServer(CancellationToken cancellationToken)
     {
-        Console.WriteLine("stopping server XYZ");
         await _server.StopWebServer(cancellationToken);
         _server = null;
     }
@@ -74,9 +73,7 @@ public class WebSocketServerImpl : IWebSocketServer
 
     public async Task<Stream> AcceptConnection(CancellationToken cancellationToken)
     {
-        Console.WriteLine("WebSocketServer waiting to AcceptConnection");
         Conn conn = await GetOrRequestConnection(cancellationToken);
-        Console.WriteLine("returning a WebSocketStreamAdapter");
         return conn.GetStream();
     }
 

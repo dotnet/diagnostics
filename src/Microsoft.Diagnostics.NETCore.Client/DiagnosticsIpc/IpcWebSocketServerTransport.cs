@@ -40,9 +40,7 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
         if (singleton.AddRef())
         {
             await singleton.StartServer(_endPoint, token);
-            Console.WriteLine("starting server AAA");
         }
-        Console.WriteLine("AcceptAsync");
         Stream s = await singleton.AcceptConnection(token);
         return s;
     }
@@ -71,7 +69,6 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
             }
             if (Interlocked.Decrement(ref _refCount) == 0)
             {
-                Console.WriteLine("stopping server AAA");
                 StopServer().Wait();
             }
         }
