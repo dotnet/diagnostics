@@ -383,7 +383,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
             {
+                Console.WriteLine("Testing WebSocket stream.");
                 bool connected = adapter.IsConnected;
+                Console.WriteLine("WebSocket stream is {0}connected.", connected ? string.Empty : "not ");
+            }
+            Console.WriteLine("unkonwn stream type {0}", stream.GetType().Name);
 
             return false;
         }

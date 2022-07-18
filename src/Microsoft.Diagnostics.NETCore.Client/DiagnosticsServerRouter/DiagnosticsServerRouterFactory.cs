@@ -107,8 +107,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     networkStream.Socket.Blocking = blockingState;
                 }
             }
+            else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
+            {
+                Console.WriteLine("Testing WebSocket stream.");
+                connected = adapter.IsConnected;
+                Console.WriteLine("WebSocket stream is {0}connected.", connected ? string.Empty : "not ");
+            }
             else
             {
+                Console.WriteLine("Unkonwn stream type {0}, assuming disconnected", stream.GetType());
                 connected = false;
             }
 
@@ -394,7 +401,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                // Get next connected tcp stream. Should timeout if no endpoint appears within timeout.
+                // Get next connected WebSocket stream. Should timeout if no endpoint appears within timeout.
                 // If that happens we need to remove endpoint since it might indicate a unresponsive runtime.
                 connectTimeoutTokenSource.CancelAfter(TcpServerTimeoutMs);
                 webSocketServerStream = await _webSocketEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
