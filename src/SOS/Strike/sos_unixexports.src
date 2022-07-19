@@ -35,6 +35,7 @@ EHInfo
 ext
 FinalizeQueue
 FindAppDomain
+GCHandles
 GCInfo
 GCRoot
 Help
@@ -47,6 +48,7 @@ HistStats
 IP2MD
 logging
 Name2EE
+ObjSize
 PrintException
 PathTo
 StopOnCatch
