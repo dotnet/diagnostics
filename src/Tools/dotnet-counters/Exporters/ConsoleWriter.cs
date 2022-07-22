@@ -233,6 +233,48 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
         }
 
+        public void CounterStopped(CounterPayload payload)
+        {
+            lock (_lock)
+            {
+                string providerName = payload.ProviderName;
+                string counterName = payload.Name;
+                string tags = payload.Tags;
+
+                if (!providers.TryGetValue(providerName, out ObservedProvider provider))
+                {
+                    return;
+                }
+
+                if (!provider.Counters.TryGetValue(counterName, out ObservedCounter counter))
+                {
+                    return;
+                }
+
+                ObservedTagSet tagSet = null;
+                if (tags != null)
+                {
+                    if (!counter.TagSets.TryGetValue(tags, out tagSet))
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        counter.TagSets.Remove(tags);
+                        if(counter.TagSets.Count == 0)
+                        {
+                            provider.Counters.Remove(counterName);
+                        }
+                    }
+                }
+                else
+                {
+                    provider.Counters.Remove(counterName);
+                }
+                AssignRowsAndInitializeDisplay();
+            }
+        }
+
         private static int GetLineWrappedLines(string text)
         {
             string[] lines = text.Split(Environment.NewLine);
