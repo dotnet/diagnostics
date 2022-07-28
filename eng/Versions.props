@@ -63,6 +63,6 @@
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
-    <NewtonSoftJsonVersion>12.0.2</NewtonSoftJsonVersion>
+    <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
   </PropertyGroup>
 </Project>
