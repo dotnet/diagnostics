@@ -4,20 +4,8 @@
 
 #include "strike.h"
 #include "util.h"
-
 #include "sos.h"
-
-
-#ifdef _ASSERTE
-#undef _ASSERTE
-#endif
-
-#define _ASSERTE(a) {;}
-
 #include "gcdesc.h"
-
-
-#undef _ASSERTE
 
 namespace sos
 {
