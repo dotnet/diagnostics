@@ -100,12 +100,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 () => server.RemoveConnection(Guid.Empty));
         }
 
-        [Fact]
+        [SkippableFact]
         public async Task ReversedServerAddressInUseTest()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return;
+                throw new SkipTestException("Not applicable on Windows due to named pipe usage.");
             }
 
             await using var server = CreateReversedServer(out string transportName);
@@ -118,7 +118,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 File.Create(transportName).Dispose();
 
                 SocketException ex = Assert.Throws<SocketException>(() => server.Start());
-                Assert.Equal(98, ex.ErrorCode); // Socket Error 98: Address in use
+                
+                int expectedErrorCode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? 48 : 98; // Address already in use
+                Assert.Equal(expectedErrorCode, ex.ErrorCode);
             }
             finally
             {
