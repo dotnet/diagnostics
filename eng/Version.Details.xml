@@ -24,9 +24,9 @@
       <Sha>3fdfc33d9a75aaa48ab6174e3762c9ae3a9b6f57</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22377.18">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22316.2" Pinned="true" >
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>3fdfc33d9a75aaa48ab6174e3762c9ae3a9b6f57</Sha>
+      <Sha>ccfe6da198c5f05534863bbb1bff66e830e0c6ab</Sha>
     </Dependency>
     <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="7.0.100-rc.1.22374.1">
       <Uri>https://github.com/dotnet/installer</Uri>
