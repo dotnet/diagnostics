@@ -721,7 +721,7 @@ namespace sos
         inline const SyncBlkIterator &operator++()
         {
             SOS_Assert(mCurr <= mTotal);
-            mSyncBlk = ++mCurr;
+            mSyncBlk = mCurr++;
 
             return *this;
         }

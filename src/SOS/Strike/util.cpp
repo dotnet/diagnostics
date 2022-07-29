@@ -4656,7 +4656,16 @@ OutputVaList(
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
     if (length > 0)
     {
-        return g_ExtControl->OutputVaList(mask, (char* const)&g_printBuffer, args);
+#ifdef HOST_WINDOWS
+        if (IsInitializedByDbgEng())
+        {
+            return g_ExtControl->Output(mask, "%s", g_printBuffer);
+        }
+        else
+#endif
+        {
+            return g_ExtControl->OutputVaList(mask, (char* const)&g_printBuffer, args);
+        }
     }
     return E_FAIL;
 }
@@ -4671,7 +4680,16 @@ ControlledOutputVaList(
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
     if (length > 0)
     {
-        return g_ExtControl->ControlledOutputVaList(outputControl, mask, (char* const)&g_printBuffer, args);
+#ifdef HOST_WINDOWS
+        if (IsInitializedByDbgEng())
+        {
+            return g_ExtControl->ControlledOutput(outputControl, mask, "%s", g_printBuffer);
+        }
+        else
+#endif
+        {
+            return g_ExtControl->ControlledOutputVaList(outputControl, mask, (char* const)&g_printBuffer, args);
+        }
     }
     return E_FAIL;
 }

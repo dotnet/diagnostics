@@ -24,6 +24,8 @@ SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.Byte\[\]!\$0_)*System.Byte\[
 VERIFY:\s+Name:        System.Byte\[\]\s+
 VERIFY:\s+Array:       Rank 1, Number of elements 100, Type Byte\s+
 
+SOSCOMMAND:ObjSize <PREVPOUT>
+
 SOSCOMMAND:GCWhere <PREVPOUT>
 # we care that the Gen is 4 (POH)
 VERIFY:<HEXVAL>\s+4\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
@@ -35,6 +37,11 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+19\]\s+
+
+SOSCOMMAND:VerifyHeap
+VERIFY:\s*No heap corruption detected.\s*
+
+SOSCOMMAND:GCHeapStat
 
 SOSCOMMAND:DumpHeap
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+

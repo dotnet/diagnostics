@@ -1044,7 +1044,6 @@ DECLARE_API(DumpSig)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -1092,7 +1091,6 @@ DECLARE_API(DumpSigElem)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -3940,7 +3938,6 @@ DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
@@ -3961,7 +3958,16 @@ DECLARE_API(DumpRuntimeTypes)
     PrintRuntimeTypeArgs pargs;
     ZeroMemory(&pargs, sizeof(PrintRuntimeTypeArgs));
 
-    GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
+    try
+    {
+        GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
+    }
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
+    }
+
     return Status;
 }
 
@@ -4495,7 +4501,6 @@ DECLARE_API(VerifyHeap)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!g_snapshot.Build())
     {
@@ -4538,8 +4543,6 @@ DECLARE_API(VerifyHeap)
         return E_FAIL;
     }
 }
-
-#ifndef FEATURE_PAL
 
 enum failure_get_memory
 {
@@ -4631,9 +4634,6 @@ DECLARE_API(AnalyzeOOM)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-#ifndef FEATURE_PAL
 
     if (!InitializeHeapData ())
     {
@@ -4699,17 +4699,12 @@ DECLARE_API(AnalyzeOOM)
     }
 
     return S_OK;
-#else
-    _ASSERTE(false);
-    return E_FAIL;
-#endif // FEATURE_PAL
 }
 
 DECLARE_API(VerifyObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR  taddrObj = 0;
     TADDR  taddrMT;
@@ -4748,9 +4743,16 @@ DECLARE_API(VerifyObj)
         ExtOut("Unable to build snapshot of the garbage collector state\n");
         goto Exit;
     }
+
+    try
     {
         GCHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
         bValid = VerifyObject(*pheapDetails, taddrObj, taddrMT, objSize, TRUE);
+    }
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
     }
 
 Exit:
@@ -4772,9 +4774,6 @@ DECLARE_API(ListNearObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-#if !defined(FEATURE_PAL)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
@@ -4946,23 +4945,12 @@ DECLARE_API(ListNearObj)
     }
 
     return Status;
-
-#else
-
-    _ASSERTE(false);
-    return E_FAIL;
-
-#endif // FEATURE_PAL
 }
-
 
 DECLARE_API(GCHeapStat)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-#ifndef FEATURE_PAL
 
     BOOL bIncUnreachable = FALSE;
     BOOL dml = FALSE;
@@ -5026,7 +5014,7 @@ DECLARE_API(GCHeapStat)
                     pohUnrootedUsage, "%");
             }
 
-            ExtOut("\nCommitted space:");
+            ExtOut("\nCommitted space:\n");
             ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
                 hpUsage.genUsage[0].committed, hpUsage.genUsage[1].committed,
                 hpUsage.genUsage[2].committed, hpUsage.genUsage[3].committed,
@@ -5066,7 +5054,9 @@ DECLARE_API(GCHeapStat)
         }
 
         // aggregate stats across heaps / generation
-        GenUsageStat genUsageStat[5] = {0, 0, 0, 0, 0};
+        GenUsageStat genUsageStat[5];
+        memset(genUsageStat, 0, sizeof(genUsageStat));
+
         bool hasPoh = false;
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
@@ -5151,16 +5141,7 @@ DECLARE_API(GCHeapStat)
     }
 
     return Status;
-
-#else
-
-    _ASSERTE(false);
-    return E_FAIL;
-
-#endif // FEATURE_PAL
 }
-
-#endif // FEATURE_PAL
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -8025,7 +8006,6 @@ DECLARE_API(ThreadPool)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
 
@@ -8610,7 +8590,6 @@ DECLARE_API(FindAppDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
@@ -8879,7 +8858,6 @@ DECLARE_API(EHInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
@@ -8961,7 +8939,6 @@ DECLARE_API(GCInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR taStartAddr = NULL;
     TADDR taGCInfoAddr;
@@ -10204,7 +10181,6 @@ DECLARE_API(DumpGCData)
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
     {
@@ -10213,16 +10189,17 @@ DECLARE_API(DumpGCData)
     }
 
     DacpGCInterestingInfoData interestingInfo;
-    interestingInfo.RequestGlobal(g_sos);
-    for (int i = 0; i < DAC_MAX_GLOBAL_GC_MECHANISMS_COUNT; i++)
-    {
-        ExtOut("%-30s: %d\n", str_gc_global_mechanisms[i], interestingInfo.globalMechanisms[i]);
-    }
-
-    ExtOut("\n[info per heap]\n");
-
     if (!IsServerBuild())
     {
+        // Doesn't work (segfaults) for server GCs
+        interestingInfo.RequestGlobal(g_sos);
+        for (int i = 0; i < DAC_MAX_GLOBAL_GC_MECHANISMS_COUNT; i++)
+        {
+            ExtOut("%-30s: %d\n", str_gc_global_mechanisms[i], interestingInfo.globalMechanisms[i]);
+        }
+
+        ExtOut("\n[info per heap]\n");
+
         if (interestingInfo.Request(g_sos) != S_OK)
         {
             ExtOut("Error requesting interesting GC info\n");
@@ -10233,6 +10210,8 @@ DECLARE_API(DumpGCData)
     }
     else
     {
+        ExtOut("\n[info per heap]\n");
+
         DWORD dwNHeaps = GetGcHeapCount();
         DWORD dwAllocSize;
         if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
@@ -10912,7 +10891,6 @@ DECLARE_API(PathTo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
     DWORD_PTR target = NULL;
@@ -11123,14 +11101,10 @@ DECLARE_API(GCWhere)
     return Status;
 }
 
-#ifndef FEATURE_PAL
-
 DECLARE_API(FindRoots)
 {
-#ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -11189,7 +11163,11 @@ DECLARE_API(FindRoots)
         GcEvtArgs gea = { GC_MARK_END, { ((gen == -1) ? 7 : (1 << gen)) } };
         idp2->SetGcNotification(gea);
         // ... and register the notification handler
+#ifndef FEATURE_PAL
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+#else
+        g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
+#endif // FEATURE_PAL
         // the above notification is removed in CNotification::OnGcEvent()
     }
     else
@@ -11232,12 +11210,7 @@ DECLARE_API(FindRoots)
     }
 
     return Status;
-#else
-    return E_NOTIMPL;
-#endif
 }
-
-#endif // FEATURE_PAL
 
 class GCHandleStatsForDomains
 {
@@ -12233,7 +12206,6 @@ DECLARE_API(GCHandleLeaks)
     return Status;
 }
 #endif // FEATURE_PAL
-
 
 class ClrStackImplWithICorDebug
 {
