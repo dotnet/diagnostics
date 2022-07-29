@@ -16,15 +16,15 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.336801</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.337501</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-rc.1.22371.1</VSRedistCommonNetCoreSharedFrameworkx6470Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-rc.1.22371.1</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-rc.1.22378.5</VSRedistCommonNetCoreSharedFrameworkx6470Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0-rc.1.22378.5</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-rc.1.22369.9</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>7.0.0-rc.1.22369.9</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-rc.1.22379.1</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>7.0.0-rc.1.22379.1</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>7.0.100-rc.1.22368.2</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>7.0.100-rc.1.22374.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
@@ -34,7 +34,7 @@
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>6.0.6</SingleFileRuntime60Version>
-    <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22366.5</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22367.4</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -63,6 +63,6 @@
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
-    <NewtonSoftJsonVersion>12.0.2</NewtonSoftJsonVersion>
+    <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
   </PropertyGroup>
 </Project>

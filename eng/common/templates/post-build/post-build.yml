@@ -236,9 +236,9 @@ stages:
       parameters:
         enable: ${{ parameters.SDLValidationParameters.enable }}
         additionalParameters: ${{ parameters.SDLValidationParameters.params }}
-        continueOnError: ${{ parameters.SDLValidationParameters.continueOnError }}
+        sdlContinueOnError: ${{ parameters.SDLValidationParameters.continueOnError }}
         artifactNames: ${{ parameters.SDLValidationParameters.artifactNames }}
-        downloadArtifacts: ${{ parameters.SDLValidationParameters.downloadArtifacts }}
+        downloadArtifacts: ${{ coalesce(parameters.SDLValidationParameters.downloadArtifacts, 'false') }}
 
 - ${{ if ne(parameters.publishAssetsImmediately, 'true') }}:
   - stage: publish_using_darc
