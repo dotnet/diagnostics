@@ -12,7 +12,6 @@
 #include "safemath.h"
 #include "releaseholder.h"
 
-
 // This is the increment for the segment lookup data
 const int nSegLookupStgIncrement = 100;
 
@@ -1572,6 +1571,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                 }
 
                 dwAddrCurrObj = (DWORD_PTR)segment.mem;
+                continue;
             }
             else
             {
