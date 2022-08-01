@@ -34,7 +34,7 @@
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>6.0.6</SingleFileRuntime60Version>
-    <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22367.4</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22380.3</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
