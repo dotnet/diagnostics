@@ -137,9 +137,6 @@ jobs:
             sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)
             targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
 
-    - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
-      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
-
     - script: $(_dockerEnv) $(_buildScript)
         -configuration $(_BuildConfig) 
         -architecture $(_BuildArch)
