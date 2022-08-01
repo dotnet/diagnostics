@@ -48,7 +48,7 @@ jobs:
 
       # Build OSX Pool  (we don't have on-prem OSX BuildPool)
       ${{ if in(parameters.osGroup, 'MacOS', 'MacOS_cross') }}:
-        vmImage: macOS-10.15
+        vmImage: macOS-latest
 
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
