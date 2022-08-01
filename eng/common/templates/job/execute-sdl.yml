@@ -37,6 +37,12 @@ jobs:
   condition: eq( ${{ parameters.enable }}, 'true')
   variables:
     - group: DotNet-VSTS-Bot
+    - name: AzDOProjectName
+      value: ${{ parameters.AzDOProjectName }}
+    - name: AzDOPipelineId
+      value: ${{ parameters.AzDOPipelineId }}
+    - name: AzDOBuildId
+      value: ${{ parameters.AzDOBuildId }}
     - template: /eng/common/templates/variables/sdl-variables.yml
     - name: GuardianVersion
       value: ${{ coalesce(parameters.overrideGuardianVersion, '$(DefaultGuardianVersion)') }}

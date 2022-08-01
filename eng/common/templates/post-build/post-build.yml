@@ -49,6 +49,7 @@ parameters:
     type: object
     default:
       enable: false
+      publishGdn: false
       continueOnError: false
       params: ''
       artifactNames: ''
@@ -235,10 +236,11 @@ stages:
     - template: /eng/common/templates/job/execute-sdl.yml
       parameters:
         enable: ${{ parameters.SDLValidationParameters.enable }}
+        publishGuardianDirectoryToPipeline: ${{ parameters.SDLValidationParameters.publishGdn }}
         additionalParameters: ${{ parameters.SDLValidationParameters.params }}
-        sdlContinueOnError: ${{ parameters.SDLValidationParameters.continueOnError }}
+        continueOnError: ${{ parameters.SDLValidationParameters.continueOnError }}
         artifactNames: ${{ parameters.SDLValidationParameters.artifactNames }}
-        downloadArtifacts: ${{ coalesce(parameters.SDLValidationParameters.downloadArtifacts, 'false') }}
+        downloadArtifacts: ${{ parameters.SDLValidationParameters.downloadArtifacts }}
 
 - ${{ if ne(parameters.publishAssetsImmediately, 'true') }}:
   - stage: publish_using_darc
