@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings =>
@@ -103,8 +103,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             using var reader = new StreamReader(outputStream);
 
-            // Unreliable test https://github.com/dotnet/diagnostics/issues/3143
-            //ValidateLoggerRemoteCategoryInformationMessage(reader);
+            ValidateLoggerRemoteCategoryInformationMessage(reader);
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
