@@ -322,9 +322,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task EventCounterTriggerWithEventPipePipelineTest(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && config.RuntimeFrameworkVersionMajor < 5)
+            if (config.RuntimeFrameworkVersionMajor < 6)
             {
-                throw new SkipTestException("Unreliable on Linux .NET 3.1");
+                throw new SkipTestException("Unreliable on .NET 3.1");
             }
             EventCounterTriggerSettings settings = new()
             {
