@@ -1,11 +1,10 @@
-using FastSerialization;
+﻿using FastSerialization;
 using Graphs;
 using Microsoft.Diagnostics.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Security;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Address = System.UInt64;
@@ -18,11 +17,11 @@ using Address = System.UInt64;
 public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 {
     public GCHeapDump(string inputFileName) :
-        this(new Deserializer(inputFileName))
+        this(new Deserializer(inputFileName, new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }))
     { }
 
     public GCHeapDump(Stream inputStream, string streamName) :
-        this(new Deserializer(inputStream, streamName))
+        this(new Deserializer(inputStream, streamName, new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }))
     { }
 
     /// <summary>
@@ -110,7 +109,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         var ret = new Dictionary<int, ProcessInfo>();
 
         // Do the 64 bit processes first, then do us   
-        if (System.Environment.Is64BitOperatingSystem && !System.Environment.Is64BitProcess)
+        if (EnvironmentUtilities.Is64BitOperatingSystem && !EnvironmentUtilities.Is64BitProcess)
         {
             GetProcessesWithGCHeapsFromHeapDump(ret);
         }
@@ -193,7 +192,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     private void Write(string outputFileName)
     {
         Debug.Assert(MemoryGraph != null);
-        var serializer = new Serializer(outputFileName, this);
+        var serializer = new Serializer(new IOStreamStreamWriter(outputFileName, config: new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }), this);
         serializer.Close();
     }
 
@@ -848,7 +847,7 @@ internal class XmlGcHeapDump
         writer.WriteLine("<TimeCollected>{0}</TimeCollected>", gcDump.TimeCollected);
         if (!string.IsNullOrWhiteSpace(gcDump.CollectionLog))
         {
-            writer.WriteLine("<CollectionLog>{0}</CollectionLog>", SecurityElement.Escape(gcDump.CollectionLog));
+            writer.WriteLine("<CollectionLog>{0}</CollectionLog>", XmlUtilities.XmlEscape(gcDump.CollectionLog));
         }
 
         if (!string.IsNullOrWhiteSpace(gcDump.MachineName))
@@ -858,7 +857,7 @@ internal class XmlGcHeapDump
 
         if (!string.IsNullOrWhiteSpace(gcDump.ProcessName))
         {
-            writer.WriteLine("<ProcessName>{0}</ProcessName>", SecurityElement.Escape(gcDump.ProcessName));
+            writer.WriteLine("<ProcessName>{0}</ProcessName>", XmlUtilities.XmlEscape(gcDump.ProcessName));
         }
 
         if (gcDump.ProcessID != 0)
@@ -883,7 +882,7 @@ internal class XmlGcHeapDump
             for (int i = 0; i < gcDump.CountMultipliersByType.Length; i++)
             {
                 writer.WriteLine("<CountMultipliers TypeIndex=\"{0}\" TypeName=\"{1}\" Value=\"{2:f4}\"/>", i,
-                    SecurityElement.Escape(gcDump.MemoryGraph.GetType((NodeTypeIndex)i, typeStorage).Name),
+                    XmlUtilities.XmlEscape(gcDump.MemoryGraph.GetType((NodeTypeIndex)i, typeStorage).Name),
                     gcDump.CountMultipliersByType[i]);
             }
 
@@ -1087,3 +1086,4 @@ internal class XmlGcHeapDump
 
 
 }
+
