@@ -103,7 +103,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             using var reader = new StreamReader(outputStream);
 
-            ValidateLoggerRemoteCategoryInformationMessage(reader);
+            // Unreliable test https://github.com/dotnet/diagnostics/issues/3143
+            //ValidateLoggerRemoteCategoryInformationMessage(reader);
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
