@@ -15696,7 +15696,7 @@ DECLARE_API(StopOnCatch)
     return S_OK;
 }
 
-class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback
+class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback, ICLRDataEnumMemoryRegionsLoggingCallback
 {
 private:
     LONG m_ref;
@@ -15721,6 +15721,12 @@ public:
             InterfaceId == IID_ICLRDataEnumMemoryRegionsCallback)
         {
             *Interface = (ICLRDataEnumMemoryRegionsCallback*)this;
+            AddRef();
+            return S_OK;
+        }
+        else if (InterfaceId == IID_ICLRDataEnumMemoryRegionsLoggingCallback)
+        {
+            *Interface = (ICLRDataEnumMemoryRegionsLoggingCallback*)this;
             AddRef();
             return S_OK;
         }
@@ -15755,6 +15761,13 @@ public:
         {
             ExtOut("%016llx %08x\n", address, size);
         }
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE LogMessage(
+        /* [in] */ LPCSTR message)
+    {
+        ExtOut("%s", message);
         return S_OK;
     }
 };
