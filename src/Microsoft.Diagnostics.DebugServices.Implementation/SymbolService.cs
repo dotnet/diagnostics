@@ -917,15 +917,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
+            
+            sb.AppendLine("Current symbol store settings:");
+            
             ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
             {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
-                    sb.AppendLine($"{httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
+                    sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
                 }
                 else
                 {
-                    sb.AppendLine(symbolStore.ToString());
+                    sb.AppendLine($"-> {symbolStore.ToString()}");
                 }
             });
             return sb.ToString();
