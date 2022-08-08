@@ -24,7 +24,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>7.0.0-rc.1.22405.12</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>7.0.0-rc.1.22405.12</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>7.0.100-rc.1.22381.2</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>7.0.100-rc.1.22407.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
@@ -34,7 +34,7 @@
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>6.0.6</SingleFileRuntime60Version>
-    <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22380.3</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22403.8</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
