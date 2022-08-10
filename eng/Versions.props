@@ -28,12 +28,12 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp31Version>3.1.25</MicrosoftNETCoreApp31Version>
+    <MicrosoftNETCoreApp31Version>3.1.28</MicrosoftNETCoreApp31Version>
     <MicrosoftAspNetCoreApp31Version>$(MicrosoftNETCoreApp31Version)</MicrosoftAspNetCoreApp31Version>
-    <MicrosoftNETCoreApp60Version>6.0.6</MicrosoftNETCoreApp60Version>
+    <MicrosoftNETCoreApp60Version>6.0.8</MicrosoftNETCoreApp60Version>
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
-    <SingleFileRuntime60Version>6.0.6</SingleFileRuntime60Version>
+    <SingleFileRuntime60Version>6.0.8</SingleFileRuntime60Version>
     <SingleFileRuntimeLatestVersion>7.0.0-rc.1.22403.8</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
