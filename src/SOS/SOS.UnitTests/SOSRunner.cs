@@ -924,6 +924,8 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
+                // Disabled until https://github.com/dotnet/diagnostics/issues/3265 is fixed.
+#if DISABLED
                 // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
                 if (_config.PublishSingleFile)
                 {
@@ -932,6 +934,7 @@ public class SOSRunner : IDisposable
                         commands.Add($"setclrpath {runtimeSymbolsPath}");
                     }
                 }
+#endif
                 if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"setsymbolserver {setSymbolServer}");
@@ -1015,7 +1018,7 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Cdb:
                 if (extensionCommand)
                 {
-                    command = "!ext " + command;
+                    command = "!sos " + command;
                 }
                 else
                 {
@@ -1023,20 +1026,26 @@ public class SOSRunner : IDisposable
                 }
                 break;
             case NativeDebugger.Lldb:
-                if (!extensionCommand)
+                command = "sos " + command;
+                break;
+            case NativeDebugger.DotNetDump:
+                if (extensionCommand)
                 {
                     command = "sos " + command;
                 }
-                break;
-            case NativeDebugger.DotNetDump:
-                int index = command.IndexOf(' ');
-                if (index != -1) {
-                    // lowercase just the command name not the rest of the command line
-                    command = command.Substring(0, index).ToLowerInvariant() + command.Substring(index);
-                }
-                else {
-                    // it is only the command name
-                    command = command.ToLowerInvariant();
+                else
+                {
+                    int index = command.IndexOf(' ');
+                    if (index != -1)
+                    {
+                        // lowercase just the command name not the rest of the command line
+                        command = command.Substring(0, index).ToLowerInvariant() + command.Substring(index);
+                    }
+                    else
+                    {
+                        // it is only the command name
+                        command = command.ToLowerInvariant();
+                    }
                 }
                 break;
             default:

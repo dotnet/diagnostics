@@ -38,21 +38,27 @@ public:
     {
         result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
 
+        const char* sosCommand = m_command;
+        if (sosCommand == nullptr)
+        {
+            if (arguments == nullptr || *arguments == nullptr)
+            {
+                sosCommand = "Help";
+            }
+            else
+            {
+                sosCommand = *arguments++;
+                if (g_services->ExecuteCommand(sosCommand, arguments, result))
+                {
+                    return result.Succeeded();
+                }
+            }
+        }
+
         LoadSos();
 
         if (g_sosHandle != nullptr)
         {
-            const char* sosCommand = m_command;
-            if (sosCommand == nullptr) 
-            {
-                if (arguments == nullptr || *arguments == nullptr) {
-                    sosCommand = "Help";
-                }
-                else
-                {
-                    sosCommand = *arguments++;
-                }
-            }
             CommandFunc commandFunc = (CommandFunc)dlsym(g_sosHandle, sosCommand);
             if (commandFunc)
             {
@@ -149,16 +155,16 @@ bool
 sosCommandInitialize(lldb::SBDebugger debugger)
 {
     g_services->AddCommand("sos", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
-    g_services->AddCommand("ext", new sosCommand("ext"), "Execute extension command. See 'soshelp' for more details. ext <command-name> <args>");
+    g_services->AddCommand("ext", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. ext <command-name> <args>");
     g_services->AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
-    g_services->AddCommand("clrmodules", new sosCommand("clrmodules"), "Lists the managed modules in the process.");
+    g_services->AddManagedCommand("clrmodules", "Lists the managed modules in the process.");
     g_services->AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     g_services->AddCommand("clrthreads", new sosCommand("Threads"), "List the managed threads running.");
     g_services->AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
     g_services->AddCommand("dbgout", new sosCommand("dbgout"), "Enable/disable (-off) internal SOS logging.");
     g_services->AddCommand("dumpalc", new sosCommand("DumpALC"), "Displays details about a collectible AssemblyLoadContext to which the specified object is loaded.");
     g_services->AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");
-    g_services->AddCommand("dumpasync", new sosCommand("DumpAsync"), "Displays information about async \"stacks\" on the garbage-collected heap.");
+    g_services->AddManagedCommand("dumpasync", "Displays information about async \"stacks\" on the garbage-collected heap.");
     g_services->AddCommand("dumpassembly", new sosCommand("DumpAssembly"), "Displays details about an assembly.");
     g_services->AddCommand("dumpclass", new sosCommand("DumpClass"), "Displays information about a EE class structure at the specified address.");
     g_services->AddCommand("dumpdelegate", new sosCommand("DumpDelegate"), "Displays information about a delegate.");
@@ -198,20 +204,20 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("histstats", new sosCommand("HistStats"), "Displays stress log stats.");
     g_services->AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
     g_services->AddCommand("listnearobj", new sosCommand("ListNearObj"), "displays the object preceeding and succeeding the address passed.");
-    g_services->AddCommand("loadsymbols", new sosCommand("SetSymbolServer", "-loadsymbols"), "Load the .NET Core native module symbols.");
-    g_services->AddCommand("logging", new sosCommand("logging"), "Enable/disable internal SOS logging.");
+    g_services->AddManagedCommand("loadsymbols", "Load the .NET Core native module symbols.");
+    g_services->AddManagedCommand("logging", "Enable/disable internal SOS logging.");
     g_services->AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
     g_services->AddCommand("objsize", new sosCommand("ObjSize"), "Displays the size of the specified object.");
-    g_services->AddCommand("pe", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
     g_services->AddCommand("pathto", new sosCommand("PathTo"), "Displays the GC path from <root> to <target>.");
+    g_services->AddCommand("pe", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
+    g_services->AddCommand("printexception", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
     g_services->AddCommand("runtimes", new sosCommand("runtimes"), "List the runtimes in the target or change the default runtime.");
     g_services->AddCommand("stoponcatch", new sosCommand("StopOnCatch"), "Debuggee will break the next time a managed exception is caught during execution");
     g_services->AddCommand("setclrpath", new sosCommand("SetClrPath"), "Set the path to load the runtime DAC/DBI files.");
-    g_services->AddCommand("setsymbolserver", new sosCommand("SetSymbolServer"), "Enables the symbol server support ");
-    g_services->AddCommand("sympath", new sosCommand("SetSymbolServer", "-sympath"), "Add server, cache and directory paths in the Windows symbol path format.");
+    g_services->AddManagedCommand("setsymbolserver", "Enables the symbol server support ");
     g_services->AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
-    g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
     g_services->AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
+    g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
     g_services->AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");

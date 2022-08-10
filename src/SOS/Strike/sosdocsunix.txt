@@ -2227,8 +2227,7 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 
 COMMAND: setsymbolserver.
 COMMAND: loadsymbols.
-COMMAND: sympath.
-SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [-sympath <windows-symbol-path>] [<symbol-server-URL>]
+SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -disable - Disable symbol download support.
@@ -2236,7 +2235,6 @@ SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-
 -timeout - Specify the symbol server timeout in minutes
 -pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is $HOME/.dotnet/symbolcache if not specified.
--sympath - Add server, cache and directory paths in the Windows symbol path format.
 -loadsymbols - Attempts to download the native .NET Core symbols for the runtime
 <symbol-server-URL> - Symbol server URL.
 
@@ -2259,10 +2257,6 @@ To add a directory to search for symbols:
 
 This command can be used so the module/symbol file structure does not have to match the machine 
 file structure that the core dump was generated.
-
-The "sympath" option/command alias allows Windows symbol paths to be parsed:
-
-    (lldb) sympath "/home/mikem/localsymbols;srv*/home/mikem/symbolcache*https://msdl.microsoft.com/download/symbols".
 
 To clear the default cache run "rm -r $HOME/.dotnet/symbolcache" in a command shell.
 
