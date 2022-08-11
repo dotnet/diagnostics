@@ -202,13 +202,13 @@ ENDIF:NETCORE_OR_DOTNETDUMP
 
 # Verify DumpStack works
 SOSCOMMAND:DumpStack
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
 # Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+)
 
