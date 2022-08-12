@@ -156,13 +156,13 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 
 # 9) Verify DumpStack works
 SOSCOMMAND:DumpStack
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
 # 10) Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\)\s+
 
