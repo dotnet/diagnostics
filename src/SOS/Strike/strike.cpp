@@ -8009,6 +8009,7 @@ DECLARE_API(ThreadPool)
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
+    BOOL mustBePortableThreadPool = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -8025,7 +8026,12 @@ DECLARE_API(ThreadPool)
     EnableDMLHolder dmlHolder(dml);
 
     DacpThreadpoolData threadpool;
-    if ((Status = threadpool.Request(g_sos)) != S_OK)
+    Status = threadpool.Request(g_sos);
+    if (Status == E_NOTIMPL)
+    {
+        mustBePortableThreadPool = TRUE;
+    }
+    else if (Status != S_OK)
     {
         ExtOut("    %s\n", "Failed to request ThreadpoolMgr information");
         return FAILED(Status) ? Status : E_FAIL;
@@ -8055,19 +8061,22 @@ DECLARE_API(ThreadPool)
     int portableTpHcLogEntry_lastHistoryMeanOffset = 0;
     do // while (false)
     {
-        // Determine if the portable thread pool is enabled
-        if (FAILED(
+        if (!mustBePortableThreadPool)
+        {
+            // Determine if the portable thread pool is enabled
+            if (FAILED(
                 GetNonSharedStaticFieldValueFromName(
                     &ui64Value,
                     corelibModule,
                     "System.Threading.ThreadPool",
                     W("UsePortableThreadPool"),
                     ELEMENT_TYPE_BOOLEAN)) ||
-            ui64Value == 0)
-        {
-            // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
-            // is not being used.
-            break;
+                ui64Value == 0)
+            {
+                // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+                // is not being used.
+                break;
+            }
         }
 
         // Get the thread pool instance
