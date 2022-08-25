@@ -757,8 +757,10 @@ exit:
 // IDebugDataSpaces
 //----------------------------------------------------------------------------
 
+#ifndef PAGE_SIZE 
 #define PAGE_SIZE 0x1000
-#define PAGE_MASK (~(PAGE_SIZE-1)) 
+#endif
+#define PAGE_MASK (~(PAGE_SIZE-1))
 
 HRESULT 
 LLDBServices::ReadVirtual(
