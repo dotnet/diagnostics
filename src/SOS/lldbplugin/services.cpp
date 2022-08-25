@@ -757,15 +757,28 @@ exit:
 // IDebugDataSpaces
 //----------------------------------------------------------------------------
 
+#define PAGE_SIZE 0x1000
+#define PAGE_MASK (~(PAGE_SIZE-1)) 
+
 HRESULT 
 LLDBServices::ReadVirtual(
     ULONG64 offset,
     PVOID buffer,
     ULONG bufferSize,
-    PULONG bytesRead)
+    PULONG pbytesRead)
 {
     lldb::SBError error;
-    size_t read = 0;
+    size_t bytesRead = 0;
+    ULONG64 page;
+
+    if (bufferSize == 0)
+    {
+        if (pbytesRead)
+        {
+            *pbytesRead = 0;
+        }
+        return S_OK;
+    }
 
     // lldb doesn't expect sign-extended address
     offset = CONVERT_FROM_SIGN_EXTENDED(offset);
@@ -776,9 +789,41 @@ LLDBServices::ReadVirtual(
         goto exit;
     }
 
-    read = process.ReadMemory(offset, buffer, bufferSize, error);
+    // Try the full read and return if successful
+    bytesRead = process.ReadMemory(offset, buffer, bufferSize, error);
+    if (error.Success())
+    {
+        goto exit;
+    }
 
-    if (!error.Success())
+    // As it turns out the lldb ReadMemory API doesn't do partial reads and the SOS
+    // caching depends on that behavior. Round up to the next page boundry and attempt
+    // to read up to the page boundries.
+    page = (offset + PAGE_SIZE - 1) & PAGE_MASK;
+
+    while (bufferSize > 0)
+    {
+        size_t size = page - offset;
+        if (size > bufferSize)
+        {
+            size = bufferSize;
+        }
+        size_t read = process.ReadMemory(offset, buffer, size, error);
+
+        bytesRead += read;
+        offset += read;
+        buffer = (BYTE*)buffer + read;
+        bufferSize -= read;
+        page += PAGE_SIZE;
+
+        if (!error.Success())
+        {
+            break;
+        }
+    }
+
+    // If the read isn't complete, try reading directly from native modules in the address range.
+    if (bufferSize > 0)
     {
         lldb::SBTarget target = process.GetTarget();
         if (!target.IsValid())
@@ -787,8 +832,7 @@ LLDBServices::ReadVirtual(
         }
 
         int numModules = target.GetNumModules();
-        bool found = false;
-        for (int i = 0; !found && i < numModules; i++)
+        for (int i = 0; i < numModules; i++)
         {
             lldb::SBModule module = target.GetModuleAtIndex(i);
             int numSections = module.GetNumSections();
@@ -803,9 +847,8 @@ LLDBServices::ReadVirtual(
                     lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
                     if (sectionData.IsValid())
                     {
-                        read = sectionData.ReadRawData(error, 0, buffer, bufferSize);
-                        found = true;
-                        break;
+                        bytesRead += sectionData.ReadRawData(error, 0, buffer, bufferSize);
+                        goto exit;
                     }
                 }
             }
@@ -813,11 +856,11 @@ LLDBServices::ReadVirtual(
     }
 
 exit:
-    if (bytesRead)
+    if (pbytesRead)
     {
-        *bytesRead = read;
+        *pbytesRead = bytesRead;
     }
-    return error.Success() || (read != 0) ? S_OK : E_FAIL;
+    return bytesRead > 0 ? S_OK : E_FAIL;
 }
 
 HRESULT 

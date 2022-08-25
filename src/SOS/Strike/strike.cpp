@@ -3956,6 +3956,12 @@ DECLARE_API(DumpRuntimeTypes)
            "Address", "Domain", "MT");
     ExtOut("------------------------------------------------------------------------------\n");
 
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to build snapshot of the garbage collector state\n");
+        return E_FAIL;
+    }
+
     PrintRuntimeTypeArgs pargs;
     ZeroMemory(&pargs, sizeof(PrintRuntimeTypeArgs));
 
