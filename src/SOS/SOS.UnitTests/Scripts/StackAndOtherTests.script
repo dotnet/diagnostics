@@ -198,6 +198,7 @@ ENDIF:NETCORE_OR_DOTNETDUMP
 
 # Issue: https://github.com/dotnet/diagnostics/issues/2947
 !IFDEF:DOTNETDUMP
+!IFDEF:ARM64
 !IFDEF:ARM
 
 # Verify DumpStack works
@@ -218,6 +219,7 @@ VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
 ENDIF:ARM
+ENDIF:ARM64
 ENDIF:DOTNETDUMP
 
 # Verify that IP2MD works (uses IP from ClrStack)

@@ -20,19 +20,11 @@
 #define InvalidChecksum     0xFFFFFFFF;
 
 #ifndef PAGE_SIZE 
-#if (defined(__arm__) || defined(__aarch64__) || defined(__loongarch64))
-#define PAGE_SIZE g_pageSize
-#else
 #define PAGE_SIZE 0x1000
-#endif
 #endif
 
 #undef PAGE_MASK 
 #define PAGE_MASK (~(PAGE_SIZE-1))
-
-#if defined(__arm__) || defined(__aarch64__) || defined(__loongarch64)
-long g_pageSize = 0;
-#endif
 
 char *g_coreclrDirectory = nullptr;
 char *g_pluginModuleDirectory = nullptr;
@@ -47,11 +39,6 @@ LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_processId(0),
     m_threadInfoInitialized(false)
 {
-    // Initialize PAGE_SIZE
-#if defined(__arm__) || defined(__aarch64__) || defined(__loongarch64)
-    g_pageSize = sysconf(_SC_PAGESIZE);
-#endif
-
     ClearCache();
 
     lldb::SBProcess process = GetCurrentProcess();

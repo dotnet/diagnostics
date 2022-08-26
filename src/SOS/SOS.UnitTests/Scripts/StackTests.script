@@ -152,6 +152,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 
 # Issue: https://github.com/dotnet/diagnostics/issues/2947
 !IFDEF:DOTNETDUMP
+!IFDEF:ARM64
 !IFDEF:ARM
 
 # 9) Verify DumpStack works
@@ -172,4 +173,5 @@ VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
 ENDIF:ARM
+ENDIF:ARM64
 ENDIF:DOTNETDUMP
