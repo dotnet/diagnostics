@@ -19,6 +19,21 @@
 #define InvalidTimeStamp    0xFFFFFFFE;
 #define InvalidChecksum     0xFFFFFFFF;
 
+#ifndef PAGE_SIZE 
+#if (defined(__arm__) || defined(__aarch64__) || defined(__loongarch64))
+#define PAGE_SIZE g_pageSize
+#else
+#define PAGE_SIZE 0x1000
+#endif
+#endif
+
+#undef PAGE_MASK 
+#define PAGE_MASK (~(PAGE_SIZE-1))
+
+#if defined(__arm__) || defined(__aarch64__) || defined(__loongarch64)
+long g_pageSize = 0;
+#endif
+
 char *g_coreclrDirectory = nullptr;
 char *g_pluginModuleDirectory = nullptr;
 
@@ -32,6 +47,11 @@ LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_processId(0),
     m_threadInfoInitialized(false)
 {
+    // Initialize PAGE_SIZE
+#if defined(__arm__) || defined(__aarch64__) || defined(__loongarch64)
+    g_pageSize = sysconf(_SC_PAGESIZE);
+#endif
+
     ClearCache();
 
     lldb::SBProcess process = GetCurrentProcess();
@@ -432,7 +452,7 @@ HRESULT
 LLDBServices::GetPageSize(
     PULONG size)
 {
-    *size = 4096;
+    *size = PAGE_SIZE;
     return S_OK;
 }
 
@@ -757,11 +777,6 @@ exit:
 // IDebugDataSpaces
 //----------------------------------------------------------------------------
 
-#ifndef PAGE_SIZE 
-#define PAGE_SIZE 0x1000
-#endif
-#define PAGE_MASK (~(PAGE_SIZE-1))
-
 HRESULT 
 LLDBServices::ReadVirtual(
     ULONG64 offset,
@@ -771,8 +786,9 @@ LLDBServices::ReadVirtual(
 {
     lldb::SBError error;
     size_t bytesRead = 0;
-    ULONG64 page;
+    ULONG64 nextPageStart;
 
+    // Reading 0 bytes must succeed
     if (bufferSize == 0)
     {
         if (pbytesRead)
@@ -801,11 +817,11 @@ LLDBServices::ReadVirtual(
     // As it turns out the lldb ReadMemory API doesn't do partial reads and the SOS
     // caching depends on that behavior. Round up to the next page boundry and attempt
     // to read up to the page boundries.
-    page = (offset + PAGE_SIZE - 1) & PAGE_MASK;
+    nextPageStart = (offset + PAGE_SIZE - 1) & PAGE_MASK;
 
     while (bufferSize > 0)
     {
-        size_t size = page - offset;
+        size_t size = nextPageStart - offset;
         if (size > bufferSize)
         {
             size = bufferSize;
@@ -816,7 +832,7 @@ LLDBServices::ReadVirtual(
         offset += read;
         buffer = (BYTE*)buffer + read;
         bufferSize -= read;
-        page += PAGE_SIZE;
+        nextPageStart += PAGE_SIZE;
 
         if (!error.Success())
         {
