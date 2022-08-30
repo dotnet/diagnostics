@@ -1173,9 +1173,12 @@ GetTargetCLRMetrics(
                 pClrInfo->DacSizeOfImage = pDebugResource->dwDacSizeOfImage;
                 return true;
             });
-            if (!pedecoder.EnumerateWin32Resources(W("CLRDEBUGINFO"), MAKEINTRESOURCEW(10), callback, pClrInfoOut))
+            if (!pedecoder.EnumerateWin32Resources(CLRDEBUGINFO_RESOURCE_NAME, MAKEINTRESOURCEW(10), callback, pClrInfoOut) || !pClrInfoOut->IsValid())
             {
-                return E_FAIL;
+                if (!pedecoder.EnumerateWin32Resources(W("CLRDEBUGINFO"), MAKEINTRESOURCEW(10), callback, pClrInfoOut) || !pClrInfoOut->IsValid())
+                {
+                    return E_FAIL;
+                }
             }
         }
         else
