@@ -518,7 +518,7 @@ void GCPrintSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_allocated_si
         dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()].start_segment;
         total_allocated_size = 0;
         total_committed_size = 0;
-        // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+
         while (dwAddrSeg != (DWORD_PTR)heap.generation_table[0].start_segment)
         {
             if (IsInterrupt())
@@ -567,7 +567,6 @@ void GCPrintLargeHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_all
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration()+1].start_segment;
 
     // total_size = 0;
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
     while (dwAddrSeg != NULL)
     {
         if (IsInterrupt())
@@ -598,7 +597,6 @@ void GCPrintPinnedHeapSegmentInfo(const GCHeapDetails &heap, DWORD_PTR &total_al
     DacpHeapSegmentData segment;
     dwAddrSeg = (DWORD_PTR)heap.generation_table[GetMaxGeneration() + 2].start_segment;
 
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
     while (dwAddrSeg != NULL)
     {
         if (IsInterrupt())
@@ -689,7 +687,6 @@ BOOL GCObjInSegment(TADDR taddrObj, const GCHeapDetails &heap,
         {
             taddrSeg = (TADDR)heap.generation_table[gen_num].start_segment;
 
-            // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
             while (taddrSeg != NULL)
             {
                 if (IsInterrupt())
@@ -715,7 +712,7 @@ BOOL GCObjInSegment(TADDR taddrObj, const GCHeapDetails &heap,
     else
     {
         taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
-        // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
+
         while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
         {
             if (IsInterrupt())
@@ -765,7 +762,6 @@ BOOL GCObjInLargeSegment(TADDR taddrObj, const GCHeapDetails &heap, TADDR_SEGINF
     DacpHeapSegmentData dacpSeg;
     taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()+1].start_segment;
 
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
     while (taddrSeg != NULL)
     {
         if (IsInterrupt())
@@ -798,7 +794,6 @@ BOOL GCObjInPinnedObjectSegment(TADDR taddrObj, const GCHeapDetails &heap, TADDR
     DacpHeapSegmentData dacpSeg;
     taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration() + 2].start_segment;
 
-    // the loop below will terminate, because we retrieved at most nMaxHeapSegmentCount segments
     while (taddrSeg != NULL)
     {
         if (IsInterrupt())
@@ -1921,12 +1916,6 @@ BOOL GCHeapSnapshot::AddSegments(const GCHeapDetails& details)
                 ExtOut("Error requesting heap segment %p\n", SOS_PTR(AddrSeg));
                 return FALSE;
             }
-            if (n++ > nMaxHeapSegmentCount && !details.has_regions) // that would be insane
-            {
-                ExtOut("More than %d heap segments, there must be an error\n", nMaxHeapSegmentCount);
-                return FALSE;
-            }
-
             // add the new segment to the array of segments. This will expand the array if necessary
             if (!m_segments.AddSegment(&segment))
             {

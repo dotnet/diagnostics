@@ -30,7 +30,7 @@ EEHeap
 EEVersion
 EEStack
 EHInfo
-enummemory
+enummem
 FinalizeQueue
 FindAppDomain
 FindRoots

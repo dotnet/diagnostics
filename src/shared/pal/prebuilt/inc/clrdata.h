@@ -1,4 +1,5 @@
-
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
@@ -100,11 +101,11 @@ typedef interface ICLRDataEnumMemoryRegionsCallback2 ICLRDataEnumMemoryRegionsCa
 #endif 	/* __ICLRDataEnumMemoryRegionsCallback2_FWD_DEFINED__ */
 
 
-#ifndef __ICLRDataEnumMemoryRegionsLoggingCallback_FWD_DEFINED__
-#define __ICLRDataEnumMemoryRegionsLoggingCallback_FWD_DEFINED__
-typedef interface ICLRDataEnumMemoryRegionsLoggingCallback ICLRDataEnumMemoryRegionsLoggingCallback;
+#ifndef __ICLRDataLoggingCallback_FWD_DEFINED__
+#define __ICLRDataLoggingCallback_FWD_DEFINED__
+typedef interface ICLRDataLoggingCallback ICLRDataLoggingCallback;
 
-#endif 	/* __ICLRDataEnumMemoryRegionsLoggingCallback_FWD_DEFINED__ */
+#endif 	/* __ICLRDataLoggingCallback_FWD_DEFINED__ */
 
 
 #ifndef __ICLRDataEnumMemoryRegions_FWD_DEFINED__
@@ -1205,19 +1206,19 @@ EXTERN_C const IID IID_ICLRDataEnumMemoryRegionsCallback2;
 #endif 	/* __ICLRDataEnumMemoryRegionsCallback2_INTERFACE_DEFINED__ */
 
 
-#ifndef __ICLRDataEnumMemoryRegionsLoggingCallback_INTERFACE_DEFINED__
-#define __ICLRDataEnumMemoryRegionsLoggingCallback_INTERFACE_DEFINED__
+#ifndef __ICLRDataLoggingCallback_INTERFACE_DEFINED__
+#define __ICLRDataLoggingCallback_INTERFACE_DEFINED__
 
-/* interface ICLRDataEnumMemoryRegionsLoggingCallback */
+/* interface ICLRDataLoggingCallback */
 /* [uuid][local][object] */ 
 
 
-EXTERN_C const IID IID_ICLRDataEnumMemoryRegionsLoggingCallback;
+EXTERN_C const IID IID_ICLRDataLoggingCallback;
 
 #if defined(__cplusplus) && !defined(CINTERFACE)
     
     MIDL_INTERFACE("F315248D-8B79-49DB-B184-37426559F703")
-    ICLRDataEnumMemoryRegionsLoggingCallback : public IUnknown
+    ICLRDataLoggingCallback : public IUnknown
     {
     public:
         virtual HRESULT STDMETHODCALLTYPE LogMessage( 
@@ -1228,36 +1229,36 @@ EXTERN_C const IID IID_ICLRDataEnumMemoryRegionsLoggingCallback;
     
 #else 	/* C style interface */
 
-    typedef struct ICLRDataEnumMemoryRegionsLoggingCallbackVtbl
+    typedef struct ICLRDataLoggingCallbackVtbl
     {
         BEGIN_INTERFACE
         
         DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
-            ICLRDataEnumMemoryRegionsLoggingCallback * This,
+            ICLRDataLoggingCallback * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
         DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
-            ICLRDataEnumMemoryRegionsLoggingCallback * This);
+            ICLRDataLoggingCallback * This);
         
         DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
-            ICLRDataEnumMemoryRegionsLoggingCallback * This);
+            ICLRDataLoggingCallback * This);
         
-        DECLSPEC_XFGVIRT(ICLRDataEnumMemoryRegionsLoggingCallback, LogMessage)
+        DECLSPEC_XFGVIRT(ICLRDataLoggingCallback, LogMessage)
         HRESULT ( STDMETHODCALLTYPE *LogMessage )( 
-            ICLRDataEnumMemoryRegionsLoggingCallback * This,
+            ICLRDataLoggingCallback * This,
             /* [in] */ LPCSTR message);
         
         END_INTERFACE
-    } ICLRDataEnumMemoryRegionsLoggingCallbackVtbl;
+    } ICLRDataLoggingCallbackVtbl;
 
-    interface ICLRDataEnumMemoryRegionsLoggingCallback
+    interface ICLRDataLoggingCallback
     {
-        CONST_VTBL struct ICLRDataEnumMemoryRegionsLoggingCallbackVtbl *lpVtbl;
+        CONST_VTBL struct ICLRDataLoggingCallbackVtbl *lpVtbl;
     };
 
     
@@ -1265,17 +1266,17 @@ EXTERN_C const IID IID_ICLRDataEnumMemoryRegionsLoggingCallback;
 #ifdef COBJMACROS
 
 
-#define ICLRDataEnumMemoryRegionsLoggingCallback_QueryInterface(This,riid,ppvObject)	\
+#define ICLRDataLoggingCallback_QueryInterface(This,riid,ppvObject)	\
     ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
 
-#define ICLRDataEnumMemoryRegionsLoggingCallback_AddRef(This)	\
+#define ICLRDataLoggingCallback_AddRef(This)	\
     ( (This)->lpVtbl -> AddRef(This) ) 
 
-#define ICLRDataEnumMemoryRegionsLoggingCallback_Release(This)	\
+#define ICLRDataLoggingCallback_Release(This)	\
     ( (This)->lpVtbl -> Release(This) ) 
 
 
-#define ICLRDataEnumMemoryRegionsLoggingCallback_LogMessage(This,message)	\
+#define ICLRDataLoggingCallback_LogMessage(This,message)	\
     ( (This)->lpVtbl -> LogMessage(This,message) ) 
 
 #endif /* COBJMACROS */
@@ -1286,7 +1287,7 @@ EXTERN_C const IID IID_ICLRDataEnumMemoryRegionsLoggingCallback;
 
 
 
-#endif 	/* __ICLRDataEnumMemoryRegionsLoggingCallback_INTERFACE_DEFINED__ */
+#endif 	/* __ICLRDataLoggingCallback_INTERFACE_DEFINED__ */
 
 
 /* interface __MIDL_itf_clrdata_0000_0008 */
@@ -1298,7 +1299,8 @@ enum CLRDataEnumMemoryFlags
         CLRDATA_ENUM_MEM_DEFAULT	= 0,
         CLRDATA_ENUM_MEM_MINI	= CLRDATA_ENUM_MEM_DEFAULT,
         CLRDATA_ENUM_MEM_HEAP	= 0x1,
-        CLRDATA_ENUM_MEM_TRIAGE	= 0x2
+        CLRDATA_ENUM_MEM_TRIAGE	= 0x2,
+        CLRDATA_ENUM_MEM_HEAP2	= 0x3
     } 	CLRDataEnumMemoryFlags;
 
 

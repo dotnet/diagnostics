@@ -30,7 +30,7 @@ namespace SOS.Extensions
         /// <param name="hostServices">The instance of the host services for the native code to use</param>
         /// <returns></returns>
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate HResult InitializeCallbackDelegate(
+        private delegate int InitializeCallbackDelegate(
             IntPtr hostServices);
 
         internal IntPtr IHostServices { get; }
@@ -178,7 +178,7 @@ namespace SOS.Extensions
 
         #region IHostServices
 
-        private HResult GetHost(
+        private int GetHost(
             IntPtr self,
             out IntPtr host)
         {
@@ -187,7 +187,7 @@ namespace SOS.Extensions
             return HResult.S_OK;
         }
 
-        private HResult RegisterDebuggerServices(
+        private int RegisterDebuggerServices(
             IntPtr self,
             IntPtr iunk)
         {
@@ -258,7 +258,7 @@ namespace SOS.Extensions
             return HResult.S_OK;
         }
 
-        private HResult CreateTarget(
+        private int CreateTarget(
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
@@ -280,7 +280,7 @@ namespace SOS.Extensions
             return HResult.S_OK;
         }
 
-        private HResult UpdateTarget(
+        private int UpdateTarget(
             IntPtr self,
             uint processId)
         {
@@ -324,7 +324,7 @@ namespace SOS.Extensions
             }
         }
 
-        private HResult DispatchCommand(
+        private int DispatchCommand(
             IntPtr self,
             string commandName,
             string commandArguments)
@@ -358,7 +358,7 @@ namespace SOS.Extensions
             return HResult.E_FAIL;
         }
 
-        private HResult DisplayHelp(
+        private int DisplayHelp(
             IntPtr self,
             string commandName)
         {
@@ -411,21 +411,21 @@ namespace SOS.Extensions
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult GetHostDelegate(
+        private delegate int GetHostDelegate(
             [In] IntPtr self,
             [Out] out IntPtr host);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult RegisterDebuggerServicesDelegate(
+        private delegate int RegisterDebuggerServicesDelegate(
             [In] IntPtr self,
             [In] IntPtr iunk);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult CreateTargetDelegate(
+        private delegate int CreateTargetDelegate(
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult UpdateTargetDelegate(
+        private delegate int UpdateTargetDelegate(
             [In] IntPtr self,
             [In] uint processId);
 
@@ -438,13 +438,13 @@ namespace SOS.Extensions
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult DispatchCommandDelegate(
+        private delegate int DispatchCommandDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandName,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandArguments);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult DisplayHelpDelegate(
+        private delegate int DisplayHelpDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandName);
 

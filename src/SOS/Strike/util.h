@@ -123,14 +123,10 @@ class MethodTable;
 #define HNDTYPE_SIZEDREF                        (8)
 #define HNDTYPE_WEAK_WINRT                      (9)
 
-// Anything above this we consider abnormal and stop processing heap information
-const int nMaxHeapSegmentCount = 1000;
-
 class BaseObject
 {
     MethodTable    *m_pMethTab;
 };
-
 
 const BYTE gElementTypeInfo[] = {
 #define TYPEINFO(e,ns,c,s,g,ia,ip,if,im,gv)    s,
