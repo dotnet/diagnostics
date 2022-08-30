@@ -202,6 +202,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+            }
             var outputStream = new MemoryStream();
 
             await using (var testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
