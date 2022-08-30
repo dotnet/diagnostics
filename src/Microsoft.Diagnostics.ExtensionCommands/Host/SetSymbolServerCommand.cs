@@ -10,7 +10,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         Name = "setsymbolserver",
         Aliases = new string[] { "SetSymbolServer" },
         Help = "Enable and set symbol server support for symbols and module download",
-        Platform = CommandPlatform.Global)]
+        Flags = CommandFlags.Global)]
+    [Command(
+        Name = "loadsymbols",
+        DefaultOptions = "--loadsymbols",
+        Help = "Load symbols for all modules",
+        Flags = CommandFlags.Global)]
     public class SetSymbolServerCommand : CommandBase
     {
         public ISymbolService SymbolService { get; set; }

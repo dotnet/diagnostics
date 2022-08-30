@@ -323,7 +323,7 @@ stages:
             condition: succeeded()
             pool:
               name: NetCore1ESPool-Svc-Internal
-              demands: ImageOverride -equals Build.Windows.10.Amd64.VS2019
+              demands: ImageOverride -equals windows.vs2022.amd64
             enablePublishUsingPipelines: true
             enableMicrobuild: true
             artifacts:
@@ -376,7 +376,7 @@ stages:
             publishUsingPipelines: true
             pool:
               name: NetCore1ESPool-Svc-Internal
-              demands: ImageOverride -equals Build.windows.10.amd64.vs2019
+              demands: ImageOverride -equals windows.vs2022.amd64
 
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - template: /eng/common/templates/post-build/post-build.yml

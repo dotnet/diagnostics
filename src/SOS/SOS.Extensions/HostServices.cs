@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SOS.Extensions
 {
@@ -128,7 +129,7 @@ namespace SOS.Extensions
             builder.AddMethod(new FlushTargetDelegate(FlushTarget));
             builder.AddMethod(new DestroyTargetDelegate(DestroyTarget));
             builder.AddMethod(new DispatchCommandDelegate(DispatchCommand));
-            builder.AddMethod(new DispatchCommandDelegate(DisplayHelp));
+            builder.AddMethod(new DisplayHelpDelegate(DisplayHelp));
             builder.AddMethod(new UninitializeDelegate(Uninitialize));
             IHostServices = builder.Complete();
 
@@ -325,15 +326,30 @@ namespace SOS.Extensions
 
         private HResult DispatchCommand(
             IntPtr self,
-            string commandLine)
+            string commandName,
+            string commandArguments)
         {
-            if (commandLine == null)
+            if (string.IsNullOrWhiteSpace(commandName))
             {
                 return HResult.E_INVALIDARG;
             }
+            if (!_commandService.IsCommand(commandName))
+            {
+                return HResult.E_NOTIMPL;
+            }
             try
             {
-                return _commandService.Execute(commandLine, _contextService.Services);
+                StringBuilder sb = new();
+                sb.Append(commandName);
+                if (!string.IsNullOrWhiteSpace(commandArguments))
+                {
+                    sb.Append(' ');
+                    sb.Append(commandArguments);
+                }
+                if (_commandService.Execute(sb.ToString(), _contextService.Services))
+                {
+                    return HResult.S_OK;
+                }
             }
             catch (Exception ex)
             {
@@ -344,11 +360,11 @@ namespace SOS.Extensions
 
         private HResult DisplayHelp(
             IntPtr self,
-            string command)
+            string commandName)
         {
             try
             {
-                if (!_commandService.DisplayHelp(command, _contextService.Services))
+                if (!_commandService.DisplayHelp(commandName, _contextService.Services))
                 {
                     return HResult.E_INVALIDARG;
                 }
@@ -424,12 +440,13 @@ namespace SOS.Extensions
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate HResult DispatchCommandDelegate(
             [In] IntPtr self,
-            [In, MarshalAs(UnmanagedType.LPStr)] string commandLine);
+            [In, MarshalAs(UnmanagedType.LPStr)] string commandName,
+            [In, MarshalAs(UnmanagedType.LPStr)] string commandArguments);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate HResult DisplayHelpDelegate(
             [In] IntPtr self,
-            [In, MarshalAs(UnmanagedType.LPStr)] string command);
+            [In, MarshalAs(UnmanagedType.LPStr)] string commandName);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate void UninitializeDelegate(

@@ -12,7 +12,6 @@
 #include "safemath.h"
 #include "releaseholder.h"
 
-
 // This is the increment for the segment lookup data
 const int nSegLookupStgIncrement = 100;
 
@@ -849,7 +848,6 @@ BOOL GCObjInHeap(TADDR taddrObj, const GCHeapDetails &heap, TADDR_SEGINFO& rngSe
     return FALSE;
 }
 
-#ifndef FEATURE_PAL
 // this function updates genUsage to reflect statistics from the range defined by [start, end)
 void GCGenUsageStats(TADDR start, TADDR alloc_end, TADDR commit_end, const std::unordered_set<TADDR> &liveObjs,
     const GCHeapDetails &heap, BOOL bLarge, BOOL bPinned, const AllocInfo *pAllocInfo, GenUsageStat *genUsage)
@@ -943,7 +941,6 @@ void GCGenUsageStats(TADDR start, TADDR alloc_end, TADDR commit_end, const std::
         }
     }
 }
-#endif // !FEATURE_PAL
 
 BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsageStat *hpUsage)
 {
@@ -977,9 +974,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
                     ExtErr("Error requesting heap segment %p\n", SOS_PTR(taddrSeg));
                     return FALSE;
                 }
-#ifndef FEATURE_PAL
                 GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.highAllocMark, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
-#endif
                 taddrSeg = (TADDR)dacpSeg.next;
             }
         }
@@ -989,7 +984,6 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
         // 1. Start with small object segments
         taddrSeg = (TADDR)heap.generation_table[GetMaxGeneration()].start_segment;
 
-#ifndef FEATURE_PAL
         // 1a. enumerate all non-ephemeral segments
         while (taddrSeg != (TADDR)heap.generation_table[0].start_segment)
         {
@@ -1004,7 +998,6 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
             GCGenUsageStats((TADDR)dacpSeg.mem, (TADDR)dacpSeg.allocated, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[2]);
             taddrSeg = (TADDR)dacpSeg.next;
         }
-#endif
 
         // 1b. now handle the ephemeral segment
         if (dacpSeg.Request(g_sos, taddrSeg, heap.original_heap_details) != S_OK)
@@ -1028,9 +1021,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
                 startGen = TO_TADDR(heap.generation_table[n].allocation_start);
             }
 
-#ifndef FEATURE_PAL
             GCGenUsageStats(startGen, endGen, (TADDR)dacpSeg.committed, liveObjs, heap, FALSE, FALSE, &allocInfo, &hpUsage->genUsage[n]);
-#endif
             endGen = startGen;
         }
     }
@@ -1048,9 +1039,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
             return FALSE;
         }
 
-#ifndef FEATURE_PAL
         GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, (TADDR) dacpSeg.committed, liveObjs, heap, TRUE, FALSE, NULL, &hpUsage->genUsage[3]);
-#endif
         taddrSeg = (TADDR)dacpSeg.next;
     }
 
@@ -1069,9 +1058,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
                 return FALSE;
             }
 
-#ifndef FEATURE_PAL
             GCGenUsageStats((TADDR) dacpSeg.mem, (TADDR) dacpSeg.allocated, (TADDR) dacpSeg.committed, liveObjs, heap, FALSE, TRUE, NULL, &hpUsage->genUsage[4]);
-#endif
             taddrSeg = (TADDR)dacpSeg.next;
         }
     }
@@ -1197,7 +1184,7 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
                 SOS_PTR(SegQueueLimit(heapDetails,gen_segment(m))));
         }
     }
-#ifndef FEATURE_PAL
+
     if (bAllReady)
     {
         if (!bShort)
@@ -1210,7 +1197,6 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
 
         PrintNotReachableInRange(rngStart, rngEnd, TRUE, bAllReady ? stat : NULL, bShort);
     }
-#endif
 
     if (!bShort)
     {
@@ -1585,6 +1571,7 @@ BOOL GCHeapTraverse(const GCHeapDetails &heap, AllocInfo* pallocInfo, VISITGCHEA
                 }
 
                 dwAddrCurrObj = (DWORD_PTR)segment.mem;
+                continue;
             }
             else
             {

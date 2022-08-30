@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Symbol server URLs
         /// </summary>
         public const string MsdlSymbolServer = "https://msdl.microsoft.com/download/symbols/";
-        public const string SymwebSymbolServer = "https://symweb.corp.microsoft.com/";
+        public const string SymwebSymbolServer = "https://symweb/";
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
@@ -701,7 +701,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return null;
             }
 
-            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, module.GetSymbolFileName()).SingleOrDefault();
+            string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? module.GetSymbolFileName() : null;
+            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
             if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
@@ -916,15 +917,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
+            
+            sb.AppendLine("Current symbol store settings:");
+            
             ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
             {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
-                    sb.AppendLine($"{httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
+                    sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
                 }
                 else
                 {
-                    sb.AppendLine(symbolStore.ToString());
+                    sb.AppendLine($"-> {symbolStore.ToString()}");
                 }
             });
             return sb.ToString();

@@ -526,7 +526,9 @@ namespace Output
         DML_IL,
         DML_ComWrapperRCW,
         DML_ComWrapperCCW,
-        DML_TaggedMemory
+        DML_TaggedMemory,
+
+        DML_Last
     };
 
     /**********************************************************************\
@@ -656,9 +658,8 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 
 bool IsDMLEnabled();
 
-
 #ifndef SOS_Assert
-#define SOS_Assert(x)
+#define SOS_Assert _ASSERTE
 #endif
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len);

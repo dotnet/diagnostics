@@ -4,14 +4,27 @@
 
 using Microsoft.FileFormats.PE;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
-    {
+    { 
+        /// <summary>
+        /// An empty Version instance.
+        /// </summary>
+        public static readonly Version EmptyVersion = new();
+
+        /// <summary>
+        /// Format a immutable array of bytes into hex (i.e build id).
+        /// </summary>
+        public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
+
         /// <summary>
         /// Combines two hash codes into a single hash code, in an order-dependent manner.
         /// </summary>
@@ -33,25 +46,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
         /// </summary>
-        public static VersionData ToVersionData(this VsFixedFileInfo fileInfo)
+        public static Version ToVersion(this VsFixedFileInfo fileInfo)
         { 
-            return new VersionData(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionRevision, fileInfo.FileVersionBuild);
-        }
-
-        /// <summary>
-        /// Convert from clrmd VersionInfo to DebugServices VersionData
-        /// </summary>
-        public static VersionData ToVersionData(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
-        { 
-            return new VersionData(versionInfo.Major, versionInfo.Minor, versionInfo.Revision, versionInfo.Patch);
-        }
-
-        /// <summary>
-        /// Convert from DebugServices VersionData to clrmd VersionInfo
-        /// </summary>
-        public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionData versionData)
-        { 
-            return new Microsoft.Diagnostics.Runtime.VersionInfo(versionData.Major, versionData.Minor, versionData.Revision, versionData.Patch);
+            return new Version(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionBuild, fileInfo.FileVersionRevision);
         }
 
         /// <summary>
@@ -108,7 +105,68 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceError($"TryOpenFile: {ex.Message}");
                 }
             }
+
             return null;
+        }
+
+        /// <summary>
+        /// Call the constructor of the type and return the instance binding any
+        /// services in the constructor parameters.
+        /// </summary>
+        /// <param name="type">type to create</param>
+        /// <param name="provider">services</param>
+        /// <param name="optional">if true, the service is not required</param>
+        /// <returns>type instance</returns>
+        public static object InvokeConstructor(Type type, IServiceProvider provider, bool optional)
+        {
+            ConstructorInfo constructor = type.GetConstructors().Single();
+            object[] arguments = BuildArguments(constructor, provider, optional);
+            try
+            {
+                return constructor.Invoke(arguments);
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException;
+            }
+        }
+
+        /// <summary>
+        /// Call the method and bind any services in the constructor parameters.
+        /// </summary>
+        /// <param name="method">method to invoke</param>
+        /// <param name="instance">class instance or null if static</param>
+        /// <param name="provider">services</param>
+        /// <param name="optional">if true, the service is not required</param>
+        /// <returns>method return value</returns>
+        public static object Invoke(MethodBase method, object instance, IServiceProvider provider, bool optional)
+        {
+            object[] arguments = BuildArguments(method, provider, optional);
+            try
+            {
+                return method.Invoke(instance, arguments);
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException;
+            }
+        }
+
+        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services, bool optional)
+        {
+            ParameterInfo[] parameters = methodBase.GetParameters();
+            object[] arguments = new object[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                // The parameter will passed as null to allow for "optional" services. The invoked 
+                // method needs to check for possible null parameters.
+                arguments[i] = services.GetService(parameters[i].ParameterType);
+                if (arguments[i] is null && !optional)
+                {
+                    throw new DiagnosticsException($"The {parameters[i].ParameterType} service is required by the {parameters[i].Name} parameter");
+                }
+            }
+            return arguments;
         }
     }
 }

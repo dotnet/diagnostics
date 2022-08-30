@@ -212,7 +212,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             moduleFlags &= ~(Module.Flags.IsPEImage | Module.Flags.IsManaged | Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
 
             // None of the modules that lldb (on either Linux/MacOS) provides are PEs
-            if (Target.Host.HostType != HostType.Lldb)
+            if (size > 0 && Target.Host.HostType != HostType.Lldb)
             {
                 // First try getting the PE info as loaded layout (native Windows DLLs and most managed PEs).
                 peFile = GetPEInfo(isVirtual: true, address, size, out List<PdbFileInfo> pdbs, out Module.Flags flags);
@@ -367,7 +367,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        Trace.TraceError($"GetVersionString: unsupported module {module} or platform {Target.OperatingSystem}");
+                        Trace.TraceError($"GetVersionString: unsupported module {module} on platform {Target.OperatingSystem}");
                     }
                 }
             }

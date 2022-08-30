@@ -56,22 +56,22 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         }
 
         private readonly object _lock = new object();
-        private readonly Dictionary<string, ObservedProvider> providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
+        private readonly Dictionary<string, ObservedProvider> _providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
-        private int maxNameLength = 40; // Allow room for 40 character counter names by default.
+        private int _maxNameLength = 40; // Allow room for 40 character counter names by default.
 
-        private int STATUS_ROW; // Row # of where we print the status of dotnet-counters
-        private int Top_Row;
-        private bool paused = false;
-        private bool initialized = false;
+        private int _statusRow; // Row # of where we print the status of dotnet-counters
+        private int _topRow;
+        private bool _paused = false;
+        private bool _initialized = false;
         private string _errorText = null;
 
-        private int maxRow = -1;
-        private bool useAnsi = false;
+        private int _maxRow = -1;
+        private bool _useAnsi = false;
 
         public ConsoleWriter(bool useAnsi) 
         {
-            this.useAnsi = useAnsi;
+            this._useAnsi = useAnsi;
         }
 
         public void Initialize()
@@ -92,9 +92,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private void SetCursorPosition(int col, int row) 
         {
-            if (this.useAnsi) 
+            if (this._useAnsi) 
             {
-                Console.Write($"\u001b[{row + 1 - Top_Row};{col + 1}H");
+                Console.Write($"\u001b[{row + 1 - _topRow};{col + 1}H");
             }
             else 
             {
@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private void Clear() 
         {
-            if (this.useAnsi) 
+            if (this._useAnsi) 
             {
                 Console.Write($"\u001b[H\u001b[J");
             }
@@ -115,11 +115,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         }
         private void UpdateStatus()
         {
-            SetCursorPosition(0, STATUS_ROW);
+            SetCursorPosition(0, _statusRow);
             Console.Write($"    Status: {GetStatus()}{new string(' ', 40)}"); // Write enough blanks to clear previous status.
         }
 
-        private string GetStatus() => !initialized ? "Waiting for initial payload..." : (paused ? "Paused" : "Running");
+        private string GetStatus() => !_initialized ? "Waiting for initial payload..." : (_paused ? "Paused" : "Running");
 
         /// <summary>Clears display and writes out category and counter name layout.</summary>
         public void AssignRowsAndInitializeDisplay()
@@ -127,9 +127,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Clear();
             
             int row = Console.CursorTop;
-            Top_Row = row;
+            _topRow = row;
             Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
-            Console.WriteLine($"    Status: {GetStatus()}");                STATUS_ROW = row++;
+            Console.WriteLine($"    Status: {GetStatus()}");                _statusRow = row++;
             if (_errorText != null)
             {
                 Console.WriteLine(_errorText);
@@ -137,12 +137,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
             Console.WriteLine();                                            row++; // Blank line.
 
-            foreach (ObservedProvider provider in providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
+            foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
                 Console.WriteLine($"[{provider.Name}]"); row++;
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
-                    string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + maxNameLength);
+                    string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         Console.WriteLine(name);
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
-                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + maxNameLength);
+                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
                             Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                             tagSet.Row = row++;
                         }
@@ -161,17 +161,17 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
             }
 
-            maxRow = Math.Max(maxRow, row);
+            _maxRow = Math.Max(_maxRow, row);
         }
 
         public void ToggleStatus(bool pauseCmdSet)
         {
-            if (paused == pauseCmdSet)
+            if (_paused == pauseCmdSet)
             {
                 return;
             }
 
-            paused = pauseCmdSet;
+            _paused = pauseCmdSet;
             UpdateStatus();
         }
 
@@ -179,9 +179,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             lock (_lock)
             {
-                if (!initialized)
+                if (!_initialized)
                 {
-                    initialized = true;
+                    _initialized = true;
                     AssignRowsAndInitializeDisplay();
                 }
 
@@ -195,9 +195,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 string tags = payload.Tags;
 
                 bool redraw = false;
-                if (!providers.TryGetValue(providerName, out ObservedProvider provider))
+                if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
                 {
-                    providers[providerName] = provider = new ObservedProvider(providerName);
+                    _providers[providerName] = provider = new ObservedProvider(providerName);
                     redraw = true;
                 }
 
@@ -205,7 +205,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 {
                     string displayName = payload.DisplayName;
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
-                    maxNameLength = Math.Max(maxNameLength, displayName.Length);
+                    _maxNameLength = Math.Max(_maxNameLength, displayName.Length);
                     if(tags != null)
                     {
                         counter.LastValue = payload.Value;
@@ -217,7 +217,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 if (tags != null && !counter.TagSets.TryGetValue(tags, out tagSet))
                 {
                     counter.TagSets[tags] = tagSet = new ObservedTagSet(tags);
-                    maxNameLength = Math.Max(maxNameLength, tagSet.DisplayTags.Length);
+                    _maxNameLength = Math.Max(_maxNameLength, tagSet.DisplayTags.Length);
                     tagSet.LastValue = payload.Value;
                     redraw = true;
                 }
@@ -228,8 +228,50 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
 
                 int row = counter.RenderValueInline ? counter.Row : tagSet.Row;
-                SetCursorPosition(Indent + maxNameLength + 1, row);
+                SetCursorPosition(Indent + _maxNameLength + 1, row);
                 Console.Write(FormatValue(payload.Value));
+            }
+        }
+
+        public void CounterStopped(CounterPayload payload)
+        {
+            lock (_lock)
+            {
+                string providerName = payload.ProviderName;
+                string counterName = payload.Name;
+                string tags = payload.Tags;
+
+                if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
+                {
+                    return;
+                }
+
+                if (!provider.Counters.TryGetValue(counterName, out ObservedCounter counter))
+                {
+                    return;
+                }
+
+                ObservedTagSet tagSet = null;
+                if (tags != null)
+                {
+                    if (!counter.TagSets.TryGetValue(tags, out tagSet))
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        counter.TagSets.Remove(tags);
+                        if(counter.TagSets.Count == 0)
+                        {
+                            provider.Counters.Remove(counterName);
+                        }
+                    }
+                }
+                else
+                {
+                    provider.Counters.Remove(counterName);
+                }
+                AssignRowsAndInitializeDisplay();
             }
         }
 
@@ -305,9 +347,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             lock (_lock)
             {
-                if (initialized)
+                if (_initialized)
                 {
-                    var row = maxRow;
+                    var row = _maxRow;
 
                     if (row > -1)
                     {

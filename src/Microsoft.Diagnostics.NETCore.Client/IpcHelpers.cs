@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,7 +10,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string ReadString(byte[] buffer, ref int index)
         {
             // Length of the string of UTF-16 characters
-            int length = (int)BitConverter.ToUInt32(buffer, index);
+            int length = BinaryPrimitives.ReadInt32LittleEndian(new ReadOnlySpan<byte>(buffer, index, 4));
             index += sizeof(UInt32);
 
             int size = (int)length * sizeof(char);

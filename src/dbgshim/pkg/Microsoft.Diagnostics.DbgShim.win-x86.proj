@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <OutputRid>win-x86</OutputRid>
+    <PackageRID>win-x86</PackageRID>
     <PackageArch>x86</PackageArch>
   </PropertyGroup>
   <Import Project="Microsoft.Diagnostics.DbgShim.props" />

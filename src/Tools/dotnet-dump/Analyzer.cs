@@ -58,6 +58,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _commandService.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
             _commandService.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandService, services));
             _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
+            _commandService.AddCommands(typeof(SOSCommand), (services) => new SOSCommand(_commandService, services));
         }
 
         public Task<int> Analyze(FileInfo dump_path, string[] command)

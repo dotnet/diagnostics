@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     ///   only calls to Kill() and property getters invoked within the logging callbacks will be called
     ///   asynchronously.
     /// </remarks>
-    public class ProcessRunner
+    public class ProcessRunner : IDisposable
     {
         // All of the locals might accessed from multiple threads and need to read/written under
         // the _lock. We also use the lock to synchronize property access on the process object.
@@ -232,6 +232,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { lock (_lock) { return _p.ExitCode; } }
         }
 
+        public int ModuleCount
+        {
+            get { lock (_lock) { return _p.Modules.Count; } }
+        }
+
         public void StandardInputWriteLine(string line)
         {
             IProcessLogger[] loggers = null;
@@ -246,6 +251,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 logger.WriteLine(this, line, ProcessStream.StandardIn);
             }
             inputStream.WriteLine(line);
+            inputStream.Flush();
         }
 
         public Task<int> Run()
@@ -260,6 +266,16 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 return _waitForExitTask;
             }
+        }
+
+        public void Dispose()
+        {
+            Process p = null;
+            lock (_lock)
+            {
+                p = _p;
+            }
+            p?.Dispose();
         }
 
         public ProcessRunner Start()

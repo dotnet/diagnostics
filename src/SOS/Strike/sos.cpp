@@ -4,20 +4,8 @@
 
 #include "strike.h"
 #include "util.h"
-
 #include "sos.h"
-
-
-#ifdef _ASSERTE
-#undef _ASSERTE
-#endif
-
-#define _ASSERTE(a) {;}
-
 #include "gcdesc.h"
-
-
-#undef _ASSERTE
 
 namespace sos
 {
@@ -505,7 +493,7 @@ namespace sos
                 int entries = 0;
 
                 if (FAILED(MOVE(entries, mt-sizeof(TADDR))))
-                    Throw<DataRead>("Failed to request number of entries.");
+                    Throw<DataRead>("Failed to request number of entries for %p MT %p", mObject, mt);
 
                 // array of vc?
                 if (entries < 0)

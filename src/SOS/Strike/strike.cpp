@@ -105,6 +105,7 @@
 #include "cordebug.h"
 #include "dacprivate.h"
 #include "corexcep.h"
+#include <dumpcommon.h>
 
 #define  CORHANDLE_MASK 0x1
 #define SWITCHED_OUT_FIBER_OSID 0xbaadf00d;
@@ -1044,7 +1045,6 @@ DECLARE_API(DumpSig)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -1092,7 +1092,6 @@ DECLARE_API(DumpSigElem)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -3940,7 +3939,6 @@ DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
@@ -3958,10 +3956,25 @@ DECLARE_API(DumpRuntimeTypes)
            "Address", "Domain", "MT");
     ExtOut("------------------------------------------------------------------------------\n");
 
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to build snapshot of the garbage collector state\n");
+        return E_FAIL;
+    }
+
     PrintRuntimeTypeArgs pargs;
     ZeroMemory(&pargs, sizeof(PrintRuntimeTypeArgs));
 
-    GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
+    try
+    {
+        GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
+    }
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
+    }
+
     return Status;
 }
 
@@ -4495,7 +4508,6 @@ DECLARE_API(VerifyHeap)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!g_snapshot.Build())
     {
@@ -4538,8 +4550,6 @@ DECLARE_API(VerifyHeap)
         return E_FAIL;
     }
 }
-
-#ifndef FEATURE_PAL
 
 enum failure_get_memory
 {
@@ -4631,9 +4641,6 @@ DECLARE_API(AnalyzeOOM)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-#ifndef FEATURE_PAL
 
     if (!InitializeHeapData ())
     {
@@ -4699,17 +4706,12 @@ DECLARE_API(AnalyzeOOM)
     }
 
     return S_OK;
-#else
-    _ASSERTE(false);
-    return E_FAIL;
-#endif // FEATURE_PAL
 }
 
 DECLARE_API(VerifyObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR  taddrObj = 0;
     TADDR  taddrMT;
@@ -4748,9 +4750,16 @@ DECLARE_API(VerifyObj)
         ExtOut("Unable to build snapshot of the garbage collector state\n");
         goto Exit;
     }
+
+    try
     {
         GCHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
         bValid = VerifyObject(*pheapDetails, taddrObj, taddrMT, objSize, TRUE);
+    }
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
     }
 
 Exit:
@@ -4772,9 +4781,6 @@ DECLARE_API(ListNearObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-#if !defined(FEATURE_PAL)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
@@ -4946,23 +4952,12 @@ DECLARE_API(ListNearObj)
     }
 
     return Status;
-
-#else
-
-    _ASSERTE(false);
-    return E_FAIL;
-
-#endif // FEATURE_PAL
 }
-
 
 DECLARE_API(GCHeapStat)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-#ifndef FEATURE_PAL
 
     BOOL bIncUnreachable = FALSE;
     BOOL dml = FALSE;
@@ -5026,7 +5021,7 @@ DECLARE_API(GCHeapStat)
                     pohUnrootedUsage, "%");
             }
 
-            ExtOut("\nCommitted space:");
+            ExtOut("\nCommitted space:\n");
             ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
                 hpUsage.genUsage[0].committed, hpUsage.genUsage[1].committed,
                 hpUsage.genUsage[2].committed, hpUsage.genUsage[3].committed,
@@ -5066,7 +5061,9 @@ DECLARE_API(GCHeapStat)
         }
 
         // aggregate stats across heaps / generation
-        GenUsageStat genUsageStat[5] = {0, 0, 0, 0, 0};
+        GenUsageStat genUsageStat[5];
+        memset(genUsageStat, 0, sizeof(genUsageStat));
+
         bool hasPoh = false;
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
@@ -5151,16 +5148,7 @@ DECLARE_API(GCHeapStat)
     }
 
     return Status;
-
-#else
-
-    _ASSERTE(false);
-    return E_FAIL;
-
-#endif // FEATURE_PAL
 }
-
-#endif // FEATURE_PAL
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -8025,9 +8013,9 @@ DECLARE_API(ThreadPool)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
+    BOOL mustBePortableThreadPool = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -8044,7 +8032,12 @@ DECLARE_API(ThreadPool)
     EnableDMLHolder dmlHolder(dml);
 
     DacpThreadpoolData threadpool;
-    if ((Status = threadpool.Request(g_sos)) != S_OK)
+    Status = threadpool.Request(g_sos);
+    if (Status == E_NOTIMPL)
+    {
+        mustBePortableThreadPool = TRUE;
+    }
+    else if (Status != S_OK)
     {
         ExtOut("    %s\n", "Failed to request ThreadpoolMgr information");
         return FAILED(Status) ? Status : E_FAIL;
@@ -8074,19 +8067,22 @@ DECLARE_API(ThreadPool)
     int portableTpHcLogEntry_lastHistoryMeanOffset = 0;
     do // while (false)
     {
-        // Determine if the portable thread pool is enabled
-        if (FAILED(
+        if (!mustBePortableThreadPool)
+        {
+            // Determine if the portable thread pool is enabled
+            if (FAILED(
                 GetNonSharedStaticFieldValueFromName(
                     &ui64Value,
                     corelibModule,
                     "System.Threading.ThreadPool",
                     W("UsePortableThreadPool"),
                     ELEMENT_TYPE_BOOLEAN)) ||
-            ui64Value == 0)
-        {
-            // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
-            // is not being used.
-            break;
+                ui64Value == 0)
+            {
+                // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+                // is not being used.
+                break;
+            }
         }
 
         // Get the thread pool instance
@@ -8371,6 +8367,29 @@ DECLARE_API(ThreadPool)
                     }
                 }
 
+                // Enumerate assignable normal-priority work items.
+                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("_assignableWorkItemQueues"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueueArrayPtr;
+                    MOVE(workItemsConcurrentQueueArrayPtr, itr->GetAddress() + offset);
+                    DacpObjectData workItemsConcurrentQueueArray;
+                    if (workItemsConcurrentQueueArray.Request(g_sos, TO_CDADDR(workItemsConcurrentQueueArrayPtr)) == S_OK &&
+                        workItemsConcurrentQueueArray.ObjectType == OBJ_ARRAY)
+                    {
+                        for (int i = 0; i < workItemsConcurrentQueueArray.dwNumComponents; i++)
+                        {
+                            DWORD_PTR workItemsConcurrentQueuePtr;
+                            MOVE(workItemsConcurrentQueuePtr, workItemsConcurrentQueueArray.ArrayDataPtr + (i * workItemsConcurrentQueueArray.dwComponentSize));
+                            if (workItemsConcurrentQueuePtr != NULL && sos::IsObject(TO_CDADDR(workItemsConcurrentQueuePtr), false))
+                            {
+                                // We got the ConcurrentQueue.  Enumerate it.
+                                EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
+                            }
+                        }
+                    }
+                }
+
                 // Enumerate normal-priority work items.
                 offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
                 if (offset > 0)
@@ -8398,9 +8417,9 @@ DECLARE_API(ThreadPool)
                     {
                         for (int i = 0; i < workItemArray.dwNumComponents; i++)
                         {
-                            CLRDATA_ADDRESS workItemPtr;
-                            MOVE(workItemPtr, TO_CDADDR(workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize)));
-                            if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                            DWORD_PTR workItemPtr;
+                            MOVE(workItemPtr, workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize));
+                            if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
                             {
                                 sos::Object workItem = TO_TADDR(workItemPtr);
                                 stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
@@ -8408,10 +8427,10 @@ DECLARE_API(ThreadPool)
                                 if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
                                     (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                                 {
-                                    CLRDATA_ADDRESS delegatePtr;
+                                    DWORD_PTR delegatePtr;
                                     MOVE(delegatePtr, workItem.GetAddress() + offset);
                                     CLRDATA_ADDRESS md;
-                                    if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
+                                    if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
                                     {
                                         NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
                                         ExtOut(" => %S", g_mdName);
@@ -8587,7 +8606,6 @@ DECLARE_API(FindAppDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
@@ -8856,7 +8874,6 @@ DECLARE_API(EHInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
@@ -8938,7 +8955,6 @@ DECLARE_API(GCInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR taStartAddr = NULL;
     TADDR taGCInfoAddr;
@@ -10181,7 +10197,6 @@ DECLARE_API(DumpGCData)
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
     {
@@ -10190,16 +10205,17 @@ DECLARE_API(DumpGCData)
     }
 
     DacpGCInterestingInfoData interestingInfo;
-    interestingInfo.RequestGlobal(g_sos);
-    for (int i = 0; i < DAC_MAX_GLOBAL_GC_MECHANISMS_COUNT; i++)
-    {
-        ExtOut("%-30s: %d\n", str_gc_global_mechanisms[i], interestingInfo.globalMechanisms[i]);
-    }
-
-    ExtOut("\n[info per heap]\n");
-
     if (!IsServerBuild())
     {
+        // Doesn't work (segfaults) for server GCs
+        interestingInfo.RequestGlobal(g_sos);
+        for (int i = 0; i < DAC_MAX_GLOBAL_GC_MECHANISMS_COUNT; i++)
+        {
+            ExtOut("%-30s: %d\n", str_gc_global_mechanisms[i], interestingInfo.globalMechanisms[i]);
+        }
+
+        ExtOut("\n[info per heap]\n");
+
         if (interestingInfo.Request(g_sos) != S_OK)
         {
             ExtOut("Error requesting interesting GC info\n");
@@ -10210,6 +10226,8 @@ DECLARE_API(DumpGCData)
     }
     else
     {
+        ExtOut("\n[info per heap]\n");
+
         DWORD dwNHeaps = GetGcHeapCount();
         DWORD dwAllocSize;
         if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
@@ -10355,9 +10373,7 @@ DECLARE_API(SOSStatus)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string command("sosstatus ");
-        command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
+        Status = hostServices->DispatchCommand("sosstatus", args);
     }
     else
     {
@@ -10889,7 +10905,6 @@ DECLARE_API(PathTo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
     DWORD_PTR target = NULL;
@@ -11100,14 +11115,10 @@ DECLARE_API(GCWhere)
     return Status;
 }
 
-#ifndef FEATURE_PAL
-
 DECLARE_API(FindRoots)
 {
-#ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
@@ -11166,7 +11177,11 @@ DECLARE_API(FindRoots)
         GcEvtArgs gea = { GC_MARK_END, { ((gen == -1) ? 7 : (1 << gen)) } };
         idp2->SetGcNotification(gea);
         // ... and register the notification handler
+#ifndef FEATURE_PAL
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+#else
+        g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
+#endif // FEATURE_PAL
         // the above notification is removed in CNotification::OnGcEvent()
     }
     else
@@ -11209,9 +11224,6 @@ DECLARE_API(FindRoots)
     }
 
     return Status;
-#else
-    return E_NOTIMPL;
-#endif
 }
 
 class GCHandleStatsForDomains
@@ -11356,7 +11368,7 @@ public:
         if (!GetCMDOption(args,option,ARRAY_SIZE(option),NULL,0,NULL))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
-        if (type != NULL)
+        if (type != NULL) {
             if (_stricmp(type, "Pinned") == 0)
                 mType = HNDTYPE_PINNED;
             else if (_stricmp(type, "RefCounted") == 0)
@@ -11379,6 +11391,7 @@ public:
                 mType = HNDTYPE_WEAK_WINRT;
             else
                 sos::Throw<sos::Exception>("Unknown handle type '%s'.", type.GetPtr());
+        }
     }
 
     void Run()
@@ -11962,10 +11975,8 @@ DECLARE_API(StopOnException)
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
-#ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
     StringHolder str_Object;
@@ -12008,10 +12019,6 @@ DECLARE_API(ObjSize)
         ExtOut("sizeof(%p) = %d (0x%x) bytes (%S)\n", SOS_PTR(obj), size, size, methodTable.GetName());
     }
     return Status;
-#else
-    return E_NOTIMPL;
-#endif
-
 }
 
 #ifndef FEATURE_PAL
@@ -12212,8 +12219,6 @@ DECLARE_API(GCHandleLeaks)
 
     return Status;
 }
-#endif // FEATURE_PAL
-
 #endif // FEATURE_PAL
 
 class ClrStackImplWithICorDebug
@@ -15706,6 +15711,108 @@ DECLARE_API(StopOnCatch)
     return S_OK;
 }
 
+class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback, ICLRDataEnumMemoryRegionsLoggingCallback
+{
+private:
+    LONG m_ref;
+    bool m_log;
+
+public:
+    EnumMemoryCallback(bool log) :
+        m_ref(1),
+        m_log(log)
+    {
+    }
+
+    virtual ~EnumMemoryCallback()
+    {
+    }
+
+    STDMETHODIMP QueryInterface(
+        ___in REFIID InterfaceId,
+        ___out PVOID* Interface)
+    {
+        if (InterfaceId == IID_IUnknown ||
+            InterfaceId == IID_ICLRDataEnumMemoryRegionsCallback)
+        {
+            *Interface = (ICLRDataEnumMemoryRegionsCallback*)this;
+            AddRef();
+            return S_OK;
+        }
+        else if (InterfaceId == IID_ICLRDataEnumMemoryRegionsLoggingCallback)
+        {
+            *Interface = (ICLRDataEnumMemoryRegionsLoggingCallback*)this;
+            AddRef();
+            return S_OK;
+        }
+        else
+        {
+            *Interface = nullptr;
+            return E_NOINTERFACE;
+        }
+    }
+
+    STDMETHODIMP_(ULONG) AddRef()
+    {
+        LONG ref = InterlockedIncrement(&m_ref);
+        return ref;
+    }
+
+    STDMETHODIMP_(ULONG) Release()
+    {
+        LONG ref = InterlockedDecrement(&m_ref);
+        if (ref == 0)
+        {
+            delete this;
+        }
+        return ref;
+    }
+
+    HRESULT STDMETHODCALLTYPE EnumMemoryRegion(
+        /* [in] */ CLRDATA_ADDRESS address,
+        /* [in] */ ULONG32 size)
+    {
+        if (m_log)
+        {
+            ExtOut("%016llx %08x\n", address, size);
+        }
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE LogMessage(
+        /* [in] */ LPCSTR message)
+    {
+        ExtOut("%s", message);
+        return S_OK;
+    }
+};
+
+DECLARE_API(enummemory)
+{
+    INIT_API();
+
+    ToRelease<ICLRDataEnumMemoryRegions> enumMemoryRegions;
+    Status = g_clrData->QueryInterface(__uuidof(ICLRDataEnumMemoryRegions), (void**)&enumMemoryRegions);
+    if (SUCCEEDED(Status))
+    {
+        ToRelease<ICLRDataEnumMemoryRegionsCallback> callback = new EnumMemoryCallback(false);
+        ULONG32 minidumpType = 
+           (MiniDumpWithPrivateReadWriteMemory |
+            MiniDumpWithDataSegs |
+            MiniDumpWithHandleData |
+            MiniDumpWithUnloadedModules |
+            MiniDumpWithFullMemoryInfo |
+            MiniDumpWithThreadInfo |
+            MiniDumpWithTokenInformation);
+        Status = enumMemoryRegions->EnumMemoryRegions(callback, minidumpType, CLRDataEnumMemoryFlags::CLRDATA_ENUM_MEM_DEFAULT);
+        if (FAILED(Status))
+        {
+            ExtErr("EnumMemoryRegions FAILED %08x\n", Status);
+        }
+    }
+    return Status;
+}
+
 #ifndef FEATURE_PAL
 
 // This is an undocumented SOS extension command intended to help test SOS
@@ -16017,9 +16124,7 @@ DECLARE_API(SetClrPath)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string command("setclrpath ");
-        command.append(args);
-        return hostServices->DispatchCommand(command.c_str());
+        return hostServices->DispatchCommand("setclrpath", args);
     }
     else
     {
@@ -16063,9 +16168,7 @@ DECLARE_API(runtimes)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string command("runtimes ");
-        command.append(args);
-        Status = hostServices->DispatchCommand(command.c_str());
+        Status = hostServices->DispatchCommand("runtimes", args);
     }
     else
     {
@@ -16108,31 +16211,22 @@ DECLARE_API(runtimes)
     return Status;
 }
 
+#ifdef HOST_WINDOWS
+
 //
 // Executes managed extension commands
 //
-HRESULT ExecuteCommand(PCSTR command, PCSTR args)
+HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
 {
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        std::string commandLine(command);
-        if (args != nullptr && strlen(args) > 0)
+        if (commandName != nullptr && strlen(commandName) > 0)
         {
-            commandLine.append(" ");
-            commandLine.append(args);
-        }
-        if (!commandLine.empty())
-        {
-            return hostServices->DispatchCommand(commandLine.c_str());
+            return hostServices->DispatchCommand(commandName, args);
         }
     }
-    else
-    {
-        ExtErr("Command not loaded\n");
-        return E_FAIL;
-    }
-    return S_OK;
+    return E_NOTIMPL;
 }
 
 //
@@ -16171,14 +16265,43 @@ DECLARE_API(logging)
     return ExecuteCommand("logging", args);
 }
 
+typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);
+
 //
 // Executes managed extension commands
 //
 DECLARE_API(ext)
 {
     INIT_API_EXT();
-    return ExecuteCommand("", args);
+
+    if (args == nullptr || strlen(args) <= 0)
+    {
+        args = "Help";
+    }
+    std::string arguments(args);
+    size_t pos = arguments.find(' ');
+    std::string commandName = arguments.substr(0, pos);
+    if (pos != std::string::npos)
+    {
+        arguments = arguments.substr(pos + 1);
+    }
+    else
+    {
+        arguments.clear();
+    }
+    Status = ExecuteCommand(commandName.c_str(), arguments.c_str());
+    if (Status == E_NOTIMPL)
+    {
+        PFN_COMMAND commandFunc = (PFN_COMMAND)GetProcAddress(g_hInstance, commandName.c_str());
+        if (commandFunc != nullptr)
+        {
+            Status = (*commandFunc)(client, arguments.c_str());
+        }
+    }
+    return Status;
 }
+
+#endif // HOST_WINDOWS
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
 {

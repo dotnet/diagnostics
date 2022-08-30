@@ -82,9 +82,12 @@ ENDIF:DESKTOP
 
 SOSCOMMAND:SOSStatus
 
+# Issue:https://github.com/dotnet/diagnostics/issues/3155
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
+ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 
 # Verify that ClrStack with managed/native mixed works
 SOSCOMMAND:ClrStack -f
@@ -193,18 +196,20 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 
 ENDIF:NETCORE_OR_DOTNETDUMP
 
+# Issue: https://github.com/dotnet/diagnostics/issues/2947
 !IFDEF:DOTNETDUMP
+!IFDEF:ARM64
 !IFDEF:ARM
 
 # Verify DumpStack works
 SOSCOMMAND:DumpStack
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
 # Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+)
 
@@ -214,6 +219,7 @@ VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
 ENDIF:ARM
+ENDIF:ARM64
 ENDIF:DOTNETDUMP
 
 # Verify that IP2MD works (uses IP from ClrStack)
