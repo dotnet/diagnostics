@@ -69,6 +69,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _maxRow = -1;
         private bool _useAnsi = false;
 
+        private int _consoleHeight = -1;
+        private int _consoleWidth = -1;
+
         public ConsoleWriter(bool useAnsi) 
         {
             this._useAnsi = useAnsi;
@@ -126,6 +129,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             Clear();
             
+            _consoleWidth = Console.WindowWidth;
+            _consoleHeight = Console.WindowHeight;
+            _maxNameLength = _consoleWidth < 80 ? (int)Math.Round(_consoleWidth * 0.5) : 60;
+            //_maxNameLength = (int)Math.Round(_consoleWidth * 0.8);
+
+            if(_consoleWidth < 100)
+            {
+                _maxNameLength = (int)Math.Round(_consoleWidth * 0.5);
+            }
+
             int row = Console.CursorTop;
             _topRow = row;
             Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
@@ -178,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         public void CounterPayloadReceived(CounterPayload payload, bool pauseCmdSet)
         {
             lock (_lock)
-            {
+            {                
                 if (!_initialized)
                 {
                     _initialized = true;
@@ -220,6 +233,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     _maxNameLength = Math.Max(_maxNameLength, tagSet.DisplayTags.Length);
                     tagSet.LastValue = payload.Value;
                     redraw = true;
+                }
+
+                if(Console.WindowWidth != _consoleWidth || Console.WindowHeight != _consoleHeight)
+                {
+                    redraw=true;
                 }
 
                 if (redraw)
