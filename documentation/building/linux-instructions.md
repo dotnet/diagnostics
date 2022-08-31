@@ -6,7 +6,7 @@ These instructions will lead you through preparing to build and test the diagnos
 Toolchain Setup
 ---------------
 
-SOS plugin requires lldb v3.4 and above. It is recommeneded to use latest version of llvm toolchain, but any version >= 3.4 should work.
+SOS plugin requires lldb v3.9 and above. It is recommended to use latest version of llvm toolchain, but any version >= 3.9 should work.
 
 To build or cross build for ARM on Windows or Linux see the instructions [here](https://github.com/dotnet/runtime/blob/main/docs/workflow/building/coreclr/cross-building.md#generating-the-rootfs) in the runtime repo. You will need to clone the runtime [repo](https://github.com/dotnet/runtime.git) and build the appropriate "rootfs" for arm or arm64 using these instructions. You only need to do this once.
 
@@ -31,9 +31,10 @@ Alpine:
 sudo apk add autoconf bash clang clang-dev cmake coreutils curl gcc gettext-dev git icu-dev krb5-dev libunwind-dev llvm make openssl openssl-dev python which
 ```
 
-Fedora/CentOS:
+CentOS/Fedora/RHEL:
 
 ```sh
+# on older OS versions, replace `dnf` with `yum`
 sudo dnf install clang cmake openssl findutils gdb git libicu libunwind lldb-devel llvm-devel make python python2-lldb tar wget which zip
 ```
 
