@@ -586,10 +586,10 @@ namespace sos
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
         mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
 
-        CheckSegmentRange();
+        TryAlignToObjectInRange();
     }
 
-    bool ObjectIterator::NextSegment()
+    bool ObjectIterator::TryMoveNextSegment()
     {
         if (mCurrHeap >= mNumHeaps)
         {
@@ -648,16 +648,29 @@ namespace sos
         mLastObj = 0;
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
         mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
-        return CheckSegmentRange();
+        return true;
     }
 
-    bool ObjectIterator::CheckSegmentRange()
+    bool ObjectIterator::TryMoveToObjectInNextSegmentInRange()
     {
-        CheckInterrupt();
+        if (TryMoveNextSegment())
+        {
+            return TryAlignToObjectInRange();
+        }
 
+        return false;
+    }
+
+    bool ObjectIterator::TryAlignToObjectInRange()
+    {
         while (!MemOverlap(mStart, mEnd, TO_TADDR(mSegment.mem), mSegmentEnd))
-            if (!NextSegment())
+        {
+            CheckInterrupt();
+            if (!TryMoveNextSegment())
+            {
                 return false;
+            }
+        }
 
         // At this point we know that the current segment contains objects in
         // the correct range.  However, there's no telling if the user gave us
@@ -724,7 +737,7 @@ namespace sos
         }
         catch(const sos::Exception &)
         {
-            NextSegment();
+            TryMoveToObjectInNextSegmentInRange();
         }
     }
 
@@ -773,7 +786,9 @@ namespace sos
         }
 
         if (mCurrObj > mEnd || mCurrObj >= mSegmentEnd)
-            NextSegment();
+        {
+            TryMoveToObjectInNextSegmentInRange();
+        }
     }
 
     SyncBlkIterator::SyncBlkIterator()

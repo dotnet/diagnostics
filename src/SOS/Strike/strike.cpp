@@ -11039,6 +11039,7 @@ DECLARE_API(GCWhere)
         }
     }
 
+    DWORD heapIdx = 0;
     if (!IsServerBuild())
     {
         DacpGcHeapDetails heapDetails;
@@ -11048,13 +11049,7 @@ DECLARE_API(GCWhere)
             return Status;
         }
 
-        if (GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge))
-        {
-            ExtOut("Address   " WIN64_8SPACES " Gen   Heap   segment   " WIN64_8SPACES " begin     " WIN64_8SPACES " allocated  " WIN64_8SPACES " size\n");
-            ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
-                SOS_PTR(taddrObj), gen, 0, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
-            bFound = TRUE;
-        }
+        bFound = GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge);
     }
     else
     {
@@ -11080,30 +11075,29 @@ DECLARE_API(GCWhere)
             return Status;
         }
 
-        for (DWORD n = 0; n < dwNHeaps; n ++)
+        for (heapIdx = 0; heapIdx < dwNHeaps && !bFound; heapIdx++)
         {
             DacpGcHeapDetails dacHeapDetails;
-            if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
+            if (dacHeapDetails.Request(g_sos, heapAddrs[heapIdx]) != S_OK)
             {
                 ExtOut("Error requesting details\n");
                 return Status;
             }
 
-            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
-            if (GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge))
-            {
-                ExtOut("Address " WIN64_8SPACES " Gen Heap segment " WIN64_8SPACES " begin   " WIN64_8SPACES " allocated" WIN64_8SPACES " size\n");
-                ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
-                    SOS_PTR(taddrObj), gen, n, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
-                bFound = TRUE;
-                break;
-            }
+            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[heapIdx]);
+            bFound = GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge);
         }
     }
 
     if (!bFound)
     {
         ExtOut("Address %#p not found in the managed heap.\n", SOS_PTR(taddrObj));
+    }
+    else
+    {
+        ExtOut("Address " WIN64_8SPACES " Gen Heap segment " WIN64_8SPACES " begin   " WIN64_8SPACES " allocated" WIN64_8SPACES " size\n");
+        ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
+            SOS_PTR(taddrObj), gen, heapIdx, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
     }
 
     return Status;
