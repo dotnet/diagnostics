@@ -242,9 +242,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Debian_Stretch
+          name: Debian_Bullseye
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-stretch-3e800f1-20190521154431
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-11-amd64-20220820185454-99143ac
           dependsOn: CentOS_7
           testOnly: true
           strategy:
@@ -284,7 +284,7 @@ stages:
         parameters:
           name: Ubuntu_18_04
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-3e800f1-20190508143252
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-20220831130522-3c53da6
           dependsOn: CentOS_7
           testOnly: true
           strategy:
