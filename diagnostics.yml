@@ -126,7 +126,8 @@ stages:
       parameters:
         name: CentOS_7
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-20220810192453-d16db59
+        requiresCapPtraceContainer: true
         strategy:
           matrix:
             Build_Debug:
