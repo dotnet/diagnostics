@@ -591,6 +591,8 @@ namespace sos
 
     bool ObjectIterator::TryMoveNextSegment()
     {
+        CheckInterrupt();
+
         if (mCurrHeap >= mNumHeaps)
         {
             return false;
@@ -663,6 +665,7 @@ namespace sos
 
     bool ObjectIterator::TryAlignToObjectInRange()
     {
+        CheckInterrupt();
         while (!MemOverlap(mStart, mEnd, TO_TADDR(mSegment.mem), mSegmentEnd))
         {
             CheckInterrupt();
@@ -755,6 +758,8 @@ namespace sos
 
     void ObjectIterator::MoveToNextObject()
     {
+        CheckInterrupt();
+
         // Object::GetSize can be unaligned, so we must align it ourselves.
         size_t size = (bLarge || bPinned) ? AlignLarge(mCurrObj.GetSize()) : Align(mCurrObj.GetSize());
 
