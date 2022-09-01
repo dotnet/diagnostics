@@ -74,6 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private int _consoleWidthThreshold = 80; // Threshold of width of console at which name begins to scale down.
         private int _nameDefaultLength = 60;
+        
         public ConsoleWriter(bool useAnsi) 
         {
             this._useAnsi = useAnsi;
@@ -155,8 +156,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
-                        
-                        Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
+                        Console.WriteLine((_consoleWidth > 20) ? $"{name} {FormatValue(counter.LastValue)}" : $"{FormatValue(counter.LastValue)}");
                     }
                     else
                     {
