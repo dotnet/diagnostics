@@ -193,7 +193,7 @@ stages:
         parameters:
           name: Linux_cross
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-cross-arm-20220831130722-70ed2e8
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-20210719121212-8a8d3be
           crossrootfsDir: '/crossrootfs/arm'
           buildAndSkipTest: true
           strategy:
@@ -207,7 +207,7 @@ stages:
         parameters:
           name: Linux_cross64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-cross-arm64-20220831130722-70ed2e8
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
           crossrootfsDir: '/crossrootfs/arm64'
           buildAndSkipTest: true
           strategy:
@@ -221,7 +221,7 @@ stages:
         parameters:
           name: Alpine_cross64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-cross-arm64-alpine-20220831130722-70ed2e8
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210923140502-78f7860
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
           buildAndSkipTest: true
@@ -281,9 +281,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Ubuntu_18_04
+          name: Ubuntu_16_04
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-3e800f1-20190508143252
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-09ca40b-20190520220842
           dependsOn: CentOS_7
           testOnly: true
           strategy:
@@ -294,9 +294,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Ubuntu_22_04
+          name: Ubuntu_18_04
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-20220831130452-94fc78a
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-3e800f1-20190508143252
           dependsOn: CentOS_7
           testOnly: true
           strategy:
