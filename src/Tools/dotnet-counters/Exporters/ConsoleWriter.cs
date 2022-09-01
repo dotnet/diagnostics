@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private readonly object _lock = new object();
         private readonly Dictionary<string, ObservedProvider> _providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
-        private int _maxNameLength = 40; // Allow room for 40 character counter names by default.
+        private int _maxNameLength = 60; // Allow room for 60 character counter names by default.
 
         private int _statusRow; // Row # of where we print the status of dotnet-counters
         private int _topRow;
@@ -72,6 +72,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
 
+        private int _consoleWidthThreshold = 80; // Threshold of width of console at which name begins to scale down.
+        private int _nameDefaultLength = 60;
         public ConsoleWriter(bool useAnsi) 
         {
             this._useAnsi = useAnsi;
@@ -131,13 +133,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             
             _consoleWidth = Console.WindowWidth;
             _consoleHeight = Console.WindowHeight;
-            _maxNameLength = _consoleWidth < 80 ? (int)Math.Round(_consoleWidth * 0.5) : 60;
-            //_maxNameLength = (int)Math.Round(_consoleWidth * 0.8);
-
-            if(_consoleWidth < 100)
-            {
-                _maxNameLength = (int)Math.Round(_consoleWidth * 0.5);
-            }
+            _maxNameLength = _consoleWidth < _consoleWidthThreshold ? _consoleWidth - 20: _nameDefaultLength;
 
             int row = Console.CursorTop;
             _topRow = row;
@@ -159,6 +155,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
+                        
                         Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
                     }
                     else
