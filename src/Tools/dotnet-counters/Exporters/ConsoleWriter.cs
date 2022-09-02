@@ -58,6 +58,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private readonly object _lock = new object();
         private readonly Dictionary<string, ObservedProvider> _providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
+        private const int CounterValueLength= 20;
+
         private int _maxNameLength = 60; // Allow room for 60 character counter names by default.
 
         private int _statusRow; // Row # of where we print the status of dotnet-counters
@@ -72,9 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
 
-        private int _consoleWidthThreshold = 80; // Threshold of width of console at which name begins to scale down.
-        private int _nameDefaultLength = 60;
-        
+
         public ConsoleWriter(bool useAnsi) 
         {
             this._useAnsi = useAnsi;
@@ -134,11 +134,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             
             _consoleWidth = Console.WindowWidth;
             _consoleHeight = Console.WindowHeight;
-            _maxNameLength = _consoleWidth < _consoleWidthThreshold ? _consoleWidth - 20: _nameDefaultLength;
+            _maxNameLength = _consoleWidth < 80 ? _consoleWidth - CounterValueLength: 60; // truncate the display name when the window width is less than 80
 
             int row = Console.CursorTop;
             _topRow = row;
-            Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
+
+            string instructions = "Press p to pause, r to resume, q to quit.";
+            Console.WriteLine((instructions.Length < _consoleWidth) ? instructions : instructions.Substring(0, _consoleWidth)); row++;
             Console.WriteLine($"    Status: {GetStatus()}");                _statusRow = row++;
             if (_errorText != null)
             {
@@ -156,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
-                        Console.WriteLine((_consoleWidth > 20) ? $"{name} {FormatValue(counter.LastValue)}" : $"{FormatValue(counter.LastValue)}");
+                        Console.WriteLine((_consoleWidth > CounterValueLength) ? $"{name} {FormatValue(counter.LastValue)}" : $"{FormatValue(counter.LastValue)}");
                     }
                     else
                     {
