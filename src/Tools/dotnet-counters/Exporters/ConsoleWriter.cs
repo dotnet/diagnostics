@@ -61,7 +61,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private const int CounterValueLength= 20;
 
         private int _maxNameLength = 60; // Allow room for 60 character counter names by default.
-
         private int _statusRow; // Row # of where we print the status of dotnet-counters
         private int _topRow;
         private bool _paused = false;
@@ -73,7 +72,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
-
 
         public ConsoleWriter(bool useAnsi) 
         {
@@ -190,7 +188,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         public void CounterPayloadReceived(CounterPayload payload, bool pauseCmdSet)
         {
             lock (_lock)
-            {                
+            {
                 if (!_initialized)
                 {
                     _initialized = true;
