@@ -1412,6 +1412,9 @@ public class SOSRunner : IDisposable
             vars.Add("%DUMP_NAME%", dumpFileName);
         }
         vars.Add("%DEBUG_ROOT%", debuggeeConfig.BinaryDirPath);
+        vars.Add("%TEST_NAME%", information.TestName);
+        vars.Add("%LOG_PATH%", information.TestConfiguration.LogDirPath);
+        vars.Add("%LOG_SUFFIX%", information.TestConfiguration.LogSuffix);
         vars.Add("%SOS_PATH%", information.TestConfiguration.SOSPath());
         vars.Add("%DESKTOP_RUNTIME_PATH%", information.TestConfiguration.DesktopRuntimePath());
 

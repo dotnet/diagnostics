@@ -54,7 +54,7 @@ namespace SOS.Extensions
             if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
                 AssemblyResolver.Enable();
             }
-            LoggingCommand.Initialize();
+            DiagnosticLoggingService.Initialize();
         }
 
         /// <summary>
@@ -107,6 +107,7 @@ namespace SOS.Extensions
         private HostServices()
         {
             _serviceProvider = new ServiceProvider();
+            _serviceProvider.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             _symbolService = new SymbolService(this);
             _symbolService.DefaultTimeout = DefaultTimeout;
             _symbolService.DefaultRetryCount = DefaultRetryCount;
@@ -217,7 +218,10 @@ namespace SOS.Extensions
             try
             {
                 var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
-                _serviceProvider.AddService<IConsoleService>(consoleService);
+                var fileLoggingConsoleService = new FileLoggingConsoleService(consoleService);
+                DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
+                _serviceProvider.AddService<IConsoleService>(fileLoggingConsoleService);
+                _serviceProvider.AddService<IConsoleFileLoggingService>(fileLoggingConsoleService);
 
                 _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
                 _serviceProvider.AddService<IContextService>(_contextService);

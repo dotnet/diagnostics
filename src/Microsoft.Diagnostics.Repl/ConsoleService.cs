@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Repl
         /// Start input processing and command dispatching
         /// </summary>
         /// <param name="dispatchCommand">Called to dispatch a command on ENTER</param>
-        public void Start(Action<string, CancellationToken> dispatchCommand)
+        public void Start(Action<string, string, CancellationToken> dispatchCommand)
         {
             m_lastCommandLine = null;
             m_interactiveConsole = !Console.IsInputRedirected;
@@ -157,14 +157,6 @@ namespace Microsoft.Diagnostics.Repl
         {
             m_prompt = prompt;
             RefreshLine();
-        }
-
-        /// <summary>
-        /// Writes a message with a new line to console.
-        /// </summary>
-        public void WriteLine(string format, params object[] parameters)
-        {
-            WriteLine(OutputType.Normal, format, parameters);
         }
 
         /// <summary>
@@ -338,7 +330,7 @@ namespace Microsoft.Diagnostics.Repl
             m_refreshingLine = false;
         }
 
-        private void ProcessKeyInfo(ConsoleKeyInfo keyInfo, Action<string, CancellationToken> dispatchCommand)
+        private void ProcessKeyInfo(ConsoleKeyInfo keyInfo, Action<string, string, CancellationToken> dispatchCommand)
         {
             int activeLineLen = m_activeLine.Length;
 
@@ -455,7 +447,7 @@ namespace Microsoft.Diagnostics.Repl
             }
         }
 
-        private bool Dispatch(string newCommand, Action<string, CancellationToken> dispatchCommand)
+        private bool Dispatch(string newCommand, Action<string, string, CancellationToken> dispatchCommand)
         {
             bool result = true;
             CommandStarting();
@@ -469,8 +461,7 @@ namespace Microsoft.Diagnostics.Repl
                 }
                 try
                 {
-                    WriteLine(OutputType.Normal, "{0}{1}", m_prompt, newCommand);
-                    dispatchCommand(newCommand, m_interruptExecutingCommand.Token);
+                    dispatchCommand(m_prompt, newCommand, m_interruptExecutingCommand.Token);
                     m_lastCommandLine = newCommand;
                 }
                 catch (OperationCanceledException)
@@ -478,8 +469,9 @@ namespace Microsoft.Diagnostics.Repl
                     // ctrl-c interrupted the command
                     m_lastCommandLine = null;
                 }
-                catch (Exception ex) when (!(ex is NullReferenceException || ex is ArgumentNullException || ex is ArgumentException))
+                catch (Exception ex)
                 {
+                    // Most exceptions should not excape the command dispatch, but just in case
                     WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
                     Trace.TraceError(ex.ToString());
                     m_lastCommandLine = null;
