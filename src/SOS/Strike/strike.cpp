@@ -1448,6 +1448,9 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
     return S_OK;
 }
 
+// If this bit is set in the RuntimeType.m_handle field, the value is a TypeDesc pointer, otherwise it is a MethodTable pointer.
+#define RUNTIMETYPE_HANDLE_IS_TYPEDESC 0x2
+
 void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
 {
     // Get the method table
@@ -1458,9 +1461,9 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
         if (MOVE(mtPtr, p_rtObject + iOffset) == S_OK)
         {
             // Check if TypeDesc
-            if ((mtPtr & 2) != 0)
+            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
             {
-                ExtOut("TypeDesc:    %p\n", mtPtr & ~2);
+                ExtOut("TypeDesc:    %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
             }
             else
             {
@@ -3921,9 +3924,9 @@ void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOI
             DMLOut(DMLObject(objAddr));
 
             // Check if TypeDesc
-            if ((mtPtr & 2) != 0)
+            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
             {
-                ExtOut(" %p\n", mtPtr & ~2);
+                ExtOut(" %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
             }
             else
             {
@@ -15804,7 +15807,7 @@ public:
             {
                 BYTE buffer[1];
                 ULONG read;
-                if (FAILED(g_ExtData->ReadVirtual(start, buffer, 1, &read)))
+                if (FAILED(g_ExtData->ReadVirtual(start, buffer, ARRAY_SIZE(buffer), &read)))
                 {
                     ExtOut("Invalid: %016llx %08x start %016llx\n", address, size, start);
                     break;
