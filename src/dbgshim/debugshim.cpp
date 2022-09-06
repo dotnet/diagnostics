@@ -604,43 +604,8 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
         BOOL useCrossPlatformNaming = FALSE;
         if (SUCCEEDED(hr))
         {
-            // the initial state is that we haven't found a proper resource
-            HRESULT hrGetResource = E_FAIL;
-
             // First check for the resource which has type = RC_DATA = 10, name = "CLRDEBUGINFO<host_os><host_arch>", language = 0
-    #if defined (HOST_WINDOWS) && defined(HOST_X86)
-            const WCHAR * resourceName = W("CLRDEBUGINFOWINDOWSX86");
-    #endif
-
-    #if !defined (HOST_WINDOWS) && defined(HOST_X86)
-            const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSX86");
-    #endif
-
-    #if defined (HOST_WINDOWS) && defined(HOST_AMD64)
-            const WCHAR * resourceName = W("CLRDEBUGINFOWINDOWSAMD64");
-    #endif
-
-    #if !defined (HOST_WINDOWS) && defined(HOST_AMD64)
-            const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSAMD64");
-    #endif
-
-    #if defined (HOST_WINDOWS) && defined(HOST_ARM64)
-            const WCHAR * resourceName = W("CLRDEBUGINFOWINDOWSARM64");
-    #endif
-
-    #if !defined (HOST_WINDOWS) && defined(HOST_ARM64)
-            const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSARM64");
-    #endif
-
-    #if defined (HOST_WINDOWS) && defined(HOST_ARM)
-            const WCHAR * resourceName = W("CLRDEBUGINFOWINDOWSARM");
-    #endif
-
-    #if !defined (HOST_WINDOWS) && defined(HOST_ARM)
-            const WCHAR * resourceName = W("CLRDEBUGINFOCORESYSARM");
-    #endif
-
-            hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, resourceName, 0, &debugResourceRVA, &debugResourceSize);
+            HRESULT hrGetResource = GetResourceRvaFromResourceSectionRvaByName(pDataTarget, moduleBaseAddress, resourceSectionRVA, 10, CLRDEBUGINFO_RESOURCE_NAME, 0, &debugResourceRVA, &debugResourceSize);
             useCrossPlatformNaming = SUCCEEDED(hrGetResource);
 
     #if defined(HOST_WINDOWS) && (defined(HOST_X86) || defined(HOST_AMD64) || defined(HOST_ARM) || defined(HOST_ARM64))
