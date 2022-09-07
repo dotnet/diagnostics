@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    [Command(Name = "sos", Aliases = new string[] { "ext" }, Help = "Run a SOS command.", Flags = CommandFlags.Global | CommandFlags.Manual)]
+    [Command(Name = "sos", Aliases = new string[] { "ext" }, Help = "Run an SOS command.", Flags = CommandFlags.Global | CommandFlags.Manual)]
     public class SOSCommand : CommandBase
     {
         private readonly CommandService _commandService;
