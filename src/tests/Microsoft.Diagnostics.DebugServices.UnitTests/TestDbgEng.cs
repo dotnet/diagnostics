@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         class DbgEngController : IDebugOutputCallbacks
         {
             [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-            private delegate HResult DebugCreateDelegate(
+            private delegate int DebugCreateDelegate(
                 ref Guid interfaceId,
                 [MarshalAs(UnmanagedType.IUnknown)] out object iinterface);
 

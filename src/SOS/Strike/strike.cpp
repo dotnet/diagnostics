@@ -1448,6 +1448,9 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
     return S_OK;
 }
 
+// If this bit is set in the RuntimeType.m_handle field, the value is a TypeDesc pointer, otherwise it is a MethodTable pointer.
+#define RUNTIMETYPE_HANDLE_IS_TYPEDESC 0x2
+
 void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
 {
     // Get the method table
@@ -1455,11 +1458,19 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
     if (iOffset > 0)
     {
         TADDR mtPtr;
-        if (SUCCEEDED(GetMTOfObject(p_rtObject + iOffset, &mtPtr)))
+        if (MOVE(mtPtr, p_rtObject + iOffset) == S_OK)
         {
-            sos::MethodTable mt = mtPtr;
-            ExtOut("Type Name:   %S\n", mt.GetName());
-            DMLOut("Type MT:     %s\n", DMLMethodTable(mtPtr));
+            // Check if TypeDesc
+            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
+            {
+                ExtOut("TypeDesc:    %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
+            }
+            else
+            {
+                sos::MethodTable mt = mtPtr;
+                ExtOut("Type Name:   %S\n", mt.GetName());
+                DMLOut("Type MT:     %s\n", DMLMethodTable(mtPtr));
+            }
         }
     }
 }
@@ -3912,24 +3923,34 @@ void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOI
         {
             DMLOut(DMLObject(objAddr));
 
-            CLRDATA_ADDRESS appDomain = GetAppDomainForMT(mtPtr);
-            if (appDomain != NULL)
+            // Check if TypeDesc
+            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
             {
-                if (appDomain == pArgs->adstore.sharedDomain)
-                    ExtOut(" %" POINTERSIZE "s", "Shared");
-
-                else if (appDomain == pArgs->adstore.systemDomain)
-                    ExtOut(" %" POINTERSIZE "s", "System");
-                else
-                    DMLOut(" %s", DMLDomain(appDomain));
+                ExtOut(" %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
             }
             else
             {
-                ExtOut(" %" POINTERSIZE "s", "?");
-            }
+                CLRDATA_ADDRESS appDomain = GetAppDomainForMT(mtPtr);
+                if (appDomain != NULL)
+                {
+                    if (appDomain == pArgs->adstore.sharedDomain)
+                        ExtOut(" %" POINTERSIZE "s", "Shared");
 
-            NameForMT_s(mtPtr, g_mdName, mdNameLen);
-            DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
+                    else if (appDomain == pArgs->adstore.systemDomain)
+                        ExtOut(" %" POINTERSIZE "s", "System");
+                    else
+                        DMLOut(" %s", DMLDomain(appDomain));
+                }
+                else
+                {
+                    ExtOut(" %" POINTERSIZE "s", "?");
+                }
+
+                if (NameForMT_s(mtPtr, g_mdName, mdNameLen))
+                {
+                    DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
+                }
+            }
         }
     }
 }
@@ -15705,16 +15726,18 @@ DECLARE_API(StopOnCatch)
     return S_OK;
 }
 
-class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback, ICLRDataEnumMemoryRegionsLoggingCallback
+class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback, ICLRDataLoggingCallback
 {
 private:
     LONG m_ref;
     bool m_log;
+    bool m_valid;
 
 public:
-    EnumMemoryCallback(bool log) :
+    EnumMemoryCallback(bool log, bool valid) :
         m_ref(1),
-        m_log(log)
+        m_log(log),
+        m_valid(valid)
     {
     }
 
@@ -15733,9 +15756,9 @@ public:
             AddRef();
             return S_OK;
         }
-        else if (InterfaceId == IID_ICLRDataEnumMemoryRegionsLoggingCallback)
+        else if (InterfaceId == IID_ICLRDataLoggingCallback)
         {
-            *Interface = (ICLRDataEnumMemoryRegionsLoggingCallback*)this;
+            *Interface = (ICLRDataLoggingCallback*)this;
             AddRef();
             return S_OK;
         }
@@ -15770,6 +15793,25 @@ public:
         {
             ExtOut("%016llx %08x\n", address, size);
         }
+        if (m_valid)
+        {
+            uint64_t start = address;
+            uint64_t numberPages = (size + DT_OS_PAGE_SIZE - 1) / DT_OS_PAGE_SIZE;
+            for (size_t p = 0; p < numberPages; p++, start += DT_OS_PAGE_SIZE)
+            {
+                BYTE buffer[1];
+                ULONG read;
+                if (FAILED(g_ExtData->ReadVirtual(start, buffer, ARRAY_SIZE(buffer), &read)))
+                {
+                    ExtOut("Invalid: %016llx %08x start %016llx\n", address, size, start);
+                    break;
+                }
+            }
+        }
+        if (IsInterrupt())
+        { 
+            return COR_E_OPERATIONCANCELED;
+        }
         return S_OK;
     }
 
@@ -15777,11 +15819,15 @@ public:
         /* [in] */ LPCSTR message)
     {
         ExtOut("%s", message);
+        if (IsInterrupt())
+        { 
+            return COR_E_OPERATIONCANCELED;
+        }
         return S_OK;
     }
 };
 
-DECLARE_API(enummemory)
+DECLARE_API(enummem)
 {
     INIT_API();
 
@@ -15789,7 +15835,7 @@ DECLARE_API(enummemory)
     Status = g_clrData->QueryInterface(__uuidof(ICLRDataEnumMemoryRegions), (void**)&enumMemoryRegions);
     if (SUCCEEDED(Status))
     {
-        ToRelease<ICLRDataEnumMemoryRegionsCallback> callback = new EnumMemoryCallback(false);
+        ToRelease<ICLRDataEnumMemoryRegionsCallback> callback = new EnumMemoryCallback(false, true);
         ULONG32 minidumpType = 
            (MiniDumpWithPrivateReadWriteMemory |
             MiniDumpWithDataSegs |

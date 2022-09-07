@@ -268,8 +268,9 @@ namespace Microsoft.Diagnostics.Repl
                 return;
             }
 
-            if (m_clearLine == null || m_clearLine.Length != Console.WindowWidth) {
-                m_clearLine = "\r" + new string(' ', Console.WindowWidth - 1);
+            int width = Console.WindowWidth;
+            if (m_clearLine == null || width != m_clearLine.Length) {
+                m_clearLine = "\r" + (width > 0 ? new string(' ', width - 1) : "");
             }
 
             Console.Write(m_clearLine);

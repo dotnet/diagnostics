@@ -36,6 +36,7 @@ namespace SOS.Hosting
     [Command(Name = "eeheap",           DefaultOptions = "EEHeap",              Help = "Displays info about process memory consumed by internal runtime data structures.")]
     [Command(Name = "eeversion",        DefaultOptions = "EEVersion",           Help = "Displays information about the runtime version.")]
     [Command(Name = "ehinfo",           DefaultOptions = "EHInfo",              Help = "Displays the exception handling blocks in a jitted method.")]
+    [Command(Name = "enummem",          DefaultOptions = "enummem",             Help = "ICLRDataEnumMemoryRegions.EnumMemoryRegions test command.")]
     [Command(Name = "finalizequeue",    DefaultOptions = "FinalizeQueue",       Help = "Displays all objects registered for finalization.")]
     [Command(Name = "findappdomain",    DefaultOptions = "FindAppDomain",       Help = "Attempts to resolve the AppDomain of a GC object.")]
     [Command(Name = "gchandles",        DefaultOptions = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]

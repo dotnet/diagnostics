@@ -4406,7 +4406,7 @@ HRESULT GetMTOfObject(TADDR obj, TADDR *mt)
     // Read the MethodTable and if we succeed, get rid of the mark bits.
     HRESULT hr = rvCache->Read(obj, mt, sizeof(TADDR), NULL);
     if (SUCCEEDED(hr))
-        *mt &= ~3;
+        *mt &= ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
 
     return hr;
 }

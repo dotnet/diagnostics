@@ -113,11 +113,11 @@ namespace Microsoft.Diagnostics
             return hr;
         }
 
-        private delegate void NativeRuntimeStartupCallbackDelegate(IntPtr cordbg, IntPtr parameter, HResult hresult);
+        private delegate void NativeRuntimeStartupCallbackDelegate(IntPtr cordbg, IntPtr parameter, int hresult);
 
         private static IntPtr RuntimeStartupCallback(object parameter, RuntimeStartupCallbackDelegate callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter)
         {
-            NativeRuntimeStartupCallbackDelegate native = (IntPtr cordbg, IntPtr param, HResult hresult) => {
+            NativeRuntimeStartupCallbackDelegate native = (IntPtr cordbg, IntPtr param, int hresult) => {
                 GCHandle gch = GCHandle.FromIntPtr(param);
                 callback(ICorDebug.Create(cordbg), gch.Target, hresult);
                 gch.Free();
@@ -260,7 +260,7 @@ namespace Microsoft.Diagnostics
         #region DbgShim pinvoke delegates
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-        private delegate HResult CreateProcessForLaunchDelegate(
+        private delegate int CreateProcessForLaunchDelegate(
             [MarshalAs(UnmanagedType.LPWStr)] string lpCommandLine,
             [MarshalAs(UnmanagedType.Bool)] bool bSuspendProcess,
             IntPtr lpEnvironment,
@@ -269,22 +269,22 @@ namespace Microsoft.Diagnostics
             out IntPtr suspendHandle);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-        private delegate HResult ResumeProcessDelegate(
+        private delegate int ResumeProcessDelegate(
             IntPtr handle);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-        private delegate HResult CloseResumeHandleDelegate(
+        private delegate int CloseResumeHandleDelegate(
             IntPtr handle);
             
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult RegisterForRuntimeStartupDelegate(
+        private delegate int RegisterForRuntimeStartupDelegate(
             uint processId,
             IntPtr callback,
             IntPtr parameter,
             out IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult RegisterForRuntimeStartupExDelegate(
+        private delegate int RegisterForRuntimeStartupExDelegate(
             uint processId,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
             IntPtr callback,
@@ -292,7 +292,7 @@ namespace Microsoft.Diagnostics
             out IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult RegisterForRuntimeStartup3Delegate(
+        private delegate int RegisterForRuntimeStartup3Delegate(
             uint processId,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
             IntPtr libraryProvider,
@@ -301,24 +301,24 @@ namespace Microsoft.Diagnostics
             out IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult UnregisterForRuntimeStartupDelegate(
+        private delegate int UnregisterForRuntimeStartupDelegate(
             IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult EnumerateCLRsDelegate(
+        private unsafe delegate int EnumerateCLRsDelegate(
             int processId,
             out IntPtr* handleArray,
             out char** stringArray,
             out int arrayLength);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CloseCLREnumerationDelegate(
+        private unsafe delegate int CloseCLREnumerationDelegate(
             IntPtr* handleArray,
             char** stringArray,
             int arrayLength);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateVersionStringFromModuleDelegate(
+        private unsafe delegate int CreateVersionStringFromModuleDelegate(
             int processId,
             [MarshalAs(UnmanagedType.LPWStr)] string moduleName,
             char* versionString,
@@ -326,25 +326,25 @@ namespace Microsoft.Diagnostics
             out int actualVersionStringLength);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersionDelegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersionDelegate(
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersionExDelegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersionExDelegate(
             int debuggerVersion,
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersion2Delegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersion2Delegate(
             int debuggerVersion,
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersion3Delegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersion3Delegate(
             int debuggerVersion,
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
@@ -352,7 +352,7 @@ namespace Microsoft.Diagnostics
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CLRCreateInstanceDelegate(
+        private unsafe delegate int CLRCreateInstanceDelegate(
             in Guid clrsid,
             in Guid riid,
             out IntPtr pInterface);
