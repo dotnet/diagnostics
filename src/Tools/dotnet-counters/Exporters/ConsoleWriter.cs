@@ -150,13 +150,22 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
                 Console.WriteLine($"[{provider.Name}]"); row++;
+                int rowCount = 0;
+                
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
+                    if(rowCount >= _consoleHeight - 5)
+                    {
+                        break;
+                    } 
+
+
                     string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
                         Console.WriteLine((_consoleWidth > CounterValueLength) ? $"{name} {FormatValue(counter.LastValue)}" : $"{FormatValue(counter.LastValue)}");
+                        rowCount += 1;
                     }
                     else
                     {
@@ -166,6 +175,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                             string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
                             Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                             tagSet.Row = row++;
+                            rowCount += 1;
                         }
                     }
                 }
