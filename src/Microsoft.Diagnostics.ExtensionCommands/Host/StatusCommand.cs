@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Write(Target.ToString());
                 Write(SymbolService.ToString());
                 long memoryUsage = GC.GetTotalMemory(forceFullCollection: true);
-                WriteLine($"GC memory usage: {memoryUsage:##,#} bytes");
+                WriteLine($"GC memory usage for managed SOS components: {memoryUsage:##,#} bytes");
             }
         }
     }
