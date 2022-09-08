@@ -127,6 +127,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             catch (TargetInvocationException ex)
             {
+                Trace.TraceError(ex.ToString());
                 throw ex.InnerException;
             }
         }
@@ -148,6 +149,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             catch (TargetInvocationException ex)
             {
+                Trace.TraceError(ex.ToString());
                 throw ex.InnerException;
             }
         }

@@ -47,9 +47,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ulong ImageSize => _imageSize;
 
-            public override uint? IndexFileSize => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexFileSize;
+            public override uint? IndexFileSize => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : unchecked((uint)_moduleInfo.IndexFileSize);
 
-            public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexTimeStamp;
+            public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : unchecked((uint)_moduleInfo.IndexTimeStamp);
 
             public override ImmutableArray<byte> BuildId
             {

@@ -267,7 +267,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         if ((offset + sizeof(uint)) <= data.Length)
                                         {
                                             uint value = BitConverter.ToUInt32(data, offset);
-                                            value += (uint)baseDelta;
+                                            value += unchecked((uint)baseDelta);
                                             byte[] source = BitConverter.GetBytes(value);
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
