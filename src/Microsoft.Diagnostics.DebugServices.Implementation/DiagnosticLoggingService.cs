@@ -137,15 +137,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     try
                     {
                         _diagnosticLoggingService._writer.Write(message);
+                        return;
                     }
                     catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
                     {
                     }
                 }
-                else 
-                {
-                    _diagnosticLoggingService._consoleService?.Write(message);
-                }
+                _diagnosticLoggingService._consoleService?.Write(message);
             }
 
             public override void WriteLine(string message)
@@ -155,15 +153,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     try
                     {
                         _diagnosticLoggingService._writer.WriteLine(message);
+                        return;
                     }
                     catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
                     {
                     }
                 }
-                else
-                {
-                    _diagnosticLoggingService._consoleService?.WriteLine(message);
-                }
+                _diagnosticLoggingService._consoleService?.WriteLine(message);
             }
         }
     }
