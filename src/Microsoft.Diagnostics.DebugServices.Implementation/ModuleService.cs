@@ -494,7 +494,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return _memoryService.ReadMemory(address, buffer, bufferSize, out bytesRead);
                 }
 
-                if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)(_cacheSize - bufferSize))))
+                if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)_cacheSize - (ulong)bufferSize)))
                 {
                     _cacheValid = false;
                     _startCache = address;
