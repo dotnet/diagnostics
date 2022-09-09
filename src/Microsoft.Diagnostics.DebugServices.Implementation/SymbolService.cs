@@ -41,6 +41,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _host = host;
             OnChangeEvent = new ServiceEvent();
+            // dbgeng's console can not handle the async logging (Tracer output on another thread than the main one).
+            Tracer.Enable = host.HostType != HostType.DbgEng;
         }
 
         #region ISymbolService
