@@ -131,7 +131,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Clear();
             
             _consoleWidth = Console.WindowWidth;
-            _consoleHeight = Console.WindowHeight;       
+            _consoleHeight = Console.WindowHeight;     
+            _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0); // Truncate the name to prevent line wrapping as long as the console width is >= CounterValueLength + Indent + 1 characters
+  
 
             int row = Console.CursorTop;
             _topRow = row;
@@ -149,39 +151,33 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
                 Console.WriteLine($"[{provider.Name}]"); row++;
-                int rowCount = 0;
 
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
-                    if(rowCount >= _consoleHeight - 5)
-                    {
-                        break;
-                    } 
-
-                    _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0);
+                    
                     string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
+                        if(row >= _consoleHeight) // prevents from displaying more counters than vertical space available
+                        {
+                            break;
+                        }
                         Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
-                        rowCount++;
                     }
                     else
                     {
                         Console.WriteLine(name);
-                        rowCount++;
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
-                            if(rowCount >= _consoleHeight - 5)
+                            if(row >= _consoleHeight)
                             {
                                 break;
                             }
 
-                            _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0);
                             string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
                             Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                             tagSet.Row = row++;
-                            rowCount++;
                         }
                     }
                 }
