@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private const int Indent = 4; // Counter name indent size.
         private const int CounterValueLength = 15;
 
-        private int _maxNameLength = 60; // Allow room for 60 character counter names by default.
+        private int _maxNameLength = 0;
         private int _statusRow; // Row # of where we print the status of dotnet-counters
         private int _topRow;
         private bool _paused = false;
