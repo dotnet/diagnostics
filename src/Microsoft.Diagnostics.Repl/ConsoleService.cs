@@ -246,7 +246,6 @@ namespace Microsoft.Diagnostics.Repl
         private void CommandFinished()
         {
             if (--m_commandExecuting == 0) {
-                m_activeLine = new StringBuilder();
                 RefreshLine();
             }
         }
@@ -268,13 +267,8 @@ namespace Microsoft.Diagnostics.Repl
 
             Console.Write(m_clearLine);
 
-            if (!m_outputRedirected) {
-                try {
-                    Console.CursorLeft = 0;
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                }
+            if (!m_outputRedirected && Console.CursorTop >= 0 ) {
+                Console.CursorLeft = 0;
             }
         }
 
@@ -319,13 +313,8 @@ namespace Microsoft.Diagnostics.Repl
 
             Console.Write("{0}{1}", prompt, text);
 
-            if (!m_outputRedirected) {
-                try {
-                    Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                }
+            if (!m_outputRedirected && Console.CursorTop >= 0) {
+                Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
             }
         }
 
