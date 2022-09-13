@@ -391,6 +391,8 @@ namespace SOS.Extensions
 
                 if (DebuggerServices != null)
                 {
+                    // This turns off any logging to console now that debugger services will be released and the console service no longer functions.
+                    DiagnosticLoggingService.Instance.SetConsole(null, null);
                     DebuggerServices.Release();
                     DebuggerServices = null;
                 }

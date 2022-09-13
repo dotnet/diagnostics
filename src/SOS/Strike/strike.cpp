@@ -162,10 +162,6 @@ WCHAR g_mdName[mdNameLen];
 HMODULE g_hInstance = NULL;
 #endif // !FEATURE_PAL
 
-#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
-extern bool g_useDesktopClrHost;
-#endif
-
 #ifdef _MSC_VER
 #pragma warning(disable:4244)   // conversion from 'unsigned int' to 'unsigned short', possible loss of data
 #pragma warning(disable:4189)   // local variable is initialized but not referenced
@@ -173,10 +169,9 @@ extern bool g_useDesktopClrHost;
 
 #ifdef FEATURE_PAL
 #define SOSPrefix ""
-#define SOSThreads "clrthreads"
 #else
-#define SOSPrefix "!"
-#define SOSThreads "!threads"
+extern const char* g_sosPrefix;
+#define SOSPrefix g_sosPrefix
 #endif
 
 #if defined _X86_ && !defined FEATURE_PAL
@@ -951,15 +946,16 @@ DECLARE_API(DumpIL)
         // Now we have a local copy of the IL, and a managed array for token resolution.
         // Visit our IL parser with this info.
         ExtOut("This is dynamic IL. Exception info is not reported at this time.\n");
-        ExtOut("If a token is unresolved, run \"!do <addr>\" on the addr given\n");
+        ExtOut("If a token is unresolved, run \"%sdumpobj <addr>\" on the addr given\n", SOSPrefix);
         ExtOut("in parenthesis. You can also look at the token table yourself, by\n");
-        ExtOut("running \"!DumpArray %p\".\n\n", SOS_PTR(tokenArrayAddr));
+        ExtOut("running \"%sdumparray %p\".\n\n", SOSPrefix, SOS_PTR(tokenArrayAddr));
         DecodeDynamicIL(pArray, (ULONG)codeArray.dwNumComponents, tokenArray);
 
         delete [] pArray;
     }
     return Status;
 }
+
 
 void DumpSigWorker (
         DWORD_PTR dwSigAddr,
@@ -1064,7 +1060,7 @@ DECLARE_API(DumpSig)
     }
     if (nArg != 2)
     {
-        ExtOut("!DumpSig <sigaddr> <moduleaddr>\n");
+        ExtOut("%sdumpsig <sigaddr> <moduleaddr>\n", SOSPrefix);
         return Status;
     }
 
@@ -1112,7 +1108,7 @@ DECLARE_API(DumpSigElem)
 
     if (nArg != 2)
     {
-        ExtOut("!DumpSigElem <sigaddr> <moduleaddr>\n");
+        ExtOut("%sdumpsigelem <sigaddr> <moduleaddr>\n", SOSPrefix);
         return Status;
     }
 
@@ -1479,9 +1475,9 @@ void DisplayInvalidStructuresMessage()
 {
     ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
     ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
-    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
-    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
-    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
+    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to\n");
+    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not\n");
+    ExtOut("work properly. %sdumpheap and %sverifyheap may incorrectly complain of heap\n", SOSPrefix, SOSPrefix);
     ExtOut("consistency errors.\n");
 }
 
@@ -1951,7 +1947,7 @@ DECLARE_API(DumpArray)
 
     if (objData.ObjectType != OBJ_ARRAY)
     {
-        ExtOut("Not an array, please use !DumpObj instead\n");
+        ExtOut("Not an array, please use %sdumpobj instead\n", SOSPrefix);
         return S_OK;
     }
     return PrintArray(objData, flags, FALSE);
@@ -2257,7 +2253,7 @@ DECLARE_API(DumpDelegate)
         }
         if (nArg != 1)
         {
-            ExtOut("Usage: !DumpDelegate <delegate object address>\n");
+            ExtOut("Usage: %sdumpdelegate <delegate object address>\n", SOSPrefix);
             return Status;
         }
 
@@ -2601,7 +2597,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         // (It doesn't matter that it's not a valid instruction). (see /vm/excep.cpp)
         //
         // This "counterhack" is not 100% accurate
-        // The biggest issue is that !PrintException must work with exception objects
+        // The biggest issue is that PrintException must work with exception objects
         // that may not be currently active; as a consequence we cannot rely on the
         // state of some "current thread" to infer whether the IP values stored in
         // the exception object have been adjusted or not. If we could, we may examine
@@ -2806,7 +2802,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                 if (IsDMLEnabled())
                     DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", SOS_PTR(taInnerExc), SOS_PTR(taInnerExc));
                 else
-                    ExtOut("Use !PrintException %p to see more.\n", SOS_PTR(taInnerExc));
+                    ExtOut("Use %sprintexception %p to see more.\n", SOSPrefix, SOS_PTR(taInnerExc));
             }
             else
             {
@@ -3144,7 +3140,7 @@ DECLARE_API(DumpVC)
     EnableDMLHolder dmlHolder(dml);
     if (nArg!=2)
     {
-        ExtOut("Usage: !DumpVC <Method Table> <Value object start addr>\n");
+        ExtOut("Usage: %sdumpvc <Method Table> <Value object start addr>\n", SOSPrefix);
         return Status;
     }
 
@@ -3568,7 +3564,7 @@ DECLARE_API(DumpPermissionSet)
     }
     if (nArg!=1)
     {
-        ExtOut("Usage: !DumpPermissionSet <PermissionSet object addr>\n");
+        ExtOut("Usage: %sdumppermissionset <PermissionSet object addr>\n", SOSPrefix);
         return Status;
     }
 
@@ -3836,7 +3832,7 @@ DECLARE_API(TraverseHeap)
 
     if (nArg != 1)
     {
-        ExtOut("usage: HeapTraverse [-xml] filename\n");
+        ExtOut("usage: !TraverseHeap [-xml] filename\n");
         return Status;
     }
 
@@ -3865,7 +3861,7 @@ DECLARE_API(TraverseHeap)
     // tree structure to a sorted list of methodtables, and the index is the ID.
 
     // TODO: "Traversing object members" code should be generalized and shared between
-    // !gcroot and !traverseheap. Also !dumpheap can begin using GCHeapsTraverse.
+    // gcroot and traverseheap. Also dumpheap can begin using GCHeapsTraverse.
 
     if (!traverser.Initialize())
     {
@@ -4055,7 +4051,7 @@ public:
             {"-type", &type, COSTRING, TRUE},        // list objects of specified type
             {"-stat", &mStat, COBOOL, FALSE},        // dump a summary of types and the number of instances of each
             {"-strings", &mStrings, COBOOL, FALSE},  // dump a summary of string objects
-            {"-verify", &mVerify, COBOOL, FALSE},    // verify heap objects (!heapverify)
+            {"-verify", &mVerify, COBOOL, FALSE},    // verify heap objects (heapverify)
             {"-thinlock", &mThinlock, COBOOL, FALSE},// list only thinlocks
             {"-short", &mShort, COBOOL, FALSE},      // list only addresses
             {"-min", &mMinSize, COHEX, TRUE},        // min size of objects to display (hex)
@@ -6872,7 +6868,7 @@ public:
     {
         PendingBreakpoint *pCur = m_breakpoints;
         size_t iBreakpointIndex = 1;
-        ExtOut(SOSPrefix "bpmd pending breakpoint list\n Breakpoint index - Location, ModuleID, Method Token\n");
+        ExtOut("%sbpmd pending breakpoint list\n Breakpoint index - Location, ModuleID, Method Token\n", SOSPrefix);
         while(pCur)
         {
             //windbg likes to format %p as always being 64 bits
@@ -7652,7 +7648,7 @@ DECLARE_API(bpmd)
 
     if (IsDumpFile())
     {
-        ExtOut(SOSPrefix "bpmd is not supported on a dump file.\n");
+        ExtOut("%sbpmd is not supported on a dump file.\n", SOSPrefix);
         return Status;
     }
 
@@ -7754,17 +7750,13 @@ DECLARE_API(bpmd)
 
     if (fBadParam || (commandsParsed != 1))
     {
-        ExtOut("Usage: " SOSPrefix "bpmd -md <MethodDesc pointer>\n");
-        ExtOut("Usage: " SOSPrefix "bpmd [-nofuturemodule] <module name> <managed function name> [<il offset>]\n");
-        ExtOut("Usage: " SOSPrefix "bpmd <filename>:<line number>\n");
-        ExtOut("Usage: " SOSPrefix "bpmd -list\n");
-        ExtOut("Usage: " SOSPrefix "bpmd -clear <pending breakpoint number>\n");
-        ExtOut("Usage: " SOSPrefix "bpmd -clearall\n");
-#ifdef FEATURE_PAL
-        ExtOut("See \"soshelp bpmd\" for more details.\n");
-#else
-        ExtOut("See \"!help bpmd\" for more details.\n");
-#endif
+        ExtOut("Usage: %sbpmd -md <MethodDesc pointer>\n", SOSPrefix);
+        ExtOut("Usage: %sbpmd [-nofuturemodule] <module name> <managed function name> [<il offset>]\n", SOSPrefix);
+        ExtOut("Usage: %sbpmd <filename>:<line number>\n", SOSPrefix);
+        ExtOut("Usage: %sbpmd -list\n", SOSPrefix);
+        ExtOut("Usage: %sbpmd -clear <pending breakpoint number>\n", SOSPrefix);
+        ExtOut("Usage: %sbpmd -clearall\n", SOSPrefix);
+        ExtOut("See \"%ssoshelp bpmd\" for more details.\n", SOSPrefix);
         return Status;
     }
 
@@ -8697,8 +8689,8 @@ DECLARE_API(FindAppDomain)
         if (IsDMLEnabled())
             DMLOut("<exec cmd=\"!gcroot /d %p\">!gcroot %p</exec>, and if you find a root on a\n", SOS_PTR(p_Object), SOS_PTR(p_Object));
         else
-            ExtOut(SOSPrefix "gcroot %p, and if you find a root on a\n", SOS_PTR(p_Object));
-        ExtOut("stack, check the AppDomain of that stack with " SOSThreads ".\n");
+            ExtOut("%sgcroot %p, and if you find a root on a\n", SOSPrefix, SOS_PTR(p_Object));
+        ExtOut("stack, check the AppDomain of that stack with %sclrthreads.\n", SOSPrefix);
         ExtOut("Note that the Thread could have transitioned between\n");
         ExtOut("multiple AppDomains.\n");
     }
@@ -10735,7 +10727,7 @@ DECLARE_API(Token2EE)
     }
     if (nArg!=2)
     {
-        ExtOut("Usage: " SOSPrefix "Token2EE module_name mdToken\n");
+        ExtOut("Usage: %stoken2ee module_name mdToken\n", SOSPrefix);
         ExtOut("       You can pass * for module_name to search all modules.\n");
         return Status;
     }
@@ -10861,11 +10853,11 @@ DECLARE_API(Name2EE)
 
     if (nArg != 2)
     {
-        ExtOut("Usage: " SOSPrefix "name2ee module_name item_name\n");
-        ExtOut("  or   " SOSPrefix "name2ee module_name!item_name\n");
+        ExtOut("Usage: %sname2ee module_name item_name\n", SOSPrefix);
+        ExtOut("  or   %sname2ee module_name!item_name\n", SOSPrefix);
         ExtOut("       use * for module_name to search all loaded modules\n");
-        ExtOut("Examples: " SOSPrefix "name2ee  mscorlib.dll System.String.ToString\n");
-        ExtOut("          " SOSPrefix "name2ee *!System.String\n");
+        ExtOut("Examples: %sname2ee  mscorlib.dll System.String.ToString\n", SOSPrefix);
+        ExtOut("          %sname2ee *!System.String\n", SOSPrefix);
         return Status;
     }
 
@@ -11011,7 +11003,7 @@ DECLARE_API(GCRoot)
     if (all)
         ExtOut("Found %d roots.\n", i);
     else
-        ExtOut("Found %d unique roots (run '" SOSPrefix "gcroot -all' to see all roots).\n", i);
+        ExtOut("Found %d unique roots (run '%sgcroot -all' to see all roots).\n", i, SOSPrefix);
 
     return Status;
 }
@@ -11137,7 +11129,7 @@ DECLARE_API(FindRoots)
 
     if (IsDumpFile())
     {
-        ExtOut("!FindRoots is not supported on a dump file.\n");
+        ExtOut("%sfindroots is not supported on a dump file.\n", SOSPrefix);
         return Status;
     }
 
@@ -11175,7 +11167,7 @@ DECLARE_API(FindRoots)
     }
     if ((gen < -1 || gen > 2) && (taObj == 0))
     {
-        ExtOut("Incorrect options.  Usage:\n\t!FindRoots -gen <N>\n\t\twhere N is 0, 1, 2, or \"any\". OR\n\t!FindRoots <obj>\n");
+        ExtOut("Incorrect options.  Usage:\n\t%sfindroots -gen <N>\n\t\twhere N is 0, 1, 2, or \"any\". OR\n\t%sfindroots <obj>\n", SOSPrefix, SOSPrefix);
         return Status;
     }
 
@@ -11207,8 +11199,8 @@ DECLARE_API(FindRoots)
 
         if (!CheckCLRNotificationEvent(&dle))
         {
-            ExtOut("The command !FindRoots can only be used after the debugger stopped on a CLRN GC notification.\n");
-            ExtOut("At this time !GCRoot should be used instead.\n");
+            ExtOut("The command %sfindroots can only be used after the debugger stopped on a CLRN GC notification.\n", SOSPrefix);
+            ExtOut("At this time %sgcroot should be used instead.\n", SOSPrefix);
             return Status;
         }
         // validate argument
@@ -13144,7 +13136,7 @@ public:
         ICorDebugProcess* pCorDebugProcess;
         if (FAILED(Status = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
         {
-            ExtOut("\n" SOSPrefix "clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n");
+            ExtOut("\n%sclrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n", SOSPrefix);
             return Status;
         }
 
@@ -13764,7 +13756,7 @@ private:
         if ((hr = g_clrData->GetTaskByOSThreadID(osID, &pTask)) != S_OK)
         {
             ExtOut("Unable to walk the managed stack. The current thread is likely not a \n");
-            ExtOut("managed thread. You can run " SOSThreads " to get a list of managed threads in\n");
+            ExtOut("managed thread. You can run %sclrthreads to get a list of managed threads in\n", SOSPrefix);
             ExtOut("the process\n");
             return hr;
         }
@@ -15578,7 +15570,7 @@ DECLARE_API(SuppressJitOptimization)
     }
     else
     {
-        ExtOut("Usage: !SuppressJitOptimization <on|off>\n");
+        ExtOut("Usage: %ssuppressjitoptimization <on|off>\n", SOSPrefix);
     }
 
     return S_OK;
