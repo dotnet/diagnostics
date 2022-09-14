@@ -154,6 +154,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 !IFDEF:DOTNETDUMP
 !IFDEF:ARM64
 !IFDEF:ARM
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 
 # 9) Verify DumpStack works
 SOSCOMMAND:DumpStack
@@ -172,6 +173,7 @@ SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
+ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 ENDIF:ARM
 ENDIF:ARM64
 ENDIF:DOTNETDUMP
