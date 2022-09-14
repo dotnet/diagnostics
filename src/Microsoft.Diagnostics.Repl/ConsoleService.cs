@@ -267,7 +267,7 @@ namespace Microsoft.Diagnostics.Repl
 
             Console.Write(m_clearLine);
 
-            if (!m_outputRedirected) {
+            if (!m_outputRedirected && Console.CursorTop >= 0 ) {
                 Console.CursorLeft = 0;
             }
         }
@@ -313,7 +313,7 @@ namespace Microsoft.Diagnostics.Repl
 
             Console.Write("{0}{1}", prompt, text);
 
-            if (!m_outputRedirected) {
+            if (!m_outputRedirected && Console.CursorTop >= 0) {
                 Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
             }
         }
