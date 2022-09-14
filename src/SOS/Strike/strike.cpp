@@ -3832,7 +3832,7 @@ DECLARE_API(TraverseHeap)
 
     if (nArg != 1)
     {
-        ExtOut("usage: !TraverseHeap [-xml] filename\n");
+        ExtOut("usage: %straverseheap [-xml] filename\n", SOSPrefix);
         return Status;
     }
 
