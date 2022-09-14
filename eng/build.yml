@@ -53,12 +53,12 @@ jobs:
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
         name: NetCore1ESPool-Internal
-        demands: ImageOverride -equals Build.Windows.10.Amd64.VS2022
+        demands: ImageOverride -equals Build.Windows.Amd64.VS2022
 
       # Public Windows Build Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), eq(variables['System.TeamProject'], 'public')) }}:
         name: NetCore-Public
-        demands: ImageOverride -equals Build.Windows.10.Amd64.VS2022.Open
+        demands: ImageOverride -equals Build.Windows.Amd64.VS2022.Open
 
     ${{ if and(ne(parameters.dockerImage, ''), ne(parameters.requiresCapPtraceContainer, 'true')) }}:
       container: ${{ parameters.dockerImage }}
