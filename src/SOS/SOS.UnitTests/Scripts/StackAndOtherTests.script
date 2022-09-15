@@ -200,6 +200,7 @@ ENDIF:NETCORE_OR_DOTNETDUMP
 !IFDEF:DOTNETDUMP
 !IFDEF:ARM64
 !IFDEF:ARM
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 
 # Verify DumpStack works
 SOSCOMMAND:DumpStack
@@ -218,6 +219,7 @@ SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
 
+ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 ENDIF:ARM
 ENDIF:ARM64
 ENDIF:DOTNETDUMP
