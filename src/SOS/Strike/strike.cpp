@@ -3803,8 +3803,6 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
     }
 }
 
-#ifndef FEATURE_PAL
-
 DECLARE_API(TraverseHeap)
 {
     INIT_API();
@@ -3842,9 +3840,9 @@ DECLARE_API(TraverseHeap)
         return Status;
     }
 
-    FILE* file = NULL;
-    if (fopen_s(&file, Filename.data, "w") != 0) {
-        ExtOut("Unable to open file\n");
+    FILE* file = fopen(Filename.data, "w");
+    if (file == nullptr) {
+        ExtOut("Unable to open file %s (%d)\n", strerror(errno), errno);
         return Status;
     }
 
@@ -3882,8 +3880,6 @@ DECLARE_API(TraverseHeap)
 
     return Status;
 }
-
-#endif // FEATURE_PAL
 
 struct PrintRuntimeTypeArgs
 {

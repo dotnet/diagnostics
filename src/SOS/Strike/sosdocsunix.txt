@@ -34,6 +34,7 @@ FinalizeQueue (finalizequeue)      GCInfo
 GCRoot (gcroot)                    EHInfo
 ObjSize (objsize)                  bpmd (bpmd)
 PrintException (pe)
+TraverseHeap (traverseheap)
                                    
 Examining CLR data structures      Diagnostic Utilities
 -----------------------------      -----------------------------
@@ -590,6 +591,48 @@ which can be specified using the -ccw option.
 The abbreviation 'pe' can be used for brevity.
 \\
 
+COMMAND: traverseheap.
+Traverseheap [-xml] [-verify] <filename>
+
+traverseheap writes out a file in a format understood by the CLR Profiler. 
+You can download the CLR Profiler from this link:
+
+http://www.microsoft.com/downloads/details.aspx?FamilyId=86CE6052-D7F4-4AEB-
+9B7A-94635BEEBDDA&displaylang=en
+
+It creates a graphical display of the GC heap to help you analyze the state of
+your application. 
+
+If you pass the -verify option it will do more sanity checking of the heap
+as it dumps it.   Use this option if heap corruption is suspected.
+
+If you pass the "-xml" flag, the file is instead written out in an easy to 
+understand xml format:
+
+    <gcheap>
+        <types>
+            <type id="1" name="System.String">
+            ...
+        </types>
+        <roots>
+            <root kind="handle" address="0x00a73ff0"/>
+            <root kind="stack" address="0x0069f0e0"/>
+            ...
+        </roots>
+        <objects>
+            <object address="0x00b73030" typeid="1" size="300"/>
+            <object address="0x00b75054" typeid="5" size="20">
+                <member address="0x00b75088" />
+                ...
+            </object>
+            ...
+        </objects>
+    </gcheap>
+
+You can break into your process, load SOS, take a snapshot of your heap with 
+this function, then continue.
+
+\\
 COMMAND: threadstate.
 ThreadState value
 
