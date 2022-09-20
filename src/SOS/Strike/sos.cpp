@@ -586,11 +586,13 @@ namespace sos
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
         mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
 
-        CheckSegmentRange();
+        TryAlignToObjectInRange();
     }
 
-    bool ObjectIterator::NextSegment()
+    bool ObjectIterator::TryMoveNextSegment()
     {
+        CheckInterrupt();
+
         if (mCurrHeap >= mNumHeaps)
         {
             return false;
@@ -648,16 +650,30 @@ namespace sos
         mLastObj = 0;
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
         mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
-        return CheckSegmentRange();
+        return true;
     }
 
-    bool ObjectIterator::CheckSegmentRange()
+    bool ObjectIterator::TryMoveToObjectInNextSegmentInRange()
+    {
+        if (TryMoveNextSegment())
+        {
+            return TryAlignToObjectInRange();
+        }
+
+        return false;
+    }
+
+    bool ObjectIterator::TryAlignToObjectInRange()
     {
         CheckInterrupt();
-
         while (!MemOverlap(mStart, mEnd, TO_TADDR(mSegment.mem), mSegmentEnd))
-            if (!NextSegment())
+        {
+            CheckInterrupt();
+            if (!TryMoveNextSegment())
+            {
                 return false;
+            }
+        }
 
         // At this point we know that the current segment contains objects in
         // the correct range.  However, there's no telling if the user gave us
@@ -724,7 +740,7 @@ namespace sos
         }
         catch(const sos::Exception &)
         {
-            NextSegment();
+            TryMoveToObjectInNextSegmentInRange();
         }
     }
 
@@ -742,6 +758,8 @@ namespace sos
 
     void ObjectIterator::MoveToNextObject()
     {
+        CheckInterrupt();
+
         // Object::GetSize can be unaligned, so we must align it ourselves.
         size_t size = (bLarge || bPinned) ? AlignLarge(mCurrObj.GetSize()) : Align(mCurrObj.GetSize());
 
@@ -773,7 +791,9 @@ namespace sos
         }
 
         if (mCurrObj > mEnd || mCurrObj >= mSegmentEnd)
-            NextSegment();
+        {
+            TryMoveToObjectInNextSegmentInRange();
+        }
     }
 
     SyncBlkIterator::SyncBlkIterator()

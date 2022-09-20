@@ -58,8 +58,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private readonly object _lock = new object();
         private readonly Dictionary<string, ObservedProvider> _providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
-        private int _maxNameLength = 40; // Allow room for 40 character counter names by default.
+        private const int CounterValueLength = 15;
 
+        private int _maxNameLength = 0;
         private int _statusRow; // Row # of where we print the status of dotnet-counters
         private int _topRow;
         private bool _paused = false;
@@ -68,6 +69,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private int _maxRow = -1;
         private bool _useAnsi = false;
+
+        private int _consoleHeight = -1;
+        private int _consoleWidth = -1;
 
         public ConsoleWriter(bool useAnsi) 
         {
@@ -126,9 +130,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             Clear();
             
+            _consoleWidth = Console.WindowWidth;
+            _consoleHeight = Console.WindowHeight;     
+            _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0); // Truncate the name to prevent line wrapping as long as the console width is >= CounterValueLength + Indent + 1 characters
+  
+
             int row = Console.CursorTop;
             _topRow = row;
-            Console.WriteLine("Press p to pause, r to resume, q to quit."); row++;
+
+            string instructions = "Press p to pause, r to resume, q to quit.";
+            Console.WriteLine((instructions.Length < _consoleWidth) ? instructions : instructions.Substring(0, _consoleWidth)); row++;
             Console.WriteLine($"    Status: {GetStatus()}");                _statusRow = row++;
             if (_errorText != null)
             {
@@ -140,12 +151,18 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
                 Console.WriteLine($"[{provider.Name}]"); row++;
+
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
+                    
                     string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
+                        if(row >= _consoleHeight) // prevents from displaying more counters than vertical space available
+                        {
+                            break;
+                        }
                         Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
                     }
                     else
@@ -153,6 +170,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         Console.WriteLine(name);
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
+                            if(row >= _consoleHeight)
+                            {
+                                break;
+                            }
+
                             string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
                             Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                             tagSet.Row = row++;
@@ -220,6 +242,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     _maxNameLength = Math.Max(_maxNameLength, tagSet.DisplayTags.Length);
                     tagSet.LastValue = payload.Value;
                     redraw = true;
+                }
+
+                if(Console.WindowWidth != _consoleWidth || Console.WindowHeight != _consoleHeight)
+                {
+                    redraw=true;
                 }
 
                 if (redraw)

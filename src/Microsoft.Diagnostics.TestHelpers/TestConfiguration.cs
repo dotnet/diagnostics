@@ -466,20 +466,23 @@ namespace Microsoft.Diagnostics.TestHelpers
             return sb.ToString();
         }
 
-        internal string GetLogSuffix()
+        public string LogSuffix
         {
-            string version = RuntimeFrameworkVersion;
-
-            // The log name can't contain wild cards, which are used in some testing scenarios.
-            // TODO: The better solution would be to sanitize the file name properly, in case
-            // there's a key being used that contains a character that is not a valid file
-            // name charater.
-            if (!string.IsNullOrEmpty(version) && version.Contains('*'))
+            get
             {
-                version = _truncatedRuntimeFrameworkVersion;
-            }
+                string version = RuntimeFrameworkVersion;
 
-            return GetStringViewWithVersion(version);
+                // The log name can't contain wild cards, which are used in some testing scenarios.
+                // TODO: The better solution would be to sanitize the file name properly, in case
+                // there's a key being used that contains a character that is not a valid file
+                // name charater.
+                if (!string.IsNullOrEmpty(version) && version.Contains('*'))
+                {
+                    version = _truncatedRuntimeFrameworkVersion;
+                }
+
+                return GetStringViewWithVersion(version);
+            }
         }
 
         public IReadOnlyDictionary<string, string> AllSettings

@@ -225,7 +225,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             PEMemoryBlock relocations = reader.GetSectionData(".reloc");
             if (relocations.Length > 0)
             {
-                ulong baseDelta = module.ImageBase - reader.PEHeaders.PEHeader.ImageBase;
+                ulong baseDelta = unchecked(module.ImageBase - reader.PEHeaders.PEHeader.ImageBase);
 #if TRACE_VERBOSE
                 Trace.TraceInformation("ApplyRelocations: dataVA {0:X8} dataCB {1} baseDelta: {2:X16}", dataVA, data.Length, baseDelta);
 #endif
@@ -267,7 +267,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         if ((offset + sizeof(uint)) <= data.Length)
                                         {
                                             uint value = BitConverter.ToUInt32(data, offset);
-                                            value += (uint)baseDelta;
+                                            unchecked { value += (uint)baseDelta; }
                                             byte[] source = BitConverter.GetBytes(value);
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }

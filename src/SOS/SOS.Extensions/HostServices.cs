@@ -30,7 +30,7 @@ namespace SOS.Extensions
         /// <param name="hostServices">The instance of the host services for the native code to use</param>
         /// <returns></returns>
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate HResult InitializeCallbackDelegate(
+        private delegate int InitializeCallbackDelegate(
             IntPtr hostServices);
 
         internal IntPtr IHostServices { get; }
@@ -54,7 +54,7 @@ namespace SOS.Extensions
             if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
                 AssemblyResolver.Enable();
             }
-            LoggingCommand.Initialize();
+            DiagnosticLoggingService.Initialize();
         }
 
         /// <summary>
@@ -107,6 +107,7 @@ namespace SOS.Extensions
         private HostServices()
         {
             _serviceProvider = new ServiceProvider();
+            _serviceProvider.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             _symbolService = new SymbolService(this);
             _symbolService.DefaultTimeout = DefaultTimeout;
             _symbolService.DefaultRetryCount = DefaultRetryCount;
@@ -178,7 +179,7 @@ namespace SOS.Extensions
 
         #region IHostServices
 
-        private HResult GetHost(
+        private int GetHost(
             IntPtr self,
             out IntPtr host)
         {
@@ -187,7 +188,7 @@ namespace SOS.Extensions
             return HResult.S_OK;
         }
 
-        private HResult RegisterDebuggerServices(
+        private int RegisterDebuggerServices(
             IntPtr self,
             IntPtr iunk)
         {
@@ -217,7 +218,10 @@ namespace SOS.Extensions
             try
             {
                 var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
-                _serviceProvider.AddService<IConsoleService>(consoleService);
+                var fileLoggingConsoleService = new FileLoggingConsoleService(consoleService);
+                DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
+                _serviceProvider.AddService<IConsoleService>(fileLoggingConsoleService);
+                _serviceProvider.AddService<IConsoleFileLoggingService>(fileLoggingConsoleService);
 
                 _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
                 _serviceProvider.AddService<IContextService>(_contextService);
@@ -258,7 +262,7 @@ namespace SOS.Extensions
             return HResult.S_OK;
         }
 
-        private HResult CreateTarget(
+        private int CreateTarget(
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
@@ -280,7 +284,7 @@ namespace SOS.Extensions
             return HResult.S_OK;
         }
 
-        private HResult UpdateTarget(
+        private int UpdateTarget(
             IntPtr self,
             uint processId)
         {
@@ -324,7 +328,7 @@ namespace SOS.Extensions
             }
         }
 
-        private HResult DispatchCommand(
+        private int DispatchCommand(
             IntPtr self,
             string commandName,
             string commandArguments)
@@ -358,7 +362,7 @@ namespace SOS.Extensions
             return HResult.E_FAIL;
         }
 
-        private HResult DisplayHelp(
+        private int DisplayHelp(
             IntPtr self,
             string commandName)
         {
@@ -387,6 +391,8 @@ namespace SOS.Extensions
 
                 if (DebuggerServices != null)
                 {
+                    // This turns off any logging to console now that debugger services will be released and the console service will no longer work.
+                    DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);
                     DebuggerServices.Release();
                     DebuggerServices = null;
                 }
@@ -411,21 +417,21 @@ namespace SOS.Extensions
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult GetHostDelegate(
+        private delegate int GetHostDelegate(
             [In] IntPtr self,
             [Out] out IntPtr host);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult RegisterDebuggerServicesDelegate(
+        private delegate int RegisterDebuggerServicesDelegate(
             [In] IntPtr self,
             [In] IntPtr iunk);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult CreateTargetDelegate(
+        private delegate int CreateTargetDelegate(
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult UpdateTargetDelegate(
+        private delegate int UpdateTargetDelegate(
             [In] IntPtr self,
             [In] uint processId);
 
@@ -438,13 +444,13 @@ namespace SOS.Extensions
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult DispatchCommandDelegate(
+        private delegate int DispatchCommandDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandName,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandArguments);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult DisplayHelpDelegate(
+        private delegate int DisplayHelpDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandName);
 

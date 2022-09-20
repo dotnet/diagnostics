@@ -35,12 +35,12 @@ namespace Microsoft.Diagnostics
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct ICorDebugVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> Initialize;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> Terminate;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, HResult> SetManangedHandler;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, HResult> SetUnmanangedHandler;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> CreateProcess;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, int, out IntPtr, HResult> DebugActiveProcess;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> Initialize;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> Terminate;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, int> SetManangedHandler;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, int> SetUnmanangedHandler;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> CreateProcess;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, int, out IntPtr, int> DebugActiveProcess;
         }
     }
 }

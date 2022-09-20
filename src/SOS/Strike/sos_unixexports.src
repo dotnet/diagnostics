@@ -30,7 +30,7 @@ EEHeap
 EEVersion
 EEStack
 EHInfo
-enummemory
+enummem
 FinalizeQueue
 FindAppDomain
 FindRoots
@@ -64,6 +64,7 @@ Threads
 ThreadPool
 ThreadState
 Token2EE
+TraverseHeap
 u
 VerifyHeap
 VerifyObj

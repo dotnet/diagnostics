@@ -36,6 +36,7 @@ namespace SOS.Hosting
     [Command(Name = "eeheap",           DefaultOptions = "EEHeap",              Help = "Displays info about process memory consumed by internal runtime data structures.")]
     [Command(Name = "eeversion",        DefaultOptions = "EEVersion",           Help = "Displays information about the runtime version.")]
     [Command(Name = "ehinfo",           DefaultOptions = "EHInfo",              Help = "Displays the exception handling blocks in a jitted method.")]
+    [Command(Name = "enummem",          DefaultOptions = "enummem",             Help = "ICLRDataEnumMemoryRegions.EnumMemoryRegions test command.")]
     [Command(Name = "finalizequeue",    DefaultOptions = "FinalizeQueue",       Help = "Displays all objects registered for finalization.")]
     [Command(Name = "findappdomain",    DefaultOptions = "FindAppDomain",       Help = "Attempts to resolve the AppDomain of a GC object.")]
     [Command(Name = "gchandles",        DefaultOptions = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]
@@ -58,6 +59,8 @@ namespace SOS.Hosting
     [Command(Name = "soshelp",          DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
     [Command(Name = "syncblk",          DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
     [Command(Name = "threadpool",       DefaultOptions = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
+    [Command(Name = "threadstate",      DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
+    [Command(Name = "traverseheap",     DefaultOptions = "TraverseHeap",        Help = "Writes out heap information to a file in a format understood by the CLR Profiler.")]
     [Command(Name = "verifyheap",       DefaultOptions = "VerifyHeap",          Help = "Checks the GC heap for signs of corruption.")]
     [Command(Name = "verifyobj",        DefaultOptions = "VerifyObj",           Help = "Checks the object for signs of corruption.")]
     [Command(Name = "comstate",         DefaultOptions = "COMState",            Flags = CommandFlags.Windows, Help = "Lists the COM apartment model for each thread.")]
@@ -65,7 +68,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpccw",          DefaultOptions = "DumpCCW",             Flags = CommandFlags.Windows, Help = "Displays information about a COM Callable Wrapper.")]
     [Command(Name = "dumppermissionset",DefaultOptions = "DumpPermissionSet",   Flags = CommandFlags.Windows, Help = "Displays a PermissionSet object (debug build only).")]
     [Command(Name = "gchandleleaks",    DefaultOptions = "GCHandleLeaks",       Flags = CommandFlags.Windows, Help = "Helps in tracking down GCHandle leaks")]
-    [Command(Name = "traverseheap",     DefaultOptions = "TraverseHeap",        Flags = CommandFlags.Windows, Help = "Writes out a file in a format understood by the CLR Profiler.")]
     [Command(Name = "watsonbuckets",    DefaultOptions = "WatsonBuckets",       Flags = CommandFlags.Windows, Help = "Displays the Watson buckets.")]
     public class SOSCommand : CommandBase
     {
