@@ -882,35 +882,38 @@ namespace Graphs
 
         internal static void WriteCompressedInt(SegmentedMemoryStreamWriter writer, int value)
         {
-            if (value << 25 >> 25 == value)
+            unchecked
             {
-                goto oneByte;
-            }
+                if (value << 25 >> 25 == value)
+                {
+                    goto oneByte;
+                }
 
-            if (value << 18 >> 18 == value)
-            {
-                goto twoBytes;
-            }
+                if (value << 18 >> 18 == value)
+                {
+                    goto twoBytes;
+                }
 
-            if (value << 11 >> 11 == value)
-            {
-                goto threeBytes;
-            }
+                if (value << 11 >> 11 == value)
+                {
+                    goto threeBytes;
+                }
 
-            if (value << 4 >> 4 == value)
-            {
-                goto fourBytes;
-            }
+                if (value << 4 >> 4 == value)
+                {
+                    goto fourBytes;
+                }
 
-            writer.Write((byte)((value >> 28) | 0x80));
+                writer.Write((byte)((value >> 28) | 0x80));
             fourBytes:
-            writer.Write((byte)((value >> 21) | 0x80));
+                writer.Write((byte)((value >> 21) | 0x80));
             threeBytes:
-            writer.Write((byte)((value >> 14) | 0x80));
+                writer.Write((byte)((value >> 14) | 0x80));
             twoBytes:
-            writer.Write((byte)((value >> 7) | 0x80));
+                writer.Write((byte)((value >> 7) | 0x80));
             oneByte:
-            writer.Write((byte)(value & 0x7F));
+                writer.Write((byte)(value & 0x7F));
+            }
         }
 
         internal NodeIndex m_index;
