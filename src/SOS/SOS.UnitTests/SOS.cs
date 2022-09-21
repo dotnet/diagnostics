@@ -366,6 +366,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
+        SkipIfArm(config);
+
         if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || OS.IsAlpine)
         {
             throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
@@ -421,7 +423,7 @@ public class SOS
 
             // Create the python script process runner
             ProcessRunner processRunner = new ProcessRunner(program, arguments.ToString()).
-                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
+                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                 WithTimeout(TimeSpan.FromMinutes(10)).
                 WithExpectedExitCode(0).

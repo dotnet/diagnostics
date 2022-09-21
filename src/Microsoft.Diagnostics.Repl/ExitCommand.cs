@@ -7,7 +7,7 @@ using System;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    [Command(Name = "exit", Aliases = new string[] { "quit", "q" }, Help = "Exit interactive mode.", Platform = CommandPlatform.Global)]
+    [Command(Name = "exit", Aliases = new string[] { "quit", "q" }, Help = "Exit interactive mode.", Flags = CommandFlags.Global | CommandFlags.Manual)]
     public class ExitCommand : CommandBase
     {
         private readonly Action _exit;

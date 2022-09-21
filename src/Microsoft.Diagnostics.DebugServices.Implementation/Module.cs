@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -197,7 +197,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (InitializeValue(Flags.InitializeSymbolFileName))
             {
-                if (Target.OperatingSystem == OSPlatform.Linux)
+                if (ImageSize > 0 && Target.OperatingSystem == OSPlatform.Linux)
                 {
                     try
                     {
@@ -216,8 +216,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                        (ex is InvalidVirtualAddressException ||
                         ex is ArgumentOutOfRangeException ||
                         ex is IndexOutOfRangeException ||
+                        ex is OverflowException ||
                         ex is BadInputFormatException)
-
                     {
                         Trace.TraceWarning("ELF .gnu_debuglink section in {0}: {1}", this, ex.Message);
                     }
@@ -226,7 +226,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _symbolFileName;
         }
 
-        public abstract VersionData GetVersionData();
+        public abstract Version GetVersionData();
 
         public abstract string GetVersionString();
 
@@ -254,23 +254,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else if (Target.OperatingSystem == OSPlatform.Linux)
             {
-                try
+                if (ImageSize > 0)
                 {
-                    Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
-                    ElfFile elfFile = new(stream, position: ImageBase, leaveOpen: false, isVirtual: true);
-                    if (elfFile.Header.IsValid)
+                    ModuleInfo module = ModuleInfo.TryCreate(Target.Services.GetService<DataReader>(), ImageBase, FileName);
+                    if (module is not null)
                     {
-                        if (elfFile.TryGetExportSymbol(name, out ulong offset))
-                        {
-                            address = ImageBase + offset;
-                            return true;
-                        }
-                        address = 0;
-                        return false;
+                        address = module.GetExportSymbolAddress(name);
+                        return address != 0;
                     }
-                }
-                catch (InvalidDataException)
-                {
                 }
             }
             return TryGetSymbolAddressInner(name, out address);
@@ -284,9 +275,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
-        protected VersionData GetVersion()
+        protected Version GetVersionInner()
         {
-            VersionData versionData = null;
+            Version version = null;
 
             PEFile peFile = GetPEInfo();
             if (peFile != null)
@@ -296,7 +287,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     VsFixedFileInfo fileInfo = peFile.VersionInfo;
                     if (fileInfo != null)
                     {
-                        versionData = fileInfo.ToVersionData();
+                        version = fileInfo.ToVersion();
                     }
                 }
                 catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
@@ -325,8 +316,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         string versionToParse = versionString.Substring(0, spaceIndex);
                         try
                         {
-                            Version version = System.Version.Parse(versionToParse);
-                            versionData = new VersionData(version.Major, version.Minor, version.Build, version.Revision);
+                            version = Version.Parse(versionToParse);
                         }
                         catch (ArgumentException ex)
                         {
@@ -336,7 +326,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            return versionData;
+            return version;
         }
 
         protected PEFile GetPEInfo()

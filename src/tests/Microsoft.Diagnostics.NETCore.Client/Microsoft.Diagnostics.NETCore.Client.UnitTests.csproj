@@ -1,66 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- 
-    DARCVersionFileName, GenerateDARCVersion, and InjectDARCVersion are used for injecting the value of MicrosoftNETCoreAppRuntimewinx64Version
-    int csharp code so that it can be used by testing harnesses for running tests under a specific runtime version.  This specifically
-    allows tests to run on a version of the runtime besides whatever was included with Arcade's SDK.
-   -->
-
   <PropertyGroup>
-    <DARCVersionFileName>$(IntermediateOutputPath)/DARCVersion.g.cs</DARCVersionFileName>
-  </PropertyGroup>
-
-  <Target Name="GenerateDARCVersionCs"
-          Inputs="$(VersionsPropsPath)"
-          Outputs="$(DARCVersionFileName)">
-    <PropertyGroup>
-      <DARCVersionFile>
-<![CDATA[
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
-
-
-// THIS FILE IS AUTO-GENERATED DURING BUILD.  MODIFICATIONS _WILL_ BE OVERWRITTEN!
-
-namespace Microsoft.Diagnostics.NETCore.Client
-{
-    public partial class CommonHelper
-    {
-        public static readonly string CurrentDARCVersion = "$(MicrosoftNETCoreAppRuntimewinx64Version)";
-    }
-}
-]]>
-      </DARCVersionFile>
-    </PropertyGroup>
-
-    <WriteLinesToFile File="$(DARCVersionFileName)"
-                      Overwrite="true"
-                      Lines="$(DARCVersionFile.Replace(';', '%3B'))"
-                      WriteOnlyWhenDifferent="true" />
-  </Target>
-
-  <Target Name="InjectDARCVersion" BeforeTargets="BeforeCompile" DependsOnTargets="GenerateDARCVersionCs">
-    <ItemGroup>
-      <FileWrites Include="$(DARCVersionFileName)" />
-      <Compile Include="$(DARCVersionFileName)" />
-    </ItemGroup>
-  </Target>
-
-  <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>$(UnitTestTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
-    <ProjectReference Include="../../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="../Tracee/Tracee.csproj" PrivateAssets="all" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
   </ItemGroup>
-  <ItemGroup>
-    <InternalsVisibleTo Include="DotnetStack.UnitTests" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
-  </ItemGroup>
+
 </Project>

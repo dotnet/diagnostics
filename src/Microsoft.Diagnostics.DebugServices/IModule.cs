@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Returns the version information for the modules. 
         /// </summary>
-        VersionData GetVersionData();
+        Version GetVersionData();
 
         /// <summary>
         /// Returns the file version string containing the build version and commit id.

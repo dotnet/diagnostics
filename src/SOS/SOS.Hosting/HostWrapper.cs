@@ -48,7 +48,7 @@ namespace SOS.Hosting
         /// </summary>
         /// <param name="targetWrapper">target wrapper address returned</param>
         /// <returns>S_OK</returns>
-        private HResult GetCurrentTarget(IntPtr self, out IntPtr targetWrapper)
+        private int GetCurrentTarget(IntPtr self, out IntPtr targetWrapper)
         {
             TargetWrapper wrapper = _getTarget();
             if (wrapper == null)
@@ -70,13 +70,13 @@ namespace SOS.Hosting
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        internal delegate HResult GetServiceDelegate(
+        internal delegate int GetServiceDelegate(
             [In] IntPtr self,
             [In] in Guid guid,
             [Out] out IntPtr ptr);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate HResult GetCurrentTargetDelegate(
+        private delegate int GetCurrentTargetDelegate(
             [In] IntPtr self,
             [Out] out IntPtr target);
 

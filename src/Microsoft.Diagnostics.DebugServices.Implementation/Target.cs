@@ -37,6 +37,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Add the per-target services
             ServiceProvider.AddService<ITarget>(this);
+            ServiceProvider.AddServiceFactory<DataReader>(() => new DataReader(this));
             ServiceProvider.AddServiceFactory<IRuntimeService>(() => new RuntimeService(this));
         }
 

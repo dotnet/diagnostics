@@ -15,16 +15,17 @@
 
      $(MicrosoftDotnetSdkInternalVersion) - .NET SDK to use for testing
 
-     $(VSRedistCommonNetCoreSharedFrameworkx6460Version)               - latest dotnet runtime package version (the version to install)
-     $(MicrosoftNETCoreAppRuntimewinx64Version)  - latest dotnet runtime stable version (the version that actually is installed)
+     $(VSRedistCommonNetCoreSharedFrameworkx6470Version)        - latest dotnet runtime package version (the version to install)
+     $(MicrosoftNETCoreAppRuntimewinx64Version)                 - latest dotnet runtime stable version (the version that actually is installed)
 
-     $(MicrosoftAspNetCoreAppRefInternalVersion) - latest dotnet aspnetcore package version (the version to install)
-     $(MicrosoftAspNetCoreAppRefVersion)         - latest dotnet aspnetcore stable version (the version that actually is installed)
+     $(MicrosoftAspNetCoreAppRefInternalVersion)                - latest dotnet aspnetcore package version (the version to install)
+     $(MicrosoftAspNetCoreAppRefVersion)                        - latest dotnet aspnetcore stable version (the version that actually is installed)
 
-     $(MicrosoftNETCoreApp50Version) $(MicrosoftAspNetCoreApp50Version)  - 5.0 version
-     $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version)  - 3.1 version
+     $(MicrosoftNETCoreApp60Version) $(MicrosoftAspNetCoreApp60Version) - 6.0 version
+     $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version) - 3.1 version
 
-     $(SingleFileRuntimeVersion) - The version of the runtime used to build single-file apps
+     $(SingleFileRuntimeLatestVersion)  - The latest version of the runtime used to build single-file apps
+     $(SingleFileRuntime60Version)      - The 6.0.x version of the runtime used to build single-file apps
 
      From Arcade:
 
@@ -63,6 +64,11 @@
     <RegeditCommand>regedit.exe</RegeditCommand>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <Enable31Testing>true</Enable31Testing>
+    <Enable31Testing Condition="'$(BuildArch)' == 'arm64' and $([MSBuild]::IsOsPlatform(OSX))">false</Enable31Testing>
+  </PropertyGroup>
+
   <Choose>
     <When Condition="$([MSBuild]::IsOsPlatform(Windows))">
       <PropertyGroup>
@@ -78,14 +84,14 @@
   </Choose>
 
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6460Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
-    <TestVersions Include="50" RuntimeVersion="$(MicrosoftNETCoreApp50Version)" AspNetVersion="$(MicrosoftAspNetCoreApp50Version)" />
-    <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6470Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="60" RuntimeVersion="$(MicrosoftNETCoreApp60Version)" AspNetVersion="$(MicrosoftAspNetCoreApp60Version)" />
+    <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" Condition="$(Enable31Testing)" />
   </ItemGroup>
 
   <!-- Local private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6460Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6470Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
   </ItemGroup>
 
   <!-- Internal service release testing -->
@@ -147,11 +153,11 @@
           Outputs="$(TestConfigFileName)">
 
     <PropertyGroup Condition="'$(PrivateBuildTesting)' != 'true' AND '$(InternalReleaseTesting)' != 'true'">
-      <RuntimeVersion31>$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
-      <AspNetCoreVersion31>$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
+      <RuntimeVersion31 Condition="$(Enable31Testing)">$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
+      <AspNetCoreVersion31 Condition="$(Enable31Testing)">$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
 
-      <RuntimeVersion50>$(MicrosoftNETCoreApp50Version)</RuntimeVersion50>
-      <AspNetCoreVersion50>$(MicrosoftAspNetCoreApp50Version)</AspNetCoreVersion50>
+      <RuntimeVersion60>$(MicrosoftNETCoreApp60Version)</RuntimeVersion60>
+      <AspNetCoreVersion60>$(MicrosoftAspNetCoreApp60Version)</AspNetCoreVersion60>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -170,13 +176,14 @@
   <RuntimeVersion31>$(RuntimeVersion31)</RuntimeVersion31>
   <AspNetCoreVersion31>$(AspNetCoreVersion31)</AspNetCoreVersion31>
 
-  <RuntimeVersion50>$(RuntimeVersion50)</RuntimeVersion50>
-  <AspNetCoreVersion50>$(AspNetCoreVersion50)</AspNetCoreVersion50>
+  <RuntimeVersion60>$(RuntimeVersion60)</RuntimeVersion60>
+  <AspNetCoreVersion60>$(AspNetCoreVersion60)</AspNetCoreVersion60>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
   <AspNetCoreVersionLatest>$(AspNetCoreVersionLatest)</AspNetCoreVersionLatest>
 
-  <SingleFileRuntimeVersion>$(SingleFileRuntimeVersion)</SingleFileRuntimeVersion>
+  <SingleFileRuntimeLatestVersion>$(SingleFileRuntimeLatestVersion)</SingleFileRuntimeLatestVersion>
+  <SingleFileRuntime60Version>$(SingleFileRuntime60Version)</SingleFileRuntime60Version>
 </Configuration>
 ]]>
       </TestConfigFileLines>

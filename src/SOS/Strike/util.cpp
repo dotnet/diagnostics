@@ -4333,7 +4333,7 @@ void GetAllocContextPtrs(AllocInfo *pallocInfo)
     CLRDATA_ADDRESS allocLimit;
 
     ReleaseHolder<ISOSDacInterface12> sos12;
-    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) && 
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) &&
         SUCCEEDED(sos12->GetGlobalAllocationContext(&allocPtr, &allocLimit)) &&
         allocPtr != 0)
     {
@@ -4406,7 +4406,7 @@ HRESULT GetMTOfObject(TADDR obj, TADDR *mt)
     // Read the MethodTable and if we succeed, get rid of the mark bits.
     HRESULT hr = rvCache->Read(obj, mt, sizeof(TADDR), NULL);
     if (SUCCEEDED(hr))
-        *mt &= ~3;
+        *mt &= ~sos::Object::METHODTABLE_PTR_LOW_BITMASK;
 
     return hr;
 }
@@ -4656,7 +4656,16 @@ OutputVaList(
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
     if (length > 0)
     {
-        return g_ExtControl->OutputVaList(mask, (char* const)&g_printBuffer, args);
+#ifdef HOST_WINDOWS
+        if (IsInitializedByDbgEng())
+        {
+            return g_ExtControl->Output(mask, "%s", g_printBuffer);
+        }
+        else
+#endif
+        {
+            return g_ExtControl->OutputVaList(mask, (char* const)&g_printBuffer, args);
+        }
     }
     return E_FAIL;
 }
@@ -4671,7 +4680,16 @@ ControlledOutputVaList(
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
     if (length > 0)
     {
-        return g_ExtControl->ControlledOutputVaList(outputControl, mask, (char* const)&g_printBuffer, args);
+#ifdef HOST_WINDOWS
+        if (IsInitializedByDbgEng())
+        {
+            return g_ExtControl->ControlledOutput(outputControl, mask, "%s", g_printBuffer);
+        }
+        else
+#endif
+        {
+            return g_ExtControl->ControlledOutputVaList(outputControl, mask, (char* const)&g_printBuffer, args);
+        }
     }
     return E_FAIL;
 }
@@ -4822,11 +4840,14 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!DumpRCW /d %s\">%s</exec>",       // DML_RCWrapper
     "<exec cmd=\"!DumpCCW /d %s\">%s</exec>",       // DML_CCWrapper
     "<exec cmd=\"!ClrStack -i %S %d\">%S</exec>",   // DML_ManagedVar
+    "<exec cmd=\"!DumpObj /d %s\">%s</exec>",       // DML_Async
     "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
     "<exec cmd=\"!DumpRCW -cw /d %s\">%s</exec>",    // DML_ComWrapperRCW
     "<exec cmd=\"!DumpCCW -cw /d %s\">%s</exec>",    // DML_ComWrapperCCW
     "<exec cmd=\"dps %s L%d\">%s</exec>",            // DML_TaggedMemory
 };
+
+static_assert(ARRAY_SIZE(DMLFormats) == Output::DML_Last, "Output types and formats must match in length");
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len)
 {
@@ -6035,9 +6056,9 @@ void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
         {
             for (int i = 0; i < slotsArray.dwNumComponents; i++)
             {
-                CLRDATA_ADDRESS workItemPtr;
-                MOVE(workItemPtr, TO_CDADDR(slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize))); // the item object reference is at the beginning of the Slot
-                if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
+                DWORD_PTR workItemPtr;
+                MOVE(workItemPtr, slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize)); // the item object reference is at the beginning of the Slot
+                if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
                 {
                     sos::Object workItem = TO_TADDR(workItemPtr);
                     stats->Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
@@ -6045,10 +6066,10 @@ void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
                     if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
                         (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                     {
-                        CLRDATA_ADDRESS delegatePtr;
+                        DWORD_PTR delegatePtr;
                         MOVE(delegatePtr, workItem.GetAddress() + offset);
                         CLRDATA_ADDRESS md;
-                        if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
+                        if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
                         {
                             NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
                             ExtOut(" => %S", g_mdName);

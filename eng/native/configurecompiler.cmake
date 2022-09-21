@@ -133,7 +133,7 @@ elseif (CLR_CMAKE_HOST_UNIX)
         message("Address Sanitizer (asan) enabled")
       endif ()
       if (${__UBSAN_POS} GREATER -1)
-        # all sanitizier flags are enabled except alignment (due to heavy use of __unaligned modifier)
+        # all sanitizer flags are enabled except alignment (due to heavy use of __unaligned modifier)
         list(APPEND CLR_CXX_SANITIZERS
           "bool"
           bounds
@@ -227,6 +227,9 @@ elseif (CLR_CMAKE_HOST_ARCH_ARM64)
 elseif (CLR_CMAKE_HOST_ARCH_LOONGARCH64)
   set(ARCH_HOST_NAME loongarch64)
   add_definitions(-DHOST_LOONGARCH64 -DHOST_64BIT)
+elseif (CLR_CMAKE_HOST_ARCH_RISCV64)
+  set(ARCH_HOST_NAME riscv64)
+  add_definitions(-DHOST_RISCV64 -DHOST_64BIT)
 elseif (CLR_CMAKE_HOST_ARCH_S390X)
   set(ARCH_HOST_NAME s390x)
   add_definitions(-DHOST_S390X -DHOST_64BIT -DBIGENDIAN)
@@ -236,6 +239,9 @@ elseif (CLR_CMAKE_HOST_ARCH_WASM)
 elseif (CLR_CMAKE_HOST_ARCH_MIPS64)
   set(ARCH_HOST_NAME mips64)
   add_definitions(-DHOST_MIPS64 -DHOST_64BIT=1)
+elseif (CLR_CMAKE_HOST_ARCH_POWERPC64)
+  set(ARCH_HOST_NAME ppc64le)
+  add_definitions(-DHOST_POWERPC64 -DHOST_64BIT)
 else ()
   clr_unknown_arch()
 endif ()
@@ -245,17 +251,21 @@ if (CLR_CMAKE_HOST_UNIX)
     if(CLR_CMAKE_HOST_UNIX_AMD64)
       message("Detected Linux x86_64")
     elseif(CLR_CMAKE_HOST_UNIX_ARM)
-      message("Detected Linux ARM")
+      message("Detected Linux arm")
     elseif(CLR_CMAKE_HOST_UNIX_ARMV6)
-      message("Detected Linux ARMv6")
+      message("Detected Linux armv6")
     elseif(CLR_CMAKE_HOST_UNIX_ARM64)
-      message("Detected Linux ARM64")
+      message("Detected Linux arm64")
     elseif(CLR_CMAKE_HOST_UNIX_LOONGARCH64)
-      message("Detected Linux LOONGARCH64")
+      message("Detected Linux loongarch64")
+    elseif(CLR_CMAKE_HOST_UNIX_RISCV64)
+      message("Detected Linux riscv64")
     elseif(CLR_CMAKE_HOST_UNIX_X86)
       message("Detected Linux i686")
     elseif(CLR_CMAKE_HOST_UNIX_S390X)
       message("Detected Linux s390x")
+    elseif(CLR_CMAKE_HOST_UNIX_POWERPC64)
+      message("Detected Linux ppc64le")
     else()
       clr_unknown_arch()
     endif()
@@ -327,10 +337,20 @@ elseif (CLR_CMAKE_TARGET_ARCH_LOONGARCH64)
     set(ARCH_SOURCES_DIR loongarch64)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_LOONGARCH64>)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_64BIT>)
+elseif (CLR_CMAKE_TARGET_ARCH_RISCV64)
+    set(ARCH_TARGET_NAME riscv64)
+    set(ARCH_SOURCES_DIR riscv64)
+    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_RISCV64>)
+    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_64BIT>)
 elseif (CLR_CMAKE_TARGET_ARCH_S390X)
     set(ARCH_TARGET_NAME s390x)
     set(ARCH_SOURCES_DIR s390x)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_S390X>)
+    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_64BIT>)
+elseif (CLR_CMAKE_TARGET_ARCH_POWERPC64)
+    set(ARCH_TARGET_NAME ppc64le)
+    set(ARCH_SOURCES_DIR ppc64le)
+    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_POWERPC64>)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_64BIT>)
 elseif (CLR_CMAKE_TARGET_ARCH_WASM)
     set(ARCH_TARGET_NAME wasm)
@@ -365,6 +385,11 @@ if (CLR_CMAKE_HOST_UNIX)
   if(CLR_CMAKE_HOST_OSX OR CLR_CMAKE_HOST_MACCATALYST)
     # We cannot enable "stack-protector-strong" on OS X due to a bug in clang compiler (current version 7.0.2)
     add_compile_options(-fstack-protector)
+    if(CLR_CMAKE_HOST_UNIX_ARM64)
+      # For OSX-Arm64, LSE instructions are enabled by default
+      add_definitions(-DLSE_INSTRUCTIONS_ENABLED_BY_DEFAULT)
+      add_compile_options(-mcpu=apple-m1)
+    endif(CLR_CMAKE_HOST_UNIX_ARM64)
   elseif(NOT CLR_CMAKE_HOST_BROWSER)
     check_c_compiler_flag(-fstack-protector-strong COMPILER_SUPPORTS_F_STACK_PROTECTOR_STRONG)
     if (COMPILER_SUPPORTS_F_STACK_PROTECTOR_STRONG)
@@ -426,11 +451,17 @@ if (CLR_CMAKE_HOST_UNIX)
     add_compile_options(-Wno-uninitialized)
     add_compile_options(-Wno-strict-aliasing)
     add_compile_options(-Wno-array-bounds)
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-class-memaccess>)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-misleading-indentation>)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-stringop-overflow>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-restrict>)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-stringop-truncation>)
-    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-placement-new>)
+
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+      # this warning is only reported by g++ 11 in debug mode when building
+      # src/coreclr/vm/stackingallocator.h. It is a false-positive, fixed in g++ 12.
+      # see: https://github.com/dotnet/runtime/pull/69188#issuecomment-1136764770
+      add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-placement-new>)
+    endif()
 
     if (CMAKE_CXX_COMPILER_ID)
       check_cxx_compiler_flag(-faligned-new COMPILER_SUPPORTS_F_ALIGNED_NEW)
@@ -586,48 +617,42 @@ if (MSVC)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4065>) # switch statement contains 'default' but no 'case' labels
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4100>) # 'identifier' : unreferenced formal parameter
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4127>) # conditional expression is constant
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4131>) # 'function' : uses old-style declarator
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4189>) # local variable is initialized but not referenced
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4200>) # nonstandard extension used : zero-sized array in struct/union
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4201>) # nonstandard extension used : nameless struct/union
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4206>) # nonstandard extension used : translation unit is empty
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4239>) # nonstandard extension used : 'token' : conversion from 'type' to 'type'
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4245>) # conversion from 'type1' to 'type2', signed/unsigned mismatch
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4291>) # no matching operator delete found; memory will not be freed if initialization throws an exception
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4310>) # cast truncates constant value
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4324>) # 'struct_name' : structure was padded due to __declspec(align())
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4366>) # The result of the unary 'operator' operator may be unaligned
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4456>) # declaration of 'identifier' hides previous local declaration
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4457>) # declaration of 'identifier' hides function parameter
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4458>) # declaration of 'identifier' hides class member
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4459>) # declaration of 'identifier' hides global declaration
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4463>) # overflow; assigning value to bit-field that can only hold values from low_value to high_value
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4505>) # unreferenced function with internal linkage has been removed
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4702>) # unreachable code
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4706>) # assignment within conditional expression
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4733>) # Inline asm assigning to 'FS:0' : handler not registered as safe handler
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4815>) # 'var': zero-sized array in stack object will have no elements (unless the object is an aggregate that has been aggregate initialized)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4838>) # conversion from 'type_1' to 'type_2' requires a narrowing conversion
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4918>) # 'character' : invalid character in pragma optimization list
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4960>) # 'function' is too big to be profiled
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4961>) # No profile data was merged into '.pgd file', profile-guided optimizations disabled
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd5105>) # macro expansion producing 'defined' has undefined behavior
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd5205>) # delete of an abstract class 'type-name' that has a non-virtual destructor results in undefined behavior
 
   # Treat Warnings as Errors:
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4007>) # 'main' : must be __cdecl.
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4013>) # 'function' undefined - assuming extern returning int.
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4018>) # 'expression' : signed/unsigned mismatch
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4055>) # 'conversion' : from data pointer 'type1' to function pointer 'type2'
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4102>) # "'%$S' : unreferenced label".
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4146>) # unary minus operator applied to unsigned type, result still unsigned
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4242>) # 'identifier' : conversion from 'type1' to 'type2', possible loss of data
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4244>) # 'conversion' conversion from 'type1' to 'type2', possible loss of data
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4267>) # 'var' : conversion from 'size_t' to 'type', possible loss of data
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4302>) # 'conversion' : truncation from 'type 1' to 'type 2'
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4308>) # negative integral constant converted to unsigned type
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4509>) # nonstandard extension used: 'function' uses SEH and 'object' has destructor
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4510>) # 'class' : default constructor could not be generated
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4532>) # 'continue' : jump out of __finally/finally block has undefined behavior during termination handling
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4533>) # initialization of 'variable' is skipped by 'instruction'
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4551>) # Function call missing argument list.
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4610>) # object 'class' can never be instantiated - user-defined constructor required
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4611>) # interaction between 'function' and C++ object destruction is non-portable
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4640>) # 'instance' : construction of local static object is not thread-safe
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4700>) # Local used w/o being initialized.
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4701>) # Potentially uninitialized local variable 'name' used
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4703>) # Potentially uninitialized local pointer variable 'name' used
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4789>) # destination of memory copy is too small
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4640>) # 'instance' : construction of local static object is not thread-safe
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4806>) # Unsafe operation involving type 'bool'.
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4995>) # 'function': name was marked as #pragma deprecated
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4996>) # 'function': was declared deprecated also 'std::': Function call with parameters that are potentially unsafe - this call relies on the caller to check that the passed values are correct. To disable this warning, use -D_SCL_SECURE_NO_WARNINGS. See documentation on how to use Visual C++ 'Checked Iterators'
 
   # Set Warning Level 3:
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/w34092>) # Sizeof returns 'unsigned long'.
@@ -762,6 +787,13 @@ if (CLR_CMAKE_HOST_WIN32)
     endif()
 
 elseif (NOT CLR_CMAKE_HOST_BROWSER)
+    # This is a workaround for upstream issue: https://gitlab.kitware.com/cmake/cmake/-/issues/22995.
+    #
+    # In Clang.cmake, the decision to use single or double hyphen for target and gcc-toolchain
+    # is made based on CMAKE_${LANG}_COMPILER_VERSION, but CMAKE_ASM_COMPILER_VERSION is empty
+    # so it picks up single hyphen options, which new clang versions don't recognize.
+    set (CMAKE_ASM_COMPILER_VERSION "${CMAKE_C_COMPILER_VERSION}")
+
     enable_language(ASM)
 
 endif(CLR_CMAKE_HOST_WIN32)

@@ -1,10 +1,10 @@
-<RuleSet Name="Diagnostics Ruleset"
-         Description="Diagnostics Ruleset"
-         ToolsVersion="14.0">
-
-    <!-- Define all the analyzer rule actions for this repo. -->
-    <Include Path="CodeAnalysis.Repository.ruleset" Action="Default" />
-
-    <!-- This will override or define all rules needed values to be SDL compliant. -->
-    <Include Path="CodeAnalysis.Security.ruleset" Action="Default" />
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Diagnostics Ruleset" Description="Diagnostics Ruleset" ToolsVersion="14.0">
+  <!-- Define all the analyzer rule actions for this repo. -->
+  <Include Path="CodeAnalysis.Repository.ruleset" Action="Default" />
+  <!-- This will override or define all rules needed values to be SDL compliant. -->
+  <Include Path="CodeAnalysis.Security.ruleset" Action="Default" />
+  <Rules AnalyzerId="Microsoft.CodeQuality.Analyzers" RuleNamespace="Microsoft.CodeQuality.Analyzers">
+    <Rule Id="CA1069" Action="None" />
+  </Rules>
 </RuleSet>
