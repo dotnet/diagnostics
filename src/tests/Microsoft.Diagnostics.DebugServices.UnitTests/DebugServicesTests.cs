@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -62,7 +63,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.NotNull(contextService.GetCurrentTarget());
 
             // Check that the ITarget properties match the test data
-            host.TestData.Target.CompareMembers(target);
+            host.TestData.CompareMembers(host.TestData.Target, target);
 
             // Test temp directory
             AssertX.DirectoryExists("Target temporary directory", target.GetTempDirectory(), Output);
@@ -96,7 +97,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     Trace.TraceInformation($"GetModuleFromBaseAddress({imageBase:X16}) {moduleFileName} FAILED");
 
                     // Skip modules not found when running under lldb
-                    if (host.Target.Host.HostType == HostType.Lldb) {
+                    if (host.Target.Host.HostType == HostType.Lldb)
+                    {
+                        continue;
+                    }
+                    // Older xml versions on Linux have modules that are not reported anymore by the new CLRMD.
+                    if (host.TestData.Version <= TestDataReader.Version100 && host.Target.OperatingSystem == OSPlatform.Linux)
+                    {
                         continue;
                     }
                 }
@@ -105,7 +112,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (host.Target.Host.HostType != HostType.Lldb)
                 { 
                     // Check that the resulting module matches the test data
-                    moduleData.CompareMembers(module);
+                    host.TestData.CompareMembers(moduleData, module);
                 }
 
                 IModule module1 = moduleService.GetModuleFromIndex(module.ModuleIndex);
@@ -113,21 +120,23 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.Equal(module, module1);
 
                 // Test GetModuleFromAddress on various address in module
-                IModule module2 = moduleService.GetModuleFromAddress(imageBase);
-                Assert.NotNull(module2);
-                Assert.True(module.ModuleIndex == module2.ModuleIndex);
-                Assert.Equal(module, module2);
+                if (module.ImageSize > 0)
+                {
+                    IModule module2 = moduleService.GetModuleFromAddress(imageBase);
+                    Assert.NotNull(module2);
+                    Assert.True(module.ModuleIndex == module2.ModuleIndex);
+                    Assert.Equal(module, module2);
 
-                module2 = moduleService.GetModuleFromAddress(imageBase + 0x100);
-                Assert.NotNull(module2);
-                Assert.True(module.ModuleIndex == module2.ModuleIndex);
-                Assert.Equal(module, module2);
+                    module2 = moduleService.GetModuleFromAddress(imageBase + 0x100);
+                    Assert.NotNull(module2);
+                    Assert.True(module.ModuleIndex == module2.ModuleIndex);
+                    Assert.Equal(module, module2);
 
-                module2 = moduleService.GetModuleFromAddress(imageBase + module.ImageSize - 1);
-                Assert.NotNull(module2);
-                Assert.True(module.ModuleIndex == module2.ModuleIndex);
-                Assert.Equal(module, module2);
-
+                    module2 = moduleService.GetModuleFromAddress(imageBase + module.ImageSize - 1);
+                    Assert.NotNull(module2);
+                    Assert.True(module.ModuleIndex == module2.ModuleIndex);
+                    Assert.Equal(module, module2);
+                }
                 // Find this module in the list of all modules
                 Assert.NotNull(moduleService.EnumerateModules().SingleOrDefault((mod) => mod.ImageBase == imageBase));
 
@@ -145,7 +154,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                             if (mod.ImageBase == imageBase)
                             {
                                 // Check that the resulting module matches the test data
-                                moduleData.CompareMembers(mod);
+                                host.TestData.CompareMembers(moduleData, mod);
                             }
                         }
                     }
@@ -211,7 +220,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.NotNull(thread);
 
                 // Check that the resulting thread matches the test data
-                threadData.CompareMembers(thread);
+                host.TestData.CompareMembers(threadData, thread);
 
                 IThread thread2 = threadService.GetThreadFromIndex(thread.ThreadIndex);
                 Assert.NotNull(thread2);
@@ -226,7 +235,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     Assert.True(register.TryGetValue("RegisterIndex", out int registerIndex));
 
                     Assert.True(threadService.TryGetRegisterInfo(registerIndex, out RegisterInfo registerInfo));
-                    register.CompareMembers(registerInfo);
+                    host.TestData.CompareMembers(register, registerInfo);
 
                     Assert.True(thread.TryGetRegisterValue(registerIndex, out ulong value));
                     Assert.Equal(value, register["Value"].GetValue<ulong>());
@@ -262,7 +271,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     IRuntime runtime = runtimeService.EnumerateRuntimes().FirstOrDefault((r) => r.Id == id);
                     Assert.NotNull(runtime);
 
-                    runtimeData.CompareMembers(runtime);
+                    host.TestData.CompareMembers(runtimeData, runtime);
 
                     ClrInfo clrInfo = runtime.Services.GetService<ClrInfo>();
                     Assert.NotNull(clrInfo);

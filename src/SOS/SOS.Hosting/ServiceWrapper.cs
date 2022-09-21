@@ -87,7 +87,7 @@ namespace SOS.Hosting
         /// <param name="serviceId">guid of the service</param>
         /// <param name="service">pointer to return service instance</param>
         /// <returns>S_OK or E_NOINTERFACE</returns>
-        public HResult GetService(IntPtr self, in Guid guid, out IntPtr ptr)
+        public int GetService(IntPtr self, in Guid guid, out IntPtr ptr)
         {
             ptr = IntPtr.Zero;
 

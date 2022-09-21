@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -566,7 +567,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     return true;
 
                 case DiagnosticsServerResponseId.Error:
-                    uint hr = BitConverter.ToUInt32(responseMessage.Payload, 0);
+                    uint hr = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(responseMessage.Payload, 0, 4));
                     int index = sizeof(uint);
                     string message = null;
                     switch (hr)

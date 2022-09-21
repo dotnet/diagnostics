@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <OutputRid>osx-x64</OutputRid>
+    <PackageRID>osx-x64</PackageRID>
     <PackageArch>x64</PackageArch>
   </PropertyGroup>
   <Import Project="Microsoft.Diagnostics.DbgShim.props" />

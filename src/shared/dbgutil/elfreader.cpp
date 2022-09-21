@@ -103,7 +103,7 @@ public:
         {
             return false;
         }
-        if (PAL_fseek(m_file, (LONG)address, SEEK_SET) != 0)
+        if (PAL_fseek(m_file, (LONG_PTR)address, SEEK_SET) != 0)
         {
             return false;
         }

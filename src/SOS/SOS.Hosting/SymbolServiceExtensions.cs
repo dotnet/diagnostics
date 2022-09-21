@@ -120,18 +120,26 @@ namespace SOS.Hosting
                 {
                     SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
                     string localFilePath = symbolService.DownloadFile(key);
-                    localFilePath += "\0";              // null terminate the string
-                    actualSize = localFilePath.Length;
+                    if (!string.IsNullOrWhiteSpace(localFilePath))
+                    {
+                        localFilePath += "\0";              // null terminate the string
+                        actualSize = localFilePath.Length;
 
-                    if (pathBufferSize > actualSize)
-                    {
-                        Trace.TraceInformation($"GetICorDebugMetadataLocator: SUCCEEDED {localFilePath}");
-                        Marshal.Copy(localFilePath.ToCharArray(), 0, pwszPathBuffer, actualSize);
+                        if (pathBufferSize > actualSize)
+                        {
+                            Trace.TraceInformation($"GetICorDebugMetadataLocator: SUCCEEDED {localFilePath}");
+                            Marshal.Copy(localFilePath.ToCharArray(), 0, pwszPathBuffer, actualSize);
+                        }
+                        else
+                        {
+                            Trace.TraceError("GetICorDebugMetadataLocator: E_INSUFFICIENT_BUFFER");
+                            hr = E_INSUFFICIENT_BUFFER;
+                        }
                     }
-                    else
+                    else 
                     {
-                        Trace.TraceError("GetICorDebugMetadataLocator: E_INSUFFICIENT_BUFFER");
-                        hr = E_INSUFFICIENT_BUFFER;
+                        Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} download FAILED");
+                        hr = HResult.E_FAIL;
                     }
                 }
                 else
