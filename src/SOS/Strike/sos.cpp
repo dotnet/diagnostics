@@ -4,8 +4,20 @@
 
 #include "strike.h"
 #include "util.h"
+
 #include "sos.h"
+
+
+#ifdef _ASSERTE
+#undef _ASSERTE
+#endif
+
+#define _ASSERTE(a) {;}
+
 #include "gcdesc.h"
+
+
+#undef _ASSERTE
 
 namespace sos
 {
@@ -493,7 +505,7 @@ namespace sos
                 int entries = 0;
 
                 if (FAILED(MOVE(entries, mt-sizeof(TADDR))))
-                    Throw<DataRead>("Failed to request number of entries for %p MT %p", mObject, mt);
+                    Throw<DataRead>("Failed to request number of entries.");
 
                 // array of vc?
                 if (entries < 0)
@@ -586,13 +598,11 @@ namespace sos
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
         mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
 
-        TryAlignToObjectInRange();
+        CheckSegmentRange();
     }
 
-    bool ObjectIterator::TryMoveNextSegment()
+    bool ObjectIterator::NextSegment()
     {
-        CheckInterrupt();
-
         if (mCurrHeap >= mNumHeaps)
         {
             return false;
@@ -650,30 +660,16 @@ namespace sos
         mLastObj = 0;
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
         mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
-        return true;
+        return CheckSegmentRange();
     }
 
-    bool ObjectIterator::TryMoveToObjectInNextSegmentInRange()
-    {
-        if (TryMoveNextSegment())
-        {
-            return TryAlignToObjectInRange();
-        }
-
-        return false;
-    }
-
-    bool ObjectIterator::TryAlignToObjectInRange()
+    bool ObjectIterator::CheckSegmentRange()
     {
         CheckInterrupt();
+
         while (!MemOverlap(mStart, mEnd, TO_TADDR(mSegment.mem), mSegmentEnd))
-        {
-            CheckInterrupt();
-            if (!TryMoveNextSegment())
-            {
+            if (!NextSegment())
                 return false;
-            }
-        }
 
         // At this point we know that the current segment contains objects in
         // the correct range.  However, there's no telling if the user gave us
@@ -740,7 +736,7 @@ namespace sos
         }
         catch(const sos::Exception &)
         {
-            TryMoveToObjectInNextSegmentInRange();
+            NextSegment();
         }
     }
 
@@ -758,8 +754,6 @@ namespace sos
 
     void ObjectIterator::MoveToNextObject()
     {
-        CheckInterrupt();
-
         // Object::GetSize can be unaligned, so we must align it ourselves.
         size_t size = (bLarge || bPinned) ? AlignLarge(mCurrObj.GetSize()) : Align(mCurrObj.GetSize());
 
@@ -791,9 +785,7 @@ namespace sos
         }
 
         if (mCurrObj > mEnd || mCurrObj >= mSegmentEnd)
-        {
-            TryMoveToObjectInNextSegmentInRange();
-        }
+            NextSegment();
     }
 
     SyncBlkIterator::SyncBlkIterator()

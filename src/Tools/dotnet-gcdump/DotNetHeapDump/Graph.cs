@@ -125,7 +125,7 @@ namespace Graphs
         /// <summary>
         /// Same as NodeIndexLimit, just cast to an integer.  
         /// </summary>
-        public long NodeCount { get { return m_nodes.Count; } }
+        public int NodeCount { get { return m_nodes.Count; } }
         /// <summary>
         /// It is expected that users will want additional information associated with TYPES of the nodes of the graph.  They can
         /// do this by allocating an array of code:NodeTypeIndexLimit and then indexing this by code:NodeTypeIndex
@@ -882,38 +882,35 @@ namespace Graphs
 
         internal static void WriteCompressedInt(SegmentedMemoryStreamWriter writer, int value)
         {
-            unchecked
+            if (value << 25 >> 25 == value)
             {
-                if (value << 25 >> 25 == value)
-                {
-                    goto oneByte;
-                }
-
-                if (value << 18 >> 18 == value)
-                {
-                    goto twoBytes;
-                }
-
-                if (value << 11 >> 11 == value)
-                {
-                    goto threeBytes;
-                }
-
-                if (value << 4 >> 4 == value)
-                {
-                    goto fourBytes;
-                }
-
-                writer.Write((byte)((value >> 28) | 0x80));
-            fourBytes:
-                writer.Write((byte)((value >> 21) | 0x80));
-            threeBytes:
-                writer.Write((byte)((value >> 14) | 0x80));
-            twoBytes:
-                writer.Write((byte)((value >> 7) | 0x80));
-            oneByte:
-                writer.Write((byte)(value & 0x7F));
+                goto oneByte;
             }
+
+            if (value << 18 >> 18 == value)
+            {
+                goto twoBytes;
+            }
+
+            if (value << 11 >> 11 == value)
+            {
+                goto threeBytes;
+            }
+
+            if (value << 4 >> 4 == value)
+            {
+                goto fourBytes;
+            }
+
+            writer.Write((byte)((value >> 28) | 0x80));
+            fourBytes:
+            writer.Write((byte)((value >> 21) | 0x80));
+            threeBytes:
+            writer.Write((byte)((value >> 14) | 0x80));
+            twoBytes:
+            writer.Write((byte)((value >> 7) | 0x80));
+            oneByte:
+            writer.Write((byte)(value & 0x7F));
         }
 
         internal NodeIndex m_index;

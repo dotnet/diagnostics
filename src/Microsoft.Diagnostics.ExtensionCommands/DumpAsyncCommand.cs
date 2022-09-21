@@ -13,7 +13,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = CommandName, Aliases = new string[] { "DumpAsync" }, Help = "Displays information about async \"stacks\" on the garbage-collected heap.")]
+    [Command(Name = CommandName, Help = "Displays information about async \"stacks\" on the garbage-collected heap.")]
     public sealed class DumpAsyncCommand : ExtensionCommandBase
     {
         /// <summary>The name of the command.</summary>

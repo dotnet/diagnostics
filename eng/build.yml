@@ -34,7 +34,7 @@ jobs:
     pool:
       # Public Linux Build Pool
       ${{ if and(eq(parameters.osGroup, 'Linux'), eq(variables['System.TeamProject'], 'public')) }}:
-        name:  NetCore-Public
+        name:  NetCore1ESPool-Svc-Public
         demands: ImageOverride -equals Build.Ubuntu.1804.Amd64.Open
 
       # Official Build Linux Pool
@@ -48,17 +48,17 @@ jobs:
 
       # Build OSX Pool  (we don't have on-prem OSX BuildPool)
       ${{ if in(parameters.osGroup, 'MacOS', 'MacOS_cross') }}:
-        vmImage: macOS-latest
+        vmImage: macOS-10.15
 
       # Official Build Windows Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
         name: NetCore1ESPool-Svc-Internal
-        demands: ImageOverride -equals windows.vs2022.amd64
+        demands: ImageOverride -equals Build.Windows.10.Amd64.VS2019
 
       # Public Windows Build Pool
       ${{ if and(eq(parameters.osGroup, 'Windows_NT'), eq(variables['System.TeamProject'], 'public')) }}:
-        name: NetCore-Public
-        demands: ImageOverride -equals windows.vs2022.amd64.open
+        name: NetCore1ESPool-Svc-Public
+        demands: ImageOverride -equals Build.Windows.10.Amd64.VS2019.Open
 
     ${{ if and(ne(parameters.dockerImage, ''), ne(parameters.requiresCapPtraceContainer, 'true')) }}:
       container: ${{ parameters.dockerImage }}
@@ -136,6 +136,9 @@ jobs:
           inputs:
             sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)
             targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
+
+    - ${{ if eq(parameters.osGroup, 'MacOS_cross') }}:
+      - script: /bin/bash -c "sudo xcode-select -s /Applications/Xcode_12.2.app/Contents/Developer"
 
     - script: $(_dockerEnv) $(_buildScript)
         -configuration $(_BuildConfig) 

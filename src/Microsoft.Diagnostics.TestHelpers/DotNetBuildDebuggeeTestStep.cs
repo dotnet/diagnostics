@@ -192,7 +192,6 @@ namespace Microsoft.Diagnostics.TestHelpers
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
-                WithEnvironmentVariable("DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER", "true").
                 WithEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR", Path.GetDirectoryName(DotNetToolPath)).
                 WithEnvironmentVariable("DOTNET_INSTALL_DIR", Path.GetDirectoryName(DotNetToolPath)).
                 RemoveEnvironmentVariable("MSBuildSDKsPath").
@@ -239,7 +238,6 @@ namespace Microsoft.Diagnostics.TestHelpers
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, dotnetArgs).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
-                WithEnvironmentVariable("DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER", "true").
                 WithEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR", Path.GetDirectoryName(DotNetToolPath)).
                 WithEnvironmentVariable("DOTNET_INSTALL_DIR", Path.GetDirectoryName(DotNetToolPath)).
                 RemoveEnvironmentVariable("MSBuildSDKsPath").

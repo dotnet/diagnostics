@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
@@ -11,72 +9,71 @@ using System.Diagnostics.Tracing;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class EventPipeSessionTests
     {
-        private readonly ITestOutputHelper _output;
-
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
+        private readonly ITestOutputHelper output;
 
         public EventPipeSessionTests(ITestOutputHelper outputHelper)
         {
-            _output = outputHelper;
+            output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task BasicEventPipeSessionTest(TestConfiguration config)
+        [Fact]
+        public Task BasicEventPipeSessionTest()
         {
-            return BasicEventPipeSessionTestCore(config, useAsync: false);
+            return BasicEventPipeSessionTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task BasicEventPipeSessionTestAsync(TestConfiguration config)
+        [Fact]
+        public Task BasicEventPipeSessionTestAsync()
         {
-            return BasicEventPipeSessionTestCore(config, useAsync: true);
+            return BasicEventPipeSessionTestCore(useAsync: true);
         }
 
         /// <summary>
         /// A simple test that checks if we can create an EventPipeSession on a child process
         /// </summary>
-        private async Task BasicEventPipeSessionTestCore(TestConfiguration config, bool useAsync)
+        private async Task BasicEventPipeSessionTestCore(bool useAsync)
+
         {
-            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
-            await runner.Start(testProcessTimeout: 60_000);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            // Don't dispose of the session here because it unnecessarily hangs the test for 30 secs
-            EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
+            using (var session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)
-            });
-            Assert.True(session.EventStream != null);
+            }))
+            {
+                Assert.True(session.EventStream != null);
+            }
             runner.Stop();
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task EventPipeSessionStreamTest(TestConfiguration config)
+        [Fact]
+        public Task EventPipeSessionStreamTest()
         {
-            return EventPipeSessionStreamTestCore(config, useAsync: false);
+            return EventPipeSessionStreamTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task EventPipeSessionStreamTestAsync(TestConfiguration config)
+        [Fact]
+        public Task EventPipeSessionStreamTestAsync()
         {
-            return EventPipeSessionStreamTestCore(config, useAsync: true);
+            return EventPipeSessionStreamTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Checks if we can create an EventPipeSession and can get some expected events out of it.
         /// </summary>
-        private async Task EventPipeSessionStreamTestCore(TestConfiguration config, bool useAsync)
+        private async Task EventPipeSessionStreamTestCore(bool useAsync)
         {
-            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
-            await runner.Start(testProcessTimeout: 60_000);
+            TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            runner.WriteLine($"Trying to start an EventPipe session");
+            runner.PrintStatus();
+            output.WriteLine($"[{DateTime.Now.ToString()}] Trying to start an EventPipe session on process {runner.Pid}");
             using (var session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("System.Runtime", EventLevel.Informational, 0, new Dictionary<string, string>() {
@@ -89,46 +86,47 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Task streamTask = Task.Run(() => {
                     var source = new EventPipeEventSource(session.EventStream);
                     source.Dynamic.All += (TraceEvent obj) => {
-                        runner.WriteLine("Got an event");
+                        output.WriteLine("Got an event");
                         evntCnt += 1;
                     };
                     try
                     {
                         source.Process();
                     }
-                    catch (Exception ex)
+                    catch (Exception e)
                     {
                         // This exception can happen if the target process exits while EventPipeEventSource is in the middle of reading from the pipe.
-                        runner.WriteLine($"Error encountered while processing events {ex}");
+                        output.WriteLine("Error encountered while processing events");
+                        output.WriteLine(e.ToString());
                     }
                     finally
                     {
-                        runner.WakeupTracee();
+                        runner.Stop();
                     }
                 });
-                runner.WriteLine("Waiting for stream Task");
+                output.WriteLine("Waiting for stream Task");
                 streamTask.Wait(10000);
-                runner.WriteLine("Done waiting for stream Task");
+                output.WriteLine("Done waiting for stream Task");
                 Assert.True(evntCnt > 0);
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task EventPipeSessionUnavailableTest(TestConfiguration config)
+        [Fact]
+        public Task EventPipeSessionUnavailableTest()
         {
-            return EventPipeSessionUnavailableTestCore(config, useAsync: false);
+            return EventPipeSessionUnavailableTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task EventPipeSessionUnavailableTestAsync(TestConfiguration config)
+        [Fact]
+        public Task EventPipeSessionUnavailableTestAsync()
         {
-            return EventPipeSessionUnavailableTestCore(config, useAsync: true);
+            return EventPipeSessionUnavailableTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tries to start an EventPipe session on a non-existent process
         /// </summary>
-        private async Task EventPipeSessionUnavailableTestCore(TestConfiguration config, bool useAsync)
+        private async Task EventPipeSessionUnavailableTestCore(bool useAsync)
         {
             List<int> pids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             int arbitraryPid = 1;
@@ -141,29 +139,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }));
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task StartEventPipeSessionWithSingleProviderTest(TestConfiguration config)
+        [Fact]
+        public Task StartEventPipeSessionWithSingleProviderTest()
         {
-            return StartEventPipeSessionWithSingleProviderTestCore(config, useAsync: false);
+            return StartEventPipeSessionWithSingleProviderTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task StartEventPipeSessionWithSingleProviderTestAsync(TestConfiguration config)
+        [Fact]
+        public Task StartEventPipeSessionWithSingleProviderTestAsync()
         {
-            return StartEventPipeSessionWithSingleProviderTestCore(config, useAsync: true);
+            return StartEventPipeSessionWithSingleProviderTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Test for the method overload: public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown=true, int circularBufferMB=256)
         /// </summary>
-        private async Task StartEventPipeSessionWithSingleProviderTestCore(TestConfiguration config, bool useAsync)
+        private async Task StartEventPipeSessionWithSingleProviderTestCore(bool useAsync)
         {
-            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
-            await runner.Start(testProcessTimeout: 60_000);
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(), output);
+            runner.Start(timeoutInMSPipeCreation: 15_000, testProcessTimeout: 60_000);
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            // Don't dispose of the session here because it unnecessarily hangs the test for 30 secs
-            EventPipeSession session = await clientShim.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational));
-            Assert.True(session.EventStream != null);
+            using (var session = await clientShim.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational)))
+            {
+                Assert.True(session.EventStream != null);
+            }
             runner.Stop();
         }
     }

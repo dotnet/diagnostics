@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Symbol server URLs
         /// </summary>
         public const string MsdlSymbolServer = "https://msdl.microsoft.com/download/symbols/";
-        public const string SymwebSymbolServer = "https://symweb/";
+        public const string SymwebSymbolServer = "https://symweb.corp.microsoft.com/";
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
@@ -41,8 +41,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _host = host;
             OnChangeEvent = new ServiceEvent();
-            // dbgeng's console can not handle the async logging (Tracer output on another thread than the main one).
-            Tracer.Enable = host.HostType != HostType.DbgEng;
         }
 
         #region ISymbolService
@@ -703,8 +701,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return null;
             }
 
-            string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? module.GetSymbolFileName() : null;
-            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
+            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, module.GetSymbolFileName()).SingleOrDefault();
             if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
@@ -919,18 +916,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            
-            sb.AppendLine("Current symbol store settings:");
-            
             ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
             {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
-                    sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
+                    sb.AppendLine($"{httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
                 }
                 else
                 {
-                    sb.AppendLine($"-> {symbolStore.ToString()}");
+                    sb.AppendLine(symbolStore.ToString());
                 }
             });
             return sb.ToString();

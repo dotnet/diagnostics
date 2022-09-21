@@ -627,27 +627,8 @@ namespace sos
         void BuildError(__out_ecount(count) char *out, size_t count, const char *format, ...) const;
 
         void AssertSanity() const;
-
-        /*
-            This function moves to the next segment/region without checking any restrictions
-            on the range. Returns true if it was able to move to a new segment/region.
-        */
-        bool TryMoveNextSegment();
-
-        /*
-            Aligns the iterator to the object that falls in the requested range, moving to 
-            the next segment/region as necessary. The iterator state doesn't change if the
-            current object already lies in the requested range. Returns true if aligning
-            to such an object was possible.
-        */
-        bool TryAlignToObjectInRange();
-
-        /*
-            Moves to the next segment/region that contains an object in the requested
-            range and align it to such object. This operation always moves the iterator.
-            Returns false if no such move was possible.
-        */
-        bool TryMoveToObjectInNextSegmentInRange();
+        bool NextSegment();
+        bool CheckSegmentRange();
         void MoveToNextObject();
 
     private:
@@ -740,7 +721,7 @@ namespace sos
         inline const SyncBlkIterator &operator++()
         {
             SOS_Assert(mCurr <= mTotal);
-            mSyncBlk = mCurr++;
+            mSyncBlk = ++mCurr;
 
             return *this;
         }

@@ -304,7 +304,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                                 printStatus();
 
-                            // if the CopyToAsync ended early (target program exited, etc.), then we don't need to stop the session.
+                            // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
                             if (!copyTask.Wait(0))
                             {
                                 // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer

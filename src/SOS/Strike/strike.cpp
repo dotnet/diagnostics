@@ -105,7 +105,6 @@
 #include "cordebug.h"
 #include "dacprivate.h"
 #include "corexcep.h"
-#include <dumpcommon.h>
 
 #define  CORHANDLE_MASK 0x1
 #define SWITCHED_OUT_FIBER_OSID 0xbaadf00d;
@@ -162,6 +161,10 @@ WCHAR g_mdName[mdNameLen];
 HMODULE g_hInstance = NULL;
 #endif // !FEATURE_PAL
 
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
+extern bool g_useDesktopClrHost;
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(disable:4244)   // conversion from 'unsigned int' to 'unsigned short', possible loss of data
 #pragma warning(disable:4189)   // local variable is initialized but not referenced
@@ -169,9 +172,10 @@ HMODULE g_hInstance = NULL;
 
 #ifdef FEATURE_PAL
 #define SOSPrefix ""
+#define SOSThreads "clrthreads"
 #else
-extern const char* g_sosPrefix;
-#define SOSPrefix g_sosPrefix
+#define SOSPrefix "!"
+#define SOSThreads "!threads"
 #endif
 
 #if defined _X86_ && !defined FEATURE_PAL
@@ -946,16 +950,15 @@ DECLARE_API(DumpIL)
         // Now we have a local copy of the IL, and a managed array for token resolution.
         // Visit our IL parser with this info.
         ExtOut("This is dynamic IL. Exception info is not reported at this time.\n");
-        ExtOut("If a token is unresolved, run \"%sdumpobj <addr>\" on the addr given\n", SOSPrefix);
+        ExtOut("If a token is unresolved, run \"!do <addr>\" on the addr given\n");
         ExtOut("in parenthesis. You can also look at the token table yourself, by\n");
-        ExtOut("running \"%sdumparray %p\".\n\n", SOSPrefix, SOS_PTR(tokenArrayAddr));
+        ExtOut("running \"!DumpArray %p\".\n\n", SOS_PTR(tokenArrayAddr));
         DecodeDynamicIL(pArray, (ULONG)codeArray.dwNumComponents, tokenArray);
 
         delete [] pArray;
     }
     return Status;
 }
-
 
 void DumpSigWorker (
         DWORD_PTR dwSigAddr,
@@ -1041,6 +1044,7 @@ DECLARE_API(DumpSig)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -1060,7 +1064,7 @@ DECLARE_API(DumpSig)
     }
     if (nArg != 2)
     {
-        ExtOut("%sdumpsig <sigaddr> <moduleaddr>\n", SOSPrefix);
+        ExtOut("!DumpSig <sigaddr> <moduleaddr>\n");
         return Status;
     }
 
@@ -1088,6 +1092,7 @@ DECLARE_API(DumpSigElem)
     INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     //
     // Fetch arguments
@@ -1108,7 +1113,7 @@ DECLARE_API(DumpSigElem)
 
     if (nArg != 2)
     {
-        ExtOut("%sdumpsigelem <sigaddr> <moduleaddr>\n", SOSPrefix);
+        ExtOut("!DumpSigElem <sigaddr> <moduleaddr>\n");
         return Status;
     }
 
@@ -1444,9 +1449,6 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
     return S_OK;
 }
 
-// If this bit is set in the RuntimeType.m_handle field, the value is a TypeDesc pointer, otherwise it is a MethodTable pointer.
-#define RUNTIMETYPE_HANDLE_IS_TYPEDESC 0x2
-
 void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
 {
     // Get the method table
@@ -1454,19 +1456,11 @@ void PrintRuntimeTypeInfo(TADDR p_rtObject, const DacpObjectData & rtObjectData)
     if (iOffset > 0)
     {
         TADDR mtPtr;
-        if (MOVE(mtPtr, p_rtObject + iOffset) == S_OK)
+        if (SUCCEEDED(GetMTOfObject(p_rtObject + iOffset, &mtPtr)))
         {
-            // Check if TypeDesc
-            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
-            {
-                ExtOut("TypeDesc:    %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
-            }
-            else
-            {
-                sos::MethodTable mt = mtPtr;
-                ExtOut("Type Name:   %S\n", mt.GetName());
-                DMLOut("Type MT:     %s\n", DMLMethodTable(mtPtr));
-            }
+            sos::MethodTable mt = mtPtr;
+            ExtOut("Type Name:   %S\n", mt.GetName());
+            DMLOut("Type MT:     %s\n", DMLMethodTable(mtPtr));
         }
     }
 }
@@ -1475,9 +1469,9 @@ void DisplayInvalidStructuresMessage()
 {
     ExtOut("The garbage collector data structures are not in a valid state for traversal.\n");
     ExtOut("It is either in the \"plan phase,\" where objects are being moved around, or\n");
-    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to\n");
-    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not\n");
-    ExtOut("work properly. %sdumpheap and %sverifyheap may incorrectly complain of heap\n", SOSPrefix, SOSPrefix);
+    ExtOut("we are at the initialization or shutdown of the gc heap. Commands related to \n");
+    ExtOut("displaying, finding or traversing objects as well as gc heap segments may not \n");
+    ExtOut("work properly. !dumpheap and !verifyheap may incorrectly complain of heap \n");
     ExtOut("consistency errors.\n");
 }
 
@@ -1947,7 +1941,7 @@ DECLARE_API(DumpArray)
 
     if (objData.ObjectType != OBJ_ARRAY)
     {
-        ExtOut("Not an array, please use %sdumpobj instead\n", SOSPrefix);
+        ExtOut("Not an array, please use !DumpObj instead\n");
         return S_OK;
     }
     return PrintArray(objData, flags, FALSE);
@@ -2253,7 +2247,7 @@ DECLARE_API(DumpDelegate)
         }
         if (nArg != 1)
         {
-            ExtOut("Usage: %sdumpdelegate <delegate object address>\n", SOSPrefix);
+            ExtOut("Usage: !DumpDelegate <delegate object address>\n");
             return Status;
         }
 
@@ -2597,7 +2591,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         // (It doesn't matter that it's not a valid instruction). (see /vm/excep.cpp)
         //
         // This "counterhack" is not 100% accurate
-        // The biggest issue is that PrintException must work with exception objects
+        // The biggest issue is that !PrintException must work with exception objects
         // that may not be currently active; as a consequence we cannot rely on the
         // state of some "current thread" to infer whether the IP values stored in
         // the exception object have been adjusted or not. If we could, we may examine
@@ -2802,7 +2796,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                 if (IsDMLEnabled())
                     DMLOut("Use <exec cmd=\"!PrintException /d %p\">!PrintException %p</exec> to see more.\n", SOS_PTR(taInnerExc), SOS_PTR(taInnerExc));
                 else
-                    ExtOut("Use %sprintexception %p to see more.\n", SOSPrefix, SOS_PTR(taInnerExc));
+                    ExtOut("Use !PrintException %p to see more.\n", SOS_PTR(taInnerExc));
             }
             else
             {
@@ -3140,7 +3134,7 @@ DECLARE_API(DumpVC)
     EnableDMLHolder dmlHolder(dml);
     if (nArg!=2)
     {
-        ExtOut("Usage: %sdumpvc <Method Table> <Value object start addr>\n", SOSPrefix);
+        ExtOut("Usage: !DumpVC <Method Table> <Value object start addr>\n");
         return Status;
     }
 
@@ -3564,7 +3558,7 @@ DECLARE_API(DumpPermissionSet)
     }
     if (nArg!=1)
     {
-        ExtOut("Usage: %sdumppermissionset <PermissionSet object addr>\n", SOSPrefix);
+        ExtOut("Usage: !DumpPermissionSet <PermissionSet object addr>\n");
         return Status;
     }
 
@@ -3803,6 +3797,8 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
     }
 }
 
+#ifndef FEATURE_PAL
+
 DECLARE_API(TraverseHeap)
 {
     INIT_API();
@@ -3830,7 +3826,7 @@ DECLARE_API(TraverseHeap)
 
     if (nArg != 1)
     {
-        ExtOut("usage: %straverseheap [-xml] filename\n", SOSPrefix);
+        ExtOut("usage: HeapTraverse [-xml] filename\n");
         return Status;
     }
 
@@ -3840,9 +3836,9 @@ DECLARE_API(TraverseHeap)
         return Status;
     }
 
-    FILE* file = fopen(Filename.data, "w");
-    if (file == nullptr) {
-        ExtOut("Unable to open file %s (%d)\n", strerror(errno), errno);
+    FILE* file = NULL;
+    if (fopen_s(&file, Filename.data, "w") != 0) {
+        ExtOut("Unable to open file\n");
         return Status;
     }
 
@@ -3859,7 +3855,7 @@ DECLARE_API(TraverseHeap)
     // tree structure to a sorted list of methodtables, and the index is the ID.
 
     // TODO: "Traversing object members" code should be generalized and shared between
-    // gcroot and traverseheap. Also dumpheap can begin using GCHeapsTraverse.
+    // !gcroot and !traverseheap. Also !dumpheap can begin using GCHeapsTraverse.
 
     if (!traverser.Initialize())
     {
@@ -3880,6 +3876,8 @@ DECLARE_API(TraverseHeap)
 
     return Status;
 }
+
+#endif // FEATURE_PAL
 
 struct PrintRuntimeTypeArgs
 {
@@ -3915,34 +3913,24 @@ void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOI
         {
             DMLOut(DMLObject(objAddr));
 
-            // Check if TypeDesc
-            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
+            CLRDATA_ADDRESS appDomain = GetAppDomainForMT(mtPtr);
+            if (appDomain != NULL)
             {
-                ExtOut(" %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
+                if (appDomain == pArgs->adstore.sharedDomain)
+                    ExtOut(" %" POINTERSIZE "s", "Shared");
+
+                else if (appDomain == pArgs->adstore.systemDomain)
+                    ExtOut(" %" POINTERSIZE "s", "System");
+                else
+                    DMLOut(" %s", DMLDomain(appDomain));
             }
             else
             {
-                CLRDATA_ADDRESS appDomain = GetAppDomainForMT(mtPtr);
-                if (appDomain != NULL)
-                {
-                    if (appDomain == pArgs->adstore.sharedDomain)
-                        ExtOut(" %" POINTERSIZE "s", "Shared");
-
-                    else if (appDomain == pArgs->adstore.systemDomain)
-                        ExtOut(" %" POINTERSIZE "s", "System");
-                    else
-                        DMLOut(" %s", DMLDomain(appDomain));
-                }
-                else
-                {
-                    ExtOut(" %" POINTERSIZE "s", "?");
-                }
-
-                if (NameForMT_s(mtPtr, g_mdName, mdNameLen))
-                {
-                    DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
-                }
+                ExtOut(" %" POINTERSIZE "s", "?");
             }
+
+            NameForMT_s(mtPtr, g_mdName, mdNameLen);
+            DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
         }
     }
 }
@@ -3952,6 +3940,7 @@ DECLARE_API(DumpRuntimeTypes)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
 
@@ -3969,25 +3958,10 @@ DECLARE_API(DumpRuntimeTypes)
            "Address", "Domain", "MT");
     ExtOut("------------------------------------------------------------------------------\n");
 
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return E_FAIL;
-    }
-
     PrintRuntimeTypeArgs pargs;
     ZeroMemory(&pargs, sizeof(PrintRuntimeTypeArgs));
 
-    try
-    {
-        GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-
+    GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
     return Status;
 }
 
@@ -4047,7 +4021,7 @@ public:
             {"-type", &type, COSTRING, TRUE},        // list objects of specified type
             {"-stat", &mStat, COBOOL, FALSE},        // dump a summary of types and the number of instances of each
             {"-strings", &mStrings, COBOOL, FALSE},  // dump a summary of string objects
-            {"-verify", &mVerify, COBOOL, FALSE},    // verify heap objects (heapverify)
+            {"-verify", &mVerify, COBOOL, FALSE},    // verify heap objects (!heapverify)
             {"-thinlock", &mThinlock, COBOOL, FALSE},// list only thinlocks
             {"-short", &mShort, COBOOL, FALSE},      // list only addresses
             {"-min", &mMinSize, COHEX, TRUE},        // min size of objects to display (hex)
@@ -4521,6 +4495,7 @@ DECLARE_API(VerifyHeap)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!g_snapshot.Build())
     {
@@ -4563,6 +4538,8 @@ DECLARE_API(VerifyHeap)
         return E_FAIL;
     }
 }
+
+#ifndef FEATURE_PAL
 
 enum failure_get_memory
 {
@@ -4654,6 +4631,9 @@ DECLARE_API(AnalyzeOOM)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
+#ifndef FEATURE_PAL
 
     if (!InitializeHeapData ())
     {
@@ -4719,12 +4699,17 @@ DECLARE_API(AnalyzeOOM)
     }
 
     return S_OK;
+#else
+    _ASSERTE(false);
+    return E_FAIL;
+#endif // FEATURE_PAL
 }
 
 DECLARE_API(VerifyObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR  taddrObj = 0;
     TADDR  taddrMT;
@@ -4763,16 +4748,9 @@ DECLARE_API(VerifyObj)
         ExtOut("Unable to build snapshot of the garbage collector state\n");
         goto Exit;
     }
-
-    try
     {
         GCHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
         bValid = VerifyObject(*pheapDetails, taddrObj, taddrMT, objSize, TRUE);
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
     }
 
 Exit:
@@ -4794,6 +4772,9 @@ DECLARE_API(ListNearObj)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
+#if !defined(FEATURE_PAL)
 
     TADDR taddrArg = 0;
     TADDR taddrObj = 0;
@@ -4965,12 +4946,23 @@ DECLARE_API(ListNearObj)
     }
 
     return Status;
+
+#else
+
+    _ASSERTE(false);
+    return E_FAIL;
+
+#endif // FEATURE_PAL
 }
+
 
 DECLARE_API(GCHeapStat)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
+#ifndef FEATURE_PAL
 
     BOOL bIncUnreachable = FALSE;
     BOOL dml = FALSE;
@@ -5034,7 +5026,7 @@ DECLARE_API(GCHeapStat)
                     pohUnrootedUsage, "%");
             }
 
-            ExtOut("\nCommitted space:\n");
+            ExtOut("\nCommitted space:");
             ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
                 hpUsage.genUsage[0].committed, hpUsage.genUsage[1].committed,
                 hpUsage.genUsage[2].committed, hpUsage.genUsage[3].committed,
@@ -5074,9 +5066,7 @@ DECLARE_API(GCHeapStat)
         }
 
         // aggregate stats across heaps / generation
-        GenUsageStat genUsageStat[5];
-        memset(genUsageStat, 0, sizeof(genUsageStat));
-
+        GenUsageStat genUsageStat[5] = {0, 0, 0, 0, 0};
         bool hasPoh = false;
         for (DWORD n = 0; n < dwNHeaps; n ++)
         {
@@ -5161,7 +5151,16 @@ DECLARE_API(GCHeapStat)
     }
 
     return Status;
+
+#else
+
+    _ASSERTE(false);
+    return E_FAIL;
+
+#endif // FEATURE_PAL
 }
+
+#endif // FEATURE_PAL
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -6864,7 +6863,7 @@ public:
     {
         PendingBreakpoint *pCur = m_breakpoints;
         size_t iBreakpointIndex = 1;
-        ExtOut("%sbpmd pending breakpoint list\n Breakpoint index - Location, ModuleID, Method Token\n", SOSPrefix);
+        ExtOut(SOSPrefix "bpmd pending breakpoint list\n Breakpoint index - Location, ModuleID, Method Token\n");
         while(pCur)
         {
             //windbg likes to format %p as always being 64 bits
@@ -7644,7 +7643,7 @@ DECLARE_API(bpmd)
 
     if (IsDumpFile())
     {
-        ExtOut("%sbpmd is not supported on a dump file.\n", SOSPrefix);
+        ExtOut(SOSPrefix "bpmd is not supported on a dump file.\n");
         return Status;
     }
 
@@ -7746,13 +7745,17 @@ DECLARE_API(bpmd)
 
     if (fBadParam || (commandsParsed != 1))
     {
-        ExtOut("Usage: %sbpmd -md <MethodDesc pointer>\n", SOSPrefix);
-        ExtOut("Usage: %sbpmd [-nofuturemodule] <module name> <managed function name> [<il offset>]\n", SOSPrefix);
-        ExtOut("Usage: %sbpmd <filename>:<line number>\n", SOSPrefix);
-        ExtOut("Usage: %sbpmd -list\n", SOSPrefix);
-        ExtOut("Usage: %sbpmd -clear <pending breakpoint number>\n", SOSPrefix);
-        ExtOut("Usage: %sbpmd -clearall\n", SOSPrefix);
-        ExtOut("See \"%ssoshelp bpmd\" for more details.\n", SOSPrefix);
+        ExtOut("Usage: " SOSPrefix "bpmd -md <MethodDesc pointer>\n");
+        ExtOut("Usage: " SOSPrefix "bpmd [-nofuturemodule] <module name> <managed function name> [<il offset>]\n");
+        ExtOut("Usage: " SOSPrefix "bpmd <filename>:<line number>\n");
+        ExtOut("Usage: " SOSPrefix "bpmd -list\n");
+        ExtOut("Usage: " SOSPrefix "bpmd -clear <pending breakpoint number>\n");
+        ExtOut("Usage: " SOSPrefix "bpmd -clearall\n");
+#ifdef FEATURE_PAL
+        ExtOut("See \"soshelp bpmd\" for more details.\n");
+#else
+        ExtOut("See \"!help bpmd\" for more details.\n");
+#endif
         return Status;
     }
 
@@ -8022,9 +8025,9 @@ DECLARE_API(ThreadPool)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
-    BOOL mustBePortableThreadPool = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -8041,12 +8044,7 @@ DECLARE_API(ThreadPool)
     EnableDMLHolder dmlHolder(dml);
 
     DacpThreadpoolData threadpool;
-    Status = threadpool.Request(g_sos);
-    if (Status == E_NOTIMPL)
-    {
-        mustBePortableThreadPool = TRUE;
-    }
-    else if (Status != S_OK)
+    if ((Status = threadpool.Request(g_sos)) != S_OK)
     {
         ExtOut("    %s\n", "Failed to request ThreadpoolMgr information");
         return FAILED(Status) ? Status : E_FAIL;
@@ -8076,22 +8074,19 @@ DECLARE_API(ThreadPool)
     int portableTpHcLogEntry_lastHistoryMeanOffset = 0;
     do // while (false)
     {
-        if (!mustBePortableThreadPool)
-        {
-            // Determine if the portable thread pool is enabled
-            if (FAILED(
+        // Determine if the portable thread pool is enabled
+        if (FAILED(
                 GetNonSharedStaticFieldValueFromName(
                     &ui64Value,
                     corelibModule,
                     "System.Threading.ThreadPool",
                     W("UsePortableThreadPool"),
                     ELEMENT_TYPE_BOOLEAN)) ||
-                ui64Value == 0)
-            {
-                // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
-                // is not being used.
-                break;
-            }
+            ui64Value == 0)
+        {
+            // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+            // is not being used.
+            break;
         }
 
         // Get the thread pool instance
@@ -8376,29 +8371,6 @@ DECLARE_API(ThreadPool)
                     }
                 }
 
-                // Enumerate assignable normal-priority work items.
-                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("_assignableWorkItemQueues"));
-                if (offset > 0)
-                {
-                    DWORD_PTR workItemsConcurrentQueueArrayPtr;
-                    MOVE(workItemsConcurrentQueueArrayPtr, itr->GetAddress() + offset);
-                    DacpObjectData workItemsConcurrentQueueArray;
-                    if (workItemsConcurrentQueueArray.Request(g_sos, TO_CDADDR(workItemsConcurrentQueueArrayPtr)) == S_OK &&
-                        workItemsConcurrentQueueArray.ObjectType == OBJ_ARRAY)
-                    {
-                        for (int i = 0; i < workItemsConcurrentQueueArray.dwNumComponents; i++)
-                        {
-                            DWORD_PTR workItemsConcurrentQueuePtr;
-                            MOVE(workItemsConcurrentQueuePtr, workItemsConcurrentQueueArray.ArrayDataPtr + (i * workItemsConcurrentQueueArray.dwComponentSize));
-                            if (workItemsConcurrentQueuePtr != NULL && sos::IsObject(TO_CDADDR(workItemsConcurrentQueuePtr), false))
-                            {
-                                // We got the ConcurrentQueue.  Enumerate it.
-                                EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
-                            }
-                        }
-                    }
-                }
-
                 // Enumerate normal-priority work items.
                 offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
                 if (offset > 0)
@@ -8426,9 +8398,9 @@ DECLARE_API(ThreadPool)
                     {
                         for (int i = 0; i < workItemArray.dwNumComponents; i++)
                         {
-                            DWORD_PTR workItemPtr;
-                            MOVE(workItemPtr, workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize));
-                            if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
+                            CLRDATA_ADDRESS workItemPtr;
+                            MOVE(workItemPtr, TO_CDADDR(workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize)));
+                            if (workItemPtr != NULL && sos::IsObject(workItemPtr, false))
                             {
                                 sos::Object workItem = TO_TADDR(workItemPtr);
                                 stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
@@ -8436,10 +8408,10 @@ DECLARE_API(ThreadPool)
                                 if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
                                     (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
                                 {
-                                    DWORD_PTR delegatePtr;
+                                    CLRDATA_ADDRESS delegatePtr;
                                     MOVE(delegatePtr, workItem.GetAddress() + offset);
                                     CLRDATA_ADDRESS md;
-                                    if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
+                                    if (TryGetMethodDescriptorForDelegate(delegatePtr, &md))
                                     {
                                         NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
                                         ExtOut(" => %S", g_mdName);
@@ -8615,6 +8587,7 @@ DECLARE_API(FindAppDomain)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR p_Object = NULL;
     BOOL dml = FALSE;
@@ -8685,8 +8658,8 @@ DECLARE_API(FindAppDomain)
         if (IsDMLEnabled())
             DMLOut("<exec cmd=\"!gcroot /d %p\">!gcroot %p</exec>, and if you find a root on a\n", SOS_PTR(p_Object), SOS_PTR(p_Object));
         else
-            ExtOut("%sgcroot %p, and if you find a root on a\n", SOSPrefix, SOS_PTR(p_Object));
-        ExtOut("stack, check the AppDomain of that stack with %sclrthreads.\n", SOSPrefix);
+            ExtOut(SOSPrefix "gcroot %p, and if you find a root on a\n", SOS_PTR(p_Object));
+        ExtOut("stack, check the AppDomain of that stack with " SOSThreads ".\n");
         ExtOut("Note that the Thread could have transitioned between\n");
         ExtOut("multiple AppDomains.\n");
     }
@@ -8883,6 +8856,7 @@ DECLARE_API(EHInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR dwStartAddr = NULL;
     BOOL dml = FALSE;
@@ -8964,6 +8938,7 @@ DECLARE_API(GCInfo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     TADDR taStartAddr = NULL;
     TADDR taGCInfoAddr;
@@ -10206,6 +10181,7 @@ DECLARE_API(DumpGCData)
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (!InitializeHeapData ())
     {
@@ -10214,17 +10190,16 @@ DECLARE_API(DumpGCData)
     }
 
     DacpGCInterestingInfoData interestingInfo;
+    interestingInfo.RequestGlobal(g_sos);
+    for (int i = 0; i < DAC_MAX_GLOBAL_GC_MECHANISMS_COUNT; i++)
+    {
+        ExtOut("%-30s: %d\n", str_gc_global_mechanisms[i], interestingInfo.globalMechanisms[i]);
+    }
+
+    ExtOut("\n[info per heap]\n");
+
     if (!IsServerBuild())
     {
-        // Doesn't work (segfaults) for server GCs
-        interestingInfo.RequestGlobal(g_sos);
-        for (int i = 0; i < DAC_MAX_GLOBAL_GC_MECHANISMS_COUNT; i++)
-        {
-            ExtOut("%-30s: %d\n", str_gc_global_mechanisms[i], interestingInfo.globalMechanisms[i]);
-        }
-
-        ExtOut("\n[info per heap]\n");
-
         if (interestingInfo.Request(g_sos) != S_OK)
         {
             ExtOut("Error requesting interesting GC info\n");
@@ -10235,8 +10210,6 @@ DECLARE_API(DumpGCData)
     }
     else
     {
-        ExtOut("\n[info per heap]\n");
-
         DWORD dwNHeaps = GetGcHeapCount();
         DWORD dwAllocSize;
         if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
@@ -10382,7 +10355,9 @@ DECLARE_API(SOSStatus)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        Status = hostServices->DispatchCommand("sosstatus", args);
+        std::string command("sosstatus ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
     else
     {
@@ -10723,7 +10698,7 @@ DECLARE_API(Token2EE)
     }
     if (nArg!=2)
     {
-        ExtOut("Usage: %stoken2ee module_name mdToken\n", SOSPrefix);
+        ExtOut("Usage: " SOSPrefix "Token2EE module_name mdToken\n");
         ExtOut("       You can pass * for module_name to search all modules.\n");
         return Status;
     }
@@ -10849,11 +10824,11 @@ DECLARE_API(Name2EE)
 
     if (nArg != 2)
     {
-        ExtOut("Usage: %sname2ee module_name item_name\n", SOSPrefix);
-        ExtOut("  or   %sname2ee module_name!item_name\n", SOSPrefix);
+        ExtOut("Usage: " SOSPrefix "name2ee module_name item_name\n");
+        ExtOut("  or   " SOSPrefix "name2ee module_name!item_name\n");
         ExtOut("       use * for module_name to search all loaded modules\n");
-        ExtOut("Examples: %sname2ee  mscorlib.dll System.String.ToString\n", SOSPrefix);
-        ExtOut("          %sname2ee *!System.String\n", SOSPrefix);
+        ExtOut("Examples: " SOSPrefix "name2ee  mscorlib.dll System.String.ToString\n");
+        ExtOut("          " SOSPrefix "name2ee *!System.String\n");
         return Status;
     }
 
@@ -10914,6 +10889,7 @@ DECLARE_API(PathTo)
 {
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     DWORD_PTR root = NULL;
     DWORD_PTR target = NULL;
@@ -10999,7 +10975,7 @@ DECLARE_API(GCRoot)
     if (all)
         ExtOut("Found %d roots.\n", i);
     else
-        ExtOut("Found %d unique roots (run '%sgcroot -all' to see all roots).\n", i, SOSPrefix);
+        ExtOut("Found %d unique roots (run '" SOSPrefix "gcroot -all' to see all roots).\n", i);
 
     return Status;
 }
@@ -11054,7 +11030,6 @@ DECLARE_API(GCWhere)
         }
     }
 
-    DWORD heapIdx = 0;
     if (!IsServerBuild())
     {
         DacpGcHeapDetails heapDetails;
@@ -11064,7 +11039,13 @@ DECLARE_API(GCWhere)
             return Status;
         }
 
-        bFound = GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge);
+        if (GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge))
+        {
+            ExtOut("Address   " WIN64_8SPACES " Gen   Heap   segment   " WIN64_8SPACES " begin     " WIN64_8SPACES " allocated  " WIN64_8SPACES " size\n");
+            ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
+                SOS_PTR(taddrObj), gen, 0, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
+            bFound = TRUE;
+        }
     }
     else
     {
@@ -11090,17 +11071,24 @@ DECLARE_API(GCWhere)
             return Status;
         }
 
-        for (heapIdx = 0; heapIdx < dwNHeaps && !bFound; heapIdx++)
+        for (DWORD n = 0; n < dwNHeaps; n ++)
         {
             DacpGcHeapDetails dacHeapDetails;
-            if (dacHeapDetails.Request(g_sos, heapAddrs[heapIdx]) != S_OK)
+            if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
             {
                 ExtOut("Error requesting details\n");
                 return Status;
             }
 
-            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[heapIdx]);
-            bFound = GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge);
+            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
+            if (GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge))
+            {
+                ExtOut("Address " WIN64_8SPACES " Gen Heap segment " WIN64_8SPACES " begin   " WIN64_8SPACES " allocated" WIN64_8SPACES " size\n");
+                ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
+                    SOS_PTR(taddrObj), gen, n, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
+                bFound = TRUE;
+                break;
+            }
         }
     }
 
@@ -11108,24 +11096,22 @@ DECLARE_API(GCWhere)
     {
         ExtOut("Address %#p not found in the managed heap.\n", SOS_PTR(taddrObj));
     }
-    else
-    {
-        ExtOut("Address " WIN64_8SPACES " Gen Heap segment " WIN64_8SPACES " begin   " WIN64_8SPACES " allocated" WIN64_8SPACES " size\n");
-        ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
-            SOS_PTR(taddrObj), gen, heapIdx, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
-    }
 
     return Status;
 }
 
+#ifndef FEATURE_PAL
+
 DECLARE_API(FindRoots)
 {
+#ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     if (IsDumpFile())
     {
-        ExtOut("%sfindroots is not supported on a dump file.\n", SOSPrefix);
+        ExtOut("!FindRoots is not supported on a dump file.\n");
         return Status;
     }
 
@@ -11163,7 +11149,7 @@ DECLARE_API(FindRoots)
     }
     if ((gen < -1 || gen > 2) && (taObj == 0))
     {
-        ExtOut("Incorrect options.  Usage:\n\t%sfindroots -gen <N>\n\t\twhere N is 0, 1, 2, or \"any\". OR\n\t%sfindroots <obj>\n", SOSPrefix, SOSPrefix);
+        ExtOut("Incorrect options.  Usage:\n\t!FindRoots -gen <N>\n\t\twhere N is 0, 1, 2, or \"any\". OR\n\t!FindRoots <obj>\n");
         return Status;
     }
 
@@ -11180,11 +11166,7 @@ DECLARE_API(FindRoots)
         GcEvtArgs gea = { GC_MARK_END, { ((gen == -1) ? 7 : (1 << gen)) } };
         idp2->SetGcNotification(gea);
         // ... and register the notification handler
-#ifndef FEATURE_PAL
         g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
-#else
-        g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
-#endif // FEATURE_PAL
         // the above notification is removed in CNotification::OnGcEvent()
     }
     else
@@ -11195,8 +11177,8 @@ DECLARE_API(FindRoots)
 
         if (!CheckCLRNotificationEvent(&dle))
         {
-            ExtOut("The command %sfindroots can only be used after the debugger stopped on a CLRN GC notification.\n", SOSPrefix);
-            ExtOut("At this time %sgcroot should be used instead.\n", SOSPrefix);
+            ExtOut("The command !FindRoots can only be used after the debugger stopped on a CLRN GC notification.\n");
+            ExtOut("At this time !GCRoot should be used instead.\n");
             return Status;
         }
         // validate argument
@@ -11227,6 +11209,9 @@ DECLARE_API(FindRoots)
     }
 
     return Status;
+#else
+    return E_NOTIMPL;
+#endif
 }
 
 class GCHandleStatsForDomains
@@ -11371,7 +11356,7 @@ public:
         if (!GetCMDOption(args,option,ARRAY_SIZE(option),NULL,0,NULL))
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
 
-        if (type != NULL) {
+        if (type != NULL)
             if (_stricmp(type, "Pinned") == 0)
                 mType = HNDTYPE_PINNED;
             else if (_stricmp(type, "RefCounted") == 0)
@@ -11394,7 +11379,6 @@ public:
                 mType = HNDTYPE_WEAK_WINRT;
             else
                 sos::Throw<sos::Exception>("Unknown handle type '%s'.", type.GetPtr());
-        }
     }
 
     void Run()
@@ -11978,8 +11962,10 @@ DECLARE_API(StopOnException)
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
+#ifndef FEATURE_PAL
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
     StringHolder str_Object;
@@ -12022,6 +12008,10 @@ DECLARE_API(ObjSize)
         ExtOut("sizeof(%p) = %d (0x%x) bytes (%S)\n", SOS_PTR(obj), size, size, methodTable.GetName());
     }
     return Status;
+#else
+    return E_NOTIMPL;
+#endif
+
 }
 
 #ifndef FEATURE_PAL
@@ -12222,6 +12212,8 @@ DECLARE_API(GCHandleLeaks)
 
     return Status;
 }
+#endif // FEATURE_PAL
+
 #endif // FEATURE_PAL
 
 class ClrStackImplWithICorDebug
@@ -13132,7 +13124,7 @@ public:
         ICorDebugProcess* pCorDebugProcess;
         if (FAILED(Status = g_pRuntime->GetCorDebugInterface(&pCorDebugProcess)))
         {
-            ExtOut("\n%sclrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n", SOSPrefix);
+            ExtOut("\n" SOSPrefix "clrstack -i is unsupported on this target.\nThe ICorDebug interface cannot be constructed.\n\n");
             return Status;
         }
 
@@ -13752,7 +13744,7 @@ private:
         if ((hr = g_clrData->GetTaskByOSThreadID(osID, &pTask)) != S_OK)
         {
             ExtOut("Unable to walk the managed stack. The current thread is likely not a \n");
-            ExtOut("managed thread. You can run %sclrthreads to get a list of managed threads in\n", SOSPrefix);
+            ExtOut("managed thread. You can run " SOSThreads " to get a list of managed threads in\n");
             ExtOut("the process\n");
             return hr;
         }
@@ -15566,7 +15558,7 @@ DECLARE_API(SuppressJitOptimization)
     }
     else
     {
-        ExtOut("Usage: %ssuppressjitoptimization <on|off>\n", SOSPrefix);
+        ExtOut("Usage: !SuppressJitOptimization <on|off>\n");
     }
 
     return S_OK;
@@ -15712,133 +15704,6 @@ DECLARE_API(StopOnCatch)
     g_clrData->SetOtherNotificationFlags(flags);
     ExtOut("Debuggee will break the next time a managed exception is caught during execution\n");
     return S_OK;
-}
-
-class EnumMemoryCallback : public ICLRDataEnumMemoryRegionsCallback, ICLRDataLoggingCallback
-{
-private:
-    LONG m_ref;
-    bool m_log;
-    bool m_valid;
-
-public:
-    EnumMemoryCallback(bool log, bool valid) :
-        m_ref(1),
-        m_log(log),
-        m_valid(valid)
-    {
-    }
-
-    virtual ~EnumMemoryCallback()
-    {
-    }
-
-    STDMETHODIMP QueryInterface(
-        ___in REFIID InterfaceId,
-        ___out PVOID* Interface)
-    {
-        if (InterfaceId == IID_IUnknown ||
-            InterfaceId == IID_ICLRDataEnumMemoryRegionsCallback)
-        {
-            *Interface = (ICLRDataEnumMemoryRegionsCallback*)this;
-            AddRef();
-            return S_OK;
-        }
-        else if (InterfaceId == IID_ICLRDataLoggingCallback)
-        {
-            *Interface = (ICLRDataLoggingCallback*)this;
-            AddRef();
-            return S_OK;
-        }
-        else
-        {
-            *Interface = nullptr;
-            return E_NOINTERFACE;
-        }
-    }
-
-    STDMETHODIMP_(ULONG) AddRef()
-    {
-        LONG ref = InterlockedIncrement(&m_ref);
-        return ref;
-    }
-
-    STDMETHODIMP_(ULONG) Release()
-    {
-        LONG ref = InterlockedDecrement(&m_ref);
-        if (ref == 0)
-        {
-            delete this;
-        }
-        return ref;
-    }
-
-    HRESULT STDMETHODCALLTYPE EnumMemoryRegion(
-        /* [in] */ CLRDATA_ADDRESS address,
-        /* [in] */ ULONG32 size)
-    {
-        if (m_log)
-        {
-            ExtOut("%016llx %08x\n", address, size);
-        }
-        if (m_valid)
-        {
-            uint64_t start = address;
-            uint64_t numberPages = (size + DT_OS_PAGE_SIZE - 1) / DT_OS_PAGE_SIZE;
-            for (size_t p = 0; p < numberPages; p++, start += DT_OS_PAGE_SIZE)
-            {
-                BYTE buffer[1];
-                ULONG read;
-                if (FAILED(g_ExtData->ReadVirtual(start, buffer, ARRAY_SIZE(buffer), &read)))
-                {
-                    ExtOut("Invalid: %016llx %08x start %016llx\n", address, size, start);
-                    break;
-                }
-            }
-        }
-        if (IsInterrupt())
-        { 
-            return COR_E_OPERATIONCANCELED;
-        }
-        return S_OK;
-    }
-
-    HRESULT STDMETHODCALLTYPE LogMessage(
-        /* [in] */ LPCSTR message)
-    {
-        ExtOut("%s", message);
-        if (IsInterrupt())
-        { 
-            return COR_E_OPERATIONCANCELED;
-        }
-        return S_OK;
-    }
-};
-
-DECLARE_API(enummem)
-{
-    INIT_API();
-
-    ToRelease<ICLRDataEnumMemoryRegions> enumMemoryRegions;
-    Status = g_clrData->QueryInterface(__uuidof(ICLRDataEnumMemoryRegions), (void**)&enumMemoryRegions);
-    if (SUCCEEDED(Status))
-    {
-        ToRelease<ICLRDataEnumMemoryRegionsCallback> callback = new EnumMemoryCallback(false, true);
-        ULONG32 minidumpType = 
-           (MiniDumpWithPrivateReadWriteMemory |
-            MiniDumpWithDataSegs |
-            MiniDumpWithHandleData |
-            MiniDumpWithUnloadedModules |
-            MiniDumpWithFullMemoryInfo |
-            MiniDumpWithThreadInfo |
-            MiniDumpWithTokenInformation);
-        Status = enumMemoryRegions->EnumMemoryRegions(callback, minidumpType, CLRDataEnumMemoryFlags::CLRDATA_ENUM_MEM_DEFAULT);
-        if (FAILED(Status))
-        {
-            ExtErr("EnumMemoryRegions FAILED %08x\n", Status);
-        }
-    }
-    return Status;
 }
 
 #ifndef FEATURE_PAL
@@ -16152,7 +16017,9 @@ DECLARE_API(SetClrPath)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        return hostServices->DispatchCommand("setclrpath", args);
+        std::string command("setclrpath ");
+        command.append(args);
+        return hostServices->DispatchCommand(command.c_str());
     }
     else
     {
@@ -16196,7 +16063,9 @@ DECLARE_API(runtimes)
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        Status = hostServices->DispatchCommand("runtimes", args);
+        std::string command("runtimes ");
+        command.append(args);
+        Status = hostServices->DispatchCommand(command.c_str());
     }
     else
     {
@@ -16239,22 +16108,31 @@ DECLARE_API(runtimes)
     return Status;
 }
 
-#ifdef HOST_WINDOWS
-
 //
 // Executes managed extension commands
 //
-HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
+HRESULT ExecuteCommand(PCSTR command, PCSTR args)
 {
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        if (commandName != nullptr && strlen(commandName) > 0)
+        std::string commandLine(command);
+        if (args != nullptr && strlen(args) > 0)
         {
-            return hostServices->DispatchCommand(commandName, args);
+            commandLine.append(" ");
+            commandLine.append(args);
+        }
+        if (!commandLine.empty())
+        {
+            return hostServices->DispatchCommand(commandLine.c_str());
         }
     }
-    return E_NOTIMPL;
+    else
+    {
+        ExtErr("Command not loaded\n");
+        return E_FAIL;
+    }
+    return S_OK;
 }
 
 //
@@ -16293,43 +16171,14 @@ DECLARE_API(logging)
     return ExecuteCommand("logging", args);
 }
 
-typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);
-
 //
 // Executes managed extension commands
 //
 DECLARE_API(ext)
 {
     INIT_API_EXT();
-
-    if (args == nullptr || strlen(args) <= 0)
-    {
-        args = "Help";
-    }
-    std::string arguments(args);
-    size_t pos = arguments.find(' ');
-    std::string commandName = arguments.substr(0, pos);
-    if (pos != std::string::npos)
-    {
-        arguments = arguments.substr(pos + 1);
-    }
-    else
-    {
-        arguments.clear();
-    }
-    Status = ExecuteCommand(commandName.c_str(), arguments.c_str());
-    if (Status == E_NOTIMPL)
-    {
-        PFN_COMMAND commandFunc = (PFN_COMMAND)GetProcAddress(g_hInstance, commandName.c_str());
-        if (commandFunc != nullptr)
-        {
-            Status = (*commandFunc)(client, arguments.c_str());
-        }
-    }
-    return Status;
+    return ExecuteCommand("", args);
 }
-
-#endif // HOST_WINDOWS
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
 {

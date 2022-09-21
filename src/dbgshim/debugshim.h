@@ -17,31 +17,6 @@
 #include <metahost.h>
 #include "runtimeinfo.h"
 
-#if defined (HOST_WINDOWS) && defined(HOST_X86)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOWINDOWSX86")
-#endif
-#if !defined (HOST_WINDOWS) && defined(HOST_X86)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOCORESYSX86")
-#endif
-#if defined (HOST_WINDOWS) && defined(HOST_AMD64)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOWINDOWSAMD64")
-#endif
-#if !defined (HOST_WINDOWS) && defined(HOST_AMD64)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOCORESYSAMD64")
-#endif
-#if defined (HOST_WINDOWS) && defined(HOST_ARM64)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOWINDOWSARM64")
-#endif
-#if !defined (HOST_WINDOWS) && defined(HOST_ARM64)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOCORESYSARM64")
-#endif
-#if defined (HOST_WINDOWS) && defined(HOST_ARM)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOWINDOWSARM")
-#endif
-#if !defined (HOST_WINDOWS) && defined(HOST_ARM)
-#define CLRDEBUGINFO_RESOURCE_NAME W("CLRDEBUGINFOCORESYSARM")
-#endif
-
 #define CORECLR_DAC_MODULE_NAME_W W("mscordaccore")
 #define CLR_DAC_MODULE_NAME_W W("mscordacwks")
 #define MAIN_DBI_MODULE_NAME_W W("mscordbi")

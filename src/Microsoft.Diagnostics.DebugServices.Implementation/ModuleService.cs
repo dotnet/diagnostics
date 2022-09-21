@@ -212,7 +212,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             moduleFlags &= ~(Module.Flags.IsPEImage | Module.Flags.IsManaged | Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
 
             // None of the modules that lldb (on either Linux/MacOS) provides are PEs
-            if (size > 0 && Target.Host.HostType != HostType.Lldb)
+            if (Target.Host.HostType != HostType.Lldb)
             {
                 // First try getting the PE info as loaded layout (native Windows DLLs and most managed PEs).
                 peFile = GetPEInfo(isVirtual: true, address, size, out List<PdbFileInfo> pdbs, out Module.Flags flags);
@@ -367,7 +367,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        Trace.TraceError($"GetVersionString: unsupported module {module} on platform {Target.OperatingSystem}");
+                        Trace.TraceError($"GetVersionString: unsupported module {module} or platform {Target.OperatingSystem}");
                     }
                 }
             }
@@ -494,7 +494,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return _memoryService.ReadMemory(address, buffer, bufferSize, out bytesRead);
                 }
 
-                if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)_cacheSize - (ulong)bufferSize)))
+                if (!_cacheValid || (address < _startCache) || (address > (_startCache + (ulong)(_cacheSize - bufferSize))))
                 {
                     _cacheValid = false;
                     _startCache = address;

@@ -8,7 +8,7 @@
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\dbgshim.unittests_$(Timestamp)</LogDir>
 
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
+  <!-- Build the debuggee for this framework version but run it on latest -->
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
 
   <TestProduct>ProjectK</TestProduct>
@@ -19,7 +19,6 @@
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
-      dotnet7=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet7/nuget/v3/index.json;
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
       dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
       dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
@@ -69,7 +68,7 @@
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-          <RuntimeFrameworkVersion>$(SingleFileRuntimeLatestVersion)</RuntimeFrameworkVersion>
+          <RuntimeFrameworkVersion>$(SingleFileRuntimeVersion)</RuntimeFrameworkVersion>
         </Option>
         <!--
             Default
@@ -78,11 +77,6 @@
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(RuntimeVersion60)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
-          <BuildProjectFramework>net6.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
         </Option>
       </Options>
     </Option>
@@ -94,6 +88,9 @@
 
   <RuntimeModuleDir>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeModuleDir>
 
+  <!--
+  <DbgShimPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)\dbgshim.dll</DbgShimPath>
+   -->
   <DbgShimPath>$(InstallDir)\dbgshim.dll</DbgShimPath>
   <RuntimeModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)\coreclr.dll</RuntimeModulePath>
   <DbiModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)\mscordbi.dll</DbiModulePath>

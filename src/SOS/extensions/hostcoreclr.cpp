@@ -45,7 +45,7 @@
 #define DT_LNK 10
 #endif
 
-#if !defined(FEATURE_PAL) && !defined(HOST_ARM64) && !defined(HOST_ARM)
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
 extern HRESULT InitializeDesktopClrHost();
 #endif
 
@@ -750,7 +750,7 @@ HRESULT InitializeHosting()
             return hr;
         }
     }
-#if !defined(FEATURE_PAL) && !defined(HOST_ARM64) && !defined(HOST_ARM)
+#if !defined(FEATURE_PAL) && !defined(_TARGET_ARM64_)
     hr = InitializeDesktopClrHost();
     if (SUCCEEDED(hr))
     {

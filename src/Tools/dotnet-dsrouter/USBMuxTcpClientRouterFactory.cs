@@ -118,18 +118,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            int bytesRead = 0;
+            bool continueRead = true;
+            int bytesToRead = count;
+            int totalBytesRead = 0;
+            int currentBytesRead = 0;
 
-            if (offset + count > buffer.Length)
-                throw new InvalidOperationException ("Potential write beyond end of buffer");
-
-            if (offset < 0)
-                throw new InvalidOperationException ("Write before beginning of buffer");
-
-            if (count < 0)
-                throw new InvalidOperationException ("Negative read count");
-
-            while (true)
+            while (continueRead && bytesToRead - totalBytesRead > 0)
             {
                 if (!IsOpen)
                     throw new EndOfStreamException();
@@ -138,15 +132,21 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 {
                     fixed (byte* fixedBuffer = buffer)
                     {
-                        bytesRead = USBMuxInterop.recv(_handle, fixedBuffer + offset, new IntPtr (count), 0);
+                        currentBytesRead = USBMuxInterop.recv(_handle, fixedBuffer + totalBytesRead, new IntPtr(bytesToRead - totalBytesRead), 0);
                     }
                 }
 
-                if (bytesRead == -1 && Marshal.GetLastWin32Error() == USBMuxInterop.EINTR)
+                if (currentBytesRead == -1 && Marshal.GetLastWin32Error() == USBMuxInterop.EINTR)
                     continue;
 
-                return bytesRead;
+                continueRead = currentBytesRead > 0;
+                if (!continueRead)
+                    break;
+
+                totalBytesRead += currentBytesRead;
             }
+
+            return totalBytesRead;
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)

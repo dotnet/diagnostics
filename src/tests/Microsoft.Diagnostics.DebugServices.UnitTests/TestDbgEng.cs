@@ -1,9 +1,9 @@
 ﻿using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Extensions;
 using SOS.Hosting;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         class DbgEngController : IDebugOutputCallbacks
         {
             [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-            private delegate int DebugCreateDelegate(
+            private delegate HResult DebugCreateDelegate(
                 ref Guid interfaceId,
                 [MarshalAs(UnmanagedType.IUnknown)] out object iinterface);
 

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Buffers.Binary;
 using System.Text;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -66,7 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             ProcessInfo processInfo = new ProcessInfo();
 
-            processInfo.ProcessId = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(payload, index, 8));
+            processInfo.ProcessId = BitConverter.ToUInt64(payload, index);
             index += sizeof(UInt64);
 
             byte[] cookieBuffer = new byte[GuidSizeInBytes];

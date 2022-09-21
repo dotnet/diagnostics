@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Buffers.Binary;
 using System.Linq;
 using System.IO;
 using System.Text;
@@ -70,10 +69,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Guid cookie = new Guid(cookieBuffer);
             index += 16;
 
-            UInt64 pid = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(buffer, index, 8));
+            UInt64 pid = BitConverter.ToUInt64(buffer, index);
             index += 8;
 
-            UInt16 future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(buffer, index, 2));
+            UInt16 future = BitConverter.ToUInt16(buffer, index);
             index += 2;
 
             // FUTURE: switch on incoming magic and change if version ever increments
@@ -92,12 +91,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Array.Copy(cookieBuffer, 0, buffer, index, cookieBuffer.Length);
             index += cookieBuffer.Length;
 
-            byte[] processIdBuffer = BitConverter.GetBytes(processId);
-            if (!BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(processIdBuffer);
-            }
-            Array.Copy(processIdBuffer, 0, buffer, index, sizeof(ulong));
+            Array.Copy(BitConverter.GetBytes(processId), 0, buffer, index, sizeof(ulong));
             index += sizeof(ulong);
 
             short future = 0;

@@ -2,71 +2,45 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Diagnostics.NETCore.Client;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
     public class StackTests
     {
-        private readonly ITestOutputHelper _output;
+        private readonly ITestOutputHelper output;
 
-        private const string _correctStack70 = @"  [Native Frames]
-  System.Console.il!Interop+Kernel32.ReadFile(int,unsigned int8*,int32,int32&,int)
-  System.Console.il!System.ConsolePal+WindowsConsoleStream.ReadFileNative(int,value class System.Span`1<unsigned int8>,bool,int32&,bool)
-  System.Console.il!System.ConsolePal+WindowsConsoleStream.Read(value class System.Span`1<unsigned int8>)
-  System.Console.il!System.IO.ConsoleStream.Read(unsigned int8[],int32,int32)
-  System.Private.CoreLib.il!System.IO.StreamReader.ReadBuffer()
-  System.Private.CoreLib.il!System.IO.StreamReader.Read()
-  System.Console.il!System.IO.SyncTextReader.Read()
-  System.Console.il!System.Console.Read()
-  ?!?";
-
-        private const string _correctStack60 = @"  [Native Frames]
-  System.Console.il!System.ConsolePal+WindowsConsoleStream.ReadFileNative(int,value class System.Span`1<unsigned int8>,bool,int32&,bool)
-  System.Console.il!System.ConsolePal+WindowsConsoleStream.Read(value class System.Span`1<unsigned int8>)
-  System.Console.il!System.IO.ConsoleStream.Read(unsigned int8[],int32,int32)
-  System.Private.CoreLib.il!System.IO.StreamReader.ReadBuffer()
-  System.Private.CoreLib.il!System.IO.StreamReader.Read()
-  System.Console.il!System.IO.SyncTextReader.Read()
-  System.Console.il!System.Console.Read()
+        private readonly string correctStack = @"  [Native Frames]
+  System.Console!System.IO.StdInReader.ReadKey(bool&)
+  System.Console!System.IO.SyncTextReader.ReadKey(bool&)
+  System.Console!System.ConsolePal.ReadKey(bool)
+  System.Console!System.Console.ReadKey()
   StackTracee!Tracee.Program.Main(class System.String[])";
-
-        private const string _correctStack31 = @"  [Native Frames]
-  System.Console.il!System.ConsolePal+WindowsConsoleStream.ReadFileNative(int,unsigned int8[],int32,int32,bool,int32&,bool)
-  System.Console.il!System.ConsolePal+WindowsConsoleStream.Read(unsigned int8[],int32,int32)
-  System.Private.CoreLib.il!System.IO.StreamReader.ReadBuffer()
-  System.Private.CoreLib.il!System.IO.StreamReader.Read()
-  System.Console.il!System.IO.SyncTextReader.Read()
-  System.Console.il!System.Console.Read()
-  StackTracee!Tracee.Program.Main(class System.String[])";
-
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
 
         public StackTests(ITestOutputHelper outputHelper)
         {
-            _output = outputHelper;
+            output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReportsStacksCorrectly(TestConfiguration config)
+        [Theory]
+        [InlineData("netcoreapp3.1")]
+        [InlineData("net5.0")]
+        public async Task ReportsStacksCorrectly(string traceeFramework)
         {
             Command reportCommand = ReportCommandHandler.ReportCommand();
 
             var console = new TestConsole();
             var parser = new Parser(reportCommand);
 
-            await using TestRunner runner = await TestRunner.Create(config, _output, "StackTracee", usePipe: false);
-            await runner.Start();
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(traceeName: "StackTracee", targetFramework: traceeFramework), output);
+            runner.Start();
 
             // Wait for tracee to get to readkey call
             await Task.Delay(TimeSpan.FromSeconds(1));
@@ -75,16 +49,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             string report = console.Out.ToString();
 
-            runner.WriteLine($"REPORT_START\n{report}REPORT_END");
+            output.WriteLine($"REPORT_START\n{report}REPORT_END");
             Assert.True(!string.IsNullOrEmpty(report));
 
-            string correctStack = config.RuntimeFrameworkVersionMajor switch
-            {
-                7 => _correctStack70,
-                6 => _correctStack60,
-                3 => _correctStack31,
-                _ => throw new NotSupportedException($"Runtime version {config.RuntimeFrameworkVersionMajor} not supported")
-            };
+
             string[] correctStackParts = correctStack.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
             string[] stackParts = report.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 

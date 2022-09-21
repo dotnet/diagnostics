@@ -10,7 +10,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         void EventPipeSourceConnected();
         void ToggleStatus(bool paused);
         void CounterPayloadReceived(CounterPayload payload, bool paused);
-        void CounterStopped(CounterPayload payload);
         void SetErrorText(string errorText);
         void Stop();
     }

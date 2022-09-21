@@ -4,8 +4,8 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;

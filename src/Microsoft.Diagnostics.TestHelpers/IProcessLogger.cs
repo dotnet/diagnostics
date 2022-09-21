@@ -15,7 +15,6 @@ namespace Microsoft.Diagnostics.TestHelpers
     public enum KillReason
     {
         TimedOut,
-        Stopped,
         Unknown
     }
 

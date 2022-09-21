@@ -83,110 +83,110 @@ namespace Microsoft.Diagnostics
         #region ICorDebugManagedCallback delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int BreakpointDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pBreakpoint);
+        private delegate HResult BreakpointDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pBreakpoint);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int StepCompleteDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pStepper, [In] int reason);
+        private delegate HResult StepCompleteDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pStepper, [In] int reason);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int BreakDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread);
+        private delegate HResult BreakDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ExceptionDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int unhandled);
+        private delegate HResult ExceptionDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int unhandled);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int EvalCompleteDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pEval);
+        private delegate HResult EvalCompleteDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pEval);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int EvalExceptionDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pEval);
+        private delegate HResult EvalExceptionDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pEval);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int CreateProcessDelegate([In] IntPtr self, [In] IntPtr pProcess);
+        private delegate HResult CreateProcessDelegate([In] IntPtr self, [In] IntPtr pProcess);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ExitProcessDelegate([In] IntPtr self, [In] IntPtr pProcess);
+        private delegate HResult ExitProcessDelegate([In] IntPtr self, [In] IntPtr pProcess);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int CreateThreadDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr thread);
+        private delegate HResult CreateThreadDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr thread);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ExitThreadDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr thread);
+        private delegate HResult ExitThreadDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr thread);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int LoadModuleDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pModule);
+        private delegate HResult LoadModuleDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pModule);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int UnloadModuleDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pModule);
+        private delegate HResult UnloadModuleDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pModule);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int LoadClassDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr c);
+        private delegate HResult LoadClassDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr c);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int UnloadClassDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr c);
+        private delegate HResult UnloadClassDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr c);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int DebuggerErrorDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] int errorHR, [In] uint errorCode);
+        private delegate HResult DebuggerErrorDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] HResult errorHR, [In] uint errorCode);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int LogMessageDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int lLevel, [In, MarshalAs(UnmanagedType.LPWStr)] string pLogSwitchName, [In, MarshalAs(UnmanagedType.LPWStr)] string pMessage);
+        private delegate HResult LogMessageDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int lLevel, [In, MarshalAs(UnmanagedType.LPWStr)] string pLogSwitchName, [In, MarshalAs(UnmanagedType.LPWStr)] string pMessage);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int LogSwitchDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int lLevel, [In] uint ulReason, [In, MarshalAs(UnmanagedType.LPWStr)] string pLogSwitchName, [In, MarshalAs(UnmanagedType.LPWStr)] string pParentName);
+        private delegate HResult LogSwitchDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int lLevel, [In] uint ulReason, [In, MarshalAs(UnmanagedType.LPWStr)] string pLogSwitchName, [In, MarshalAs(UnmanagedType.LPWStr)] string pParentName);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int CreateAppDomainDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] IntPtr pAppDomain);
+        private delegate HResult CreateAppDomainDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] IntPtr pAppDomain);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ExitAppDomainDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] IntPtr pAppDomain);
+        private delegate HResult ExitAppDomainDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] IntPtr pAppDomain);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int LoadAssemblyDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pAssembly);
+        private delegate HResult LoadAssemblyDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pAssembly);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int UnloadAssemblyDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pAssembly);
+        private delegate HResult UnloadAssemblyDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pAssembly);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ControlCTrapDelegate([In] IntPtr self, [In] IntPtr pProcess);
+        private delegate HResult ControlCTrapDelegate([In] IntPtr self, [In] IntPtr pProcess);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int NameChangeDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread);
+        private delegate HResult NameChangeDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int UpdateModuleSymbolsDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pModule, [In] IntPtr pSymbolStream);
+        private delegate HResult UpdateModuleSymbolsDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pModule, [In] IntPtr pSymbolStream);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int EditAndContinueRemapDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pFunction, [In] int fAccurate);
+        private delegate HResult EditAndContinueRemapDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pFunction, [In] int fAccurate);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int BreakpointSetErrorDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pBreakpoint, [In] uint dwError);
+        private delegate HResult BreakpointSetErrorDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pBreakpoint, [In] uint dwError);
 
         #endregion
 
         #region ICorDebugManagedCallback2 delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int FunctionRemapOpportunityDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pOldFunction, [In] IntPtr pNewFunction, [In] uint oldILOffset);
+        private delegate HResult FunctionRemapOpportunityDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pOldFunction, [In] IntPtr pNewFunction, [In] uint oldILOffset);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int CreateConnectionDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] uint dwConnectionId, [In] ref ushort pConnName);
+        private delegate HResult CreateConnectionDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] uint dwConnectionId, [In] ref ushort pConnName);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ChangeConnectionDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] uint dwConnectionId);
+        private delegate HResult ChangeConnectionDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] uint dwConnectionId);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int DestroyConnectionDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] uint dwConnectionId);
+        private delegate HResult DestroyConnectionDelegate([In] IntPtr self, [In] IntPtr pProcess, [In] uint dwConnectionId);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ExceptionDelegate2([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pFrame, [In] uint nOffset, [In] int dwEventType, [In] uint dwFlags);
+        private delegate HResult ExceptionDelegate2([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pFrame, [In] uint nOffset, [In] int dwEventType, [In] uint dwFlags);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ExceptionUnwindDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int dwEventType, [In] uint dwFlags);
+        private delegate HResult ExceptionUnwindDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] int dwEventType, [In] uint dwFlags);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int FunctionRemapCompleteDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pFunction);
+        private delegate HResult FunctionRemapCompleteDelegate([In] IntPtr self, [In] IntPtr pAppDomain, [In] IntPtr pThread, [In] IntPtr pFunction);
         
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int MDANotificationDelegate([In] IntPtr self, [In] IntPtr pController, [In] IntPtr pThread, [In] IntPtr pMDA);
+        private delegate HResult MDANotificationDelegate([In] IntPtr self, [In] IntPtr pController, [In] IntPtr pThread, [In] IntPtr pMDA);
 
         #endregion
     }

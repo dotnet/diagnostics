@@ -4,10 +4,11 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -365,32 +366,32 @@ namespace SOS
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DebuggerServices.OperatingSystem, int> GetOperatingSystem;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, int> GetDebuggeeType;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, int> GetExecutingProcessorType;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, int> AddCommand;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DebuggerServices.OperatingSystem, HResult> GetOperatingSystem;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, HResult> GetDebuggeeType;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, HResult> GetExecutingProcessorType;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, HResult> AddCommand;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputString;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, int> ReadVirtual;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, int> WriteVirtual;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, int> GetNumberModules;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, uint, out uint, byte*, uint, uint*, byte*, uint, uint*, int> GetModuleNames;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, out ulong, out uint, out uint, int> GetModuleInfo;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, int> GetModuleVersionInformation;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, int> GetNumberThreads;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint*, uint*, int> GetThreadIdsByIndex;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint, byte*, int> GetThreadContextBySystemId;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, int> GetCurrentProcessSystemId;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, int> GetCurrentThreadSystemId;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, int> SetCurrentThreadSystemId;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, int> GetThreadTeb;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, byte*, int> VirtualUnwind;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, int> GetSymbolPath;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, int> GetSymbolByOffset;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, int> GetOffsetBySymbol;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, HResult> ReadVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, HResult> WriteVirtual;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, HResult> GetNumberModules;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, uint, out uint, byte*, uint, uint*, byte*, uint, uint*, HResult> GetModuleNames;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, out ulong, out uint, out uint, HResult> GetModuleInfo;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, HResult> GetModuleVersionInformation;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetNumberThreads;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint*, uint*, HResult> GetThreadIdsByIndex;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint, byte*, HResult> GetThreadContextBySystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetCurrentProcessSystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, HResult> GetCurrentThreadSystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, HResult> SetCurrentThreadSystemId;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, HResult> GetThreadTeb;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, byte*, HResult> VirtualUnwind;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, HResult> GetSymbolPath;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, HResult> GetSymbolByOffset;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, HResult> GetOffsetBySymbol;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint> GetOutputWidth;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint*, int> SupportsDml;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint*, HResult> SupportsDml;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputDmlString;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, byte*, int> AddModuleSymbol;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, byte*, HResult> AddModuleSymbol;
         }
     }
 }

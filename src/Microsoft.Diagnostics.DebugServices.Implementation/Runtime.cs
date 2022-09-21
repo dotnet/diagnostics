@@ -70,7 +70,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_dacFilePath is null)
             {
-                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
+                string dacFileName = GetDacFileName();
+                _dacFilePath = GetLocalDacPath(dacFileName);
+                if (_dacFilePath is null)
+                {
+                    _dacFilePath = DownloadFile(dacFileName);
+                }
             }
             return _dacFilePath;
         }
@@ -79,7 +84,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_dbiFilePath is null)
             {
-                _dbiFilePath = GetLibraryPath(DebugLibraryKind.Dbi);
+                string dbiFileName = GetDbiFileName();
+                _dbiFilePath = GetLocalPath(dbiFileName);
+                if (_dbiFilePath is null)
+                {
+                    _dbiFilePath = DownloadFile(dbiFileName);
+                }
             }
             return _dbiFilePath;
         }
@@ -121,45 +131,62 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _clrRuntime;
         }
 
-        private string GetLibraryPath(DebugLibraryKind kind)
+        private string GetDacFileName()
         {
-            Architecture currentArch = RuntimeInformation.ProcessArchitecture;
-            string libraryPath = null;
-
-            foreach (DebugLibraryInfo libraryInfo in _clrInfo.DebuggingLibraries)
+            if (_clrInfo.SingleFileRuntimeInfo.HasValue)
             {
-                if (libraryInfo.Kind == kind && RuntimeInformation.IsOSPlatform(libraryInfo.Platform) && libraryInfo.TargetArchitecture == currentArch)
+                return ClrInfoProvider.GetDacFileName(_clrInfo.Flavor, Target.OperatingSystem);
+            }
+            Debug.Assert(!string.IsNullOrEmpty(_clrInfo.DacInfo.PlatformSpecificFileName));
+            return _clrInfo.DacInfo.PlatformSpecificFileName;
+        }
+
+        private string GetLocalDacPath(string dacFileName)
+        {
+            string dacFilePath;
+            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
+            {
+                dacFilePath = Path.Combine(RuntimeModuleDirectory, dacFileName);
+            }
+            else
+            {
+                dacFilePath = _clrInfo.DacInfo.LocalDacPath;
+
+                // On MacOS CLRMD doesn't return the full DAC path just the file name so check if it exists
+                if (string.IsNullOrEmpty(dacFilePath) || !File.Exists(dacFilePath))
                 {
-                    libraryPath = GetLocalPath(libraryInfo.FileName);
-                    if (libraryPath is not null)
-                    {
-                        break;
-                    }
-                    libraryPath = DownloadFile(libraryInfo);
-                    if (libraryPath is not null)
-                    {
-                        break;
-                    }
+                    dacFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), dacFileName);
                 }
             }
+            if (!File.Exists(dacFilePath))
+            {
+                dacFilePath = null;
+            }
+            return dacFilePath;
+        }
 
-            return libraryPath;
+        private string GetDbiFileName()
+        {
+            string name = Target.GetPlatformModuleName("mscordbi");
+
+            // If this is the Linux runtime module name, but we are running on Windows return the cross-OS DBI name.
+            if (Target.OperatingSystem == OSPlatform.Linux && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                name = "mscordbi.dll";
+            }
+            return name;
         }
 
         private string GetLocalPath(string fileName)
         {
-            if (File.Exists(fileName))
-            {
-                return fileName;
-            }
             string localFilePath;
             if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
-                localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(fileName));
+                localFilePath = Path.Combine(RuntimeModuleDirectory, fileName);
             }
             else
             {
-                localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(fileName));
+                localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), fileName);
             }
             if (!File.Exists(localFilePath))
             {
@@ -168,7 +195,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return localFilePath;
         }
 
-        private string DownloadFile(DebugLibraryInfo libraryInfo)
+        private string DownloadFile(string fileName)
         {
             OSPlatform platform = Target.OperatingSystem;
             string filePath = null;
@@ -180,54 +207,41 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (platform == OSPlatform.Windows)
                 {
                     // It is the coreclr.dll's id (timestamp/filesize) in the DacInfo used to download the the dac module.
-                    if (libraryInfo.IndexTimeStamp != 0 && libraryInfo.IndexFileSize != 0)
+                    if (_clrInfo.DacInfo.IndexTimeStamp != 0 && _clrInfo.DacInfo.IndexFileSize != 0)
                     {
-                        key = PEFileKeyGenerator.GetKey(libraryInfo.FileName, (uint)libraryInfo.IndexTimeStamp, (uint)libraryInfo.IndexFileSize);
+                        key = PEFileKeyGenerator.GetKey(fileName, (uint)_clrInfo.DacInfo.IndexTimeStamp, (uint)_clrInfo.DacInfo.IndexFileSize);
                     }
                     else
                     {
-                        Trace.TraceError($"DownloadFile: {libraryInfo}: key not generated - no index timestamp/filesize");
+                        Trace.TraceError($"DownloadFile: {fileName}: key not generated - no index timestamp/filesize");
                     }
                 }
                 else
                 {
                     // Use the runtime's build id to download the the dac module.
-                    if (!libraryInfo.IndexBuildId.IsDefaultOrEmpty)
+                    if (!_clrInfo.DacInfo.ClrBuildId.IsDefaultOrEmpty)
                     {
-                        byte[] buildId = libraryInfo.IndexBuildId.ToArray();
+                        byte[] buildId = _clrInfo.DacInfo.ClrBuildId.ToArray();
                         IEnumerable<SymbolStoreKey> keys = null;
-                        KeyTypeFlags flags = KeyTypeFlags.None;
-                        string fileName = null;
-
-                        switch (libraryInfo.ArchivedUnder)
-                        {
-                            case SymbolProperties.Self:
-                                flags = KeyTypeFlags.IdentityKey;
-                                fileName = libraryInfo.FileName;
-                                break;
-                            case SymbolProperties.Coreclr:
-                                flags = KeyTypeFlags.DacDbiKeys;
-                                break;
-                        }
 
                         if (platform == OSPlatform.Linux)
                         {
-                            keys = ELFFileKeyGenerator.GetKeys(flags, fileName ?? "libcoreclr.so", buildId, symbolFile: false, symbolFileName: null);
+                            keys = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.DacDbiKeys, "libcoreclr.so", buildId, symbolFile: false, symbolFileName: null);
                         }
                         else if (platform == OSPlatform.OSX)
                         {
-                            keys = MachOFileKeyGenerator.GetKeys(flags, fileName ?? "libcoreclr.dylib", buildId, symbolFile: false, symbolFileName: null);
+                            keys = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.DacDbiKeys, "libcoreclr.dylib", buildId, symbolFile: false, symbolFileName: null);
                         }
                         else
                         {
-                            Trace.TraceError($"DownloadFile: {libraryInfo}: platform not supported - {platform}");
+                            Trace.TraceError($"DownloadFile: {fileName}: platform not supported - {platform}");
                         }
 
-                        key = keys?.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == Path.GetFileName(libraryInfo.FileName));
+                        key = keys?.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == fileName);
                     }
                     else
                     {
-                        Trace.TraceError($"DownloadFile: {libraryInfo}: key not generated - no index time stamp or file size");
+                        Trace.TraceError($"DownloadFile: {fileName}: key not generated - no index time stamp or file size");
                     }
                 }
 
@@ -239,7 +253,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else
             {
-                Trace.TraceInformation($"DownLoadFile: {libraryInfo}: symbol store not enabled");
+                Trace.TraceInformation($"DownLoadFile: {fileName}: symbol store not enabled");
             }
             return filePath;
         }
@@ -268,9 +282,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             var sb = new StringBuilder();
             string config = s_runtimeTypeNames[(int)RuntimeType];
-            string index = _clrInfo.BuildId.IsDefaultOrEmpty ? $"{_clrInfo.IndexTimeStamp:X8} {_clrInfo.IndexFileSize:X8}" : _clrInfo.BuildId.ToHex();
-            sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8} index {index}");
-            if (_clrInfo.IsSingleFile) {
+            sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8}");
+            if (_clrInfo.SingleFileRuntimeInfo.HasValue) {
                 sb.AppendLine($"    Single-file runtime module path: {RuntimeModule.FileName}");
             }
             else {

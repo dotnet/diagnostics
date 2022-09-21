@@ -10,7 +10,7 @@ namespace Tracee
     {
         static void Main(string[] args)
         {
-            Console.Read();
+            Console.ReadKey();
         }
     }
 }

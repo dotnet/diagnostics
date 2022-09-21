@@ -56,6 +56,9 @@ ENDIF:LIVE
 
 CONTINUE
 
+EXTCOMMAND:clrmodules
+VERIFY:\s*<HEXVAL>.*
+
 EXTCOMMAND:modules -v
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>.*
 
@@ -64,12 +67,6 @@ VERIFY:\s*<DECVAL>\s+0x<HEXVAL>\s+\(<DECVAL>\)\s+
 
 EXTCOMMAND:registers
 VERIFY:\s*([r|e]ip|pc) = 0x<HEXVAL>\s+
-
-EXTCOMMAND:ClrStack
-
-EXTCOMMAND:ThreadPool
-
-EXTCOMMAND:VerifyHeap
 
 SOSCOMMAND:DumpHeap
 VERIFY:\s+Address\s+MT\s+Size\s+
@@ -126,12 +123,6 @@ VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:(\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*)?
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 
-EXTCOMMAND:logopen %LOG_PATH%/%TEST_NAME%.%LOG_SUFFIX%.consolelog
-EXTCOMMAND:logging %LOG_PATH%/%TEST_NAME%.%LOG_SUFFIX%.diaglog
-
-EXTCOMMAND:clrmodules -v
-VERIFY:\s*<HEXVAL>.*
-
 SOSCOMMAND:SyncBlk
 # On Linux/MacOS we sometimes get "Error requesting SyncBlk data" error from the DAC.
 IFDEF:WINDOWS
@@ -140,12 +131,3 @@ VERIFY:\s*Total\s+<DECVAL>
 VERIFY:\s*CCW\s+<DECVAL>
 VERIFY:\s*RCW\s+<DECVAL>
 ENDIF:WINDOWS
-
-SOSCOMMAND:GCHandles
-
-SOSCOMMAND:DumpGCData
-
-SOSCOMMAND:DumpRuntimeTypes
-
-EXTCOMMAND:logclose
-EXTCOMMAND:logging --disable

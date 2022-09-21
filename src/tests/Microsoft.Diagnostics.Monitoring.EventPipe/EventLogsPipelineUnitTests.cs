@@ -2,9 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Diagnostics.NETCore.Client.UnitTests;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,7 +15,6 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -28,8 +26,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private readonly ITestOutputHelper _output;
 
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
-
         public EventLogsPipelineUnitTests(ITestOutputHelper output)
         {
             _output = output;
@@ -38,15 +34,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that all log events are collected if no filters are specified.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestLogsAllCategoriesAllLevels(TestConfiguration config)
+        [SkippableFact]
+        public async Task TestLogsAllCategoriesAllLevels()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
+            using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
             });
@@ -67,15 +63,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestLogsAllCategoriesDefaultLevel(TestConfiguration config)
+        [SkippableFact]
+        public async Task TestLogsAllCategoriesDefaultLevel()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
-
-            using Stream outputStream = await GetLogsAsync(config, settings =>
+            using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Warning;
@@ -95,15 +90,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
-        public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
+        [SkippableFact]
+        public async Task TestLogsAllCategoriesDefaultLevelFallback()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
+            using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
@@ -128,13 +123,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that LogLevel.None is not supported as the default log level.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestLogsAllCategoriesDefaultLevelNoneNotSupported(TestConfiguration config)
+        [Fact]
+        public async Task TestLogsAllCategoriesDefaultLevelNoneNotSupported()
         {
             // Pipeline should throw PipelineException with inner exception of NotSupportedException.
             PipelineException exception = await Assert.ThrowsAsync<PipelineException>(
                 () => GetLogsAsync(
-                    config,
                     settings =>
                     {
                         settings.UseAppFilters = false;
@@ -147,15 +141,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for the categories and levels specified by the application.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestLogsUseAppFilters(TestConfiguration config)
+        [Fact]
+        public async Task TestLogsUseAppFilters()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
-            using Stream outputStream = await GetLogsAsync(config);
+            using Stream outputStream = await GetLogsAsync();
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
@@ -171,15 +160,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestLogsUseAppFiltersAndFilterSpecs(TestConfiguration config)
+        [SkippableFact]
+        public async Task TestLogsUseAppFiltersAndFilterSpecs()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
+            using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
@@ -201,15 +190,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for wildcard categories.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestLogsWildcardCategory(TestConfiguration config)
+        [SkippableFact]
+        public async Task TestLogsWildcardCategory()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2568");
             }
-
-            using Stream outputStream = await GetLogsAsync(config, settings =>
+            using Stream outputStream = await GetLogsAsync(settings =>
             {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
@@ -230,14 +218,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.True(reader.EndOfStream, "Expected to have read all entries from stream.");
         }
 
-        private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)
+        private async Task<Stream> GetLogsAsync(Action<EventLogsPipelineSettings> settingsCallback = null)
         {
             var outputStream = new MemoryStream();
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
+            await using (var testExecution = StartTraceeProcess(LoggerRemoteTestName))
             {
+                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
+
                 using var loggerFactory = new LoggerFactory(new[] { new TestStreamingLoggerProvider(outputStream) });
-                var client = new DiagnosticsClient(testRunner.Pid);
+                var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
 
                 var logSettings = new EventLogsPipelineSettings { Duration = Timeout.InfiniteTimeSpan };
                 if (null != settingsCallback)
@@ -246,7 +236,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }
                 await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
 
-                await PipelineTestUtilities.ExecutePipelineWithTracee(pipeline, testRunner);
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(_output, pipeline, testExecution);
             }
 
             outputStream.Position = 0L;
@@ -342,6 +332,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 //TODO For now this will always be a string
                 Assert.Equal(expectedValue.value, value.GetString());
             }
+        }
+
+        private RemoteTestExecution StartTraceeProcess(string loggerCategory)
+        {
+            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory, _output);
         }
 
         private sealed class LoggerTestResult

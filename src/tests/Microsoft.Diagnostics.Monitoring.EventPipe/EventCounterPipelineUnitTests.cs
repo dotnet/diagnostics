@@ -3,23 +3,20 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Diagnostics.NETCore.Client.UnitTests;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class EventCounterPipelineUnitTests
     {
         private readonly ITestOutputHelper _output;
-
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
 
         public EventCounterPipelineUnitTests(ITestOutputHelper output)
         {
@@ -86,8 +83,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestCounterEventPipeline(TestConfiguration config)
+        [Fact]
+        public async Task TestCounterEventPipeline()
         {
             var expectedCounters = new[] { "cpu-usage", "working-set" };
             string expectedProvider = "System.Runtime";
@@ -99,9 +96,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
+            await using (var testExecution = StartTraceeProcess("CounterRemoteTest"))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
+                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
+
+                var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
 
                 await using EventCounterPipeline pipeline = new EventCounterPipeline(client, new EventPipeCounterPipelineSettings
                 {
@@ -117,9 +116,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     CounterIntervalSeconds = 1
                 }, new[] { logger });
 
-                await PipelineTestUtilities.ExecutePipelineWithTracee(
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                    _output,
                     pipeline,
-                    testRunner,
+                    testExecution,
                     foundExpectedCountersSource);
             }
 
@@ -129,6 +129,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.Equal(expectedCounters, actualMetrics);
             Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));
+        }
+
+        private RemoteTestExecution StartTraceeProcess(string loggerCategory)
+        {
+            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory, _output);
         }
     }
 }

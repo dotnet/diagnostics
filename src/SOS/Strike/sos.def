@@ -74,9 +74,7 @@ EXPORTS
     EHInfo
     ehinfo=EHInfo
     Ehinfo=EHInfo
-    enummem
     ext
-    sos=ext
     FinalizeQueue
     finalizequeue=FinalizeQueue
     fq=FinalizeQueue

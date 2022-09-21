@@ -159,7 +159,7 @@ namespace SOS.Hosting
             var commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
             if (commandFunc == null)
             {
-                throw new DiagnosticsException($"SOS command not found: {command}");
+                throw new EntryPointNotFoundException($"Can not find SOS command: {command}");
             }
             int result = commandFunc(client, arguments ?? "");
             if (result != HResult.S_OK)

@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
                     if (NetFx && runtime.RuntimeType == RuntimeType.Desktop ||
-                        NetCore && runtime.RuntimeType == RuntimeType.NetCore)
+                        NetCore && runtime.RuntimeType  == RuntimeType.NetCore)
                     {
                         ContextService.SetCurrentRuntime(runtime.Id);
                         WriteLine("Switched to {0} runtime successfully", name);
@@ -61,20 +61,45 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     ClrInfo clrInfo = runtime.Services.GetService<ClrInfo>();
                     if (clrInfo is not null)
                     {
-                        WriteLine("    Libraries:");
-                        foreach (DebugLibraryInfo library in clrInfo.DebuggingLibraries)
+                        unsafe
                         {
-                            string index = library.IndexBuildId.IsDefaultOrEmpty ? $"{library.IndexTimeStamp:X8} {library.IndexFileSize:X8}" : library.IndexBuildId.ToHex();
-                            WriteLine($"        {library.Kind} {library.FileName} {library.Platform} {library.TargetArchitecture} {library.ArchivedUnder} {index}");
+                            if (clrInfo.SingleFileRuntimeInfo.HasValue)
+                            {
+                                RuntimeInfo runtimeInfo = clrInfo.SingleFileRuntimeInfo.Value;
+                                WriteLine("    Signature:   {0}", Encoding.ASCII.GetString(runtimeInfo.Signature, RuntimeInfo.SignatureValueLength - 1));
+                                WriteLine("    Version:     {0}", runtimeInfo.Version);
+                                if (Target.OperatingSystem == OSPlatform.Windows)
+                                {
+                                    WriteLine("    Runtime:     {0}", GetWindowsIndex(runtimeInfo.RuntimeModuleIndex));
+                                    WriteLine("    DBI:         {0}", GetWindowsIndex(runtimeInfo.DbiModuleIndex));
+                                    WriteLine("    DAC:         {0}", GetWindowsIndex(runtimeInfo.DacModuleIndex));
+                                }
+                                else 
+                                {
+                                    WriteLine("    Runtime:     {0}",  GetUnixIndex(runtimeInfo.RuntimeModuleIndex));
+                                    WriteLine("    DBI:         {0}",  GetUnixIndex(runtimeInfo.DbiModuleIndex));
+                                    WriteLine("    DAC:         {0}",  GetUnixIndex(runtimeInfo.DacModuleIndex));
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    public static class Utilities
-    {
-        public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
+        private unsafe string GetWindowsIndex(byte* index)
+        {
+            uint timeStamp = BitConverter.ToUInt32(new ReadOnlySpan<byte>(index + sizeof(byte), sizeof(uint)).ToArray(), 0);
+            uint fileSize = BitConverter.ToUInt32(new ReadOnlySpan<byte>(index + sizeof(byte) + sizeof(uint), sizeof(uint)).ToArray(), 0);
+            return string.Format("TimeStamp {0:X8} FileSize {1:X8}", timeStamp, fileSize);
+        }
+
+        private unsafe string GetUnixIndex(byte* index)
+        {
+            var buildId = new ReadOnlySpan<byte>(index + sizeof(byte), index[0]).ToArray().ToImmutableArray();
+            return string.Format("BuildId {0}", ToHex(buildId));
+        }
+
+        private string ToHex(ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
     }
 }

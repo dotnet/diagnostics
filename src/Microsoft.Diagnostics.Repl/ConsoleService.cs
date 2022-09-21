@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Repl
         /// Start input processing and command dispatching
         /// </summary>
         /// <param name="dispatchCommand">Called to dispatch a command on ENTER</param>
-        public void Start(Action<string, string, CancellationToken> dispatchCommand)
+        public void Start(Action<string, CancellationToken> dispatchCommand)
         {
             m_lastCommandLine = null;
             m_interactiveConsole = !Console.IsInputRedirected;
@@ -157,6 +157,14 @@ namespace Microsoft.Diagnostics.Repl
         {
             m_prompt = prompt;
             RefreshLine();
+        }
+
+        /// <summary>
+        /// Writes a message with a new line to console.
+        /// </summary>
+        public void WriteLine(string format, params object[] parameters)
+        {
+            WriteLine(OutputType.Normal, format, parameters);
         }
 
         /// <summary>
@@ -260,14 +268,13 @@ namespace Microsoft.Diagnostics.Repl
                 return;
             }
 
-            int width = Console.WindowWidth;
-            if (m_clearLine == null || width != m_clearLine.Length) {
-                m_clearLine = "\r" + (width > 0 ? new string(' ', width - 1) : "");
+            if (m_clearLine == null || m_clearLine.Length != Console.WindowWidth) {
+                m_clearLine = "\r" + new string(' ', Console.WindowWidth - 1);
             }
 
             Console.Write(m_clearLine);
 
-            if (!m_outputRedirected && Console.CursorTop >= 0 ) {
+            if (!m_outputRedirected) {
                 Console.CursorLeft = 0;
             }
         }
@@ -313,7 +320,7 @@ namespace Microsoft.Diagnostics.Repl
 
             Console.Write("{0}{1}", prompt, text);
 
-            if (!m_outputRedirected && Console.CursorTop >= 0) {
+            if (!m_outputRedirected) {
                 Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
             }
         }
@@ -330,7 +337,7 @@ namespace Microsoft.Diagnostics.Repl
             m_refreshingLine = false;
         }
 
-        private void ProcessKeyInfo(ConsoleKeyInfo keyInfo, Action<string, string, CancellationToken> dispatchCommand)
+        private void ProcessKeyInfo(ConsoleKeyInfo keyInfo, Action<string, CancellationToken> dispatchCommand)
         {
             int activeLineLen = m_activeLine.Length;
 
@@ -447,7 +454,7 @@ namespace Microsoft.Diagnostics.Repl
             }
         }
 
-        private bool Dispatch(string newCommand, Action<string, string, CancellationToken> dispatchCommand)
+        private bool Dispatch(string newCommand, Action<string, CancellationToken> dispatchCommand)
         {
             bool result = true;
             CommandStarting();
@@ -461,7 +468,8 @@ namespace Microsoft.Diagnostics.Repl
                 }
                 try
                 {
-                    dispatchCommand(m_prompt, newCommand, m_interruptExecutingCommand.Token);
+                    WriteLine(OutputType.Normal, "{0}{1}", m_prompt, newCommand);
+                    dispatchCommand(newCommand, m_interruptExecutingCommand.Token);
                     m_lastCommandLine = newCommand;
                 }
                 catch (OperationCanceledException)
@@ -469,9 +477,8 @@ namespace Microsoft.Diagnostics.Repl
                     // ctrl-c interrupted the command
                     m_lastCommandLine = null;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!(ex is NullReferenceException || ex is ArgumentNullException || ex is ArgumentException))
                 {
-                    // Most exceptions should not excape the command dispatch, but just in case
                     WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
                     Trace.TraceError(ex.ToString());
                     m_lastCommandLine = null;

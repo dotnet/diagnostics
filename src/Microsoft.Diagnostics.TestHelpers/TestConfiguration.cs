@@ -454,10 +454,6 @@ namespace Microsoft.Diagnostics.TestHelpers
                 sb.Append(".");
                 sb.Append(debuggeeBuildProcess);
             }
-            if (PublishSingleFile)
-            {
-                sb.Append(".singlefile");
-            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append(".");
@@ -466,23 +462,20 @@ namespace Microsoft.Diagnostics.TestHelpers
             return sb.ToString();
         }
 
-        public string LogSuffix
+        internal string GetLogSuffix()
         {
-            get
+            string version = RuntimeFrameworkVersion;
+
+            // The log name can't contain wild cards, which are used in some testing scenarios.
+            // TODO: The better solution would be to sanitize the file name properly, in case
+            // there's a key being used that contains a character that is not a valid file
+            // name charater.
+            if (!string.IsNullOrEmpty(version) && version.Contains('*'))
             {
-                string version = RuntimeFrameworkVersion;
-
-                // The log name can't contain wild cards, which are used in some testing scenarios.
-                // TODO: The better solution would be to sanitize the file name properly, in case
-                // there's a key being used that contains a character that is not a valid file
-                // name charater.
-                if (!string.IsNullOrEmpty(version) && version.Contains('*'))
-                {
-                    version = _truncatedRuntimeFrameworkVersion;
-                }
-
-                return GetStringViewWithVersion(version);
+                version = _truncatedRuntimeFrameworkVersion;
             }
+
+            return GetStringViewWithVersion(version);
         }
 
         public IReadOnlyDictionary<string, string> AllSettings
@@ -786,18 +779,6 @@ namespace Microsoft.Diagnostics.TestHelpers
         public string LinkerPackageVersion
         {
             get { return GetValue("LinkerPackageVersion"); }
-        }
-
-        /// <summary>
-        /// The root of the dotnet install to use to run the test (i.e. $(RepoRootDir)/.dotnet-test)
-        /// </summary>
-        public string DotNetRoot
-        {
-            get
-            {
-                string dotnetRoot = GetValue("DotNetRoot");
-                return MakeCanonicalPath(dotnetRoot);
-            }
         }
 
         #region Runtime Features properties

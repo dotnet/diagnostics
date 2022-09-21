@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <PackageRID>win-arm64</PackageRID>
+    <OutputRid>win-arm64</OutputRid>
     <PackageArch>arm64</PackageArch>
   </PropertyGroup>
   <Import Project="Microsoft.Diagnostics.DbgShim.props" />

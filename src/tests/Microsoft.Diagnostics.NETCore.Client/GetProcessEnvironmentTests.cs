@@ -2,61 +2,53 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class ProcessEnvironmentTests
     {
-        private readonly ITestOutputHelper _output;
-
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
+        private readonly ITestOutputHelper output;
 
         public ProcessEnvironmentTests(ITestOutputHelper outputHelper)
         {
-            _output = outputHelper;
+            output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task BasicEnvTest(TestConfiguration config)
+        [Fact]
+        public Task BasicEnvTest()
         {
-            return BasicEnvTestCore(config, useAsync: false);
+            return BasicEnvTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public Task BasicEnvTestAsync(TestConfiguration config)
+        [Fact]
+        public Task BasicEnvTestAsync()
         {
-            return BasicEnvTestCore(config, useAsync: true);
+            return BasicEnvTestCore(useAsync: true);
         }
 
         /// <summary>
         /// A simple test that collects process environment.
         /// </summary>
-        private async Task BasicEnvTestCore(TestConfiguration config, bool useAsync)
+        private async Task BasicEnvTestCore(bool useAsync)
         {
-            if (config.RuntimeFrameworkVersionMajor < 5)
-            {
-                throw new SkipTestException("Not supported on < .NET 5.0");
-            }
             // as the attribute says, this test requires 5.0-rc1 or newer.  This has been tested locally on
             // an rc1 build and passes.  It is equivalent to the dotnet/runtime version of this test.
-            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
+            using TestRunner runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), output);
             string testKey = "FOO";
             string testVal = "BAR";
             runner.AddEnvVar(testKey, testVal);
-            await runner.Start();
+            runner.Start(timeoutInMSPipeCreation: 3000);
             var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
             Dictionary<string,string> env = await clientShim.GetProcessEnvironment();
 
             Assert.True(env.ContainsKey(testKey) && env[testKey].Equals(testVal));
 
-            runner.WakeupTracee();
+            runner.Stop();
         }
     }
 }

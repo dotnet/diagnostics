@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             ConsoleTestOutputHelper consoleLogger = null;
             if (!string.IsNullOrEmpty(config.LogDirPath))
             {
-                string logFileName = $"{testName}.{config.LogSuffix}.log";
+                string logFileName = $"{ testName }.{ config.GetLogSuffix() }.log";
                 string logPath = Path.Combine(config.LogDirPath, logFileName);
                 fileLogger = new FileTestOutputHelper(logPath, FileMode.Append);
             }

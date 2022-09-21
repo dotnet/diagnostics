@@ -11,11 +11,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net462'">
@@ -26,7 +26,6 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
 
-  <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
   <Import Condition="'$(DotNetBuildFromSource)' != 'true'"
           Project="$(RepositoryEngineeringDir)Analyzers.props" />
 </Project>

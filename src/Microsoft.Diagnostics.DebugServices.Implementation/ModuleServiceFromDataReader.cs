@@ -22,18 +22,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
 
+            private static readonly VersionInfo EmptyVersionInfo = new (0, 0, 0, 0);
             private readonly ModuleServiceFromDataReader _moduleService;
+            private readonly IExportReader _exportReader;
             private readonly ModuleInfo _moduleInfo;
             private readonly ulong _imageSize;
-            private Version _version;
+            private VersionData _versionData;
             private string _versionString;
 
-            public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
+            public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, IExportReader exportReader, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
                 : base(moduleService.Target)
             {
                 _moduleService = moduleService;
                 _moduleInfo = moduleInfo;
                 _imageSize = imageSize;
+                _exportReader = exportReader;
                 ModuleIndex = moduleIndex;
             }
 
@@ -47,9 +50,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ulong ImageSize => _imageSize;
 
-            public override uint? IndexFileSize => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : unchecked((uint)_moduleInfo.IndexFileSize);
+            public override uint? IndexFileSize => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexFileSize;
 
-            public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : unchecked((uint)_moduleInfo.IndexTimeStamp);
+            public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : (uint)_moduleInfo.IndexTimeStamp;
 
             public override ImmutableArray<byte> BuildId
             {
@@ -57,7 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     if (_buildId.IsDefault)
                     {
-                        ImmutableArray<byte> buildId = _moduleInfo.BuildId;
+                        ImmutableArray<byte> buildId = _moduleService._dataReader.GetBuildId(ImageBase);
                         // If the data reader can't get the build id, it returns a empty (instead of default) immutable array.
                         _buildId = buildId.IsDefaultOrEmpty ? base.BuildId : buildId;
                     }
@@ -65,23 +68,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            public override Version GetVersionData()
+            public override VersionData GetVersionData()
             {
                 if (InitializeValue(Module.Flags.InitializeVersion))
                 {
-                    if (!_moduleInfo.Version.Equals(Utilities.EmptyVersion))
+                    if (_moduleInfo.Version != EmptyVersionInfo)
                     {
-                        _version = _moduleInfo.Version;
+                        _versionData = _moduleInfo.Version.ToVersionData();
                     }
                     else
                     {
                         if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
                         {
-                            _version = GetVersionInner();
+                            _versionData = GetVersion();
                         }
                     }
                 }
-                return _version;
+                return _versionData;
             }
 
             public override string GetVersionString()
@@ -105,8 +108,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             protected override bool TryGetSymbolAddressInner(string name, out ulong address)
             {
-                address = _moduleInfo.GetExportSymbolAddress(name);
-                return address != 0;
+                if (_exportReader is not null)
+                {
+                    return _exportReader.TryGetSymbolAddress(ImageBase, name, out address);
+                }
+                address = 0;
+                return false;
             }
 
             protected override ModuleService ModuleService => _moduleService;
@@ -128,44 +135,35 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var modules = new Dictionary<ulong, IModule>();
             int moduleIndex = 0;
 
+            IExportReader exportReader = _dataReader as IExportReader;
             ModuleInfo[] moduleInfos = _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase).ToArray();
             for (int i = 0; i < moduleInfos.Length; i++)
             {
                 ModuleInfo moduleInfo = moduleInfos[i];
-                ulong imageSize = (ulong)moduleInfo.ImageSize;
-
-                // Only add images that have a size. On Linux these are special files like /run/shm/lttng-ust-wait-8-1000 and non-ELF
-                // resource(?) files like /usr/share/zoneinfo-icu/44/le/metaZones.res. Haven't see any 0 sized PE or MachO files.
-                if (imageSize > 0)
+                ulong imageSize = (uint)moduleInfo.IndexFileSize;
+                if ((i + 1) < moduleInfos.Length)
                 {
-                    // There are times when the module infos returned by the data reader overlap which breaks the module
-                    // service's address binary search. This code adjusts the module's image size to the next module's
-                    // image base address if there is overlap.
-                    if ((i + 1) < moduleInfos.Length)
-                    {
-                        ModuleInfo moduleInfoNext = moduleInfos[i + 1];
-                        ulong start = moduleInfo.ImageBase;
-                        ulong end = moduleInfo.ImageBase + imageSize;
-                        ulong startNext = moduleInfoNext.ImageBase;
+                    ModuleInfo moduleInfoNext = moduleInfos[i + 1];
+                    ulong start = moduleInfo.ImageBase;
+                    ulong end = moduleInfo.ImageBase + imageSize;
+                    ulong startNext = moduleInfoNext.ImageBase;
 
-                        if (end > startNext)
-                        {
-                            Trace.TraceWarning($"Module {moduleInfo.FileName} {start:X16} - {end:X16} ({imageSize:X8})");
-                            Trace.TraceWarning($"  overlaps with {moduleInfoNext.FileName} {startNext:X16}");
-                            imageSize = startNext - start;
-                        }
-                    }
-                    var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo, imageSize);
-                    try
+                    if (end > startNext)
                     {
-                        modules.Add(moduleInfo.ImageBase, module);
-                    }
-                    catch (ArgumentException)
-                    {
-                        Trace.TraceError($"GetModules(): duplicate module base '{module}' dup '{modules[moduleInfo.ImageBase]}'");
+                        Trace.TraceWarning($"Module {moduleInfo.FileName} {start:X16} - {end:X16} ({imageSize:X8})");
+                        Trace.TraceWarning($"  overlaps with {moduleInfoNext.FileName} {startNext:X16}");
+                        imageSize = startNext - start;
                     }
                 }
-
+                var module = new ModuleFromDataReader(this, exportReader, moduleIndex, moduleInfo, imageSize);
+                try
+                {
+                    modules.Add(moduleInfo.ImageBase, module);
+                }
+                catch (ArgumentException)
+                {
+                    Trace.TraceError($"GetModules(): duplicate module base '{module}' dup '{modules[moduleInfo.ImageBase]}'");
+                }
                 moduleIndex++;
             }
             return modules;

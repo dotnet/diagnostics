@@ -7,10 +7,10 @@ using System;
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
-    /// Command flags to filter by OS Platforms, control scope and how the command is registered.
+    /// OS Platforms to add command
     /// </summary>
     [Flags]
-    public enum CommandFlags : byte
+    public enum CommandPlatform : byte
     {
         Windows     = 0x01,
         Linux       = 0x02,
@@ -20,11 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Command is supported when there is no target
         /// </summary>
         Global      = 0x08,
-
-        /// <summary>
-        /// Command is not added through reflection, but manually with command service API.
-        /// </summary>
-        Manual      = 0x10,
 
         /// <summary>
         /// Default. All operating system, but target is required
@@ -54,9 +49,9 @@ namespace Microsoft.Diagnostics.DebugServices
         public string[] Aliases = Array.Empty<string>();
 
         /// <summary>
-        /// Command flags to filter by OS Platforms, control scope and how the command is registered.
+        /// Optional OS platform for the command
         /// </summary>
-        public CommandFlags Flags = CommandFlags.Default;
+        public CommandPlatform Platform = CommandPlatform.Default;
 
         /// <summary>
         /// A string of options that are parsed before the command line options

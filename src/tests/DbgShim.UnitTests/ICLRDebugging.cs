@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct ICLRDebuggingVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, IntPtr, IntPtr, in ClrDebuggingVersion, in Guid, out IntPtr, out ClrDebuggingVersion, out ClrDebuggingProcessFlags, int> OpenVirtualProcess;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, IntPtr, IntPtr, in ClrDebuggingVersion, in Guid, out IntPtr, out ClrDebuggingVersion, out ClrDebuggingProcessFlags, HResult> OpenVirtualProcess;
         }
     }
 }

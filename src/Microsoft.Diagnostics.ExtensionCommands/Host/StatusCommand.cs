@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -28,8 +27,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 Write(Target.ToString());
                 Write(SymbolService.ToString());
-                long memoryUsage = GC.GetTotalMemory(forceFullCollection: true);
-                WriteLine($"GC memory usage for managed SOS components: {memoryUsage:##,#} bytes");
             }
         }
     }

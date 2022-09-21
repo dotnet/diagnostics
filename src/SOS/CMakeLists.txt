@@ -13,9 +13,9 @@ if(CLR_CMAKE_HOST_WIN32)
   add_compile_options(/Zl) # omit default library name in .OBJ
 
   add_subdirectory(runcommand)
-  if(NOT CLR_CMAKE_TARGET_ARCH_ARM64 AND NOT CLR_CMAKE_TARGET_ARCH_ARM)
+  if(NOT CLR_CMAKE_TARGET_ARCH_ARM64)
     add_subdirectory(SOS.UnitTests/Debuggees/DesktopClrHost)
-  endif(NOT CLR_CMAKE_TARGET_ARCH_ARM64 AND NOT CLR_CMAKE_TARGET_ARCH_ARM)
+  endif()
 endif(CLR_CMAKE_HOST_WIN32)
 
 add_definitions(-D_SECURE_SCL=0)

@@ -12,9 +12,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestOutputProcessLogger : IProcessLogger
     {
-        private static readonly string _timeFormat = "mm\\:ss\\.fff";
-        private readonly ITestOutputHelper _output;
-        private readonly StringBuilder[] _lineBuffers;
+        string _timeFormat = "mm\\:ss\\.fff";
+        ITestOutputHelper _output;
+        StringBuilder[] _lineBuffers;
 
         public TestOutputProcessLogger(ITestOutputHelper output)
         {
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 TimeSpan offset = runner.StartTime - DateTime.Now;
                 _output.WriteLine("}");
-                _output.WriteLine($"Process {runner.ProcessId} exited {runner.ExitCode} ({offset.ToString(_timeFormat)} elapsed)");
+                _output.WriteLine("Exit code: " + runner.ExitCode + " ( " + offset.ToString(_timeFormat) + " elapsed)");
                 _output.WriteLine("");
             }
         }
@@ -79,14 +79,16 @@ namespace Microsoft.Diagnostics.TestHelpers
             lock (this)
             {
                 TimeSpan offset = runner.StartTime - DateTime.Now;
-                string reasonText = reason switch
+                string reasonText = "";
+                if (reason == KillReason.TimedOut)
                 {
-                    KillReason.TimedOut => "Process timed out",
-                    KillReason.Stopped => "Process was stopped",
-                    KillReason.Unknown => "Kill() was called",
-                    _ => "Reason Unknown"
-                };
-                _output.WriteLine($"Killing process {runner.ProcessId}: {offset.ToString(_timeFormat)} - {reasonText}");
+                    reasonText = "Process timed out";
+                }
+                else if (reason == KillReason.Unknown)
+                {
+                    reasonText = "Kill() was called";
+                }
+                _output.WriteLine("    Killing process: " + offset.ToString(_timeFormat) + ": " + reasonText);
             }
         }
 

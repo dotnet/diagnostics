@@ -40,10 +40,6 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" />
 
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm" />
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm.$(Configuration)\libsos.so" TargetRid="linux-musl-arm" />
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Linux-musl.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm" />
-
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-x64" />

@@ -217,7 +217,6 @@ void __cdecl _SOS_invalid_parameter(
 }
 
 bool g_Initialized = false;
-const char* g_sosPrefix = "";
 
 bool IsInitializedByDbgEng()
 {
@@ -239,7 +238,6 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
         return S_OK;
     }
     g_Initialized = true;
-    g_sosPrefix = "!";
 
     ReleaseHolder<IDebugClient> debugClient;
     if ((hr = DebugCreate(__uuidof(IDebugClient), (void **)&debugClient)) != S_OK)

@@ -13,18 +13,18 @@ SOSCOMMAND:PrintException
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.AggregateException\s+
 VERIFY:Message:\s+(<Invalid Object>|One or more errors occurred\.)\s+
-VERIFY:InnerException:\s+System\.FormatException, Use !?printexception <HEXVAL> to see more\.\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more\.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+System(::|\.)Threading(::|\.)Tasks(::|\.)Task\.Wait(\(\))?\+0x<HEXVAL>\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+.*RandomUserTask\.WaitTask(\(\))?\+0x<HEXVAL>\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+.*SosTests(::|\.)TaskException\.Main(\(\))?\+0x<HEXVAL>\s+
 
-SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.FormatException, Use !?printexception (<HEXVAL>) to see more<POUT>
+SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.FormatException, Use !PrintException (<HEXVAL>) to see more<POUT>
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.FormatException\s+
 VERIFY:Message:\s+(<Invalid Object>|Bad format exception, outer\.)\s+
-VERIFY:InnerException:\s+System\.InvalidOperationException, Use !?printexception <HEXVAL> to see more\.\s+
+VERIFY:InnerException:\s+System\.InvalidOperationException, Use !PrintException <HEXVAL> to see more\.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*
@@ -34,7 +34,7 @@ VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]
 ENDIF:TRIAGE_DUMP
 ENDIF:DESKTOP
 
-SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.InvalidOperationException, Use !?printexception (<HEXVAL>) to see more<POUT>
+SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.InvalidOperationException, Use !PrintException (<HEXVAL>) to see more<POUT>
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.InvalidOperationException\s+
 VERIFY:Message:\s+(<Invalid Object>|This is an Inner InvalidOperationException\.)\s+

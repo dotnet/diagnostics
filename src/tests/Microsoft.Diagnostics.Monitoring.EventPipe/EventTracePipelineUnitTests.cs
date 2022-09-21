@@ -2,20 +2,22 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.NETCore.Client.UnitTests;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -23,20 +25,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
     {
         private readonly ITestOutputHelper _output;
 
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
-
         public EventTracePipelineUnitTests(ITestOutputHelper output)
         {
             _output = output;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestTraceStopAsync(TestConfiguration config)
+        [Fact]
+        public async Task TestTraceStopAsync()
         {
             Stream eventStream = null;
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "TraceStopTest", _output))
+            await using (var testExecution = StartTraceeProcess("TraceStopTest"))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
+                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
+
+                var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
                 var settings = new EventTracePipelineSettings()
                 {
                     Duration = Timeout.InfiniteTimeSpan,
@@ -65,9 +67,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     await Task.Run(() => Assert.True(eventSource.Process()), token);
                 });
 
-                await PipelineTestUtilities.ExecutePipelineWithTracee(
+                await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                    _output,
                     pipeline,
-                    testRunner,
+                    testExecution,
                     foundProviderSource);
             }
 
@@ -75,19 +78,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));   
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestEventStreamCleanup(TestConfiguration config)
+        [SkippableFact]
+        public async Task TestEventStreamCleanup()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new SkipTestException("Test tracee sigfaults for OSX/Linux");
+                throw new SkipTestException("Test debugee sigfaults for OSX/Linux");
             }
 
             Stream eventStream = null;
             using var cancellationTokenSource = new CancellationTokenSource();
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "TestEventStreamCleanup", _output))
+            await using (var testExecution = StartTraceeProcess("TestEventStreamCleanup"))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
+                //TestRunner should account for start delay to make sure that the diagnostic pipe is available.
+
+                var client = new DiagnosticsClient(testExecution.TestRunner.Pid);
                 var settings = new EventTracePipelineSettings()
                 {
                     Duration = Timeout.InfiniteTimeSpan,
@@ -103,14 +108,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 });
 
                 await Assert.ThrowsAsync<OperationCanceledException>(
-                    async () => await PipelineTestUtilities.ExecutePipelineWithTracee(
+                    async () => await PipelineTestUtilities.ExecutePipelineWithDebugee(
+                        _output,
                         pipeline,
-                        testRunner,
+                        testExecution,
                         cancellationTokenSource.Token));
             }
 
             //Validate that the stream is only valid for the lifetime of the callback in the trace pipeline.
             Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));
+        }
+
+        private RemoteTestExecution StartTraceeProcess(string loggerCategory)
+        {
+            return RemoteTestExecution.StartProcess(CommonHelper.GetTraceePathWithArgs("EventPipeTracee") + " " + loggerCategory, _output);
         }
     }
 }

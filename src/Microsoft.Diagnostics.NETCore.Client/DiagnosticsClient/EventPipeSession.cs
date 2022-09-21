@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -93,7 +92,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 DiagnosticsClient.ValidateResponseMessage(response.Value.Message, operationName);
 
-                long sessionId = BinaryPrimitives.ReadInt64LittleEndian(new ReadOnlySpan<byte>(response.Value.Message.Payload, 0, 8));
+                long sessionId = BitConverter.ToInt64(response.Value.Message.Payload, 0);
 
                 var session = new EventPipeSession(endpoint, response.Value, sessionId);
                 response = null;
@@ -121,10 +120,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             byte[] payload = BitConverter.GetBytes(_sessionId);
-            if (!BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(payload);
-            }
 
             stopMessage = new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.StopTracing, payload);
 

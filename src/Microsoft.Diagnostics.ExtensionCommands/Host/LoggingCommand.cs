@@ -5,44 +5,68 @@
 using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Security;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "logging", Help = "Enable/disable internal diagnostic logging", Flags = CommandFlags.Global)]
+    [Command(Name = "logging", Help = "Enable/disable internal logging", Platform = CommandPlatform.Global)]
     public class LoggingCommand : CommandBase
     {
-        public IDiagnosticLoggingService DiagnosticLoggingService { get; set; }
-
-        [Argument(Name = "path", Help = "Log file path.")]
-        public string FilePath { get; set; }
-
-        [Option(Name = "--enable", Aliases = new string[] { "enable", "-e" }, Help = "Enable internal logging.")]
+        [Option(Name = "enable", Help = "Enable internal logging.")]
         public bool Enable { get; set; }
 
-        [Option(Name = "--disable", Aliases = new string[] { "disable", "-d"}, Help = "Disable internal logging.")]
+        [Option(Name = "disable", Help = "Disable internal logging.")]
         public bool Disable { get; set; }
+
+        private const string ListenerName = "Analyze.LoggingListener";
 
         public override void Invoke()
         {
-            if (DiagnosticLoggingService is null)
-            {
-                throw new DiagnosticsException("Diagnostic logging is not supported");
+            if (Enable) {
+                EnableLogging();
             }
-            if (Disable)
-            {
-                DiagnosticLoggingService.Disable();
+            else if (Disable) {
+                DisableLogging();
             }
-            else if (Enable || !string.IsNullOrWhiteSpace(FilePath))
-            {
-                DiagnosticLoggingService.Enable(FilePath);
-            }
-            WriteLine("Logging is {0}", DiagnosticLoggingService.IsEnabled ? "enabled" : "disabled");
+            WriteLine("Logging is {0}", Trace.Listeners[ListenerName] != null ? "enabled" : "disabled");
+        }
 
-            if (!string.IsNullOrWhiteSpace(DiagnosticLoggingService.FilePath))
+        public static void Initialize()
+        {
+            if (Environment.GetEnvironmentVariable("DOTNET_ENABLED_SOS_LOGGING") == "1")
             {
-                WriteLine(DiagnosticLoggingService.FilePath);
+                EnableLogging();
+            }
+        }
+
+        public static void EnableLogging()
+        {
+            if (Trace.Listeners[ListenerName] == null)
+            {
+                Trace.Listeners.Add(new LoggingListener());
+                Trace.AutoFlush = true;
+            }
+        }
+
+        public static void DisableLogging()
+        {
+            Trace.Listeners.Remove(ListenerName);
+        }
+
+        class LoggingListener : TraceListener
+        {
+            internal LoggingListener()
+                : base(ListenerName)
+            {
+            }
+
+            public override void Write(string message)
+            {
+                System.Console.Write(message);
+            }
+
+            public override void WriteLine(string message)
+            {
+                System.Console.WriteLine(message);
             }
         }
     }

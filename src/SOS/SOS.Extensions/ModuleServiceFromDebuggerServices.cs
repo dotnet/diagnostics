@@ -4,9 +4,8 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -24,7 +23,7 @@ namespace SOS.Extensions
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
 
             private readonly ModuleServiceFromDebuggerServices _moduleService;
-            private Version _version;
+            private VersionData _versionData;
             private string _versionString;
 
             public ModuleFromDebuggerServices(
@@ -62,7 +61,7 @@ namespace SOS.Extensions
 
             public override uint? IndexTimeStamp { get; }
 
-            public override Version GetVersionData()
+            public override VersionData GetVersionData()
             {
                 if (InitializeValue(Module.Flags.InitializeVersion))
                 {
@@ -71,19 +70,19 @@ namespace SOS.Extensions
                     {
                         int major = (int)(fileInfo.dwFileVersionMS >> 16);
                         int minor = (int)(fileInfo.dwFileVersionMS & 0xffff);
-                        int build = (int)(fileInfo.dwFileVersionLS >> 16);
-                        int revision = (int)(fileInfo.dwFileVersionLS & 0xffff);
-                        _version = new Version(major, minor, build, revision);
+                        int revision = (int)(fileInfo.dwFileVersionLS >> 16);
+                        int patch = (int)(fileInfo.dwFileVersionLS & 0xffff);
+                        _versionData = new VersionData(major, minor, revision, patch);
                     }
                     else
                     {
                         if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
                         {
-                            _version = GetVersionInner();
+                            _versionData = GetVersion();
                         }
                     }
                 }
-                return _version;
+                return _versionData;
             }
 
             public override string GetVersionString()

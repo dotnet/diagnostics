@@ -42,8 +42,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="commandLine">command line text</param>
         /// <param name="services">services for the command</param>
-        /// <returns>true success, false failure</returns>
-        public bool Execute(string commandLine, IServiceProvider services)
+        /// <returns>exit code</returns>
+        public int Execute(string commandLine, IServiceProvider services)
         {
             // Parse the command line and invoke the command
             ParseResult parseResult = Parser.Parse(commandLine);
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             {
                                 context.Console.Error.WriteLine($"Command '{command.Name}' needs a target");
                             }
-                            return false;
+                            return 1;
                         }
                         try
                         {
@@ -78,27 +78,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         catch (Exception ex)
                         {
-                            if (ex is NullReferenceException ||
-                                ex is ArgumentException ||
-                                ex is ArgumentNullException ||
-                                ex is ArgumentOutOfRangeException ||
-                                ex is NotImplementedException)
-                            {
-                                context.Console.Error.WriteLine(ex.ToString());
-                            }
-                            else
-                            {
-                                context.Console.Error.WriteLine(ex.Message);
-                            }
-                            Trace.TraceError(ex.ToString());
-                            return false;
+                            OnException(ex, context);
                         }
                     }
                 }
             }
 
             context.InvocationResult?.Apply(context);
-            return context.ResultCode == 0;
+            return context.ResultCode;
         }
 
         /// <summary>
@@ -151,13 +138,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Does this command or alias exists?
-        /// </summary>
-        /// <param name="commandName">command or alias name</param>
-        /// <returns>true if command exists</returns>
-        public bool IsCommand(string commandName) => _rootBuilder.Command.Children.Contains(commandName);
-
-        /// <summary>
         /// Enumerates all the command's name and help
         /// </summary>
         public IEnumerable<(string name, string help, IEnumerable<string> aliases)> Commands => _commandHandlers.Select((keypair) => (keypair.Value.Name, keypair.Value.Help, keypair.Value.Aliases));
@@ -169,31 +149,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="factory">function to create command instance</param>
         public void AddCommands(Type type, Func<IServiceProvider, object> factory)
         {
-            if (type.IsClass)
+            for (Type baseType = type; baseType != null; baseType = baseType.BaseType)
             {
-                for (Type baseType = type; baseType != null; baseType = baseType.BaseType)
-                {
-                    if (baseType == typeof(CommandBase))
-                    {
-                        break;
-                    }
-                    var commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
-                    foreach (CommandAttribute commandAttribute in commandAttributes)
-                    {
-                        if ((commandAttribute.Flags & CommandFlags.Manual) == 0 || factory != null)
-                        {
-                            if (factory == null)
-                            {
-                                factory = (services) => Utilities.InvokeConstructor(type, services, optional: true);
-                            }
-                            CreateCommand(baseType, commandAttribute, factory);
-                        }
-                    }
+                if (baseType == typeof(CommandBase)) {
+                    break;
                 }
+                var commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
+                foreach (CommandAttribute commandAttribute in commandAttributes)
+                {
+                    if (factory == null)
+                    {
+                        // Assumes zero parameter constructor
+                        ConstructorInfo constructor = type.GetConstructors().SingleOrDefault((info) => info.GetParameters().Length == 0) ??
+                            throw new ArgumentException($"No eligible constructor found in {type}");
 
-                // Build or re-build parser instance after all these commands and aliases are added
-                FlushParser();
+                        factory = (services) => constructor.Invoke(Array.Empty<object>());
+                    }
+                    CreateCommand(baseType, commandAttribute, factory);
+                }
             }
+
+            // Build or re-build parser instance after all these commands and aliases are added
+            FlushParser();
         }
 
         private void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
@@ -256,6 +233,27 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private Parser Parser => _parser ??= _rootBuilder.Build();
 
         private void FlushParser() => _parser = null;
+
+        private void OnException(Exception ex, InvocationContext context)
+        {
+            if (ex is TargetInvocationException)
+            {
+                ex = ex.InnerException;
+            }
+            if (ex is NullReferenceException || 
+                ex is ArgumentException || 
+                ex is ArgumentNullException || 
+                ex is ArgumentOutOfRangeException || 
+                ex is NotImplementedException) 
+            {
+                context.Console.Error.WriteLine(ex.ToString());
+            }
+            else 
+            {
+                context.Console.Error.WriteLine(ex.Message);
+            }
+            Trace.TraceError(ex.ToString());
+        }
 
         private static string BuildOptionAlias(string parameterName)
         {
@@ -321,7 +319,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// </summary>
             internal bool IsValidPlatform(ITarget target)
             {
-                if ((_commandAttribute.Flags & CommandFlags.Global) != 0)
+                if ((_commandAttribute.Platform & CommandPlatform.Global) != 0)
                 {
                     return true;
                 }
@@ -329,15 +327,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     if (target.OperatingSystem == OSPlatform.Windows)
                     {
-                        return (_commandAttribute.Flags & CommandFlags.Windows) != 0;
+                        return (_commandAttribute.Platform & CommandPlatform.Windows) != 0;
                     }
                     if (target.OperatingSystem == OSPlatform.Linux)
                     {
-                        return (_commandAttribute.Flags & CommandFlags.Linux) != 0;
+                        return (_commandAttribute.Platform & CommandPlatform.Linux) != 0;
                     }
                     if (target.OperatingSystem == OSPlatform.OSX)
                     {
-                        return (_commandAttribute.Flags & CommandFlags.OSX) != 0;
+                        return (_commandAttribute.Platform & CommandPlatform.OSX) != 0;
                     }
                 }
                 return false;
@@ -374,7 +372,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 object instance = _factory(services);
                 SetProperties(context, parser, services, instance);
-                Utilities.Invoke(methodInfo, instance, services, optional: true);
+
+                object[] arguments = BuildArguments(methodInfo, services);
+                methodInfo.Invoke(instance, arguments);
             }
 
             private void SetProperties(InvocationContext context, Parser parser, IServiceProvider services, object instance)
@@ -460,6 +460,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                     argument.Property.SetValue(instance, array != null ? array.ToArray() : value);
                 }
+            }
+
+            private object[] BuildArguments(MethodBase methodBase, IServiceProvider services)
+            {
+                ParameterInfo[] parameters = methodBase.GetParameters();
+                object[] arguments = new object[parameters.Length];
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    Type parameterType = parameters[i].ParameterType;
+
+                    // The parameter will passed as null to allow for "optional" services. The invoked 
+                    // method needs to check for possible null parameters.
+                    arguments[i] = services.GetService(parameterType);
+                }
+                return arguments;
             }
         }
 

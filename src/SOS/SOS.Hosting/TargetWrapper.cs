@@ -82,7 +82,7 @@ namespace SOS.Hosting
             return _target.GetTempDirectory();
         }
 
-        private int GetRuntime(
+        private HResult GetRuntime(
             IntPtr self,
             IntPtr* ppRuntime)
         {
@@ -120,7 +120,7 @@ namespace SOS.Hosting
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetRuntimeDelegate(
+        private delegate HResult GetRuntimeDelegate(
             [In] IntPtr self,
             [Out] IntPtr* ppRuntime);
 

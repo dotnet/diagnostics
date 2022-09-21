@@ -169,7 +169,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
-
         }
 
         private void HandleGauge(TraceEvent obj)
@@ -192,12 +191,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
-            }
-            else
-            {
-                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, 0, _interval, obj.TimeStamp);
-                _renderer.CounterStopped(payload);
             }
         }
 

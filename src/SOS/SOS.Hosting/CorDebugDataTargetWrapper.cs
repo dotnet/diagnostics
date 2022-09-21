@@ -125,17 +125,13 @@ namespace SOS.Hosting
             uint bytesRequested,
             uint* pbytesRead)
         {
-            int read = 0;
-            if (bytesRequested > 0)
+            address &= _ignoreAddressBitsMask;
+            if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int bytesRead))
             {
-                address &= _ignoreAddressBitsMask;
-                if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out read))
-                {
-                    Trace.TraceError("CorDebugDataTargetWrappter.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
-                    return HResult.E_FAIL;
-                }
+                Trace.TraceError("CorDebugDataTargetWrappter.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
+                return HResult.E_FAIL;
             }
-            SOSHost.Write(pbytesRead, (uint)read);
+            SOSHost.Write(pbytesRead, (uint)bytesRead);
             return HResult.S_OK;
         }
 

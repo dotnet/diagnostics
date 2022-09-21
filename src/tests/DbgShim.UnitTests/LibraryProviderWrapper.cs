@@ -83,7 +83,7 @@ namespace SOS.Hosting
             Trace.TraceInformation("LibraryProviderWrapper.Destroy");
         }
 
-        private int ProvideLibrary(
+        private HResult ProvideLibrary(
             IntPtr self,
             string fileName,
             uint timeStamp,
@@ -134,7 +134,7 @@ namespace SOS.Hosting
             return HResult.E_INVALIDARG;
         }
 
-        private int ProvideLibrary2(
+        private HResult ProvideLibrary2(
             IntPtr self,
             string fileName,
             uint timeStamp,
@@ -187,7 +187,7 @@ namespace SOS.Hosting
             return HResult.E_INVALIDARG;
         }
 
-        private int ProvideWindowsLibrary(
+        private HResult ProvideWindowsLibrary(
             IntPtr self,
             string fileName,
             string runtimeModulePath,
@@ -243,7 +243,7 @@ namespace SOS.Hosting
             return HResult.E_INVALIDARG;
         }
 
-        private int ProvideUnixLibrary(
+        private HResult ProvideUnixLibrary(
             IntPtr self,
             string fileName,
             string runtimeModulePath,
@@ -469,7 +469,7 @@ namespace SOS.Hosting
         #region ICLRDebuggingLibraryProvider* delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ProvideLibraryDelegate(
+        private delegate HResult ProvideLibraryDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In] uint timeStamp,
@@ -477,7 +477,7 @@ namespace SOS.Hosting
             out IntPtr moduleHandle);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ProvideLibrary2Delegate(
+        private delegate HResult ProvideLibrary2Delegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In] uint timeStamp,
@@ -485,7 +485,7 @@ namespace SOS.Hosting
             out IntPtr modulePath);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ProvideWindowsLibraryDelegate(
+        private delegate HResult ProvideWindowsLibraryDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In, MarshalAs(UnmanagedType.LPWStr)] string runtimeModulePath,
@@ -495,7 +495,7 @@ namespace SOS.Hosting
             out IntPtr modulePath);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ProvideUnixLibraryDelegate(
+        private delegate HResult ProvideUnixLibraryDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In, MarshalAs(UnmanagedType.LPWStr)] string runtimeModulePath,

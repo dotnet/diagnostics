@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -101,7 +101,7 @@ namespace SOS.Hosting
 
         #region ICLRDataTarget
 
-        private int GetMachineType(
+        private HResult GetMachineType(
             IntPtr self,
             out IMAGE_FILE_MACHINE machineType)
         {
@@ -121,7 +121,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        private int GetPointerSize(
+        private HResult GetPointerSize(
             IntPtr self,
             out int pointerSize)
         {
@@ -129,7 +129,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        private int GetImageBase(
+        private HResult GetImageBase(
             IntPtr self,
             string imagePath,
             out ulong baseAddress)
@@ -144,30 +144,26 @@ namespace SOS.Hosting
             return HResult.E_FAIL;
         }
 
-        private int ReadVirtual(
+        private HResult ReadVirtual(
             IntPtr self,
             ulong address,
             IntPtr buffer,
             uint bytesRequested,
-            uint* pbytesRead)
+            uint* bytesRead)
         {
             Debug.Assert(address != MagicCallbackConstant);
-            int read = 0;
-            if (bytesRequested > 0)
+            address &= _ignoreAddressBitsMask;
+            if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out int read))
             {
-                address &= _ignoreAddressBitsMask;
-                if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out read))
-                {
-                    Trace.TraceError("DataTargetWrapper.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
-                    SOSHost.Write(pbytesRead);
-                    return HResult.E_FAIL;
-                }
+                Trace.TraceError("DataTargetWrapper.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
+                SOSHost.Write(bytesRead);
+                return HResult.E_FAIL;
             }
-            SOSHost.Write(pbytesRead, (uint)read);
+            SOSHost.Write(bytesRead, (uint)read);
             return HResult.S_OK;
         }
 
-        private int WriteVirtual(
+        private HResult WriteVirtual(
             IntPtr self,
             ulong address,
             IntPtr buffer,
@@ -184,7 +180,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        private int GetTLSValue(
+        private HResult GetTLSValue(
             IntPtr self,
             uint threadId,
             uint index,
@@ -193,7 +189,7 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        private int SetTLSValue(
+        private HResult SetTLSValue(
             IntPtr self,
             uint threadId,
             uint index,
@@ -202,7 +198,7 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        private int GetCurrentThreadID(
+        private HResult GetCurrentThreadID(
             IntPtr self,
             out uint threadId)
         {
@@ -216,7 +212,7 @@ namespace SOS.Hosting
             return HResult.E_FAIL;
         }
 
-        private int GetThreadContext(
+        private HResult GetThreadContext(
             IntPtr self,
             uint threadId,
             uint contextFlags,
@@ -245,7 +241,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        private int SetThreadContext(
+        private HResult SetThreadContext(
             IntPtr self,
             uint threadId,
             int contextSize,
@@ -254,7 +250,7 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        private int Request(
+        private HResult Request(
             IntPtr self,
             uint reqCode,
             uint inBufferSize,
@@ -269,7 +265,7 @@ namespace SOS.Hosting
 
         #region ICLRDataTarget2
 
-        private int AllocVirtual(
+        private HResult AllocVirtual(
             IntPtr self,
             ulong address,
             uint size,
@@ -287,7 +283,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        private int FreeVirtual(
+        private HResult FreeVirtual(
             IntPtr self,
             ulong address,
             uint size,
@@ -329,7 +325,7 @@ namespace SOS.Hosting
 
         #region ICLRMetadataLocator
 
-        private int GetMetadata(
+        private HResult GetMetadata(
             IntPtr self,
             string fileName,
             uint imageTimestamp,
@@ -348,7 +344,7 @@ namespace SOS.Hosting
 
         #region ICLRRuntimeLocator
 
-        private int GetRuntimeBase(
+        private HResult GetRuntimeBase(
             IntPtr self,
             out ulong address)
         {
@@ -361,23 +357,23 @@ namespace SOS.Hosting
         #region ICLRDataTarget delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetMachineTypeDelegate(
+        private delegate HResult GetMachineTypeDelegate(
             [In] IntPtr self,
             [Out] out IMAGE_FILE_MACHINE machineType);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetPointerSizeDelegate(
+        private delegate HResult GetPointerSizeDelegate(
             [In] IntPtr self,
             [Out] out int pointerSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetImageBaseDelegate(
+        private delegate HResult GetImageBaseDelegate(
             [In] IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string imagePath,
             [Out] out ulong baseAddress);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int ReadVirtualDelegate(
+        private delegate HResult ReadVirtualDelegate(
             [In] IntPtr self,
             [In] ulong address,
             [In] IntPtr buffer,
@@ -385,7 +381,7 @@ namespace SOS.Hosting
             [Out] uint* bytesRead);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int WriteVirtualDelegate(
+        private delegate HResult WriteVirtualDelegate(
             [In] IntPtr self,
             [In] ulong address,
             [In] IntPtr buffer,
@@ -393,26 +389,26 @@ namespace SOS.Hosting
             [Out] uint* bytesWritten);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetTLSValueDelegate(
+        private delegate HResult GetTLSValueDelegate(
             [In] IntPtr self,
             [In] uint threadId,
             [In] uint index,
             [Out] ulong* value);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int SetTLSValueDelegate(
+        private delegate HResult SetTLSValueDelegate(
             [In] IntPtr self,
             [In] uint threadId,
             [In] uint index,
             [In] ulong value);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetCurrentThreadIDDelegate(
+        private delegate HResult GetCurrentThreadIDDelegate(
             [In] IntPtr self,
             [Out] out uint threadId);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetThreadContextDelegate(
+        private delegate HResult GetThreadContextDelegate(
             [In] IntPtr self,
             [In] uint threadId,
             [In] uint contextFlags,
@@ -420,14 +416,14 @@ namespace SOS.Hosting
             [Out] IntPtr context);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int SetThreadContextDelegate(
+        private delegate HResult SetThreadContextDelegate(
             [In] IntPtr self,
             [In] uint threadId,
             [In] int contextSize,
             [In] IntPtr context);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int RequestDelegate(
+        private delegate HResult RequestDelegate(
             [In] IntPtr self,
             [In] uint reqCode,
             [In] uint inBufferSize,
@@ -440,7 +436,7 @@ namespace SOS.Hosting
         #region ICLRDataTarget2 delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int AllocVirtualDelegate(
+        private delegate HResult AllocVirtualDelegate(
             [In] IntPtr self,
             [In] ulong address,
             [In] uint size,
@@ -449,7 +445,7 @@ namespace SOS.Hosting
             [Out] ulong* buffer);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int FreeVirtualDelegate(
+        private delegate HResult FreeVirtualDelegate(
             [In] IntPtr self,
             [In] ulong address,
             [In] uint size,
@@ -471,7 +467,7 @@ namespace SOS.Hosting
         #region ICLRMetadataLocator delegate
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetMetadataDelegate(
+        private delegate HResult GetMetadataDelegate(
             [In] IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In] uint imageTimestamp,
@@ -488,7 +484,7 @@ namespace SOS.Hosting
         #region ICLRRuntimeLocator delegate
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int GetRuntimeBaseDelegate(
+        private delegate HResult GetRuntimeBaseDelegate(
             [In] IntPtr self,
             [Out] out ulong address);
 

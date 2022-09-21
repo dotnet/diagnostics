@@ -8,12 +8,9 @@ LOADSOS
 
 # Issue: https://github.com/dotnet/diagnostics/issues/1567
 !IFDEF:ALPINE
-# Issue:https://github.com/dotnet/diagnostics/issues/3155
-!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 # Test eeversion command
 SOSCOMMAND:EEVersion
 VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
-ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 ENDIF:ALPINE
 
 # 1) Verifying that ClrStack with no options works
@@ -150,21 +147,18 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 
-# Issue: https://github.com/dotnet/diagnostics/issues/2947
 !IFDEF:DOTNETDUMP
-!IFDEF:ARM64
 !IFDEF:ARM
-!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
 
 # 9) Verify DumpStack works
 SOSCOMMAND:DumpStack
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
 # 10) Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\)\s+
 
@@ -173,7 +167,5 @@ SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+\+\s*0x<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(System\.String\[\]\)\),\s+calling.*
 
-ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 ENDIF:ARM
-ENDIF:ARM64
 ENDIF:DOTNETDUMP

@@ -6,7 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Text;
 
-namespace Microsoft.Diagnostics.Tools.Dump
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "readmemory", Aliases = new string[] { "d" }, Help = "Dump memory contents.")]
     [Command(Name = "db", DefaultOptions = "--ascii:true  --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:1  -w:16", Help = "Dump memory as bytes.")]

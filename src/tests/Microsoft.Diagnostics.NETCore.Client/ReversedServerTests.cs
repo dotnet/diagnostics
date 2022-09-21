@@ -2,22 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Net;
-using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Extensions;
-using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -28,8 +22,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static readonly TimeSpan DefaultNegativeVerificationTimeout = TimeSpan.FromSeconds(2);
 
         private readonly ITestOutputHelper _outputHelper;
-
-        public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
 
         public ReversedServerTests(ITestOutputHelper outputHelper)
         {
@@ -100,40 +92,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 () => server.RemoveConnection(Guid.Empty));
         }
 
-        [SkippableFact]
-        public async Task ReversedServerAddressInUseTest()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("Not applicable on Windows due to named pipe usage.");
-            }
-
-            await using var server = CreateReversedServer(out string transportName);
-
-            Assert.False(File.Exists(transportName), "Unix Domain Socket should not exist yet.");
-
-            try
-            {
-                // Create file to simulate that the socket is already created.
-                File.Create(transportName).Dispose();
-
-                SocketException ex = Assert.Throws<SocketException>(() => server.Start());
-                
-                int expectedErrorCode = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? 48 : 98; // Address already in use
-                Assert.Equal(expectedErrorCode, ex.ErrorCode);
-            }
-            finally
-            {
-                try
-                {
-                    File.Delete(transportName);
-                }
-                catch (Exception)
-                {
-                }
-            }
-        }
-
         /// <summary>
         /// Tests that <see cref="ReversedDiagnosticsServer.AcceptAsync(CancellationToken)"/> does not complete
         /// when no connections are available and that cancellation will move the returned task to the cancelled state.
@@ -153,22 +111,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(acceptTask.IsCanceled);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerNonExistingRuntimeIdentifierTest(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerNonExistingRuntimeIdentifierTest()
         {
-            await ReversedServerNonExistingRuntimeIdentifierTestCore(config, useAsync: false);
+            await ReversedServerNonExistingRuntimeIdentifierTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerNonExistingRuntimeIdentifierTestAsync(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerNonExistingRuntimeIdentifierTestAsync()
         {
-            await ReversedServerNonExistingRuntimeIdentifierTestCore(config, useAsync: true);
+            await ReversedServerNonExistingRuntimeIdentifierTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that invoking server methods with non-existing runtime identifier appropriately fail.
         /// </summary>
-        private async Task ReversedServerNonExistingRuntimeIdentifierTestCore(TestConfiguration config, bool useAsync)
+        private async Task ReversedServerNonExistingRuntimeIdentifierTestCore(bool useAsync)
         {
             await using var server = CreateReversedServer(out string transportName);
 
@@ -191,16 +149,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.False(server.RemoveConnection(Guid.NewGuid()), "Removal of nonexisting connection should fail.");
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerSingleTargetMultipleUseClientTest(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerSingleTargetMultipleUseClientTest()
         {
-            await ReversedServerSingleTargetMultipleUseClientTestCore(config, useAsync: false);
+            await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerSingleTargetMultipleUseClientTestAsync(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerSingleTargetMultipleUseClientTestAsync()
         {
-            await ReversedServerSingleTargetMultipleUseClientTestCore(config, useAsync: true);
+            await ReversedServerSingleTargetMultipleUseClientTestCore(useAsync: true);
         }
 
         /// <summary>
@@ -212,19 +170,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// because of how the endpoint is updated with new stream information each
         /// time the target process reconnects to the server.
         /// </remarks>
-        private async Task ReversedServerSingleTargetMultipleUseClientTestCore(TestConfiguration config, bool useAsync)
+        private async Task ReversedServerSingleTargetMultipleUseClientTestCore(bool useAsync)
         {
-            if (config.RuntimeFrameworkVersionMajor < 5)
-            {
-                throw new SkipTestException("Not supported on < .NET 5.0");
-            }
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
-            IpcEndpointInfo info;
 
-            // Start client pointing to diagnostics server
-            await using (TestRunner runner = await StartTracee(config, transportName))
+            TestRunner runner = null;
+            IpcEndpointInfo info;
+            try
             {
+                // Start client pointing to diagnostics server
+                runner = StartTracee(transportName);
+
                 info = await AcceptEndpointInfo(server, useAsync);
 
                 await VerifyEndpointInfo(runner, info, useAsync);
@@ -234,9 +191,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 await ResumeRuntime(info, useAsync);
 
-                await runner.WaitForTracee();
-
                 await VerifySingleSession(info, useAsync);
+            }
+            finally
+            {
+                _outputHelper.WriteLine("Stopping tracee.");
+                runner?.Stop();
             }
 
             // Wait some time for the process to exit
@@ -251,34 +211,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await VerifyNoNewEndpointInfos(server, useAsync);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerSingleTargetExitsClientInviableTest(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerSingleTargetExitsClientInviableTest()
         {
-            await ReversedServerSingleTargetExitsClientInviableTestCore(config, useAsync: false);
+            await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerSingleTargetExitsClientInviableTestAsync(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerSingleTargetExitsClientInviableTestAsync()
         {
-            await ReversedServerSingleTargetExitsClientInviableTestCore(config, useAsync: true);
+            await ReversedServerSingleTargetExitsClientInviableTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that a DiagnosticsClient is not viable after target exists.
         /// </summary>
-        private async Task ReversedServerSingleTargetExitsClientInviableTestCore(TestConfiguration config, bool useAsync)
+        private async Task ReversedServerSingleTargetExitsClientInviableTestCore(bool useAsync)
         {
-            if (config.RuntimeFrameworkVersionMajor < 5)
-            {
-                throw new SkipTestException("Not supported on < .NET 5.0");
-            }
             await using var server = CreateReversedServer(out string transportName);
             server.Start();
 
-            // Start client pointing to diagnostics server
+            TestRunner runner = null;
             IpcEndpointInfo info;
-            await using (TestRunner runner = await StartTracee(config, transportName))
+            try
             {
+                // Start client pointing to diagnostics server
+                runner = StartTracee(transportName);
+
                 // Get client connection
                 info = await AcceptEndpointInfo(server, useAsync);
 
@@ -289,9 +248,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 await ResumeRuntime(info, useAsync);
 
-                await runner.WaitForTracee();
-
                 await VerifyWaitForConnection(info, useAsync);
+            }
+            finally
+            {
+                _outputHelper.WriteLine("Stopping tracee.");
+                runner?.Stop();
             }
 
             // Wait some time for the process to exit
@@ -310,22 +272,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Validates that the <see cref="ReversedDiagnosticsServer"/> does not create a new server
         /// transport during disposal.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task ReversedServerNoCreateTransportAfterDispose(TestConfiguration config)
+        [Fact]
+        public async Task ReversedServerNoCreateTransportAfterDispose()
         {
-            if (config.RuntimeFrameworkVersionMajor < 5)
-            {
-                throw new SkipTestException("Not supported on < .NET 5.0");
-            }
             var transportCallback = new IpcServerTransportCallback();
+
             int transportVersion = 0;
-
-            await using var server = CreateReversedServer(out string transportName);
-            server.TransportCallback = transportCallback;
-            server.Start();
-
-            await using (TestRunner runner = await StartTracee(config, transportName))
+            TestRunner runner = null;
+            try
             {
+                await using var server = CreateReversedServer(out string transportName);
+                server.TransportCallback = transportCallback;
+                server.Start();
+
+                // Start client pointing to diagnostics server
+                runner = StartTracee(transportName);
+
                 // Get client connection
                 IpcEndpointInfo info = await AcceptEndpointInfo(server, useAsync: true);
 
@@ -336,13 +298,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 await ResumeRuntime(info, useAsync: true);
 
-                await runner.WaitForTracee();
-
                 await VerifyWaitForConnection(info, useAsync: true);
 
                 transportVersion = await transportCallback.GetStableTransportVersion();
 
                 // Server will be disposed
+            }
+            finally
+            {
+                _outputHelper.WriteLine("Stopping tracee.");
+                runner?.Stop();
             }
 
             // Check that the reversed server did not create a new server transport upon disposal.
@@ -363,11 +328,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return await shim.Accept(DefaultPositiveVerificationTimeout);
         }
 
-        private async Task<TestRunner> StartTracee(TestConfiguration config, string transportName)
+        private TestRunner StartTracee(string transportName)
         {
-            TestRunner runner = await TestRunner.Create(config, _outputHelper, "Tracee");
+            _outputHelper.WriteLine("Starting tracee.");
+            var runner = new TestRunner(CommonHelper.GetTraceePathWithArgs(targetFramework: "net5.0"), _outputHelper);
             runner.SetDiagnosticPort(transportName, suspend: true);
-            await runner.Start(waitForTracee: false);
+            runner.Start();
             return runner;
         }
 
@@ -398,7 +364,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private async Task VerifyEndpointInfo(TestRunner runner, IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
-            runner.WriteLine("Verifying connection information for process");
+            _outputHelper.WriteLine($"Verifying connection information for process ID {runner.Pid}.");
             Assert.NotNull(runner);
             Assert.Equal(runner.Pid, info.ProcessId);
             Assert.NotEqual(Guid.Empty, info.RuntimeInstanceCookie);
@@ -406,7 +372,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             await VerifyWaitForConnection(info, useAsync, expectTimeout);
 
-            runner.WriteLine($"Connection: {info.DebuggerDisplay}");
+            _outputHelper.WriteLine($"Connection: {info.DebuggerDisplay}");
         }
 
         private async Task ResumeRuntime(IpcEndpointInfo info, bool useAsync)

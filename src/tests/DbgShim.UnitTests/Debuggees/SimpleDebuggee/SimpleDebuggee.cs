@@ -16,11 +16,12 @@ class Simple
         {
             try
             {
+                int timeout = TimeSpan.FromMinutes(5).Milliseconds;
                 using var pipeStream = new NamedPipeClientStream(pipeServerName);
 
                 Console.WriteLine("{0} SimpleDebuggee: connecting to pipe", pid);
                 Console.Out.Flush();
-                pipeStream.Connect((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
+                pipeStream.Connect(timeout);
 
                 Console.WriteLine("{0} SimpleDebuggee: connected to pipe", pid);
                 Console.Out.Flush();

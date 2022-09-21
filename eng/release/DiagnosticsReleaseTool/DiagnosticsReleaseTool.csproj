@@ -19,7 +19,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="[5.0.0]" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="[5.0.0]" />
 
-    <PackageReference Include="Azure.Storage.Blobs" Version="[12.13.0]" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="[12.9.1]" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20467.2" />
   </ItemGroup>
 

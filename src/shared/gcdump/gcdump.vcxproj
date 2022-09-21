@@ -107,7 +107,7 @@
       <StringPooling>true</StringPooling>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4640</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
@@ -167,7 +167,7 @@
       <StringPooling>true</StringPooling>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4640</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
@@ -223,7 +223,7 @@
       <StringPooling>true</StringPooling>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4640</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
@@ -281,7 +281,7 @@
       <StringPooling>true</StringPooling>
       <StructMemberAlignment>8Bytes</StructMemberAlignment>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4640</TreatSpecificWarningsAsErrors>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <TreatWarningAsError>true</TreatWarningAsError>
       <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>

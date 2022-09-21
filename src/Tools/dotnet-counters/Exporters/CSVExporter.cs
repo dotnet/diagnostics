@@ -83,8 +83,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
         }
 
-        public void CounterStopped(CounterPayload payload) { }
-
         public void Stop()
         {
             string outputString;

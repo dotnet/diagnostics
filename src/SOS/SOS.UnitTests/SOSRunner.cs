@@ -317,7 +317,7 @@ public class SOSRunner : IDisposable
                 // Create the debuggee process runner
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
                     WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
-                    WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
+                    WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
                     WithEnvironmentVariable("COMPlus_DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
@@ -672,7 +672,7 @@ public class SOSRunner : IDisposable
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
-                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
+                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
@@ -681,10 +681,6 @@ public class SOSRunner : IDisposable
             {
                 processRunner.WithExpectedExitCode(0);
             }
-
-            // Disable W^E so that the bpmd command and the tests pass
-            // Issue: https://github.com/dotnet/diagnostics/issues/3126
-            processRunner.WithEnvironmentVariable("COMPlus_EnableWriteXorExecute", "0");
 
             DumpType? dumpType = null;
             if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
@@ -905,8 +901,9 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"!SetHostRuntime {setHostRuntime}");
                 }
-                // If a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI locally.
-                if (_config.PublishSingleFile || (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
+                // If there is no host runtime and a single-file app or a triage dump, add the path to runtime so SOS can find DAC/DBI.
+                if ((isHostRuntimeNone && _config.PublishSingleFile) || 
+                    (_dumpType.HasValue && _dumpType.Value == DumpType.Triage))
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
@@ -924,17 +921,14 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
-                // Disabled until https://github.com/dotnet/diagnostics/issues/3265 is fixed.
-#if DISABLED
-                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
-                if (_config.PublishSingleFile)
+                // If there is no host runtime and a single-file app, add the path to runtime so SOS can find DAC/DBI.
+                if (isHostRuntimeNone && _config.PublishSingleFile)
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
                     {
                         commands.Add($"setclrpath {runtimeSymbolsPath}");
                     }
                 }
-#endif
                 if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"setsymbolserver {setSymbolServer}");
@@ -944,14 +938,6 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Gdb:
                 break;
             case NativeDebugger.DotNetDump:
-                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
-                if (_config.PublishSingleFile)
-                {
-                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
-                    {
-                        commands.Add($"setclrpath {runtimeSymbolsPath}");
-                    }
-                }
                 if (!string.IsNullOrEmpty(setSymbolServer))
                 {
                     commands.Add($"setsymbolserver {setSymbolServer}");
@@ -1018,7 +1004,7 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Cdb:
                 if (extensionCommand)
                 {
-                    command = "!sos " + command;
+                    command = "!ext " + command;
                 }
                 else
                 {
@@ -1026,26 +1012,20 @@ public class SOSRunner : IDisposable
                 }
                 break;
             case NativeDebugger.Lldb:
-                command = "sos " + command;
-                break;
-            case NativeDebugger.DotNetDump:
-                if (extensionCommand)
+                if (!extensionCommand)
                 {
                     command = "sos " + command;
                 }
-                else
-                {
-                    int index = command.IndexOf(' ');
-                    if (index != -1)
-                    {
-                        // lowercase just the command name not the rest of the command line
-                        command = command.Substring(0, index).ToLowerInvariant() + command.Substring(index);
-                    }
-                    else
-                    {
-                        // it is only the command name
-                        command = command.ToLowerInvariant();
-                    }
+                break;
+            case NativeDebugger.DotNetDump:
+                int index = command.IndexOf(' ');
+                if (index != -1) {
+                    // lowercase just the command name not the rest of the command line
+                    command = command.Substring(0, index).ToLowerInvariant() + command.Substring(index);
+                }
+                else {
+                    // it is only the command name
+                    command = command.ToLowerInvariant();
                 }
                 break;
             default:
@@ -1412,9 +1392,6 @@ public class SOSRunner : IDisposable
             vars.Add("%DUMP_NAME%", dumpFileName);
         }
         vars.Add("%DEBUG_ROOT%", debuggeeConfig.BinaryDirPath);
-        vars.Add("%TEST_NAME%", information.TestName);
-        vars.Add("%LOG_PATH%", information.TestConfiguration.LogDirPath);
-        vars.Add("%LOG_SUFFIX%", information.TestConfiguration.LogSuffix);
         vars.Add("%SOS_PATH%", information.TestConfiguration.SOSPath());
         vars.Add("%DESKTOP_RUNTIME_PATH%", information.TestConfiguration.DesktopRuntimePath());
 
@@ -1603,6 +1580,12 @@ public static class TestConfigurationExtensions
             gdbPath = Environment.GetEnvironmentVariable("GDB_PATH");
         }
         return TestConfiguration.MakeCanonicalPath(gdbPath);
+    }
+
+    public static string DotNetRoot(this TestConfiguration config)
+    {
+        string dotnetRoot = config.GetValue("DotNetRoot");
+        return TestConfiguration.MakeCanonicalPath(dotnetRoot);
     }
 
     public static string DotNetDumpHost(this TestConfiguration config)

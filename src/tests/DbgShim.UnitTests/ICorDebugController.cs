@@ -35,14 +35,14 @@ namespace Microsoft.Diagnostics
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct ICorDebugControllerVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, int> Stop;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, int> Continue;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> IsRunning_dummy;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> HasQueuedCallbacks_dummy;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> EnumerateThreads_dummy;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> SetAllThreadsDebugState_dummy;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, int> Detach;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, int> Terminate;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, HResult> Stop;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int, HResult> Continue;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> IsRunning_dummy;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> HasQueuedCallbacks_dummy;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> EnumerateThreads_dummy;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> SetAllThreadsDebugState_dummy;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, HResult> Detach;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, HResult> Terminate;
         }
     }
 }
