@@ -58,6 +58,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnEnter = true;
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
+            bool processStarted = true;
             int ret = ReturnCode.Ok;
             IsQuiet = showchildio;
 
@@ -163,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
-
+                
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
                     string processMainModuleFileName = $"Process{processId}";
@@ -356,6 +357,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 collectionStopped = true;
                 ret = ReturnCode.TracingError;
+                processStarted = !ex.Message.StartsWith("Failed to start");
             }
             finally
             {
@@ -364,7 +366,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (console.GetTerminal() != null)
                         Console.CursorVisible = true;
                 }
-                
+            
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
@@ -373,7 +375,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
 
                     // If we launched a child proc that hasn't exited yet, terminate it before we exit.
-                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
+                    if (processStarted && !ProcessLauncher.Launcher.ChildProc.HasExited)
                     {
                         ProcessLauncher.Launcher.ChildProc.Kill();
                     }
