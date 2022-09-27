@@ -58,7 +58,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnEnter = true;
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
-            bool processStarted = true;
             int ret = ReturnCode.Ok;
             IsQuiet = showchildio;
 
@@ -354,10 +353,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex.Message}");
                 collectionStopped = true;
                 ret = ReturnCode.TracingError;
-                processStarted = !ex.Message.StartsWith("Failed to start");
             }
             finally
             {
@@ -373,13 +371,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         ret = ReturnCode.TracingError;
                     }
-
-                    // If we launched a child proc that hasn't exited yet, terminate it before we exit.
-                    if (processStarted && !ProcessLauncher.Launcher.ChildProc.HasExited)
-                    {
-                        ProcessLauncher.Launcher.ChildProc.Kill();
-                    }
                 }
+                ProcessLauncher.Launcher.Cleanup();
             }
             return await Task.FromResult(ret);
         }

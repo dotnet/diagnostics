@@ -22,6 +22,7 @@ namespace Microsoft.Internal.Common.Utils
         private Task _stdOutTask = Task.CompletedTask;
         private Task _stdErrTask = Task.CompletedTask;
         internal static ProcessLauncher Launcher = new ProcessLauncher();
+        private bool _processStarted;
 
         public void PrepareChildProcess(string[] args)
         {
@@ -97,11 +98,12 @@ namespace Microsoft.Internal.Common.Utils
                     Console.WriteLine($"Launching: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
                 }
                 _childProc.Start();
+                _processStarted = true;
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Cannot start target process: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
-                Console.WriteLine(e.ToString());
+                Console.WriteLine(e.Message);
                 return false;
             }
             if (!showChildIO)
@@ -115,7 +117,7 @@ namespace Microsoft.Internal.Common.Utils
 
         public void Cleanup()
         {
-            if (_childProc != null && !_childProc.HasExited)
+            if (_childProc != null && _processStarted && !_childProc.HasExited)
             {
                 try
                 {
