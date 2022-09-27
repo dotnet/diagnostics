@@ -165,7 +165,7 @@ namespace SOS.Extensions
                         {
                             Trace.TraceError("GetModuleName({0}) {1:X16} FAILED {2:X8}", moduleIndex, imageBase, hr);
                         }
-                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, (uint)imageSize, timestamp);
+                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, unchecked((uint)imageSize), timestamp);
                         if (!modules.TryGetValue(imageBase, out IModule original))
                         {
                             modules.Add(imageBase, module);
