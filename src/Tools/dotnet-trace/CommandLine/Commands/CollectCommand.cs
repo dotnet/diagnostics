@@ -163,7 +163,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
-                
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
                     string processMainModuleFileName = $"Process{processId}";
