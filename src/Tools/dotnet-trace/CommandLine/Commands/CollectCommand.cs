@@ -352,7 +352,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.Message}");
+                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
                 collectionStopped = true;
                 ret = ReturnCode.TracingError;
             }
