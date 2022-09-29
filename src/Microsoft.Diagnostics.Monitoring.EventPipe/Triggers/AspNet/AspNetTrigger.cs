@@ -5,9 +5,7 @@
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
@@ -60,21 +58,43 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             if (traceEvent.ProviderGuid == MicrosoftAspNetCoreHostingGuid)
             {
                 int? statusCode = null;
-                long? duration = null;
+                long? duration = 0;
+                string activityId = "";
+                string path = "";
+
                 AspnetTriggerEventType eventType = AspnetTriggerEventType.Start;
 
                 System.Collections.IList arguments = (System.Collections.IList)traceEvent.PayloadValue(2);
-                string activityId = ExtractByIndex(arguments, 0);
-                string path = ExtractByIndex(arguments, 1);
+
+                foreach (var argument in arguments)
+                {
+                    if (argument is IEnumerable<KeyValuePair<string, object>> argumentsEnumerable)
+                    {
+                        string key = (string)argumentsEnumerable.First().Value;
+                        string value = (string)argumentsEnumerable.Last().Value;
+
+                        if (key.Equals("activityid", StringComparison.OrdinalIgnoreCase))
+                        {
+                            activityId = value;
+                        }
+                        else if (key.Equals("path", StringComparison.OrdinalIgnoreCase))
+                        {
+                            path = value;
+                        }
+                        else if (key.Equals("statuscode", StringComparison.OrdinalIgnoreCase))
+                        {
+                            statusCode = int.Parse(value);
+                        }
+                        else if (key.Equals("activityduration", StringComparison.OrdinalIgnoreCase))
+                        {
+                            duration = long.Parse(value);
+                        }
+                    }
+                }
 
                 if (traceEvent.EventName == Activity1Stop)
                 {
-                    statusCode = int.Parse(ExtractByIndex(arguments, 2));
-                    duration = long.Parse(ExtractByIndex(arguments, 3));
                     eventType = AspnetTriggerEventType.Stop;
-
-                    Debug.Assert(statusCode != null, "Status code cannot be null.");
-                    Debug.Assert(duration != null, "Duration cannot be null.");
                 }
 
                 return HasSatisfiedCondition(timeStamp, eventType, activityId, path, statusCode, duration);
@@ -82,7 +102,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
             //Heartbeat only
             return HasSatisfiedCondition(timeStamp, eventType: AspnetTriggerEventType.Heartbeat, activityId: null, path: null, statusCode: null, duration: null);
-
         }
 
         /// <summary>
@@ -110,17 +129,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 return ActivityStop(timestamp, activityId, duration.Value, statusCode.Value);
             }
             return false;
-        }
-
-        private static string ExtractByIndex(System.Collections.IList arguments, int index)
-        {
-            IEnumerable<KeyValuePair<string, object>> values = (IEnumerable<KeyValuePair<string, object>>)arguments[index];
-            //The data is internally organized as two KeyValuePair entries,
-            //The first entry is { Key, "KeyValue"}
-            //The second is { Value, "Value"}
-            //e.g.
-            //{{ Key:"StatusCode", Value:"200" }}
-            return (string)values.Last().Value;
         }
     }
 

@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             RequestRundown = true;
         }
 
-        private const string DiagnosticFilterString =
+        public const string DiagnosticFilterString =
                 "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
                     "Request.Scheme" +
                     ";Request.Host" +
@@ -33,10 +33,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     ";ActivityIdFormat=*Activity.IdFormat" +
                 "\r\n" +
                 "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Stop@Activity1Stop:-" +
-                    "Response.StatusCode" +
+                    "ActivityId=*Activity.Id" +
+                    ";Request.Path" +
+                    ";Response.StatusCode" +
                     ";ActivityDuration=*Activity.Duration.Ticks" +
-                    ";ActivityId=*Activity.Id" +
-                "\r\n" +
+                    "\r\n" +
                 "HttpHandlerDiagnosticListener/System.Net.Http.HttpRequestOut@Event:-" +
                 "\r\n" +
                 "HttpHandlerDiagnosticListener/System.Net.Http.HttpRequestOut.Start@Activity2Start:-" +
