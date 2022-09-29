@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     ";Request.Path" +
                     ";Response.StatusCode" +
                     ";ActivityDuration=*Activity.Duration.Ticks" +
-                    "\r\n" +
+                "\r\n" +
                 "HttpHandlerDiagnosticListener/System.Net.Http.HttpRequestOut@Event:-" +
                 "\r\n" +
                 "HttpHandlerDiagnosticListener/System.Net.Http.HttpRequestOut.Start@Activity2Start:-" +
