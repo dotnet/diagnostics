@@ -6,6 +6,7 @@ using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
@@ -58,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             if (traceEvent.ProviderGuid == MicrosoftAspNetCoreHostingGuid)
             {
                 int? statusCode = null;
-                long? duration = 0;
+                long? duration = null;
                 string activityId = "";
                 string path = "";
 
@@ -95,6 +96,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 if (traceEvent.EventName == Activity1Stop)
                 {
                     eventType = AspnetTriggerEventType.Stop;
+
+                    Debug.Assert(statusCode != null, "Status code cannot be null.");
+                    Debug.Assert(duration != null, "Duration cannot be null.");
                 }
 
                 return HasSatisfiedCondition(timeStamp, eventType, activityId, path, statusCode, duration);
