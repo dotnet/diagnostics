@@ -193,7 +193,7 @@ stages:
         parameters:
           name: Linux_arm
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross
           crossrootfsDir: '/crossrootfs/arm'
           buildAndSkipTest: true
           strategy:
@@ -207,7 +207,7 @@ stages:
         parameters:
           name: Linux_arm64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm64
           crossrootfsDir: '/crossrootfs/arm64'
           buildAndSkipTest: true
           strategy:
@@ -221,7 +221,7 @@ stages:
         parameters:
           name: Linux_musl_arm
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm-alpine
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm-alpine
           crossrootfsDir: '/crossrootfs/arm'
           artifactsTargetPath: bin/Linux-musl.arm.Release
           buildAndSkipTest: true
@@ -236,7 +236,7 @@ stages:
         parameters:
           name: Linux_musl_arm64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm64-alpine
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
           buildAndSkipTest: true
