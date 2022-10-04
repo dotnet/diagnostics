@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
-
+using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Diagnostics;
@@ -102,9 +102,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Cannot start target process: {_childProc.StartInfo.FileName} {_childProc.StartInfo.Arguments}");
-                Console.WriteLine(e.Message);
-                return false;
+                throw new CommandLineErrorException($"An error occurred trying to start process {_childProc.StartInfo.FileName} with working directory {System.IO.Directory.GetCurrentDirectory()}. {e.Message}");
             }
             if (!showChildIO)
             {

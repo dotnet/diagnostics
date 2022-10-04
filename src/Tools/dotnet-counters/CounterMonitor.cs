@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;

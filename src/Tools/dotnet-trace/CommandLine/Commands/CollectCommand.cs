@@ -350,6 +350,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
+            catch (CommandLineErrorException e)
+            {
+                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                collectionStopped = true;
+                ret = ReturnCode.TracingError;
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
