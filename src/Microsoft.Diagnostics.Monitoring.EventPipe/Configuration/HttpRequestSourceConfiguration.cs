@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             RequestRundown = true;
         }
 
-        public const string DiagnosticFilterString =
+        internal const string DiagnosticFilterString =
                 "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
                     "Request.Scheme" +
                     ";Request.Host" +
