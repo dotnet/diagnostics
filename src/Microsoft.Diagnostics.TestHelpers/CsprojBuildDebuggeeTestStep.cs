@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </param>
         public CsprojBuildDebuggeeTestStep(string dotnetToolPath,
                                        string templateSolutionDirPath,
+                                       string debuggeeMsbuildAuxRoot,
                                        string debuggeeNativeLibDirPath,
                                        Dictionary<string,string> buildProperties,
                                        string runtimeIdentifier,
@@ -43,6 +44,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                        string logPath) :
             base(dotnetToolPath,
                  templateSolutionDirPath,
+                 debuggeeMsbuildAuxRoot,
                  debuggeeNativeLibDirPath,
                  debuggeeSolutionDirPath,
                  debuggeeProjectDirPath,
