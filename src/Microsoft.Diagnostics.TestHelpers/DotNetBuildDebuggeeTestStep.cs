@@ -72,6 +72,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </param>
         public DotNetBuildDebuggeeTestStep(string dotnetToolPath,
                                        string templateSolutionDirPath,
+                                       string debuggeeMsbuildAuxRoot,
                                        string debuggeeNativeLibDirPath,
                                        string debuggeeSolutionDirPath,
                                        string debuggeeProjectDirPath,
@@ -85,6 +86,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             DotNetToolPath = dotnetToolPath;
             DebuggeeTemplateSolutionDirPath = templateSolutionDirPath;
+            DebuggeeMsbuildAuxRoot = debuggeeMsbuildAuxRoot;
             DebuggeeNativeLibDirPath = debuggeeNativeLibDirPath;
             DebuggeeSolutionDirPath = debuggeeSolutionDirPath;
             DebuggeeProjectDirPath = debuggeeProjectDirPath;
@@ -109,6 +111,10 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public string DebuggeeTemplateSolutionDirPath { get; private set; }
         /// <summary>
+        /// The path containing supporting msbuild files for the build
+        /// </summary>
+        public string DebuggeeMsbuildAuxRoot { get; }
+        /// <summary>
         /// The path where the debuggee's native binary dependencies will be copied from.
         /// </summary>
         public string DebuggeeNativeLibDirPath { get; private set; }
@@ -117,6 +123,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// the debuggee project directory.
         /// </summary>
         public string DebuggeeSolutionDirPath { get; private set; }
+
         /// <summary>
         /// The path where the primary debuggee executable project directory will be created. For single project solutions this
         /// will be identical to the debuggee solution directory.
@@ -158,6 +165,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             output.WriteLine("{");
             IndentedTestOutputHelper indentedOutput = new IndentedTestOutputHelper(output);
             CopySourceDirectory(DebuggeeTemplateSolutionDirPath, DebuggeeSolutionDirPath, indentedOutput);
+            CopySourceDirectory(DebuggeeMsbuildAuxRoot, DebuggeeSolutionDirPath, indentedOutput);
             CreateNuGetConfig(indentedOutput);
             output.WriteLine("}");
             output.WriteLine("");
