@@ -16,7 +16,6 @@
       </KnownRuntimePack>
 
       <KnownFrameworkReference>
-        <TargetingPackVersion Condition="'%(TargetFramework)' == 'netcoreapp3.1'">$(MicrosoftNETCoreApp31Version)</TargetingPackVersion>
         <LatestRuntimeFrameworkVersion Condition="'%(TargetFramework)' == 'netcoreapp3.1'">$(MicrosoftNETCoreApp31Version)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
       <KnownAppHostPack>
