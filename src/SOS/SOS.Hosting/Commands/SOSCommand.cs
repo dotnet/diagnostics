@@ -59,6 +59,8 @@ namespace SOS.Hosting
     [Command(Name = "soshelp",          DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
     [Command(Name = "syncblk",          DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
     [Command(Name = "threadpool",       DefaultOptions = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
+    [Command(Name = "threadstate",      DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
+    [Command(Name = "traverseheap",     DefaultOptions = "TraverseHeap",        Help = "Writes out heap information to a file in a format understood by the CLR Profiler.")]
     [Command(Name = "verifyheap",       DefaultOptions = "VerifyHeap",          Help = "Checks the GC heap for signs of corruption.")]
     [Command(Name = "verifyobj",        DefaultOptions = "VerifyObj",           Help = "Checks the object for signs of corruption.")]
     [Command(Name = "comstate",         DefaultOptions = "COMState",            Flags = CommandFlags.Windows, Help = "Lists the COM apartment model for each thread.")]
@@ -66,7 +68,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpccw",          DefaultOptions = "DumpCCW",             Flags = CommandFlags.Windows, Help = "Displays information about a COM Callable Wrapper.")]
     [Command(Name = "dumppermissionset",DefaultOptions = "DumpPermissionSet",   Flags = CommandFlags.Windows, Help = "Displays a PermissionSet object (debug build only).")]
     [Command(Name = "gchandleleaks",    DefaultOptions = "GCHandleLeaks",       Flags = CommandFlags.Windows, Help = "Helps in tracking down GCHandle leaks")]
-    [Command(Name = "traverseheap",     DefaultOptions = "TraverseHeap",        Flags = CommandFlags.Windows, Help = "Writes out a file in a format understood by the CLR Profiler.")]
     [Command(Name = "watsonbuckets",    DefaultOptions = "WatsonBuckets",       Flags = CommandFlags.Windows, Help = "Displays the Watson buckets.")]
     public class SOSCommand : CommandBase
     {

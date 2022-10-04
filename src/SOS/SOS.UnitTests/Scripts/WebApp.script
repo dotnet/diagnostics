@@ -1,8 +1,6 @@
 #
 # Tests the various SOS stack and other commands against a webapp 3.x app
 #
-# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads)
-#
 
 CONTINUE
 

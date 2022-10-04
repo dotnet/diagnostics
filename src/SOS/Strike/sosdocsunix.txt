@@ -34,6 +34,7 @@ FinalizeQueue (finalizequeue)      GCInfo
 GCRoot (gcroot)                    EHInfo
 ObjSize (objsize)                  bpmd (bpmd)
 PrintException (pe)
+TraverseHeap (traverseheap)
                                    
 Examining CLR data structures      Diagnostic Utilities
 -----------------------------      -----------------------------
@@ -536,7 +537,7 @@ memory in that range, you'll see the object pointers that are registered:
 
 You could run dumpobj on any of those pointers to learn more. In this example,
 there are no objects ready for finalization, presumably because they still have
-roots (You can use !GCRoot to find out). The statistics section provides a 
+roots (You can use gcroot to find out). The statistics section provides a 
 higher-level summary of the objects registered for finalization. Note that 
 objects ready for finalization are also included in the statistics (if any).
 
@@ -590,6 +591,48 @@ which can be specified using the -ccw option.
 The abbreviation 'pe' can be used for brevity.
 \\
 
+COMMAND: traverseheap.
+Traverseheap [-xml] [-verify] <filename>
+
+traverseheap writes out a file in a format understood by the CLR Profiler. 
+You can download the CLR Profiler from this link:
+
+http://www.microsoft.com/downloads/details.aspx?FamilyId=86CE6052-D7F4-4AEB-
+9B7A-94635BEEBDDA&displaylang=en
+
+It creates a graphical display of the GC heap to help you analyze the state of
+your application. 
+
+If you pass the -verify option it will do more sanity checking of the heap
+as it dumps it.   Use this option if heap corruption is suspected.
+
+If you pass the "-xml" flag, the file is instead written out in an easy to 
+understand xml format:
+
+    <gcheap>
+        <types>
+            <type id="1" name="System.String">
+            ...
+        </types>
+        <roots>
+            <root kind="handle" address="0x00a73ff0"/>
+            <root kind="stack" address="0x0069f0e0"/>
+            ...
+        </roots>
+        <objects>
+            <object address="0x00b73030" typeid="1" size="300"/>
+            <object address="0x00b75054" typeid="5" size="20">
+                <member address="0x00b75088" />
+                ...
+            </object>
+            ...
+        </objects>
+    </gcheap>
+
+You can break into your process, load SOS, take a snapshot of your heap with 
+this function, then continue.
+
+\\
 COMMAND: threadstate.
 ThreadState value
 
@@ -1326,14 +1369,14 @@ It means that Thread e04 owns object 00a7a194, and Thread ab8 owns object
         0404ea04 77f5c524 SharedUserData!SystemCallStub+0x4
         0404ea08 77e75ee0 ntdll!NtWaitForMultipleObjects+0xc
         0404eaa4 5d9de9d6 KERNEL32!WaitForMultipleObjectsEx+0x12c
-        0404eb38 5d9def80 clr!Thread::DoAppropriateAptStateWait+0x156
-        0404ecc4 5d9dd8bb clr!Thread::DoAppropriateWaitWorker+0x360
-        0404ed20 5da628dd clr!Thread::DoAppropriateWait+0xbb
-        0404ede4 5da4e2e2 clr!CLREvent::Wait+0x29d
-        0404ee70 5da4dd41 clr!AwareLock::EnterEpilog+0x132
-        0404ef34 5da4efa3 clr!AwareLock::Enter+0x2c1
-        0404f09c 5d767880 clr!AwareLock::Contention+0x483
-        0404f1c4 03f00229 clr!JITutil_MonContention+0x2c0
+        0404eb38 5d9def80 coreclr!Thread::DoAppropriateAptStateWait+0x156
+        0404ecc4 5d9dd8bb coreclr!Thread::DoAppropriateWaitWorker+0x360
+        0404ed20 5da628dd coreclr!Thread::DoAppropriateWait+0xbb
+        0404ede4 5da4e2e2 coreclr!CLREvent::Wait+0x29d
+        0404ee70 5da4dd41 coreclr!AwareLock::EnterEpilog+0x132
+        0404ef34 5da4efa3 coreclr!AwareLock::Enter+0x2c1
+        0404f09c 5d767880 coreclr!AwareLock::Contention+0x483
+        0404f1c4 03f00229 coreclr!JITutil_MonContention+0x2c0
         0404f1f4 5b6ef077 image00400000!Worker.Work()+0x79
         ...
 
@@ -1706,10 +1749,10 @@ VerifyObj <object address>
 VerifyObj is a diagnostic tool that checks the object that is passed as an 
 argument for signs of corruption.
 
-    0:002> !verifyobj 028000ec
+    0:002> verifyobj 028000ec
     object 0x28000ec does not have valid method table
 
-    0:002> !verifyobj 0680017c 
+    0:002> verifyobj 0680017c 
     object 0x680017c: bad member 00000001 at 06800184
 
 \\
@@ -1763,14 +1806,14 @@ generations too, and report those roots.
 \\
 
 COMMAND: analyzeoom.
-AnalyzeOOM
+analyzeoom
 
 AnalyzeOOM displays the info of the last OOM occurred on an allocation request to
 the GC heap (in Server GC it displays OOM, if any, on each GC heap). 
 
 To see the managed exception(s) use the clrthreads command which will show you 
 managed exception(s), if any, on each managed thread. If you do see an 
-OutOfMemoryException exception you can use the !PrintException command on it.
+OutOfMemoryException exception you can use the printexception command on it.
 To get the full callstack use the "kb" command in the debugger for that thread.
 For example, to display thread 3's stack use ~3kb.
 
@@ -1785,7 +1828,7 @@ OOM exceptions could be because of the following reasons:
    for example, some .NET framework code converts a native OOM exception to managed 
    and throws it.
 
-The !AnalyzeOOM command aims to help you with investigating 1) which is the most
+The analyzeoom command aims to help you with investigating 1) which is the most
 difficult because it requires some internal info from GC. The only exception is
 we don't support allocating objects larger than 2GB on CLR v2.0 or prior. And this
 command will not display any managed OOM because we will throw OOM right away 
@@ -1807,7 +1850,7 @@ The other cases should be fairly obvious from the callstack.
 
 Sample output:
 
-0:011> !analyzeoom
+0:011> analyzeoom
 ---------Heap 2 ---------
 Managed OOM occurred after GC #28 (Requested to allocate 1234 bytes)
 Reason: Didn't have enough memory to commit
@@ -2026,7 +2069,7 @@ Here is sample output from a very simple program.  Note that the "RefCount"
 field only applies to RefCount Handles, and this field will contain the
 reference count:
 
-    0:000> !GCHandles
+    0:000> gchandles
       Handle Type          Object     Size RefCount Type
     001611c0 Strong      01d00b58       84          System.IndexOutOfRangeException
     001611c4 Strong      01d00b58       84          System.IndexOutOfRangeException
