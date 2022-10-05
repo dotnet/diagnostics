@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Diagnostics.Tools.Counters
+namespace Microsoft.Diagnostics.Tools
 {
     // This is an exception whose error message is intended to be displayed
     // to the user an error on the command line

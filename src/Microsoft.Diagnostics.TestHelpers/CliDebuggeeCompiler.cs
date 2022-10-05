@@ -76,6 +76,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             string logPath = GetLogPath(config, framework, runtimeIdentifier, debuggeeName);
             return new CsprojBuildDebuggeeTestStep(dotNetPath,
                                                initialSourceDirPath,
+                                               config.DebuggeeMsbuildAuxRoot,
                                                GetDebuggeeNativeLibDirPath(config, debuggeeName),
                                                GetBuildProperties(config, runtimeIdentifier),
                                                runtimeIdentifier,
