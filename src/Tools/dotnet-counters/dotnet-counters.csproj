@@ -18,6 +18,7 @@
     <Compile Include="..\Common\Commands\Utils.cs" Link="Utils.cs" />
     <Compile Include="..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
     <Compile Include="..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
+    <Compile Include="..\Common\CommandLineErrorException.cs" Link="CommandLineErrorException.cs" />
  </ItemGroup>
 
   <ItemGroup>
