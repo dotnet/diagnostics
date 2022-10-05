@@ -102,7 +102,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (Exception e)
             {
-                throw new CommandLineErrorException($"An error occurred trying to start process {_childProc.StartInfo.FileName} with working directory {System.IO.Directory.GetCurrentDirectory()}. {e.Message}");
+                throw new CommandLineErrorException($"An error occurred trying to start process '{_childProc.StartInfo.FileName}' with working directory '{System.IO.Directory.GetCurrentDirectory()}'. {e.Message}");
             }
             if (!showChildIO)
             {
