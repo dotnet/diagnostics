@@ -12,6 +12,7 @@
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\DbgShim.UnitTests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
 

@@ -638,6 +638,14 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
+        /// Auxiliary properties used by CLI based test projects file will be fetched from this path and copied to DebuggeeSourceRoot
+        /// </summary>
+        public string DebuggeeMsbuildAuxRoot
+        {
+            get { return MakeCanonicalPath(GetValue("DebuggeeMsbuildAuxRoot")); }
+        }
+
+        /// <summary>
         /// Debuggee final sources/project file/binary outputs will be placed here: <DebuggeeBuildRoot>/<DebuggeeName>/
         /// </summary>
         public string DebuggeeBuildRoot

@@ -163,7 +163,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
-
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
                     string processMainModuleFileName = $"Process{processId}";
@@ -351,6 +350,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
+            catch (CommandLineErrorException e)
+            {
+                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                collectionStopped = true;
+                ret = ReturnCode.TracingError;
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
@@ -364,20 +369,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (console.GetTerminal() != null)
                         Console.CursorVisible = true;
                 }
-                
+            
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
                     {
                         ret = ReturnCode.TracingError;
                     }
-
-                    // If we launched a child proc that hasn't exited yet, terminate it before we exit.
-                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
-                    {
-                        ProcessLauncher.Launcher.ChildProc.Kill();
-                    }
                 }
+                ProcessLauncher.Launcher.Cleanup();
             }
             return await Task.FromResult(ret);
         }
