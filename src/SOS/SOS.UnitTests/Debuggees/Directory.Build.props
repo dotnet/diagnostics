@@ -1,7 +1,6 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\..\..\Directory.Build.props"/>
-  <Import Project="$(RepoRoot)/eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
-
+  
   <PropertyGroup>
     <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

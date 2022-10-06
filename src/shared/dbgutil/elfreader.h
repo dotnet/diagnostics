@@ -67,11 +67,7 @@ private:
     bool EnumerateLinkMapEntries(ElfW(Dyn)* dynamicAddr);
 #endif
     bool EnumerateProgramHeaders(ElfW(Phdr)* phdrAddr, int phnum, uint64_t baseAddress, uint64_t* ploadbias, ElfW(Dyn)** pdynamicAddr);
-#ifdef __FreeBSD__
-    virtual void VisitModule(caddr_t baseAddress, std::string& moduleName) { };
-#else
     virtual void VisitModule(uint64_t baseAddress, std::string& moduleName) { };
-#endif
     virtual void VisitProgramHeader(uint64_t loadbias, uint64_t baseAddress, ElfW(Phdr)* phdr) { };
     virtual bool ReadMemory(void* address, void* buffer, size_t size) = 0;
     virtual void Trace(const char* format, ...) { };

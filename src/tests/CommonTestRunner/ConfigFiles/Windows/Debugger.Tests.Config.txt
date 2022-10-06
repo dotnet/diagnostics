@@ -16,7 +16,6 @@
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)\src\tests</DebuggeeSourceRoot>
-  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>

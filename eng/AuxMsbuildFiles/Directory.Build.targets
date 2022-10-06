@@ -1,5 +1,0 @@
-<Project>
-    <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
-    <Import Project="SdkPackOverrides.targets"/>
-</Project>

@@ -25,7 +25,6 @@ parameters:
   enablePublishTestResults: false
   enablePublishUsingPipelines: false
   disableComponentGovernance: false
-  componentGovernanceIgnoreDirectories: ''
   mergeTestResults: false
   testRunTitle: ''
   testResultsFormat: ''
@@ -147,8 +146,6 @@ jobs:
   - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), ne(parameters.disableComponentGovernance, 'true')) }}:
       - task: ComponentGovernanceComponentDetection@0
         continueOnError: true
-        inputs:
-          ignoreDirectories: ${{ parameters.componentGovernanceIgnoreDirectories }}
 
   - ${{ if eq(parameters.enableMicrobuild, 'true') }}:
     - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -226,5 +223,4 @@ jobs:
       parameters:
         PackageVersion: ${{ parameters.packageVersion}}
         BuildDropPath: ${{ parameters.buildDropPath }}
-        IgnoreDirectories: ${{ parameters.componentGovernanceIgnoreDirectories }}
 
