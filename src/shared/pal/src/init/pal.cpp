@@ -81,7 +81,6 @@ int CacheLineSize;
 
 #ifdef __FreeBSD__
 #include <sys/user.h>
-#include <sys/sysctl.h>
 #endif
 
 #include <algorithm>

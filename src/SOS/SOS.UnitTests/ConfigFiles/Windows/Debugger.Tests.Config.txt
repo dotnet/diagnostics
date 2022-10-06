@@ -40,7 +40,6 @@
   <DesktopFramework>net462</DesktopFramework>
 
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
-  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
 

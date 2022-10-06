@@ -14,6 +14,8 @@
     <IsShipping>false</IsShipping>
     <IsShippingAssembly>true</IsShippingAssembly>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Version information -->
+    <VersionPrefix>5.0.0</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
