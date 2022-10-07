@@ -16,6 +16,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             RequestRundown = true;
         }
 
+        // This string is shared between HttpRequestSourceConfiguration and AspNetTriggerSourceConfiguration
+        // due to an issue that causes the FilterAndPayloadSpecs to be overwritten but never reverted.
+        // This caused http traces to interfere with AspNet* triggers due to having different arguments.
         public const string DiagnosticFilterString =
                 "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
                     "Request.Scheme" +

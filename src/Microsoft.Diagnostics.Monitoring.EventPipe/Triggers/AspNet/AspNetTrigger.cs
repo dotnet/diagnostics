@@ -16,6 +16,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
     /// </summary>
     internal abstract class AspNetTrigger<TSettings> : ITraceEventTrigger where TSettings : AspNetTriggerSettings
     {
+        private const string ActivityId = "activityid";
+        private const string Path = "path";
+        private const string StatusCode = "statuscode";
+        private const string ActivityDuration = "activityduration";
         private const string Activity1Start = "Activity1/Start";
         private const string Activity1Stop = "Activity1/Stop";
         private static readonly Guid MicrosoftAspNetCoreHostingGuid = new Guid("{adb401e1-5296-51f8-c125-5fda75826144}");
@@ -60,8 +64,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             {
                 int? statusCode = null;
                 long? duration = null;
-                string activityId = "";
-                string path = "";
+                string activityId = string.Empty;
+                string path = string.Empty;
 
                 AspnetTriggerEventType eventType = AspnetTriggerEventType.Start;
 
@@ -74,19 +78,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                         string key = (string)argumentsEnumerable.First().Value;
                         string value = (string)argumentsEnumerable.Last().Value;
 
-                        if (key.Equals("activityid", StringComparison.OrdinalIgnoreCase))
+                        if (key.Equals(ActivityId, StringComparison.OrdinalIgnoreCase))
                         {
                             activityId = value;
                         }
-                        else if (key.Equals("path", StringComparison.OrdinalIgnoreCase))
+                        else if (key.Equals(Path, StringComparison.OrdinalIgnoreCase))
                         {
                             path = value;
                         }
-                        else if (key.Equals("statuscode", StringComparison.OrdinalIgnoreCase))
+                        else if (key.Equals(StatusCode, StringComparison.OrdinalIgnoreCase))
                         {
                             statusCode = int.Parse(value);
                         }
-                        else if (key.Equals("activityduration", StringComparison.OrdinalIgnoreCase))
+                        else if (key.Equals(ActivityDuration, StringComparison.OrdinalIgnoreCase))
                         {
                             duration = long.Parse(value);
                         }
