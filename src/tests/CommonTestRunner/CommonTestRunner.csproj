@@ -20,7 +20,6 @@
     </Content>
     <Content Include="$(CommonTestRunnerConfigFileName)">
       <Link>Debugger.Tests.Common.txt</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
