@@ -5,7 +5,6 @@
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
@@ -17,6 +16,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
     /// </summary>
     internal abstract class AspNetTrigger<TSettings> : ITraceEventTrigger where TSettings : AspNetTriggerSettings
     {
+        private const string ActivityId = "activityid";
+        private const string Path = "path";
+        private const string StatusCode = "statuscode";
+        private const string ActivityDuration = "activityduration";
         private const string Activity1Start = "Activity1/Start";
         private const string Activity1Stop = "Activity1/Stop";
         private static readonly Guid MicrosoftAspNetCoreHostingGuid = new Guid("{adb401e1-5296-51f8-c125-5fda75826144}");
@@ -61,16 +64,41 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
             {
                 int? statusCode = null;
                 long? duration = null;
+                string activityId = string.Empty;
+                string path = string.Empty;
+
                 AspnetTriggerEventType eventType = AspnetTriggerEventType.Start;
 
                 System.Collections.IList arguments = (System.Collections.IList)traceEvent.PayloadValue(2);
-                string activityId = ExtractByIndex(arguments, 0);
-                string path = ExtractByIndex(arguments, 1);
+
+                foreach (var argument in arguments)
+                {
+                    if (argument is IEnumerable<KeyValuePair<string, object>> argumentsEnumerable)
+                    {
+                        string key = (string)argumentsEnumerable.First().Value;
+                        string value = (string)argumentsEnumerable.Last().Value;
+
+                        if (key.Equals(ActivityId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            activityId = value;
+                        }
+                        else if (key.Equals(Path, StringComparison.OrdinalIgnoreCase))
+                        {
+                            path = value;
+                        }
+                        else if (key.Equals(StatusCode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            statusCode = int.Parse(value);
+                        }
+                        else if (key.Equals(ActivityDuration, StringComparison.OrdinalIgnoreCase))
+                        {
+                            duration = long.Parse(value);
+                        }
+                    }
+                }
 
                 if (traceEvent.EventName == Activity1Stop)
                 {
-                    statusCode = int.Parse(ExtractByIndex(arguments, 2));
-                    duration = long.Parse(ExtractByIndex(arguments, 3));
                     eventType = AspnetTriggerEventType.Stop;
 
                     Debug.Assert(statusCode != null, "Status code cannot be null.");
@@ -82,7 +110,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
             //Heartbeat only
             return HasSatisfiedCondition(timeStamp, eventType: AspnetTriggerEventType.Heartbeat, activityId: null, path: null, statusCode: null, duration: null);
-
         }
 
         /// <summary>
@@ -110,17 +137,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                 return ActivityStop(timestamp, activityId, duration.Value, statusCode.Value);
             }
             return false;
-        }
-
-        private static string ExtractByIndex(System.Collections.IList arguments, int index)
-        {
-            IEnumerable<KeyValuePair<string, object>> values = (IEnumerable<KeyValuePair<string, object>>)arguments[index];
-            //The data is internally organized as two KeyValuePair entries,
-            //The first entry is { Key, "KeyValue"}
-            //The second is { Value, "Value"}
-            //e.g.
-            //{{ Key:"StatusCode", Value:"200" }}
-            return (string)values.Last().Value;
         }
     }
 
