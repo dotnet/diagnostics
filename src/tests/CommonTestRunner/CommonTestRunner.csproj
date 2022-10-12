@@ -41,10 +41,6 @@
     <Message Importance="High" Text="Created config file $(CommonTestRunnerConfigFileName)" />
     <ItemGroup>
       <FileWrites Include="$(CommonTestRunnerConfigFileName)" />
-      <Content Include="$(CommonTestRunnerConfigFileName)">
-        <Link>Debugger.Tests.Common.txt</Link>
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
     </ItemGroup>
   </Target>
 
