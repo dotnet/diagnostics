@@ -30,7 +30,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private bool _disposed = false;
         private Task _acceptTransportTask;
-        private bool _enableTcpIpProtocol = false;
         private IpcServerTransport _transport;
         private Kind _kind = Kind.Ipc;
 
@@ -143,7 +142,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new InvalidOperationException(nameof(ReversedDiagnosticsServer.Start) + " method can only be called once.");
             }
 
-            _transport = IpcServerTransport.Create(_address, maxConnections, _kind, _enableTcpIpProtocol, TransportCallback);
+            _transport = IpcServerTransport.Create(_address, maxConnections, _kind, TransportCallback);
 
             _acceptTransportTask = AcceptTransportAsync(_transport, _disposalSource.Token);
 
