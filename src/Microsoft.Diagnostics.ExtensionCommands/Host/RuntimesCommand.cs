@@ -21,6 +21,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public ITarget Target { get; set; }
 
+        [Argument(Help = "Switch to the runtime by id.")]
+        public int? Id { get; set; }
+
         [Option(Name = "--netfx", Aliases = new string[] { "-netfx", "-f" }, Help = "Switches to the desktop .NET Framework if exists.")]
         public bool NetFx { get; set; }
 
@@ -42,11 +45,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         NetCore && runtime.RuntimeType == RuntimeType.NetCore)
                     {
                         ContextService.SetCurrentRuntime(runtime.Id);
-                        WriteLine("Switched to {0} runtime successfully", name);
+                        WriteLine($"Switched to {name} runtime successfully");
                         return;
                     }
                 }
-                WriteLineError("The {0} runtime is not loaded", name);
+                WriteLineError($"The {name} runtime is not loaded");
+            }
+            else if (Id.HasValue)
+            {
+                ContextService.SetCurrentRuntime(Id.Value);
+                WriteLine($"Switched to runtime #{Id.Value} successfully");
             }
             else
             {
