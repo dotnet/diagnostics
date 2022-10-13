@@ -5,8 +5,9 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 
-namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
+namespace Microsoft.Diagnostics.WebSocketServer;
 
 internal class WebSocketStreamAdapter : Stream, IWebSocketStreamAdapter
 {

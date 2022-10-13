@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             // checkLoopbackOnly(webSocket);
 
             const string magicEnv = "DIAGNOSTICS_SERVER_WEBSOCKET_SERVER_TYPE";
-            string serverType = typeof(Microsoft.Diagnostics.NETCore.Client.WebSocketServer.WebSocketServerImpl).AssemblyQualifiedName;
+            string serverType = typeof(Microsoft.Diagnostics.WebSocketServer.WebSocketServerImpl).AssemblyQualifiedName;
             Console.WriteLine("Setting env var to {0}", serverType);
             Environment.SetEnvironmentVariable(magicEnv, serverType);
 

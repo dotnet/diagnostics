@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ using System.Net.WebSockets;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
 using System.Linq;
 
-namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
+namespace Microsoft.Diagnostics.WebSocketServer;
 
 
 public class WebSocketServerImpl : IWebSocketServer

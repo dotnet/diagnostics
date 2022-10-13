@@ -10,13 +10,10 @@
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
-    <!-- Do not ship this package until ready to be consumed. -->
+    <!-- Do not ship this package until ready to be consumed standalone. -->
     <IsShipping>false</IsShipping>
     <IsShippingAssembly>true</IsShippingAssembly>
   </PropertyGroup>
-
-  <ItemGroup>
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
