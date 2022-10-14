@@ -33,6 +33,7 @@ public class WebSocketServerImpl : IWebSocketServer
 
     public async Task StartServer(Uri uri, CancellationToken cancellationToken)
     {
+        Console.WriteLine("Starting web socket server on {0}", uri);
         WebSocketServer.Options options = new()
         {
             Scheme = uri.Scheme,
@@ -43,6 +44,8 @@ public class WebSocketServerImpl : IWebSocketServer
         _server = WebSocketServer.CreateWebServer(options, HandleWebSocket);
 
         await _server.StartWebServer(cancellationToken);
+        Console.WriteLine("Started web socket server on {0}", uri);
+
     }
 
 

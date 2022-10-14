@@ -318,15 +318,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocket, int runtimeTimeout, string verbose)
         {
-            // checkLoopbackOnly(webSocket);
-
-            const string magicEnv = "DIAGNOSTICS_SERVER_WEBSOCKET_SERVER_TYPE";
-            string serverType = typeof(Microsoft.Diagnostics.WebSocketServer.WebSocketServerImpl).AssemblyQualifiedName;
-            Console.WriteLine("Setting env var to {0}", serverType);
-            Environment.SetEnvironmentVariable(magicEnv, serverType);
-
             using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
             using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+            NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
+            {
+                Console.WriteLine("building a new web socket server");
+                return new WebSocketServer.WebSocketServerImpl();
+            });
 
             LogLevel logLevel = LogLevel.Information;
             if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)

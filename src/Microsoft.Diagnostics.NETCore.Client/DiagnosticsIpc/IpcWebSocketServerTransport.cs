@@ -80,15 +80,8 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
                 return;
             }
             ServerRunning = true;
-            string typeName = Environment.GetEnvironmentVariable("DIAGNOSTICS_SERVER_WEBSOCKET_SERVER_TYPE");
-            Console.WriteLine("typeName: {0}", typeName);
-            Type t = Type.GetType(typeName);
-            if (t == null)
-            {
-                Console.WriteLine("no type found {0}", typeName);
-                throw new Exception("Unable to find type " + typeName);
-            }
-            server = (WebSocketServer.IWebSocketServer)Activator.CreateInstance(t);
+            WebSocketServer.IWebSocketServer newServer = WebSocketServer.WebSocketServerFactory.CreateWebSocketServer();
+            server = newServer; ;
             await server.StartServer(endPoint.EndPoint, token);
             await Task.Delay(1000);
         }
