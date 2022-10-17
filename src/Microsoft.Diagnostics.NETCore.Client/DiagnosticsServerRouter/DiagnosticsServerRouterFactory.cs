@@ -149,31 +149,129 @@ namespace Microsoft.Diagnostics.NETCore.Client
     }
 
     /// <summary>
+    /// This is a common base class for network-based server endpoints used when building router instances.
+    /// </summary>
+    /// <remarks>
+    /// We have two subclases: for normal TCP/IP sockets, and another for WebSocket connections.
+    /// </remarks>
+    internal abstract class NetServerRouterFactory : IIpcServerTransportCallbackInternal
+    {
+        private readonly ILogger _logger;
+        private IpcEndpointInfo _netServerEndpointInfo;
+        public abstract void CreatedNewServer(EndPoint localEP);
+
+
+        protected ILogger Logger => _logger;
+
+        protected int RuntimeTimeoutMs { get; private set; } = 60000;
+        protected int NetServerTimeoutMs { get; set; } = 5000;
+
+        private bool _auto_shutdown;
+
+        protected bool IsAutoShutdown => _auto_shutdown;
+
+        protected IpcEndpointInfo NetServerEndpointInfo
+        {
+            get => _netServerEndpointInfo;
+            private set { _netServerEndpointInfo = value; }
+        }
+
+
+        protected IpcEndpoint Endpoint => NetServerEndpointInfo.Endpoint;
+        public Guid RuntimeInstanceId => NetServerEndpointInfo.RuntimeInstanceCookie;
+        public int RuntimeProcessId => NetServerEndpointInfo.ProcessId;
+
+        protected void ResetEnpointInfo()
+        {
+            NetServerEndpointInfo = new IpcEndpointInfo();
+        }
+
+        protected NetServerRouterFactory(int runtimeTimeoutMs, ILogger logger)
+        {
+            _logger = logger;
+            _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
+            if (runtimeTimeoutMs != Timeout.Infinite)
+                RuntimeTimeoutMs = runtimeTimeoutMs;
+
+            _netServerEndpointInfo = new IpcEndpointInfo();
+
+        }
+
+        protected abstract string ServerAddress { get; }
+        protected abstract string ServerTransportName { get; }
+
+        protected abstract Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token);
+
+        public async Task<Stream> AcceptNetStreamAsync(CancellationToken token)
+        {
+            Stream netServerStream;
+
+            Logger?.LogDebug($"Waiting for a new {ServerTransportName} connection at endpoint \"{ServerAddress}\".");
+
+            if (Endpoint == null)
+            {
+                using var acceptTimeoutTokenSource = new CancellationTokenSource();
+                using var acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
+
+                try
+                {
+                    // If no new runtime instance connects, timeout.
+                    acceptTimeoutTokenSource.CancelAfter(RuntimeTimeoutMs);
+                    NetServerEndpointInfo = await AcceptAsyncImpl(acceptTokenSource.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (acceptTimeoutTokenSource.IsCancellationRequested)
+                    {
+                        Logger?.LogDebug("No runtime instance connected before timeout.");
+
+                        if (IsAutoShutdown)
+                            throw new RuntimeTimeoutException(RuntimeTimeoutMs);
+                    }
+
+                    throw;
+                }
+            }
+
+            using var connectTimeoutTokenSource = new CancellationTokenSource();
+            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+
+            try
+            {
+                // Get next connected tcp stream. Should timeout if no endpoint appears within timeout.
+                // If that happens we need to remove endpoint since it might indicate a unresponsive runtime.
+                connectTimeoutTokenSource.CancelAfter(NetServerTimeoutMs);
+                netServerStream = await Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                if (connectTimeoutTokenSource.IsCancellationRequested)
+                {
+                    Logger?.LogDebug($"No {ServerTransportName} stream connected before timeout.");
+                    throw new BackendStreamTimeoutException(NetServerTimeoutMs);
+                }
+
+                throw;
+            }
+
+            if (netServerStream != null)
+                Logger?.LogDebug($"Successfully connected {ServerTransportName} stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
+
+            return netServerStream;
+        }
+
+
+    }
+
+    /// <summary>
     /// This class represent a TCP/IP server endpoint used when building up router instances.
     /// </summary>
-    internal class TcpServerRouterFactory : IIpcServerTransportCallbackInternal
+    internal class TcpServerRouterFactory : NetServerRouterFactory
     {
-        protected readonly ILogger _logger;
 
         string _tcpServerAddress;
 
         ReversedDiagnosticsServer _tcpServer;
-        IpcEndpointInfo _tcpServerEndpointInfo;
-
-        bool _auto_shutdown;
-
-        int RuntimeTimeoutMs { get; set; } = 60000;
-        int TcpServerTimeoutMs { get; set; } = 5000;
-
-        public Guid RuntimeInstanceId
-        {
-            get { return _tcpServerEndpointInfo.RuntimeInstanceCookie; }
-        }
-
-        public int RuntimeProcessId
-        {
-            get { return _tcpServerEndpointInfo.ProcessId; }
-        }
 
         public string TcpServerAddress
         {
@@ -187,18 +285,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new TcpServerRouterFactory(tcpServer, runtimeTimeoutMs, logger);
         }
 
-        public TcpServerRouterFactory(string tcpServer, int runtimeTimeoutMs, ILogger logger)
+        public TcpServerRouterFactory(string tcpServer, int runtimeTimeoutMs, ILogger logger) : base(runtimeTimeoutMs, logger)
         {
-            _logger = logger;
 
             _tcpServerAddress = IpcTcpSocketEndPoint.NormalizeTcpIpEndPoint(string.IsNullOrEmpty(tcpServer) ? "127.0.0.1:0" : tcpServer);
 
-            _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
-            if (runtimeTimeoutMs != Timeout.Infinite)
-                RuntimeTimeoutMs = runtimeTimeoutMs;
-
             _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, ReversedDiagnosticsServer.Kind.Tcp);
-            _tcpServerEndpointInfo = new IpcEndpointInfo();
             _tcpServer.TransportCallback = this;
         }
 
@@ -214,72 +306,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public void Reset()
         {
-            if (_tcpServerEndpointInfo.Endpoint != null)
+            if (Endpoint != null)
             {
-                _tcpServer.RemoveConnection(_tcpServerEndpointInfo.RuntimeInstanceCookie);
-                _tcpServerEndpointInfo = new IpcEndpointInfo();
+                _tcpServer.RemoveConnection(NetServerEndpointInfo.RuntimeInstanceCookie);
+                ResetEnpointInfo();
             }
         }
 
-        public async Task<Stream> AcceptTcpStreamAsync(CancellationToken token)
-        {
-            Stream tcpServerStream;
+        protected override Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token) => _tcpServer.AcceptAsync(token);
+        protected override string ServerAddress => _tcpServerAddress;
+        protected override string ServerTransportName => "tcp";
 
-            _logger?.LogDebug($"Waiting for a new tcp connection at endpoint \"{_tcpServerAddress}\".");
 
-            if (_tcpServerEndpointInfo.Endpoint == null)
-            {
-                using var acceptTimeoutTokenSource = new CancellationTokenSource();
-                using var acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
-
-                try
-                {
-                    // If no new runtime instance connects, timeout.
-                    acceptTimeoutTokenSource.CancelAfter(RuntimeTimeoutMs);
-                    _tcpServerEndpointInfo = await _tcpServer.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    if (acceptTimeoutTokenSource.IsCancellationRequested)
-                    {
-                        _logger?.LogDebug("No runtime instance connected before timeout.");
-
-                        if (_auto_shutdown)
-                            throw new RuntimeTimeoutException(RuntimeTimeoutMs);
-                    }
-
-                    throw;
-                }
-            }
-
-            using var connectTimeoutTokenSource = new CancellationTokenSource();
-            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
-
-            try
-            {
-                // Get next connected tcp stream. Should timeout if no endpoint appears within timeout.
-                // If that happens we need to remove endpoint since it might indicate a unresponsive runtime.
-                connectTimeoutTokenSource.CancelAfter(TcpServerTimeoutMs);
-                tcpServerStream = await _tcpServerEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                if (connectTimeoutTokenSource.IsCancellationRequested)
-                {
-                    _logger?.LogDebug("No tcp stream connected before timeout.");
-                    throw new BackendStreamTimeoutException(TcpServerTimeoutMs);
-                }
-
-                throw;
-            }
-
-            if (tcpServerStream != null)
-                _logger?.LogDebug($"Successfully connected tcp stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
-
-            return tcpServerStream;
-        }
-
-        public void CreatedNewServer(EndPoint localEP)
+        public override void CreatedNewServer(EndPoint localEP)
         {
             if (localEP is IPEndPoint ipEP)
                 _tcpServerAddress = _tcpServerAddress.Replace(":0", string.Format(":{0}", ipEP.Port));
@@ -289,29 +328,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// This class represent a WebSocket server endpoint used when building up router instances.
     /// </summary>
-    internal class WebSocketServerRouterFactory : IIpcServerTransportCallbackInternal
+    internal class WebSocketServerRouterFactory : NetServerRouterFactory
     {
-        protected readonly ILogger _logger;
 
         IpcWebSocketEndPoint _webSocketEndPoint;
 
         ReversedDiagnosticsServer _webSocketServer;
-        IpcEndpointInfo _webSocketEndpointInfo;
-
-        bool _auto_shutdown;
-
-        int RuntimeTimeoutMs { get; set; } = 60000;
-        int TcpServerTimeoutMs { get; set; } = 5000;
-
-        public Guid RuntimeInstanceId
-        {
-            get { return _webSocketEndpointInfo.RuntimeInstanceCookie; }
-        }
-
-        public int RuntimeProcessId
-        {
-            get { return _webSocketEndpointInfo.ProcessId; }
-        }
 
         public Uri WebSocketURL
         {
@@ -325,106 +347,44 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new WebSocketServerRouterFactory(webSocketURL, runtimeTimeoutMs, logger);
         }
 
-        public WebSocketServerRouterFactory(string webSocketURL, int runtimeTimeoutMs, ILogger logger)
+        public WebSocketServerRouterFactory(string webSocketURL, int runtimeTimeoutMs, ILogger logger) : base(runtimeTimeoutMs, logger)
         {
-            _logger = logger;
 
             _webSocketEndPoint = new IpcWebSocketEndPoint(string.IsNullOrEmpty(webSocketURL) ? "ws://127.0.0.1:8088/diagnostics" : webSocketURL);
 
-            _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
-            if (runtimeTimeoutMs != Timeout.Infinite)
-                RuntimeTimeoutMs = runtimeTimeoutMs;
-
             _webSocketServer = new ReversedDiagnosticsServer(_webSocketEndPoint.EndPoint.ToString(), ReversedDiagnosticsServer.Kind.WebSocket);
-            _webSocketEndpointInfo = new IpcEndpointInfo();
             _webSocketServer.TransportCallback = this;
         }
 
         public virtual void Start()
         {
-            _logger.LogInformation("Starting web socket server");
+            Logger.LogInformation("Starting web socket server");
             _webSocketServer.Start();
         }
 
         public virtual async Task Stop()
         {
-            _logger.LogInformation("Stopping web socket server");
+            Logger.LogInformation("Stopping web socket server");
             await _webSocketServer.DisposeAsync().ConfigureAwait(false);
         }
 
         public void Reset()
         {
-            if (_webSocketEndpointInfo.Endpoint != null)
+            if (Endpoint != null)
             {
-                _logger.LogInformation("Resetting the web socket server");
-                _webSocketServer.RemoveConnection(_webSocketEndpointInfo.RuntimeInstanceCookie);
-                _webSocketEndpointInfo = new IpcEndpointInfo();
+                Logger.LogInformation("Resetting the web socket server");
+                _webSocketServer.RemoveConnection(NetServerEndpointInfo.RuntimeInstanceCookie);
+                ResetEnpointInfo();
             }
         }
 
-        public async Task<Stream> AcceptWebSocketStreamAsync(CancellationToken token)
+        protected override Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token) => _webSocketServer.AcceptAsync(token);
+        protected override string ServerAddress => WebSocketURL.ToString();
+        protected override string ServerTransportName => "WebSocket";
+
+        public override void CreatedNewServer(EndPoint localEP)
         {
-            Stream webSocketServerStream;
-
-            _logger?.LogDebug($"Waiting for a new WebSocket connection at endpoint \"{WebSocketURL}\".");
-
-            if (_webSocketEndpointInfo.Endpoint == null)
-            {
-                using var acceptTimeoutTokenSource = new CancellationTokenSource();
-                using var acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
-
-                try
-                {
-                    // If no new runtime instance connects, timeout.
-                    acceptTimeoutTokenSource.CancelAfter(RuntimeTimeoutMs);
-                    _webSocketEndpointInfo = await _webSocketServer.AcceptAsync(acceptTokenSource.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    if (acceptTimeoutTokenSource.IsCancellationRequested)
-                    {
-                        _logger?.LogDebug("No runtime instance connected before timeout.");
-
-                        if (_auto_shutdown)
-                            throw new RuntimeTimeoutException(RuntimeTimeoutMs);
-                    }
-
-                    throw;
-                }
-            }
-
-            using var connectTimeoutTokenSource = new CancellationTokenSource();
-            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
-
-            try
-            {
-                // Get next connected WebSocket stream. Should timeout if no endpoint appears within timeout.
-                // If that happens we need to remove endpoint since it might indicate a unresponsive runtime.
-                connectTimeoutTokenSource.CancelAfter(TcpServerTimeoutMs);
-                webSocketServerStream = await _webSocketEndpointInfo.Endpoint.ConnectAsync(connectTokenSource.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                if (connectTimeoutTokenSource.IsCancellationRequested)
-                {
-                    _logger?.LogDebug("No WebSocket stream connected before timeout.");
-                    throw new BackendStreamTimeoutException(TcpServerTimeoutMs);
-                }
-
-                throw;
-            }
-
-            if (webSocketServerStream != null)
-                _logger?.LogDebug($"Successfully connected WebSocket stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
-
-            return webSocketServerStream;
-        }
-
-        public void CreatedNewServer(EndPoint localEP)
-        {
-            // FIXME: anything to do here?
-            //if (localEP is IPEndPoint ipEP)
-            //    _webSocketEndPoint = _webSocketEndPoint.Replace(":0", string.Format(":{0}", ipEP.Port));
+            // anything to do here?
         }
 
     }
@@ -818,7 +778,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Get new tcp server endpoint.
-                using var tcpServerStreamTask = _tcpServerRouterFactory.AcceptTcpStreamAsync(cancelRouter.Token);
+                using var tcpServerStreamTask = _tcpServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
 
                 // Get new ipc server endpoint.
                 using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
@@ -1135,7 +1095,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Get new server endpoint.
-                tcpServerStream = await _tcpServerRouterFactory.AcceptTcpStreamAsync(cancelRouter.Token).ConfigureAwait(false);
+                tcpServerStream = await _tcpServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token).ConfigureAwait(false);
 
                 // Get new client endpoint.
                 using var ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
@@ -1516,7 +1476,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Get new tcp server endpoint.
-                using var webSocketServerStreamTask = _webSocketServerRouterFactory.AcceptWebSocketStreamAsync(cancelRouter.Token);
+                using var webSocketServerStreamTask = _webSocketServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
 
                 // Get new ipc server endpoint.
                 using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
