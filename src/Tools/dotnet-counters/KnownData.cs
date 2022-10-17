@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static readonly IReadOnlyDictionary<string, CounterProvider> _knownProviders =
             CreateKnownProviders(maxVersion).ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
+        private const string net70 = "7.0";
         private const string net60 = "6.0";
         private const string net50 = "5.0";
         private const string net31 = "3.1";
@@ -91,13 +92,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "System.Net.Http",
                 "A set of performance counters for System.Net.Http",
                 "0x0", // Keywords
-                "4", // Level
+                "1", // Level
                 new[] {
                     new CounterProfile{ Name="requests-started", Description="Total Requests Started", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="requests-started-rate", Description="Number of Requests Started between update intervals", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="requests-aborted", Description="Total Requests Aborted", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="requests-aborted-rate", Description="Number of Requests Aborted between update intervals", SupportedVersions=new[] { net50, net60 } },
-                    new CounterProfile{ Name="current-requests", Description="Current Requests", SupportedVersions=new[] { net50, net60 } }
+                    new CounterProfile{ Name="current-requests", Description="Current Requests", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="http11-connections-current-total", Description="Current number of HTTP 1.1 connections", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="http20-connections-current-total", Description="Current number of HTTP 2.0 connections", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="http30-connections-current-total", Description="Current number of HTTP 3.0 connections", SupportedVersions=new[] { net70 } },
+                    new CounterProfile{ Name="http11-requests-queue-duration", Description="Average duration of the time HTTP 1.1 requests spent in the request queue", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="http20-requests-queue-duration", Description="Average duration of the time HTTP 2.0 requests spent in the request queue", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="http30-requests-queue-duration", Description="Average duration of the time HTTP 3.0 requests spent in the request queue", SupportedVersions=new[] { net70 } },
                 },
                 runtimeVersion
             );
@@ -105,10 +112,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "System.Net.NameResolution",
                 "A set of performance counters for DNS lookups",
                 "0x0",
-                "4",
+                "1",
                 new[] {
                     new CounterProfile{ Name="dns-lookups-requested", Description="The number of DNS lookups requested since the process started", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="dns-lookups-duration", Description="Average DNS Lookup Duration", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="current-dns-lookups", Description="The current number of DNS lookups that have started but not yet completed", SupportedVersions=new[] { net60 } },
                 },
                 runtimeVersion
             );
@@ -116,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "System.Net.Security",
                 "A set of performance counters for TLS",
                 "0x0",
-                "4",
+                "1",
                 new[] {
                     new CounterProfile{ Name="tls-handshake-rate", Description="The number of TLS handshakes completed per update interval", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="total-tls-handshakes", Description="The total number of TLS handshakes completed since the process started", SupportedVersions=new[] { net50, net60 } },
@@ -139,10 +147,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "System.Net.Sockets",
                 "A set of performance counters for System.Net.Sockets",
                 "0x0",
-                "4",
+                "1",
                 new[] {
                     new CounterProfile{ Name="outgoing-connections-established", Description="The total number of outgoing connections established since the process started", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="incoming-connections-established", Description="The total number of incoming connections established since the process started", SupportedVersions=new[] { net50, net60 } },
+                    new CounterProfile{ Name="current-outgoing-connect-attempts", Description="The current number of outgoing connect attempts that have started but not yet completed", SupportedVersions=new[] { net70 } },
                     new CounterProfile{ Name="bytes-received", Description="The total number of bytes received since the process started", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="bytes-sent", Description="The total number of bytes sent since the process started", SupportedVersions=new[] { net50, net60 } },
                     new CounterProfile{ Name="datagrams-received", Description="The total number of datagrams received since the process started", SupportedVersions=new[] { net50, net60 } },
