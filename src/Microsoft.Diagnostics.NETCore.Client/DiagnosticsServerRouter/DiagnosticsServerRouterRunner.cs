@@ -41,9 +41,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return await runRouter(token, new IpcClientTcpClientRouterFactory(ipcClient, tcpClient, runtimeTimeoutMs, tcpClientRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocketURL, int runtimeTimeoutMs, WebSocketServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory, ILogger logger, Callbacks callbacks)
+        public static async Task<int> runIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocketURL, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory, ILogger logger, Callbacks callbacks)
         {
-            return await runRouter(token, new IpcServerWebSocketServerRouterFactory(ipcServer, webSocketURL, runtimeTimeoutMs, webSocketServerRouterFactory, logger), callbacks).ConfigureAwait(false);
+            return await runRouter(token, new IpcServerTcpServerRouterFactory(ipcServer, webSocketURL, runtimeTimeoutMs, webSocketServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)

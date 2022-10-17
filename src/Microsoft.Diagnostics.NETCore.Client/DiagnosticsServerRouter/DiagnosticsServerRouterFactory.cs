@@ -156,6 +156,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </remarks>
     internal abstract class NetServerRouterFactory : IIpcServerTransportCallbackInternal
     {
+        public delegate NetServerRouterFactory CreateInstanceDelegate(string webSocketURL, int runtimeTimeoutMs, ILogger logger);
+
         private readonly ILogger _logger;
         private IpcEndpointInfo _netServerEndpointInfo;
         public abstract void CreatedNewServer(EndPoint localEP);
@@ -197,10 +199,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         }
 
-        protected abstract string ServerAddress { get; }
-        protected abstract string ServerTransportName { get; }
+        /// <summary>
+        /// Subclasses should return a human and machine readable address of the server.
+        /// For TCP this should be something that can be passed as an address in DOTNET_DiagnosticPorts, for WebSocket it could be a URI.
+        /// </summary>
+        public abstract string ServerAddress { get; }
+        /// <summary>
+        /// Subclasses should return a human readable description of the server connection type ("tcp", "WebSocket", etc)
+        /// </summary>
+        public abstract string ServerTransportName { get; }
 
         protected abstract Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token);
+
+        public abstract void Start();
+        public abstract Task Stop();
+        public abstract void Reset();
 
         public async Task<Stream> AcceptNetStreamAsync(CancellationToken token)
         {
@@ -278,8 +291,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _tcpServerAddress; }
         }
 
-        public delegate TcpServerRouterFactory CreateInstanceDelegate(string tcpServer, int runtimeTimeoutMs, ILogger logger);
-
         public static TcpServerRouterFactory CreateDefaultInstance(string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
             return new TcpServerRouterFactory(tcpServer, runtimeTimeoutMs, logger);
@@ -294,17 +305,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _tcpServer.TransportCallback = this;
         }
 
-        public virtual void Start()
+        public override void Start()
         {
             _tcpServer.Start();
         }
 
-        public virtual async Task Stop()
+        public override async Task Stop()
         {
             await _tcpServer.DisposeAsync().ConfigureAwait(false);
         }
 
-        public void Reset()
+        public override void Reset()
         {
             if (Endpoint != null)
             {
@@ -314,8 +325,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         protected override Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token) => _tcpServer.AcceptAsync(token);
-        protected override string ServerAddress => _tcpServerAddress;
-        protected override string ServerTransportName => "tcp";
+        public override string ServerAddress => _tcpServerAddress;
+        public override string ServerTransportName => "TCP";
 
 
         public override void CreatedNewServer(EndPoint localEP)
@@ -340,8 +351,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get { return _webSocketEndPoint.EndPoint; }
         }
 
-        public delegate WebSocketServerRouterFactory CreateInstanceDelegate(string webSocketURL, int runtimeTimeoutMs, ILogger logger);
-
         public static WebSocketServerRouterFactory CreateDefaultInstance(string webSocketURL, int runtimeTimeoutMs, ILogger logger)
         {
             return new WebSocketServerRouterFactory(webSocketURL, runtimeTimeoutMs, logger);
@@ -356,19 +365,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _webSocketServer.TransportCallback = this;
         }
 
-        public virtual void Start()
+        public override void Start()
         {
             Logger.LogInformation("Starting web socket server");
             _webSocketServer.Start();
         }
 
-        public virtual async Task Stop()
+        public override async Task Stop()
         {
             Logger.LogInformation("Stopping web socket server");
             await _webSocketServer.DisposeAsync().ConfigureAwait(false);
         }
 
-        public void Reset()
+        public override void Reset()
         {
             if (Endpoint != null)
             {
@@ -379,8 +388,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         protected override Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token) => _webSocketServer.AcceptAsync(token);
-        protected override string ServerAddress => WebSocketURL.ToString();
-        protected override string ServerTransportName => "WebSocket";
+        public override string ServerAddress => WebSocketURL.ToString();
+        public override string ServerTransportName => "WebSocket";
 
         public override void CreatedNewServer(EndPoint localEP)
         {
@@ -710,13 +719,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class IpcServerTcpServerRouterFactory : DiagnosticsServerRouterFactory
     {
         ILogger _logger;
-        TcpServerRouterFactory _tcpServerRouterFactory;
+        NetServerRouterFactory _netServerRouterFactory;
         IpcServerRouterFactory _ipcServerRouterFactory;
 
         public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
             _logger = logger;
-            _tcpServerRouterFactory = factory(tcpServer, runtimeTimeoutMs, logger);
+            _netServerRouterFactory = factory(tcpServer, runtimeTimeoutMs, logger);
             _ipcServerRouterFactory = new IpcServerRouterFactory(ipcServer, logger);
         }
 
@@ -732,7 +741,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             get
             {
-                return _tcpServerRouterFactory.TcpServerAddress;
+                return _netServerRouterFactory.ServerAddress;
             }
         }
 
@@ -746,24 +755,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Task Start(CancellationToken token)
         {
-            _tcpServerRouterFactory.Start();
+            _netServerRouterFactory.Start();
             _ipcServerRouterFactory.Start();
 
-            _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
+            _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> {_netServerRouterFactory.ServerTransportName} server ({_netServerRouterFactory.ServerAddress}) router.");
 
             return Task.CompletedTask;
         }
 
         public override Task Stop()
         {
-            _logger?.LogInformation($"Stopping IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
+            _logger?.LogInformation($"Stopping IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> {_netServerRouterFactory.ServerTransportName} server ({_netServerRouterFactory.ServerAddress}) router.");
             _ipcServerRouterFactory.Stop();
-            return _tcpServerRouterFactory.Stop();
+            return _netServerRouterFactory.Stop();
         }
 
         public override void Reset()
         {
-            _tcpServerRouterFactory.Reset();
+            _netServerRouterFactory.Reset();
         }
 
         public override async Task<Router> CreateRouterAsync(CancellationToken token)
@@ -778,17 +787,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Get new tcp server endpoint.
-                using var tcpServerStreamTask = _tcpServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
+                using var netServerStreamTask = _netServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
 
                 // Get new ipc server endpoint.
                 using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
 
-                await Task.WhenAny(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
+                await Task.WhenAny(ipcServerStreamTask, netServerStreamTask).ConfigureAwait(false);
 
-                if (IsCompletedSuccessfully(ipcServerStreamTask) && IsCompletedSuccessfully(tcpServerStreamTask))
+                if (IsCompletedSuccessfully(ipcServerStreamTask) && IsCompletedSuccessfully(netServerStreamTask))
                 {
                     ipcServerStream = ipcServerStreamTask.Result;
-                    tcpServerStream = tcpServerStreamTask.Result;
+                    tcpServerStream = netServerStreamTask.Result;
                 }
                 else if (IsCompletedSuccessfully(ipcServerStreamTask))
                 {
@@ -799,35 +808,35 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
 
                     // Wait for at least completion of one task.
-                    await Task.WhenAny(tcpServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
+                    await Task.WhenAny(netServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
 
                     // Cancel out any pending tasks not yet completed.
                     cancelRouter.Cancel();
 
                     try
                     {
-                        await Task.WhenAll(tcpServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
+                        await Task.WhenAll(netServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
                         // Check if we have an accepted tcp stream.
-                        if (IsCompletedSuccessfully(tcpServerStreamTask))
-                            tcpServerStreamTask.Result?.Dispose();
+                        if (IsCompletedSuccessfully(netServerStreamTask))
+                            netServerStreamTask.Result?.Dispose();
 
                         if (checkIpcStreamTask.IsFaulted)
                         {
-                            _logger?.LogInformation("Broken ipc connection detected, aborting tcp connection.");
+                            _logger?.LogInformation($"Broken ipc connection detected, aborting {_netServerRouterFactory.ServerTransportName} connection.");
                             checkIpcStreamTask.GetAwaiter().GetResult();
                         }
 
                         throw;
                     }
 
-                    tcpServerStream = tcpServerStreamTask.Result;
+                    tcpServerStream = netServerStreamTask.Result;
                 }
-                else if (IsCompletedSuccessfully(tcpServerStreamTask))
+                else if (IsCompletedSuccessfully(netServerStreamTask))
                 {
-                    tcpServerStream = tcpServerStreamTask.Result;
+                    tcpServerStream = netServerStreamTask.Result;
 
                     // We have a valid tcp stream and a pending ipc accept. Wait for completion
                     // or disconnect of tcp stream.
@@ -851,7 +860,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                         if (checkTcpStreamTask.IsFaulted)
                         {
-                            _logger?.LogInformation("Broken tcp connection detected, aborting ipc connection.");
+                            _logger?.LogInformation($"Broken {_netServerRouterFactory.ServerTransportName} connection detected, aborting ipc connection.");
                             checkTcpStreamTask.GetAwaiter().GetResult();
                         }
 
@@ -866,7 +875,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     cancelRouter.Cancel();
                     try
                     {
-                        await Task.WhenAll(ipcServerStreamTask, tcpServerStreamTask).ConfigureAwait(false);
+                        await Task.WhenAll(ipcServerStreamTask, netServerStreamTask).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -1027,9 +1036,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         ILogger _logger;
         IpcClientRouterFactory _ipcClientRouterFactory;
-        TcpServerRouterFactory _tcpServerRouterFactory;
+        NetServerRouterFactory _tcpServerRouterFactory;
 
-        public IpcClientTcpServerRouterFactory(string ipcClient, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
+        public IpcClientTcpServerRouterFactory(string ipcClient, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
             _logger = logger;
             _ipcClientRouterFactory = new IpcClientRouterFactory(ipcClient, logger);
@@ -1048,7 +1057,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             get
             {
-                return _tcpServerRouterFactory.TcpServerAddress;
+                return _tcpServerRouterFactory.ServerAddress;
             }
         }
 
@@ -1067,14 +1076,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             _tcpServerRouterFactory.Start();
 
-            _logger?.LogInformation($"Starting IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
+            _logger?.LogInformation($"Starting IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> {_tcpServerRouterFactory.ServerTransportName} server ({_tcpServerRouterFactory.ServerAddress}) router.");
 
             return Task.CompletedTask;
         }
 
         public override Task Stop()
         {
-            _logger?.LogInformation($"Stopping IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> TCP server ({_tcpServerRouterFactory.TcpServerAddress}) router.");
+            _logger?.LogInformation($"Stopping IPC client ({_ipcClientRouterFactory.IpcClientPath}) <--> {_tcpServerRouterFactory.ServerTransportName} server ({_tcpServerRouterFactory.ServerAddress}) router.");
             return _tcpServerRouterFactory.Stop();
         }
 
@@ -1398,202 +1407,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _updateRuntimeInfo = false;
         }
     }
-
-    /// <summary>
-    /// This class creates IPC Server - WebSocket Server router instances.
-    /// Supports NamedPipes/UnixDomainSocket server and WebSocket server.
-    /// </summary>
-    internal class IpcServerWebSocketServerRouterFactory : DiagnosticsServerRouterFactory
-    {
-        ILogger _logger;
-        WebSocketServerRouterFactory _webSocketServerRouterFactory;
-        IpcServerRouterFactory _ipcServerRouterFactory;
-
-        public IpcServerWebSocketServerRouterFactory(string ipcServer, string webSocketURL, int runtimeTimeoutMs, WebSocketServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
-        {
-            _logger = logger;
-            _webSocketServerRouterFactory = factory(webSocketURL, runtimeTimeoutMs, logger);
-            _ipcServerRouterFactory = new IpcServerRouterFactory(ipcServer, logger);
-        }
-
-        public override string IpcAddress
-        {
-            get
-            {
-                return _ipcServerRouterFactory.IpcServerPath;
-            }
-        }
-
-        public Uri WebSocketURL
-        {
-            get
-            {
-                return _webSocketServerRouterFactory.WebSocketURL;
-            }
-        }
-
-        public override string TcpAddress => WebSocketURL.ToString();
-
-        public override ILogger Logger
-        {
-            get
-            {
-                return _logger;
-            }
-        }
-
-        public override Task Start(CancellationToken token)
-        {
-            _webSocketServerRouterFactory.Start();
-            _ipcServerRouterFactory.Start();
-
-            _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> WebSocket server ({_webSocketServerRouterFactory.WebSocketURL}) router.");
-
-            return Task.CompletedTask;
-        }
-
-        public override Task Stop()
-        {
-            _logger?.LogInformation($"Stopping IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> WebSocket server ({_webSocketServerRouterFactory.WebSocketURL}) router.");
-            _ipcServerRouterFactory.Stop();
-            return _webSocketServerRouterFactory.Stop();
-        }
-
-        public override void Reset()
-        {
-            _webSocketServerRouterFactory.Reset();
-        }
-
-        public override async Task<Router> CreateRouterAsync(CancellationToken token)
-        {
-            Stream websocketServerStream = null;
-            Stream ipcServerStream = null;
-
-            _logger?.LogDebug($"Trying to create new router instance.");
-
-            try
-            {
-                using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
-
-                // Get new tcp server endpoint.
-                using var webSocketServerStreamTask = _webSocketServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
-
-                // Get new ipc server endpoint.
-                using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
-
-                await Task.WhenAny(ipcServerStreamTask, webSocketServerStreamTask).ConfigureAwait(false);
-
-                if (IsCompletedSuccessfully(ipcServerStreamTask) && IsCompletedSuccessfully(webSocketServerStreamTask))
-                {
-                    ipcServerStream = ipcServerStreamTask.Result;
-                    websocketServerStream = webSocketServerStreamTask.Result;
-                }
-                else if (IsCompletedSuccessfully(ipcServerStreamTask))
-                {
-                    ipcServerStream = ipcServerStreamTask.Result;
-
-                    // We have a valid ipc stream and a pending tcp accept. Wait for completion
-                    // or disconnect of ipc stream.
-                    using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
-
-                    // Wait for at least completion of one task.
-                    await Task.WhenAny(webSocketServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
-
-                    // Cancel out any pending tasks not yet completed.
-                    cancelRouter.Cancel();
-
-                    try
-                    {
-                        await Task.WhenAll(webSocketServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        // Check if we have an accepted tcp stream.
-                        if (IsCompletedSuccessfully(webSocketServerStreamTask))
-                            webSocketServerStreamTask.Result?.Dispose();
-
-                        if (checkIpcStreamTask.IsFaulted)
-                        {
-                            _logger?.LogInformation("Broken ipc connection detected, aborting web socket connection.");
-                            checkIpcStreamTask.GetAwaiter().GetResult();
-                        }
-
-                        throw;
-                    }
-
-                    websocketServerStream = webSocketServerStreamTask.Result;
-                }
-                else if (IsCompletedSuccessfully(webSocketServerStreamTask))
-                {
-                    websocketServerStream = webSocketServerStreamTask.Result;
-
-                    // We have a valid tcp stream and a pending ipc accept. Wait for completion
-                    // or disconnect of tcp stream.
-                    _logger?.LogInformation("webSocketServerStreamTask completed successfully.");
-                    using var checkWebSocketStreamTask = IsStreamConnectedAsync(websocketServerStream, cancelRouter.Token);
-
-                    // Wait for at least completion of one task.
-                    await Task.WhenAny(ipcServerStreamTask, checkWebSocketStreamTask).ConfigureAwait(false);
-
-                    // Cancel out any pending tasks not yet completed.
-                    cancelRouter.Cancel();
-
-                    try
-                    {
-                        await Task.WhenAll(ipcServerStreamTask, checkWebSocketStreamTask).ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        // Check if we have an accepted ipc stream.
-                        if (IsCompletedSuccessfully(ipcServerStreamTask))
-                            ipcServerStreamTask.Result?.Dispose();
-
-                        if (checkWebSocketStreamTask.IsFaulted)
-                        {
-                            _logger?.LogInformation("Broken webSocekt connection detected, aborting ipc connection.");
-                            checkWebSocketStreamTask.GetAwaiter().GetResult();
-                        }
-
-                        throw;
-                    }
-
-                    ipcServerStream = ipcServerStreamTask.Result;
-                }
-                else
-                {
-                    // Error case, cancel out. wait and throw exception.
-                    cancelRouter.Cancel();
-                    try
-                    {
-                        await Task.WhenAll(ipcServerStreamTask, webSocketServerStreamTask).ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        // Check if we have an ipc stream.
-                        if (IsCompletedSuccessfully(ipcServerStreamTask))
-                            ipcServerStreamTask.Result?.Dispose();
-                        throw;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                _logger?.LogDebug("Failed creating new router instance. {exn}", e);
-
-                // Cleanup and rethrow.
-                ipcServerStream?.Dispose();
-                websocketServerStream?.Dispose();
-
-                throw;
-            }
-
-            // Create new router.
-            _logger?.LogDebug("New router instance successfully created.");
-
-            return new Router(ipcServerStream, websocketServerStream, _logger);
-        }
-    }
-
 
     internal class Router : IDisposable
     {
