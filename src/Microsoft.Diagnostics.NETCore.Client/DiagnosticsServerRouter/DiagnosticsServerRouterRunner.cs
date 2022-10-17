@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return await runRouter(token, new IpcClientTcpServerRouterFactory(ipcClient, tcpServer, runtimeTimeoutMs, tcpServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, Callbacks callbacks)
+        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, Callbacks callbacks)
         {
             return await runRouter(token, new IpcServerTcpServerRouterFactory(ipcServer, tcpServer, runtimeTimeoutMs, tcpServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
@@ -39,11 +39,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static async Task<int> runIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory, ILogger logger, Callbacks callbacks)
         {
             return await runRouter(token, new IpcClientTcpClientRouterFactory(ipcClient, tcpClient, runtimeTimeoutMs, tcpClientRouterFactory, logger), callbacks).ConfigureAwait(false);
-        }
-
-        public static async Task<int> runIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocketURL, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory, ILogger logger, Callbacks callbacks)
-        {
-            return await runRouter(token, new IpcServerTcpServerRouterFactory(ipcServer, webSocketURL, runtimeTimeoutMs, webSocketServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
         public static bool isLoopbackOnly(string address)

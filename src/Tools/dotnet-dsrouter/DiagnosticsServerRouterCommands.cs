@@ -350,12 +350,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             logger.LogInformation("started with options: '{ipcServer}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcServer, webSocket, runtimeTimeout, verbose);
 
-            WebSocketServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
+            NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
             if (string.IsNullOrEmpty(ipcServer))
                 ipcServer = GetDefaultIpcServerPath(logger);
 
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerWebSocketServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
+            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, Launcher);
 
             while (!linkedCancelToken.IsCancellationRequested)
             {
