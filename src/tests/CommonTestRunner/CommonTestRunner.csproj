@@ -37,7 +37,7 @@
     </ConfigFileEntries>
   </ItemGroup>
 
-  <Target Name="CommonTestRunnerWriteTestConfigFile" Outputs="$(CommonTestRunnerConfigFileName)" AfterTargets="Build">
+  <Target Name="CommonTestRunnerWriteTestConfigFile" Outputs="$(CommonTestRunnerConfigFileName)" BeforeTargets="BeforeBuild;Publish">
      <PropertyGroup>
        <TestConfigFileLines>@(ConfigFileEntries-&gt;Metadata("ConfigFileEntry"))</TestConfigFileLines>
      </PropertyGroup>
