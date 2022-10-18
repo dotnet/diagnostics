@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     /// A stream that can monitor an event stream which is compatible with <see cref="EventPipeEventSource"/>
     /// for a specific event while also passing along the event data to a destination stream.
     /// </summary>
-    public sealed class EventMonitoringPassthroughStream : Stream
+    internal sealed class EventMonitoringPassthroughStream : Stream
     {
         private readonly Action<TraceEvent> _onPayloadFilterMismatch;
         private readonly Action<TraceEvent> _onEvent;
