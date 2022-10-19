@@ -24,6 +24,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         delegate Task<int> DiagnosticsServerIpcServerWebSocketServerRouterDelegate(CancellationToken ct, string ipcServer, string webSocket, int runtimeTimeoutS, string verbose);
 
+        delegate Task<int> DiagnosticsServerIpcClientWebSocketServerRouterDelegate(CancellationToken ct, string ipcClient, string webSocket, int runtimeTimeoutS, string verbose);
+
+
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
                 name: "client-server",
@@ -73,6 +76,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerWebSocketServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerWebSocketServerRouter).GetCommandHandler(),
             // Options
             IpcServerAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption()
+        };
+
+        private static Command IpcClientWebSocketServerRouterCommand() =>
+        new Command(
+            name: "client-websocket",
+            description: "Starts a .NET application Diagnostic Server routing local IPC client <--> remote WebSocket client. " +
+                                "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
+                                "and a WebSocket server (accepting runtime WebSocket client).")
+        {
+            // Handler
+            HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientWebSocketServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientWebSocketServerRouter).GetCommandHandler(),
+            // Options
+            IpcClientAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption()
         };
 
         private static Command IpcClientTcpClientRouterCommand() =>
@@ -178,6 +194,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 .AddCommand(IpcServerTcpClientRouterCommand())
                 .AddCommand(IpcClientTcpClientRouterCommand())
                 .AddCommand(IpcServerWebSocketServerRouterCommand())
+                .AddCommand(IpcClientWebSocketServerRouterCommand())
                 .UseDefaults()
                 .Build();
 

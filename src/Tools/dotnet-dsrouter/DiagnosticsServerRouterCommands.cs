@@ -283,6 +283,41 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token);
         }
 
+        class IpcClientWebSocketServerRunner : SpecificRunnerBase
+        {
+            public IpcClientWebSocketServerRunner(string verbose) : base(verbose) { }
+
+            public override void ConfigureLauncher(CancellationToken cancellationToken)
+            {
+                Launcher.SuspendProcess = true;
+                Launcher.ConnectMode = true;
+                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.CommandToken = cancellationToken;
+            }
+        }
+
+        public async Task<int> RunIpcClientWebSocketServerRouter(CancellationToken token, string ipcClient, string webSocket, int runtimeTimeout, string verbose)
+        {
+            NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
+            {
+                Console.WriteLine("building a new web socket server");
+                return new WebSocketServer.WebSocketServerImpl();
+            });
+
+            var runner = new IpcClientWebSocketServerRunner(verbose);
+
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
+            {
+                logger.LogInformation("started with options: '{ipcClient}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcClient, webSocket, runtimeTimeout, verbose);
+
+                NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
+
+                var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
+                return routerTask;
+            }, token);
+        }
+
+
         static string GetDefaultIpcServerPath(ILogger logger)
         {
             int processId = Process.GetCurrentProcess().Id;
