@@ -12,7 +12,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Configuration;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
@@ -46,335 +45,242 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
     public class DiagnosticsServerRouterCommands
     {
-        public static DiagnosticsServerRouterLauncher Launcher { get; } = new DiagnosticsServerRouterLauncher();
 
         public DiagnosticsServerRouterCommands()
         {
+        }
+
+        // Common behavior for different commands used by CommonRunLoop
+        internal abstract class SpecificRunnerBase
+        {
+            public DiagnosticsServerRouterLauncher Launcher { get; } = new DiagnosticsServerRouterLauncher();
+
+            public LogLevel LogLevel { get; }
+            // runners can override if necessary
+            public virtual ILoggerFactory ConfigureLogging()
+            {
+                var factory = LoggerFactory.Create(builder =>
+                            {
+                                builder.SetMinimumLevel(LogLevel);
+                                builder.AddSimpleConsole(configure =>
+                                {
+                                    configure.IncludeScopes = true;
+                                });
+                            });
+                return factory;
+            }
+
+            protected SpecificRunnerBase(LogLevel logLevel)
+            {
+                LogLevel = logLevel;
+            }
+
+            protected SpecificRunnerBase(string logLevel) : this(ParseLogLevel(logLevel))
+            {
+            }
+
+            public abstract void ConfigureLauncher(CancellationToken cancellationToken);
+
+            protected static LogLevel ParseLogLevel(string verbose)
+            {
+                LogLevel logLevel = LogLevel.Information;
+                if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                    logLevel = LogLevel.Debug;
+                else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                    logLevel = LogLevel.Trace;
+                return logLevel;
+            }
+
+            // The basic run loop: configure logging and the launcher, then create the router and run it until it exits or the user interrupts
+            public async Task<int> CommonRunLoop(Func<ILogger, DiagnosticsServerRouterRunner.Callbacks, CancellationTokenSource, Task<int>> createRouterTask, CancellationToken token)
+            {
+                using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+                using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+
+                using ILoggerFactory loggerFactory = ConfigureLogging();
+
+                ConfigureLauncher(token);
+
+                var logger = loggerFactory.CreateLogger("dotnet-dsrouter");
+
+                var routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
+
+                while (!linkedCancelToken.IsCancellationRequested)
+                {
+                    await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                    if (routerTask.IsCompleted)
+                        break;
+
+                    if (!Console.IsInputRedirected && Console.KeyAvailable)
+                    {
+                        ConsoleKey cmd = Console.ReadKey(true).Key;
+                        if (cmd == ConsoleKey.Q)
+                        {
+                            cancelRouterTask.Cancel();
+                            break;
+                        }
+                    }
+                }
+                return routerTask.Result;
+            }
+        }
+
+        class IpcClientTcpServerRunner : SpecificRunnerBase
+        {
+            public IpcClientTcpServerRunner(string verbose) : base(verbose) { }
+
+            public override void ConfigureLauncher(CancellationToken cancellationToken)
+            {
+                Launcher.SuspendProcess = true;
+                Launcher.ConnectMode = true;
+                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.CommandToken = cancellationToken;
+            }
+            public override ILoggerFactory ConfigureLogging()
+            {
+                var factory = LoggerFactory.Create(builder =>
+                    {
+                        builder.SetMinimumLevel(LogLevel);
+                        builder.AddConsole();
+                    });
+                return factory;
+            }
         }
 
         public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
             checkLoopbackOnly(tcpServer);
 
-            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+            var runner = new IpcClientTcpServerRunner(verbose);
 
-            LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Trace;
-
-            using var factory = LoggerFactory.Create(builder =>
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                builder.SetMinimumLevel(logLevel);
-                builder.AddConsole();
-            });
+                NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
 
-            Launcher.SuspendProcess = true;
-            Launcher.ConnectMode = true;
-            Launcher.Verbose = logLevel != LogLevel.Information;
-            Launcher.CommandToken = token;
+                var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
+                return routerTask;
+            }, token);
+        }
 
-            var logger = factory.CreateLogger("dotnet-dsrouter");
+        class IpcServerTcpServerRunner : SpecificRunnerBase
+        {
+            public IpcServerTcpServerRunner(string verbose) : base(verbose) { }
 
-            TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
-            if (!string.IsNullOrEmpty(forwardPort))
+            public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
-                }
-                else
-                {
-                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode. Ignoring --forward-port argument.");
-                }
+                Launcher.SuspendProcess = false;
+                Launcher.ConnectMode = true;
+                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.CommandToken = cancellationToken;
             }
-
-            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
-            return routerTask.Result;
         }
 
         public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
             checkLoopbackOnly(tcpServer);
 
-            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
+            var runner = new IpcServerTcpServerRunner(verbose);
 
-            LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Trace;
-
-            using var factory = LoggerFactory.Create(builder =>
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                builder.SetMinimumLevel(logLevel);
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.IncludeScopes = true;
-                });
-            });
+                NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
 
-            Launcher.SuspendProcess = false;
-            Launcher.ConnectMode = true;
-            Launcher.Verbose = logLevel != LogLevel.Information;
-            Launcher.CommandToken = token;
+                if (string.IsNullOrEmpty(ipcServer))
+                    ipcServer = GetDefaultIpcServerPath(logger);
 
-            var logger = factory.CreateLogger("dotnet-dsrouter");
+                var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
+                return routerTask;
+            }, token);
+        }
 
-            TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
-            if (!string.IsNullOrEmpty(forwardPort))
+        class IpcServerTcpClientRunner : SpecificRunnerBase
+        {
+            public IpcServerTcpClientRunner(string verbose) : base(verbose) { }
+
+            public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
-                }
-                else
-                {
-                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode. Ignoring --forward-port argument.");
-                }
+                Launcher.SuspendProcess = false;
+                Launcher.ConnectMode = false;
+                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.CommandToken = cancellationToken;
             }
-
-            if (string.IsNullOrEmpty(ipcServer))
-                ipcServer = GetDefaultIpcServerPath(logger);
-
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
-            return routerTask.Result;
         }
 
         public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
-            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
-
-            LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Trace;
-
-            using var factory = LoggerFactory.Create(builder =>
+            var runner = new IpcServerTcpClientRunner(verbose);
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                builder.SetMinimumLevel(logLevel);
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.IncludeScopes = true;
-                });
-            });
+                TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
+                if (string.IsNullOrEmpty(ipcServer))
+                    ipcServer = GetDefaultIpcServerPath(logger);
 
-            Launcher.SuspendProcess = false;
-            Launcher.ConnectMode = false;
-            Launcher.Verbose = logLevel != LogLevel.Information;
-            Launcher.CommandToken = token;
+                var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
+                return routerTask;
+            }, token);
+        }
 
-            var logger = factory.CreateLogger("dotnet-dsrouter");
+        class IpcClientTcpClientRunner : SpecificRunnerBase
+        {
+            public IpcClientTcpClientRunner(string verbose) : base(verbose) { }
 
-            TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
-            if (!string.IsNullOrEmpty(forwardPort))
+            public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
-                }
-                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
-                }
-                else
-                {
-                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Ignoring --forward-port argument.");
-                }
+                Launcher.SuspendProcess = true;
+                Launcher.ConnectMode = false;
+                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.CommandToken = cancellationToken;
             }
-
-            if (string.IsNullOrEmpty(ipcServer))
-                ipcServer = GetDefaultIpcServerPath(logger);
-
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
-            return routerTask.Result;
         }
 
         public async Task<int> RunIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
-            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
-
-            LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Trace;
-
-            using var factory = LoggerFactory.Create(builder =>
+            var runner = new IpcClientTcpClientRunner(verbose);
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                builder.SetMinimumLevel(logLevel);
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.IncludeScopes = true;
-                });
-            });
+                TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
-            Launcher.SuspendProcess = true;
-            Launcher.ConnectMode = false;
-            Launcher.Verbose = logLevel != LogLevel.Information;
-            Launcher.CommandToken = token;
+                var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
+                return routerTask;
+            }, token);
+        }
 
-            var logger = factory.CreateLogger("dotnet-dsrouter");
+        class IpcServerWebSocketServerRunner : SpecificRunnerBase
+        {
+            public IpcServerWebSocketServerRunner(string verbose) : base(verbose) { }
 
-            TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
-            if (!string.IsNullOrEmpty(forwardPort))
+            public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
-                }
-                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
-                {
-                    tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
-                }
-                else
-                {
-                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Ignoring --forward-port argument.");
-                }
+                Launcher.SuspendProcess = false;
+                Launcher.ConnectMode = true;
+                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.CommandToken = cancellationToken;
             }
-
-            var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
-            return routerTask.Result;
         }
 
         public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocket, int runtimeTimeout, string verbose)
         {
-            using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
-            using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
             NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
             {
                 Console.WriteLine("building a new web socket server");
                 return new WebSocketServer.WebSocketServerImpl();
             });
 
-            LogLevel logLevel = LogLevel.Information;
-            if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Debug;
-            else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
-                logLevel = LogLevel.Trace;
+            var runner = new IpcServerWebSocketServerRunner(verbose);
 
-            using var factory = LoggerFactory.Create(builder =>
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                builder.SetMinimumLevel(logLevel);
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.IncludeScopes = true;
-                });
-            });
+                logger.LogInformation("started with options: '{ipcServer}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcServer, webSocket, runtimeTimeout, verbose);
 
-            Launcher.SuspendProcess = false;
-            Launcher.ConnectMode = true;
-            Launcher.Verbose = logLevel != LogLevel.Information;
-            Launcher.CommandToken = token;
+                NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
-            var logger = factory.CreateLogger("dotnet-dsrouter");
+                if (string.IsNullOrEmpty(ipcServer))
+                    ipcServer = GetDefaultIpcServerPath(logger);
 
-            logger.LogInformation("started with options: '{ipcServer}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcServer, webSocket, runtimeTimeout, verbose);
-
-            NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
-
-            if (string.IsNullOrEmpty(ipcServer))
-                ipcServer = GetDefaultIpcServerPath(logger);
-
-            var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, Launcher);
-
-            while (!linkedCancelToken.IsCancellationRequested)
-            {
-                await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
-                if (routerTask.IsCompleted)
-                    break;
-
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
-                {
-                    ConsoleKey cmd = Console.ReadKey(true).Key;
-                    if (cmd == ConsoleKey.Q)
-                    {
-                        cancelRouterTask.Cancel();
-                        break;
-                    }
-                }
-            }
-
-            return routerTask.Result;
+                var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
+                return routerTask;
+            }, token);
         }
 
         static string GetDefaultIpcServerPath(ILogger logger)
@@ -414,6 +320,45 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 return path;
             }
+
+        }
+
+        static TcpClientRouterFactory.CreateInstanceDelegate ChooseTcpClientRouterFactory(string forwardPort, ILogger logger)
+        {
+            TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
+                }
+                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Ignoring --forward-port argument.");
+                }
+            }
+            return tcpClientRouterFactory;
+        }
+
+        static NetServerRouterFactory.CreateInstanceDelegate ChooseTcpServerRouterFactory(string forwardPort, ILogger logger)
+        {
+            NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
+            if (!string.IsNullOrEmpty(forwardPort))
+            {
+                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
+                }
+                else
+                {
+                    logger.LogError($"Unknown port forwarding argument, {forwardPort}. Only Android port fowarding is supported for TcpServer mode. Ignoring --forward-port argument.");
+                }
+            }
+            return tcpServerRouterFactory;
         }
 
         static void checkLoopbackOnly(string tcpServer)
