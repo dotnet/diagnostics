@@ -23,27 +23,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _heartbeatIntervalSeconds = heartbeatIntervalSeconds;
         }
 
-        /// <summary>
-        /// Filter string for trigger data. Note that even though some triggers use start OR stop,
-        /// collecting just one causes unusual behavior in data collection.
-        /// </summary>
-        /// <remarks>
-        /// IMPORTANT! We rely on these transformations to make sure we can access relevant data
-        /// by index. The order must match the data extracted in the triggers.
-        /// </remarks>
-        private const string DiagnosticFilterString =
-                "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Start@Activity1Start:-" +
-                    "ActivityId=*Activity.Id" +
-                    ";Request.Path" +
-                    ";ActivityStartTime=*Activity.StartTimeUtc.Ticks" +
-                    "\r\n" +
-                "Microsoft.AspNetCore/Microsoft.AspNetCore.Hosting.HttpRequestIn.Stop@Activity1Stop:-" +
-                    "ActivityId=*Activity.Id" +
-                    ";Request.Path" +
-                    ";Response.StatusCode" +
-                    ";ActivityDuration=*Activity.Duration.Ticks" +
-                    "\r\n";
-
         public override IList<EventPipeProvider> GetProviders()
         {
             if (_heartbeatIntervalSeconds.HasValue)
@@ -62,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         eventLevel: EventLevel.Verbose,
                         arguments: new Dictionary<string,string>
                         {
-                            { "FilterAndPayloadSpecs", DiagnosticFilterString }
+                            { "FilterAndPayloadSpecs", HttpRequestSourceConfiguration.DiagnosticFilterString }
                         })
                 };
             }
