@@ -221,6 +221,10 @@ public class WebSocketServer
                 webHostBuilder.UseKestrel();
                 webHostBuilder.Configure((/*context, */app) => ConfigureApplication(/*context,*/ app, connectionHandler));
                 webHostBuilder.UseUrls(MakeUrls(options.Scheme, options.Host, options.Port));
+            })
+            .UseConsoleLifetime(options =>
+            {
+                options.SuppressStatusMessages = true;
             });
 
         var host = builder.Build();
