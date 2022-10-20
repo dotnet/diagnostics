@@ -263,7 +263,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
             {
-                Console.WriteLine("building a new web socket server");
                 return new WebSocketServer.WebSocketServerImpl();
             });
 
@@ -271,8 +270,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                logger.LogInformation("started with options: '{ipcServer}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcServer, webSocket, runtimeTimeout, verbose);
-
                 NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
                 if (string.IsNullOrEmpty(ipcServer))
@@ -300,7 +297,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
             {
-                Console.WriteLine("building a new web socket server");
                 return new WebSocketServer.WebSocketServerImpl();
             });
 
@@ -308,8 +304,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
-                logger.LogInformation("started with options: '{ipcClient}' '{webSocket}' '{runtimeTimeout}' '{verbose}'", ipcClient, webSocket, runtimeTimeout, verbose);
-
                 NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
                 var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);

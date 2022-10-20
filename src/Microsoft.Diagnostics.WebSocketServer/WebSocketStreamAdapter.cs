@@ -86,7 +86,6 @@ internal class WebSocketStreamAdapter : Stream, IWebSocketStreamAdapter
     {
         if (disposing)
         {
-            Console.WriteLine("WebSocket stream adapter Dispose(true)");
             _onDispose();
             _webSocket.Dispose();
         }
