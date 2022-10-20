@@ -261,12 +261,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocket, int runtimeTimeout, string verbose)
         {
+            var runner = new IpcServerWebSocketServerRunner(verbose);
+
             NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
             {
-                return new WebSocketServer.WebSocketServerImpl();
+                return new WebSocketServer.WebSocketServerImpl(runner.LogLevel);
             });
 
-            var runner = new IpcServerWebSocketServerRunner(verbose);
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {
@@ -295,12 +296,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcClientWebSocketServerRouter(CancellationToken token, string ipcClient, string webSocket, int runtimeTimeout, string verbose)
         {
+            var runner = new IpcClientWebSocketServerRunner(verbose);
+
             NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
             {
-                return new WebSocketServer.WebSocketServerImpl();
+                return new WebSocketServer.WebSocketServerImpl(runner.LogLevel);
             });
-
-            var runner = new IpcClientWebSocketServerRunner(verbose);
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
             {

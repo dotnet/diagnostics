@@ -28,8 +28,12 @@ public class WebSocketServerImpl : IWebSocketServer
 {
     private WebSocketServer _server = null;
     private readonly Queue<Conn> _acceptQueue = new Queue<Conn>();
+    private readonly LogLevel _logLevel;
 
-    public WebSocketServerImpl() { }
+    public WebSocketServerImpl(LogLevel logLevel)
+    {
+        _logLevel = logLevel;
+    }
 
     public async Task StartServer(Uri uri, CancellationToken cancellationToken)
     {
@@ -39,6 +43,7 @@ public class WebSocketServerImpl : IWebSocketServer
             Host = uri.Host,
             Port = uri.Port.ToString(),
             Path = uri.PathAndQuery,
+            LogLevel = _logLevel,
         };
         _server = WebSocketServer.CreateWebServer(options, HandleWebSocket);
 
@@ -174,6 +179,7 @@ public class WebSocketServer
         public string Host { get; set; } = default;
         public string Path { get; set; } = default!;
         public string Port { get; set; } = default;
+        public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
 
         public void Assign(Options other)
@@ -197,8 +203,8 @@ public class WebSocketServer
         var builder = new HostBuilder()
             .ConfigureLogging(logging =>
             {
-                /* FIXME: delegate to outer host's logging */
-                logging.AddConsole().AddFilter(null, LogLevel.Debug);
+                /* FIXME: use a delegating provider that sends the output to the dotnet-dsrouter LoggerFactory */
+                logging.AddConsole().AddFilter(null, options.LogLevel);
             })
             .ConfigureServices((ctx, services) =>
             {
