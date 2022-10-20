@@ -27,6 +27,10 @@ namespace Microsoft.Diagnostics.WebSocketServer;
 public class WebSocketServerImpl : IWebSocketServer
 {
     private WebSocketServer _server = null;
+
+    // Used to coordinate between the webserver accepting incoming websocket connections and the diagnostic server waiting for a stream to be available.
+    // This could be a deeper queue if we wanted to somehow allow multiple browser tabs to connect to the same dsrouter, but it's unclear what to do with them
+    // since on the other end we have a single IpcStream with a single diagnostic client.
     private readonly Queue<Conn> _acceptQueue = new Queue<Conn>();
     private readonly LogLevel _logLevel;
 
@@ -59,6 +63,8 @@ public class WebSocketServerImpl : IWebSocketServer
 
     public async Task HandleWebSocket(HttpContext context, WebSocket webSocket, CancellationToken cancellationToken)
     {
+        // Called by the web server when a new websocket connection is established.  We put the connection into our queue of accepted connections
+        // and wait until someone uses it and disposes of the connection.
         await QueueWebSocketUntilClose(context, webSocket, cancellationToken);
     }
 
@@ -73,6 +79,8 @@ public class WebSocketServerImpl : IWebSocketServer
 
     internal Task<Conn> GetOrRequestConnection(CancellationToken cancellationToken)
     {
+        // This is called from the diagnostic server when it is ready to start talking to a connection. We give them back a connection from
+        // the ones the web server has accepted, or block until the web server queues a new one.
         return _acceptQueue.Dequeue(cancellationToken);
     }
 
@@ -82,7 +90,8 @@ public class WebSocketServerImpl : IWebSocketServer
         return conn.GetStream();
     }
 
-    // single-element queue
+    // Single-element queue where both queueing and dequeueing are async operations that wait until
+    // the queue has capacity (or an item, respectively).
     internal class Queue<T>
     {
         private T _obj;
@@ -143,6 +152,7 @@ public class WebSocketServerImpl : IWebSocketServer
 
     }
 
+    // An abstraction encapsulating an open websocket connection.
     internal class Conn
     {
         private readonly WebSocket _webSocket;
@@ -164,11 +174,6 @@ public class WebSocketServerImpl : IWebSocketServer
             _streamDisposed.SetResult();
         }
     }
-}
-
-public interface IWebSocketConnectionHandler
-{
-    Task Handle(HttpContext context, WebSocket webSocket, CancellationToken cancellationToken);
 }
 
 public class WebSocketServer
