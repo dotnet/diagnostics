@@ -40,5 +40,4 @@
   <ItemGroup>
     <Compile Condition="$(BuildingOutsideDiagnostics)" Include="**/*.cs" />
   </ItemGroup>
-
 </Project>
