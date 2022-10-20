@@ -28,7 +28,6 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
         {
             _cancellation.Cancel();
 
-            // _stream.Dispose();
             singleton.DropRef();
 
             _cancellation.Dispose();
@@ -86,6 +85,11 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
     }
 
 
+    // a coordination class that ensures we only start a single webserver even as the
+    // diagnostic server protocol requires us to accept multiple connections.
+    // while it is alive, each connection owns one reference to this singleton.
+    // when the reference count goes from 0->1, we start the server.
+    // when the references drops back to zero, we let the webserver stop.
     internal class Singleton
     {
         private volatile int _refCount;
