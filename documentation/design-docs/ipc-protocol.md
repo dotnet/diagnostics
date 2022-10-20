@@ -380,6 +380,7 @@ enum class ProcessCommandId : uint8_t
     ResumeRuntime      = 0x01,
     ProcessEnvironment = 0x02,
     ProcessInfo2       = 0x04,
+    ProcessInfo3       = 0x05,
     // future
 }
 ```
@@ -801,7 +802,7 @@ In the event of an [error](#Errors), the runtime will attempt to send an error m
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0402; 0x0000 }`
+Header: `{ Magic; Size; 0x0404; 0x0000 }`
 
 There is no payload.
 
@@ -842,6 +843,46 @@ struct Payload
     GUID RuntimeCookie;
     LPCWSTR ManagedEntrypointAssemblyName;
     LPCWSTR ClrProductVersion;
+}
+```
+> Available since .NET 8.0
+
+### `ProcessInfo3`
+
+Command Code: `0x0405`
+
+The `ProcessInfo3` command queries the runtime for some basic information about the process. The returned payload is a variable sized list of key value pairs that provide information about the process.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0405; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `int count`: the number of key value pairs contained in entries
+* `ProcessInfoKeyValuePair[] entries`: the list of key value pairs that provide information about the process
+
+##### Details:
+
+Returns:
+```c++
+struct ProcessInfoKeyValuePair
+{
+    LPCWSTR name;
+    LPCWSTR value;
+}
+
+struct Payload
+{
+    int count;
+    ProcessInfoKeyValuePair entries[];
 }
 ```
 
