@@ -13,12 +13,12 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
     private static Singleton singleton = new Singleton();
     private readonly CancellationTokenSource _cancellation;
     private readonly int _maxConnections;
-    private readonly IpcWebSocketEndPoint _endPoint;
+    private readonly Uri _endPoint;
     public IpcWebSocketServerTransport(string address, int maxAllowedConnections, IIpcServerTransportCallbackInternal transportCallback = null)
         : base(transportCallback)
     {
         _maxConnections = maxAllowedConnections;
-        _endPoint = new IpcWebSocketEndPoint(address);
+        ParseWebSocketURL(address, out _endPoint);
         _cancellation = new CancellationTokenSource();
     }
 
@@ -44,6 +44,47 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
         Stream s = await singleton.AcceptConnection(token);
         return s;
     }
+
+    private static void ParseWebSocketURL(string endPoint, out Uri uri)
+    {
+        string uriToParse;
+        // Host can contain wildcard (*) that is a reserved charachter in URI's.
+        // Replace with dummy localhost representation just for parsing purpose.
+        if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+        {
+            // FIXME: This is a workaround for the fact that Uri.Host is not set for wildcard host.
+            throw new ArgumentException("Wildcard host is not supported for WebSocket endpoints");
+        }
+        else
+        {
+            uriToParse = endPoint;
+        }
+
+        string[] supportedSchemes = new string[] { "ws", "wss", "http", "https" };
+
+        if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.Absolute, out uri))
+        {
+            bool supported = false;
+            foreach (string scheme in supportedSchemes)
+            {
+                if (string.Compare(uri.Scheme, scheme, StringComparison.InvariantCultureIgnoreCase) == 0)
+                {
+                    supported = true;
+                    break;
+                }
+            }
+            if (!supported)
+            {
+                throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
+            }
+            return;
+        }
+        else
+        {
+            throw new ArgumentException(string.Format("Could not parse {0} into host, port", endPoint));
+        }
+    }
+
 
     internal class Singleton
     {
@@ -73,7 +114,7 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
             }
         }
 
-        internal async Task StartServer(IpcWebSocketEndPoint endPoint, CancellationToken token)
+        internal async Task StartServer(Uri endPoint, CancellationToken token)
         {
             if (ServerStopping)
             {
@@ -82,7 +123,7 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
             ServerRunning = true;
             WebSocketServer.IWebSocketServer newServer = WebSocketServer.WebSocketServerFactory.CreateWebSocketServer();
             server = newServer; ;
-            await server.StartServer(endPoint.EndPoint, token);
+            await server.StartServer(endPoint, token);
             await Task.Delay(1000);
         }
 

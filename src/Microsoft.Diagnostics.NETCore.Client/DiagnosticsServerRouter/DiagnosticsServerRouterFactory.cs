@@ -342,14 +342,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class WebSocketServerRouterFactory : NetServerRouterFactory
     {
 
-        IpcWebSocketEndPoint _webSocketEndPoint;
+        private readonly string _webSocketURL;
 
         ReversedDiagnosticsServer _webSocketServer;
 
-        public Uri WebSocketURL
-        {
-            get { return _webSocketEndPoint.EndPoint; }
-        }
+        public string WebSocketURL => _webSocketURL;
 
         public static WebSocketServerRouterFactory CreateDefaultInstance(string webSocketURL, int runtimeTimeoutMs, ILogger logger)
         {
@@ -359,9 +356,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public WebSocketServerRouterFactory(string webSocketURL, int runtimeTimeoutMs, ILogger logger) : base(runtimeTimeoutMs, logger)
         {
 
-            _webSocketEndPoint = new IpcWebSocketEndPoint(string.IsNullOrEmpty(webSocketURL) ? "ws://127.0.0.1:8088/diagnostics" : webSocketURL);
+            _webSocketURL = string.IsNullOrEmpty(webSocketURL) ? "ws://127.0.0.1:8088/diagnostics" : webSocketURL;
 
-            _webSocketServer = new ReversedDiagnosticsServer(_webSocketEndPoint.EndPoint.ToString(), ReversedDiagnosticsServer.Kind.WebSocket);
+            _webSocketServer = new ReversedDiagnosticsServer(_webSocketURL, ReversedDiagnosticsServer.Kind.WebSocket);
             _webSocketServer.TransportCallback = this;
         }
 
@@ -388,7 +385,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         protected override Task<IpcEndpointInfo> AcceptAsyncImpl(CancellationToken token) => _webSocketServer.AcceptAsync(token);
-        public override string ServerAddress => WebSocketURL.ToString();
+        public override string ServerAddress => WebSocketURL;
         public override string ServerTransportName => "WebSocket";
 
         public override void CreatedNewServer(EndPoint localEP)
