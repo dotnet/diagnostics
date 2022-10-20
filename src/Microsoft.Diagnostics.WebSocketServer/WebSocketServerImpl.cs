@@ -5,28 +5,21 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using CancellationToken = System.Threading.CancellationToken;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+
 using System.Net.WebSockets;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
-using System.Linq;
+
 
 namespace Microsoft.Diagnostics.WebSocketServer;
 
-
+// This class implements the IWebSocketServer interface exposed by the Microsoft.Diagnostics.NETCore.Client library.
+// It is responsible for coordinating between an underlying web server that creates web socket connections and the diagnostic server router that
+// is used by dotnet-dsrouter to pass the diagnostic server connections to the diagnostic clients.
 public class WebSocketServerImpl : IWebSocketServer
 {
-    private WebSocketServer _server = null;
+    private EmbeddedWebSocketServer _server = null;
 
     // Used to coordinate between the webserver accepting incoming websocket connections and the diagnostic server waiting for a stream to be available.
     // This could be a deeper queue if we wanted to somehow allow multiple browser tabs to connect to the same dsrouter, but it's unclear what to do with them
@@ -41,7 +34,7 @@ public class WebSocketServerImpl : IWebSocketServer
 
     public async Task StartServer(Uri uri, CancellationToken cancellationToken)
     {
-        WebSocketServer.Options options = new()
+        EmbeddedWebSocketServer.Options options = new()
         {
             Scheme = uri.Scheme,
             Host = uri.Host,
@@ -49,7 +42,7 @@ public class WebSocketServerImpl : IWebSocketServer
             Path = uri.PathAndQuery,
             LogLevel = _logLevel,
         };
-        _server = WebSocketServer.CreateWebServer(options, HandleWebSocket);
+        _server = EmbeddedWebSocketServer.CreateWebServer(options, HandleWebSocket);
 
         await _server.StartWebServer(cancellationToken);
     }
@@ -173,135 +166,5 @@ public class WebSocketServerImpl : IWebSocketServer
         {
             _streamDisposed.SetResult();
         }
-    }
-}
-
-public class WebSocketServer
-{
-    public record Options
-    {
-        public string Scheme { get; set; } = "http";
-        public string Host { get; set; } = default;
-        public string Path { get; set; } = default!;
-        public string Port { get; set; } = default;
-        public LogLevel LogLevel { get; set; } = LogLevel.Information;
-
-
-        public void Assign(Options other)
-        {
-            Scheme = other.Scheme;
-            Host = other.Host;
-            Port = other.Port;
-            Path = other.Path;
-        }
-    }
-
-    private readonly IHost _host;
-    private WebSocketServer(IHost host)
-    {
-        _host = host;
-    }
-
-    private static string[] MakeUrls(string scheme, string host, string port) => new string[] { $"{scheme}://{host}:{port}" };
-    public static WebSocketServer CreateWebServer(Options options, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
-    {
-        var builder = new HostBuilder()
-            .ConfigureLogging(logging =>
-            {
-                /* FIXME: use a delegating provider that sends the output to the dotnet-dsrouter LoggerFactory */
-                logging.AddConsole().AddFilter(null, options.LogLevel);
-            })
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddCors(o => o.AddPolicy("AnyCors", builder =>
-                    {
-                        builder.AllowAnyOrigin()
-                            .AllowAnyMethod()
-                            .AllowAnyHeader()
-                            .WithExposedHeaders("*");
-                    }));
-                services.AddRouting();
-                services.Configure<Options>(localOptions => localOptions.Assign(options));
-            })
-            .ConfigureWebHostDefaults(webHostBuilder =>
-            {
-                webHostBuilder.UseKestrel();
-                webHostBuilder.Configure((/*context, */app) => ConfigureApplication(/*context,*/ app, connectionHandler));
-                webHostBuilder.UseUrls(MakeUrls(options.Scheme, options.Host, options.Port));
-            })
-            .UseConsoleLifetime(options =>
-            {
-                options.SuppressStatusMessages = true;
-            });
-
-        var host = builder.Build();
-
-        return new WebSocketServer(host);
-    }
-
-    private static void ConfigureApplication(/*WebHostBuilderContext context,*/ IApplicationBuilder app, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
-    {
-        app.Use((context, next) =>
-        {
-            context.Response.Headers.Add("Cross-Origin-Embedder-Policy", "require-corp");
-            context.Response.Headers.Add("Cross-Origin-Opener-Policy", "same-origin");
-            return next();
-        });
-
-        app.UseCors("AnyCors");
-
-        app.UseWebSockets();
-        app.UseRouter(router =>
-        {
-            var options = router.ServiceProvider.GetRequiredService<IOptions<Options>>().Value;
-            router.MapGet(options.Path, (context) => OnWebSocketGet(context, connectionHandler));
-        });
-
-    }
-
-    public async Task StartWebServer(CancellationToken ct = default)
-    {
-        await _host.StartAsync(ct);
-        var logger = _host.Services.GetRequiredService<ILogger<WebSocketServer>>();
-        var ipAddressSecure = _host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses
-        .Where(a => a.StartsWith("http:"))
-        .Select(a => new Uri(a))
-        .Select(uri => $"{uri.Host}:{uri.Port}")
-        .FirstOrDefault();
-
-        logger.LogInformation("ip address is {IpAddressSecure}", ipAddressSecure);
-
-    }
-
-    public async Task StopWebServer(CancellationToken ct = default)
-    {
-        await _host.StopAsync(ct);
-    }
-
-    private static bool NeedsClose(WebSocketState state)
-    {
-        return state switch
-        {
-            WebSocketState.Open | WebSocketState.Connecting => true,
-            WebSocketState.Closed | WebSocketState.CloseReceived | WebSocketState.CloseSent => false,
-            WebSocketState.Aborted => false,
-            _ => true
-        };
-    }
-
-    private static async Task OnWebSocketGet(HttpContext context, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
-    {
-        if (!context.WebSockets.IsWebSocketRequest)
-        {
-            context.Response.StatusCode = 400;
-            return;
-        }
-        var socket = await context.WebSockets.AcceptWebSocketAsync();
-        if (connectionHandler != null)
-            await connectionHandler(context, socket, context.RequestAborted);
-        else
-            await Task.Delay(250);
-        if (NeedsClose(socket.State))
-            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
     }
 }

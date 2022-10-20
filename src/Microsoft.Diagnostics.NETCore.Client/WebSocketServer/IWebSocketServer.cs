@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 
+// This interface abstracts the web socket server implementation used by dotnet-dsrouter
+// in order to avoid a dependency on ASP.NET in the client library.
 public interface IWebSocketServer
 {
     public Task StartServer(Uri uri, CancellationToken cancellationToken);
