@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     /// <summary>
     /// A read-only stream that passes data as it is read to another stream.
     /// </summary>
-    public sealed class PassthroughStream : Stream
+    internal sealed class PassthroughStream : Stream
     {
         private readonly Stream _sourceStream;
         private readonly Stream _destinationStream;

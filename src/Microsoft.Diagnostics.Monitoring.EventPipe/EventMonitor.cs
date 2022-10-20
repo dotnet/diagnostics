@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     /// <summary>
     /// A stream that can monitor an event stream which is compatible with <see cref="EventPipeEventSource"/> for a specific event.
     /// </summary>
-    public sealed class EventMonitor : IAsyncDisposable
+    internal sealed class EventMonitor : IAsyncDisposable
     {
         private readonly Action<TraceEvent> _onPayloadFilterMismatch;
         private readonly Action<TraceEvent> _onEvent;
