@@ -335,7 +335,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
-        async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
+        private async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
             Stream tcpClientStream = null;
 
@@ -396,7 +396,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return tcpClientStream;
         }
 
-        async Task ConnectAsyncInternal(Socket clientSocket, EndPoint remoteEP, CancellationToken token)
+        private async Task ConnectAsyncInternal(Socket clientSocket, EndPoint remoteEP, CancellationToken token)
         {
             using (token.Register(() => clientSocket.Close(0)))
             {
@@ -1203,7 +1203,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new Router(ipcClientStream, tcpClientStream, _logger, (ulong)initBackendToFrontendByteTransfer, (ulong)initFrontendToBackendByteTransfer);
         }
 
-        async Task<int> InitFrontendReadBackendWrite(Stream ipcClientStream, Stream tcpClientStream, CancellationToken token)
+        private async Task<int> InitFrontendReadBackendWrite(Stream ipcClientStream, Stream tcpClientStream, CancellationToken token)
         {
             using CancellationTokenSource cancelReadConnect = CancellationTokenSource.CreateLinkedTokenSource(token);
 
@@ -1249,7 +1249,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return bytesRead;
         }
 
-        async Task UpdateRuntimeInfo(CancellationToken token)
+        private async Task UpdateRuntimeInfo(CancellationToken token)
         {
             if (!_updateRuntimeInfo)
                 return;
@@ -1394,7 +1394,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        async Task BackendReadFrontendWrite(CancellationToken token)
+        private async Task BackendReadFrontendWrite(CancellationToken token)
         {
             try
             {
@@ -1435,7 +1435,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             RouterTaskCompleted?.TrySetResult(true);
         }
 
-        async Task FrontendReadBackendWrite(CancellationToken token)
+        private async Task FrontendReadBackendWrite(CancellationToken token)
         {
             try
             {
