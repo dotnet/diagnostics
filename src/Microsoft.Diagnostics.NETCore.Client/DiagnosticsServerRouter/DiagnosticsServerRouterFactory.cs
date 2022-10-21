@@ -1180,7 +1180,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // A new router instance can not be complete until frontend starts to
                 // write data to backend or a new router instance will connect against frontend
                 // that in turn will disconnects previous accepted but pending connections, triggering
-                // frequent connect/discconnects of connections.
+                // frequent connects/disconnects.
                 initFrontendToBackendByteTransfer = await InitFrontendReadBackendWrite(ipcClientStream, tcpClientStream, token).ConfigureAwait(false);
             }
             catch (Exception)
