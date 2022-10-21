@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.351102</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.352002</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
     <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-rtm.22513.12</VSRedistCommonNetCoreSharedFrameworkx6470Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
