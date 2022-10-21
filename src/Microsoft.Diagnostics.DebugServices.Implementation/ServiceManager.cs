@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Linq;
 using System.IO;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -67,12 +68,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="assembly">service implementation assembly</param>
         public void RegisterServices(Assembly assembly)
         {
-            foreach (Type serviceType in assembly.GetExportedTypes())
+            try
             {
-                if (serviceType.IsClass)
+                foreach (Type serviceType in assembly.GetExportedTypes())
                 {
-                    RegisterServices(serviceType);
+                    if (serviceType.IsClass)
+                    {
+                        RegisterServices(serviceType);
+                    }
                 }
+            }
+            catch (Exception ex) when (ex is FileLoadException)
+            {
+                Trace.TraceError(ex.ToString());
             }
         }
 
