@@ -61,13 +61,10 @@ VERIFY:\s+Jit code heap:\s+
 VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes\.\s+
 VERIFY:\s+Total LoaderHeap size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
-VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
-VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
-VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
 VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\(<DECVAL>\)\s+0x<HEXVAL>\(<DECVAL>\)\s+
-VERIFY:\s+Large object heap starts at 0x<HEXVAL>\s+
-VERIFY:\s+Pinned object heap starts at 0x<HEXVAL>\s+
+VERIFY:\s+Large object heap.*
+VERIFY:\s+Pinned object heap.*
 
 # Continue to the next DebugBreak
 CONTINUE
