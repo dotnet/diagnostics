@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>EventPipe package for collecting logs, metrics, and gcdumps.</Description>
     <!-- Tentatively create package so other teams can tentatively consume. -->
