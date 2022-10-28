@@ -272,8 +272,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             return netServerStream;
         }
-
-
     }
 
     /// <summary>
@@ -298,7 +296,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public TcpServerRouterFactory(string tcpServer, int runtimeTimeoutMs, ILogger logger) : base(runtimeTimeoutMs, logger)
         {
-
             _tcpServerAddress = IpcTcpSocketEndPoint.NormalizeTcpIpEndPoint(string.IsNullOrEmpty(tcpServer) ? "127.0.0.1:0" : tcpServer);
 
             _tcpServer = new ReversedDiagnosticsServer(_tcpServerAddress, ReversedDiagnosticsServer.Kind.Tcp);
@@ -328,7 +325,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override string ServerAddress => _tcpServerAddress;
         public override string ServerTransportName => "TCP";
 
-
         public override void CreatedNewServer(EndPoint localEP)
         {
             if (localEP is IPEndPoint ipEP)
@@ -355,7 +351,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public WebSocketServerRouterFactory(string webSocketURL, int runtimeTimeoutMs, ILogger logger) : base(runtimeTimeoutMs, logger)
         {
-
             _webSocketURL = string.IsNullOrEmpty(webSocketURL) ? "ws://127.0.0.1:8088/diagnostics" : webSocketURL;
 
             _webSocketServer = new ReversedDiagnosticsServer(_webSocketURL, ReversedDiagnosticsServer.Kind.WebSocket);

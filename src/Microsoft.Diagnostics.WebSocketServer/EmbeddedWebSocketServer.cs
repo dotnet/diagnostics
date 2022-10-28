@@ -33,7 +33,6 @@ internal class EmbeddedWebSocketServer
         public string Port { get; set; } = default;
         public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
-
         public void Assign(Options other)
         {
             Scheme = other.Scheme;
@@ -103,7 +102,6 @@ internal class EmbeddedWebSocketServer
             var options = router.ServiceProvider.GetRequiredService<IOptions<Options>>().Value;
             router.MapGet(options.Path, (context) => OnWebSocketGet(context, connectionHandler));
         });
-
     }
 
     public async Task StartWebServer(CancellationToken ct = default)
@@ -117,7 +115,6 @@ internal class EmbeddedWebSocketServer
         .FirstOrDefault();
 
         logger.LogInformation("ip address is {IpAddressSecure}", ipAddressSecure);
-
     }
 
     public async Task StopWebServer(CancellationToken ct = default)

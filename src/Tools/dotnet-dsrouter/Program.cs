@@ -26,7 +26,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         delegate Task<int> DiagnosticsServerIpcClientWebSocketServerRouterDelegate(CancellationToken ct, string ipcClient, string webSocket, int runtimeTimeoutS, string verbose);
 
-
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
                 name: "client-server",

@@ -136,6 +136,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 Launcher.Verbose = LogLevel != LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
+
             public override ILoggerFactory ConfigureLogging()
             {
                 var factory = LoggerFactory.Create(builder =>

@@ -11,7 +11,6 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using System.Net.WebSockets;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
 
-
 namespace Microsoft.Diagnostics.WebSocketServer;
 
 // This class implements the IWebSocketServer interface exposed by the Microsoft.Diagnostics.NETCore.Client library.
@@ -142,7 +141,6 @@ public class WebSocketServerImpl : IWebSocketServer
                 }
             }
         }
-
     }
 
     // An abstraction encapsulating an open websocket connection.
@@ -151,12 +149,14 @@ public class WebSocketServerImpl : IWebSocketServer
         private readonly WebSocket _webSocket;
         private readonly HttpContext _context;
         private readonly TaskCompletionSource _streamDisposed;
+
         public Conn(HttpContext context, WebSocket webSocket, TaskCompletionSource streamDisposed)
         {
             _context = context;
             _webSocket = webSocket;
             _streamDisposed = streamDisposed;
         }
+
         public Stream GetStream()
         {
             return new WebSocketStreamAdapter(_webSocket, OnStreamDispose);

@@ -224,7 +224,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 IpcAdvertise advertise = null;
                 try
                 {
-
                     stream = await transport.AcceptAsync(token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)

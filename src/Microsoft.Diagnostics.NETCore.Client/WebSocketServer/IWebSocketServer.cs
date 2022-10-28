@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-
 namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 
 // This interface abstracts the web socket server implementation used by dotnet-dsrouter

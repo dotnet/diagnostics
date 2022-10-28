@@ -92,5 +92,4 @@ internal class WebSocketStreamAdapter : Stream, IWebSocketStreamAdapter
     }
 
     bool IWebSocketStreamAdapter.IsConnected => _webSocket.State == WebSocketState.Open;
-
 }
