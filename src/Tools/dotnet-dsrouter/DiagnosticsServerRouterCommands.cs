@@ -264,22 +264,29 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             var runner = new IpcServerWebSocketServerRunner(verbose);
 
-            NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
+            WebSocketServer.WebSocketServerImpl server = new(runner.LogLevel);
+
+            NETCore.Client.WebSocketServer.WebSocketServerProvider.SetProvider(() => server);
+
+            try
             {
-                return new WebSocketServer.WebSocketServerImpl(runner.LogLevel);
-            });
+                Task _ = Task.Run(() => server.StartServer(webSocket, token));
 
+                return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
+                {
+                    NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
-            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
+                    if (string.IsNullOrEmpty(ipcServer))
+                        ipcServer = GetDefaultIpcServerPath(logger);
+
+                    var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
+                    return routerTask;
+                }, token);
+            }
+            finally
             {
-                NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
-
-                if (string.IsNullOrEmpty(ipcServer))
-                    ipcServer = GetDefaultIpcServerPath(logger);
-
-                var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
-                return routerTask;
-            }, token);
+                await server.StopServer(token);
+            }
         }
 
         class IpcClientWebSocketServerRunner : SpecificRunnerBase
@@ -299,18 +306,26 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             var runner = new IpcClientWebSocketServerRunner(verbose);
 
-            NETCore.Client.WebSocketServer.WebSocketServerFactory.SetBuilder(() =>
-            {
-                return new WebSocketServer.WebSocketServerImpl(runner.LogLevel);
-            });
+            WebSocketServer.WebSocketServerImpl server = new(runner.LogLevel);
 
-            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-            {
-                NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
+            NETCore.Client.WebSocketServer.WebSocketServerProvider.SetProvider(() => server);
 
-                var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
-                return routerTask;
-            }, token);
+            try
+            {
+                Task _ = Task.Run(() => server.StartServer(webSocket, token));
+
+                return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
+                {
+                    NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
+
+                    var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
+                    return routerTask;
+                }, token);
+            }
+            finally
+            {
+                await server.StopServer(token);
+            }
         }
 
 

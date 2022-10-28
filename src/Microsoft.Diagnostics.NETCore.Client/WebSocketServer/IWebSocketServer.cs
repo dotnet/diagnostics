@@ -13,9 +13,5 @@ namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 // in order to avoid a dependency on ASP.NET in the client library.
 internal interface IWebSocketServer
 {
-    public Task StartServer(Uri uri, CancellationToken cancellationToken);
-
-    public Task StopServer(CancellationToken cancellationToken);
-
     public Task<Stream> AcceptConnection(CancellationToken cancellationToken);
 }

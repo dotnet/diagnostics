@@ -5,17 +5,17 @@ namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 
 // This interface allows dotnet-dsrouter to install a callback that will create IWebSocketServer instances.
 // This is used to avoid a dependency on ASP.NET in the client library.
-internal class WebSocketServerFactory
+internal class WebSocketServerProvider
 {
-    internal static void SetBuilder(Func<IWebSocketServer> builder)
+    internal static void SetProvider(Func<IWebSocketServer> provider)
     {
-        _builder = builder;
+        _provider = provider;
     }
 
-    internal static IWebSocketServer CreateWebSocketServer()
+    internal static IWebSocketServer GetWebSocketServerInstance()
     {
-        return _builder();
+        return _provider();
     }
 
-    private static Func<IWebSocketServer> _builder;
+    private static Func<IWebSocketServer> _provider;
 }

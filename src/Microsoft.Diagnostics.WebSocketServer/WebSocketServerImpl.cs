@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.WebSocketServer;
 public class WebSocketServerImpl : IWebSocketServer
 {
     private EmbeddedWebSocketServer _server = null;
+    private volatile int _started = 0;
 
     // Used to coordinate between the webserver accepting incoming websocket connections and the diagnostic server waiting for a stream to be available.
     // This could be a deeper queue if we wanted to somehow allow multiple browser tabs to connect to the same dsrouter, but it's unclear what to do with them
@@ -31,8 +32,15 @@ public class WebSocketServerImpl : IWebSocketServer
         _logLevel = logLevel;
     }
 
-    public async Task StartServer(Uri uri, CancellationToken cancellationToken)
+    public async Task StartServer(string endpoint, CancellationToken cancellationToken)
     {
+        if (Interlocked.CompareExchange(ref _started, 1, 0) != 0)
+        {
+            throw new InvalidOperationException("Server already started");
+        }
+
+        ParseWebSocketURL(endpoint, out Uri uri);
+
         EmbeddedWebSocketServer.Options options = new()
         {
             Scheme = uri.Scheme,
@@ -46,9 +54,14 @@ public class WebSocketServerImpl : IWebSocketServer
         await _server.StartWebServer(cancellationToken);
     }
 
-
     public async Task StopServer(CancellationToken cancellationToken)
     {
+        if (_started == 0)
+        {
+            throw new InvalidOperationException("Server not started");
+        }
+        if (_server == null)
+            return;
         await _server.StopWebServer(cancellationToken);
         _server = null;
     }
@@ -142,6 +155,48 @@ public class WebSocketServerImpl : IWebSocketServer
             }
         }
     }
+
+    private static void ParseWebSocketURL(string endPoint, out Uri uri)
+    {
+        string uriToParse;
+        // Host can contain wildcard (*) that is a reserved charachter in URI's.
+        // Replace with dummy localhost representation just for parsing purpose.
+        if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+        {
+            // FIXME: This is a workaround for the fact that Uri.Host is not set for wildcard host.
+            throw new ArgumentException("Wildcard host is not supported for WebSocket endpoints");
+        }
+        else
+        {
+            uriToParse = endPoint;
+        }
+
+        string[] supportedSchemes = new string[] { "ws", "wss", "http", "https" };
+
+        if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.Absolute, out uri))
+        {
+            bool supported = false;
+            foreach (string scheme in supportedSchemes)
+            {
+                if (string.Compare(uri.Scheme, scheme, StringComparison.InvariantCultureIgnoreCase) == 0)
+                {
+                    supported = true;
+                    break;
+                }
+            }
+            if (!supported)
+            {
+                throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
+            }
+            return;
+        }
+        else
+        {
+            throw new ArgumentException(string.Format("Could not parse {0} into host, port", endPoint));
+        }
+    }
+
+
 
     // An abstraction encapsulating an open websocket connection.
     internal class Conn
