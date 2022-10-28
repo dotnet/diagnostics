@@ -359,13 +359,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void Start()
         {
-            Logger.LogInformation("Starting web socket server");
             _webSocketServer.Start();
         }
 
         public override async Task Stop()
         {
-            Logger.LogInformation("Stopping web socket server");
             await _webSocketServer.DisposeAsync().ConfigureAwait(false);
         }
 
@@ -373,7 +371,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (Endpoint != null)
             {
-                Logger.LogInformation("Resetting the web socket server");
                 _webSocketServer.RemoveConnection(NetServerEndpointInfo.RuntimeInstanceCookie);
                 ResetEnpointInfo();
             }
@@ -385,7 +382,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void CreatedNewServer(EndPoint localEP)
         {
-            // anything to do here?
         }
 
     }
