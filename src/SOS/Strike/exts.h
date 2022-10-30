@@ -179,8 +179,15 @@ public:
         }
     }
 
+    void FlushCheck()
+    {
+        ((DbgEngServices*)m_pDebuggerServices)->FlushCheck(this);
+    }
+
     IHost* GetHost();
 };
+
+extern HRESULT GetRuntime(IRuntime** ppRuntime);
 
 #ifndef MINIDUMP
  
