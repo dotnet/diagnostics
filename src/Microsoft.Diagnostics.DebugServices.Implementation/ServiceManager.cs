@@ -181,17 +181,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 string[] paths = diagnosticExtensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
                 extensionPaths.AddRange(paths);
             }
-            string searchPath = Path.Combine(Utilities.GetDotNetHomeDirectory(), "extensions");
-            if (Directory.Exists(searchPath))
+            string assemblyPath = Assembly.GetExecutingAssembly().Location;
+            if (!string.IsNullOrEmpty(assemblyPath))
             {
-                try
+                string searchPath = Path.Combine(Path.GetDirectoryName(assemblyPath), "extensions");
+                if (Directory.Exists(searchPath))
                 {
-                    string[] extensionFiles = Directory.GetFiles(searchPath, "*.dll");
-                    extensionPaths.AddRange(extensionFiles);
-                }
-                catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
-                {
-                    Trace.TraceError(ex.ToString());
+                    try
+                    {
+                        string[] extensionFiles = Directory.GetFiles(searchPath, "*.dll");
+                        extensionPaths.AddRange(extensionFiles);
+                    }
+                    catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+                    {
+                        Trace.TraceError(ex.ToString());
+                    }
                 }
             }
             foreach (string extensionPath in extensionPaths)
