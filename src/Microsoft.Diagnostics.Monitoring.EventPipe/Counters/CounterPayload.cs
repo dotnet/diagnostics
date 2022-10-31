@@ -18,7 +18,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit,
             double value,
             CounterType counterType,
-            float interval)
+            float interval,
+            Dictionary<string, string> metadata)
         {
             Timestamp = timestamp;
             Name = name;
@@ -28,6 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             CounterType = counterType;
             Provider = provider;
             Interval = interval;
+            Metadata = metadata;
         }
 
         public string Namespace { get; }
@@ -47,5 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public CounterType CounterType { get; }
 
         public string Provider { get; }
+
+        public Dictionary<string, string> Metadata { get; } = new Dictionary<string, string>(0);
     }
 }

@@ -23,6 +23,43 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
 
+                string metadata = payloadFields["Metadata"].ToString();
+
+                // Just playing around...
+                // Read up until colon, then look for comma. If another colon shows up, fail
+                // Num_colons == num_commas - 1
+                // Also need to validate which characters are included, but that can maybe be done later...?
+                // Technically, label keys can't have colons/commas, but values can be any unicode character...
+                // without making changes in the Runtime repo, not sure we can work around this.
+                var metadataDict = new Dictionary<string, string>();
+
+                while (metadata.Length > 0)
+                {
+                    int colonIndex = metadata.IndexOf(':');
+                    string metadataKey = metadata.Substring(0, colonIndex);
+                    metadata = metadata.Substring(colonIndex + 1);
+                    int commaIndex = metadata.IndexOf(',');
+                    string metadataValue = string.Empty;
+                    if (commaIndex == -1)
+                    {
+                        if (metadata.Contains(':'))
+                        {
+                            metadataDict = new Dictionary<string, string>();
+                            break;
+                            // Fail
+                        }
+                        metadataValue = metadata;
+                        metadata = string.Empty;
+                    }
+                    else
+                    {
+                        metadataValue = metadata.Substring(0, commaIndex);
+                        metadata = metadata.Substring(commaIndex + 1);
+                    }
+
+                    metadataDict[metadataKey] = metadataValue;
+                }
+
                 //CONSIDER
                 //Concurrent counter sessions do not each get a separate interval. Instead the payload
                 //for _all_ the counters changes the Series to be the lowest specified interval, on a per provider basis.
@@ -62,7 +99,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     displayUnits,
                     value,
                     counterType,
-                    intervalSec);
+                    intervalSec,
+                    metadataDict);
                 return true;
             }
 

@@ -34,5 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         DateTime Timestamp { get; }
 
         float Interval { get; }
+
+        public Dictionary<string, string> Metadata { get; }
     }
 }
