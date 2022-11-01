@@ -179,10 +179,12 @@ public:
         }
     }
 
+#ifndef FEATURE_PAL
     void FlushCheck()
     {
         ((DbgEngServices*)m_pDebuggerServices)->FlushCheck(this);
     }
+#endif
 
     IHost* GetHost();
 };

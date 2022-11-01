@@ -405,6 +405,8 @@ HRESULT GetRuntime(IRuntime** ppRuntime)
     {
         return E_FAIL;
     }
+#ifndef FEATURE_PAL
     extensions->FlushCheck();
+#endif
     return target->GetRuntime(ppRuntime);
 }
