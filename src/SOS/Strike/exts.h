@@ -182,7 +182,10 @@ public:
 #ifndef FEATURE_PAL
     void FlushCheck()
     {
-        ((DbgEngServices*)m_pDebuggerServices)->FlushCheck(this);
+        if (m_pDebuggerServices != nullptr)
+        {
+            ((DbgEngServices*)m_pDebuggerServices)->FlushCheck(this);
+        }
     }
 #endif
 
