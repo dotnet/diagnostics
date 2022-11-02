@@ -126,8 +126,8 @@ namespace Microsoft.Internal.Common.Commands
                 var processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
-                    .OrderBy(process => process.ProcessName)
-                    .ThenBy(process => process.Id);
+                    .OrderBy(process => process.Id)
+                    .ThenBy(process => process.ProcessName);
 
                 var currentPid = Process.GetCurrentProcess().Id;
                 List<Microsoft.Internal.Common.Commands.ProcessStatusCommandHandler.ProcessDetails> printInfo = new ();
