@@ -179,8 +179,20 @@ public:
         }
     }
 
+#ifndef FEATURE_PAL
+    void FlushCheck()
+    {
+        if (m_pDebuggerServices != nullptr)
+        {
+            ((DbgEngServices*)m_pDebuggerServices)->FlushCheck(this);
+        }
+    }
+#endif
+
     IHost* GetHost();
 };
+
+extern HRESULT GetRuntime(IRuntime** ppRuntime);
 
 #ifndef MINIDUMP
  
