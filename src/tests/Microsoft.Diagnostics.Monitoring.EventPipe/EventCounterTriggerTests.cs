@@ -484,7 +484,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     EventCounterConstants.CpuUsageUnits,
                     value,
                     CounterType.Metric,
-                    actualInterval);
+                    actualInterval,
+                    null);
             }
         }
     }

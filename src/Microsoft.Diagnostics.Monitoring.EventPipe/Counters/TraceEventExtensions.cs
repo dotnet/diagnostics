@@ -25,23 +25,35 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 var metadataDict = new Dictionary<string, string>();
 
-                string[] kvPairs = payloadFields["Metadata"].ToString().Split(",");
+                ReadOnlySpan<char> metadata = payloadFields["Metadata"].ToString();
 
-                foreach (string kvPair in kvPairs)
+                while (!metadata.IsEmpty)
                 {
-                    int colonIndex = kvPair.IndexOf(':');
-                    if (colonIndex == -1)
+                    int commaIndex = metadata.IndexOf(',');
+
+                    ReadOnlySpan<char> kvPair;
+
+                    if (commaIndex < 0)
                     {
-                        // Remove all entries from metadataDict if has bad formatting
-                        metadataDict.Clear();
-                        break;
+                        kvPair = metadata;
+                        metadata = default;
                     }
                     else
                     {
-                        string metadataKey = kvPair.Substring(0, colonIndex);
-                        string metadataValue = kvPair.Substring(colonIndex + 1);
-                        metadataDict[metadataKey] = metadataValue;
+                        kvPair = metadata[..commaIndex];
+                        metadata = metadata.Slice(commaIndex + 1);
                     }
+
+                    int colonIndex = kvPair.IndexOf(':');
+                    if (colonIndex < 0)
+                    {
+                        metadataDict.Clear();
+                        break;
+                    }
+
+                    string metadataKey = kvPair[..colonIndex].ToString();
+                    string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
+                    metadataDict[metadataKey] = metadataValue;
                 }
 
                 //CONSIDER
