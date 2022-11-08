@@ -33,7 +33,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="console"></param>
         /// <param name="processId">The process to report the stack from.</param>
         /// <param name="name">The name of process to report the stack from.</param>
-        /// <param name="output">The output path for the collected trace data.</param>
         /// <param name="duration">The duration of to trace the target for. </param>
         /// <returns></returns>
         private static async Task<int> Report(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration)
