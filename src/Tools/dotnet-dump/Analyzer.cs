@@ -60,16 +60,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceContainer.AddService<IContextService>(_contextService);
 
             // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.LoadExtension(typeof(Target).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(Target).Assembly);
 
             // Register all the services and commands in the dotnet-dump (this) assembly
-            _serviceManager.LoadExtension(typeof(Analyzer).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(Analyzer).Assembly);
 
             // Register all the services and commands in the SOS.Hosting assembly
-            _serviceManager.LoadExtension(typeof(SOSHost).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(SOSHost).Assembly);
 
             // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-            _serviceManager.LoadExtension(typeof(ClrMDHelper).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(ClrMDHelper).Assembly);
 
             // Add the specially handled exit command
             _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));

@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceContainer.AddService<ISymbolService>(_symbolService);
 
             // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.LoadExtension(typeof(Target).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(Target).Assembly);
 
             // Automatically enable symbol server support
             _symbolService.AddSymbolServer(msdl: true, symweb: false, timeoutInMinutes: 6, retryCount: 5);

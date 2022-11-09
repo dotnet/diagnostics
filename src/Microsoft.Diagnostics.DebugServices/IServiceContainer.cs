@@ -9,20 +9,15 @@ namespace Microsoft.Diagnostics.DebugServices
     /// <summary>
     /// The method used to create a service instance
     /// </summary>
-    /// <param name="provider">service provider instance that this factory belongs</param>
+    /// <param name="provider">service provider instance that this factory is registered to.</param>
     /// <returns>service instance</returns>
     public delegate object ServiceFactory(IServiceProvider provider);
 
     /// <summary>
     /// This is returned by the service manager to allow various sub-components like 
-    /// targets, modules, threads, runtimes to  managed the services they provider.
-    ///
-    /// Implementations of this interface need to allow multiple instances of the same 
-    /// service type to be registered. They are queried by getting the IEnumerable of 
-    /// the service type. If the non-enumerable service type is queried and there are
-    /// multiple instances, an exception is thrown. The IRuntimeService implementation
-    /// uses this feature to enumerate all the IRuntimeProvider instances registered 
-    /// in the system.
+    /// targets, modules, threads, runtimes to manage the services they provide. Calls
+    /// the service factory for the type if not already instantiated and cached and if
+    /// no factory, chains to the parent service container.
     /// </summary>
     public interface IServiceContainer
     {
@@ -32,23 +27,24 @@ namespace Microsoft.Diagnostics.DebugServices
         IServiceProvider Services { get; }
 
         /// <summary>
-        /// Clones the parent service provider except any cached instances.
+        /// Creates a copy container with the factories for the services and the parent
+        /// in the container. Instantiated services are not transferred.
         /// </summary>
         /// <returns>clone</returns>
         IServiceContainer Clone();
 
         /// <summary>
-        /// Add service factory and cache result when requested.
+        /// Add a service factory. Multiple factories for the same type are allowed.
         /// </summary>
         /// <param name="type">service type or interface</param>
         /// <param name="factory">function to create service instance</param>
         void AddServiceFactory(Type type, ServiceFactory factory);
 
         /// <summary>
-        /// Add a service instance.
+        /// Add a service instance. Multiple instances for the same type are NOT allowed.
         /// </summary>
         /// <param name="type">service type</param>
-        /// <param name="service">instance</param>
+        /// <param name="service">service instance (must derives from type)</param>
         void AddService(Type type, object service);
 
         /// <summary>
@@ -69,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices
         void DisposeServices(object thisService);
 
         /// <summary>
-        /// Get the cached service instance if one exists. Don't call the factory or parent to create.
+        /// Get the cached/instantiated service instance if one exists. Don't call the factory or parent to create.
         /// </summary>
         /// <param name="type">service type</param>
         /// <param name="service">service instance (can be null)</param>

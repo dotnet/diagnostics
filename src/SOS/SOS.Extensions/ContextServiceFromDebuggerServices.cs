@@ -32,7 +32,7 @@ namespace SOS.Extensions
                 return null;
             }
             IThread currentThread = ThreadService?.GetThreadFromId(threadId);
-            // This call fires the context change event if the current thread from the host debugger has changed
+            // This call fires the context change event if the thread obtain by the host debugger differs from the current thread
             base.SetCurrentThread(currentThread);
             return currentThread;
         }

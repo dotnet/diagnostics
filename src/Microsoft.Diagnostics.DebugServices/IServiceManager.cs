@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Creates a new service provider instance with all the registered factories for the given scope.
         /// </summary>
         /// <param name="scope">global, per-target, per-runtime, etc. service type</param>
-        /// <param name="parent">parent service provider to chain</param>
+        /// <param name="parent">parent service provider to chain to</param>
         /// <returns>IServiceContainer instance</returns>
         IServiceContainer CreateServiceContainer(ServiceScope scope, IServiceProvider parent = null);
     }

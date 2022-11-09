@@ -121,17 +121,17 @@ namespace SOS.Extensions
             _serviceContainer.AddService<ISymbolService>(_symbolService);
 
             // Don't register everything in the SOSHost assembly; just the wrappers
-            _serviceManager.RegisterServices(typeof(TargetWrapper));
-            _serviceManager.RegisterServices(typeof(RuntimeWrapper));
+            _serviceManager.RegisterExportedServices(typeof(TargetWrapper));
+            _serviceManager.RegisterExportedServices(typeof(RuntimeWrapper));
 
             // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.LoadExtension(typeof(Target).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(Target).Assembly);
 
             // Register all the services and commands in the SOS.Extensions (this) assembly
-            _serviceManager.LoadExtension(typeof(HostServices).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(HostServices).Assembly);
 
             // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-            _serviceManager.LoadExtension(typeof(ClrMDHelper).Assembly);
+            _serviceManager.RegisterExportedServices(typeof(ClrMDHelper).Assembly);
 
             _hostWrapper = new HostWrapper(this);
             _hostWrapper.ServiceWrapper.AddServiceWrapper(IID_IHostServices, this);

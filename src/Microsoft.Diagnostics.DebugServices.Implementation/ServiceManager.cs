@@ -66,21 +66,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Finds all the ServiceExport attributes in the assembly and registers.
         /// </summary>
         /// <param name="assembly">service implementation assembly</param>
-        public void RegisterServices(Assembly assembly)
+        public void RegisterExportedServices(Assembly assembly)
         {
-            try
+            foreach (Type serviceType in assembly.GetExportedTypes())
             {
-                foreach (Type serviceType in assembly.GetExportedTypes())
+                if (serviceType.IsClass)
                 {
-                    if (serviceType.IsClass)
-                    {
-                        RegisterServices(serviceType);
-                    }
+                    RegisterExportedServices(serviceType);
                 }
-            }
-            catch (Exception ex) when (ex is FileLoadException)
-            {
-                Trace.TraceError(ex.ToString());
             }
         }
 
@@ -88,7 +81,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Finds all the ServiceExport attributes in the type and registers.
         /// </summary>
         /// <param name="serviceType">service implementation type</param>
-        public void RegisterServices(Type serviceType)
+        public void RegisterExportedServices(Type serviceType)
         {
             for (Type currentType = serviceType; currentType is not null; currentType = currentType.BaseType)
             {
@@ -221,18 +214,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             if (assembly is not null)
             {
-                LoadExtension(assembly);
+                try
+                {
+                    RegisterExportedServices(assembly);
+                    _notifyExtensionLoad.Fire(assembly);
+                }
+                catch (Exception ex) when (ex is DiagnosticsException || ex is NotSupportedException || ex is FileNotFoundException)
+                {
+                    Trace.TraceError(ex.ToString());
+                }
             }
-        }
-
-        /// <summary>
-        /// Load the extension assembly
-        /// </summary>
-        /// <param name="assembly">extension assembly</param>
-        public void LoadExtension(Assembly assembly)
-        {
-            RegisterServices(assembly);
-            _notifyExtensionLoad.Fire(assembly);
         }
     }
 }

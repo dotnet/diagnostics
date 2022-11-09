@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Allows hosts to set the initial current target
+        /// Allows hosts to set the current target. Fires the context change event if the current target has changed.
         /// </summary>
         /// <param name="target"></param>
         public virtual void SetCurrentTarget(ITarget target)
@@ -137,7 +137,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         protected virtual IThread GetCurrentThread() => _currentThread ??= ThreadService?.EnumerateThreads().FirstOrDefault();
 
         /// <summary>
-        /// Allows hosts to set the initial current thread
+        /// Allows hosts to set the current thread. Fires the context change event if the current thread has changed.
         /// </summary>
         /// <param name="thread"></param>
         public virtual void SetCurrentThread(IThread thread)
@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Allows hosts to set the initial current runtime 
+        /// Allows hosts to set the current runtime. Fires the context change event if the current thread has changed.
         /// </summary>
         public virtual void SetCurrentRuntime(IRuntime runtime)
         {
