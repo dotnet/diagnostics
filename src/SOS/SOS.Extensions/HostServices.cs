@@ -125,13 +125,13 @@ namespace SOS.Extensions
             _serviceManager.RegisterExportedServices(typeof(RuntimeWrapper));
 
             // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.RegisterExportedServices(typeof(Target).Assembly);
+            _serviceManager.RegisterAssembly(typeof(Target).Assembly);
 
             // Register all the services and commands in the SOS.Extensions (this) assembly
-            _serviceManager.RegisterExportedServices(typeof(HostServices).Assembly);
+            _serviceManager.RegisterAssembly(typeof(HostServices).Assembly);
 
             // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-            _serviceManager.RegisterExportedServices(typeof(ClrMDHelper).Assembly);
+            _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
 
             _hostWrapper = new HostWrapper(this);
             _hostWrapper.ServiceWrapper.AddServiceWrapper(IID_IHostServices, this);

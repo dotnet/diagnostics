@@ -208,21 +208,30 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 assembly = Assembly.LoadFrom(extensionPath);
             }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException  || ex is BadImageFormatException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is BadImageFormatException || ex is System.Security.SecurityException)
             {
                 Trace.TraceError(ex.ToString());
             }
             if (assembly is not null)
             {
-                try
-                {
-                    RegisterExportedServices(assembly);
-                    _notifyExtensionLoad.Fire(assembly);
-                }
-                catch (Exception ex) when (ex is DiagnosticsException || ex is NotSupportedException || ex is FileNotFoundException)
-                {
-                    Trace.TraceError(ex.ToString());
-                }
+                RegisterAssembly(assembly);
+            }
+        }
+
+        /// <summary>
+        /// Register the exported services in the assembly and notify the assembly has loaded.
+        /// </summary>
+        /// <param name="assembly">extension assembly</param>
+        public void RegisterAssembly(Assembly assembly)
+        {
+            try
+            {
+                RegisterExportedServices(assembly);
+                _notifyExtensionLoad.Fire(assembly);
+            }
+            catch (Exception ex) when (ex is DiagnosticsException || ex is NotSupportedException || ex is FileNotFoundException)
+            {
+                Trace.TraceError(ex.ToString());
             }
         }
     }
