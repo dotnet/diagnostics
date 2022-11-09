@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 OnShutdownEvent.Fire();
 
                 // Dispose of the global services
-                _serviceContainer.DisposeServices(this);
+                _serviceContainer.DisposeServices();
             }
             return Task.FromResult(0);
         }

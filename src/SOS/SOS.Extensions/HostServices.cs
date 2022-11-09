@@ -401,7 +401,7 @@ namespace SOS.Extensions
                 OnShutdownEvent.Fire();
 
                 // Dispose of the global services which RemoteMemoryService but not host services (this)
-                _serviceContainer.DisposeServices(this);
+                _serviceContainer.DisposeServices();
 
                 // This turns off any logging to console now that debugger services will be released and the console service will no longer work.
                 DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);

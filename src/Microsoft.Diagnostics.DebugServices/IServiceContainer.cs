@@ -61,8 +61,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Dispose of the instantiated services.
         /// </summary>
-        /// <param name="thisService">skip this service to prevent recursion</param>
-        void DisposeServices(object thisService);
+        void DisposeServices();
 
         /// <summary>
         /// Get the cached/instantiated service instance if one exists. Don't call the factory or parent to create.

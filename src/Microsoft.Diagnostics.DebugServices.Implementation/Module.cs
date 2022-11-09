@@ -48,7 +48,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceContainer.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
         }
 
-        void IDisposable.Dispose() => ServiceContainer.DisposeServices(this);
+        public virtual void Dispose()
+        { 
+            ServiceContainer.RemoveService(typeof(IModule));
+            ServiceContainer.RemoveService(typeof(IExportSymbols));
+            ServiceContainer.DisposeServices();
+        }
 
         #region IModule
 

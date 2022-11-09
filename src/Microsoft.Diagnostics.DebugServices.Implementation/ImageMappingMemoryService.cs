@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void Dispose() 
         {
             Flush();
-            _container.DisposeServices(this); 
+            _container.DisposeServices(); 
         } 
 
         protected void Flush() => _memoryCache.FlushCache();

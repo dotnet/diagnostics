@@ -117,7 +117,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Trace.TraceInformation($"Destroy target #{Id}");
             OnDestroyEvent.Fire();
-            ServiceContainer.DisposeServices(this);
+            ServiceContainer.RemoveService(typeof(ITarget));
+            ServiceContainer.DisposeServices();
             CleanupTempDirectory();
         }
 

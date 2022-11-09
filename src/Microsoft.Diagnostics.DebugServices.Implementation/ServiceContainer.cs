@@ -110,13 +110,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Dispose of the instantiated services.
         /// </summary>
-        /// <param name="thisService">skip this service to prevent recursion</param>
-        public void DisposeServices(object thisService)
+        public void DisposeServices()
         {
-            Debug.Assert(thisService != null);
             foreach (object service in _instances.Values)
             {
-                if (service != thisService && service is IDisposable disposable)
+                if (service is IDisposable disposable)
                 {
                     disposable.Dispose();
                 }

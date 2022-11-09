@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void Dispose()
         {
             Flush();
-            _container.DisposeServices(this);
+            _container.DisposeServices();
         }
 
         /// <summary>

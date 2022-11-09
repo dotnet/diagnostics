@@ -23,16 +23,5 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="container">IServiceContainer instance</param>
         /// <param name="instance">service instance (must derive from T)</param>
         public static void AddService<T>(this IServiceContainer container, T instance) => container.AddService(typeof(T), instance);
-
-        /// <summary>
-        /// Get the cached/instantiated service instance if one exists. Don't call the factory or parent to create.
-        /// </summary>
-        /// <typeparam name="T">service type</typeparam>
-        /// <returns>service instance or null</returns>
-        public static T GetCachedService<T>(this IServiceContainer container)
-        {
-            container.TryGetCachedService(typeof(T), out object service);
-            return (T)service;
-        }
     }
 }

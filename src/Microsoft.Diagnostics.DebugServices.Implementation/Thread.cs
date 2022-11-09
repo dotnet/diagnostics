@@ -25,7 +25,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceContainer.AddService<IThread>(this);
         }
 
-        void IDisposable.Dispose() => ServiceContainer.DisposeServices(this);
+        void IDisposable.Dispose()
+        {
+            ServiceContainer.RemoveService(typeof(IThread));
+            ServiceContainer.DisposeServices();
+        }
 
         #region IThread
 

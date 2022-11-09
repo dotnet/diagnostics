@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = services.GetService<ITarget>() ?? throw new ArgumentNullException();
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
-            _symbolService = services.GetService<ISymbolService>(); 
+            _symbolService = services.GetService<ISymbolService>();
 
             RuntimeType = RuntimeType.Unknown;
             if (clrInfo.Flavor == ClrFlavor.Core) {
@@ -49,14 +49,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ServiceContainer.AddService<ClrInfo>(clrInfo);
             ServiceContainer.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
 
-            _onFlushEvent = Target.OnFlushEvent.Register(() => ServiceContainer.GetCachedService<ClrRuntime>()?.FlushCachedData());
+            _onFlushEvent = Target.OnFlushEvent.Register(Flush);
+
             Trace.TraceInformation($"Created runtime #{id} {clrInfo.Flavor} {clrInfo}");
         }
 
         void IDisposable.Dispose()
         {
-            ServiceContainer.DisposeServices(this);
+            ServiceContainer.RemoveService(typeof(IRuntime));
+            ServiceContainer.DisposeServices();
             _onFlushEvent.Dispose();
+        }
+
+        private void Flush()
+        {
+            if (ServiceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
+            {
+                ((ClrRuntime)service).FlushCachedData();
+            }
         }
 
         #region IRuntime

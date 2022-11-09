@@ -95,6 +95,12 @@ namespace SOS.Extensions
                 ServiceContainer.AddService<IModuleSymbols>(this);
             }
 
+            public override void Dispose()
+            { 
+                ServiceContainer.RemoveService(typeof(IModuleSymbols));
+                base.Dispose();
+            }
+
             #region IModule
 
             public override Version GetVersionData()

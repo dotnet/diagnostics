@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _currentTarget = target;
                 _currentThread = null;
                 _currentRuntime = null;
-                ServiceContainer.DisposeServices(this);
+                ServiceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
         }
@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (!IsThreadEqual(thread, _currentThread))
             {
                 _currentThread = thread;
-                ServiceContainer.DisposeServices(this);
+                ServiceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
         }
@@ -199,7 +199,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (!IsRuntimeEqual(runtime, _currentRuntime))
             {
                 _currentRuntime = runtime;
-                ServiceContainer.DisposeServices(this);
+                ServiceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
         }
