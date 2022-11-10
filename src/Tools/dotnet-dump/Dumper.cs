@@ -81,6 +81,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     case DumpTypeOption.Mini:
                         dumpTypeMessage = "dump";
                         break;
+                    case DumpTypeOption.Triage:
+                        dumpTypeMessage = "triage";
+                        break;
                 }
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
