@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
 
-            Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PMI removed.
+            Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PII removed.
         }
 
         public Dumper()
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         dumpTypeMessage = "dump";
                         break;
                     case DumpTypeOption.Triage:
-                        dumpTypeMessage = "triage";
+                        dumpTypeMessage = "triage dump";
                         break;
                 }
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
