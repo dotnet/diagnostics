@@ -3,14 +3,19 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class CounterPayload : ICounterPayload
     {
+#if NETSTANDARD
+        private static readonly IReadOnlyDictionary<string, string> Empty = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(0));
+#else
+        private static readonly IReadOnlyDictionary<string, string> Empty = System.Collections.Immutable.ImmutableDictionary<string, string>.Empty;
+#endif
+
         public CounterPayload(DateTime timestamp,
             string provider,
             string name,
@@ -29,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             CounterType = counterType;
             Provider = provider;
             Interval = interval;
-            Metadata = metadata;
+            Metadata = metadata ?? Empty;
         }
 
         public string Namespace { get; }
@@ -50,6 +55,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string Provider { get; }
 
-        public Dictionary<string, string> Metadata { get; } = new Dictionary<string, string>(0);
+        public IReadOnlyDictionary<string, string> Metadata { get; } = new Dictionary<string, string>(0);
     }
 }

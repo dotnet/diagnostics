@@ -23,38 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
 
-                var metadataDict = new Dictionary<string, string>();
-
-                ReadOnlySpan<char> metadata = payloadFields["Metadata"].ToString();
-
-                while (!metadata.IsEmpty)
-                {
-                    int commaIndex = metadata.IndexOf(',');
-
-                    ReadOnlySpan<char> kvPair;
-
-                    if (commaIndex < 0)
-                    {
-                        kvPair = metadata;
-                        metadata = default;
-                    }
-                    else
-                    {
-                        kvPair = metadata[..commaIndex];
-                        metadata = metadata.Slice(commaIndex + 1);
-                    }
-
-                    int colonIndex = kvPair.IndexOf(':');
-                    if (colonIndex < 0)
-                    {
-                        metadataDict.Clear();
-                        break;
-                    }
-
-                    string metadataKey = kvPair[..colonIndex].ToString();
-                    string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
-                    metadataDict[metadataKey] = metadataValue;
-                }
+                Dictionary<string, string> metadataDict = GetMetadata(payloadFields["Metadata"].ToString());
 
                 //CONSIDER
                 //Concurrent counter sessions do not each get a separate interval. Instead the payload
@@ -101,6 +70,44 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             return false;
+        }
+
+        public static Dictionary<string, string> GetMetadata(string metadataPayload)
+        {
+            var metadataDict = new Dictionary<string, string>();
+
+            ReadOnlySpan<char> metadata = metadataPayload;
+
+            while (!metadata.IsEmpty)
+            {
+                int commaIndex = metadata.IndexOf(',');
+
+                ReadOnlySpan<char> kvPair;
+
+                if (commaIndex < 0)
+                {
+                    kvPair = metadata;
+                    metadata = default;
+                }
+                else
+                {
+                    kvPair = metadata[..commaIndex];
+                    metadata = metadata.Slice(commaIndex + 1);
+                }
+
+                int colonIndex = kvPair.IndexOf(':');
+                if (colonIndex < 0)
+                {
+                    metadataDict.Clear();
+                    break;
+                }
+
+                string metadataKey = kvPair[..colonIndex].ToString();
+                string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
+                metadataDict[metadataKey] = metadataValue;
+            }
+
+            return metadataDict;
         }
 
         private static int GetInterval(string series)

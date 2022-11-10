@@ -35,6 +35,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         float Interval { get; }
 
-        public Dictionary<string, string> Metadata { get; }
+        IReadOnlyDictionary<string, string> Metadata { get; }
     }
 }
