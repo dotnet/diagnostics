@@ -26,10 +26,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
             {
-                IDisposable onChangeEvent = symbolService.OnChangeEvent.Register(() => container.RemoveService(typeof(PEModule)));
                 PEReader reader = OpenPEReader(symbolService.DownloadModuleFile(module));
                 if (reader is not null)
                 {
+                    IDisposable onChangeEvent = symbolService.OnChangeEvent.Register(() => container.RemoveService(typeof(PEModule)));
                     return new PEModule(reader, onChangeEvent);
                 }
             }

@@ -9,6 +9,7 @@ using System.Linq;
 using System.IO;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -149,7 +150,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
             if (!string.IsNullOrEmpty(diagnosticExtensions))
             {
-                string[] paths = diagnosticExtensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] paths = diagnosticExtensions.Split(new char[] { RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':' }, StringSplitOptions.RemoveEmptyEntries);
                 extensionPaths.AddRange(paths);
             }
             string assemblyPath = Assembly.GetExecutingAssembly().Location;
