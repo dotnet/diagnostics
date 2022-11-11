@@ -66,8 +66,72 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
+            if ("System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
+            {
+                if (traceEvent.ProviderName == "System.Diagnostics.Metrics")
+                {
+                    if (traceEvent.EventName == "BeginInstrumentReporting")
+                    {
+                        HandleBeginInstrumentReporting(traceEvent);
+                    }
+                    if (traceEvent.EventName == "HistogramValuePublished")
+                    {
+                        HandleHistogram(traceEvent);
+                    }
+                    else if (traceEvent.EventName == "GaugeValuePublished")
+                    {
+                        HandleGauge(traceEvent);
+                    }
+                    else if (traceEvent.EventName == "CounterRateValuePublished")
+                    {
+                        HandleCounterRate(traceEvent, out payload);
+                    }
+                    else if (traceEvent.EventName == "TimeSeriesLimitReached")
+                    {
+                        HandleTimeSeriesLimitReached(traceEvent);
+                    }
+                    else if (traceEvent.EventName == "HistogramLimitReached")
+                    {
+                        HandleHistogramLimitReached(traceEvent);
+                    }
+                    else if (traceEvent.EventName == "Error")
+                    {
+                        HandleError(traceEvent);
+                    }
+                    else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
+                    {
+                        HandleObservableInstrumentCallbackError(traceEvent);
+                    }
+                    else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
+                    {
+                        HandleMultipleSessionsNotSupportedError(traceEvent);
+                    }
+                }
+
+                return payload != null;
+            }
+
             return false;
         }
+
+        private static void HandleCounterRate(TraceEvent traceEvent, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string sessionId = (string)traceEvent.PayloadValue(0);
+            string meterName = (string)traceEvent.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)traceEvent.PayloadValue(3);
+            string unit = (string)traceEvent.PayloadValue(4);
+            string tags = (string)traceEvent.PayloadValue(5);
+            string rateText = (string)traceEvent.PayloadValue(6);
+
+            if (double.TryParse(rateText, out double rate))
+            {
+                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, 10, traceEvent.TimeStamp); // NEED REAL VALUE FOR INTERVAL
+            }
+        }
+
 
         private static int GetInterval(string series)
         {

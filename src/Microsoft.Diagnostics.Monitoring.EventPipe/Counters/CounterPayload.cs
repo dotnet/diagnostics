@@ -30,11 +30,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             Interval = interval;
         }
 
+        // Copied from dotnet-counters
+        public CounterPayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, DateTime timestamp, string type)
+        {
+            Provider = providerName;
+            Name = name;
+            Tags = tags;
+            Value = value;
+            Timestamp = timestamp;
+            CounterType = (CounterType)Enum.Parse(typeof(CounterType), type);
+        }
+
         public string Namespace { get; }
 
         public string Name { get; }
 
-        public string DisplayName { get; }
+        public string DisplayName { get; protected set; }
 
         public string Unit { get; }
 
@@ -47,5 +58,43 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public CounterType CounterType { get; }
 
         public string Provider { get; }
+
+        public string Tags { get; private set; }
+
+    }
+
+    class GaugePayload : CounterPayload
+    {
+        public GaugePayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, tags, value, timestamp, "Metric")
+        {
+            // In case these properties are not provided, set them to appropriate values.
+            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+        }
+    }
+
+    class RatePayload : CounterPayload
+    {
+        public RatePayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, double intervalSecs, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, tags, value, timestamp, "Rate")
+        {
+            // In case these properties are not provided, set them to appropriate values.
+            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            string unitsName = string.IsNullOrEmpty(displayUnits) ? "Count" : displayUnits;
+            string intervalName = intervalSecs.ToString() + " sec";
+            DisplayName = $"{counterName} ({unitsName} / {intervalName})";
+        }
+    }
+
+    class PercentilePayload : CounterPayload
+    {
+        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string tags, double val, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, tags, val, timestamp, "Metric")
+        {
+            // In case these properties are not provided, set them to appropriate values.
+            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+        }
     }
 }
