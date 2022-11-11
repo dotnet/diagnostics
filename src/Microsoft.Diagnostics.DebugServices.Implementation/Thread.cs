@@ -14,21 +14,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private byte[] _threadContext;
         private ulong? _teb;
 
-        protected readonly IServiceContainer ServiceContainer;
+        protected readonly IServiceContainer _serviceContainer;
 
         public Thread(ThreadService threadService, int index, uint id)
         {
             _threadService = threadService;
             ThreadIndex = index;
             ThreadId = id;
-            ServiceContainer = threadService.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Thread, threadService.Services);
-            ServiceContainer.AddService<IThread>(this);
+            _serviceContainer = threadService.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Thread, threadService.Services);
+            _serviceContainer.AddService<IThread>(this);
         }
 
         void IDisposable.Dispose()
         {
-            ServiceContainer.RemoveService(typeof(IThread));
-            ServiceContainer.DisposeServices();
+            _serviceContainer.RemoveService(typeof(IThread));
+            _serviceContainer.DisposeServices();
         }
 
         #region IThread
@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target => _threadService.Target;
 
-        public IServiceProvider Services => ServiceContainer.Services;
+        public IServiceProvider Services => _serviceContainer.Services;
 
         public bool TryGetRegisterValue(int index, out ulong value)
         {

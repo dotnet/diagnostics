@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string _dacFilePath;
         private string _dbiFilePath;
 
-        public readonly IServiceContainer ServiceContainer;
+        protected readonly IServiceContainer _serviceContainer;
 
         public Runtime(IServiceProvider services, int id, ClrInfo clrInfo)
         {
@@ -44,10 +44,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             RuntimeModule = services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
 
-            ServiceContainer = services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Runtime, services);
-            ServiceContainer.AddService<IRuntime>(this);
-            ServiceContainer.AddService<ClrInfo>(clrInfo);
-            ServiceContainer.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
+            _serviceContainer = services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Runtime, services);
+            _serviceContainer.AddService<IRuntime>(this);
+            _serviceContainer.AddService<ClrInfo>(clrInfo);
+            _serviceContainer.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
 
             _onFlushEvent = Target.OnFlushEvent.Register(Flush);
 
@@ -56,14 +56,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         void IDisposable.Dispose()
         {
-            ServiceContainer.RemoveService(typeof(IRuntime));
-            ServiceContainer.DisposeServices();
+            _serviceContainer.RemoveService(typeof(IRuntime));
+            _serviceContainer.DisposeServices();
             _onFlushEvent.Dispose();
         }
 
         private void Flush()
         {
-            if (ServiceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
+            if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
             {
                 ((ClrRuntime)service).FlushCachedData();
             }
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target { get; }
 
-        public IServiceProvider Services => ServiceContainer.Services;
+        public IServiceProvider Services => _serviceContainer.Services;
 
         public RuntimeType RuntimeType { get; }
 

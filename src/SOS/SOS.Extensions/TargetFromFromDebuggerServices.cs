@@ -72,21 +72,21 @@ namespace SOS.Extensions
             }
 
             // Add the thread, memory, and module services
-            ServiceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
-            ServiceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
-            ServiceContainer.AddServiceFactory<IMemoryService>((_) => {
+            _serviceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainer.AddServiceFactory<IMemoryService>((_) => {
                 Debug.Assert(Host.HostType != HostType.DotnetDump);
                 IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
                 if (IsDump && Host.HostType == HostType.Lldb)
                 {
                     // lldb doesn't map managed modules into the address space
-                    memoryService = new ImageMappingMemoryService(ServiceContainer, memoryService, managed: true);
+                    memoryService = new ImageMappingMemoryService(_serviceContainer, memoryService, managed: true);
 
                     // This is a special memory service that maps the managed assemblies' metadata into the address 
                     // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
                     // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping 
                     // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
-                    memoryService = new MetadataMappingMemoryService(ServiceContainer, memoryService);
+                    memoryService = new MetadataMappingMemoryService(_serviceContainer, memoryService);
                 }
                 return memoryService;
             });

@@ -13,17 +13,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ContextService : IContextService
     {
-        protected readonly IHost Host;
-        protected readonly IServiceContainer ServiceContainer;
+        protected readonly IHost _host;
+        protected readonly IServiceContainer _serviceContainer;
         private ITarget _currentTarget;
         private IThread _currentThread;
         private IRuntime _currentRuntime;
 
         public ContextService(IHost host)
         {
-            Host = host;
+            _host = host;
             var parent = new ContextServiceProvider(this);
-            ServiceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Context, parent);
+            _serviceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Context, parent);
 
             // Clear the current context when a target is flushed or destroyed
             host.OnTargetCreate.Register((target) => {
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Current context service provider. Contains the current ITarget, IThread 
         /// and IRuntime instances along with all per target and global services.
         /// </summary>
-        public IServiceProvider Services => ServiceContainer.Services;
+        public IServiceProvider Services => _serviceContainer.Services;
 
         /// <summary>
         /// Fires anytime the current context changes.
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">invalid target id</exception>
         public void SetCurrentTarget(int targetId)
         {
-            ITarget target = Host.EnumerateTargets().SingleOrDefault((target) => target.Id == targetId);
+            ITarget target = _host.EnumerateTargets().SingleOrDefault((target) => target.Id == targetId);
             if (target is null) {
                 throw new DiagnosticsException($"Invalid target id {targetId}");
             }
@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Returns the current target.
         /// </summary>
-        protected virtual ITarget GetCurrentTarget() => _currentTarget ??= Host.EnumerateTargets().FirstOrDefault();
+        protected virtual ITarget GetCurrentTarget() => _currentTarget ??= _host.EnumerateTargets().FirstOrDefault();
 
         /// <summary>
         /// Clears the context service state if the target is current
@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _currentTarget = target;
                 _currentThread = null;
                 _currentRuntime = null;
-                ServiceContainer.DisposeServices();
+                _serviceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
         }
@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (!IsThreadEqual(thread, _currentThread))
             {
                 _currentThread = thread;
-                ServiceContainer.DisposeServices();
+                _serviceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
         }
@@ -198,7 +198,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (!IsRuntimeEqual(runtime, _currentRuntime))
             {
                 _currentRuntime = runtime;
-                ServiceContainer.DisposeServices();
+                _serviceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
         }
@@ -299,7 +299,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
                 // Check with the global host services.
-                return _contextService.Host.Services.GetService(type);
+                return _contextService._host.Services.GetService(type);
             }
         }
     }

@@ -92,12 +92,12 @@ namespace SOS.Extensions
                 IndexFileSize = indexTimeStamp == InvalidTimeStamp ? null : indexFileSize;
                 IndexTimeStamp = indexTimeStamp == InvalidTimeStamp ? null : indexTimeStamp;
 
-                ServiceContainer.AddService<IModuleSymbols>(this);
+                _serviceContainer.AddService<IModuleSymbols>(this);
             }
 
             public override void Dispose()
             { 
-                ServiceContainer.RemoveService(typeof(IModuleSymbols));
+                _serviceContainer.RemoveService(typeof(IModuleSymbols));
                 base.Dispose();
             }
 

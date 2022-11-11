@@ -42,7 +42,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         foreach (ClrModule clrModule in clrRuntime.EnumerateModules())
                         {
                             ModuleFromAddress module = new(this, moduleIndex, clrModule.ImageBase, clrModule.Size, clrModule.Name);
-                            module.ServiceContainer.AddService(clrModule);
                             try
                             {
                                 modules.Add(module.ImageBase, module);

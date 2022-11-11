@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly string _dumpPath;
         private string _tempDirectory;
 
-        protected readonly IServiceContainer ServiceContainer;
+        protected readonly IServiceContainer _serviceContainer;
 
         public Target(IHost host, int id, string dumpPath)
         {
@@ -33,8 +33,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnDestroyEvent = new ServiceEvent();
 
             // Initialize the per-target services. Need to only use factories so it can be property cloned.
-            ServiceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Target, host.Services);
-            ServiceContainer.AddServiceFactory<ITarget>((_) => this);
+            _serviceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Target, host.Services);
+            _serviceContainer.AddServiceFactory<ITarget>((_) => this);
         }
 
         #region ITarget
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The per target services.
         /// </summary>
-        public IServiceProvider Services => ServiceContainer.Services;
+        public IServiceProvider Services => _serviceContainer.Services;
 
         /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).
@@ -117,8 +117,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Trace.TraceInformation($"Destroy target #{Id}");
             OnDestroyEvent.Fire();
-            ServiceContainer.RemoveService(typeof(ITarget));
-            ServiceContainer.DisposeServices();
+            _serviceContainer.RemoveService(typeof(ITarget));
+            _serviceContainer.DisposeServices();
             CleanupTempDirectory();
         }
 

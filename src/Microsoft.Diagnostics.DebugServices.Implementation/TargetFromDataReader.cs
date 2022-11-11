@@ -40,14 +40,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnFlushEvent.Register(dataReader.FlushCachedData);
 
             // Add the thread, memory, and module services
-            ServiceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, _dataReader));
-            ServiceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, _dataReader));
-            ServiceContainer.AddServiceFactory<IMemoryService>((_) => {
+            _serviceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, _dataReader));
+            _serviceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, _dataReader));
+            _serviceContainer.AddServiceFactory<IMemoryService>((_) => {
                 IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
                 if (IsDump)
                 {
                     // The underlying host (dotnet-dump usually) doesn't map native modules into the address space
-                    memoryService = new ImageMappingMemoryService(ServiceContainer, memoryService, managed: false);
+                    memoryService = new ImageMappingMemoryService(_serviceContainer, memoryService, managed: false);
 
                     // Any dump created for a MacOS target does not have managed assemblies in the native module service so
                     // we need to use this managed mapping memory service to make sure the metadata is available and 7.0 Linux
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // be able to map in the metadata.
                     if (targetOS == OSPlatform.OSX || targetOS == OSPlatform.Linux)
                     {
-                        memoryService = new ImageMappingMemoryService(ServiceContainer, memoryService, managed: true);
+                        memoryService = new ImageMappingMemoryService(_serviceContainer, memoryService, managed: true);
                     }
                 }
                 return memoryService;

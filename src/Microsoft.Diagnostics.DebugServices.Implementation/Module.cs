@@ -35,31 +35,31 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private Flags _flags;
         private IEnumerable<PdbFileInfo> _pdbFileInfos;
-        protected ImmutableArray<byte> _buildId;
         private string _symbolFileName;
 
-        public readonly IServiceContainer ServiceContainer;
+        protected ImmutableArray<byte> _buildId;
+        protected readonly IServiceContainer _serviceContainer;
 
         public Module(IServiceProvider services)
         {
-            ServiceContainer = services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Module, services);
-            ServiceContainer.AddService<IModule>(this);
-            ServiceContainer.AddService<IExportSymbols>(this);
-            ServiceContainer.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
+            _serviceContainer = services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Module, services);
+            _serviceContainer.AddService<IModule>(this);
+            _serviceContainer.AddService<IExportSymbols>(this);
+            _serviceContainer.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
         }
 
         public virtual void Dispose()
         { 
-            ServiceContainer.RemoveService(typeof(IModule));
-            ServiceContainer.RemoveService(typeof(IExportSymbols));
-            ServiceContainer.DisposeServices();
+            _serviceContainer.RemoveService(typeof(IModule));
+            _serviceContainer.RemoveService(typeof(IExportSymbols));
+            _serviceContainer.DisposeServices();
         }
 
         #region IModule
 
         public ITarget Target => ModuleService.Target;
 
-        public IServiceProvider Services => ServiceContainer.Services;
+        public IServiceProvider Services => _serviceContainer.Services;
 
         public virtual int ModuleIndex { get; protected set; }
 
