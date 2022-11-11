@@ -132,6 +132,27 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
+        private static void HandleHistogram(TraceEvent obj, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string sessionId = (string)obj.PayloadValue(0);
+            string meterName = (string)obj.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)obj.PayloadValue(3);
+            string unit = (string)obj.PayloadValue(4);
+            string tags = (string)obj.PayloadValue(5);
+            string quantilesText = (string)obj.PayloadValue(6);
+
+            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
+            foreach ((double key, double val) in quantiles)
+            {
+                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, obj.TimeStamp);
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
+            }
+        }
+
 
         private static int GetInterval(string series)
         {
