@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime provider implementation
     /// </summary>
-    [ServiceExport(Scope = ServiceScope.Target)]
+    [ServiceExport(Type = typeof(IRuntimeProvider), Scope = ServiceScope.Target)]
     public class RuntimeProvider : IRuntimeProvider, IDisposable
     {
         private readonly IServiceProvider _services;

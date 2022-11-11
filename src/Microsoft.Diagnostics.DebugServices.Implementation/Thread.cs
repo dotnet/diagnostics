@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private byte[] _threadContext;
         private ulong? _teb;
 
-        public readonly IServiceContainer ServiceContainer;
+        protected readonly IServiceContainer ServiceContainer;
 
         public Thread(ThreadService threadService, int index, uint id)
         {

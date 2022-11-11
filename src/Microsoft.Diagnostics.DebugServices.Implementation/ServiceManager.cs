@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="scope">global, per-target, per-runtime, etc. service type</param>
         /// <param name="parent">parent service provider to chain</param>
         /// <returns></returns>
-        public IServiceContainer CreateServiceContainer(ServiceScope scope, IServiceProvider parent = null)
+        public IServiceContainer CreateServiceContainer(ServiceScope scope, IServiceProvider parent)
         {
             var container = new ServiceContainer(parent, _factories[(int)scope]);
             if (scope == ServiceScope.Global || scope == ServiceScope.Context)
@@ -93,29 +93,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (serviceAttribute is not null)
                 {
                     ServiceFactory factory = (provider) => Utilities.CreateInstance(serviceType, provider);
-                    if (serviceAttribute.Type is null)
-                    {
-                        IEnumerable<Type> interfaces = serviceType.GetInterfaces().Where((i) => i != typeof(IDisposable));
-                        if (interfaces.Any())
-                        {
-                            // If the service type on the attributes wasn't defined, add all the interfaces on the implementation class as services.
-                            foreach (Type i in interfaces)
-                            {
-                                if (i != typeof(IDisposable))
-                                {
-                                    AddServiceFactory(serviceAttribute.Scope, i, factory);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            AddServiceFactory(serviceAttribute.Scope, serviceType, factory);
-                        }
-                    }
-                    else
-                    {
-                        AddServiceFactory(serviceAttribute.Scope, serviceAttribute.Type, factory);
-                    }
+                    AddServiceFactory(serviceAttribute.Scope, serviceAttribute.Type ?? serviceType, factory);
                 }
                 // The method or constructor must be static and public
                 foreach (MethodInfo methodInfo in currentType.GetMethods(BindingFlags.Static | BindingFlags.Public))

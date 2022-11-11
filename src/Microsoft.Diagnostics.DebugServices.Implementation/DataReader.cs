@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime service implementation
     /// </summary>
-    [ServiceExport(Scope = ServiceScope.Target)]
+    [ServiceExport(Type = typeof(IDataReader), Scope = ServiceScope.Target)]
     public class DataReader : IDataReader
     {
         private readonly ITarget _target;

@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             DiagnosticLoggingService.Initialize();
 
             _serviceManager = new ServiceManager();
-            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global);
+            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
 
@@ -91,14 +91,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _fileLoggingConsoleService.WriteLine($"Loading core dump: {dump_path} ...");
 
             // Attempt to load the persisted command history
-            string historyFileName = Path.Combine(Utilities.GetDotNetHomeDirectory(), "dotnet-dump.history");
+            string historyFileName = null;
             try
             {
+                historyFileName = Path.Combine(Utilities.GetDotNetHomeDirectory(), "dotnet-dump.history");
                 string[] history = File.ReadAllLines(historyFileName);
                 _consoleService.AddCommandHistory(history);
             }
             catch (Exception ex) when
                 (ex is IOException ||
+                 ex is ArgumentNullException ||
                  ex is UnauthorizedAccessException ||
                  ex is NotSupportedException ||
                  ex is SecurityException)
@@ -177,17 +179,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 _targets.Clear();
 
                 // Persist the current command history
-                try
+                if (historyFileName != null)
                 {
-                    File.WriteAllLines(historyFileName, _consoleService.GetCommandHistory());
+                    try
+                    {
+                        File.WriteAllLines(historyFileName, _consoleService.GetCommandHistory());
+                    }
+                    catch (Exception ex) when
+                        (ex is IOException ||
+                         ex is UnauthorizedAccessException ||
+                         ex is NotSupportedException ||
+                         ex is SecurityException)
+                    {
+                    }
                 }
-                catch (Exception ex) when
-                    (ex is IOException ||
-                     ex is UnauthorizedAccessException ||
-                     ex is NotSupportedException ||
-                     ex is SecurityException)
-                {
-                }
+
                 // Send shutdown event on exit
                 OnShutdownEvent.Fire();
 

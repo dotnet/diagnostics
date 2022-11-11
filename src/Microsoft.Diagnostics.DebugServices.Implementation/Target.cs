@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly string _dumpPath;
         private string _tempDirectory;
 
-        public readonly IServiceContainer ServiceContainer;
+        protected readonly IServiceContainer ServiceContainer;
 
         public Target(IHost host, int id, string dumpPath)
         {

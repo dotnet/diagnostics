@@ -14,11 +14,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class ContextService : IContextService
     {
         protected readonly IHost Host;
+        protected readonly IServiceContainer ServiceContainer;
         private ITarget _currentTarget;
         private IThread _currentThread;
         private IRuntime _currentRuntime;
-
-        public readonly IServiceContainer ServiceContainer;
 
         public ContextService(IHost host)
         {

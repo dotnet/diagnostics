@@ -107,7 +107,7 @@ namespace SOS.Extensions
         private HostServices()
         {
             _serviceManager = new ServiceManager();
-            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global);
+            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
 
