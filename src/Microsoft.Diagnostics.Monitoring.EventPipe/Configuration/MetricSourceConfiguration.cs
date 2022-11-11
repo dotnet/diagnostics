@@ -44,6 +44,34 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                {
                     { "EventCounterIntervalSec", MetricIntervalSeconds }
                })).ToList();
+
+            const long TimeSeriesValues = 0x2;
+            StringBuilder metrics = new StringBuilder();
+            foreach (string provider in customProviderNames)
+            {
+                if (metrics.Length != 0)
+                {
+                    metrics.Append(",");
+                }
+
+                metrics.Append(provider);
+            }
+
+            var metricsEventSourceSessionId = Guid.NewGuid().ToString();
+
+            EventPipeProvider metricsEventSourceProvider =
+                new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+                    new Dictionary<string, string>()
+                    {
+                        { "SessionId", metricsEventSourceSessionId },
+                        { "Metrics", metrics.ToString() },
+                        { "RefreshInterval", MetricIntervalSeconds.ToString() },
+                        { "MaxTimeSeries", "1000" },
+                        { "MaxHistograms", "10" }
+                    }
+                );
+
+            _eventPipeProviders = _eventPipeProviders.Append(metricsEventSourceProvider).ToArray();
         }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames, int maxHistograms, int maxTimeSeries) : this(metricIntervalSeconds, customProviderNames)
