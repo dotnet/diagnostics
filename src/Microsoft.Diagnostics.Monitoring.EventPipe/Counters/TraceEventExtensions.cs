@@ -219,7 +219,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 metadataDict.Add("quantile", key.ToString());
                 payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, metadataDict, val, obj.TimeStamp));
             }
-        }
+        }*/
 
         private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
