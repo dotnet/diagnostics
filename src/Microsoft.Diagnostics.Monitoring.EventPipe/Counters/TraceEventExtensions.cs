@@ -72,15 +72,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     if (traceEvent.EventName == "BeginInstrumentReporting")
                     {
-                        HandleBeginInstrumentReporting(traceEvent);
+                        //HandleBeginInstrumentReporting(traceEvent);
                     }
                     if (traceEvent.EventName == "HistogramValuePublished")
                     {
-                        HandleHistogram(traceEvent);
+                        //HandleHistogram(traceEvent);
                     }
                     else if (traceEvent.EventName == "GaugeValuePublished")
                     {
-                        HandleGauge(traceEvent);
+                        HandleGauge(traceEvent, out payload);
                     }
                     else if (traceEvent.EventName == "CounterRateValuePublished")
                     {
@@ -88,23 +88,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     }
                     else if (traceEvent.EventName == "TimeSeriesLimitReached")
                     {
-                        HandleTimeSeriesLimitReached(traceEvent);
+                        //HandleTimeSeriesLimitReached(traceEvent);
                     }
                     else if (traceEvent.EventName == "HistogramLimitReached")
                     {
-                        HandleHistogramLimitReached(traceEvent);
+                        //HandleHistogramLimitReached(traceEvent);
                     }
                     else if (traceEvent.EventName == "Error")
                     {
-                        HandleError(traceEvent);
+                        //HandleError(traceEvent);
                     }
                     else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
                     {
-                        HandleObservableInstrumentCallbackError(traceEvent);
+                        //HandleObservableInstrumentCallbackError(traceEvent);
                     }
                     else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                     {
-                        HandleMultipleSessionsNotSupportedError(traceEvent);
+                        //HandleMultipleSessionsNotSupportedError(traceEvent);
                     }
                 }
 
@@ -112,6 +112,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             return false;
+        }
+
+        private static void HandleGauge(TraceEvent obj, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string sessionId = (string)obj.PayloadValue(0);
+            string meterName = (string)obj.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)obj.PayloadValue(3);
+            string unit = (string)obj.PayloadValue(4);
+            string tags = (string)obj.PayloadValue(5);
+            string lastValueText = (string)obj.PayloadValue(6);
+
+            // the value might be an empty string indicating no measurement was provided this collection interval
+            if (double.TryParse(lastValueText, out double lastValue))
+            {
+                payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
+            }
         }
 
         private static void HandleCounterRate(TraceEvent traceEvent, out ICounterPayload payload)
@@ -132,6 +151,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
+        /*
         private static void HandleHistogram(TraceEvent obj, out ICounterPayload payload)
         {
             payload = null;
@@ -151,7 +171,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
-        }
+        }*/
 
 
         private static int GetInterval(string series)
