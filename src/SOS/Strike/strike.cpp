@@ -1336,7 +1336,7 @@ DECLARE_API(DumpMT)
             const char* title = "AssemblyLoadContext:";
             if (assemblyLoadContext != 0)
             {
-                table.WriteRow(title, PrefixHex(assemblyLoadContext));
+                table.WriteRow(title, ObjectPtr(assemblyLoadContext));
             }
             else
             {
