@@ -50,6 +50,9 @@
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <!-- Use pinned version to avoid picking up latest (which doesn't support netcoreapp3.1) during source-build -->
     <MicrosoftExtensionsLoggingPinnedVersion>2.1.1</MicrosoftExtensionsLoggingPinnedVersion>
+    <!-- dotnet-dsrouter needs a net6.0 version of logging -->
+    <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
