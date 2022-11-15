@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Command IpcClientWebSocketServerRouterCommand() =>
         new Command(
             name: "client-websocket",
-            description: "Starts a .NET application Diagnostic Server routing local IPC client <--> remote WebSocket client. " +
+            description: "Starts a .NET application Diagnostic Server routing local IPC server <--> remote WebSocket client. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
                                 "and a WebSocket server (accepting runtime WebSocket client).")
         {
