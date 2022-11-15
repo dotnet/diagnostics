@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            return new MetricSourceConfiguration(Settings.CounterIntervalSeconds, _filter.GetProviders());
+            return new MetricSourceConfiguration(Settings.CounterIntervalSeconds, _filter.GetProviders(), Settings.MaxHistograms, Settings.MaxTimeSeries);
         }
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_filter, out ICounterPayload counterPayload))
+                    if (traceEvent.TryGetCounterPayload(_filter, out List<ICounterPayload> counterPayload))
                     {
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }

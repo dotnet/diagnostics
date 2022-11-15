@@ -15,6 +15,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         //Do not use TimeSpan here since we may need to synchronize this pipeline interval
         //with a different session and want to make sure the values are identical.
         public float CounterIntervalSeconds { get; set; }
+
+        public int MaxHistograms { get; set; }
+
+        public int MaxTimeSeries { get; set; }
     }
 
     internal class EventPipeCounterGroup

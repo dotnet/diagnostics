@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         //TODO Consider making these async.
 
-        void Log(ICounterPayload counter);
+        void Log(List<ICounterPayload> counter);
         void PipelineStarted();
         void PipelineStopped();
     }

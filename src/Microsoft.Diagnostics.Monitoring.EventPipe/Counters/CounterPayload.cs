@@ -5,12 +5,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class CounterPayload : ICounterPayload
     {
+#if NETSTANDARD
+        private static readonly IReadOnlyDictionary<string, string> Empty = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(0));
+#else
+        private static readonly IReadOnlyDictionary<string, string> Empty = System.Collections.Immutable.ImmutableDictionary<string, string>.Empty;
+#endif
+
         public CounterPayload(DateTime timestamp,
             string provider,
             string name,
@@ -18,7 +25,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit,
             double value,
             CounterType counterType,
-            float interval)
+            float interval,
+            Dictionary<string, string> metadata)
         {
             Timestamp = timestamp;
             Name = name;
@@ -28,14 +36,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             CounterType = counterType;
             Provider = provider;
             Interval = interval;
+            Metadata = metadata ?? Empty;
         }
 
         // Copied from dotnet-counters
-        public CounterPayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, DateTime timestamp, string type)
+        public CounterPayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double value, DateTime timestamp, string type)
         {
             Provider = providerName;
             Name = name;
-            Tags = tags;
+            Metadata = metadata ?? Empty;
             Value = value;
             Timestamp = timestamp;
             CounterType = (CounterType)Enum.Parse(typeof(CounterType), type);
@@ -61,12 +70,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string Tags { get; private set; }
 
+        public IReadOnlyDictionary<string, string> Metadata { get; } = new Dictionary<string, string>(0);
+
+
     }
 
     class GaugePayload : CounterPayload
     {
-        public GaugePayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, tags, value, timestamp, "Metric")
+        public GaugePayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double value, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Metric")
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
@@ -76,8 +88,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     class RatePayload : CounterPayload
     {
-        public RatePayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, double intervalSecs, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, tags, value, timestamp, "Rate")
+        public RatePayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double value, double intervalSecs, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Rate")
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
@@ -89,8 +101,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     class PercentilePayload : CounterPayload
     {
-        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string tags, double val, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, tags, val, timestamp, "Metric")
+        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double val, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, metadata, val, timestamp, "Metric")
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;

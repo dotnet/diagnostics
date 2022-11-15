@@ -5,14 +5,15 @@
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static class TraceEventExtensions
     {
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, out ICounterPayload payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, out List<ICounterPayload> payload)
         {
-            payload = null;
+            payload = new List<ICounterPayload>();
 
             if ("EventCounters".Equals(traceEvent.EventName))
             {
@@ -22,6 +23,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 //Make sure we are part of the requested series. If multiple clients request metrics, all of them get the metrics.
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
+
+                Dictionary<string, string> metadataDict = GetMetadata(payloadFields["Metadata"].ToString());
 
                 //CONSIDER
                 //Concurrent counter sessions do not each get a separate interval. Instead the payload
@@ -55,60 +58,67 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
                 // We no longer added it here.
-                payload = new CounterPayload(
+
+                payload.Add(new CounterPayload(
                     traceEvent.TimeStamp,
                     traceEvent.ProviderName,
                     counterName, displayName,
                     displayUnits,
                     value,
                     counterType,
-                    intervalSec);
+                    intervalSec,
+                    metadataDict));
+
                 return true;
             }
 
             if ("System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
             {
-                if (traceEvent.ProviderName == "System.Diagnostics.Metrics")
+                ICounterPayload individualPayload = null;
+
+                if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
-                    if (traceEvent.EventName == "BeginInstrumentReporting")
-                    {
-                        //HandleBeginInstrumentReporting(traceEvent);
-                    }
-                    if (traceEvent.EventName == "HistogramValuePublished")
-                    {
-                        //HandleHistogram(traceEvent);
-                    }
-                    else if (traceEvent.EventName == "GaugeValuePublished")
-                    {
-                        HandleGauge(traceEvent, out payload);
-                    }
-                    else if (traceEvent.EventName == "CounterRateValuePublished")
-                    {
-                        HandleCounterRate(traceEvent, out payload);
-                    }
-                    else if (traceEvent.EventName == "TimeSeriesLimitReached")
-                    {
-                        //HandleTimeSeriesLimitReached(traceEvent);
-                    }
-                    else if (traceEvent.EventName == "HistogramLimitReached")
-                    {
-                        //HandleHistogramLimitReached(traceEvent);
-                    }
-                    else if (traceEvent.EventName == "Error")
-                    {
-                        //HandleError(traceEvent);
-                    }
-                    else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
-                    {
-                        //HandleObservableInstrumentCallbackError(traceEvent);
-                    }
-                    else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
-                    {
-                        //HandleMultipleSessionsNotSupportedError(traceEvent);
-                    }
+                    //HandleBeginInstrumentReporting(traceEvent);
+                }
+                if (traceEvent.EventName == "HistogramValuePublished")
+                {
+                    HandleHistogram(traceEvent, out payload);
+                }
+                else if (traceEvent.EventName == "GaugeValuePublished")
+                {
+                    HandleGauge(traceEvent, out individualPayload);
+                }
+                else if (traceEvent.EventName == "CounterRateValuePublished")
+                {
+                    HandleCounterRate(traceEvent, out individualPayload);
+                }
+                else if (traceEvent.EventName == "TimeSeriesLimitReached")
+                {
+                    //HandleTimeSeriesLimitReached(traceEvent);
+                }
+                else if (traceEvent.EventName == "HistogramLimitReached")
+                {
+                    //HandleHistogramLimitReached(traceEvent);
+                }
+                else if (traceEvent.EventName == "Error")
+                {
+                    //HandleError(traceEvent);
+                }
+                else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
+                {
+                    //HandleObservableInstrumentCallbackError(traceEvent);
+                }
+                else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
+                {
+                    //HandleMultipleSessionsNotSupportedError(traceEvent);
                 }
 
-                return payload != null;
+                if (null != individualPayload)
+                {
+                    payload.Add(individualPayload);
+                }
+
+                return null != payload && payload.Any();
             }
 
             return false;
@@ -126,10 +136,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)obj.PayloadValue(5);
             string lastValueText = (string)obj.PayloadValue(6);
 
+            Dictionary<string, string> metadataDict = GetMetadata(tags);
+
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, out double lastValue))
             {
-                payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
+                payload = new GaugePayload(meterName, instrumentName, null, unit, metadataDict, lastValue, obj.TimeStamp);
             }
         }
 
@@ -145,16 +157,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
 
+            Dictionary<string, string> metadataDict = GetMetadata(tags);
+
             if (double.TryParse(rateText, out double rate))
             {
-                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, 10, traceEvent.TimeStamp); // NEED REAL VALUE FOR INTERVAL
+                payload = new RatePayload(meterName, instrumentName, null, unit, metadataDict, rate, 10, traceEvent.TimeStamp); // NEED REAL VALUE FOR INTERVAL
             }
         }
 
-        /*
-        private static void HandleHistogram(TraceEvent obj, out ICounterPayload payload)
+        
+        private static void HandleHistogram(TraceEvent obj, out List<ICounterPayload> payload)
         {
-            payload = null;
+            payload = new List<ICounterPayload>();
 
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
@@ -164,15 +178,85 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
 
-            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            Console.WriteLine("MeterName: " + meterName);
+            Console.WriteLine("InstrumentName: " + instrumentName);
+            Console.WriteLine("Unit: " + unit);
+            Console.WriteLine("Tags: " + tags);
+            Console.WriteLine("Quantiles: " + quantilesText);
+
+
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
             foreach ((double key, double val) in quantiles)
             {
-                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
-            }
-        }*/
+                Console.WriteLine("Key: " + key + " | Value: " + val);
 
+                Dictionary<string, string> metadataDict = GetMetadata(tags);
+                metadataDict.Add("quantile", key.ToString());
+                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, metadataDict, val, obj.TimeStamp));
+            }
+        }
+
+        public static Dictionary<string, string> GetMetadata(string metadataPayload)
+        {
+            var metadataDict = new Dictionary<string, string>();
+
+            ReadOnlySpan<char> metadata = metadataPayload;
+
+            while (!metadata.IsEmpty)
+            {
+                int commaIndex = metadata.IndexOf(',');
+
+                ReadOnlySpan<char> kvPair;
+
+                if (commaIndex < 0)
+                {
+                    kvPair = metadata;
+                    metadata = default;
+                }
+                else
+                {
+                    kvPair = metadata[..commaIndex];
+                    metadata = metadata.Slice(commaIndex + 1);
+                }
+
+                int colonIndex = kvPair.IndexOf(':');
+                if (colonIndex < 0)
+                {
+                    metadataDict.Clear();
+                    break;
+                }
+
+                string metadataKey = kvPair[..colonIndex].ToString();
+                string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
+                metadataDict[metadataKey] = metadataValue;
+            }
+
+            return metadataDict;
+        }
+
+        private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
+        {
+            string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            List<KeyValuePair<double, double>> quantiles = new List<KeyValuePair<double, double>>();
+            foreach (string quantile in quantileParts)
+            {
+                string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
+                if (keyValParts.Length != 2)
+                {
+                    continue;
+                }
+                if (!double.TryParse(keyValParts[0], out double key))
+                {
+                    continue;
+                }
+                if (!double.TryParse(keyValParts[1], out double val))
+                {
+                    continue;
+                }
+                quantiles.Add(new KeyValuePair<double, double>(key, val));
+            }
+            return quantiles.ToArray();
+        }
 
         private static int GetInterval(string series)
         {

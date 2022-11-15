@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly IList<EventPipeProvider> _eventPipeProviders;
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames, int maxHistograms, int maxTimeSeries)
         {
             RequestRundown = false;
             if (customProviderNames == null)
@@ -65,8 +65,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         { "SessionId", metricsEventSourceSessionId },
                         { "Metrics", metrics.ToString() },
                         { "RefreshInterval", MetricIntervalSeconds.ToString() },
-                        { "MaxTimeSeries", "1000" },
-                        { "MaxHistograms", "10" }
+                        { "MaxTimeSeries", maxTimeSeries.ToString() },
+                        { "MaxHistograms", maxHistograms.ToString() }
                     }
                 );
 
