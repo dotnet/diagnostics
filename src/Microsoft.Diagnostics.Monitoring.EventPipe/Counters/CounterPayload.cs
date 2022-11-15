@@ -71,7 +71,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public IReadOnlyDictionary<string, string> Metadata { get; }
 
         public EventType EventType { get; set; }
-
     }
 
     public class GaugePayload : CounterPayload
