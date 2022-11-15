@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly IList<EventPipeProvider> _eventPipeProviders;
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames, int maxHistograms, int maxTimeSeries)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
         {
             RequestRundown = false;
             if (customProviderNames == null)
@@ -43,7 +43,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                {
                     { "EventCounterIntervalSec", MetricIntervalSeconds }
                })).ToList();
+        }
 
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames, int maxHistograms, int maxTimeSeries) : this(metricIntervalSeconds, customProviderNames)
+        {
             const long TimeSeriesValues = 0x2;
             StringBuilder metrics = new StringBuilder();
             foreach (string provider in customProviderNames)

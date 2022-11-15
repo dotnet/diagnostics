@@ -94,11 +94,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
-                    //HandleTimeSeriesLimitReached(traceEvent);
+                    HandleTimeSeriesLimitReached(traceEvent, out individualPayload);
                 }
                 else if (traceEvent.EventName == "HistogramLimitReached")
                 {
-                    //HandleHistogramLimitReached(traceEvent);
+                    HandleHistogramLimitReached(traceEvent, out individualPayload);
                 }
                 else if (traceEvent.EventName == "Error")
                 {
@@ -194,6 +194,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 metadataDict.Add("quantile", key.ToString());
                 payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, metadataDict, val, obj.TimeStamp));
             }
+        }
+
+        private static void HandleHistogramLimitReached(TraceEvent obj, out ICounterPayload payload)
+        {
+            string sessionId = (string)obj.PayloadValue(0);
+
+            string errorMessage = $"Warning: Histogram tracking limit reached. Not all data is being shown. The limit can be changed with maxHistograms but will use more memory in the target process.";
+
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
+        }
+
+        private static void HandleTimeSeriesLimitReached(TraceEvent obj, out ICounterPayload payload)
+        {
+            string sessionId = (string)obj.PayloadValue(0);
+
+            string errorMessage = "Warning: Time series tracking limit reached. Not all data is being shown. The limit can be changed with maxTimeSeries but will use more memory in the target process.";
+
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
         }
 
         public static Dictionary<string, string> GetMetadata(string metadataPayload)
