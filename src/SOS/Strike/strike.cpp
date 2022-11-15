@@ -1327,20 +1327,21 @@ DECLARE_API(DumpMT)
     }
 
     ReleaseHolder<ISOSDacInterface8> sos8;
-    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+    if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
     {
         CLRDATA_ADDRESS assemblyLoadContext = 0;
-        if (SUCCEEDED(sos8->GetAssemblyLoadContext(TO_CDADDR(dwStartAddr), &assemblyLoadContext)))
+        Status = sos8->GetAssemblyLoadContext(TO_CDADDR(dwStartAddr), &assemblyLoadContext);
+        if (SUCCEEDED(Status))
         {
-            // const char* title = "AssemblyLoadContext:";
-            // if (assemblyLoadContext != 0)
-            // {
-            //     table.WriteRow(title, ObjectPtr(assemblyLoadContext));
-            // }
-            // else
-            // {
-            //     table.WriteRow(title, "Default ALC - The managed instance of this context doesn't exist yet.");
-            // }
+            const char* title = "AssemblyLoadContext:";
+            if (assemblyLoadContext != 0)
+            {
+                table.WriteRow(title, ObjectPtr(assemblyLoadContext));
+            }
+            else
+            {
+                table.WriteRow(title, "Default ALC - The managed instance of this context doesn't exist yet.");
+            }
         }
     }
 
