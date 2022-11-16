@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal enum CounterType
+    public enum CounterType
     {
         //Same as average or mean
         Metric,
@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         Rate
     }
 
-    internal interface ICounterPayload
+    public interface ICounterPayload
     {
         string Name { get; }
 

@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal class CounterPayload : ICounterPayload
+    public class CounterPayload : ICounterPayload
     {
 #if NETSTANDARD
         private static readonly IReadOnlyDictionary<string, string> Empty = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(0));
@@ -78,7 +78,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     }
 
-    class GaugePayload : CounterPayload
+    public class GaugePayload : CounterPayload
     {
         public GaugePayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double value, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Metric", EventType.Gauge)
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    class RatePayload : CounterPayload
+    public class RatePayload : CounterPayload
     {
         public RatePayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double value, double intervalSecs, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Rate", EventType.Rate)
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    class PercentilePayload : CounterPayload
+    public class PercentilePayload : CounterPayload
     {
         public PercentilePayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double val, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, val, timestamp, "Metric", EventType.Histogram)
@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    class ErrorPayload : CounterPayload
+    public class ErrorPayload : CounterPayload
     {
         public ErrorPayload(string providerName, string name, string displayName, string displayUnits, Dictionary<string, string> metadata, double val, DateTime timestamp, string errorMessage) :
             base(providerName, name, displayName, displayUnits, metadata, val, timestamp, "Metric", EventType.Error)
@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     }
 
     // If keep this, should probably put it somewhere else
-    enum EventType : int
+    public enum EventType : int
     {
         Rate,
         Gauge,
