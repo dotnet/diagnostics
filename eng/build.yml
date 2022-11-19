@@ -21,6 +21,7 @@ parameters:
   dependsOn: ''
   artifactsTargetPath: ''
   requiresCapPtraceContainer: false
+  isCodeQLRun: false
 
 jobs:
 - template: /eng/common/templates/job/job.yml
@@ -95,13 +96,24 @@ jobs:
             --docker-image $(_DockerImageName)
             --source-directory $(Build.SourcesDirectory)
             --container-name diagnostics-$(Build.BuildId)
+    - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+      - name: Codeql.Enabled
+        value: True
+      - name: Codeql.Cadence
+        value: 0
+      - name: Codeql.TSAEnabled
+        value: True
+      - name: Codeql.BuildIdentifier
+        value: $(System.JobDisplayName)
+      - name: Codeql.Language
+        value: csharp,cpp
 
-    - ${{ if eq(parameters.buildAndSkipTest, 'true') }}:
+    - ${{ if or(eq(parameters.buildAndSkipTest, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
       - _TestArgs: ''
 
     - _InternalInstallArgs: ''
     # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.isCodeQLRun, 'false')) }}:
       - _InternalInstallArgs:
           -dotnetruntimeversion '$(DotnetRuntimeVersion)'
           -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
@@ -137,6 +149,10 @@ jobs:
             sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)
             targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
 
+    - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+      - task: CodeQL3000Init@0
+        displayName: CodeQL Initialize
+
     - script: $(_dockerEnv) $(_buildScript)
         -configuration $(_BuildConfig) 
         -architecture $(_BuildArch)
@@ -148,6 +164,10 @@ jobs:
       condition: succeeded()
       env:
         ROOTFS_DIR: ${{ parameters.crossrootfsDir }}
+
+    - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+      - task: CodeQL3000Finalize@0
+        displayName: CodeQL Finalize
 
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - task: CopyFiles@2
@@ -209,7 +229,7 @@ jobs:
       continueOnError: true
       condition: always()
 
-    - ${{ if eq(parameters.buildAndSkipTest, 'false') }}:
+    - ${{ if and(eq(parameters.buildAndSkipTest, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
       # Publish test results to Azure Pipelines
       - task: PublishTestResults@2
         inputs:
