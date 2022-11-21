@@ -82,15 +82,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 if (traceEvent.EventName == "HistogramValuePublished")
                 {
-                    HandleHistogram(traceEvent, sessionId, out payload);
+                    HandleHistogram(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "GaugeValuePublished")
                 {
-                    HandleGauge(traceEvent, sessionId, out individualPayload);
+                    HandleGauge(traceEvent, filter, sessionId, out individualPayload);
                 }
                 else if (traceEvent.EventName == "CounterRateValuePublished")
                 {
-                    HandleCounterRate(traceEvent, sessionId, out individualPayload);
+                    HandleCounterRate(traceEvent, filter, sessionId, out individualPayload);
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return TryGetCounterPayload(traceEvent, filter, null, out payload);
         }
 
-        private static void HandleGauge(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        private static void HandleGauge(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -149,6 +149,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             Dictionary<string, string> metadataDict = GetMetadata(tags);
 
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, out double lastValue))
             {
@@ -156,7 +161,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleCounterRate(TraceEvent traceEvent, string sessionId, out ICounterPayload payload)
+        private static void HandleCounterRate(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -183,7 +188,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
 
         
-        private static void HandleHistogram(TraceEvent obj, string sessionId, out List<ICounterPayload> payload)
+        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out List<ICounterPayload> payload)
         {
             payload = new List<ICounterPayload>();
 
@@ -200,6 +205,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
 
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
             foreach ((double key, double val) in quantiles)
