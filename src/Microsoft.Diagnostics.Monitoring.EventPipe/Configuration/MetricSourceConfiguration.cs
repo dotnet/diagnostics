@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
         private readonly IList<EventPipeProvider> _eventPipeProviders;
+        public string SessionId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
         {
@@ -59,13 +60,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 metrics.Append(provider);
             }
 
-            var metricsEventSourceSessionId = Guid.NewGuid().ToString();
+            SessionId = Guid.NewGuid().ToString();
 
             EventPipeProvider metricsEventSourceProvider =
                 new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
                     new Dictionary<string, string>()
                     {
-                        { "SessionId", metricsEventSourceSessionId },
+                        { "SessionId", SessionId },
                         { "Metrics", metrics.ToString() },
                         { "RefreshInterval", MetricIntervalSeconds.ToString() },
                         { "MaxTimeSeries", maxTimeSeries.ToString() },
