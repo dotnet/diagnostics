@@ -306,7 +306,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
         }
 
-
         //The metadata payload is formatted as a string of comma separated key:value pairs.
         //This limitation means that metadata values cannot include commas; otherwise, the
         //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
