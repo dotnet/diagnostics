@@ -387,7 +387,7 @@ public class SOS
             if (OS.Kind == OSKind.OSX)
             {
                 program = "xcrun";
-                arguments.Append("python3");
+                arguments.Append("python3 ");
             }
             else 
             {
