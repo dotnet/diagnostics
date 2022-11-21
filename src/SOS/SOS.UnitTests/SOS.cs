@@ -382,12 +382,23 @@ public class SOS
             outputHelper.WriteLine("Starting {0}", testName);
             outputHelper.WriteLine("{");
 
-            string program = "/usr/bin/python";
-            if (!File.Exists(program))
-            {
-                throw new ArgumentException($"{program} does not exists");
-            }
+            string program;
             var arguments = new StringBuilder();
+            if (OS.Kind == OSKind.OSX)
+            {
+                program = "xcrun";
+                arguments.Append("python3");
+            }
+            else 
+            {
+                // We should verify what python version this is. 2.7 is out of 
+                // support for a while now, but we have old OS's.
+                program = "/usr/bin/python";
+                if (!File.Exists(program))
+                {
+                    throw new ArgumentException($"{program} does not exists");
+                }
+            }
             string repoRootDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["RepoRootDir"]);
 
             // Get test python script path
