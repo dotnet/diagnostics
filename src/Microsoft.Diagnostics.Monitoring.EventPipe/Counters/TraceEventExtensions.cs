@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
                 {
-                    //HandleObservableInstrumentCallbackError(traceEvent);
+                    HandleObservableInstrumentCallbackError(traceEvent, sessionId, out individualPayload);
                 }
                 else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                 {
@@ -187,7 +187,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        
         private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out List<ICounterPayload> payload)
         {
             payload = new List<ICounterPayload>();
@@ -270,6 +269,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
             }
+        }
+
+        private static void HandleObservableInstrumentCallbackError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+            string error = (string)obj.PayloadValue(1);
+
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string errorMessage = "Exception thrown from an observable instrument callback in the target process:" + Environment.NewLine +
+                error;
+
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
         }
 
         public static Dictionary<string, string> GetMetadata(string metadataPayload)
