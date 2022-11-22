@@ -1327,7 +1327,8 @@ DECLARE_API(DumpMT)
     }
 
     ReleaseHolder<ISOSDacInterface8> sos8;
-    if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+    if (IsRuntimeVersionAtLeast(7) // Prior to .NET 7, a bug existed that made ALC queries fail.
+        && SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
     {
         CLRDATA_ADDRESS assemblyLoadContext = 0;
         Status = sos8->GetAssemblyLoadContext(TO_CDADDR(dwStartAddr), &assemblyLoadContext);
