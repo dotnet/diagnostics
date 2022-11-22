@@ -74,6 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (sessionId != null && "System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
             {
+                
                 ICounterPayload individualPayload = null;
 
                 if (traceEvent.EventName == "BeginInstrumentReporting")
