@@ -55,6 +55,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string Provider { get; }
 
-        public IReadOnlyDictionary<string, string> Metadata { get; } = new Dictionary<string, string>(0);
+        public IReadOnlyDictionary<string, string> Metadata { get; }
     }
 }

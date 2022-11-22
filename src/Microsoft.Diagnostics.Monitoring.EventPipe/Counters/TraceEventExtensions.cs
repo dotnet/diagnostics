@@ -72,7 +72,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return false;
         }
 
-        public static Dictionary<string, string> GetMetadata(string metadataPayload)
+        //The metadata payload is formatted as a string of comma separated key:value pairs.
+        //This limitation means that metadata values cannot include commas; otherwise, the
+        //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
+        //is treated as invalid and excluded from the payload.
+        internal static Dictionary<string, string> GetMetadata(string metadataPayload)
         {
             var metadataDict = new Dictionary<string, string>();
 
