@@ -74,10 +74,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (sessionId != null && "System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
             {
+                
                 ICounterPayload individualPayload = null;
 
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
+                    // Do we want to log something for this?
                     //HandleBeginInstrumentReporting(traceEvent);
                 }
                 if (traceEvent.EventName == "HistogramValuePublished")
@@ -102,7 +104,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "Error")
                 {
-                    //HandleError(traceEvent);
+                    HandleError(traceEvent, sessionId, out individualPayload);
                 }
                 else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
                 {
@@ -183,7 +185,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (double.TryParse(rateText, out double rate))
             {
-                payload = new RatePayload(meterName, instrumentName, null, unit, metadataDict, rate, 10, traceEvent.TimeStamp); // NEED REAL VALUE FOR INTERVAL
+                payload = new RatePayload(meterName, instrumentName, null, unit, metadataDict, rate, 10, traceEvent.TimeStamp);
             }
         }
 
@@ -232,7 +234,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = $"Warning: Histogram tracking limit reached. Not all data is being shown. The limit can be changed with maxHistograms but will use more memory in the target process.";
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
         }
 
         private static void HandleTimeSeriesLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
@@ -248,7 +250,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = "Warning: Time series tracking limit reached. Not all data is being shown. The limit can be changed with maxTimeSeries but will use more memory in the target process.";
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
+        }
+
+        private static void HandleError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+            string error = (string)obj.PayloadValue(1);
+            if (sessionId != payloadSessionId)
+            {
+                return;
+            }
+
+            string errorMessage = "Error reported from target process:" + Environment.NewLine + error;
+
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
         }
 
         private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, string sessionId, out ICounterPayload payload)
@@ -267,7 +285,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string errorMessage = "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
                 "Concurrent sessions are not supported.";
 
-                payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
+                payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
             }
         }
 
@@ -286,7 +304,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string errorMessage = "Exception thrown from an observable instrument callback in the target process:" + Environment.NewLine +
                 error;
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, DateTime.Now, errorMessage); // NEED REAL VALUE FOR DATETIME
+            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
         }
 
         public static Dictionary<string, string> GetMetadata(string metadataPayload)
