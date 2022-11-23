@@ -113,6 +113,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             // Load any extra extensions
             _serviceManager.LoadExtensions();
 
+            // Loading extensions or adding service factories not allowed after this point.
+            _serviceManager.Finalized();
+
             try
             {
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);

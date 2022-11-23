@@ -36,6 +36,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             // Automatically enable symbol server support
             _symbolService.AddSymbolServer(msdl: true, symweb: false, timeoutInMinutes: 6, retryCount: 5);
             _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+
+            // Loading extensions or adding service factories not allowed after this point.
+            _serviceManager.Finalized();
         }
 
         protected override ITarget GetTarget()

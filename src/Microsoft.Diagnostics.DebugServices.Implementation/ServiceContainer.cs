@@ -40,20 +40,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly IServiceProvider _parent;
         private readonly IServiceProvider _serviceProvider;
         private readonly Dictionary<Type, object> _instances;
-        private readonly Dictionary<Type, List<ServiceFactory>> _factories;
+        private readonly Dictionary<Type, ServiceFactory> _factories;
 
         /// <summary>
         /// Create a service provider with parent provider and service factories
         /// </summary>
         /// <param name="parent">search this provider if service isn't found in this instance or null</param>
         /// <param name="factories">service factories to initialize provider or null</param>
-        public ServiceContainer(IServiceProvider parent, IDictionary<Type, List<ServiceFactory>> factories)
+        public ServiceContainer(IServiceProvider parent, IDictionary<Type, ServiceFactory> factories)
         {
             Debug.Assert(factories != null);
             _parent = parent;
             _serviceProvider = new ServiceProvider(this);
             _instances = new Dictionary<Type, object>();
-            _factories = new Dictionary<Type, List<ServiceFactory>>(factories);
+            _factories = new Dictionary<Type, ServiceFactory>(factories);
         }
 
         /// <summary>
@@ -80,13 +80,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (type is null) throw new ArgumentNullException(nameof(type));
             if (factory is null) throw new ArgumentNullException(nameof(factory));
-
-            if (!_factories.TryGetValue(type, out List<ServiceFactory> services))
-            {
-                services = new List<ServiceFactory>();
-                _factories.Add(type, services);
-            }
-            services.Add(factory);
+            _factories.Add(type, factory);
         }
 
         /// <summary>
@@ -155,23 +149,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 return service;
             }
-            bool isEnumerable = type.IsGenericType && typeof(IEnumerable<>).IsAssignableFrom(type.GetGenericTypeDefinition());
-            Type factoryType = isEnumerable ? type.GetGenericArguments().First() : type;
-            if (_factories.TryGetValue(factoryType, out List<ServiceFactory> factories))
+            if (_factories.TryGetValue(type, out ServiceFactory factory))
             {
-                if (isEnumerable)
-                {
-                    List<object> instances = new();
-                    foreach (ServiceFactory factory in factories)
-                    {
-                        instances.Add(factory.Invoke(_serviceProvider));
-                    }
-                    service = instances;
-                }
-                else
-                {
-                    service = factories.Single().Invoke(_serviceProvider);
-                }
+                service = factory(_serviceProvider);
                 _instances.Add(type, service);
             }
             else

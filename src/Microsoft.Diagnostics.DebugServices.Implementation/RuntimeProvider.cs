@@ -11,24 +11,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime provider implementation
     /// </summary>
-    [ServiceExport(Type = typeof(IRuntimeProvider), Scope = ServiceScope.Target)]
-    public class RuntimeProvider : IRuntimeProvider, IDisposable
+    [ServiceExport(Type = typeof(IRuntimeProvider), Scope = ServiceScope.Provider)]
+    public class RuntimeProvider : IRuntimeProvider
     {
         private readonly IServiceProvider _services;
-        private DataTarget _dataTarget;
 
-        public RuntimeProvider(IServiceProvider services, ITarget target)
+        public RuntimeProvider(IServiceProvider services)
         {
             _services = services;
-            target.OnFlushEvent.Register(Flush);
-        }
-
-        void IDisposable.Dispose() => Flush();
-
-        private void Flush()
-        {
-            _dataTarget?.Dispose();
-            _dataTarget = null;
         }
 
         #region IRuntimeProvider
@@ -39,15 +29,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="startingRuntimeId">The starting runtime id for this provider</param>
         public IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId)
         {
-            if (_dataTarget is null)
+            DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>())) {
+                FileLocator = null
+            };
+            for (int i = 0; i < dataTarget.ClrVersions.Length; i++)
             {
-                _dataTarget = new DataTarget(new CustomDataTarget(_services.GetService<IDataReader>())) {
-                    FileLocator = null
-                };
-            }
-            for (int i = 0; i < _dataTarget.ClrVersions.Length; i++)
-            {
-                yield return new Runtime(_services, startingRuntimeId + i, _dataTarget.ClrVersions[i]);
+                yield return new Runtime(_services, startingRuntimeId + i, dataTarget.ClrVersions[i]);
             }
         }
 

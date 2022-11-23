@@ -5,10 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Linq;
 using System.IO;
 using System.Diagnostics;
-using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -20,9 +18,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ServiceManager : IServiceManager
     {
-        private readonly Dictionary<Type, List<ServiceFactory>>[] _factories;
+        private readonly Dictionary<Type, ServiceFactory>[] _factories;
+        private readonly Dictionary<Type, List<ServiceFactory>> _providerFactories;
         private readonly List<ServiceContainer>[] _serviceContainers;
         private readonly ServiceEvent<Assembly> _notifyExtensionLoad;
+        private bool _finalized;
 
         /// <summary>
         /// This event fires when an extension assembly is loaded
@@ -34,12 +34,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public ServiceManager()
         {
-            _factories = new Dictionary<Type, List<ServiceFactory>>[(int)ServiceScope.Max];
+            _factories = new Dictionary<Type, ServiceFactory>[(int)ServiceScope.Max];
+            _providerFactories = new Dictionary<Type, List<ServiceFactory>>();
             _serviceContainers = new List<ServiceContainer>[(int)ServiceScope.Max];
             _notifyExtensionLoad = new ServiceEvent<Assembly>();
             for (int i = 0; i < (int)ServiceScope.Max; i++)
             {
-                _factories[i] = new Dictionary<Type, List<ServiceFactory>>();
+                _factories[i] = new Dictionary<Type, ServiceFactory>();
             }
         }
 
@@ -64,6 +65,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Get the provider factories for a type or interface.
+        /// </summary>
+        /// <param name="providerType">type or interface</param>
+        /// <returns>the provider factories for the type</returns>
+        public IEnumerable<ServiceFactory> EnumerateProviderFactories(Type providerType)
+        {
+            if (!_finalized) throw new InvalidOperationException();
+
+            if (_providerFactories.TryGetValue(providerType, out List<ServiceFactory> factories))
+            {
+                return factories;
+            }
+            return Array.Empty<ServiceFactory>();
+        }
+
+        /// <summary>
         /// Finds all the ServiceExport attributes in the assembly and registers.
         /// </summary>
         /// <param name="assembly">service implementation assembly</param>
@@ -84,6 +101,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="serviceType">service implementation type</param>
         public void RegisterExportedServices(Type serviceType)
         {
+            if (_finalized) throw new InvalidOperationException();
+
             for (Type currentType = serviceType; currentType is not null; currentType = currentType.BaseType)
             {
                 if (currentType == typeof(object) || currentType == typeof(ValueType))
@@ -125,18 +144,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void AddServiceFactory(ServiceScope scope, Type serviceType, ServiceFactory factory)
         {
             if (factory is null) throw new ArgumentNullException(nameof(factory));
+            if (_finalized) throw new InvalidOperationException();
 
-            if (!_factories[(int)scope].TryGetValue(serviceType, out List<ServiceFactory> services))
+            if (scope == ServiceScope.Provider)
             {
-                services = new List<ServiceFactory>();
-                _factories[(int)scope].Add(serviceType, services);
-            }
-            services.Add(factory);
-            if (_serviceContainers[(int)scope] != null)
-            {
-                foreach (ServiceContainer container in _serviceContainers[(int)scope])
+                if (!_providerFactories.TryGetValue(serviceType, out List<ServiceFactory> factories))
                 {
-                    container.AddServiceFactory(serviceType, factory);
+                    _providerFactories.Add(serviceType, factories = new List<ServiceFactory>());
+                }
+                factories.Add(factory);
+            }
+            else
+            {
+                _factories[(int)scope].Add(serviceType, factory);
+                if (_serviceContainers[(int)scope] != null)
+                {
+                    foreach (ServiceContainer container in _serviceContainers[(int)scope])
+                    {
+                        container.AddServiceFactory(serviceType, factory);
+                    }
                 }
             }
         }
@@ -146,6 +172,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public void LoadExtensions()
         {
+            if (_finalized) throw new InvalidOperationException();
+
             List<string> extensionPaths = new();
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
             if (!string.IsNullOrEmpty(diagnosticExtensions))
@@ -182,6 +210,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="extensionPath">extension assembly path</param>
         public void LoadExtension(string extensionPath)
         {
+            if (_finalized) throw new InvalidOperationException();
             Assembly assembly = null;
             try
             {
@@ -203,6 +232,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="assembly">extension assembly</param>
         public void RegisterAssembly(Assembly assembly)
         {
+            if (_finalized) throw new InvalidOperationException();
             try
             {
                 RegisterExportedServices(assembly);
@@ -213,5 +243,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Trace.TraceError(ex.ToString());
             }
         }
+
+        /// <summary>
+        /// Finalizes the service manager. Loading extensions or adding service factories are not allowed after this called.
+        /// </summary>
+        public void Finalized() => _finalized = true;
     }
 }

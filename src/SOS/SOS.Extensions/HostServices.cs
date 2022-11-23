@@ -235,6 +235,9 @@ namespace SOS.Extensions
                 // Load any extra extensions in the search path
                 _serviceManager.LoadExtensions();
 
+                // Loading extensions or adding service factories not allowed after this point.
+                _serviceManager.Finalized();
+
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandService.Commands)
                 {

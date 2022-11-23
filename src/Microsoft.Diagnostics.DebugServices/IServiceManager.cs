@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -15,5 +16,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="parent">parent service provider to chain to</param>
         /// <returns>IServiceContainer instance</returns>
         IServiceContainer CreateServiceContainer(ServiceScope scope, IServiceProvider parent);
+
+        /// <summary>
+        /// Get the provider factories for a type or interface.
+        /// </summary>
+        /// <param name="providerType">type or interface</param>
+        /// <returns>the provider factories for the type</returns>
+        public IEnumerable<ServiceFactory> EnumerateProviderFactories(Type providerType);
     }
 }

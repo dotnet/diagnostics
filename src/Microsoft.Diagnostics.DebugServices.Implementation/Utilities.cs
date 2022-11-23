@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation

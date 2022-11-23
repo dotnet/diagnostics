@@ -15,11 +15,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class RuntimeService : IRuntimeService, IDisposable
     {
         private readonly IServiceProvider _services;
+        private readonly IServiceManager _serviceManager;
         private List<IRuntime> _runtimes;
 
         public RuntimeService(IServiceProvider services, ITarget target)
         {
             _services = services;
+            _serviceManager = services.GetService<IServiceManager>();
             target.OnFlushEvent.Register(Flush);
         }
 
@@ -50,14 +52,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_runtimes is null)
             {
                 _runtimes = new List<IRuntime>();
-
-                IEnumerable<IRuntimeProvider> providers = _services.GetServices<IRuntimeProvider>();
-                if (providers is not null)
+                foreach (ServiceFactory factory in _serviceManager.EnumerateProviderFactories(typeof(IRuntimeProvider)))
                 {
-                    foreach (IRuntimeProvider provider in providers)
-                    {
-                        _runtimes.AddRange(provider.EnumerateRuntimes(_runtimes.Count));
-                    }
+                    IRuntimeProvider provider = (IRuntimeProvider)factory(_services);
+                    _runtimes.AddRange(provider.EnumerateRuntimes(_runtimes.Count));
                 }
             }
             return _runtimes;
