@@ -375,7 +375,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 object instance = _factory(services);
                 SetProperties(context, parser, instance);
-                Utilities.Invoke(methodInfo, instance, services, optional: false);
+                Utilities.Invoke(methodInfo, instance, services);
             }
 
             private void SetProperties(InvocationContext context, Parser parser, object instance)

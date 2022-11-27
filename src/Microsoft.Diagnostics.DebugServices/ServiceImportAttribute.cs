@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// <summary>
     /// Marks properties or methods to import another service when a service is instantiated.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method)]
     public class ServiceImportAttribute : Attribute
     {
         /// <summary>

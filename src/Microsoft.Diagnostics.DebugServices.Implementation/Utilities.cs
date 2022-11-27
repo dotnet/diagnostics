@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>new instance</returns>
         public static object CreateInstance(Type type, IServiceProvider provider)
         {
-            object instance = InvokeConstructor(type, provider, optional: false);
+            object instance = InvokeConstructor(type, provider);
             if (instance is not null)
             {
                 ImportServices(instance, provider);
@@ -120,7 +120,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>new instance</returns>
         public static object CreateInstance(MethodBase method, IServiceProvider provider)
         {
-            object instance = Invoke(method, null, provider, optional: false);
+            object instance = Invoke(method, null, provider);
             if (instance is not null)
             {
                 ImportServices(instance, provider);
@@ -177,7 +177,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     ServiceImportAttribute attribute = method.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
                     if (attribute is not null)
                     {
-                        Utilities.Invoke(method, instance, provider, attribute.Optional);
+                        Utilities.Invoke(method, instance, provider);
                     }
                 }
             }
@@ -189,12 +189,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="type">type to create</param>
         /// <param name="provider">services</param>
-        /// <param name="optional">if true, the service is not required</param>
         /// <returns>type instance</returns>
-        public static object InvokeConstructor(Type type, IServiceProvider provider, bool optional)
+        public static object InvokeConstructor(Type type, IServiceProvider provider)
         {
             ConstructorInfo constructor = type.GetConstructors().Single();
-            object[] arguments = BuildArguments(constructor, provider, optional);
+            object[] arguments = BuildArguments(constructor, provider);
             try
             {
                 return constructor.Invoke(arguments);
@@ -212,11 +211,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="method">method to invoke</param>
         /// <param name="instance">class instance or null if static</param>
         /// <param name="provider">services</param>
-        /// <param name="optional">if true, the service is not required</param>
         /// <returns>method return value</returns>
-        public static object Invoke(MethodBase method, object instance, IServiceProvider provider, bool optional)
+        public static object Invoke(MethodBase method, object instance, IServiceProvider provider)
         {
-            object[] arguments = BuildArguments(method, provider, optional);
+            object[] arguments = BuildArguments(method, provider);
             try
             {
                 return method.Invoke(instance, arguments);
@@ -228,14 +226,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services, bool optional)
+        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services)
         {
             ParameterInfo[] parameters = methodBase.GetParameters();
             object[] arguments = new object[parameters.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
-                // The parameter will passed as null to allow for "optional" services. The invoked 
-                // method needs to check for possible null parameters.
+                // The service import attribute isn't necessary on parameters unless Optional property needs to be changed from the default of false.
+                bool optional = false;
+                ServiceImportAttribute attribute = parameters[i].GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                if (attribute is not null)
+                {
+                    optional = attribute.Optional;
+                }
+                // The parameter will passed as null to allow for "optional" services. The invoked method needs to check for possible null parameters.
                 arguments[i] = services.GetService(parameters[i].ParameterType);
                 if (arguments[i] is null && !optional)
                 {
