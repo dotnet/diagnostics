@@ -7,10 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Security;
 using Address = System.UInt64;
-
-// Copy of version in Microsoft/PerfView
 
 // Graph contains generic Graph-Node traversal algorithms (spanning tree etc).
 namespace Graphs
@@ -43,8 +40,8 @@ namespace Graphs
     /// nodes with the code:Graph.AllocNodeStorage call
     /// 
     /// Thus the basic flow is you call code:Graph.AllocNodeStorage to allocate storage, then call code:Graph.GetRoot
-    /// to get your first node.  If you need to provide additional information about the nodes, you can allocate an auxiliary
-    /// array of Size code:Graph.NodeIndexLimit to hold it (for example a 'visited' bit).   Then repeatedly call 
+    /// to get your first node.  If you need to 'hang' additional information off he nodes, you allocate an array
+    /// of Size code:Graph.NodeIndexLimit to hold it (for example a 'visited' bit).   Then repeatedly call 
     /// code:Node.GetFirstChild, code:Node.GetNextChild to get the children of a node to traverse the graph.
     /// 
     /// OVERHEAD
@@ -72,7 +69,7 @@ namespace Graphs
         /// Given an arbitrary code:NodeIndex that identifies the node, Get a code:Node object.  
         /// 
         /// This routine does not allocated but uses the space passed in by 'storage.  
-        /// 'storage' should be allocated with coode:AllocNodeStorage, and should be agressively reused.  
+        /// 'storage' should be allocated with coode:AllocNodeStorage, and should be aggressively reused.  
         /// </summary>
         public Node GetNode(NodeIndex nodeIndex, Node storage)
         {
@@ -89,7 +86,7 @@ namespace Graphs
         /// Given an arbitrary code:NodeTypeIndex that identifies the nodeId of the node, Get a code:NodeType object.  
         /// 
         /// This routine does not allocated but overwrites the space passed in by 'storage'.  
-        /// 'storage' should be allocated with coode:AllocNodeTypeStorage, and should be agressively reused.  
+        /// 'storage' should be allocated with coode:AllocNodeTypeStorage, and should be aggressively reused.  
         /// 
         /// Note that this routine does not get used much, instead Node.GetType is normal way of getting the nodeId.  
         /// </summary>
@@ -123,7 +120,7 @@ namespace Graphs
         /// </summary>
         public NodeIndex NodeIndexLimit { get { return (NodeIndex)m_nodes.Count; } }
         /// <summary>
-        /// Same as NodeIndexLimit, just cast to an integer.  
+        /// Same as NodeIndexLimit.  
         /// </summary>
         public long NodeCount { get { return m_nodes.Count; } }
         /// <summary>
@@ -164,8 +161,11 @@ namespace Graphs
         /// 
         /// TODO I can eliminate the need for AllowReading.  
         /// </summary>
-        public Graph(int expectedNodeCount)
+        /// <remarks>if isVeryLargeGraph argument is true, then StreamLabels will be serialized as longs
+        /// too acommodate for the extra size of the graph's stream representation.</remarks>
+        public Graph(int expectedNodeCount, bool isVeryLargeGraph = false)
         {
+            m_isVeryLargeGraph = isVeryLargeGraph;
             m_expectedNodeCount = expectedNodeCount;
             m_types = new GrowableArray<TypeInfo>(Math.Max(expectedNodeCount / 100, 2000));
             m_nodes = new SegmentedList<StreamLabel>(SegmentSize, m_expectedNodeCount);
@@ -407,7 +407,7 @@ namespace Graphs
                 }
 
                 sw.WriteLine("  <Type Name=\"{0}\" Size=\"{1}\" Count=\"{2}\"/>",
-                    SecurityElement.Escape(GetType(sizeAndCount.TypeIdx, typeStorage).Name), sizeAndCount.Size, sizeAndCount.Count);
+                    XmlUtilities.XmlEscape(GetType(sizeAndCount.TypeIdx, typeStorage).Name), sizeAndCount.Size, sizeAndCount.Count);
             }
             sw.WriteLine("</HistogramByType>");
             return sw.ToString();
@@ -465,7 +465,8 @@ namespace Graphs
             RootIndex = NodeIndex.Invalid;
             if (m_writer == null)
             {
-                m_writer = new SegmentedMemoryStreamWriter(m_expectedNodeCount * 8);
+                m_writer = new SegmentedMemoryStreamWriter(m_expectedNodeCount * 8,
+                    m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
             }
 
             m_totalSize = 0;
@@ -512,8 +513,16 @@ namespace Graphs
                 serializer.Write(m_types[i].ModuleName);
             }
 
-            // Write out the Nodes 
-            serializer.Write(m_nodes.Count);
+            // Write out the Nodes
+            if (m_isVeryLargeGraph)
+            {
+                serializer.Write(m_nodes.Count);
+            }
+            else
+            {
+                serializer.Write((int)m_nodes.Count);
+            }
+
             for (int i = 0; i < m_nodes.Count; i++)
             {
                 serializer.Write((int)m_nodes[i]);
@@ -551,7 +560,7 @@ namespace Graphs
 
                     // You can place tagged values in here always adding right before the WriteTaggedEnd
                     // for any new fields added after version 1 
-                    serializer.WriteTaggedEnd(); // This insures tagged things don't read junk after the region.  
+                    serializer.WriteTaggedEnd(); // This ensures tagged things don't read junk after the region.  
                 });
             }
         }
@@ -574,10 +583,10 @@ namespace Graphs
             }
 
             // Read in the Nodes 
-            int nodeCount = deserializer.ReadInt();
+            long nodeCount = m_isVeryLargeGraph ? deserializer.ReadInt64() : deserializer.ReadInt();
             m_nodes = new SegmentedList<StreamLabel>(SegmentSize, nodeCount);
 
-            for (int i = 0; i < nodeCount; i++)
+            for (long i = 0; i < nodeCount; i++)
             {
                 m_nodes.Add((StreamLabel)(uint)deserializer.ReadInt());
             }
@@ -585,7 +594,9 @@ namespace Graphs
             // Read in the Blob stream.  
             // TODO be lazy about reading in the blobs.  
             int blobCount = deserializer.ReadInt();
-            SegmentedMemoryStreamWriter writer = new SegmentedMemoryStreamWriter(blobCount);
+            SegmentedMemoryStreamWriter writer = new SegmentedMemoryStreamWriter(blobCount,
+                m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
+
             while (8 <= blobCount)
             {
                 writer.Write(deserializer.ReadInt64());
@@ -644,7 +655,7 @@ namespace Graphs
             }
         }
 
-        private int m_expectedNodeCount;                // Initial guess at graph Size. 
+        private long m_expectedNodeCount;                // Initial guess at graph Size.
         private long m_totalSize;                       // Total Size of all the nodes in the graph.  
         internal int m_totalRefs;                       // Total Number of references in the graph
         internal GrowableArray<TypeInfo> m_types;       // We expect only thousands of these
@@ -656,6 +667,7 @@ namespace Graphs
         // There should not be any of these left as long as every node referenced
         // by another node has a definition.
         internal SegmentedMemoryStreamWriter m_writer; // Used only during construction to serialize the nodes.
+        protected bool m_isVeryLargeGraph;
         #endregion
     }
 
@@ -796,7 +808,7 @@ namespace Graphs
             }
 
             writer.Write("{0}<Node Index=\"{1}\" TypeIndex=\"{2}\" Size=\"{3}\" Type=\"{4}\" NumChildren=\"{5}\"{6}",
-                prefix, (int)Index, TypeIndex, Size, SecurityElement.Escape(GetType(typeStorage).Name),
+                prefix, (int)Index, TypeIndex, Size, XmlUtilities.XmlEscape(GetType(typeStorage).Name),
                 ChildCount, additinalAttribs);
             var childIndex = GetFirstChildIndex();
             if (childIndex != NodeIndex.Invalid)
@@ -838,7 +850,7 @@ namespace Graphs
             m_index = NodeIndex.Invalid;
         }
 
-        // Node information is stored in a compressed form because we have alot of them. 
+        // Node information is stored in a compressed form because we have a lot of them. 
         internal static int ReadCompressedInt(SegmentedMemoryStreamReader reader)
         {
             int ret = 0;
@@ -1024,7 +1036,7 @@ namespace Graphs
         }
         public void WriteXml(TextWriter writer, string prefix = "")
         {
-            writer.WriteLine("{0}<NodeType Index=\"{1}\" Name=\"{2}\"/>", prefix, (int)Index, SecurityElement.Escape(Name));
+            writer.WriteLine("{0}<NodeType Index=\"{1}\" Name=\"{2}\"/>", prefix, (int)Index, XmlUtilities.XmlEscape(Name));
         }
         #region private
         protected internal NodeType(Graph graph)
@@ -1065,7 +1077,7 @@ namespace Graphs
         /// </summary>
         public DateTime BuildTime;      // From in the PE header
         /// <summary>
-        /// The name of hte PDB file assoicated with this module.   Ma bye null if unknown
+        /// The name of hte PDB file associated with this module.   Ma bye null if unknown
         /// </summary>
         public string PdbName;
         /// <summary>
@@ -1247,7 +1259,7 @@ namespace Graphs
 
             node = graph.GetNode(graph.RootIndex, nodeStorage);
             writer.WriteLine("<GraphDump RootNode=\"{0}\" NumNodes=\"{1}\" NumTypes=\"{2}\" TotalSize=\"{3}\" SizeOfGraphDescription=\"{4}\">",
-                SecurityElement.Escape(node.GetType(typeStorage).Name),
+                XmlUtilities.XmlEscape(node.GetType(typeStorage).Name),
                 graph.NodeIndexLimit,
                 graph.NodeTypeIndexLimit,
                 graph.TotalSize,
@@ -1262,7 +1274,7 @@ namespace Graphs
                 node = graph.GetNode(nodeIdx, nodeStorage);
                 string name = node.GetType(typeStorage).Name;
 
-                writer.Write("  <Node Address=\"{0:x}\" Size=\"{1}\" Type=\"{2}\"> ", graph.GetAddress(nodeIdx), node.Size, SecurityElement.Escape(name));
+                writer.Write("  <Node Address=\"{0:x}\" Size=\"{1}\" Type=\"{2}\"> ", graph.GetAddress(nodeIdx), node.Size, XmlUtilities.XmlEscape(name));
                 bool isRoot = graph.GetAddress(node.Index) == 0;
                 int childCnt = 0;
                 for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
@@ -1376,7 +1388,7 @@ public class RefGraph
     /// Given an arbitrary code:NodeIndex that identifies the node, Get a code:Node object.  
     /// 
     /// This routine does not allocated but uses the space passed in by 'storage.  
-    /// 'storage' should be allocated with coode:AllocNodeStorage, and should be agressively reused.  
+    /// 'storage' should be allocated with coode:AllocNodeStorage, and should be aggressively reused.  
     /// </summary>
     public RefNode GetNode(NodeIndex nodeIndex, RefNode storage)
     {
@@ -1829,8 +1841,8 @@ public class SpanningTree
     /// <summary>
     /// A helper for AddOrphansToQueue, so we only add orphans that are not reachable from other orphans.  
     /// 
-    /// Mark all decendents (but not nodeIndex itself) as being visited.    Any arcs that form
-    /// cycles are ignored, so nodeIndex is guarenteed to NOT be marked.     
+    /// Mark all descendants (but not nodeIndex itself) as being visited.    Any arcs that form
+    /// cycles are ignored, so nodeIndex is guaranteed to NOT be marked.     
     /// </summary>
     private void MarkDecendentsIgnoringCycles(NodeIndex nodeIndex, int recursionCount)
     {
@@ -1935,7 +1947,7 @@ public class SpanningTree
             var m = Regex.Match(priorityPatArray[i], @"(.*)->(-?\d+.?\d*)");
             if (!m.Success)
             {
-                if (string.IsNullOrWhiteSpace(priorityPatArray[i]))
+                if (StringUtilities.IsNullOrWhiteSpace(priorityPatArray[i]))
                 {
                     continue;
                 }
@@ -2393,7 +2405,7 @@ public class GraphSampler
             stats.TotalMetric += node.Size;
         }
 
-        // Also insure that if there are a large number of types, that we sample them at least some. 
+        // Also ensure that if there are a large number of types, that we sample them at least some. 
         if (stats.SampleCount == 0 && !mustAdd && (m_numDistictTypesWithSamples + .5F) * m_filteringRatio <= m_numDistictTypes)
         {
             mustAdd = true;
@@ -2606,9 +2618,8 @@ public class GraphSampler
         if (allNodesVisited)
         {
             Debug.Assert(total == m_graph.NodeCount);
-            // TODO The assert should be Debug.Assert(totalSize == m_graph.TotalSize);
-            // but we have to give a 1% error margin to get things passing. Fix this.
-            Debug.Assert(Math.Abs(totalSize - m_graph.TotalSize) / totalSize < .01);
+            // TODO FIX NOW enable Debug.Assert(totalSize == m_graph.TotalSize);
+            Debug.Assert(Math.Abs(totalSize - m_graph.TotalSize) / totalSize < .01);     // TODO FIX NOW lame, replace with assert above
         }
         Debug.Assert(sampleTotal == m_newGraph.NodeCount);
     }
@@ -2626,7 +2637,7 @@ public class GraphSampler
 
     /// <summary>
     /// This value goes in the m_newIndex[].   If we accept the node into the sampled graph, we put the node
-    /// index in the NET graph in m_newIndex.   If we reject the node we use the special RegjectedNode value
+    /// index in the NET graph in m_newIndex.   If we reject the node we use the special RejectedNode value
     /// below
     /// </summary>
     private const NodeIndex RejectedNode = (NodeIndex)(-2);
