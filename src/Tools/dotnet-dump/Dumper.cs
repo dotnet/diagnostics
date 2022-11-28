@@ -53,13 +53,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             if (processId == 0) {
                 Console.Error.WriteLine("ProcessId is required.");
-                return 0;
+                return 1;
             }
 
             if (processId < 0)
             {
                 Console.Error.WriteLine($"The PID cannot be negative: {processId}");
-                return 0;
+                return 1;
             }
 
             try
