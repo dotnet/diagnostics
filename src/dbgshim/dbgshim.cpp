@@ -354,6 +354,7 @@ public:
             hr = GetTargetCLRMetrics(clrInfo.RuntimeModulePath, NULL, &clrInfo, NULL);
             if (FAILED(hr))
             { 
+                // Runtime module not found (return false). This isn't an error that needs to be reported via the callback.
                 return false;
             }
 
@@ -407,7 +408,7 @@ public:
             // Invoke the callback on error
             m_callback(NULL, m_parameter, hr);
         }
-
+        // Runtime module found (return true)
         return true;
     }
 
@@ -1293,12 +1294,13 @@ GetTargetCLRMetrics(
     {
         if (IsCoreClr(wszModulePath))
         {
-            // Get the runtime index info (build id) for Linux/MacOS
-            if (!TryGetBuildIdFromFile(wszModulePath, pClrInfoOut->RuntimeBuildId, MAX_BUILDID_SIZE, &pClrInfoOut->RuntimeBuildIdSize)) 
+            // Get the runtime index info (build id) for Linux/MacOS. If getting the build id fails for any reason, return success
+            // but with an invalid ClrInfo (unknown index type, no build id) so ProvideLibraries fails in InvokeStartupCallback and
+            // invokes the callback with an error.
+            if (TryGetBuildIdFromFile(wszModulePath, pClrInfoOut->RuntimeBuildId, MAX_BUILDID_SIZE, &pClrInfoOut->RuntimeBuildIdSize)) 
             {
-                return E_FAIL;
+                pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Runtime;
             }
-            pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Runtime; 
         }
         else
         { 
