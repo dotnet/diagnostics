@@ -42,24 +42,24 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 if (processId != 0)
                 {
                     Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return 0;
+                    return -1;
                 }
                 processId = CommandUtils.FindProcessIdWithName(name);
                 if (processId < 0)
                 {
-                    return 0;
+                    return -1;
                 }
             }
 
             if (processId == 0) {
                 Console.Error.WriteLine("ProcessId is required.");
-                return 1;
+                return -1;
             }
 
             if (processId < 0)
             {
                 Console.Error.WriteLine($"The PID cannot be negative: {processId}");
-                return 1;
+                return -1;
             }
 
             try
@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     if (crashreport)
                     {
                         Console.WriteLine("Crash reports not supported on Windows.");
-                        return 0;
+                        return -1;
                     }
 
                     Windows.CollectDump(processId, output, type);
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
-                return 1;
+                return -1;
             }
 
             console.Out.WriteLine($"Complete");
