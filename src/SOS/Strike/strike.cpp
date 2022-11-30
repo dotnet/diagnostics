@@ -1276,7 +1276,7 @@ DECLARE_API(DumpMT)
     }
 
     EnableDMLHolder dmlHolder(dml);
-    TableOutput table(2, 16, AlignLeft, false);
+    TableOutput table(2, 20, AlignLeft, false);
 
     if (nArg == 0)
     {
@@ -1323,6 +1323,24 @@ DECLARE_API(DumpMT)
         if (SUCCEEDED(MOVE(loaderAllocator, vMethTableCollectible.LoaderAllocatorObjectHandle)))
         {
             table.WriteRow("LoaderAllocator:", ObjectPtr(loaderAllocator));
+        }
+    }
+
+    ReleaseHolder<ISOSDacInterface8> sos8;
+    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+    {
+        CLRDATA_ADDRESS assemblyLoadContext = 0;
+        if (SUCCEEDED(sos8->GetAssemblyLoadContext(TO_CDADDR(dwStartAddr), &assemblyLoadContext)))
+        {
+            const char* title = "AssemblyLoadContext:";
+            if (assemblyLoadContext != 0)
+            {
+                table.WriteRow(title, ObjectPtr(assemblyLoadContext));
+            }
+            else
+            {
+                table.WriteRow(title, "Default ALC - The managed instance of this context doesn't exist yet.");
+            }
         }
     }
 
@@ -10338,7 +10356,7 @@ DECLARE_API(EEVersion)
         else
             ExtOut("Workstation mode\n");
 
-        if (!GetGcStructuresValid()) 
+        if (!GetGcStructuresValid())
         {
             ExtOut("In plan phase of garbage collection\n");
         }
@@ -15797,7 +15815,7 @@ public:
             }
         }
         if (IsInterrupt())
-        { 
+        {
             return COR_E_OPERATIONCANCELED;
         }
         return S_OK;
@@ -15808,7 +15826,7 @@ public:
     {
         ExtOut("%s", message);
         if (IsInterrupt())
-        { 
+        {
             return COR_E_OPERATIONCANCELED;
         }
         return S_OK;
@@ -15824,7 +15842,7 @@ DECLARE_API(enummem)
     if (SUCCEEDED(Status))
     {
         ToRelease<ICLRDataEnumMemoryRegionsCallback> callback = new EnumMemoryCallback(false, true);
-        ULONG32 minidumpType = 
+        ULONG32 minidumpType =
            (MiniDumpWithPrivateReadWriteMemory |
             MiniDumpWithDataSegs |
             MiniDumpWithHandleData |

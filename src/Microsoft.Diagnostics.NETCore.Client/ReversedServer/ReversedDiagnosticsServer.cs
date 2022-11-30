@@ -30,8 +30,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private bool _disposed = false;
         private Task _acceptTransportTask;
-        private bool _enableTcpIpProtocol = false;
         private IpcServerTransport _transport;
+        private Kind _kind = Kind.Ipc;
+
+        public enum Kind
+        {
+            Tcp,
+            Ipc,
+            WebSocket,
+        }
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
@@ -57,16 +64,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// On all other systems, this must be the full file path of the socket.
         /// When TcpIp is enabled, this can also be host:port of the listening socket.
         /// </param>
-        /// <param name="enableTcpIpProtocol">
-        /// Add TcpIp as a supported protocol for ReversedDiagnosticServer. When enabled, address will
+        /// <param name="kind">
+        /// If kind is WebSocket, start a Kestrel web server.
+        /// Otherwise if kind is TcpIp as a supported protocol for ReversedDiagnosticServer. When Kind is Tcp, address will
         /// be analyzed and if on format host:port, ReversedDiagnosticServer will try to bind
-        /// a TcpIp listener to host and port.
+        /// a TcpIp listener to host and port, otherwise it will use a Unix domain socket or a Windows named pipe.
         ///
         /// </param>
-        public ReversedDiagnosticsServer(string address, bool enableTcpIpProtocol)
+        public ReversedDiagnosticsServer(string address, Kind kind)
         {
             _address = address;
-            _enableTcpIpProtocol = enableTcpIpProtocol;
+            _kind = kind;
         }
 
         public async ValueTask DisposeAsync()
@@ -134,7 +142,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new InvalidOperationException(nameof(ReversedDiagnosticsServer.Start) + " method can only be called once.");
             }
 
-            _transport = IpcServerTransport.Create(_address, maxConnections, _enableTcpIpProtocol, TransportCallback);
+            _transport = IpcServerTransport.Create(_address, maxConnections, _kind, TransportCallback);
 
             _acceptTransportTask = AcceptTransportAsync(_transport, _disposalSource.Token);
 
@@ -370,6 +378,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     IntPtr.Zero,
                     IntPtr.Zero,
                     IntPtr.Zero);
+            }
+            else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
+            {
+                return adapter.IsConnected;
             }
 
             return false;

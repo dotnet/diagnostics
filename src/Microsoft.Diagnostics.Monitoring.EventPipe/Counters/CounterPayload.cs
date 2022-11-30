@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Runtime.CompilerServices;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -70,9 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string Provider { get; }
 
-        public string Tags { get; private set; }
-
-        public IReadOnlyDictionary<string, string> Metadata { get; } = new Dictionary<string, string>(0);
+        public IReadOnlyDictionary<string, string> Metadata { get; }
 
         public EventType EventType { get; set; }
 

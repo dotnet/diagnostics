@@ -393,6 +393,7 @@ static HRESULT ProbeInstallationMarkerFile(const char* const markerName, std::st
     if (getline(&line, &lineLen, locationFile) == -1)
     {
         TraceError("Unable to read .NET installation marker at %s\n", markerName);
+        free(line);
         return E_FAIL;
     }
 

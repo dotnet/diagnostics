@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
 
-            Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PMI removed.
+            Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PII removed.
         }
 
         public Dumper()
@@ -42,18 +42,24 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 if (processId != 0)
                 {
                     Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return 0;
+                    return -1;
                 }
                 processId = CommandUtils.FindProcessIdWithName(name);
                 if (processId < 0)
                 {
-                    return 0;
+                    return -1;
                 }
             }
 
             if (processId == 0) {
-                console.Error.WriteLine("ProcessId is required.");
-                return 1;
+                Console.Error.WriteLine("ProcessId is required.");
+                return -1;
+            }
+
+            if (processId < 0)
+            {
+                Console.Error.WriteLine($"The PID cannot be negative: {processId}");
+                return -1;
             }
 
             try
@@ -81,6 +87,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     case DumpTypeOption.Mini:
                         dumpTypeMessage = "dump";
                         break;
+                    case DumpTypeOption.Triage:
+                        dumpTypeMessage = "triage dump";
+                        break;
                 }
                 console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
@@ -89,7 +98,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     if (crashreport)
                     {
                         Console.WriteLine("Crash reports not supported on Windows.");
-                        return 0;
+                        return -1;
                     }
 
                     Windows.CollectDump(processId, output, type);
@@ -141,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
-                return 1;
+                return -1;
             }
 
             console.Out.WriteLine($"Complete");
