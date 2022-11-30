@@ -44,6 +44,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 return false;
             }
+
+            return IsIncluded(providerName, counterName);
+        }
+
+        public bool IsIncluded(string providerName, string counterName)
+        {
             if (_enabledCounters.Count == 0)
             {
                 return true;

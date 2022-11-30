@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
         private readonly IList<EventPipeProvider> _eventPipeProviders;
+        public string SessionId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
         {
@@ -43,6 +44,37 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                {
                     { "EventCounterIntervalSec", MetricIntervalSeconds }
                })).ToList();
+        }
+
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames, int maxHistograms, int maxTimeSeries) : this(metricIntervalSeconds, customProviderNames)
+        {
+            const long TimeSeriesValues = 0x2;
+            StringBuilder metrics = new StringBuilder();
+            foreach (string provider in customProviderNames)
+            {
+                if (metrics.Length != 0)
+                {
+                    metrics.Append(",");
+                }
+
+                metrics.Append(provider);
+            }
+
+            SessionId = Guid.NewGuid().ToString();
+
+            EventPipeProvider metricsEventSourceProvider =
+                new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+                    new Dictionary<string, string>()
+                    {
+                        { "SessionId", SessionId },
+                        { "Metrics", metrics.ToString() },
+                        { "RefreshInterval", MetricIntervalSeconds.ToString() },
+                        { "MaxTimeSeries", maxTimeSeries.ToString() },
+                        { "MaxHistograms", maxHistograms.ToString() }
+                    }
+                );
+
+            _eventPipeProviders = _eventPipeProviders.Append(metricsEventSourceProvider).ToArray();
         }
 
         private string MetricIntervalSeconds { get; }

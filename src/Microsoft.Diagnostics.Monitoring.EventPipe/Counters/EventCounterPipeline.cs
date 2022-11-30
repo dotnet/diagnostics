@@ -15,6 +15,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly IEnumerable<ICountersLogger> _loggers;
         private readonly CounterFilter _filter;
+        private string _sessionId;
 
         public EventCounterPipeline(DiagnosticsClient client,
             EventPipeCounterPipelineSettings settings,
@@ -38,7 +39,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            return new MetricSourceConfiguration(Settings.CounterIntervalSeconds, _filter.GetProviders());
+            var config = new MetricSourceConfiguration(Settings.CounterIntervalSeconds, _filter.GetProviders(), Settings.MaxHistograms, Settings.MaxTimeSeries);
+
+            _sessionId = config.SessionId;
+
+            return config;
         }
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
@@ -49,7 +54,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_filter, out ICounterPayload counterPayload))
+                    if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out List<ICounterPayload> counterPayload))
                     {
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
