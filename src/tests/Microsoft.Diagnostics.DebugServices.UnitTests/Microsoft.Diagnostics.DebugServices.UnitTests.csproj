@@ -108,7 +108,7 @@
     </ConfigFileEntries>
   </ItemGroup>
 
-  <Target Name="DebugServicesWriteTestConfigFile" Outputs="$(DebugServicesConfigFileName)" AfterTargets="Build">
+  <Target Name="DebugServicesWriteTestConfigFile" Outputs="$(DebugServicesConfigFileName)" BeforeTargets="BeforeBuild;Publish">
      <PropertyGroup>
        <TestConfigFileLines>@(ConfigFileEntries-&gt;Metadata("ConfigFileEntry"))</TestConfigFileLines>
      </PropertyGroup>

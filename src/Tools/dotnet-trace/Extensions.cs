@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Event counters
             string filterData = tokens.Length > 3 ? tokens[3] : null;
-            var argument = string.IsNullOrWhiteSpace(filterData) ? null : ParseArgumentString(filterData); 
+            var argument = string.IsNullOrWhiteSpace(filterData) ? null : ParseArgumentString(filterData);
             return new EventPipeProvider(providerName, eventLevel, keywords, argument);
         }
 
@@ -186,13 +186,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (c == '=')
                     {
                         keyEnd = curIdx;
-                        valStart = curIdx+1;
+                        valStart = curIdx + 1;
                     }
                     else if (c == ';')
                     {
                         valEnd = curIdx;
                         AddKeyValueToArgumentDict(argumentDict, argument, keyStart, keyEnd, valStart, valEnd);
-                        keyStart = curIdx+1; // new key starts
+                        keyStart = curIdx + 1; // new key starts
                     }
                     else if (c == '\"')
                     {
@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 curIdx += 1;
             }
-            if(valStart > valEnd)
+            if (valStart > valEnd)
             {
                 valEnd = curIdx;
             }

@@ -532,10 +532,10 @@ HRESULT DbgEngServices::ChangeEngineState(
 {
     if (Flags == DEBUG_CES_EXECUTION_STATUS)
     {
-        if (((Argument & DEBUG_STATUS_MASK) == DEBUG_STATUS_BREAK) && ((Argument & DEBUG_STATUS_INSIDE_WAIT) == 0))
+        if ((Argument & DEBUG_STATUS_MASK) == DEBUG_STATUS_BREAK)
         {
             // Flush the target when the debugger target breaks
-            Extensions::GetInstance()->FlushTarget();
+            m_flushNeeded = true;
         }
     }
     return DEBUG_STATUS_NO_CHANGE;
@@ -642,6 +642,17 @@ HRESULT DbgEngServices::UnloadModule(
 //----------------------------------------------------------------------------
 // Helper Functions
 //----------------------------------------------------------------------------
+
+void 
+DbgEngServices::FlushCheck(Extensions* extensions)
+{
+    // Flush the target when the debugger target breaks
+    if (m_flushNeeded)
+    {
+        m_flushNeeded = false;
+        extensions->FlushTarget();
+    }
+}
 
 IMachine*
 DbgEngServices::GetMachine()

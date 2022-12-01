@@ -23,6 +23,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
 
+                Dictionary<string, string> metadataDict = GetMetadata(payloadFields["Metadata"].ToString());
+
                 //CONSIDER
                 //Concurrent counter sessions do not each get a separate interval. Instead the payload
                 //for _all_ the counters changes the Series to be the lowest specified interval, on a per provider basis.
@@ -62,11 +64,54 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     displayUnits,
                     value,
                     counterType,
-                    intervalSec);
+                    intervalSec,
+                    metadataDict);
                 return true;
             }
 
             return false;
+        }
+
+        //The metadata payload is formatted as a string of comma separated key:value pairs.
+        //This limitation means that metadata values cannot include commas; otherwise, the
+        //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
+        //is treated as invalid and excluded from the payload.
+        internal static Dictionary<string, string> GetMetadata(string metadataPayload)
+        {
+            var metadataDict = new Dictionary<string, string>();
+
+            ReadOnlySpan<char> metadata = metadataPayload;
+
+            while (!metadata.IsEmpty)
+            {
+                int commaIndex = metadata.IndexOf(',');
+
+                ReadOnlySpan<char> kvPair;
+
+                if (commaIndex < 0)
+                {
+                    kvPair = metadata;
+                    metadata = default;
+                }
+                else
+                {
+                    kvPair = metadata[..commaIndex];
+                    metadata = metadata.Slice(commaIndex + 1);
+                }
+
+                int colonIndex = kvPair.IndexOf(':');
+                if (colonIndex < 0)
+                {
+                    metadataDict.Clear();
+                    break;
+                }
+
+                string metadataKey = kvPair[..colonIndex].ToString();
+                string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
+                metadataDict[metadataKey] = metadataValue;
+            }
+
+            return metadataDict;
         }
 
         private static int GetInterval(string series)

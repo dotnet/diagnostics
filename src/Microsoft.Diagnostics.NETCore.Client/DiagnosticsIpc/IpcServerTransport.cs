@@ -17,9 +17,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private IIpcServerTransportCallbackInternal _callback;
         private bool _disposed;
 
-        public static IpcServerTransport Create(string address, int maxConnections, bool enableTcpIpProtocol, IIpcServerTransportCallbackInternal transportCallback = null)
+        public static IpcServerTransport Create(string address, int maxConnections, ReversedDiagnosticsServer.Kind kind, IIpcServerTransportCallbackInternal transportCallback = null)
         {
-            if (!enableTcpIpProtocol || !IpcTcpSocketEndPoint.IsTcpIpEndPoint(address))
+            if (kind == ReversedDiagnosticsServer.Kind.WebSocket)
+            {
+                return new IpcWebSocketServerTransport(address, maxConnections, transportCallback);
+            }
+            else if (kind == ReversedDiagnosticsServer.Kind.Ipc || !IpcTcpSocketEndPoint.IsTcpIpEndPoint(address))
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {

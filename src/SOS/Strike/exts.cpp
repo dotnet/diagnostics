@@ -391,3 +391,22 @@ IHost* SOSExtensions::GetHost()
     }
     return m_pHost;
 }
+
+/// <summary>
+/// Returns the runtime or fails if no target or current runtime
+/// </summary>
+/// <param name="ppRuntime">runtime instance</param>
+/// <returns>error code</returns>
+HRESULT GetRuntime(IRuntime** ppRuntime)
+{
+    SOSExtensions* extensions = (SOSExtensions*)Extensions::GetInstance();
+    ITarget* target = extensions->GetTarget();
+    if (target == nullptr)
+    {
+        return E_FAIL;
+    }
+#ifndef FEATURE_PAL
+    extensions->FlushCheck();
+#endif
+    return target->GetRuntime(ppRuntime);
+}

@@ -78,7 +78,7 @@
     <None Include="Debuggees\SimpleDebuggee\SimpleDebuggee.cs" />
   </ItemGroup>
 
-  <Target Name="DbgShimWriteTestConfigFile" Outputs="$(DbgShimConfigFileName)" AfterTargets="Build">
+  <Target Name="DbgShimWriteTestConfigFile" Outputs="$(DbgShimConfigFileName)" BeforeTargets="BeforeBuild;Publish">
      <PropertyGroup>
        <TestConfigFileLines>@(ConfigFileEntries-&gt;Metadata("ConfigFileEntry"))</TestConfigFileLines>
      </PropertyGroup>
