@@ -150,8 +150,6 @@ inline ISymbolService* GetSymbolService()
     return Extensions::GetInstance()->GetSymbolService();
 }
 
-extern HRESULT GetRuntime(IRuntime** ppRuntime);
-
 #ifdef __cplusplus
 }
 #endif

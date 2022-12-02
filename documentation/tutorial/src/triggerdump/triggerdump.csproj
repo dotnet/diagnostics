@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ToolCommandName>triggerdump</ToolCommandName>
     <RootNamespace>Diagnosticv.TriggerDump</RootNamespace>
@@ -9,18 +9,11 @@
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <TargetName>triggerdump</TargetName>
-	<OutputType>Exe</OutputType>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)..\..\..\..\src\Tools\dotnet-trace\Extensions.cs" Link="Extensions.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\..\..\src\Microsoft.Diagnostics.Tools.RuntimeClient\Microsoft.Diagnostics.Tools.RuntimeClient.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.41" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.351802" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.0.5" />
   </ItemGroup>
 </Project>

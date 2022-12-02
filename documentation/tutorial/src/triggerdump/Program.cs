@@ -3,75 +3,71 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
-using Microsoft.Diagnostics.Tools.RuntimeClient;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     internal class Program
     {
-        private static ulong _sessionId;
         private static int threshold;
-        private static int pid; 
-
+        private static int pid;
 
         private static void Main(string[] args)
         {
-            if(args.Length<2)
+            if (args.Length < 2)
             {
                 Console.WriteLine("triggerdump <pid> <mem threshold in MB>");
             }
             else
             {
-                    pid = Convert.ToInt32(args[0]);
-                    threshold = Convert.ToInt32(args[1]);
+                pid = Convert.ToInt32(args[0]);
+                threshold = Convert.ToInt32(args[1]);
+                DiagnosticsClient diagnosticsClient = new(pid);
+                EventPipeSession session = null;
 
-                    Task monitorTask = new Task(() => 
+                Task monitorTask = new Task(() =>
+                {
+                    var provider = new List<EventPipeProvider>
                     {
-                        var prov = new List<Provider>();
-                        prov.Add(new Provider("System.Runtime", filterData:"EventCounterIntervalSec=1"));
+                        new EventPipeProvider("System.Runtime", EventLevel.Verbose,
+                            arguments: new Dictionary<string, string> { ["EventCounterIntervalSec"] = "1" })
+                    };
 
-                        var configuration = new SessionConfiguration(
-                        circularBufferSizeMB: 1000,
-                        outputPath: "",
-                        providers: prov);
-                        
-                        var binaryReader = EventPipeClient.CollectTracing(Int32.Parse(args[0]), configuration, out _sessionId);
-                        EventPipeEventSource source = new EventPipeEventSource(binaryReader);
-                        source.Dynamic.All += Dynamic_All;
-                        source.Process();
-                    });
+                    session = diagnosticsClient.StartEventPipeSession(provider, false);
+                    EventPipeEventSource source = new(session.EventStream);
+                    source.Dynamic.All += Dynamic_All;
+                    source.Process();
+                });
 
-                    Task commandTask = new Task(() =>
+                Task commandTask = new Task(() =>
+                {
+                    while (true)
                     {
-                        while(true)
+                        while (!Console.KeyAvailable) { }
+                        ConsoleKey cmd = Console.ReadKey(true).Key;
+                        if (cmd == ConsoleKey.Q)
                         {
-                            while (!Console.KeyAvailable) { }
-                            ConsoleKey cmd = Console.ReadKey(true).Key;
-                            if (cmd == ConsoleKey.Q)
-                            {
-                                break;
-                            }
+                            break;
                         }
-                    });
-
-                    monitorTask.Start();
-                    commandTask.Start();
-                    commandTask.Wait();
-
-                    try
-                    {
-                        EventPipeClient.StopTracing(Int32.Parse(args[0]), _sessionId);    
                     }
-                    catch (System.IO.EndOfStreamException) {} 
+                });
+
+                monitorTask.Start();
+                commandTask.Start();
+                commandTask.Wait();
+
+                try
+                {
+                    session?.Stop();
+                }
+                catch (System.IO.EndOfStreamException) { }
             }
         }
 
@@ -83,13 +79,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
 
                 ICounterPayload payload = payloadFields.Count == 6 ? (ICounterPayload)new IncrementingCounterPayload(payloadFields) : (ICounterPayload)new CounterPayload(payloadFields);
-                string displayName = payload.GetDisplay();                
+                string displayName = payload.GetDisplay();
                 if (string.IsNullOrEmpty(displayName))
                 {
                     displayName = payload.GetName();
                 }
 
-                if(string.Compare(displayName, "GC Heap Size") == 0 && Convert.ToInt32(payload.GetValue())>threshold)
+                if (string.Compare(displayName, "GC Heap Size") == 0 && Convert.ToInt32(payload.GetValue()) > threshold)
                 {
                     Console.WriteLine("Memory threshold has been breached....");
                     System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
@@ -107,11 +103,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         if (!File.Exists(createDumpPath))
                         {
                             Console.WriteLine("Unable to locate 'createdump' tool in '{runtimeDirectory}'");
-                            Environment.Exit(1);                            
-                        }                        
+                            Environment.Exit(1);
+                        }
 
                         var createdump = new System.Diagnostics.Process()
-                        {       
+                        {
                             StartInfo = new System.Diagnostics.ProcessStartInfo()
                             {
                                 FileName = createDumpPath,

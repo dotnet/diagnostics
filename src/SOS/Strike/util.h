@@ -442,11 +442,13 @@ public:
         highest_address = dacGCDetails.highest_address;
         card_table = dacGCDetails.card_table;
         has_regions = generation_table[0].start_segment != generation_table[1].start_segment;
+        has_background_gc = dacGCDetails.mark_array != -1;
     }
 
     DacpGcHeapDetails original_heap_details;
     bool has_poh;
     bool has_regions;
+    bool has_background_gc;
     CLRDATA_ADDRESS heapAddr; // Only filled in in server mode, otherwise NULL
     CLRDATA_ADDRESS alloc_allocated;
 

@@ -216,21 +216,6 @@ void Extensions::ReleaseTarget()
 }
 
 /// <summary>
-/// Returns the runtime or fails if no target or current runtime
-/// </summary>
-/// <param name="ppRuntime">runtime instance</param>
-/// <returns>error code</returns>
-HRESULT GetRuntime(IRuntime** ppRuntime)
-{
-    ITarget* target = GetTarget();
-    if (target == nullptr)
-    {
-        return E_FAIL;
-    }
-    return target->GetRuntime(ppRuntime);
-}
-
-/// <summary>
 /// Helper function to get the absolute path from a relative one
 /// </summary>
 /// <param name="path">relative path</param>
