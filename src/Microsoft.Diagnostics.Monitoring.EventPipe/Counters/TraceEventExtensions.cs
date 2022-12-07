@@ -74,7 +74,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (sessionId != null && "System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
             {
-                
                 ICounterPayload individualPayload = null;
 
                 if (traceEvent.EventName == "BeginInstrumentReporting")
@@ -126,9 +125,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return false;
         }
 
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, out List<ICounterPayload> payload)
+        public static bool TryGetIndividualCounterPayload(this TraceEvent traceEvent, CounterFilter filter, out ICounterPayload payload)
         {
-            return TryGetCounterPayload(traceEvent, filter, null, out payload);
+            bool gotCounterPayload = TryGetCounterPayload(traceEvent, filter, null, out List<ICounterPayload> payloadsList);
+
+            payload = payloadsList.FirstOrDefault();
+
+            return gotCounterPayload;
         }
 
         private static void HandleGauge(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
@@ -306,7 +309,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
         }
-
 
         //The metadata payload is formatted as a string of comma separated key:value pairs.
         //This limitation means that metadata values cannot include commas; otherwise, the

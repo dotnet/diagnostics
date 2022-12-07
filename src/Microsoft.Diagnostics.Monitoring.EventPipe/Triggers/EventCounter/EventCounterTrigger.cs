@@ -59,9 +59,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_filter, out List<ICounterPayload> payload))
+            if (traceEvent.TryGetIndividualCounterPayload(_filter, out ICounterPayload payload))
             {
-                return _impl.HasSatisfiedCondition(payload[0]); // Need to check if this is safe - in theory just want the first (and only) result
+                return _impl.HasSatisfiedCondition(payload);
             }
             return false;
         }
