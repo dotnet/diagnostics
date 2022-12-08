@@ -1,8 +1,8 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.357801">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.360501">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>46033d5bdad3149da529dadb21be3a1f48db5d93</Sha>
+      <Sha>9d8944d87cede39ad8035baacdc7cad0f050dc0d</Sha>
     </Dependency>
     <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.2.332302">
       <Uri>https://github.com/microsoft/clrmd</Uri>
@@ -12,25 +12,25 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>a64d9ac11086f28fbd4b2b2337c19be7826fbfa9</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.22579.1">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.22608.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>bed0fd20a5a55843c1f04ef195ef2fd7171ae715</Sha>
+      <Sha>17ad400c7b867c675b05aa3143163503bcdf8695</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.22575.1">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.22579.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>b61fcdfe86b30fe91898bfb296f4f4396fe5d87a</Sha>
+      <Sha>6b3bad6673f3ebe89ebe12ea7c4eff1705b893e6</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22316.2" Pinned="true">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>ccfe6da198c5f05534863bbb1bff66e830e0c6ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="7.0.101-servicing.22571.1">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="7.0.102-servicing.22601.12">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>d02d33e069bf59d00b6374e304d39d6ceb20e18a</Sha>
+      <Sha>de57a6e8e4d65a03405f6aac5c0384159bd8fa70</Sha>
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="7.0.0-rtm.22513.7">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>

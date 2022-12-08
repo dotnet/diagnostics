@@ -48,13 +48,14 @@ private:
 public:
     ElfReader(bool isFileLayout);
     virtual ~ElfReader();
-#ifdef HOST_UNIX
-    bool EnumerateElfInfo(ElfW(Phdr)* phdrAddr, int phnum);
-#endif
     bool PopulateForSymbolLookup(uint64_t baseAddress);
     bool TryLookupSymbol(std::string symbolName, uint64_t* symbolOffset);
-    bool EnumerateProgramHeaders(uint64_t baseAddress, uint64_t* ploadbias = nullptr, ElfW(Dyn)** pdynamicAddr = nullptr);
     bool GetBuildId(BYTE* buffer, ULONG bufferSize, PULONG pBuildSize);
+#ifdef HOST_UNIX
+    bool EnumerateElfInfo(ElfW(Phdr)* phdrAddr, int phnum);
+    bool GetBuildIdFromSectionHeader(uint64_t baseAddress, BYTE* buffer, ULONG bufferSize, PULONG pBuildSize);
+#endif
+    bool EnumerateProgramHeaders(uint64_t baseAddress, uint64_t* ploadbias = nullptr, ElfW(Dyn)** pdynamicAddr = nullptr);
 
 private:
     bool GetSymbol(int32_t index, ElfW(Sym)* symbol);
@@ -63,10 +64,11 @@ private:
     uint32_t Hash(const std::string& symbolName);
     bool GetChain(int index, int32_t* chain);
     bool GetStringAtIndex(int index, std::string& result);
+    bool ReadHeader(uint64_t baseAddress, ElfW(Ehdr)& ehdr);
+    bool EnumerateProgramHeaders(ElfW(Phdr)* phdrAddr, int phnum, uint64_t baseAddress, uint64_t* ploadbias, ElfW(Dyn)** pdynamicAddr);
 #ifdef HOST_UNIX
     bool EnumerateLinkMapEntries(ElfW(Dyn)* dynamicAddr);
 #endif
-    bool EnumerateProgramHeaders(ElfW(Phdr)* phdrAddr, int phnum, uint64_t baseAddress, uint64_t* ploadbias, ElfW(Dyn)** pdynamicAddr);
 #ifdef __FreeBSD__
     virtual void VisitModule(caddr_t baseAddress, std::string& moduleName) { };
 #else
