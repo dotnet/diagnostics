@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using System;
 using System.Globalization;
 using System.IO;
@@ -72,10 +73,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
                 builder
                     .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
-                    .Append(" \"provider\": \"").Append(JsonEscape(payload.ProviderName)).Append("\", ")
-                    .Append(" \"name\": \"").Append(JsonEscape(payload.DisplayName)).Append("\", ")
-                    .Append(" \"tags\": \"").Append(JsonEscape(payload.Tags)).Append("\", ")
-                    .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType)).Append("\", ")
+                    .Append(" \"provider\": \"").Append(JsonEscape(payload.Provider)).Append("\", ")
+                    .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay(CounterPayloadExtensions.DisplayRenderingMode.DotnetCounters))).Append("\", ")
+                    .Append(" \"tags\": \"").Append(JsonEscape(payload.Metadata)).Append("\", ")
+                    .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
         }

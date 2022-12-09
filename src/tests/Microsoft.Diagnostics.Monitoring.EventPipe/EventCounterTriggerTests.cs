@@ -477,7 +477,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 // Add some variance between -5 and 5 milliseconds to simulate "real" timestamp
                 _lastTimestamp = _lastTimestamp.Value.AddMilliseconds((10 * _random.NextDouble()) - 5);
 
-                return new CounterPayload(
+                return new StandardCounterPayload(
                     _lastTimestamp.Value,
                     EventCounterConstants.RuntimeProviderName,
                     EventCounterConstants.CpuUsageCounterName,
@@ -486,6 +486,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     value,
                     CounterType.Metric,
                     actualInterval,
+                    (int)_intervalSeconds,
                     null);
             }
         }

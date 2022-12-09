@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using System;
 using System.Globalization;
 using System.IO;
@@ -71,8 +72,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 builder
                     .Append(payload.Timestamp.ToString()).Append(',')
                     .Append(payload.ProviderName).Append(',')
-                    .Append(payload.DisplayName);
-                if (!string.IsNullOrEmpty(payload.Tags))
+                    .Append(payload.GetDisplay(CounterPayloadExtensions.DisplayRenderingMode.DotnetCounters));
+                if(!string.IsNullOrEmpty(payload.Tags))
                 {
                     builder.Append('[').Append(payload.Tags.Replace(',', ';')).Append(']');
                 }

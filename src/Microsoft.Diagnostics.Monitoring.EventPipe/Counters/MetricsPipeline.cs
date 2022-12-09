@@ -59,7 +59,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             eventSource.Dynamic.All += traceEvent => {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload counterPayload))
+                    if (traceEvent.TryGetCounterPayload(new CounterConfiguration(_filter)
+                        {
+                            SessionId = _sessionId,
+                            MaxHistograms = Settings.MaxHistograms,
+                            MaxTimeseries = Settings.MaxTimeSeries
+                        }, out ICounterPayload counterPayload))
                     {
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
