@@ -6,6 +6,8 @@ using System.IO;
 using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
+using Microsoft.Diagnostics.Tools.Counters;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Xunit;
 
 #pragma warning disable CA1507 // Use nameof to express symbol names
@@ -26,7 +28,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", "", "", 1, 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", string.Empty, string.Empty, 1, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -57,7 +59,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", "", "", 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", string.Empty, string.Empty, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -88,7 +90,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "heapSize", "Heap Size", "MB", "", i, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "heapSize", "Heap Size", "MB", string.Empty, i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -122,7 +124,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "heapSize", "Heap Size", "MB", "", 0, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "heapSize", "Heap Size", "MB", string.Empty, 0, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 

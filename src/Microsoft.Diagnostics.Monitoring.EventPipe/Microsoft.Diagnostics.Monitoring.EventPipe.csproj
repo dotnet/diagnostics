@@ -39,6 +39,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="dotnet-counters" />
+    <InternalsVisibleTo Include="DotnetCounters.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tool.UnitTests" />
