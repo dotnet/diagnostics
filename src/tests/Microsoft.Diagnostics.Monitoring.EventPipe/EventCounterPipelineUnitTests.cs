@@ -67,13 +67,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }
             }
 
-            public void PipelineStarted()
-            {
-            }
+            public Task PipelineStarted() => Task.CompletedTask;
 
-            public void PipelineStopped()
-            {
-            }
+            public Task PipelineStopped() => Task.CompletedTask;
 
             private static string CreateKey(ICounterPayload payload)
             {
