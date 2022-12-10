@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
             if (!string.IsNullOrEmpty(diagnosticExtensions))
             {
-                string[] paths = diagnosticExtensions.Split(new char[] { RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] paths = diagnosticExtensions.Split(new char[] { Path.PathSeparator }, StringSplitOptions.RemoveEmptyEntries);
                 extensionPaths.AddRange(paths);
             }
             string assemblyPath = Assembly.GetExecutingAssembly().Location;
