@@ -284,15 +284,18 @@ namespace SOS.Extensions
 
         public HResult GetThreadTeb(uint threadId, out ulong teb)
         {
-            // The native code may zero out this return pointer
+            // The native code may not zero out this return pointer
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
+            teb = 0;
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
             return VTable.GetThreadTeb(Self, threadId, out teb);
         }
 
-        public HResult VirtualUnwind(uint threadId, uint contextSize, byte[] context)
+        public HResult VirtualUnwind(uint threadId, Span<byte> context)
         {
             fixed (byte* contextPtr = context)
             {
-                return VTable.VirtualUnwind(Self, threadId, contextSize, contextPtr);
+                return VTable.VirtualUnwind(Self, threadId, context.Length, contextPtr);
             }
         }
 
@@ -537,7 +540,7 @@ namespace SOS.Extensions
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, int> GetCurrentThreadSystemId;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, int> SetCurrentThreadSystemId;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, int> GetThreadTeb;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, byte*, int> VirtualUnwind;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, int, byte*, int> VirtualUnwind;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, int> GetSymbolPath;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, int, ulong, byte*, int, out uint, out ulong, int> GetSymbolByOffset;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, int, byte*, out ulong, int> GetOffsetBySymbol;
