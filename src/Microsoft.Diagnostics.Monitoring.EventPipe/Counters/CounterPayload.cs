@@ -78,6 +78,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
+    internal class CounterEndedPayload : CounterPayload
+    {
+        public CounterEndedPayload(string providerName, string name, string displayName, DateTime timestamp)
+            : base(providerName, name, displayName, string.Empty, null, 0.0, timestamp, "Metric", EventType.CounterEnded)
+        {
+
+        }
+    }
+
     internal class RatePayload : CounterPayload
     {
         public RatePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, double intervalSecs, DateTime timestamp) :
@@ -123,6 +132,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         Rate,
         Gauge,
         Histogram,
-        Error
+        Error,
+        CounterEnded
     }
 }
