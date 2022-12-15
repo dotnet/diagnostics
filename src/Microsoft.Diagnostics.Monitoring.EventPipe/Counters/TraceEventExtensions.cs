@@ -223,10 +223,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
             foreach ((double key, double val) in quantiles)
             {
-                tags = FormattableString.Invariant($"{tags},quantile={key}");
-                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, tags, val, obj.TimeStamp));
+                string tagsWithQuantile = AppendQuantile(tags, FormattableString.Invariant($"quantile={key}"));
+                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, tagsWithQuantile, val, obj.TimeStamp));
             }
         }
+
+        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : FormattableString.Invariant($"{tags},{quantile}");
 
         private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
@@ -318,7 +320,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         //This limitation means that metadata values cannot include commas; otherwise, the
         //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
         //is treated as invalid and excluded from the payload.
-        public static IDictionary<string, string> GetMetadata(string metadataPayload)
+        public static IDictionary<string, string> GetMetadata(string metadataPayload, char kvSeparator = ':')
         {
             var metadataDict = new Dictionary<string, string>();
 
@@ -341,7 +343,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     metadata = metadata.Slice(commaIndex + 1);
                 }
 
-                int colonIndex = kvPair.IndexOf(':');
+                int colonIndex = kvPair.IndexOf(kvSeparator);
                 if (colonIndex < 0)
                 {
                     metadataDict.Clear();
