@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class CounterPayload : ICounterPayload
+    internal class CounterPayload : ICounterPayload
     {
         public CounterPayload(DateTime timestamp,
             string provider,
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public EventType EventType { get; set; }
     }
 
-    public class GaugePayload : CounterPayload
+    internal class GaugePayload : CounterPayload
     {
         public GaugePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Metric", EventType.Gauge)
@@ -78,7 +78,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    public class RatePayload : CounterPayload
+    internal class RatePayload : CounterPayload
     {
         public RatePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, double intervalSecs, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Rate", EventType.Rate)
@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    public class PercentilePayload : CounterPayload
+    internal class PercentilePayload : CounterPayload
     {
         public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double val, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, val, timestamp, "Metric", EventType.Histogram)
@@ -102,10 +102,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    public class ErrorPayload : CounterPayload
+    internal class ErrorPayload : CounterPayload
     {
-        public ErrorPayload(string providerName, string name, string displayName, string displayUnits, string metadata, double val, DateTime timestamp, string errorMessage) :
-            base(providerName, name, displayName, displayUnits, metadata, val, timestamp, "Metric", EventType.Error)
+        public ErrorPayload(string errorMessage) : this(errorMessage, DateTime.UtcNow) 
+        {
+        }
+
+        public ErrorPayload(string errorMessage, DateTime timestamp) :
+            base(string.Empty, string.Empty, string.Empty, string.Empty, null, 0.0, timestamp, "Metric", EventType.Error)
         {
             ErrorMessage = errorMessage;
         }
@@ -114,7 +118,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     }
 
     // If keep this, should probably put it somewhere else
-    public enum EventType : int
+    internal enum EventType : int
     {
         Rate,
         Gauge,
