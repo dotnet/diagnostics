@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
 
-                Dictionary<string, string> metadataDict = GetMetadata(payloadFields["Metadata"].ToString());
+                string metadata = payloadFields["Metadata"].ToString();
 
                 //CONSIDER
                 //Concurrent counter sessions do not each get a separate interval. Instead the payload
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     value,
                     counterType,
                     intervalSec,
-                    metadataDict));
+                    metadata));
 
                 return true;
             }
@@ -152,8 +152,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)obj.PayloadValue(5);
             string lastValueText = (string)obj.PayloadValue(6);
 
-            Dictionary<string, string> metadataDict = GetMetadata(tags);
-
             if (!filter.IsIncluded(meterName, instrumentName))
             {
                 return;
@@ -162,7 +160,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, out double lastValue))
             {
-                payload = new GaugePayload(meterName, instrumentName, null, unit, metadataDict, lastValue, obj.TimeStamp);
+                payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the Gauge callback function throws an exception.
+
+                //TODO Can this occur for other meter types?
+                payload = new CounterEndedPayload(meterName, instrumentName, null, obj.TimeStamp);
+                
             }
         }
 
@@ -184,11 +191,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
 
-            Dictionary<string, string> metadataDict = GetMetadata(tags);
-
             if (double.TryParse(rateText, out double rate))
             {
-                payload = new RatePayload(meterName, instrumentName, null, unit, metadataDict, rate, 10, traceEvent.TimeStamp);
+                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, 10, traceEvent.TimeStamp);
             }
         }
 
@@ -218,11 +223,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
             foreach ((double key, double val) in quantiles)
             {
-                Dictionary<string, string> metadataDict = GetMetadata(tags);
-                metadataDict.Add("quantile", key.ToString());
-                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, metadataDict, val, obj.TimeStamp));
+                string tagsWithQuantile = AppendQuantile(tags, FormattableString.Invariant($"quantile={key}"));
+                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, tagsWithQuantile, val, obj.TimeStamp));
             }
         }
+
+        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : FormattableString.Invariant($"{tags},{quantile}");
 
         private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
@@ -237,7 +243,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = $"Warning: Histogram tracking limit reached. Not all data is being shown. The limit can be changed with maxHistograms but will use more memory in the target process.";
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
+            payload = new ErrorPayload(errorMessage);
         }
 
         private static void HandleTimeSeriesLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
@@ -253,7 +259,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = "Warning: Time series tracking limit reached. Not all data is being shown. The limit can be changed with maxTimeSeries but will use more memory in the target process.";
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
         private static void HandleError(TraceEvent obj, string sessionId, out ICounterPayload payload)
@@ -269,7 +275,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = "Error reported from target process:" + Environment.NewLine + error;
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
         private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, string sessionId, out ICounterPayload payload)
@@ -288,7 +294,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string errorMessage = "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
                 "Concurrent sessions are not supported.";
 
-                payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
+                payload = new ErrorPayload(errorMessage, obj.TimeStamp);
             }
         }
 
@@ -307,14 +313,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string errorMessage = "Exception thrown from an observable instrument callback in the target process:" + Environment.NewLine +
                 error;
 
-            payload = new ErrorPayload(string.Empty, string.Empty, string.Empty, string.Empty, new(), 0, obj.TimeStamp, errorMessage);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
         //The metadata payload is formatted as a string of comma separated key:value pairs.
         //This limitation means that metadata values cannot include commas; otherwise, the
         //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
         //is treated as invalid and excluded from the payload.
-        internal static Dictionary<string, string> GetMetadata(string metadataPayload)
+        public static IDictionary<string, string> GetMetadata(string metadataPayload, char kvSeparator = ':')
         {
             var metadataDict = new Dictionary<string, string>();
 
@@ -337,7 +343,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     metadata = metadata.Slice(commaIndex + 1);
                 }
 
-                int colonIndex = kvPair.IndexOf(':');
+                int colonIndex = kvPair.IndexOf(kvSeparator);
                 if (colonIndex < 0)
                 {
                     metadataDict.Clear();
