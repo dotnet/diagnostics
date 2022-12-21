@@ -223,12 +223,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
             foreach ((double key, double val) in quantiles)
             {
-                string tagsWithQuantile = AppendQuantile(tags, FormattableString.Invariant($"Percentile={(int)(100*key)}"));
-                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, tagsWithQuantile, val, obj.TimeStamp));
+                string tagsWithPercentile = AppendPercentile(tags, FormattableString.Invariant($"Percentile={(int)(100*key)}"));
+                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, tagsWithPercentile, val, obj.TimeStamp));
             }
         }
 
-        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : FormattableString.Invariant($"{tags},{quantile}");
+        private static string AppendPercentile(string tags, string percentile) => string.IsNullOrEmpty(tags) ? percentile : FormattableString.Invariant($"{tags},{percentile}");
 
         private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
