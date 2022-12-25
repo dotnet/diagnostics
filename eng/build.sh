@@ -131,7 +131,7 @@ mkdir -p "$__IntermediatesDir"
 mkdir -p "$__LogsDir"
 mkdir -p "$__CMakeBinDir"
 
-__ExtraCmakeArgs="$__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
+__ExtraCmakeArgs="$__CMakeArgs $__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 
 # Specify path to be set for CMAKE_INSTALL_PREFIX.
 # This is where all built native libraries will copied to.
