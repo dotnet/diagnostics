@@ -1,8 +1,8 @@
 # .NET Core Diagnostics Overview
 
-With .NET Full running on Windows we have grown accustomed to a plethora of great diagnostics tools ranging from dump generation and manual analysis to more sophisticated collection engines such as DebugDiag. As .NET core is picking up (cross platform) steam  what types of diagnostics capabilities are available to us when we need to do production diagnostics? It turns out that a lot of work has been done in this area and specifically .net core 3 promises to bring a wide range of diagnostics capabilities. 
+With .NET Full running on Windows we have grown accustomed to a plethora of great diagnostics tools ranging from dump generation and manual analysis to more sophisticated collection engines such as DebugDiag. As .NET core is picking up (cross platform) steam  what types of diagnostics capabilities are available to us when we need to do production diagnostics? It turns out that a lot of work has been done in this area and specifically .net core 3 promises to bring a wide range of diagnostics capabilities.
 
-To learn more about production diagnostics in .net core 3, we'll be running through a set of diagnostics scenarios using the built in runtime/sdk tools. The walkthroughs are all run on Ubuntu 16.04 and use the latest .net core preview bits. 
+To learn more about production diagnostics in .net core 3, we'll be running through a set of diagnostics scenarios using the built in runtime/sdk tools. The walkthroughs are all run on Ubuntu 16.04 and use the latest .net core preview bits.
 
 Before we jump in head first, let's take a look at some basic methodologies as it relates to production diagnostics. When an outage occurs in production, typically the first and foremost goal is mitigation. Mitigation typically involves getting the app back up and running as quickly as possible. Common mitigation techniques involve restarting the app or sometimes one or more nodes/servers. While restarting is a quick and effective mitigation technique, root cause of the failure is still expected to be understood and appropriate fix(es) made to avoid future downtime. In order to get to root cause, we need to collect as much diagnostics data as we can prior to executing the mitigation strategy. The diagnostics data collected can then be analyzed postmortem to determine root cause and possible fixes. Each of the scenarios we will explore here will outline what capabilities .net core 3 has in terms of diagnostics data collection and analysis.
 
@@ -30,4 +30,4 @@ Please note that you have to be using at least preview 5 for most of the capabil
 
 ### [Scenario - App is not responding](hung_app.md)
 
-### Scenario - App is experiencing intermittent exceptions
+### [Scenario - App is experiencing intermittent exceptions](intermittent_exceptions.md)
