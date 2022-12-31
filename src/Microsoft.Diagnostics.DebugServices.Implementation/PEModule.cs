@@ -3,77 +3,56 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Reflection.PortableExecutable;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Disposable PEReader wrapper around the module file.
+    /// PEModule service that provides downloaded module PEReader wrapper.
     /// </summary>
     public class PEModule : IDisposable
     {
-        private readonly IDisposable _disposable;
-
-        public PEReader Reader { get; private set; }
+        private readonly IModule _module;
+        private readonly ISymbolService _symbolService;
+        private readonly IDisposable _onChangeEvent;
+        private PEReader _reader;
 
         /// <summary>
         /// Creates a PEModule service instance of the downloaded or local (if exists) module file.
         /// </summary>
         [ServiceExport(Scope = ServiceScope.Module)]
-        public static PEModule CreatePEModule(IServiceContainer container, ISymbolService symbolService, IModule module)
+        public static PEModule CreatePEModule(IModule module, ISymbolService symbolService)
         {
             if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
             {
-                PEReader reader = OpenPEReader(symbolService.DownloadModuleFile(module));
-                if (reader is not null)
-                {
-                    IDisposable onChangeEvent = symbolService.OnChangeEvent.Register(() => container.RemoveService(typeof(PEModule)));
-                    return new PEModule(reader, onChangeEvent);
-                }
+                return new PEModule(module, symbolService);
             }
             return null;
         }
 
-        /// <summary>
-        /// Opens and returns an PEReader instance from the local file path
-        /// </summary>
-        /// <param name="filePath">PE file to open</param>
-        /// <returns>PEReader instance or null</returns>
-        public static PEReader OpenPEReader(string filePath)
+        public PEReader GetPEReader()
         {
-            Stream stream = Utilities.TryOpenFile(filePath);
-            if (stream is not null)
+            if (_reader == null)
             {
-                try
-                {
-                    var reader = new PEReader(stream);
-                    if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
-                    {
-                        Trace.TraceWarning($"OpenPEReader: PEReader invalid headers");
-                        return null;
-                    }
-                    return reader;
-                }
-                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
-                }
+                _reader = Utilities.OpenPEReader(_symbolService.DownloadModuleFile(_module));
             }
-            return null;
+            return _reader;
         }
 
-        private PEModule(PEReader reader, IDisposable disposable)
+        private PEModule(IModule module, ISymbolService symbolService)
         {
-            Reader = reader;
-            _disposable = disposable;
+            _module = module;
+            _symbolService = symbolService;
+            _onChangeEvent = symbolService.OnChangeEvent.Register(() => {
+                _reader?.Dispose();
+                _reader = null;
+            });
         }
 
         public void Dispose()
         {
-            Reader?.Dispose();
-            _disposable?.Dispose();
+            _reader?.Dispose();
+            _onChangeEvent.Dispose();
         }
     }
 }

@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
@@ -715,10 +717,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string fileName = fileKey.FullPathName;
             if (File.Exists(fileName))
             {
-                using ELFModule elfModule = ELFModule.OpenFile(fileName);
-                if (elfModule is not null)
+                using ELFFile elfFile = Utilities.OpenELFFile(fileName);
+                if (elfFile is not null)
                 {
-                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfModule, fileName);
+                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, fileName);
                     foreach (SymbolStoreKey key in generator.GetKeys(flags))
                     {
                         if (fileKey.Equals(key))
@@ -771,10 +773,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string fileName = fileKey.FullPathName;
             if (File.Exists(fileName))
             {
-                using MachOModule machOModule = MachOModule.OpenFile(fileName);
-                if (machOModule is not null)
+                using MachOFile machOFile = Utilities.OpenMachOFile(fileName);
+                if (machOFile is not null)
                 {
-                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOModule, fileName);
+                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, fileName);
                     IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
                     foreach (SymbolStoreKey key in keys)
                     {

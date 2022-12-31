@@ -130,11 +130,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 service = _serviceProvider;
                 return true;
             }
-            if (type == typeof(IServiceContainer))
-            {
-                service = this;
-                return true;
-            }
             return _instances.TryGetValue(type, out service);
         }
 

@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (module != null)
                     {
                         // We found a module that contains the memory requested. Now find or download the PE image.
-                        PEReader reader = module.Services.GetService<PEModule>()?.Reader;
+                        PEReader reader = module.Services.GetService<PEModule>()?.GetPEReader();
                         if (reader is not null)
                         {
                             int rva = (int)(address - module.ImageBase);
@@ -181,11 +181,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         else
                         {
                             // Find or download the ELF image, if one.
-                            Reader virtualAddressReader = module.Services.GetService<ELFModule>()?.VirtualAddressReader;
+                            Reader virtualAddressReader = module.Services.GetService<ELFModule>()?.GetELFFile()?.VirtualAddressReader;
                             if (virtualAddressReader is null)
                             {
                                 // Find or download the MachO image, if one.
-                                virtualAddressReader = module.Services.GetService<MachOModule>()?.VirtualAddressReader;
+                                virtualAddressReader = module.Services.GetService<MachOModule>()?.GetMachOFile()?.VirtualAddressReader;
                             }
                             if (virtualAddressReader is not null)
                             {

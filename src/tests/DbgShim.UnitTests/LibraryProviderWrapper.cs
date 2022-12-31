@@ -7,6 +7,8 @@ using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
@@ -396,19 +398,19 @@ namespace SOS.Hosting
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    using ELFModule elfModule = ELFModule.OpenFile(filePath);
-                    if (elfModule is not null)
+                    using ELFFile elfFile = Utilities.OpenELFFile(filePath);
+                    if (elfFile is not null)
                     {
-                        return elfModule.BuildID.ToImmutableArray();
+                        return elfFile.BuildID.ToImmutableArray();
                     }
                     throw new ArgumentException($"TestBuildId {filePath} not valid ELF file");
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    using MachOModule machOModule = MachOModule.OpenFile(filePath);
-                    if (machOModule is not null)
+                    using MachOFile machOFile = Utilities.OpenMachOFile(filePath);
+                    if (machOFile is not null)
                     {
-                        return machOModule.Uuid.ToImmutableArray();
+                        return machOFile.Uuid.ToImmutableArray();
                     }
                     throw new ArgumentException($"TestBuildId {filePath} not valid MachO file");
                 }
