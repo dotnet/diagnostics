@@ -9,9 +9,9 @@ namespace Microsoft.Diagnostics.DebugServices
     public enum ServiceScope
     {
         Global,
+        Context,
         Provider,
         Target,
-        Context,
         Module,
         Thread,
         Runtime,

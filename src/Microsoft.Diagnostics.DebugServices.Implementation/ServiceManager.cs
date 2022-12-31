@@ -20,8 +20,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private readonly Dictionary<Type, ServiceFactory>[] _factories;
         private readonly Dictionary<Type, List<ServiceFactory>> _providerFactories;
-        private readonly List<ServiceContainer>[] _serviceContainers;
         private readonly ServiceEvent<Assembly> _notifyExtensionLoad;
+        private ServiceContainer _globalServiceContainer;
+        private ServiceContainer _contextServiceContainer;
         private bool _finalized;
 
         /// <summary>
@@ -36,7 +37,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _factories = new Dictionary<Type, ServiceFactory>[(int)ServiceScope.Max];
             _providerFactories = new Dictionary<Type, List<ServiceFactory>>();
-            _serviceContainers = new List<ServiceContainer>[(int)ServiceScope.Max];
             _notifyExtensionLoad = new ServiceEvent<Assembly>();
             for (int i = 0; i < (int)ServiceScope.Max; i++)
             {
@@ -53,13 +53,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public IServiceContainer CreateServiceContainer(ServiceScope scope, IServiceProvider parent)
         {
             var container = new ServiceContainer(parent, _factories[(int)scope]);
-            if (scope == ServiceScope.Global || scope == ServiceScope.Context)
+            switch (scope)
             {
-                if (_serviceContainers[(int)scope] == null)
-                {
-                    _serviceContainers[(int)scope] = new List<ServiceContainer>();
-                }
-                _serviceContainers[(int)scope].Add(container);
+                case ServiceScope.Global:
+                    _globalServiceContainer = container;
+                    break;
+                case ServiceScope.Context:
+                    _contextServiceContainer = container;
+                    break;
+                default:
+                    if (!_finalized)
+                    {
+                        throw new InvalidOperationException();
+                    }
+                    break;
             }
             return container;
         }
@@ -157,12 +164,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else
             {
                 _factories[(int)scope].Add(serviceType, factory);
-                if (_serviceContainers[(int)scope] != null)
+                switch (scope)
                 {
-                    foreach (ServiceContainer container in _serviceContainers[(int)scope])
-                    {
-                        container.AddServiceFactory(serviceType, factory);
-                    }
+                    case ServiceScope.Global:
+                        _globalServiceContainer.AddServiceFactory(serviceType, factory);
+                        break;
+                    case ServiceScope.Context:
+                        _contextServiceContainer.AddServiceFactory(serviceType, factory);
+                        break;
                 }
             }
         }
