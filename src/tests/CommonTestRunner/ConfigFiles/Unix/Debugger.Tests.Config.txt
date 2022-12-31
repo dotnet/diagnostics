@@ -11,7 +11,6 @@
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)/src/tests</DebuggeeSourceRoot>
@@ -40,10 +39,6 @@
       <BuildProjectFramework>net6.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
     </Option>
-    <Option Condition="'$(RuntimeVersion31)' != ''">
-      <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-    </Option>
   </Options>
 
   <!-- Single-file debuggees don't need the host -->
@@ -51,5 +46,5 @@
   <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(RuntimeFrameworkVersion)</HostArgs>
 
   <DotNetTraceHost>$(DotNetRoot)/dotnet</DotNetTraceHost>
-  <DotNetTracePath>$(RootBinDir)/bin/dotnet-trace/$(TargetConfiguration)/netcoreapp3.1/dotnet-trace.dll</DotNetTracePath>
+  <DotNetTracePath>$(RootBinDir)/bin/dotnet-trace/$(TargetConfiguration)/net6.0/dotnet-trace.dll</DotNetTracePath>
 </Configuration>

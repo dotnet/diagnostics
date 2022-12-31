@@ -1,14 +1,12 @@
 {
   "tools": {
-    "dotnet": "7.0.100",
+    "dotnet": "7.0.101",
     "runtimes": {
       "dotnet/x64": [
-        "$(MicrosoftNETCoreApp31Version)",
         "$(MicrosoftNETCoreApp60Version)",
         "$(VSRedistCommonNetCoreSharedFrameworkx6470Version)"
       ],
       "dotnet/x86": [
-        "$(MicrosoftNETCoreApp31Version)",
         "$(MicrosoftNETCoreApp60Version)",
         "$(VSRedistCommonNetCoreSharedFrameworkx6470Version)"
       ],
