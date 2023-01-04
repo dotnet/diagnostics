@@ -16,7 +16,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.362701</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.405201</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
     <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.0-rtm.22513.12</VSRedistCommonNetCoreSharedFrameworkx6470Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>7.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
@@ -45,7 +45,7 @@
     <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.3.362104</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>2.3.363101</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>2.0.64</MicrosoftDiagnosticsTracingTraceEventVersion>
     <!-- Use pinned version to avoid picking up latest (which doesn't support netcoreapp3.1) during source-build -->
