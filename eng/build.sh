@@ -48,7 +48,7 @@ handle_arguments() {
             __ShiftArgs=1
             ;;
 
-        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign)
+        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
@@ -63,7 +63,7 @@ handle_arguments() {
             __ShiftArgs=1
             ;;
 
-        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine)
+        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
