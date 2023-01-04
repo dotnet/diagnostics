@@ -27,7 +27,6 @@
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
 
   <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
@@ -80,11 +79,6 @@
       <BuildProjectFramework>net6.0</BuildProjectFramework>
       <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
     </Option>
-    <Option Condition="'$(RuntimeVersion31)' != ''">
-      <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-      <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-    </Option>
     <!--
         SOS.StackAndOtherTests (cli because tested with embedded, portable PDBs and single-file)
       -->
@@ -117,10 +111,6 @@
           <BuildProjectFramework>net6.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
         </Option>
-        <Option Condition="'$(RuntimeVersion31)' != ''">
-          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-        </Option>
       </Options>
     </Option>
     <!--
@@ -137,11 +127,6 @@
           <BuildProjectFramework>net6.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersion60)</FrameworkVersion>
-        </Option>
-        <Option Condition="'$(AspNetCoreVersion31)' != ''">
-          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-          <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
         </Option>
       </Options>
     </Option>
@@ -165,7 +150,7 @@
   </Options>
 
   <DotNetDumpHost>$(DotNetRoot)/dotnet</DotNetDumpHost>
-  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/netcoreapp3.1/publish/dotnet-dump.dll</DotNetDumpPath>
+  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/net6.0/publish/dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 

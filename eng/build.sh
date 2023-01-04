@@ -202,7 +202,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
     __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
 
     "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.csproj \
+        $__RepoRootDir/eng/CreateVersionFile.proj \
         /bl:$__GenerateVersionLog \
         /t:GenerateVersionFiles \
         /restore \
