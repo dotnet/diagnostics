@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public enum CounterType
+    internal enum CounterType
     {
         //Same as average or mean
         Metric,
@@ -33,8 +33,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         DateTime Timestamp { get; }
 
+        /// <summary>
+        /// The interval between counters. Note this is the actual measure of time elapsed, not the requested interval.
+        /// </summary>
         float Interval { get; }
 
+        /// <summary>
+        /// Optional metadata for counters. Note that normal counters use ':' as a separator character, while System.Diagnostics.Metrics use ';'.
+        /// We do not immediately convert string to Dictionary, since dotnet-counters does not need this conversion.
+        /// </summary>
         string Metadata { get; }
 
         EventType EventType { get; set; }
