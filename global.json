@@ -1,18 +1,16 @@
 {
   "tools": {
-    "dotnet": "7.0.101",
+    "dotnet": "8.0.100-alpha.1.23063.11",
     "runtimes": {
-      "dotnet/x64": [
+      "dotnet": [
         "$(MicrosoftNETCoreApp60Version)",
-        "$(VSRedistCommonNetCoreSharedFrameworkx6470Version)"
+        "$(MicrosoftNETCoreApp70Version)",
+        "$(VSRedistCommonNetCoreSharedFrameworkx6480Version)"
       ],
       "dotnet/x86": [
         "$(MicrosoftNETCoreApp60Version)",
-        "$(VSRedistCommonNetCoreSharedFrameworkx6470Version)"
-      ],
-      "dotnet/arm64": [
-        "$(MicrosoftNETCoreApp60Version)",
-        "$(VSRedistCommonNetCoreSharedFrameworkx6470Version)"
+        "$(MicrosoftNETCoreApp70Version)",
+        "$(VSRedistCommonNetCoreSharedFrameworkx6480Version)"
       ]
     }
   },

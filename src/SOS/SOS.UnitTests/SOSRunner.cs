@@ -913,9 +913,21 @@ public class SOSRunner : IDisposable
                         commands.Add($"!SetClrPath {runtimeSymbolsPath}");
                     }
                 }
-                if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
+                if (!isHostRuntimeNone)
                 {
-                    commands.Add($"!SetSymbolServer {setSymbolServer}");
+                    // If single-file app, add the debuggee directory containing the PDBs and
+                    // add the symbol server so SOS can find DAC/DBI for single file apps which
+                    // may not have been built with the runtime pointed by RuntimeSymbolsPath
+                    // since we use the arcade provided SDK (in .dotnet) to build them.
+                    if (_config.PublishSingleFile)
+                    {
+                        string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
+                        commands.Add($"!SetSymbolServer -ms -directory {appRootDir}");
+                    }
+                    if (!string.IsNullOrEmpty(setSymbolServer))
+                    {
+                        commands.Add($"!SetSymbolServer {setSymbolServer}");
+                    }
                 }
                 break;
             case NativeDebugger.Lldb:
@@ -935,9 +947,21 @@ public class SOSRunner : IDisposable
                     }
                 }
 #endif
-                if (!isHostRuntimeNone && !string.IsNullOrEmpty(setSymbolServer))
+                if (!isHostRuntimeNone)
                 {
-                    commands.Add($"setsymbolserver {setSymbolServer}");
+                    // If single-file app, add the debuggee directory containing the PDBs and
+                    // add the symbol server so SOS can find DAC/DBI for single file apps which
+                    // may not have been built with the runtime pointed by RuntimeSymbolsPath
+                    // since we use the arcade provided SDK (in .dotnet) to build them.
+                    if (_config.PublishSingleFile)
+                    {
+                        string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
+                        commands.Add($"setsymbolserver -ms -directory {appRootDir}");
+                    }
+                    if (!string.IsNullOrEmpty(setSymbolServer))
+                    {
+                        commands.Add($"setsymbolserver {setSymbolServer}");
+                    }
                 }
                 SwitchToExceptionThread();
                 break;
@@ -1246,7 +1270,7 @@ public class SOSRunner : IDisposable
                     throw new Exception(poutTag + " can't be used when there is no previous command output");
                 }
                 int startRegexIndex = firstPOUT + poutTag.Length;
-                string poutRegex = input.Substring(startRegexIndex, secondPOUT - startRegexIndex);
+                string poutRegex = input[startRegexIndex..secondPOUT];
                 Match m = Regex.Match(_lastCommandOutput, ReplaceVariables(poutRegex), RegexOptions.Multiline);
                 if (!m.Success)
                 {
@@ -1266,11 +1290,20 @@ public class SOSRunner : IDisposable
         {
             command = ProcessCommand(command);
         }
+        if (Debugger == NativeDebugger.Lldb)
+        {
+            // Back quotes need to be escaped so lldb passes them through
+            command = command.Replace("`", "'`");
+        }
         _processRunner.StandardInputWriteLine(command);
 
         ScriptLogger.CommandResult result = await _scriptLogger.WaitForCommandOutput();
         _lastCommandOutput = result.CommandOutput;
-
+        if (Debugger == NativeDebugger.Cdb)
+        {
+            // Remove the cdb prompt because it interferes with script's regex's
+            _lastCommandOutput = _lastCommandOutput?.Replace("0:000>", string.Empty);
+        }
         return result.CommandSucceeded;
     }
 
