@@ -8626,7 +8626,7 @@ DECLARE_API(ThreadPool)
         ExtOut ("\n");
     }
 
-    return Status;
+    return S_OK;
 }
 
 DECLARE_API(FindAppDomain)

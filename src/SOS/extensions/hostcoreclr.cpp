@@ -70,8 +70,8 @@ namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
-        {7, 0},
         {6, 0},
+        {7, 0},
         {8, 0}
     };
 

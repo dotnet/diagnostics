@@ -670,7 +670,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// The framework type/version used to build the debuggee like "netcoreapp3.1" or "netstandard2.0".
+        /// The framework type/version used to build the debuggee like "net6.0" or "net7.0"
         /// </summary>
         public string BuildProjectFramework
         {

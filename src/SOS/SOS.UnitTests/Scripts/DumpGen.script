@@ -1,64 +1,62 @@
-# Concurrent dictionaries dump command
+# Test the dumpgen command
 # 1) Load the executable
 # 2) Run the executable
 # 3) Take a dump of the executable before it exits
 # 4) Open the dump, find objects in different generations and compare the output
 
-!IFDEF:CDB
-!IFDEF:LLDB
 IFDEF:NETCORE_OR_DOTNETDUMP
 
 # Load SOS even though it doesn't actually load the sos module on dotnet-dump but it runs some initial settings/commands.
 LOADSOS
 
-COMMAND: dumpgen
+EXTCOMMAND: dumpgen
 VERIFY: Generation argument is missing
 
-COMMAND: dumpgen invalid
+EXTCOMMAND: dumpgen invalid
 VERIFY: invalid is not a supported generation
 
-COMMAND: dumpgen gen0 -mt
+!IFDEF:LLDB
+EXTCOMMAND: dumpgen gen0 -mt
 VERIFY: Required argument missing for option: -mt
 
-COMMAND: dumpgen gen1 -mt zzzzz
+EXTCOMMAND: dumpgen gen1 -mt zzzzz
 VERIFY: Hexadecimal address expected for -mt option
+ENDIF:LLDB
 
-COMMAND: dumpgen gen0
+EXTCOMMAND: dumpgen gen0
 VERIFY: ^\s+MT\s+Count\s+TotalSize\s+Class Name
 VERIFY: ^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
-COMMAND: dumpgen gen0 -type DotnetDumpCommands
+EXTCOMMAND: dumpgen gen0 -type DotnetDumpCommands
 VERIFY: ^<HEXVAL>\s+10\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 VERIFY: Total 10 objects
 
-COMMAND: dumpgen gen0 -mt <POUT>^(<HEXVAL>)<POUT>
+EXTCOMMAND: dumpgen gen0 -mt <POUT>^(<HEXVAL>)<POUT>
 VERIFY: ^\s+Address\s+MT\s+Size
 VERIFY: Total 10 objects
 VERIFY: (<HEXVAL>\s+<HEXVAL>\s+<DECVAL>){10}
 
-COMMAND: dumpgen gen0 -mt 00000001
+EXTCOMMAND: dumpgen gen0 -mt 00000001
 VERIFY: Total 0 objects
 
-COMMAND: dumpgen gen0 -type NoMatchingType
+EXTCOMMAND: dumpgen gen0 -type NoMatchingType
 VERIFY: Total 0 objects
 
-COMMAND: dumpgen gen1
+EXTCOMMAND: dumpgen gen1
 VERIFY: ^<HEXVAL>\s+3\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 
-COMMAND: dumpgen gen2
+EXTCOMMAND: dumpgen gen2
 VERIFY: ^<HEXVAL>\s+5\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 !VERIFY: ^<HEXVAL>\s+1\s+100<DECVAL>\s+System.Byte\[\]
 
-COMMAND: dumpgen loh
+EXTCOMMAND: dumpgen loh
 VERIFY: ^<HEXVAL>\s+1\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass\[\]
 
 IFDEF:MAJOR_RUNTIME_VERSION_GE_5
-COMMAND: dumpgen poh
+EXTCOMMAND: dumpgen poh
 VERIFY: ^<HEXVAL>\s+1\s+100<DECVAL>\s+System.Byte\[\]
 ENDIF:MAJOR_RUNTIME_VERSION_GE_5
 
 SOSCOMMAND: dumpheap -stat
 
 ENDIF:NETCORE_OR_DOTNETDUMP
-ENDIF:LLDB
-ENDIF:CDB

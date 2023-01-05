@@ -803,9 +803,10 @@ namespace sos
         // there are no SyncBlocks in the process.
         DacpSyncBlockData syncBlockData;
         if (SUCCEEDED(syncBlockData.Request(g_sos, 1)))
+        {
             mTotal = syncBlockData.SyncBlockCount;
-
-        mSyncBlk = mCurr;
+            mSyncBlk = mCurr;
+        }
     }
 
     GCHeap::GCHeap()

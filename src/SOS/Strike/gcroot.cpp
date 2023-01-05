@@ -1379,10 +1379,11 @@ BOOL CardIsSet(const GCHeapDetails &heap, TADDR objAddr)
         }
 
         size_t card = (objAddr - card_table_lowest_addr) / card_size;
+        TADDR card_addr = card_table + (card_word(card) * sizeof(DWORD));
         DWORD value;
-        if (MOVE(value, card_table + card_word(card)*sizeof(DWORD)) != S_OK)
+        if (MOVE(value, card_addr) != S_OK)
         {
-            ExtErr("Error reading card bits\n");
+            ExtErr("Error reading card bits - obj %p card %08x card_addr %p card_table %p\n", objAddr, card, card_addr, card_table);
             return FALSE;
         }
 
