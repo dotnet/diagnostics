@@ -13,11 +13,6 @@
   
   <!-- Run tests on Windows x64 -->
   <Options Condition="'$(RunTestsWindows_x64)' == 'true'">
-    <Option>
-      <DumpFile>$(Package_TestAssets_Windows_x64_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
-      <TestDataFile>$(Package_TestAssets_Windows_x64_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
-    </Option>
-    
     <!-- Can currently only have one TestDbgEng test -->
     <!-- Disable TestDbgEng testing see https://github.com/dotnet/diagnostics/issues/3111
     <Option>
@@ -26,7 +21,7 @@
       <TestDataFile>$(Package_TestAssets_Windows_x64_5_0)\DualRuntimes\SOS.DualRuntimes.Heap.dmp.xml</TestDataFile>
     </Option>
     -->
-    
+
     <Option>
       <DumpFile>$(Package_TestAssets_Windows_x64_5_0)\DualRuntimes\SOS.DualRuntimes.Heap.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Windows_x64_5_0)\DualRuntimes\SOS.DualRuntimes.Heap.dmp.xml</TestDataFile>
@@ -55,10 +50,6 @@
     
     <!-- Cross-OS Linux x64 testing -->
     <Option>
-      <DumpFile>$(Package_TestAssets_Linux_x64_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
-      <TestDataFile>$(Package_TestAssets_Linux_x64_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
-    </Option>
-    <Option>
       <DumpFile>$(Package_TestAssets_Linux_x64_5_0)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Linux_x64_5_0)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
     </Option>
@@ -81,10 +72,6 @@
     </Option>
 
     <!-- Cross-OS Linux arm64 testing -->
-    <Option>
-      <DumpFile>$(Package_TestAssets_Linux_arm64_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
-      <TestDataFile>$(Package_TestAssets_Linux_arm64_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
-    </Option>
     <Option>
       <DumpFile>$(Package_TestAssets_Linux_arm64_5_0)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Linux_arm64_5_0)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
@@ -110,11 +97,6 @@
   
   <!-- Run tests on Windows x86 -->
   <Options Condition="'$(RunTestsWindows_x86)' == 'true'">
-    <Option>
-      <DumpFile>$(Package_TestAssets_Windows_x86_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
-      <TestDataFile>$(Package_TestAssets_Windows_x86_3_1)\SymbolTestApp\SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
-    </Option>
-    
     <!-- Can currently only have one TestDbgEng test -->
     <!-- Disable TestDbgEng testing see https://github.com/dotnet/diagnostics/issues/3111
     <Option>
