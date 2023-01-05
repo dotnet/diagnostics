@@ -182,6 +182,12 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
+        source.Clr.GCGenAwareStart += delegate (GenAwareBeginTraceData data)
+        {
+            m_seenStart = true;
+            m_ignoreEvents = false;
+        };
+
         source.Clr.GCStart += delegate (GCStartTraceData data)
         {
             // If this GC is not part of a heap dump, ignore it.  
@@ -231,8 +237,6 @@ public class DotNetHeapDumpGraphReader
             }
         };
 
-
-
         source.Clr.GCStop += delegate (GCEndTraceData data)
         {
             if (m_ignoreEvents || data.ProcessID != m_processId)
@@ -259,6 +263,17 @@ public class DotNetHeapDumpGraphReader
             else
             {
                 m_log.WriteLine("Found a GC Stop at {0:n3} but id {1} != {2} Target ID", data.TimeStampRelativeMSec, data.Count, m_gcID);
+            }
+        };
+
+        source.Clr.GCGenAwareEnd += delegate (GenAwareEndTraceData data)
+        {
+            m_ignoreEvents = true;
+            if (m_nodeBlocks.Count == 0 && m_typeBlocks.Count == 0 && m_edgeBlocks.Count == 0)
+            {
+                m_log.WriteLine("Found no node events, looking for another GC");
+                m_seenStart = false;
+                return;
             }
         };
 
@@ -474,6 +489,9 @@ public class DotNetHeapDumpGraphReader
                 case 3:
                     segment.Gen3End = end;
                     break;
+                case 4:
+                    segment.Gen4End = end;
+                    break;
                 default:
                     throw new Exception("Invalid generation in GCGenerationRangeTraceData");
             }
@@ -488,8 +506,6 @@ public class DotNetHeapDumpGraphReader
     /// </summary>
     internal unsafe void ConvertHeapDataToGraph()
     {
-        int maxNodeCount = 10_000_000;
-
         if (m_converted)
         {
             return;
@@ -696,14 +712,6 @@ public class DotNetHeapDumpGraphReader
 
             Debug.Assert(!m_graph.IsDefined(nodeIdx));
             m_graph.SetNode(nodeIdx, typeIdx, objSize, m_children);
-
-            if (m_graph.NodeCount >= maxNodeCount)
-            {
-                doCompletionCheck = false;
-                var userMessage = string.Format("Exceeded max node count {0}", maxNodeCount);
-                m_log.WriteLine("[WARNING: ]", userMessage);
-                break;
-            }
         }
 
         if (doCompletionCheck && m_curEdgeBlock != null && m_curEdgeBlock.Count != m_curEdgeIdx)
