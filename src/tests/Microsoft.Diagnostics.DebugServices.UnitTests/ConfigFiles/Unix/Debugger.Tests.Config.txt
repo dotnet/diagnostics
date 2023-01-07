@@ -25,6 +25,10 @@
   <!-- Linux x64 testing -->
   <Options Condition="'$(RunTestsLinux_x64)' == 'true'">
     <Option>
+      <DumpFile>$(Package_TestAssets_Linux_x64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_x64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
+    </Option>
+    <Option>
       <DumpFile>$(Package_TestAssets_Linux_x64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Linux_x64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
     </Option>
@@ -48,6 +52,10 @@
 
   <!-- Linux arm64 testing -->
   <Options Condition="'$(RunTestsLinux_arm64)' == 'true'">
+    <Option>
+      <DumpFile>$(Package_TestAssets_Linux_arm64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
+      <TestDataFile>$(Package_TestAssets_Linux_arm64_3_1)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>
+    </Option>
     <Option>
       <DumpFile>$(Package_TestAssets_Linux_arm64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp</DumpFile>
       <TestDataFile>$(Package_TestAssets_Linux_arm64_5_0)/SymbolTestApp/SOS.StackAndOtherTests.Heap.portable.dmp.xml</TestDataFile>

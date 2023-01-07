@@ -21,15 +21,19 @@
     
   <ItemGroup Condition="$(RunTests) AND '$(OS)' == 'Windows_NT'">
     <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
+    <PackageDownload Include="TestAssets.Windows.x64.3.1" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Windows.x64.5.0" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Windows.x64.6.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x86.3.1" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Windows.x86.5.0" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Windows.x86.6.0" Version="[$(TestAssetsVersion)]" />
   </ItemGroup>
     
   <ItemGroup Condition="$(RunTests) AND ('$(OS)' == 'Unix' OR '$(OS)' == 'Windows_NT')">
+    <PackageDownload Include="TestAssets.Linux.x64.3.1" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Linux.x64.5.0" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Linux.x64.6.0" Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.arm64.3.1" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Linux.arm64.5.0" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Linux.arm64.6.0" Version="[$(TestAssetsVersion)]" />
   </ItemGroup>
@@ -57,16 +61,20 @@
   <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <RunTests>$(RunTests)</RunTests>
   <DbgEngPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\dbgeng.dll</DbgEngPath>
-
+  
+  <Package_TestAssets_Windows_x64_3_1>$(NuGetPackageRoot)testassets.windows.x64.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_3_1>
   <Package_TestAssets_Windows_x64_5_0>$(NuGetPackageRoot)testassets.windows.x64.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_5_0>
   <Package_TestAssets_Windows_x64_6_0>$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_6_0>
-
+  
+  <Package_TestAssets_Windows_x86_3_1>$(NuGetPackageRoot)testassets.windows.x86.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_3_1>
   <Package_TestAssets_Windows_x86_5_0>$(NuGetPackageRoot)testassets.windows.x86.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_5_0>
   <Package_TestAssets_Windows_x86_6_0>$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_6_0>
-
+  
+  <Package_TestAssets_Linux_x64_3_1>$(NuGetPackageRoot)testassets.linux.x64.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Linux_x64_3_1>
   <Package_TestAssets_Linux_x64_5_0>$(NuGetPackageRoot)testassets.linux.x64.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_x64_5_0>
   <Package_TestAssets_Linux_x64_6_0>$(NuGetPackageRoot)testassets.linux.x64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_x64_6_0>
-
+  
+  <Package_TestAssets_Linux_arm64_3_1>$(NuGetPackageRoot)testassets.linux.arm64.3.1\$(TestAssetsVersion)\content</Package_TestAssets_Linux_arm64_3_1>
   <Package_TestAssets_Linux_arm64_5_0>$(NuGetPackageRoot)testassets.linux.arm64.5.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_arm64_5_0>
   <Package_TestAssets_Linux_arm64_6_0>$(NuGetPackageRoot)testassets.linux.arm64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Linux_arm64_6_0>
 </Configuration>
@@ -86,10 +94,12 @@
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
   <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <RunTests>$(RunTests)</RunTests>
-
+  
+  <Package_TestAssets_Linux_x64_3_1>$(NuGetPackageRoot)testassets.linux.x64.3.1/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_3_1>
   <Package_TestAssets_Linux_x64_5_0>$(NuGetPackageRoot)testassets.linux.x64.5.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_5_0>
   <Package_TestAssets_Linux_x64_6_0>$(NuGetPackageRoot)testassets.linux.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_6_0>
-
+  
+  <Package_TestAssets_Linux_arm64_3_1>$(NuGetPackageRoot)testassets.linux.arm64.3.1/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_3_1>
   <Package_TestAssets_Linux_arm64_5_0>$(NuGetPackageRoot)testassets.linux.arm64.5.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_5_0>
   <Package_TestAssets_Linux_arm64_6_0>$(NuGetPackageRoot)testassets.linux.arm64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_6_0>
 </Configuration>
