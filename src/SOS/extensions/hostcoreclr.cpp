@@ -70,12 +70,9 @@ namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
+        {7, 0},
         {6, 0},
-#if !(defined(HOST_OSX) && defined(HOST_ARM64))
-        {3, 1},
-        {5, 0},
-#endif
-        {7, 0}
+        {8, 0}
     };
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
@@ -122,9 +119,8 @@ namespace RuntimeHostingConstants
         "/usr/local/share/dotnet"
 #else
         "/rh-dotnet60/root/usr/bin/dotnet",
-        "/rh-dotnet31/root/usr/bin/dotnet",
-        "/rh-dotnet50/root/usr/bin/dotnet",
         "/rh-dotnet70/root/usr/bin/dotnet",
+        "/rh-dotnet80/root/usr/bin/dotnet",
         "/usr/share/dotnet",
 #endif
     };
@@ -322,12 +318,15 @@ static std::string GetTpaListForRuntimeVersion(
     //       assembly version than the ones in the ones in the framework. The test could just
     //       have a list of assemblies we pack with the versions, and if we end up using a newer assembly
     //       fail the test and point to update this list.
-    if (hostRuntimeVersion.Major < 5)
-    {
-        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
-        AddFileToTpaList(directory, "System.Runtime.CompilerServices.Unsafe.dll", tpaList);
-    }
+    //
+    //       There's currently no DLLs SOS requires that are of a higher version than those provided by
+    //       the supported host frameworks. In case it's needed, add: a section here before AddFilesFromDirectoryToTpaList.
+    // 
+    //           if (hostRuntimeVersion.Major < 5)
+    //           {
+    //               AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
+    //               ...
+    //           }
 
     // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
     // components.
@@ -374,6 +373,7 @@ static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string&
         hostRuntimeDirectory.append(versionFound);
         return true;
     }
+
 
     return false;
 }
@@ -516,7 +516,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 
         if (hostRuntimeVersion.Major == 0)
         {
-            TraceError("Error: Failed to find runtime directory within %s\n", hostRuntimeDirectory.c_str());
+            TraceError("Error: Failed to find a supported runtime within %s\n", hostRuntimeDirectory.c_str());
             return E_FAIL;
         }
 
