@@ -22,7 +22,6 @@
      $(MicrosoftAspNetCoreAppRefVersion)                        - latest dotnet aspnetcore stable version (the version that actually is installed)
 
      $(MicrosoftNETCoreApp60Version) $(MicrosoftAspNetCoreApp60Version) - 6.0 version
-     $(MicrosoftNETCoreApp31Version) $(MicrosoftAspNetCoreApp31Version) - 3.1 version
 
      $(SingleFileRuntimeLatestVersion)  - The latest version of the runtime used to build single-file apps
      $(SingleFileRuntime60Version)      - The 6.0.x version of the runtime used to build single-file apps
@@ -86,7 +85,6 @@
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
     <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6470Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
     <TestVersions Include="60" RuntimeVersion="$(MicrosoftNETCoreApp60Version)" AspNetVersion="$(MicrosoftAspNetCoreApp60Version)" />
-    <TestVersions Include="31" RuntimeVersion="$(MicrosoftNETCoreApp31Version)" AspNetVersion="$(MicrosoftAspNetCoreApp31Version)" Condition="$(Enable31Testing)" />
   </ItemGroup>
 
   <!-- Local private build testing -->
@@ -153,11 +151,9 @@
           Outputs="$(TestConfigFileName)">
 
     <PropertyGroup Condition="'$(PrivateBuildTesting)' != 'true' AND '$(InternalReleaseTesting)' != 'true'">
-      <RuntimeVersion31 Condition="$(Enable31Testing)">$(MicrosoftNETCoreApp31Version)</RuntimeVersion31>
-      <AspNetCoreVersion31 Condition="$(Enable31Testing)">$(MicrosoftAspNetCoreApp31Version)</AspNetCoreVersion31>
-
       <RuntimeVersion60>$(MicrosoftNETCoreApp60Version)</RuntimeVersion60>
       <AspNetCoreVersion60>$(MicrosoftAspNetCoreApp60Version)</AspNetCoreVersion60>
+      <!-- TODO: Add others -->
     </PropertyGroup>
 
     <PropertyGroup>

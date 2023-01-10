@@ -202,7 +202,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
     __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
 
     "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.csproj \
+        $__RepoRootDir/eng/CreateVersionFile.proj \
         /bl:$__GenerateVersionLog \
         /t:GenerateVersionFiles \
         /restore \
@@ -230,8 +230,9 @@ fi
 #
 
 if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
-    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp3.1/publish/$__DistroRid
-    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp3.1/publish/$__DistroRid
+    __targetRid=net6.0
+    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__DistroRid
+    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__DistroRid
 
     mkdir -p "$__dotnet_sos"
     mkdir -p "$__dotnet_dump"

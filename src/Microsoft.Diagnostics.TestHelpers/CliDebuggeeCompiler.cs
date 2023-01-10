@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected override string GetFramework(TestConfiguration config)
         {
-            return config.BuildProjectFramework ?? "netcoreapp3.1";
+            return config.BuildProjectFramework ?? "net6.0";
         }
 
         protected override string GetDebuggeeBinaryDirPath(string debuggeeProjectDirPath, string framework, string runtime)
