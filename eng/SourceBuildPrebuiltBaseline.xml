@@ -2,8 +2,4 @@
   <IgnorePatterns>
     <UsagePattern IdentityGlob="Microsoft.SourceBuild.Intermediate.*" />
   </IgnorePatterns>
-  <Usages>
-    <Usage Id="Microsoft.AspNetCore.App.Ref" Version="6.0.12" />
-    <Usage Id="Microsoft.NETCore.App.Ref" Version="6.0.12" />
-  </Usages>
 </UsageData>
