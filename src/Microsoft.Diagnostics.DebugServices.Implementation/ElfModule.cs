@@ -13,10 +13,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Disposable ELFFile wrapper around the module file.
     /// </summary>
-    public class ELFModule : ELFFile, IDisposable
+    public class ELFModule : ELFFile
     {
-        private readonly Stream _stream;
-
         /// <summary>
         /// Opens and returns an ELFFile instance from the local file path
         /// </summary>
@@ -48,9 +46,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public ELFModule(Stream stream) :
             base(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false)
         {
-            _stream = stream;
         }
-
-        public void Dispose() => _stream.Dispose();
     }
 }
