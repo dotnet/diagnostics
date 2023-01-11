@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target.OnFlushEvent.Register(Flush);
         }
 
-        void IDisposable.Dispose() => Flush();
+        public void Dispose() => Flush();
 
         private void Flush()
         {

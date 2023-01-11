@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.IO;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -21,8 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly Dictionary<Type, ServiceFactory>[] _factories;
         private readonly Dictionary<Type, List<ServiceFactory>> _providerFactories;
         private readonly ServiceEvent<Assembly> _notifyExtensionLoad;
-        private ServiceContainer _globalServiceContainer;
-        private ServiceContainer _contextServiceContainer;
         private bool _finalized;
 
         /// <summary>
@@ -45,30 +42,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Creates a new service provider instance with all the registered factories for the given scope.
+        /// Creates a new service container factory with all the registered factories for the given scope.
         /// </summary>
         /// <param name="scope">global, per-target, per-runtime, etc. service type</param>
         /// <param name="parent">parent service provider to chain</param>
         /// <returns></returns>
-        public IServiceContainer CreateServiceContainer(ServiceScope scope, IServiceProvider parent)
+        public ServiceContainerFactory CreateServiceContainerFactory(ServiceScope scope, IServiceProvider parent)
         {
-            var container = new ServiceContainer(parent, _factories[(int)scope]);
-            switch (scope)
-            {
-                case ServiceScope.Global:
-                    _globalServiceContainer = container;
-                    break;
-                case ServiceScope.Context:
-                    _contextServiceContainer = container;
-                    break;
-                default:
-                    if (!_finalized)
-                    {
-                        throw new InvalidOperationException();
-                    }
-                    break;
-            }
-            return container;
+            if (!_finalized) throw new InvalidOperationException();
+            return new ServiceContainerFactory(parent, _factories[(int)scope]);
         }
 
         /// <summary>
@@ -135,7 +117,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Add service factory for the specific scope.
+        /// Add service containerFactory for the specific scope.
         /// </summary>
         /// <typeparam name="T">service type</typeparam>
         /// <param name="scope">global, per-target, per-runtime, etc. service type</param>
@@ -143,7 +125,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void AddServiceFactory<T>(ServiceScope scope, ServiceFactory factory) => AddServiceFactory(scope, typeof(T), factory);
 
         /// <summary>
-        /// Add service factory for the specific scope.
+        /// Add service containerFactory for the specific scope.
         /// </summary>
         /// <param name="scope">global, per-target, per-runtime, etc. service type</param>
         /// <param name="serviceType">service type or interface</param>
@@ -164,15 +146,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else
             {
                 _factories[(int)scope].Add(serviceType, factory);
-                switch (scope)
-                {
-                    case ServiceScope.Global:
-                        _globalServiceContainer.AddServiceFactory(serviceType, factory);
-                        break;
-                    case ServiceScope.Context:
-                        _contextServiceContainer.AddServiceFactory(serviceType, factory);
-                        break;
-                }
             }
         }
 
@@ -254,7 +227,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Finalizes the service manager. Loading extensions or adding service factories are not allowed after this called.
+        /// Finalizes the service manager. Loading extensions or adding service factories are not allowed after this call.
         /// </summary>
         public void Finalized() => _finalized = true;
     }

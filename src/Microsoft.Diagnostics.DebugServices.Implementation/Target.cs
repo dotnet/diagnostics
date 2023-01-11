@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -19,8 +18,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private readonly string _dumpPath;
         private string _tempDirectory;
+        private ServiceContainer _serviceContainer;
 
-        protected readonly IServiceContainer _serviceContainer;
+        protected readonly ServiceContainerFactory _serviceContainerFactory;
 
         public Target(IHost host, int id, string dumpPath)
         {
@@ -32,9 +32,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnFlushEvent = new ServiceEvent();
             OnDestroyEvent = new ServiceEvent();
 
-            // Initialize the per-target services. Need to only use factories so it can be property cloned.
-            _serviceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Target, host.Services);
-            _serviceContainer.AddServiceFactory<ITarget>((_) => this);
+            // Initialize the per-target services.
+            _serviceContainerFactory = host.Services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Target, host.Services);
+            _serviceContainerFactory.AddServiceFactory<ITarget>((_) => this);
+        }
+
+        protected void Finished()
+        {
+            // Now the that the target is completely initialized, finalize container and fire event
+            _serviceContainer = _serviceContainerFactory.Build();
+            Host.OnTargetCreate.Fire(this);
         }
 
         #region ITarget
@@ -89,7 +96,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The per target services.
         /// </summary>
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).

@@ -22,37 +22,45 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class MetadataMappingMemoryService : IMemoryService, IDisposable
     {
-        private readonly IServiceContainer _container;
+        private readonly ServiceContainer _serviceContainer;
         private readonly IMemoryService _memoryService;
         private readonly IRuntimeService _runtimeService;
         private readonly ISymbolService _symbolService;
+        private readonly IDisposable _onChangeEvent;
         private bool _regionInitialized;
         private ImmutableArray<MetadataRegion> _regions;
 
         /// <summary>
         /// Memory service constructor
         /// </summary>
-        /// <param name="container">service container to clone</param>
+        /// <param name="container">service container</param>
         /// <param name="memoryService">memory service to wrap</param>
-        public MetadataMappingMemoryService(IServiceContainer container, IMemoryService memoryService)
+        public MetadataMappingMemoryService(ServiceContainer container, IMemoryService memoryService)
         {
-            _container = container.Clone();
-            _container.AddService(memoryService);
-            _memoryService = memoryService;
-            _runtimeService = _container.Services.GetService<IRuntimeService>();
-            _symbolService = _container.Services.GetService<ISymbolService>();    
+            _serviceContainer = container;
+            container.AddService(memoryService);
 
-            ITarget target = _container.Services.GetService<ITarget>();
+            _memoryService = memoryService;
+            _runtimeService = container.GetService<IRuntimeService>();
+            _symbolService = container.GetService<ISymbolService>();    
+
+            ITarget target = container.GetService<ITarget>();
             target.OnFlushEvent.Register(Flush);
 
-            IDisposable onChangeEvent = _container.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(Flush);
-            target.OnDestroyEvent.Register(() => onChangeEvent?.Dispose());
+            ISymbolService symbolService = container.GetService<ISymbolService>();
+            _onChangeEvent = symbolService?.OnChangeEvent.Register(Flush);
         }
 
         public void Dispose()
         {
             Flush();
-            _container.DisposeServices();
+            _onChangeEvent?.Dispose();
+            _serviceContainer.RemoveService(typeof(IMemoryService));
+            _serviceContainer.DisposeServices();
+            if (_memoryService is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         }
 
         /// <summary>

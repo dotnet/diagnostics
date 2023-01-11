@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private byte[] _threadContext;
         private ulong? _teb;
 
-        protected readonly IServiceContainer _serviceContainer;
+        protected readonly ServiceContainer _serviceContainer;
 
         public Thread(ThreadService threadService, int index, uint id)
         {
@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target => _threadService.Target;
 
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         public bool TryGetRegisterValue(int index, out ulong value)
         {

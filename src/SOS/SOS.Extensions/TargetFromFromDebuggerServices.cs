@@ -19,7 +19,7 @@ namespace SOS.Extensions
     internal class TargetFromDebuggerServices : Target
     {
         /// <summary>
-        /// Create a target instance from IDataReader
+        /// Build a target instance from IDataReader
         /// </summary>
         internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host, int id)
             : base(host, id, dumpPath: null)
@@ -72,27 +72,29 @@ namespace SOS.Extensions
             }
 
             // Add the thread, memory, and module services
-            _serviceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
-            _serviceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
-            _serviceContainer.AddServiceFactory<IMemoryService>((_) => {
+            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) => {
                 Debug.Assert(Host.HostType != HostType.DotnetDump);
                 IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
                 if (IsDump && Host.HostType == HostType.Lldb)
                 {
+                    ServiceContainerFactory clone = _serviceContainerFactory.Clone();
+                    clone.RemoveServiceFactory<IMemoryService>();
+
                     // lldb doesn't map managed modules into the address space
-                    memoryService = new ImageMappingMemoryService(_serviceContainer, memoryService, managed: true);
+                    memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: true);
 
                     // This is a special memory service that maps the managed assemblies' metadata into the address 
                     // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
                     // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping 
                     // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
-                    memoryService = new MetadataMappingMemoryService(_serviceContainer, memoryService);
+                    memoryService = new MetadataMappingMemoryService(clone.Build(), memoryService);
                 }
                 return memoryService;
             });
 
-            // Now the that the target is completely initialized, fire event
-            Host.OnTargetCreate.Fire(this);
+            Finished();
         }
     }
 }

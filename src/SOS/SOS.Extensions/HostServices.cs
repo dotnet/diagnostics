@@ -38,10 +38,10 @@ namespace SOS.Extensions
         internal DebuggerServices DebuggerServices { get; private set; }
 
         private readonly ServiceManager _serviceManager;
-        private readonly IServiceContainer _serviceContainer;
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private ServiceContainer _serviceContainer;
         private ContextServiceFromDebuggerServices _contextService;
         private int _targetIdFactory;
         private ITarget _target;
@@ -107,31 +107,14 @@ namespace SOS.Extensions
         private HostServices()
         {
             _serviceManager = new ServiceManager();
-            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
-            _serviceContainer.AddService<IServiceManager>(_serviceManager);
-            _serviceContainer.AddService<IHost>(this);
-
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!ext" : null);
-            _serviceContainer.AddService<ICommandService>(_commandService);
             _serviceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
-            _symbolService = new SymbolService(this);
-            _symbolService.DefaultTimeout = DefaultTimeout;
-            _symbolService.DefaultRetryCount = DefaultRetryCount;
-            _serviceContainer.AddService<ISymbolService>(_symbolService);
-
-            // Don't register everything in the SOSHost assembly; just the wrappers
-            _serviceManager.RegisterExportedServices(typeof(TargetWrapper));
-            _serviceManager.RegisterExportedServices(typeof(RuntimeWrapper));
-
-            // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.RegisterAssembly(typeof(Target).Assembly);
-
-            // Register all the services and commands in the SOS.Extensions (this) assembly
-            _serviceManager.RegisterAssembly(typeof(HostServices).Assembly);
-
-            // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-            _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
+            _symbolService = new SymbolService(this)
+            {
+                DefaultTimeout = DefaultTimeout,
+                DefaultRetryCount = DefaultRetryCount
+            };
 
             _hostWrapper = new HostWrapper(this);
             _hostWrapper.ServiceWrapper.AddServiceWrapper(IID_IHostServices, this);
@@ -166,7 +149,7 @@ namespace SOS.Extensions
 
         public HostType HostType => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb;
 
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         public IEnumerable<ITarget> EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
@@ -201,33 +184,25 @@ namespace SOS.Extensions
                 Trace.TraceError(ex.Message);
                 return HResult.E_NOINTERFACE;
             }
-            try
-            {
-                var remoteMemoryService = new RemoteMemoryService(iunk);
-                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
-                // disposed in Uninitialize() below by the DisposeServices call.
-                remoteMemoryService.AddRef();
-                _serviceContainer.AddService<IRemoteMemoryService>(remoteMemoryService);
-            }
-            catch (InvalidCastException)
-            {
-            }
             HResult hr;
             try
             {
-                _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
-                _serviceContainer.AddService<IContextService>(_contextService);
-
                 var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
                 var fileLoggingConsoleService = new FileLoggingConsoleService(consoleService);
-                _serviceContainer.AddService<IConsoleService>(fileLoggingConsoleService);
-                _serviceContainer.AddService<IConsoleFileLoggingService>(fileLoggingConsoleService);
-
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
-                _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
 
-                var threadUnwindService = new ThreadUnwindServiceFromDebuggerServices(DebuggerServices);
-                _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
+                // Don't register everything in the SOSHost assembly; just the wrappers
+                _serviceManager.RegisterExportedServices(typeof(TargetWrapper));
+                _serviceManager.RegisterExportedServices(typeof(RuntimeWrapper));
+
+                // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
+                _serviceManager.RegisterAssembly(typeof(Target).Assembly);
+
+                // Register all the services and commands in the SOS.Extensions (this) assembly
+                _serviceManager.RegisterAssembly(typeof(HostServices).Assembly);
+
+                // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
+                _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
 
                 // Display any extension assembly loads on console
                 _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
@@ -237,6 +212,22 @@ namespace SOS.Extensions
 
                 // Loading extensions or adding service factories not allowed after this point.
                 _serviceManager.Finalized();
+
+                // Add all the global services to the global service container
+                _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
+                _serviceContainer.AddService<IServiceManager>(_serviceManager);
+                _serviceContainer.AddService<IHost>(this);
+                _serviceContainer.AddService<ICommandService>(_commandService);
+                _serviceContainer.AddService<ISymbolService>(_symbolService);
+                _serviceContainer.AddService<IConsoleService>(fileLoggingConsoleService);
+                _serviceContainer.AddService<IConsoleFileLoggingService>(fileLoggingConsoleService);
+                _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
+
+                _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
+                _serviceContainer.AddService<IContextService>(_contextService);
+
+                var threadUnwindService = new ThreadUnwindServiceFromDebuggerServices(DebuggerServices);
+                _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandService.Commands)
@@ -252,6 +243,17 @@ namespace SOS.Extensions
             {
                 Trace.TraceError(ex.ToString());
                 return HResult.E_FAIL;
+            }
+            try
+            {
+                var remoteMemoryService = new RemoteMemoryService(iunk);
+                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
+                // disposed in Uninitialize() below by the DisposeServices call.
+                remoteMemoryService.AddRef();
+                _serviceContainer.AddService<IRemoteMemoryService>(remoteMemoryService);
+            }
+            catch (InvalidCastException)
+            {
             }
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)

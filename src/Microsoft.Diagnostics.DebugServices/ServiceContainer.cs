@@ -5,9 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
-namespace Microsoft.Diagnostics.DebugServices.Implementation
+namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
     /// This service provider and container implementation caches the service instance. Calls
@@ -20,67 +19,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// exception is thrown. The IRuntimeService implementation uses this feature to 
     /// enumerate all the IRuntimeProvider instances registered in the system.
     /// </summary>
-    public class ServiceContainer : IServiceContainer
+    public class ServiceContainer : IServiceProvider
     {
-        /// <summary>
-        /// This wrapper class is used to shield this container from the IServiceProvider instance
-        /// </summary>
-        class ServiceProvider : IServiceProvider
-        {
-            private readonly ServiceContainer _container;
-
-            internal ServiceProvider(ServiceContainer container)
-            {
-                _container = container;
-            }
-
-            public object GetService(Type type) => _container.GetService(type);
-        }
-
         private readonly IServiceProvider _parent;
-        private readonly IServiceProvider _serviceProvider;
         private readonly Dictionary<Type, object> _instances;
         private readonly Dictionary<Type, ServiceFactory> _factories;
 
         /// <summary>
-        /// Create a service provider with parent provider and service factories
+        /// Build a service provider with parent provider and service factories
         /// </summary>
         /// <param name="parent">search this provider if service isn't found in this instance or null</param>
         /// <param name="factories">service factories to initialize provider or null</param>
-        public ServiceContainer(IServiceProvider parent, IDictionary<Type, ServiceFactory> factories)
+        public ServiceContainer(IServiceProvider parent, Dictionary<Type, ServiceFactory> factories)
         {
             Debug.Assert(factories != null);
             _parent = parent;
-            _serviceProvider = new ServiceProvider(this);
+            _factories = factories;
             _instances = new Dictionary<Type, object>();
-            _factories = new Dictionary<Type, ServiceFactory>(factories);
-        }
-
-        /// <summary>
-        /// Returns the IServiceProvider instance
-        /// </summary>
-        public IServiceProvider Services => _serviceProvider;
-
-        /// <summary>
-        /// Creates a copy container with the factories for the services and the parent
-        /// in the container. Instantiated services are not transferred.
-        /// </summary>
-        /// <returns>clone</returns>
-        public IServiceContainer Clone()
-        {
-            return new ServiceContainer(_parent, _factories);
-        }
-
-        /// <summary>
-        /// Add a service factory. Multiple factories for the same type are allowed.
-        /// </summary>
-        /// <param name="type">service type or interface</param>
-        /// <param name="factory">function to create service instance</param>
-        public void AddServiceFactory(Type type, ServiceFactory factory)
-        {
-            if (type is null) throw new ArgumentNullException(nameof(type));
-            if (factory is null) throw new ArgumentNullException(nameof(factory));
-            _factories.Add(type, factory);
         }
 
         /// <summary>
@@ -91,15 +46,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void AddService(Type type, object service) => _instances.Add(type, service);
 
         /// <summary>
+        /// Add a service instance. Multiple instances for the same type are not allowed.
+        /// </summary>
+        /// <typeparam name="T">type of service</typeparam>
+        /// <param name="instance">service instance (must derive from T)</param>
+        public void AddService<T>(T instance) => AddService(typeof(T), instance);
+
+        /// <summary>
         /// Flushes the cached service instance for the specified type. Does not remove the service factory registered for the type.
         /// </summary>
         /// <param name="type">service type</param>
         public void RemoveService(Type type) => _instances.Remove(type);
-
-        /// <summary>
-        /// Flushes all the cached instances of the services. Does not remove any of the service factories registered.
-        /// </summary>
-        public void FlushServices() => _instances.Clear();
 
         /// <summary>
         /// Dispose of the instantiated services.
@@ -127,7 +84,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Debug.Assert(type != null);
             if (type == typeof(IServiceProvider))
             {
-                service = _serviceProvider;
+                service = this;
                 return true;
             }
             return _instances.TryGetValue(type, out service);
@@ -146,7 +103,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             if (_factories.TryGetValue(type, out ServiceFactory factory))
             {
-                service = factory(_serviceProvider);
+                service = factory(this);
                 _instances.Add(type, service);
             }
             else

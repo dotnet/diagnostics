@@ -17,10 +17,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ImageMappingMemoryService : IMemoryService, IDisposable
     {
-        private readonly IServiceContainer _container;
+        private readonly ServiceContainer _serviceContainer;
         private readonly IMemoryService _memoryService;
         private readonly IModuleService _moduleService;
         private readonly MemoryCache _memoryCache;
+        private readonly IDisposable _onChangeEvent;
         private readonly HashSet<ulong> _recursionProtection;
 
         /// <summary>
@@ -31,26 +32,33 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="container">service container</param>
         /// <param name="memoryService">memory service to wrap</param>
         /// <param name="managed">if true, map managed modules, else native</param>
-        public ImageMappingMemoryService(IServiceContainer container, IMemoryService memoryService, bool managed)
+        public ImageMappingMemoryService(ServiceContainer container, IMemoryService memoryService, bool managed)
         {
-            _container = container.Clone();
-            _container.AddService(memoryService);
+            _serviceContainer = container;
+            container.AddService(memoryService);
+
             _memoryService = memoryService;
-            _moduleService = managed ? new ManagedImageMappingModuleService(_container.Services) : _container.Services.GetService<IModuleService>();
+            _moduleService = managed ? new ManagedImageMappingModuleService(container) : container.GetService<IModuleService>();
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
             _recursionProtection = new HashSet<ulong>();
 
-            ITarget target = _container.Services.GetService<ITarget>();
+            ITarget target = container.GetService<ITarget>();
             target.OnFlushEvent.Register(Flush);
 
-            IDisposable onChangeEvent = _container.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(Flush);
-            target.OnDestroyEvent.Register(() => onChangeEvent?.Dispose());
+            ISymbolService symbolService = container.GetService<ISymbolService>();
+            _onChangeEvent = symbolService?.OnChangeEvent.Register(Flush);
         }
 
         public void Dispose() 
         {
             Flush();
-            _container.DisposeServices(); 
+            _onChangeEvent?.Dispose();
+            _serviceContainer.RemoveService(typeof(IMemoryService));
+            _serviceContainer.DisposeServices();
+            if (_memoryService is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         } 
 
         protected void Flush() => _memoryCache.FlushCache();

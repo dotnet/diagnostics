@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class ContextService : IContextService
     {
         protected readonly IHost _host;
-        protected readonly IServiceContainer _serviceContainer;
+        protected readonly ServiceContainer _serviceContainer;
         private ITarget _currentTarget;
         private IThread _currentThread;
         private IRuntime _currentRuntime;
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Current context service provider. Contains the current ITarget, IThread 
         /// and IRuntime instances along with all per target and global services.
         /// </summary>
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         /// <summary>
         /// Fires anytime the current context changes.

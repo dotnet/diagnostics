@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string _dacFilePath;
         private string _dbiFilePath;
 
-        protected readonly IServiceContainer _serviceContainer;
+        protected readonly ServiceContainer _serviceContainer;
 
         public Runtime(IServiceProvider services, int id, ClrInfo clrInfo)
         {
@@ -44,10 +44,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             RuntimeModule = services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
 
-            _serviceContainer = services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Runtime, services);
+            ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Runtime, services);
+            containerFactory .AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
+            _serviceContainer = containerFactory.Build();
             _serviceContainer.AddService<IRuntime>(this);
             _serviceContainer.AddService<ClrInfo>(clrInfo);
-            _serviceContainer.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
 
             _onFlushEvent = Target.OnFlushEvent.Register(Flush);
 
@@ -75,7 +76,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target { get; }
 
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         public RuntimeType RuntimeType { get; }
 

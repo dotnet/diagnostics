@@ -23,13 +23,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
     public class Analyzer : IHost
     {
         private readonly ServiceManager _serviceManager;
-        private readonly IServiceContainer _serviceContainer;
         private readonly ConsoleService _consoleService;
         private readonly FileLoggingConsoleService _fileLoggingConsoleService;
         private readonly CommandService _commandService;
-        private readonly SymbolService _symbolService;
-        private readonly ContextService _contextService;
         private readonly List<ITarget> _targets = new();
+        private ServiceContainer _serviceContainer;
         private int _targetIdFactory;
 
         public Analyzer()
@@ -37,45 +35,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             DiagnosticLoggingService.Initialize();
 
             _serviceManager = new ServiceManager();
-            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
-            _serviceContainer.AddService<IServiceManager>(_serviceManager);
-            _serviceContainer.AddService<IHost>(this);
-
             _consoleService = new ConsoleService();
             _fileLoggingConsoleService = new FileLoggingConsoleService(_consoleService);
-            _serviceContainer.AddService<IConsoleService>(_fileLoggingConsoleService);
-            _serviceContainer.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
-
             DiagnosticLoggingService.Instance.SetConsole(_fileLoggingConsoleService, _fileLoggingConsoleService);
-            _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
 
             _commandService = new CommandService();
-            _serviceContainer.AddService<ICommandService>(_commandService);
             _serviceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
-
-            _symbolService = new SymbolService(this);
-            _serviceContainer.AddService<ISymbolService>(_symbolService);
-
-            _contextService = new ContextService(this);
-            _serviceContainer.AddService<IContextService>(_contextService);
-
-            // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.RegisterAssembly(typeof(Target).Assembly);
-
-            // Register all the services and commands in the dotnet-dump (this) assembly
-            _serviceManager.RegisterAssembly(typeof(Analyzer).Assembly);
-
-            // Register all the services and commands in the SOS.Hosting assembly
-            _serviceManager.RegisterAssembly(typeof(SOSHost).Assembly);
-
-            // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-            _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
-
-            // Add the specially handled exit command
-            _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));
-
-            // Add "sos" command manually
-            _commandService.AddCommands(typeof(SOSCommand), (services) => new SOSCommand(_commandService, services));
 
             // Add and remove targets from the host
             OnTargetCreate.Register((target) => {
@@ -107,6 +72,24 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
             }
 
+            // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
+            _serviceManager.RegisterAssembly(typeof(Target).Assembly);
+
+            // Register all the services and commands in the dotnet-dump (this) assembly
+            _serviceManager.RegisterAssembly(typeof(Analyzer).Assembly);
+
+            // Register all the services and commands in the SOS.Hosting assembly
+            _serviceManager.RegisterAssembly(typeof(SOSHost).Assembly);
+
+            // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
+            _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
+
+            // Add the specially handled exit command
+            _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));
+
+            // Add "sos" command manually
+            _commandService.AddCommands(typeof(SOSCommand), (services) => new SOSCommand(_commandService, services));
+
             // Display any extension assembly loads on console
             _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => _fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
 
@@ -115,6 +98,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             // Loading extensions or adding service factories not allowed after this point.
             _serviceManager.Finalized();
+
+            // Add all the global services to the global service container
+            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
+            _serviceContainer.AddService<IServiceManager>(_serviceManager);
+            _serviceContainer.AddService<IHost>(this);
+            _serviceContainer.AddService<IConsoleService>(_fileLoggingConsoleService);
+            _serviceContainer.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
+            _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
+            _serviceContainer.AddService<ICommandService>(_commandService);
+
+            var symbolService = new SymbolService(this);
+            _serviceContainer.AddService<ISymbolService>(symbolService);
+
+            var contextService = new ContextService(this);
+            _serviceContainer.AddService<IContextService>(contextService);
 
             try
             {
@@ -128,19 +126,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     targetPlatform = OSPlatform.OSX;
                 }
                 var target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
-                _contextService.SetCurrentTarget(target);
+                contextService.SetCurrentTarget(target);
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
-                _symbolService.AddSymbolServer(msdl: true, symweb: false, retryCount: 3);
-                _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
-                _symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
+                symbolService.AddSymbolServer(msdl: true, symweb: false, retryCount: 3);
+                symbolService.AddCachePath(symbolService.DefaultSymbolCache);
+                symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
 
                 // Run the commands from the dotnet-dump command line
                 if (command != null)
                 {
                     foreach (string cmd in command)
                     {
-                        _commandService.Execute(cmd, _contextService.Services);
+                        _commandService.Execute(cmd, contextService.Services);
                         if (_consoleService.Shutdown)
                         {
                             break;
@@ -156,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) =>
                     {
                         _fileLoggingConsoleService.WriteLine("{0}{1}", prompt, commandLine);
-                        _commandService.Execute(commandLine, _contextService.Services);
+                        _commandService.Execute(commandLine, contextService.Services);
                     });
                 }
             }
@@ -214,7 +212,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public HostType HostType => HostType.DotnetDump;
 
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         public IEnumerable<ITarget> EnumerateTargets() => _targets.ToArray();
 

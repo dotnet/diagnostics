@@ -33,21 +33,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             IsDump = true;
             Architecture = dataReader.Architecture;
 
-            if (dataReader.ProcessId != -1) {
+            if (dataReader.ProcessId != -1)
+            {
                 ProcessId = (uint)dataReader.ProcessId;
             }
 
             OnFlushEvent.Register(dataReader.FlushCachedData);
 
             // Add the thread, memory, and module services
-            _serviceContainer.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, _dataReader));
-            _serviceContainer.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, _dataReader));
-            _serviceContainer.AddServiceFactory<IMemoryService>((_) => {
+            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDataReader(services, _dataReader));
+            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDataReader(services, _dataReader));
+            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) => {
                 IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
                 if (IsDump)
                 {
+                    ServiceContainerFactory clone = _serviceContainerFactory.Clone();
+                    clone.RemoveServiceFactory<IMemoryService>();
+
                     // The underlying host (dotnet-dump usually) doesn't map native modules into the address space
-                    memoryService = new ImageMappingMemoryService(_serviceContainer, memoryService, managed: false);
+                    memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: false);
 
                     // Any dump created for a MacOS target does not have managed assemblies in the native module service so
                     // we need to use this managed mapping memory service to make sure the metadata is available and 7.0 Linux
@@ -55,14 +59,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // be able to map in the metadata.
                     if (targetOS == OSPlatform.OSX || targetOS == OSPlatform.Linux)
                     {
-                        memoryService = new ImageMappingMemoryService(_serviceContainer, memoryService, managed: true);
+                        memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: true);
                     }
                 }
                 return memoryService;
             });
 
-            // Now the that the target is completely initialized, fire event
-            Host.OnTargetCreate.Fire(this);
+            Finished();
         }
     }
 }

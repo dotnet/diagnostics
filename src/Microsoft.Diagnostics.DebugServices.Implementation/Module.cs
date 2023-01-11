@@ -38,14 +38,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string _symbolFileName;
 
         protected ImmutableArray<byte> _buildId;
-        protected readonly IServiceContainer _serviceContainer;
+        protected readonly ServiceContainer _serviceContainer;
 
         public Module(IServiceProvider services)
         {
-            _serviceContainer = services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Module, services);
+            ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Module, services);
+            containerFactory.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
+            _serviceContainer = containerFactory.Build();
             _serviceContainer.AddService<IModule>(this);
             _serviceContainer.AddService<IExportSymbols>(this);
-            _serviceContainer.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
         }
 
         public virtual void Dispose()
@@ -59,7 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target => ModuleService.Target;
 
-        public IServiceProvider Services => _serviceContainer.Services;
+        public IServiceProvider Services => _serviceContainer;
 
         public virtual int ModuleIndex { get; protected set; }
 
