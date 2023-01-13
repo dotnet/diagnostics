@@ -191,9 +191,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
 
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
             if (double.TryParse(rateText, out double rate))
             {
-                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, 10, traceEvent.TimeStamp);
+                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.IntervalSeconds, traceEvent.TimeStamp);
             }
         }
 
