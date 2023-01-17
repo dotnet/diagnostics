@@ -42,7 +42,7 @@ To install the platform's prerequisites and build:
 * [FAQ](documentation/FAQ.md) - Frequently asked questions.
 * [The LLDB Debugger](http://lldb.llvm.org/index.html) - More information about lldb.
 * [SOS](https://msdn.microsoft.com/en-us/library/bb190764(v=vs.110).aspx) - More information about SOS.
-* [Debugging CoreCLR](https://github.com/dotnet/runtime/blob/main/docs/workflow/debugging/coreclr/debugging.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
+* [Debugging CoreCLR](https://github.com/dotnet/runtime/blob/main/docs/workflow/debugging/coreclr/debugging-runtime.md) - Instructions for debugging .NET Core and the CoreCLR runtime.
 * [dotnet/runtime](https://github.com/dotnet/runtime) - Source for the .NET Core runtime.
 * [Official Build Instructions](documentation/building/official-build-instructions.md) - Internal official build instructions.
 
