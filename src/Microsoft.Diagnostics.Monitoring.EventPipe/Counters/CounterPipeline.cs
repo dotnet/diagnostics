@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal class EventCounterPipeline : EventSourcePipeline<EventPipeCounterPipelineSettings>
+    internal class CounterPipeline : EventSourcePipeline<CounterPipelineSettings>
     {
         private readonly IEnumerable<ICountersLogger> _loggers;
         private readonly CounterFilter _filter;
         private string _sessionId;
 
-        public EventCounterPipeline(DiagnosticsClient client,
-            EventPipeCounterPipelineSettings settings,
+        public CounterPipeline(DiagnosticsClient client,
+            CounterPipelineSettings settings,
             IEnumerable<ICountersLogger> loggers) : base(client, settings)
         {
             _loggers = loggers ?? throw new ArgumentNullException(nameof(loggers));
