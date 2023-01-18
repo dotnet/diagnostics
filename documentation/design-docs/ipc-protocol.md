@@ -950,7 +950,7 @@ Example usage:
 $ export DOTNET_DiagnosticPorts=$DOTNET_DiagnosticPorts;~/mydiagport.sock,nosuspend;
 ```
 
-Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDotnetPortSuspend` which defaults to `0` for `nosuspend`.
+Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDiagnosticPortSuspend` which defaults to `0` for `nosuspend`.
 
 Each port configuration specifies whether it is a `suspend` or `nosuspend` port. Ports specifying `suspend` in their configuration will cause the runtime to pause early on in the startup path before most runtime subsystems have started. This allows any agent to receive a connection and properly setup before the application startup continues. Since multiple ports can individually request suspension, the `resume` command needs to be sent by each suspended port connection before the runtime resumes execution.
 
