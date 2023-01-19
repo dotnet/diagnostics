@@ -129,7 +129,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public string ErrorMessage { get; private set; }
     }
 
-    // If keep this, should probably put it somewhere else
     internal enum EventType : int
     {
         Rate,
