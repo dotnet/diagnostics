@@ -324,7 +324,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 string[] files = Directory.GetFiles(PidIpcEndpoint.IpcRootPath);
                 return GetAllPublishedProcesses(files).Distinct();
             }
-            catch ( System.UnauthorizedAccessException ex)
+            catch ( UnauthorizedAccessException ex)
             {
                 if (PidIpcEndpoint.IpcRootPath.StartsWith(@"\\.\pipe"))
                 {

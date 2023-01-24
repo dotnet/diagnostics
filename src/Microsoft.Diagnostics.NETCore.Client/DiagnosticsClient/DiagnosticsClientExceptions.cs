@@ -7,7 +7,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class DiagnosticsClientException : Exception
     {
-        public DiagnosticsClientException(string msg, Exception exception=null) : base(msg, exception) {}
+        public DiagnosticsClientException(string msg) : base(msg) {}
+        public DiagnosticsClientException(string msg, Exception exception) : base(msg, exception) {}
     }
 
     // When a certian command is not supported by either the library or the target process' runtime
