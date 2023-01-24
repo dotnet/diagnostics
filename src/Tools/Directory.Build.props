@@ -23,7 +23,7 @@
       <PropertyGroup>
         <IsPackable>true</IsPackable>
         <PackAsTool>true</PackAsTool>
-        <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64</PackAsToolShimRuntimeIdentifiers>
+        <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;win-arm;osx-x64;osx-arm64</PackAsToolShimRuntimeIdentifiers>
         <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
       </PropertyGroup>
     </Otherwise>
