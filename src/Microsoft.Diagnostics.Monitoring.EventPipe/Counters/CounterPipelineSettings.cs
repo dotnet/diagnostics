@@ -36,6 +36,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public CounterGroupType Type { get; set; } = CounterGroupType.EventCounter | CounterGroupType.Meter;
 
-        public float IntervalSeconds { get; set; }
+        public float? IntervalSeconds { get; set; }
     }
 }
