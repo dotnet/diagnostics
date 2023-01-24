@@ -328,7 +328,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (PidIpcEndpoint.IpcRootPath.StartsWith(@"\\.\pipe"))
                 {
-                    throw new NamedPipeEnumerationUnauthorizedException($"Enumerating {PidIpcEndpoint.IpcRootPath} is not authorized", ex);
+                    throw new DiagnosticsClientException($"Enumerating {PidIpcEndpoint.IpcRootPath} is not authorized", ex);
                 }
                 else
                 {

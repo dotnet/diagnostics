@@ -23,12 +23,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public ServerNotAvailableException(string msg) : base(msg) {}
     }
 
-    // When process does not have authorization to enumerate NamedPipes.
-    public class NamedPipeEnumerationUnauthorizedException : DiagnosticsClientException
-    {
-        public NamedPipeEnumerationUnauthorizedException(string msg, Exception exception) : base(msg, exception) {}
-    }
-
     // When the runtime responded with an error
     public class ServerErrorException : DiagnosticsClientException
     {
