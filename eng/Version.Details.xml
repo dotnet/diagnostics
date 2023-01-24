@@ -1,8 +1,8 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.406601">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.407301">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>54f437a76277211be53ba448a8b64263a7f53430</Sha>
+      <Sha>24c0b5cbb1b1f7a22f7d712bc1ab191e86a00233</Sha>
     </Dependency>
     <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.3.405501">
       <Uri>https://github.com/microsoft/clrmd</Uri>
