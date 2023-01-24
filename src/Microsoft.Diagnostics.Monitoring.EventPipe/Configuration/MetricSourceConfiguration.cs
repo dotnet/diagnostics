@@ -13,71 +13,82 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
+    [Flags]
+    public enum MetricType
+    {
+        EventCounter = 0x1,
+        Meter = 0x2
+    }
+
+    public sealed class MetricEventPipeProvider
+    {
+        public string Provider { get; set; }
+
+        public float? IntervalSeconds { get; set; }
+
+        public MetricType Type { get; set; } = MetricType.EventCounter | MetricType.Meter;
+    }
+
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
         private readonly IList<EventPipeProvider> _eventPipeProviders;
         public string SessionId { get; private set; }
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> eventCounterProviderNames)
+            : this(metricIntervalSeconds, CreateProviders(eventCounterProviderNames?.Any() == true ? eventCounterProviderNames : DefaultMetricProviders))
         {
-            RequestRundown = false;
-            if (customProviderNames == null)
-            {
-                throw new ArgumentNullException(nameof(customProviderNames));
-            }
-            MetricIntervalSeconds = metricIntervalSeconds.ToString(CultureInfo.InvariantCulture);
-
-            IEnumerable<string> providers = null;
-            if (customProviderNames.Any())
-            {
-                providers = customProviderNames;
-            }
-            else
-            {
-                providers = new[] { SystemRuntimeEventSourceName, MicrosoftAspNetCoreHostingEventSourceName, GrpcAspNetCoreServer };
-            }
-
-            _eventPipeProviders = providers.Select((string provider) => new EventPipeProvider(provider,
-               EventLevel.Informational,
-               (long)ClrTraceEventParser.Keywords.None,
-               new Dictionary<string, string>()
-               {
-                    { "EventCounterIntervalSec", MetricIntervalSeconds }
-               })).ToList();
         }
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> customProviderNames, int maxHistograms, int maxTimeSeries) : this(metricIntervalSeconds, customProviderNames)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000)
         {
-            const long TimeSeriesValues = 0x2;
-            StringBuilder metrics = new StringBuilder();
-            foreach (string provider in customProviderNames)
+            if (providers == null)
             {
-                if (metrics.Length != 0)
-                {
-                    metrics.Append(",");
-                }
-
-                metrics.Append(provider);
+                throw new ArgumentNullException(nameof(providers));
             }
 
-            SessionId = Guid.NewGuid().ToString();
+            RequestRundown = false;
 
-            EventPipeProvider metricsEventSourceProvider =
-                new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+            _eventPipeProviders = providers.Where(provider => provider.Type.HasFlag(MetricType.EventCounter))
+                .Select((MetricEventPipeProvider provider) => new EventPipeProvider(provider.Provider,
+                    EventLevel.Informational,
+                    (long)ClrTraceEventParser.Keywords.None,
                     new Dictionary<string, string>()
                     {
-                        { "SessionId", SessionId },
-                        { "Metrics", metrics.ToString() },
-                        { "RefreshInterval", MetricIntervalSeconds.ToString() },
-                        { "MaxTimeSeries", maxTimeSeries.ToString() },
-                        { "MaxHistograms", maxHistograms.ToString() }
-                    }
-                );
+                        {
+                            "EventCounterIntervalSec", (provider.IntervalSeconds ?? metricIntervalSeconds).ToString(CultureInfo.InvariantCulture)
+                        }
+                    })).ToList();
 
-            _eventPipeProviders = _eventPipeProviders.Append(metricsEventSourceProvider).ToArray();
+            IEnumerable<MetricEventPipeProvider> meterProviders = providers.Where(provider => provider.Type.HasFlag(MetricType.Meter));
+
+            if (meterProviders.Any())
+            {
+                const long TimeSeriesValues = 0x2;
+                string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
+
+                SessionId = Guid.NewGuid().ToString();
+
+                EventPipeProvider metricsEventSourceProvider =
+                    new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+                        new Dictionary<string, string>()
+                        {
+                            { "SessionId", SessionId },
+                            { "Metrics", metrics },
+                            { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
+                            { "MaxTimeSeries", maxTimeSeries.ToString() },
+                            { "MaxHistograms", maxHistograms.ToString() }
+                        }
+                    );
+
+                _eventPipeProviders = _eventPipeProviders.Append(metricsEventSourceProvider).ToArray();
+            }
         }
 
-        private string MetricIntervalSeconds { get; }
+        private static IEnumerable<MetricEventPipeProvider> CreateProviders(IEnumerable<string> providers) =>
+            providers.Select(provider => new MetricEventPipeProvider {
+                Provider = provider,
+                Type = MetricType.EventCounter
+            });
 
         public override IList<EventPipeProvider> GetProviders() => _eventPipeProviders;
     }

@@ -21,9 +21,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public int MaxTimeSeries { get; set; }
     }
 
+    [Flags]
+    internal enum CounterGroupType
+    {
+        EventCounter = 0x1,
+        Meter = 0x2,
+    }
+
     internal class EventPipeCounterGroup
     {
         public string ProviderName { get; set; }
+
         public string[] CounterNames { get; set; }
+
+        public CounterGroupType Type { get; set; } = CounterGroupType.EventCounter | CounterGroupType.Meter;
+
+        public float? IntervalSeconds { get; set; }
     }
 }

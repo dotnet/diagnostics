@@ -166,10 +166,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the Gauge callback function throws an exception.
-
-                //TODO Can this occur for other meter types?
                 payload = new CounterEndedPayload(meterName, instrumentName, null, obj.TimeStamp);
-                
             }
         }
 
@@ -199,6 +196,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             if (double.TryParse(rateText, out double rate))
             {
                 payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.IntervalSeconds, traceEvent.TimeStamp);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the ObservableCounter callback function throws an exception.
+                payload = new CounterEndedPayload(meterName, instrumentName, null, traceEvent.TimeStamp);
             }
         }
 
