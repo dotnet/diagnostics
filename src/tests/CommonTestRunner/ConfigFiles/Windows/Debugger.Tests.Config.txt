@@ -1,0 +1,49 @@
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
+  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
+  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
+
+  <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
+  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\common.unittests_$(Timestamp)</LogDir>
+
+  <!-- Build the debuggee for this framework version but run it on latest -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
+
+  <TestProduct>ProjectK</TestProduct>
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
+  <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
+  <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
+  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
+
+  <NuGetPackageFeeds>
+      dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
+      dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
+      dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+  </NuGetPackageFeeds>
+
+  <Options>
+    <!--
+        Default (prebuilt)
+      -->
+    <Option Condition="'$(RuntimeVersionLatest)' != ''">
+      <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+    </Option>
+    <Option Condition="'$(RuntimeVersion60)' != ''">
+      <BuildProjectFramework>net6.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+    </Option>
+  </Options>
+
+  <!-- Single-file debuggees don't need the host -->
+  <HostExe Condition="'$(PublishSingleFile)' != 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
+  <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(RuntimeFrameworkVersion)</HostArgs>
+
+  <DotNetTraceHost>$(DotNetRoot)\dotnet.exe</DotNetTraceHost>
+  <DotNetTracePath>$(RootBinDir)\bin\dotnet-trace\$(TargetConfiguration)\net6.0\dotnet-trace.dll</DotNetTracePath>
+</Configuration>

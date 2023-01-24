@@ -41,10 +41,6 @@ inline void RestoreSOToleranceState() {}
 #include "runtimeimpl.h"
 #include "symbols.h"
 
-#ifndef COUNTOF
-#define COUNTOF(a) (sizeof(a) / sizeof(*a))
-#endif
-
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
 
@@ -127,14 +123,10 @@ class MethodTable;
 #define HNDTYPE_SIZEDREF                        (8)
 #define HNDTYPE_WEAK_WINRT                      (9)
 
-// Anything above this we consider abnormal and stop processing heap information
-const int nMaxHeapSegmentCount = 1000;
-
 class BaseObject
 {
     MethodTable    *m_pMethTab;
 };
-
 
 const BYTE gElementTypeInfo[] = {
 #define TYPEINFO(e,ns,c,s,g,ia,ip,if,im,gv)    s,
@@ -450,11 +442,13 @@ public:
         highest_address = dacGCDetails.highest_address;
         card_table = dacGCDetails.card_table;
         has_regions = generation_table[0].start_segment != generation_table[1].start_segment;
+        has_background_gc = dacGCDetails.mark_array != -1;
     }
 
     DacpGcHeapDetails original_heap_details;
     bool has_poh;
     bool has_regions;
+    bool has_background_gc;
     CLRDATA_ADDRESS heapAddr; // Only filled in in server mode, otherwise NULL
     CLRDATA_ADDRESS alloc_allocated;
 
@@ -530,7 +524,9 @@ namespace Output
         DML_IL,
         DML_ComWrapperRCW,
         DML_ComWrapperCCW,
-        DML_TaggedMemory
+        DML_TaggedMemory,
+
+        DML_Last
     };
 
     /**********************************************************************\
@@ -660,9 +656,8 @@ inline void ExtOutIndent()  { WhitespaceOut(Output::g_Indent << 2); }
 
 bool IsDMLEnabled();
 
-
 #ifndef SOS_Assert
-#define SOS_Assert(x)
+#define SOS_Assert _ASSERTE
 #endif
 
 void ConvertToLower(__out_ecount(len) char *buffer, size_t len);
@@ -1025,8 +1020,8 @@ namespace Output
                 char buffer[64];
                 if (mFormat == Formats::Default || mFormat == Formats::Pointer)
                 {
-                    sprintf_s(buffer, _countof(buffer), "%p", (int *)(SIZE_T)mValue);
-                    ConvertToLower(buffer, _countof(buffer));
+                    sprintf_s(buffer, ARRAY_SIZE(buffer), "%p", (int *)(SIZE_T)mValue);
+                    ConvertToLower(buffer, ARRAY_SIZE(buffer));
                 }
                 else
                 {
@@ -1038,8 +1033,8 @@ namespace Output
                     else if (mFormat == Formats::Decimal)
                         format = "%d";
 
-                    sprintf_s(buffer, _countof(buffer), format, (__int32)mValue);
-                    ConvertToLower(buffer, _countof(buffer));
+                    sprintf_s(buffer, ARRAY_SIZE(buffer), format, (__int32)mValue);
+                    ConvertToLower(buffer, ARRAY_SIZE(buffer));
                 }
 
                 return buffer;
@@ -1095,7 +1090,7 @@ namespace Output
         static void BuildDMLCol(__out_ecount(len) char *result, int len, CLRDATA_ADDRESS value, Formats::Format format, Output::FormatType dmlType, bool leftAlign, int width)
         {
             char hex[64];
-            int count = GetHex(value, hex, _countof(hex), format != Formats::Hex);
+            int count = GetHex(value, hex, ARRAY_SIZE(hex), format != Formats::Hex);
             int i = 0;
 
             if (!leftAlign)
@@ -1534,7 +1529,7 @@ public:
 
         va_list list;
         va_start(list, fmt);
-        vsprintf_s(result, _countof(result), fmt, list);
+        vsprintf_s(result, ARRAY_SIZE(result), fmt, list);
         va_end(list);
 
         WriteColumn(col, result);
@@ -1546,7 +1541,7 @@ public:
 
         va_list list;
         va_start(list, fmt);
-        vswprintf_s(result, _countof(result), fmt, list);
+        vswprintf_s(result, ARRAY_SIZE(result), fmt, list);
         va_end(list);
 
         WriteColumn(col, result);
@@ -2890,7 +2885,7 @@ public:
     {
 #ifdef _DEBUG
         char buffer[1024];
-        sprintf_s(buffer, _countof(buffer), "Cache (%s): %d reads (%2.1f%% hits), %d misses (%2.1f%%), %d misaligned (%2.1f%%).\n",
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "Cache (%s): %d reads (%2.1f%% hits), %d misses (%2.1f%%), %d misaligned (%2.1f%%).\n",
                                              func, mReads, 100*(mReads-mMisses)/(float)(mReads+mMisaligned), mMisses,
                                              100*mMisses/(float)(mReads+mMisaligned), mMisaligned, 100*mMisaligned/(float)(mReads+mMisaligned));
         OutputDebugStringA(buffer);

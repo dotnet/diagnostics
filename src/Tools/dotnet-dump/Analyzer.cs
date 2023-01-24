@@ -23,7 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
     public class Analyzer : IHost
     {
         private readonly ServiceProvider _serviceProvider;
-        private readonly ConsoleService _consoleProvider;
+        private readonly ConsoleService _consoleService;
+        private readonly FileLoggingConsoleService _fileLoggingConsoleService;
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly ContextService _contextService;
@@ -32,16 +33,20 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public Analyzer()
         {
-            LoggingCommand.Initialize();
+            DiagnosticLoggingService.Initialize();
 
             _serviceProvider = new ServiceProvider();
-            _consoleProvider = new ConsoleService();
+            _consoleService = new ConsoleService();
+            _fileLoggingConsoleService  = new FileLoggingConsoleService(_consoleService);
             _commandService = new CommandService();
             _symbolService = new SymbolService(this);
             _contextService = new ContextService(this);
+            DiagnosticLoggingService.Instance.SetConsole(_fileLoggingConsoleService, _fileLoggingConsoleService);
 
             _serviceProvider.AddService<IHost>(this);
-            _serviceProvider.AddService<IConsoleService>(_consoleProvider);
+            _serviceProvider.AddService<IConsoleService>(_fileLoggingConsoleService);
+            _serviceProvider.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
+            _serviceProvider.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             _serviceProvider.AddService<ICommandService>(_commandService);
             _serviceProvider.AddService<ISymbolService>(_symbolService);
             _serviceProvider.AddService<IContextService>(_contextService);
@@ -56,31 +61,26 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _commandService.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
             _commandService.AddCommands(new Assembly[] { typeof(SOSHost).Assembly });
             _commandService.AddCommands(typeof(HelpCommand), (services) => new HelpCommand(_commandService, services));
-            _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleProvider.Stop));
+            _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));
+            _commandService.AddCommands(typeof(SOSCommand), (services) => new SOSCommand(_commandService, services));
         }
 
         public Task<int> Analyze(FileInfo dump_path, string[] command)
         {
-            _consoleProvider.WriteLine($"Loading core dump: {dump_path} ...");
+            _fileLoggingConsoleService.WriteLine($"Loading core dump: {dump_path} ...");
 
             // Attempt to load the persisted command history
-            string dotnetHome;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE"), ".dotnet");
-            }
-            else { 
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet");
-            }
+            string dotnetHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
             string historyFileName = Path.Combine(dotnetHome, "dotnet-dump.history");
             try
             {
                 string[] history = File.ReadAllLines(historyFileName);
-                _consoleProvider.AddCommandHistory(history);
+                _consoleService.AddCommandHistory(history);
             }
-            catch (Exception ex) when 
-                (ex is IOException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is NotSupportedException || 
+            catch (Exception ex) when
+                (ex is IOException ||
+                 ex is UnauthorizedAccessException ||
+                 ex is NotSupportedException ||
                  ex is SecurityException)
             {
             }
@@ -89,11 +89,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             LoadExtensions();
 
             try
-            { 
+            {
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
 
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib"))
+                {
                     targetPlatform = OSPlatform.OSX;
                 }
                 _target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
@@ -102,7 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 _target.ServiceProvider.AddServiceFactory<SOSHost>(() => new SOSHost(_contextService.Services));
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
-                _symbolService.AddSymbolServer(msdl: true, symweb: false, symbolServerPath: null, authToken: null, timeoutInMinutes: 0);
+                _symbolService.AddSymbolServer(msdl: true, symweb: false, retryCount: 3);
                 _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
                 _symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
 
@@ -112,18 +113,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     foreach (string cmd in command)
                     {
                         _commandService.Execute(cmd, _contextService.Services);
-                        if (_consoleProvider.Shutdown) {
+                        if (_consoleService.Shutdown)
+                        {
                             break;
                         }
                     }
                 }
-                if (!_consoleProvider.Shutdown && (!Console.IsOutputRedirected || Console.IsInputRedirected))
+                if (!_consoleService.Shutdown && (!Console.IsOutputRedirected || Console.IsInputRedirected))
                 {
                     // Start interactive command line processing
-                    _consoleProvider.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
-                    _consoleProvider.WriteLine("Type 'quit' or 'exit' to exit the session.");
+                    _fileLoggingConsoleService.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
+                    _fileLoggingConsoleService.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    _consoleProvider.Start((string commandLine, CancellationToken cancellation) => {
+                    _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) =>
+                    {
+                        _fileLoggingConsoleService.WriteLine("{0}{1}", prompt, commandLine);
                         _commandService.Execute(commandLine, _contextService.Services);
                     });
                 }
@@ -138,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  ex is InvalidOperationException ||
                  ex is NotSupportedException)
             {
-                _consoleProvider.WriteLine(OutputType.Error, $"{ex.Message}");
+                _fileLoggingConsoleService.WriteError($"{ex.Message}");
                 return Task.FromResult(1);
             }
             finally
@@ -150,12 +154,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Persist the current command history
                 try
                 {
-                    File.WriteAllLines(historyFileName, _consoleProvider.GetCommandHistory());
+                    File.WriteAllLines(historyFileName, _consoleService.GetCommandHistory());
                 }
-                catch (Exception ex) when 
-                    (ex is IOException || 
-                     ex is UnauthorizedAccessException || 
-                     ex is NotSupportedException || 
+                catch (Exception ex) when
+                    (ex is IOException ||
+                     ex is UnauthorizedAccessException ||
+                     ex is NotSupportedException ||
                      ex is SecurityException)
                 {
                 }
@@ -177,14 +181,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public void DestroyTarget(ITarget target)
         {
-            if (target == null) {
+            if (target == null)
+            {
                 throw new ArgumentNullException(nameof(target));
             }
             if (target == _target)
             {
                 _target = null;
                 _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable) {
+                if (target is IDisposable disposable)
+                {
                     disposable.Dispose();
                 }
             }
@@ -221,14 +227,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 assembly = Assembly.LoadFrom(extensionPath);
             }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException  || ex is BadImageFormatException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is BadImageFormatException || ex is System.Security.SecurityException)
             {
-                _consoleProvider.WriteLineError($"Extension load {extensionPath} FAILED {ex.Message}");
+                _fileLoggingConsoleService.WriteLineError($"Extension load {extensionPath} FAILED {ex.Message}");
             }
             if (assembly is not null)
             {
                 _commandService.AddCommands(assembly);
-                _consoleProvider.WriteLine($"Extension loaded {extensionPath}");
+                _fileLoggingConsoleService.WriteLine($"Extension loaded {extensionPath}");
             }
         }
     }

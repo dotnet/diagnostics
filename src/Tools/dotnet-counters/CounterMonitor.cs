@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
@@ -21,6 +22,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Globalization;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -164,11 +166,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
 
             // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(rateText, out double rate))
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
                 CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
+
         }
 
         private void HandleGauge(TraceEvent obj)
@@ -187,10 +190,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
             
             // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(lastValueText, out double lastValue))
+            if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
                 CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, 0, _interval, obj.TimeStamp);
+                _renderer.CounterStopped(payload);
             }
         }
 
@@ -297,11 +306,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     continue;
                 }
-                if (!double.TryParse(keyValParts[0], out double key))
+                if (!double.TryParse(keyValParts[0], NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double key))
                 {
                     continue;
                 }
-                if (!double.TryParse(keyValParts[1], out double val))
+                if (!double.TryParse(keyValParts[1], NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double val))
                 {
                     continue;
                 }
@@ -476,7 +485,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
-                    bool useAnsi = vTerm.IsEnabled && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+                    bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {
                         return ReturnCode.Ok;

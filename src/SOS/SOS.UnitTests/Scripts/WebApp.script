@@ -1,8 +1,6 @@
 #
 # Tests the various SOS stack and other commands against a webapp 3.x app
 #
-# Commands Verified: ClrStack, DumpStackObjects, DumpStack, EEStack, IP2MD, u, Name2EE, Threads (clrthreads)
-#
 
 CONTINUE
 
@@ -34,8 +32,16 @@ EXTCOMMAND:parallelstacks
 EXTCOMMAND:timerinfo
 VERIFY:\s*<DECVAL>\s*timers\s*
 
+SOSCOMMAND:runtimes
+
+EXTCOMMAND:runtimes
+
 # Verify that ClrStack with no options works
 SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+EXTCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
@@ -117,16 +123,24 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 !VERIFY:.*UNKNOWN.*
 
-SOSCOMMAND:DumpAsync
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+SOSCOMMAND:DumpAsync --completed
+VERIFY:\s*STACK <DECVAL>\s*
+VERIFY?:\s*<< Awaiting: <HEXVAL>\s+<HEXVAL>\s+.* >>\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
 
-SOSCOMMAND:DumpAsync -mt <POUT>\s+MT\s+Count\s+TotalSize\s+Class Name\s+(<HEXVAL>)\s+<DECVAL>\s+<DECVAL>\s+.*<POUT>
-VERIFY:\s*Statistics:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
-VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+SOSCOMMAND:DumpAsync --stats
+VERIFY:\s+MT\s+Count\s+Type\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+.*
+!VERIFY:.*UNKNOWN.*
 
-SOSCOMMAND:DumpAsync -mt <PREVOUT> -fields
+SOSCOMMAND:DumpAsync --methodtable 0x<POUT>\s+MT\s+Count\s+Type\s+(<HEXVAL>)\s+<DECVAL>\s+.*<POUT>
+VERIFY:\s*STACK <DECVAL>\s*
+VERIFY?:\s*<< Awaiting: <HEXVAL>\s+<HEXVAL>\s+.* >>\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
+
+SOSCOMMAND:DumpMT --stats <PREVPOUT>
+!VERIFY:\s*<HEXVAL> is not a MethodTable
+
+SOSCOMMAND:DumpAsync --coalesce
+VERIFY:\s*STACKS <DECVAL>\s*
+VERIFY:\s*\[<DECVAL>\]\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*

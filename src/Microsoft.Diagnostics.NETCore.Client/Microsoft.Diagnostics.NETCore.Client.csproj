@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netstandard2.0;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DotNetBuildFromSource)' != 'true'">netstandard2.0;net6.0</TargetFrameworks>
+    <TargetFramework Condition="'$(DotNetBuildFromSource)' == 'true'">netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
     <Description>.NET Core Diagnostics Client Library</Description>
     <VersionPrefix>0.2.0</VersionPrefix>
@@ -11,16 +12,18 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
     <IsShipping>true</IsShipping>
+    <BuildingOutsideDiagnostics>false</BuildingOutsideDiagnostics>
+    <BuildingOutsideDiagnostics Condition="'$(GitHubRepositoryName)' != 'diagnostics'">true</BuildingOutsideDiagnostics>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(GitHubRepositoryName)' == 'runtime'">
+  <PropertyGroup Condition="$(BuildingOutsideDiagnostics)">
     <DefineConstants>$(DefineConstants);DIAGNOSTICS_RUNTIME</DefineConstants>
     <NoWarn>CS1591,CS8073,CS0162</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingPinnedVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,12 +33,13 @@
     <InternalsVisibleTo Include="dotnet-trace" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.WebSocketServer" />
     <!-- Temporary until Diagnostic Apis are finalized-->
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Condition="'$(GitHubRepositoryName)' == 'runtime'" Include="**/*.cs" />
+    <Compile Condition="$(BuildingOutsideDiagnostics)" Include="**/*.cs" />
   </ItemGroup>
 </Project>

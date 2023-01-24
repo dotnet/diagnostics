@@ -4,20 +4,8 @@
 
 #include "strike.h"
 #include "util.h"
-
 #include "sos.h"
-
-
-#ifdef _ASSERTE
-#undef _ASSERTE
-#endif
-
-#define _ASSERTE(a) {;}
-
 #include "gcdesc.h"
-
-
-#undef _ASSERTE
 
 namespace sos
 {
@@ -505,7 +493,7 @@ namespace sos
                 int entries = 0;
 
                 if (FAILED(MOVE(entries, mt-sizeof(TADDR))))
-                    Throw<DataRead>("Failed to request number of entries.");
+                    Throw<DataRead>("Failed to request number of entries for %p MT %p", mObject, mt);
 
                 // array of vc?
                 if (entries < 0)
@@ -596,15 +584,15 @@ namespace sos
         }
 
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
-        mSegmentEnd = (segStart == TO_TADDR(mHeaps[0].ephemeral_heap_segment)) ?
-                            TO_TADDR(mHeaps[0].alloc_allocated) :
-                            TO_TADDR(mSegment.allocated);
+        mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
 
-        CheckSegmentRange();
+        TryAlignToObjectInRange();
     }
 
-    bool ObjectIterator::NextSegment()
+    bool ObjectIterator::TryMoveNextSegment()
     {
+        CheckInterrupt();
+
         if (mCurrHeap >= mNumHeaps)
         {
             return false;
@@ -661,19 +649,31 @@ namespace sos
 
         mLastObj = 0;
         mCurrObj = mStart < TO_TADDR(mSegment.mem) ? TO_TADDR(mSegment.mem) : mStart;
-        mSegmentEnd = (next == TO_TADDR(mHeaps[mCurrHeap].ephemeral_heap_segment)) ?
-                            TO_TADDR(mHeaps[mCurrHeap].alloc_allocated) :
-                            TO_TADDR(mSegment.allocated);
-        return CheckSegmentRange();
+        mSegmentEnd = TO_TADDR(mSegment.highAllocMark);
+        return true;
     }
 
-    bool ObjectIterator::CheckSegmentRange()
+    bool ObjectIterator::TryMoveToObjectInNextSegmentInRange()
+    {
+        if (TryMoveNextSegment())
+        {
+            return TryAlignToObjectInRange();
+        }
+
+        return false;
+    }
+
+    bool ObjectIterator::TryAlignToObjectInRange()
     {
         CheckInterrupt();
-
         while (!MemOverlap(mStart, mEnd, TO_TADDR(mSegment.mem), mSegmentEnd))
-            if (!NextSegment())
+        {
+            CheckInterrupt();
+            if (!TryMoveNextSegment())
+            {
                 return false;
+            }
+        }
 
         // At this point we know that the current segment contains objects in
         // the correct range.  However, there's no telling if the user gave us
@@ -740,7 +740,7 @@ namespace sos
         }
         catch(const sos::Exception &)
         {
-            NextSegment();
+            TryMoveToObjectInNextSegmentInRange();
         }
     }
 
@@ -758,6 +758,8 @@ namespace sos
 
     void ObjectIterator::MoveToNextObject()
     {
+        CheckInterrupt();
+
         // Object::GetSize can be unaligned, so we must align it ourselves.
         size_t size = (bLarge || bPinned) ? AlignLarge(mCurrObj.GetSize()) : Align(mCurrObj.GetSize());
 
@@ -789,7 +791,9 @@ namespace sos
         }
 
         if (mCurrObj > mEnd || mCurrObj >= mSegmentEnd)
-            NextSegment();
+        {
+            TryMoveToObjectInNextSegmentInRange();
+        }
     }
 
     SyncBlkIterator::SyncBlkIterator()
@@ -976,7 +980,7 @@ namespace sos
             else if (isString)
             {
                 WCHAR str[32];
-                obj.GetStringData(str, _countof(str));
+                obj.GetStringData(str, ARRAY_SIZE(str));
 
                 _snwprintf_s(buffer, size, _TRUNCATE, W("%s: \"%s\""), mt.GetName(), str);
             }

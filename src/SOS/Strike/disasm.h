@@ -175,7 +175,7 @@ public:
     virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
-    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs); }
+    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs); }
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
@@ -247,7 +247,7 @@ public:
     virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
-    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs); }
+    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs); }
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
@@ -320,7 +320,7 @@ public:
     virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
-    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs); }
+    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs); }
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 
@@ -390,7 +390,7 @@ public:
     virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
-    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = _countof(s_GCRegs);}
+    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs);}
 
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
 

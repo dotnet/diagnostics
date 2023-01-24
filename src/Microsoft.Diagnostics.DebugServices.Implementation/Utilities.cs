@@ -2,19 +2,29 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
-    {
+    { 
+        /// <summary>
+        /// An empty Version instance.
+        /// </summary>
+        public static readonly Version EmptyVersion = new();
+
+        /// <summary>
+        /// Format a immutable array of bytes into hex (i.e build id).
+        /// </summary>
+        public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
+
         /// <summary>
         /// Combines two hash codes into a single hash code, in an order-dependent manner.
         /// </summary>
@@ -36,25 +46,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
         /// </summary>
-        public static VersionData ToVersionData(this VsFixedFileInfo fileInfo)
+        public static Version ToVersion(this VsFixedFileInfo fileInfo)
         { 
-            return new VersionData(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionRevision, fileInfo.FileVersionBuild);
-        }
-
-        /// <summary>
-        /// Convert from clrmd VersionInfo to DebugServices VersionData
-        /// </summary>
-        public static VersionData ToVersionData(this Microsoft.Diagnostics.Runtime.VersionInfo versionInfo)
-        { 
-            return new VersionData(versionInfo.Major, versionInfo.Minor, versionInfo.Revision, versionInfo.Patch);
-        }
-
-        /// <summary>
-        /// Convert from DebugServices VersionData to clrmd VersionInfo
-        /// </summary>
-        public static Microsoft.Diagnostics.Runtime.VersionInfo ToVersionInfo(this VersionData versionData)
-        { 
-            return new Microsoft.Diagnostics.Runtime.VersionInfo(versionData.Major, versionData.Minor, versionData.Revision, versionData.Patch);
+            return new Version(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionBuild, fileInfo.FileVersionRevision);
         }
 
         /// <summary>
@@ -80,7 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     var reader = new PEReader(stream);
                     if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
-                        Trace.TraceError($"OpenPEReader: PEReader invalid headers");
+                        Trace.TraceWarning($"OpenPEReader: PEReader invalid headers");
                         return null;
                     }
                     return reader;
@@ -88,94 +82,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
                 {
                     Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Disposable ELFFile wrapper
-        /// </summary>
-        public class ELFModule : ELFFile, IDisposable
-        {
-            private readonly Stream _stream;
-
-            public ELFModule(Stream stream) :
-                base(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false)
-            {
-                _stream = stream;
-            }
-
-            public void Dispose() => _stream.Dispose();
-        }
-
-        /// <summary>
-        /// Opens and returns an ELFFile instance from the local file path
-        /// </summary>
-        /// <param name="filePath">ELF file to open</param>
-        /// <returns>ELFFile instance or null</returns>
-        public static ELFModule OpenELFFile(string filePath)
-        {
-            Stream stream = TryOpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    ELFModule elfModule = new (stream);
-                    if (!elfModule.IsValid())
-                    {
-                        Trace.TraceError($"OpenELFFile: not a valid file");
-                        return null;
-                    }
-                    return elfModule;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenELFFile: exception {ex.Message}");
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Disposable MachOFile wrapper
-        /// </summary>
-        public class MachOModule : MachOFile, IDisposable
-        {
-            private readonly Stream _stream;
-
-            public MachOModule(Stream stream) :
-                base(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false)
-            {
-                _stream = stream;
-            }
-
-            public void Dispose() => _stream.Dispose();
-        }
-
-        /// <summary>
-        /// Opens and returns an MachOFile instance from the local file path
-        /// </summary>
-        /// <param name="filePath">MachO file to open</param>
-        /// <returns>MachOFile instance or null</returns>
-        public static MachOModule OpenMachOFile(string filePath)
-        {
-            Stream stream = TryOpenFile(filePath);
-            if (stream is not null)
-            {
-                try
-                {
-                    var machoModule = new MachOModule(stream);
-                    if (!machoModule.IsValid())
-                    {
-                        Trace.TraceError($"OpenMachOFile: not a valid file");
-                        return null;
-                    }
-                    return machoModule;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenMachOFile: exception {ex.Message}");
                 }
             }
             return null;
@@ -199,7 +105,70 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceError($"TryOpenFile: {ex.Message}");
                 }
             }
+
             return null;
+        }
+
+        /// <summary>
+        /// Call the constructor of the type and return the instance binding any
+        /// services in the constructor parameters.
+        /// </summary>
+        /// <param name="type">type to create</param>
+        /// <param name="provider">services</param>
+        /// <param name="optional">if true, the service is not required</param>
+        /// <returns>type instance</returns>
+        public static object InvokeConstructor(Type type, IServiceProvider provider, bool optional)
+        {
+            ConstructorInfo constructor = type.GetConstructors().Single();
+            object[] arguments = BuildArguments(constructor, provider, optional);
+            try
+            {
+                return constructor.Invoke(arguments);
+            }
+            catch (TargetInvocationException ex)
+            {
+                Trace.TraceError(ex.ToString());
+                throw ex.InnerException;
+            }
+        }
+
+        /// <summary>
+        /// Call the method and bind any services in the constructor parameters.
+        /// </summary>
+        /// <param name="method">method to invoke</param>
+        /// <param name="instance">class instance or null if static</param>
+        /// <param name="provider">services</param>
+        /// <param name="optional">if true, the service is not required</param>
+        /// <returns>method return value</returns>
+        public static object Invoke(MethodBase method, object instance, IServiceProvider provider, bool optional)
+        {
+            object[] arguments = BuildArguments(method, provider, optional);
+            try
+            {
+                return method.Invoke(instance, arguments);
+            }
+            catch (TargetInvocationException ex)
+            {
+                Trace.TraceError(ex.ToString());
+                throw ex.InnerException;
+            }
+        }
+
+        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services, bool optional)
+        {
+            ParameterInfo[] parameters = methodBase.GetParameters();
+            object[] arguments = new object[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                // The parameter will passed as null to allow for "optional" services. The invoked 
+                // method needs to check for possible null parameters.
+                arguments[i] = services.GetService(parameters[i].ParameterType);
+                if (arguments[i] is null && !optional)
+                {
+                    throw new DiagnosticsException($"The {parameters[i].ParameterType} service is required by the {parameters[i].Name} parameter");
+                }
+            }
+            return arguments;
         }
     }
 }

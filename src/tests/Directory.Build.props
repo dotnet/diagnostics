@@ -1,0 +1,10 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+
+  <PropertyGroup>
+    <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
+    <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
+    <UnitTestTargetFrameworks>net6.0;net7.0</UnitTestTargetFrameworks>
+  </PropertyGroup>
+
+</Project>

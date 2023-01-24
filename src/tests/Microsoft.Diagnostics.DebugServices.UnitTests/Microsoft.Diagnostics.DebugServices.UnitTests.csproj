@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Needs to be netcoreapp3.1 and not higher so this test assembly can be loaded by dotnet-dump via the DOTNET_DIAGNOSTIC_EXTENSIONS env var -->
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <DebugServicesConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DebugServicesConfigFileName>
     <TestAssetsVersion>1.0.257801</TestAssetsVersion>
     <!-- Controls the test asset package restore and the tests that use them -->
@@ -11,7 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
-    <PackageReference Include="Microsoft.Diagnostics.Runtime.Utilities" Version="$(MicrosoftDiagnosticsRuntimeUtilitiesVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -110,7 +108,7 @@
     </ConfigFileEntries>
   </ItemGroup>
 
-  <Target Name="DebugServicesWriteTestConfigFile" Outputs="$(DebugServicesConfigFileName)" AfterTargets="Build">
+  <Target Name="DebugServicesWriteTestConfigFile" Outputs="$(DebugServicesConfigFileName)" BeforeTargets="BeforeBuild;Publish">
      <PropertyGroup>
        <TestConfigFileLines>@(ConfigFileEntries-&gt;Metadata("ConfigFileEntry"))</TestConfigFileLines>
      </PropertyGroup>

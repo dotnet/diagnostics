@@ -53,6 +53,7 @@ namespace SOS.Hosting
 
         private readonly ISymbolService _symbolService;
         private readonly IMemoryService _memoryService;
+        private readonly ulong _ignoreAddressBitsMask;
 
         public SymbolServiceWrapper(ISymbolService symbolService, IMemoryService memoryService)
         {
@@ -60,16 +61,11 @@ namespace SOS.Hosting
             Debug.Assert(memoryService != null);
             _symbolService = symbolService;
             _memoryService = memoryService;
+            _ignoreAddressBitsMask = memoryService.SignExtensionMask();
             Debug.Assert(_symbolService != null);
 
             VTableBuilder builder = AddInterface(IID_ISymbolService, validate: false);
-            builder.AddMethod(new IsSymbolStoreEnabledDelegate((IntPtr self) => _symbolService.IsSymbolStoreEnabled));
-            builder.AddMethod(new InitializeSymbolStoreDelegate(InitializeSymbolStore));
             builder.AddMethod(new ParseSymbolPathDelegate(ParseSymbolPath));
-            builder.AddMethod(new DisplaySymbolStoreDelegate(DisplaySymbolStore));
-            builder.AddMethod(new DisableSymbolStoreDelegate((IntPtr self) => _symbolService.DisableSymbolStore()));
-            builder.AddMethod(new LoadNativeSymbolsDelegate(LoadNativeSymbols));
-            builder.AddMethod(new LoadNativeSymbolsFromIndexDelegate(LoadNativeSymbolsFromIndex));
             builder.AddMethod(new LoadSymbolsForModuleDelegate(LoadSymbolsForModule));
             builder.AddMethod(new DisposeDelegate(Dispose));
             builder.AddMethod(new ResolveSequencePointDelegate(ResolveSequencePoint));
@@ -89,50 +85,6 @@ namespace SOS.Hosting
         }
 
         /// <summary>
-        /// Initializes symbol loading. Adds the symbol server and/or the cache path (if not null) to the list of
-        /// symbol servers. This API can be called more than once to add more servers to search.
-        /// </summary>
-        /// <param name="msdl">if true, use the public Microsoft server</param>
-        /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
-        /// <param name="symbolServerPath">symbol server url (optional)</param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
-        /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
-        /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
-        /// <returns>if false, failure</returns>
-        private bool InitializeSymbolStore(
-            IntPtr self,
-            bool msdl,
-            bool symweb,
-            string symbolServerPath,
-            string authToken,
-            int timeoutInMinutes,
-            string symbolCachePath,
-            string symbolDirectoryPath)
-        {
-            if (msdl || symweb || symbolServerPath != null)
-            {
-                // Add the default symbol cache if no cache specified and adding server
-                if (symbolCachePath == null)
-                {
-                    symbolCachePath = _symbolService.DefaultSymbolCache;
-                }
-                if (!_symbolService.AddSymbolServer(msdl, symweb, symbolServerPath, authToken, timeoutInMinutes))
-                {
-                    return false;
-                }
-            }
-            if (symbolCachePath != null)
-            {
-                _symbolService.AddCachePath(symbolCachePath);
-            }
-            if (symbolDirectoryPath != null)
-            {
-                _symbolService.AddDirectoryPath(symbolDirectoryPath);
-            }
-            return true;
-        }
-
-        /// <summary>
         /// Parse the Windows sympath format
         /// </summary>
         /// <param name="symbolPath">windows symbol path</param>
@@ -144,162 +96,8 @@ namespace SOS.Hosting
             if (string.IsNullOrWhiteSpace(symbolPath)) {
                 return false;
             }
+            _symbolService.DisableSymbolStore();
             return _symbolService.ParseSymbolPathFixDefault(symbolPath);
-        }
-
-        /// <summary>
-        /// Displays the symbol server and cache configuration
-        /// </summary>
-        private void DisplaySymbolStore(IntPtr self, WriteLine writeLine)
-        {
-            writeLine(_symbolService.ToString());
-        }
-
-        /// <summary>
-        /// Load native symbols and modules (i.e. DAC, DBI).
-        /// </summary>
-        /// <param name="callback">called back for each symbol file loaded</param>
-        /// <param name="parameter">callback parameter</param>
-        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
-        /// <param name="moduleFilePath">module path</param>
-        /// <param name="address">module base address</param>
-        /// <param name="size">module size</param>
-        /// <param name="readMemory">read memory callback delegate</param>
-        private void LoadNativeSymbols(
-            IntPtr self,
-            SymbolFileCallback callback,
-            IntPtr parameter,
-            RuntimeConfiguration config,
-            string moduleFilePath,
-            ulong address,
-            uint size)
-        {
-            if (_symbolService.IsSymbolStoreEnabled)
-            {
-                try
-                {
-                    KeyGenerator generator = null;
-                    if (config == RuntimeConfiguration.UnixCore)
-                    {
-                        Stream stream = _memoryService.CreateMemoryStream();
-                        var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
-                        generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, moduleFilePath);
-                    }
-                    else if (config == RuntimeConfiguration.OSXCore)
-                    {
-                        Stream stream = _memoryService.CreateMemoryStream();
-                        var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
-                        generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, moduleFilePath);
-                    }
-                    else if (config == RuntimeConfiguration.WindowsCore || config ==  RuntimeConfiguration.WindowsDesktop)
-                    {
-                        Stream stream = _memoryService.CreateMemoryStream(address, size);
-                        var peFile = new PEFile(new StreamAddressSpace(stream), true);
-                        generator = new PEFileKeyGenerator(Tracer.Instance, peFile, moduleFilePath);
-                    }
-                    else
-                    {
-                        Trace.TraceError("LoadNativeSymbols: unsupported config {0}", config);
-                    }
-                    if (generator != null)
-                    {
-                        IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.SymbolKey | KeyTypeFlags.DacDbiKeys);
-                        foreach (SymbolStoreKey key in keys)
-                        {
-                            string moduleFileName = Path.GetFileName(key.FullPathName);
-                            Trace.TraceInformation("{0} {1}", key.FullPathName, key.Index);
-
-                            string downloadFilePath = _symbolService.DownloadFile(key);
-                            if (downloadFilePath != null)
-                            {
-                                Trace.TraceInformation("{0}: {1}", moduleFileName, downloadFilePath);
-                                callback(parameter, moduleFileName, downloadFilePath);
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex) when 
-                   (ex is DiagnosticsException || 
-                    ex is BadInputFormatException || 
-                    ex is InvalidVirtualAddressException || 
-                    ex is ArgumentOutOfRangeException ||
-                    ex is IndexOutOfRangeException ||
-                    ex is TaskCanceledException)
-                {
-                    Trace.TraceError("{0} address {1:X16}: {2}", moduleFilePath, address, ex.Message);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Load native modules (i.e. DAC, DBI) from the runtime build id.
-        /// </summary>
-        /// <param name="callback">called back for each symbol file loaded</param>
-        /// <param name="parameter">callback parameter</param>
-        /// <param name="config">Target configuration: Windows, Linux or OSX</param>
-        /// <param name="moduleFilePath">module path</param>
-        /// <param name="specialKeys">if true, returns the DBI/DAC keys, otherwise the identity key</param>
-        /// <param name="moduleIndexSize">build id size</param>
-        /// <param name="moduleIndex">pointer to build id</param>
-        private void LoadNativeSymbolsFromIndex(
-            IntPtr self,
-            SymbolFileCallback callback,
-            IntPtr parameter,
-            RuntimeConfiguration config,
-            string moduleFilePath,
-            bool specialKeys,
-            int moduleIndexSize,
-            IntPtr moduleIndex)
-        {
-            if (_symbolService.IsSymbolStoreEnabled)
-            {
-                try
-                {
-                    KeyTypeFlags flags = specialKeys ? KeyTypeFlags.DacDbiKeys : KeyTypeFlags.IdentityKey;
-                    byte[] id = new byte[moduleIndexSize];
-                    Marshal.Copy(moduleIndex, id, 0, moduleIndexSize);
-
-                    IEnumerable<SymbolStoreKey> keys = null;
-                    switch (config)
-                    {
-                        case RuntimeConfiguration.UnixCore:
-                            keys = ELFFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
-                            break;
-
-                        case RuntimeConfiguration.OSXCore:
-                            keys = MachOFileKeyGenerator.GetKeys(flags, moduleFilePath, id, symbolFile: false, symbolFileName: null);
-                            break;
-
-                        case RuntimeConfiguration.WindowsCore:
-                        case RuntimeConfiguration.WindowsDesktop:
-                            uint timeStamp = BitConverter.ToUInt32(id, 0);
-                            uint fileSize = BitConverter.ToUInt32(id, 4);
-                            SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleFilePath, timeStamp, fileSize);
-                            keys = new SymbolStoreKey[] { key };
-                            break;
-
-                        default:
-                            Trace.TraceError("LoadNativeSymbolsFromIndex: unsupported platform {0}", config);
-                            return;
-                    }
-                    foreach (SymbolStoreKey key in keys)
-                    {
-                        string moduleFileName = Path.GetFileName(key.FullPathName);
-                        Trace.TraceInformation("{0} {1}", key.FullPathName, key.Index);
-
-                        string downloadFilePath = _symbolService.DownloadFile(key);
-                        if (downloadFilePath != null)
-                        {
-                            Trace.TraceInformation("{0}: {1}", moduleFileName, downloadFilePath);
-                            callback(parameter, moduleFileName, downloadFilePath);
-                        }
-                    }
-                }
-                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException || ex is TaskCanceledException)
-                {
-                    Trace.TraceError("{0} - {1}", ex.Message, moduleFilePath);
-                }
-            }
         }
 
         /// <summary>
@@ -351,11 +149,13 @@ namespace SOS.Hosting
                 ISymbolFile symbolFile = null;
                 if (loadedPeAddress != 0)
                 {
+                    loadedPeAddress &= _ignoreAddressBitsMask;
                     Stream peStream = _memoryService.CreateMemoryStream(loadedPeAddress, loadedPeSize);
                     symbolFile = _symbolService.OpenSymbolFile(assemblyPath, isFileLayout, peStream);
                 }
                 if (inMemoryPdbAddress != 0)
                 {
+                    inMemoryPdbAddress &= _ignoreAddressBitsMask;
                     Stream pdbStream = _memoryService.CreateMemoryStream(inMemoryPdbAddress, inMemoryPdbSize);
                     symbolFile = _symbolService.OpenSymbolFile(pdbStream);
                 }

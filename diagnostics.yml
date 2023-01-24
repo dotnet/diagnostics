@@ -173,7 +173,7 @@ stages:
 
     - template: /eng/build.yml
       parameters:
-        name: MacOS_cross
+        name: MacOS_arm64
         osGroup: MacOS_cross
         crossbuild: true
         buildAndSkipTest: true
@@ -191,7 +191,7 @@ stages:
     - ${{ if ne(variables['System.TeamProject'], 'public') }}:
       - template: /eng/build.yml
         parameters:
-          name: Linux_cross
+          name: Linux_arm
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-20210719121212-8a8d3be
           crossrootfsDir: '/crossrootfs/arm'
@@ -205,7 +205,7 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Linux_cross64
+          name: Linux_arm64
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
           crossrootfsDir: '/crossrootfs/arm64'
@@ -219,7 +219,22 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Alpine_cross64
+          name: Linux_musl_arm
+          osGroup: Linux
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm-alpine-20210923140502-78f7860
+          crossrootfsDir: '/crossrootfs/arm'
+          artifactsTargetPath: bin/Linux-musl.arm.Release
+          buildAndSkipTest: true
+          strategy:
+            matrix:
+              Build_Release:
+                _BuildConfig: Release
+                _BuildArch: arm
+                _PublishArtifacts: bin/Linux.arm.Release
+
+      - template: /eng/build.yml
+        parameters:
+          name: Linux_musl_arm64
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210923140502-78f7860
           crossrootfsDir: '/crossrootfs/arm64'
@@ -231,7 +246,6 @@ stages:
                 _BuildConfig: Release
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Linux.arm64.Release
-
 
       ############################
       #                          #
@@ -316,14 +330,15 @@ stages:
             - CentOS_7
             - Alpine3_13
             - MacOS
-            - MacOS_cross
-            - Linux_cross
-            - Linux_cross64
-            - Alpine_cross64
+            - MacOS_arm64
+            - Linux_arm
+            - Linux_arm64
+            - Linux_musl_arm
+            - Linux_musl_arm64
             condition: succeeded()
             pool:
               name: NetCore1ESPool-Internal
-              demands: ImageOverride -equals Build.Windows.10.Amd64.VS2019
+              demands: ImageOverride -equals windows.vs2022.amd64
             enablePublishUsingPipelines: true
             enableMicrobuild: true
             artifacts:
@@ -376,7 +391,7 @@ stages:
             publishUsingPipelines: true
             pool:
               name: NetCore1ESPool-Internal
-              demands: ImageOverride -equals Build.windows.10.amd64.vs2019
+              demands: ImageOverride -equals windows.vs2022.amd64
 
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - template: /eng/common/templates/post-build/post-build.yml

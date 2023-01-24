@@ -12,6 +12,11 @@ set __ThisScriptDir="%~dp0"
 call "%__ThisScriptDir%"\native\init-vs-env.cmd
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithError
 
+if defined VS170COMNTOOLS (
+    set "__VSToolsRoot=%VS170COMNTOOLS%"
+    set "__VCToolsRoot=%VS170COMNTOOLS%\..\..\VC\Auxiliary\Build"
+    set __VSVersion=vs2022
+)
 if defined VS160COMNTOOLS (
     set "__VSToolsRoot=%VS160COMNTOOLS%"
     set "__VCToolsRoot=%VS160COMNTOOLS%\..\..\VC\Auxiliary\Build"
@@ -137,7 +142,7 @@ echo %__MsgPrefix%Commencing diagnostics repo build
 
 echo %__MsgPrefix%Checking prerequisites
 :: Eval the output from probe-win1.ps1
-for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& ""%__ProjectDir%\eng\set-cmake-path.ps1"""') do %%a
+for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy ByPass "& ""%__ProjectDir%\eng\native\set-cmake-path.ps1"""') do %%a
 
 REM =========================================================================================
 REM ===
@@ -148,11 +153,7 @@ REM ============================================================================
 @if defined _echo @echo on
 
 :: Parse the optdata package versions out of msbuild so that we can pass them on to CMake
-set __DotNetCli=%__ProjectDir%\.dotnet\dotnet.exe
-if not exist "%__DotNetCli%" (
-    echo %__MsgPrefix%Assertion failed: dotnet cli not found at path "%__DotNetCli%"
-    goto ExitWithError
-)
+set __DotNetCli=%__ProjectDir%\dotnet.cmd
 
 REM =========================================================================================
 REM ===
@@ -178,7 +179,7 @@ if /i %__BuildCrossArch% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.proj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         goto ExitWithError
@@ -193,12 +194,12 @@ if /i %__BuildCrossArch% EQU 1 (
     set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__CrossCompIntermediatesDir%"
-    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__CrossCompIntermediatesDir%" %__VSVersion% %__CrossArch% !__ExtraCmakeArgs!
+    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__CrossCompIntermediatesDir%" %__VSVersion% %__CrossArch% %__BuildOS% !__ExtraCmakeArgs!
     @if defined _echo @echo on
     popd
 
 :SkipConfigureCrossBuild
-    if not exist "%__CrossCompIntermediatesDir%\install.vcxproj" (
+    if not exist "%__CrossCompIntermediatesDir%\CMakeCache.txt" (
         echo %__MsgPrefix%Error: failed to generate cross-arch components build project!
         goto ExitWithError
     )
@@ -206,8 +207,8 @@ if /i %__BuildCrossArch% EQU 1 (
 
     set __BuildLog="%__LogDir%\Cross.Build.binlog"
 
-    :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__CrossCompIntermediatesDir%\install.vcxproj /bl:!__BuildLog! %__CommonBuildArgs%
+    echo running "%CMakePath%" --build %__CrossCompIntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
+    "%CMakePath%" --build %__CrossCompIntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
@@ -252,7 +253,7 @@ if %__Build% EQU 1 (
 
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.csproj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.proj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         goto ExitWithError
@@ -266,21 +267,21 @@ if %__Build% EQU 1 (
     set __ExtraCmakeArgs="-DCMAKE_SYSTEM_VERSION=10.0" "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__IntermediatesDir%"
-    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__IntermediatesDir%" %__VSVersion% %__BuildArch% !__ExtraCmakeArgs!
+    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__IntermediatesDir%" %__VSVersion% %__BuildArch% %__BuildOS% !__ExtraCmakeArgs!
     @if defined _echo @echo on
     popd
 
 :SkipConfigure
     if defined __ConfigureOnly goto SkipNativeBuild
 
-    if not exist "%__IntermediatesDir%\install.vcxproj" (
+    if not exist "%__IntermediatesDir%\CMakeCache.txt" (
         echo %__MsgPrefix%Error: failed to generate native component build project!
         goto ExitWithError
     )
     set __BuildLog="%__LogDir%\Native.Build.binlog"
 
-    :: MSBuild.exe is the only one that has the C++ targets. "%__DotNetCli% msbuild" fails because VCTargetsPath isn't defined.
-    msbuild.exe %__IntermediatesDir%\install.vcxproj /bl:!__BuildLog! %__CommonBuildArgs%
+    echo running "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
+    "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
@@ -295,8 +296,9 @@ if %__Build% EQU 1 (
 
 REM Copy the native SOS binaries to where these tools expect for CI & VS testing
 
-set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\netcoreapp3.1"
-set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\netcoreapp3.1"
+set "__targetRid=net6.0"
+set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\%__targetRid%"
+set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\%__targetRid%"
 mkdir %__dotnet_sos%\win-%__BuildArch%
 mkdir %__dotnet_sos%\publish\win-%__BuildArch%
 mkdir %__dotnet_dump%\win-%__BuildArch%

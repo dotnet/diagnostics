@@ -57,21 +57,10 @@ namespace SOS
         {
             m_writeLine = writeLine;
             string rid = GetRid(architecture);
-            string home;
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                home = Environment.GetEnvironmentVariable("USERPROFILE");
-                if (string.IsNullOrEmpty(home)) {
-                    throw new SOSInstallerException("USERPROFILE environment variable not found");
-                }
-            }
-            else
-            {
-                home = Environment.GetEnvironmentVariable("HOME");
-                if (string.IsNullOrEmpty(home)) {
-                    throw new SOSInstallerException("HOME environment variable not found");
-                }
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
             }
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
@@ -87,16 +76,20 @@ namespace SOS
         {
             WriteLine("Installing SOS to {0}", InstallLocation);
 
-            if (string.IsNullOrEmpty(SOSNativeSourcePath) || string.IsNullOrEmpty(SOSManagedSourcePath)) {
+            if (string.IsNullOrEmpty(SOSNativeSourcePath) || string.IsNullOrEmpty(SOSManagedSourcePath))
+            {
                 throw new SOSInstallerException("SOS source path not valid");
             }
-            if (!Directory.Exists(SOSNativeSourcePath)) {
+            if (!Directory.Exists(SOSNativeSourcePath))
+            {
                 throw new SOSInstallerException($"Operating system or architecture not supported: installing from {SOSNativeSourcePath}");
             }
-            if (!Directory.Exists(SOSManagedSourcePath)) {
+            if (!Directory.Exists(SOSManagedSourcePath))
+            {
                 throw new SOSInstallerException($"Invalid SOS source directory {SOSManagedSourcePath}");
             }
-            if (string.IsNullOrEmpty(InstallLocation)) {
+            if (string.IsNullOrEmpty(InstallLocation))
+            {
                 throw new SOSInstallerException($"Installation path {InstallLocation} not valid");
             }
 
@@ -139,10 +132,12 @@ namespace SOS
                 });
 
                 // Configure lldb 
-                if (LLDBInitFile != null) {
+                if (LLDBInitFile != null)
+                {
                     Configure();
                 }
-                else {
+                else
+                {
                     WriteLine($"Execute '.load {InstallLocation}\\sos.dll' to load SOS in your Windows debugger.");
                 }
 
@@ -207,7 +202,8 @@ namespace SOS
         /// <exception cref="SOSInstallerException"></exception>
         public void Configure(bool remove = false)
         {
-            if (string.IsNullOrEmpty(LLDBInitFile)) {
+            if (string.IsNullOrEmpty(LLDBInitFile))
+            {
                 throw new SOSInstallerException("No lldb configuration file path");
             }
             bool changed = false;
@@ -243,7 +239,8 @@ namespace SOS
                     }
                 }
 
-                if (markerFound) {
+                if (markerFound)
+                {
                     throw new SOSInstallerException(".lldbinit file end marker not found");
                 }
             }
@@ -256,7 +253,8 @@ namespace SOS
                 string extension = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? ".dylib" : ".so";
                 lines.Add($"plugin load {plugin}{extension}");
 
-                if (EnableSymbolServer) {
+                if (EnableSymbolServer)
+                {
                     lines.Add(string.Format("setsymbolserver -ms"));
                 }
                 lines.Add(InitFileEnd);
@@ -266,10 +264,12 @@ namespace SOS
             // If there is anything to write, write the lldb init file
             if (changed)
             {
-                if (remove) {
+                if (remove)
+                {
                     WriteLine("Reverting {0} file - LLDB will no longer load SOS at startup", LLDBInitFile);
                 }
-                else {
+                else
+                {
                     WriteLine("{0} {1} file - LLDB will load SOS automatically at startup", existing ? "Updating existing" : "Creating new", LLDBInitFile);
                 }
                 RetryOperation($"Problem writing lldb init file {LLDBInitFile}", () => File.WriteAllLines(LLDBInitFile, lines.ToArray()));
@@ -303,7 +303,8 @@ namespace SOS
                 }
                 catch (Exception ex) when (ex is ArgumentException || ex is UnauthorizedAccessException || ex is SecurityException)
                 {
-                    if (errorMessage == null) {
+                    if (errorMessage == null)
+                    {
                         return;
                     }
                     throw new SOSInstallerException($"{errorMessage}: {ex.Message}", ex);
@@ -312,7 +313,8 @@ namespace SOS
 
             if (lastfailure != null)
             {
-                if (errorMessage == null) {
+                if (errorMessage == null)
+                {
                     return;
                 }
                 throw new SOSInstallerException($"{errorMessage}: {lastfailure.Message}", lastfailure);

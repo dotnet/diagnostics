@@ -14,14 +14,14 @@ SOSCOMMAND:PrintException
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.Reflection\.TargetInvocationException\s+
 VERIFY:Message:\s+(<Invalid Object>|Exception has been thrown by the target of an invocation\.)\s+
-VERIFY:InnerException:\s+System\.Exception, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:InnerException:\s+System\.Exception, Use !?printexception <HEXVAL> to see more.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:<HEXVAL>\s+<HEXVAL>\s+[Rr]eflection[Tt]est.*!(\$0_)?RefLoader(\.|::)Loader\.Main(\(\))?\+0x<HEXVAL>
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131604
 
 # 6) Verifying that the Exception Object/ID gives us the same output about the reflected exception.
-SOSCOMMAND:PrintException <POUT>InnerException:\s+System\.Exception, Use !PrintException (<HEXVAL>) to see more<POUT>
+SOSCOMMAND:PrintException <POUT>InnerException:\s+System\.Exception, Use !?printexception (<HEXVAL>) to see more<POUT>
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.Exception\s+
 VERIFY:Message:\s+(<Invalid Object>|Exception from InvokedCode\.Invoked\.ExceptionNoHandler(\(\))?)\s+
@@ -35,7 +35,7 @@ VERIFY:HResult:\s+80131500
 SOSCOMMAND:PrintException -lines
 VERIFY:Exception type:\s+System\.Reflection\.TargetInvocationException\s+
 VERIFY:Message:\s+(<Invalid Object>|Exception has been thrown by the target of an invocation\.)\s+
-VERIFY:InnerException:\s+System\.Exception, Use !PrintException <HEXVAL> to see more\.\s+
+VERIFY:InnerException:\s+System\.Exception, Use !?printexception <HEXVAL> to see more\.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Rr]eflection[Tt]est.*!(\$0_)?RefLoader\.Loader\.Main(\(\))?\+0x<HEXVAL>\s*
 VERIFY:[.*[\\|/]Debuggees[\\|/].*[Rr]eflection[Tt]est[\\|/][Rr]eflection[Tt]est\.cs @ 32\s*\]

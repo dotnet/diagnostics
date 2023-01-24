@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -33,6 +33,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             InitializePEInfo = 0x10,
             InitializeVersion = 0x20,
             InitializeProductVersion = 0x40,
+            InitializeSymbolFileName = 0x80
         }
 
         private readonly IDisposable _onChangeEvent;
@@ -40,6 +41,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private IEnumerable<PdbFileInfo> _pdbFileInfos;
         protected ImmutableArray<byte> _buildId;
         private PEFile _peFile;
+        private string _symbolFileName;
 
         public readonly ServiceProvider ServiceProvider;
 
@@ -47,20 +49,50 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             ServiceProvider = new ServiceProvider();
             ServiceProvider.AddServiceFactoryWithNoCaching<PEFile>(() => GetPEInfo());
+            ServiceProvider.AddService<IExportSymbols>(this);
 
-            ServiceProvider.AddServiceFactory<PEReader>(() => Utilities.OpenPEReader(ModuleService.SymbolService.DownloadModule(this)));
-            if (target.OperatingSystem == OSPlatform.Linux) {
-                ServiceProvider.AddServiceFactory<ELFFile>(() => Utilities.OpenELFFile(ModuleService.SymbolService.DownloadModule(this)));
+            ServiceProvider.AddServiceFactory<PEReader>(() => {
+                if (!IndexTimeStamp.HasValue || !IndexFileSize.HasValue) {
+                    return null;
+                }
+                return Utilities.OpenPEReader(ModuleService.SymbolService.DownloadModuleFile(this));
+            });
+
+            if (target.OperatingSystem == OSPlatform.Linux) 
+            {
+                ServiceProvider.AddServiceFactory<ELFModule>(() => {
+                    if (BuildId.IsDefaultOrEmpty) {
+                        return null;
+                    }
+                    return ELFModule.OpenFile(ModuleService.SymbolService.DownloadModuleFile(this));
+                });
+                ServiceProvider.AddServiceFactory<ELFFile>(() => {
+                    Stream stream = ModuleService.MemoryService.CreateMemoryStream();
+                    var elfFile = new ELFFile(new StreamAddressSpace(stream), ImageBase, true);
+                    return elfFile.IsValid() ? elfFile : null;
+                });
             }
-            if (target.OperatingSystem == OSPlatform.OSX) {
-                ServiceProvider.AddServiceFactory<MachOFile>(() => Utilities.OpenMachOFile(ModuleService.SymbolService.DownloadModule(this)));
+
+            if (target.OperatingSystem == OSPlatform.OSX) 
+            {
+                ServiceProvider.AddServiceFactory<MachOModule>(() => {
+                    if (BuildId.IsDefaultOrEmpty) {
+                        return null;
+                    }
+                    return MachOModule.OpenFile(ModuleService.SymbolService.DownloadModuleFile(this));
+                });
+                ServiceProvider.AddServiceFactory<MachOFile>(() => {
+                    Stream stream = ModuleService.MemoryService.CreateMemoryStream();
+                    var machoFile = new MachOFile(new StreamAddressSpace(stream), ImageBase, true);
+                    return machoFile.IsValid() ? machoFile : null;
+                });
             }
+
             _onChangeEvent = target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(() => {
-                ServiceProvider.RemoveService(typeof(MachOFile)); 
-                ServiceProvider.RemoveService(typeof(ELFFile));
+                ServiceProvider.RemoveService(typeof(MachOModule)); 
+                ServiceProvider.RemoveService(typeof(ELFModule));
                 ServiceProvider.RemoveService(typeof(PEReader));
             });
-            ServiceProvider.AddService<IExportSymbols>(this);
          }
 
         public void Dispose()
@@ -134,16 +166,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public IEnumerable<PdbFileInfo> PdbFileInfos
-        {
-            get
-            {
-                GetPEInfo();
-                Debug.Assert(_pdbFileInfos is not null);
-                return _pdbFileInfos;
-            }
-        }
-
         public virtual ImmutableArray<byte> BuildId
         {
             get
@@ -164,9 +186,51 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public abstract VersionData VersionData { get; }
+        public IEnumerable<PdbFileInfo> GetPdbFileInfos()
+        {
+            GetPEInfo();
+            Debug.Assert(_pdbFileInfos is not null);
+            return _pdbFileInfos;
+        }
 
-        public abstract string VersionString { get; }
+        public string GetSymbolFileName()
+        {
+            if (InitializeValue(Flags.InitializeSymbolFileName))
+            {
+                if (ImageSize > 0 && Target.OperatingSystem == OSPlatform.Linux)
+                {
+                    try
+                    {
+                        Stream stream = ModuleService.RawMemoryService.CreateMemoryStream();
+                        var elfFile = new ELFFile(new StreamAddressSpace(stream), ImageBase, true);
+                        if (elfFile.IsValid())
+                        {
+                            ELFSection section = elfFile.FindSectionByName(".gnu_debuglink");
+                            if (section != null)
+                            {
+                                _symbolFileName = section.Contents.Read<string>(0);
+                            }
+                        }
+                    }
+                    catch (Exception ex) when
+                       (ex is InvalidVirtualAddressException ||
+                        ex is ArgumentOutOfRangeException ||
+                        ex is IndexOutOfRangeException ||
+                        ex is OverflowException ||
+                        ex is BadInputFormatException)
+                    {
+                        Trace.TraceWarning("ELF .gnu_debuglink section in {0}: {1}", this, ex.Message);
+                    }
+                }
+            }
+            return _symbolFileName;
+        }
+
+        public abstract Version GetVersionData();
+
+        public abstract string GetVersionString();
+
+        public abstract string LoadSymbols();
 
         #endregion
 
@@ -176,9 +240,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (Target.OperatingSystem == OSPlatform.Windows)
             {
-                Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
-                PEFile image = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
-                if (image.IsValid())
+                PEFile image = Services.GetService<PEFile>();
+                if (image is not null)
                 { 
                     if (image.TryGetExportSymbol(name, out ulong offset))
                     {
@@ -191,23 +254,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else if (Target.OperatingSystem == OSPlatform.Linux)
             {
-                try
+                if (ImageSize > 0)
                 {
-                    Stream stream = ModuleService.MemoryService.CreateMemoryStream(ImageBase, ImageSize);
-                    ElfFile elfFile = new(stream, position: ImageBase, leaveOpen: false, isVirtual: true);
-                    if (elfFile.Header.IsValid)
+                    ModuleInfo module = ModuleInfo.TryCreate(Target.Services.GetService<DataReader>(), ImageBase, FileName);
+                    if (module is not null)
                     {
-                        if (elfFile.TryGetExportSymbol(name, out ulong offset))
-                        {
-                            address = ImageBase + offset;
-                            return true;
-                        }
-                        address = 0;
-                        return false;
+                        address = module.GetExportSymbolAddress(name);
+                        return address != 0;
                     }
-                }
-                catch (InvalidDataException)
-                {
                 }
             }
             return TryGetSymbolAddressInner(name, out address);
@@ -221,9 +275,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
-        protected VersionData GetVersion()
+        protected Version GetVersionInner()
         {
-            VersionData versionData = null;
+            Version version = null;
 
             PEFile peFile = GetPEInfo();
             if (peFile != null)
@@ -233,7 +287,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     VsFixedFileInfo fileInfo = peFile.VersionInfo;
                     if (fileInfo != null)
                     {
-                        versionData = fileInfo.ToVersionData();
+                        version = fileInfo.ToVersion();
                     }
                 }
                 catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
@@ -244,7 +298,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else 
             {
                 // If we can't get the version from the PE, search for version string embedded in the module data
-                string versionString = VersionString;
+                string versionString = GetVersionString();
                 if (versionString != null)
                 {
                     int spaceIndex = versionString.IndexOf(' ');
@@ -262,8 +316,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         string versionToParse = versionString.Substring(0, spaceIndex);
                         try
                         {
-                            Version version = System.Version.Parse(versionToParse);
-                            versionData = new VersionData(version.Major, version.Minor, version.Build, version.Revision);
+                            version = Version.Parse(versionToParse);
                         }
                         catch (ArgumentException ex)
                         {
@@ -271,13 +324,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                     }
                 }
-                else
-                {
-                    Trace.TraceInformation($"Module.GetVersion no version string");
-                }
             }
 
-            return versionData;
+            return version;
         }
 
         protected PEFile GetPEInfo()

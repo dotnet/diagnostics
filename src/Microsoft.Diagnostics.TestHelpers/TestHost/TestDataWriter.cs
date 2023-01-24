@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         public TestDataWriter()
         {
             Root = new XElement("TestData");
-            Root.Add(new XElement("Version", "1.0.0"));
+            Root.Add(new XElement("Version", "1.0.1"));
             Target = new XElement("Target");
             Root.Add(Target);
         }
@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void AddModuleMembers(XElement element, IModule module, string symbolModuleName)
         {
-            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.PdbFileInfos), nameof(IModule.VersionString));
+            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.GetPdbFileInfos), nameof(IModule.GetVersionString), nameof(IModule.GetSymbolFileName));
 
             if (symbolModuleName != null && IsModuleEqual(module, symbolModuleName))
             {
@@ -230,7 +230,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                             result = string.Format($"0x{{0:X{digits}}}", memberValue);
                         }
                     }
-                    else if (memberType.IsValueType || memberType == typeof(VersionData) || memberType == typeof(PdbFileInfo))
+                    else if (memberType.IsValueType || memberType == typeof(Version) || memberType == typeof(PdbFileInfo))
                     {
                         result = memberValue?.ToString();
                     }

@@ -348,7 +348,7 @@ DECLARE_API(HistRoot)
         {&rootstr.data, COSTRING},
     };
 
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
         return Status;
 
     if (nArg != 1)
@@ -463,7 +463,7 @@ DECLARE_API(HistObjFind)
         {&objstr.data, COSTRING},
     };
 
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
         return Status;
 
     if (nArg != 1)
@@ -542,7 +542,7 @@ DECLARE_API(HistObj)
         {&objstr.data, COSTRING},
     };
 
-    if (!GetCMDOption(args, NULL, 0, arg, _countof(arg), &nArg))
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
         return Status;
 
     if (nArg != 1)

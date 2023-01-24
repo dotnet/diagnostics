@@ -220,7 +220,7 @@ void GCRootImpl::GetDependentHandleMap(std::unordered_map<TADDR, std::list<TADDR
 
     do
     {
-        hr = handles->Next(_countof(data), data, &fetched);
+        hr = handles->Next(ARRAY_SIZE(data), data, &fetched);
 
         if (FAILED(hr))
         {
@@ -240,7 +240,7 @@ void GCRootImpl::GetDependentHandleMap(std::unordered_map<TADDR, std::list<TADDR
                 map[obj].push_back(target);
             }
         }
-    } while (fetched == _countof(data));
+    } while (fetched == ARRAY_SIZE(data));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -791,7 +791,7 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
     do
     {
         // Fetch more handles
-        hr = pEnum->Next(_countof(handles), handles, &fetched);
+        hr = pEnum->Next(ARRAY_SIZE(handles), handles, &fetched);
         if (FAILED(hr))
         {
             ExtOut("Failed to request more handles.\n");
@@ -833,7 +833,7 @@ int GCRootImpl::PrintRootsOnHandleTable(int gen)
             }
         }
     }
-    while (_countof(handles) == fetched);
+    while (ARRAY_SIZE(handles) == fetched);
 
     return total;
 }
@@ -1244,7 +1244,7 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
 
     do
     {
-        hr = handles->Next(_countof(data), data, &fetched);
+        hr = handles->Next(ARRAY_SIZE(data), data, &fetched);
 
         if (FAILED(hr))
         {
@@ -1265,7 +1265,7 @@ UINT FindAllPinnedAndStrong(DWORD_PTR handlearray[], UINT arraySize)
                 handlearray[pos++] = (DWORD_PTR)data[i].Handle;
             }
         }
-    } while (fetched == _countof(data));
+    } while (fetched == ARRAY_SIZE(data));
 
     return pos;
 }
@@ -1656,8 +1656,7 @@ BOOL FindSegment(const GCHeapDetails &heap, DacpHeapSegmentData &seg, CLRDATA_AD
                     ExtOut("Error requesting heap segment %p\n", SOS_PTR(dwAddrSeg));
                     return FALSE;
                 }
-                if (addr >= TO_TADDR(seg.mem) &&
-                    addr < (dwAddrSeg == heap.ephemeral_heap_segment ? heap.alloc_allocated : TO_TADDR(seg.allocated)))
+                if (addr >= TO_TADDR(seg.mem) && addr < seg.highAllocMark)
                 {
                     return TRUE;
                 }
@@ -1935,11 +1934,10 @@ size_t HeapTraverser::getID(size_t mTable)
     return 0;
 }
 
-#ifndef FEATURE_PAL
-void replace(std::wstring &str, const WCHAR *toReplace, const WCHAR *replaceWith)
+void replace(std::string &str, const char* toReplace, const char* replaceWith)
 {
-    const size_t replaceLen = _wcslen(toReplace);
-    const size_t replaceWithLen = _wcslen(replaceWith);
+    const size_t replaceLen = strlen(toReplace);
+    const size_t replaceWithLen = strlen(replaceWith);
 
     size_t i = str.find(toReplace);
     while (i != std::wstring::npos)
@@ -1948,31 +1946,34 @@ void replace(std::wstring &str, const WCHAR *toReplace, const WCHAR *replaceWith
         i = str.find(toReplace, i + replaceWithLen);
     }
 }
-#endif
 
-void HeapTraverser::PrintType(size_t ID,LPCWSTR name)
+void HeapTraverser::PrintType(size_t ID, LPCWSTR wname)
 {
     if (m_format==FORMAT_XML)
     {
-#ifndef FEATURE_PAL
+        int len = (int)_wcslen(wname);
+        int size = WideCharToMultiByte(CP_ACP, 0, wname, len, NULL, 0, NULL, NULL);
+        char *buffer = (char*)_alloca(size + 1);
+        WideCharToMultiByte(CP_ACP, 0, wname, len, buffer, size, NULL, NULL);
+        buffer[size] = '\0';
+
         // Sanitize name based on XML spec.
-        std::wstring wname = name;
-        replace(wname, W("&"), W("&amp;"));
-        replace(wname, W("\""), W("&quot;"));
-        replace(wname, W("'"), W("&apos;"));
-        replace(wname, W("<"), W("&lt;"));
-        replace(wname, W(">"), W("&gt;"));
-        name = wname.c_str();
-#endif
+        std::string name(buffer);
+        replace(name, "&", "&amp;");
+        replace(name, "\"", "&quot;");
+        replace(name, "'", "&apos;");
+        replace(name, "<", "&lt;");
+        replace(name, ">", "&gt;");
+
         fprintf(m_file,
-            "<type id=\"%d\" name=\"%S\"/>\n",
-            ID, name);
+            "<type id=\"%d\" name=\"%s\"/>\n",
+            ID, name.c_str());
     }
     else if (m_format==FORMAT_CLRPROFILER)
     {
         fprintf(m_file,
             "t %d 0 %S\n",
-            ID,name);
+            ID, wname);
     }
 }
 
@@ -2190,14 +2191,14 @@ void HeapTraverser::TraceHandles()
 
     do
     {
-        hr = handles->Next(_countof(data), data, &fetched);
+        hr = handles->Next(ARRAY_SIZE(data), data, &fetched);
 
         if (FAILED(hr))
             break;
 
         for (unsigned int i = 0; i < fetched; ++i)
             PrintRoot(W("handle"), (size_t)data[i].Handle);
-    } while (fetched == _countof(data));
+    } while (fetched == ARRAY_SIZE(data));
 }
 
 /* static */ void HeapTraverser::GatherTypes(DWORD_PTR objAddr,size_t Size,

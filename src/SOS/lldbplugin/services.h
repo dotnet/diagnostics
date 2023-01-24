@@ -398,6 +398,12 @@ public:
 
     ULONG STDMETHODCALLTYPE GetOutputWidth();
 
+    HRESULT STDMETHODCALLTYPE SupportsDml(PULONG supported);
+
+    void STDMETHODCALLTYPE OutputDmlString(
+        ULONG mask,
+        PCSTR str);
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------
@@ -407,6 +413,10 @@ public:
     void FlushCheck();
 
     lldb::SBCommand AddCommand(const char *name, lldb::SBCommandPluginInterface *impl, const char *help);
+
+    void AddManagedCommand(const char* name, const char* help);
+
+    bool ExecuteCommand( const char* commandName, char** arguments, lldb::SBCommandReturnObject &result);
 
     HRESULT InternalOutputVaList(ULONG mask, PCSTR format, va_list args);
 };

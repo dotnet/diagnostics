@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -121,9 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, bool logDumpGeneration = false)
         {
-            IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
-            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
-            ValidateResponseMessage(response, nameof(WriteDump));
+            WriteDump(dumpType, dumpPath, logDumpGeneration ? WriteDumpFlags.LoggingEnabled : WriteDumpFlags.None);
         }
 
         /// <summary>
@@ -134,15 +133,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, WriteDumpFlags flags)
         {
-            IpcMessage request = CreateWriteDumpMessage2(dumpType, dumpPath, flags);
+            IpcMessage request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
             IpcMessage response = IpcClient.SendMessage(_endpoint, request);
-            if (!ValidateResponseMessage(response, nameof(WriteDump), ValidateResponseOptions.UnknownCommandReturnsFalse))
+            if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
             {
-                if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+                request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
+                response = IpcClient.SendMessage(_endpoint, request);
+                if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse))
                 {
-                    throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+                    if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+                    {
+                        throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+                    }
+                    request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
+                    response = IpcClient.SendMessage(_endpoint, request);
+                    ValidateResponseMessage(response, "Write dump");
                 }
-                WriteDump(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
             }
         }
 
@@ -153,11 +159,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
         /// <param name="logDumpGeneration">When set to true, display the dump generation debug log to the console.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, bool logDumpGeneration, CancellationToken token)
+        public Task WriteDumpAsync(DumpType dumpType, string dumpPath, bool logDumpGeneration, CancellationToken token)
         {
-            IpcMessage request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration);
-            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-            ValidateResponseMessage(response, nameof(WriteDumpAsync));
+            return WriteDumpAsync(dumpType, dumpPath, logDumpGeneration ? WriteDumpFlags.LoggingEnabled : WriteDumpFlags.None, token);
         }
 
         /// <summary>
@@ -169,15 +173,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="token">The token to monitor for cancellation requests.</param>
         public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, WriteDumpFlags flags, CancellationToken token)
         {
-            IpcMessage request = CreateWriteDumpMessage2(dumpType, dumpPath, flags);
+            IpcMessage request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-            if (!ValidateResponseMessage(response, nameof(WriteDumpAsync), ValidateResponseOptions.UnknownCommandReturnsFalse))
+            if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
             {
-                if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+                request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
+                response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+                if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse))
                 {
-                    throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+                    if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+                    {
+                        throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+                    }
+                    request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
+                    response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+                    ValidateResponseMessage(response, "Write dump");
                 }
-                await WriteDumpAsync(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0, token);
             }
         }
 
@@ -536,13 +547,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
         }
 
-        private static IpcMessage CreateWriteDumpMessage2(DumpType dumpType, string dumpPath, WriteDumpFlags flags)
+        private static IpcMessage CreateWriteDumpMessage(DumpCommandId command, DumpType dumpType, string dumpPath, WriteDumpFlags flags)
         {
             if (string.IsNullOrEmpty(dumpPath))
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
-            return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump2, payload);
+            return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);
         }
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)
@@ -566,8 +577,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             switch ((DiagnosticsServerResponseId)responseMessage.Header.CommandId)
             {
+                case DiagnosticsServerResponseId.OK:
+                    return true;
+
                 case DiagnosticsServerResponseId.Error:
-                    uint hr = BitConverter.ToUInt32(responseMessage.Payload, 0);
+                    uint hr = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(responseMessage.Payload, 0, 4));
+                    int index = sizeof(uint);
+                    string message = null;
                     switch (hr)
                     {
                         case (uint)DiagnosticsIpcError.UnknownCommand:
@@ -576,18 +592,36 @@ namespace Microsoft.Diagnostics.NETCore.Client
                                 return false;
                             }
                             throw new UnsupportedCommandException($"{operationName} failed - Command is not supported.");
+
                         case (uint)DiagnosticsIpcError.ProfilerAlreadyActive:
                             throw new ProfilerAlreadyActiveException($"{operationName} failed - A profiler is already loaded.");
+
                         case (uint)DiagnosticsIpcError.InvalidArgument:
                             if (options.HasFlag(ValidateResponseOptions.InvalidArgumentIsRequiresSuspension))
                             {
                                 throw new ServerErrorException($"{operationName} failed - The runtime must be suspended for this command.");
                             }
                             throw new UnsupportedCommandException($"{operationName} failed - Invalid command argument.");
+
+                        case (uint)DiagnosticsIpcError.NotSupported:
+                            message = $"{operationName} - Not supported by this runtime.";
+                            break;
+
+                        default:
+                            break;
                     }
-                    throw new ServerErrorException($"{operationName} failed - HRESULT: 0x{hr:X8}");
-                case DiagnosticsServerResponseId.OK:
-                    return true;
+                    // Check if the command can return an error message and if the payload is big enough to contain the
+                    // error code (uint) and the string length (uint).
+                    if (options.HasFlag(ValidateResponseOptions.ErrorMessageReturned) && responseMessage.Payload.Length >= (sizeof(uint) * 2))
+                    {
+                        message = IpcHelpers.ReadString(responseMessage.Payload, ref index);
+                    }
+                    if (string.IsNullOrWhiteSpace(message))
+                    {
+                        message = $"{operationName} failed - HRESULT: 0x{hr:X8}.";
+                    }
+                    throw new ServerErrorException(message);
+
                 default:
                     throw new ServerErrorException($"{operationName} failed - Server responded with unknown response.");
             }
@@ -599,6 +633,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             None = 0x0,
             UnknownCommandReturnsFalse = 0x1,
             InvalidArgumentIsRequiresSuspension = 0x2,
+            ErrorMessageReturned = 0x4,
         }
     }
 }

@@ -41,7 +41,7 @@ SOSCOMMAND:PrintException
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.InvalidOperationException\s+
 VERIFY:Message:\s+(<Invalid Object>|Invalid operation exception, outer)\s+
-VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !?printexception <HEXVAL> to see more.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s+
@@ -54,7 +54,7 @@ SOSCOMMAND:PrintException -nested
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.InvalidOperationException\s+
 VERIFY:Message:\s+(<Invalid Object>|Invalid operation exception, outer)\s+
-VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !?printexception <HEXVAL> to see more.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s+
@@ -72,7 +72,7 @@ VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131537
 
 # 6) Verifying that the Exception Object/ID gives us the same output about the reflected exception.
-SOSCOMMAND:PrintException <POUT>InnerException:\s+System\.FormatException, Use !PrintException (<HEXVAL>) to see more<POUT>
+SOSCOMMAND:PrintException <POUT>InnerException:\s+System\.FormatException, Use !?printexception (<HEXVAL>) to see more<POUT>
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.FormatException\s+
 VERIFY:Message:\s+(<Invalid Object>|Bad format exception, inner)\s+
@@ -89,7 +89,7 @@ SOSCOMMAND:PrintException -lines
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.InvalidOperationException\s+
 VERIFY:Message:\s+(<Invalid Object>|Invalid operation exception, outer)\s+
-VERIFY:InnerException:\s+System\.FormatException, Use !PrintException <HEXVAL> to see more.\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !?printexception <HEXVAL> to see more.\s+
 VERIFY:StackTrace \(generated\):
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s*

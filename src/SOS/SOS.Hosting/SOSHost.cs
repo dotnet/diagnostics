@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng;
+using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -480,7 +480,8 @@ namespace SOS.Hosting
                 {
                     return HResult.E_INVALIDARG;
                 }
-                if (module.VersionData is null)
+                Version version = module.GetVersionData();
+                if (version is null)
                 {
                     return HResult.E_FAIL;
                 }
@@ -489,15 +490,13 @@ namespace SOS.Hosting
                 fileInfo->dwStrucVersion = 0;
                 fileInfo->dwFileFlagsMask = 0;
                 fileInfo->dwFileFlags = 0;
-
-                VersionData versionData = module.VersionData;
-                fileInfo->dwFileVersionMS = (uint)versionData.Minor | (uint)versionData.Major << 16;
-                fileInfo->dwFileVersionLS = (uint)versionData.Patch | (uint)versionData.Revision << 16;
+                fileInfo->dwFileVersionMS = (uint)version.Minor & 0xffff | (uint)version.Major << 16;
+                fileInfo->dwFileVersionLS = (uint)version.Revision & 0xffff | (uint)version.Build << 16;
             }
             else if (item == "\\StringFileInfo\\040904B0\\FileVersion")
             {
                 *buffer = 0;
-                string versionString = module.VersionString;
+                string versionString = module.GetVersionString();
                 if (versionString == null)
                 {
                     return HResult.E_FAIL;

@@ -29,8 +29,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly string _address;
 
         private bool _disposed = false;
-        private Task _listenTask;
-        private bool _enableTcpIpProtocol = false;
+        private Task _acceptTransportTask;
+        private IpcServerTransport _transport;
+        private Kind _kind = Kind.Ipc;
+
+        public enum Kind
+        {
+            Tcp,
+            Ipc,
+            WebSocket,
+        }
 
         /// <summary>
         /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
@@ -56,29 +64,41 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// On all other systems, this must be the full file path of the socket.
         /// When TcpIp is enabled, this can also be host:port of the listening socket.
         /// </param>
-        /// <param name="enableTcpIpProtocol">
-        /// Add TcpIp as a supported protocol for ReversedDiagnosticServer. When enabled, address will
+        /// <param name="kind">
+        /// If kind is WebSocket, start a Kestrel web server.
+        /// Otherwise if kind is TcpIp as a supported protocol for ReversedDiagnosticServer. When Kind is Tcp, address will
         /// be analyzed and if on format host:port, ReversedDiagnosticServer will try to bind
-        /// a TcpIp listener to host and port.
+        /// a TcpIp listener to host and port, otherwise it will use a Unix domain socket or a Windows named pipe.
         ///
         /// </param>
-        public ReversedDiagnosticsServer(string address, bool enableTcpIpProtocol)
+        public ReversedDiagnosticsServer(string address, Kind kind)
         {
             _address = address;
-            _enableTcpIpProtocol = enableTcpIpProtocol;
+            _kind = kind;
         }
 
         public async ValueTask DisposeAsync()
         {
             if (!_disposed)
             {
+                // Dispose the server transport before signaling cancellation in order to prevent the
+                // AcceptAsync call on the server transport from recreating the server stream.
+                try
+                {
+                    _transport?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Debug.Fail(ex.Message);
+                }
+
                 _disposalSource.Cancel();
 
-                if (null != _listenTask)
+                if (null != _acceptTransportTask)
                 {
                     try
                     {
-                        await _listenTask.ConfigureAwait(false);
+                        await _acceptTransportTask.ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
@@ -122,9 +142,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new InvalidOperationException(nameof(ReversedDiagnosticsServer.Start) + " method can only be called once.");
             }
 
-            _listenTask = ListenAsync(maxConnections, _disposalSource.Token);
-            if (_listenTask.IsFaulted)
-                _listenTask.Wait(); // Rethrow aggregated exception.
+            _transport = IpcServerTransport.Create(_address, maxConnections, _kind, TransportCallback);
+
+            _acceptTransportTask = AcceptTransportAsync(_transport, _disposalSource.Token);
+
+            if (_acceptTransportTask.IsFaulted)
+                _acceptTransportTask.Wait(); // Rethrow aggregated exception.
         }
 
         /// <summary>
@@ -188,19 +211,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Listens at the address for new connections.
+        /// Accept connections from the transport.
         /// </summary>
-        /// <param name="maxConnections">The maximum number of connections the server will support.</param>
+        /// <param name="transport">The server transport from which connections are accepted.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>A task that completes when the server is no longer listening at the address.</returns>
-        private async Task ListenAsync(int maxConnections, CancellationToken token)
+        private async Task AcceptTransportAsync(IpcServerTransport transport, CancellationToken token)
         {
-            // This disposal shuts down the transport in case an exception is thrown.
-            using var transport = IpcServerTransport.Create(_address, maxConnections, _enableTcpIpProtocol, TransportCallback);
-            // This disposal shuts down the transport in case of cancellation; causes the transport
-            // to not recreate the server stream before the AcceptAsync call observes the cancellation.
-            using var _ = token.Register(() => transport.Dispose());
-
             while (!token.IsCancellationRequested)
             {
                 Stream stream = null;
@@ -362,11 +379,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     IntPtr.Zero,
                     IntPtr.Zero);
             }
+            else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
+            {
+                return adapter.IsConnected;
+            }
 
             return false;
         }
 
-        private bool IsStarted => null != _listenTask;
+        private bool IsStarted => null != _transport;
 
         public static int MaxAllowedConnections = IpcServerTransport.MaxAllowedConnections;
 

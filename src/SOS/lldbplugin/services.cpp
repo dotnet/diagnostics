@@ -19,6 +19,13 @@
 #define InvalidTimeStamp    0xFFFFFFFE;
 #define InvalidChecksum     0xFFFFFFFF;
 
+#ifndef PAGE_SIZE 
+#define PAGE_SIZE 0x1000
+#endif
+
+#undef PAGE_MASK 
+#define PAGE_MASK (~(PAGE_SIZE-1))
+
 char *g_coreclrDirectory = nullptr;
 char *g_pluginModuleDirectory = nullptr;
 
@@ -432,7 +439,7 @@ HRESULT
 LLDBServices::GetPageSize(
     PULONG size)
 {
-    *size = 4096;
+    *size = PAGE_SIZE;
     return S_OK;
 }
 
@@ -762,10 +769,21 @@ LLDBServices::ReadVirtual(
     ULONG64 offset,
     PVOID buffer,
     ULONG bufferSize,
-    PULONG bytesRead)
+    PULONG pbytesRead)
 {
     lldb::SBError error;
-    size_t read = 0;
+    size_t bytesRead = 0;
+    ULONG64 nextPageStart;
+
+    // Reading 0 bytes must succeed
+    if (bufferSize == 0)
+    {
+        if (pbytesRead)
+        {
+            *pbytesRead = 0;
+        }
+        return S_OK;
+    }
 
     // lldb doesn't expect sign-extended address
     offset = CONVERT_FROM_SIGN_EXTENDED(offset);
@@ -776,9 +794,41 @@ LLDBServices::ReadVirtual(
         goto exit;
     }
 
-    read = process.ReadMemory(offset, buffer, bufferSize, error);
+    // Try the full read and return if successful
+    bytesRead = process.ReadMemory(offset, buffer, bufferSize, error);
+    if (error.Success())
+    {
+        goto exit;
+    }
 
-    if (!error.Success())
+    // As it turns out the lldb ReadMemory API doesn't do partial reads and the SOS
+    // caching depends on that behavior. Round up to the next page boundry and attempt
+    // to read up to the page boundries.
+    nextPageStart = (offset + PAGE_SIZE - 1) & PAGE_MASK;
+
+    while (bufferSize > 0)
+    {
+        size_t size = nextPageStart - offset;
+        if (size > bufferSize)
+        {
+            size = bufferSize;
+        }
+        size_t read = process.ReadMemory(offset, buffer, size, error);
+
+        bytesRead += read;
+        offset += read;
+        buffer = (BYTE*)buffer + read;
+        bufferSize -= read;
+        nextPageStart += PAGE_SIZE;
+
+        if (!error.Success())
+        {
+            break;
+        }
+    }
+
+    // If the read isn't complete, try reading directly from native modules in the address range.
+    if (bufferSize > 0)
     {
         lldb::SBTarget target = process.GetTarget();
         if (!target.IsValid())
@@ -787,8 +837,7 @@ LLDBServices::ReadVirtual(
         }
 
         int numModules = target.GetNumModules();
-        bool found = false;
-        for (int i = 0; !found && i < numModules; i++)
+        for (int i = 0; i < numModules; i++)
         {
             lldb::SBModule module = target.GetModuleAtIndex(i);
             int numSections = module.GetNumSections();
@@ -803,9 +852,8 @@ LLDBServices::ReadVirtual(
                     lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
                     if (sectionData.IsValid())
                     {
-                        read = sectionData.ReadRawData(error, 0, buffer, bufferSize);
-                        found = true;
-                        break;
+                        bytesRead += sectionData.ReadRawData(error, 0, buffer, bufferSize);
+                        goto exit;
                     }
                 }
             }
@@ -813,11 +861,11 @@ LLDBServices::ReadVirtual(
     }
 
 exit:
-    if (bytesRead)
+    if (pbytesRead)
     {
-        *bytesRead = read;
+        *pbytesRead = bytesRead;
     }
-    return error.Success() || (read != 0) ? S_OK : E_FAIL;
+    return bytesRead > 0 ? S_OK : E_FAIL;
 }
 
 HRESULT 
@@ -2113,19 +2161,17 @@ public:
             result.SetStatus(lldb::eReturnStatusFailed);
             return false;
         }
-        std::string commandLine;
-        commandLine.append(m_commandName);
-        commandLine.append(" ");
+        std::string commandArguments;
         if (arguments != nullptr)
         {
-            for (const char* arg = *arguments; arg; arg = *(++arguments))
+            for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))
             {
-                commandLine.append(arg);
-                commandLine.append(" ");
+                commandArguments.append(arg);
+                commandArguments.append(" ");
             }
         }
         g_services->FlushCheck();
-        HRESULT hr = hostservices->DispatchCommand(commandLine.c_str());
+        HRESULT hr = hostservices->DispatchCommand(m_commandName, commandArguments.c_str());
         if (hr != S_OK)
         {
             result.SetStatus(lldb::eReturnStatusFailed);
@@ -2347,6 +2393,21 @@ ULONG
 LLDBServices::GetOutputWidth()
 {
     return m_debugger.GetTerminalWidth();
+}
+
+HRESULT
+LLDBServices::SupportsDml(PULONG supported)
+{
+    supported = 0;
+    return S_OK;
+}
+
+void
+LLDBServices::OutputDmlString(
+    ULONG mask,
+    PCSTR str)
+{
+    OutputString(mask, str);
 }
 
 //----------------------------------------------------------------------------
@@ -2767,6 +2828,66 @@ LLDBServices::AddCommand(
         m_commands.insert(name);
     }
     return command;
+}
+
+void
+LLDBServices::AddManagedCommand(
+    const char* name,
+    const char* help)
+{
+    HRESULT hr = AddCommand(name, help, nullptr, 0);
+    if (FAILED(hr))
+    {
+        Output(DEBUG_OUTPUT_ERROR, "AddManagedCommand FAILED %08x\n", hr);
+    }
+}
+
+bool
+LLDBServices::ExecuteCommand(
+    const char* commandName,
+    char** arguments,
+    lldb::SBCommandReturnObject &result)
+{
+    // Build all the possible arguments into a string
+    std::string commandArguments;
+    for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))
+    {
+        commandArguments.append(arg);
+        commandArguments.append(" ");
+    }
+    // Load and initialize the managed extensions and commands before we check the m_commands list. 
+    IHostServices* hostservices = GetHostServices();
+
+    // If the command is a native SOS or managed extension command execute it through the lldb command added.
+    if (m_commands.find(commandName) != m_commands.end())
+    {
+        std::string commandLine;
+        commandLine.append(commandName);
+        if (!commandArguments.empty())
+        {
+            commandLine.append(" ");
+            commandLine.append(commandArguments);
+        }
+        lldb::ReturnStatus status = m_interpreter.HandleCommand(commandLine.c_str(), result);
+        result.SetStatus(status);
+        return true;
+    }
+
+    // Fallback to dispatch it as a managed command for those commands that couldn't be added 
+    // directly to the lldb interpreter because of existing commands or aliases.
+    if (hostservices != nullptr)
+    {
+        g_services->FlushCheck();
+        HRESULT hr = hostservices->DispatchCommand(commandName, commandArguments.c_str());
+        if (hr != E_NOTIMPL)
+        {
+            result.SetStatus(hr == S_OK ? lldb::eReturnStatusSuccessFinishResult : lldb::eReturnStatusFailed);
+            return true;
+        }
+    }
+
+    // Command not found; attempt dispatch to native SOS module
+    return false;
 }
 
 HRESULT 

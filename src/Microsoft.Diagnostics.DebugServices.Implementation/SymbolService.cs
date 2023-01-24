@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Symbol server URLs
         /// </summary>
         public const string MsdlSymbolServer = "https://msdl.microsoft.com/download/symbols/";
-        public const string SymwebSymbolServer = "https://symweb.corp.microsoft.com/";
+        public const string SymwebSymbolServer = "https://symweb/";
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
@@ -41,6 +41,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _host = host;
             OnChangeEvent = new ServiceEvent();
+            // dbgeng's console can not handle the async logging (Tracer output on another thread than the main one).
+            Tracer.Enable = host.HostType != HostType.DbgEng;
         }
 
         #region ISymbolService
@@ -79,16 +81,31 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        _defaultSymbolCache = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".dotnet", "symbolcache");
+                        _defaultSymbolCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "symbolcache");
                     }
                 }
                 return _defaultSymbolCache;
             }
-            set 
+            set
             {
                 _defaultSymbolCache = value;
             }
         }
+
+        /// <summary>
+        /// The time out in minutes passed to the HTTP symbol store when not overridden in AddSymbolServer.
+        /// </summary>
+        public int DefaultTimeout { get; set; } = 4;
+
+        /// <summary>
+        /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
+        /// </summary>
+        public int DefaultRetryCount { get; set; } = 0;
+
+        /// <summary>
+        /// Reset any HTTP symbol stores marked with a client failure
+        /// </summary>
+        public void Reset() => ForEachSymbolStore<HttpSymbolStore>((httpSymbolStore) => httpSymbolStore.ResetClientFailure());
 
         /// <summary>
         /// Parses the Windows debugger symbol path (srv*, cache*, etc.).
@@ -167,7 +184,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             symbolCachePaths.Add(DefaultSymbolCache);
                                         }
                                     }
-                                    else 
+                                    else
                                     {
                                         symbolCachePaths.Add(parts[i]);
                                     }
@@ -186,7 +203,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     if (symbolServerPath != null)
                     {
-                        if (!AddSymbolServer(msdl: false, symweb: false, symbolServerPath.Trim(), authToken: null, timeoutInMinutes: 0))
+                        if (!AddSymbolServer(msdl: false, symweb: false, symbolServerPath.Trim()))
                         {
                             return false;
                         }
@@ -211,15 +228,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="msdl">if true, use the public Microsoft server</param>
         /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
         /// <param name="symbolServerPath">symbol server url (optional)</param>
-        /// <param name="authToken"></param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional)</param>
+        /// <param name="authToken">PAT for secure symbol server (optional)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
         public bool AddSymbolServer(
             bool msdl,
             bool symweb,
-            string symbolServerPath,
-            string authToken,
-            int timeoutInMinutes)
+            string symbolServerPath = null,
+            string authToken = null,
+            int? timeoutInMinutes = null,
+            int? retryCount = null)
         {
             bool internalServer = false;
 
@@ -274,10 +293,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         httpSymbolStore = new HttpSymbolStore(Tracer.Instance, store, uri, personalAccessToken: authToken);
                     }
-                    if (timeoutInMinutes != 0)
-                    {
-                        httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
-                    }
+                    httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes.GetValueOrDefault(DefaultTimeout));
+                    httpSymbolStore.RetryCount = retryCount.GetValueOrDefault(DefaultRetryCount);
                     SetSymbolStore(httpSymbolStore);
                 }
             }
@@ -334,18 +351,40 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="module">module interface</param>
         /// <returns>module path or null</returns>
-        public string DownloadModule(IModule module)
+        public string DownloadModuleFile(IModule module)
         {
-            string downloadFilePath = DownloadPE(module);
+            string downloadFilePath = DownloadPE(module, KeyTypeFlags.IdentityKey);
             if (downloadFilePath is null)
             {
                 if (module.Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    downloadFilePath = DownloadELF(module);
+                    downloadFilePath = DownloadELF(module, KeyTypeFlags.IdentityKey);
                 }
                 else if (module.Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    downloadFilePath = DownloadMachO(module);
+                    downloadFilePath = DownloadMachO(module, KeyTypeFlags.IdentityKey);
+                }
+            }
+            return downloadFilePath;
+        }
+
+        /// <summary>
+        /// Downloads the symbol file for module
+        /// </summary>
+        /// <param name="module">module interface</param>
+        /// <returns>module path or null</returns>
+        public string DownloadSymbolFile(IModule module)
+        {
+            string downloadFilePath = DownloadPE(module, KeyTypeFlags.SymbolKey);
+            if (downloadFilePath is null)
+            {
+                if (module.Target.OperatingSystem == OSPlatform.Linux)
+                {
+                    downloadFilePath = DownloadELF(module, KeyTypeFlags.SymbolKey);
+                }
+                else if (module.Target.OperatingSystem == OSPlatform.OSX)
+                {
+                    downloadFilePath = DownloadMachO(module, KeyTypeFlags.SymbolKey);
                 }
             }
             return downloadFilePath;
@@ -424,10 +463,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception ex) when 
-                (ex is UnauthorizedAccessException || 
-                 ex is BadImageFormatException || 
-                 ex is InvalidVirtualAddressException || 
+            catch (Exception ex) when
+                (ex is UnauthorizedAccessException ||
+                 ex is BadImageFormatException ||
+                 ex is InvalidVirtualAddressException ||
                  ex is IOException)
             {
                 Trace.TraceError($"GetMetaData: {ex.Message}");
@@ -456,7 +495,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 peStream = Utilities.TryOpenFile(assemblyPath);
                 if (peStream == null)
                     return null;
-                
+
                 options = PEStreamOptions.Default;
             }
 
@@ -550,43 +589,92 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Finds or downloads the PE module
         /// </summary>
         /// <param name="module">module instance</param>
+        /// <param name="flags"></param>
         /// <returns>module path or null</returns>
-        private string DownloadPE(IModule module)
+        private string DownloadPE(IModule module, KeyTypeFlags flags)
         {
-            if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
+            SymbolStoreKey fileKey = null;
+            string fileName = null;
+            if ((flags & KeyTypeFlags.IdentityKey) != 0)
             {
-                Trace.TraceWarning($"DownLoadPE: module {module.FileName} has no index timestamp/filesize");
-                return null;
+                if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
+                {
+                    return null;
+                }
+                fileName = module.FileName;
+                fileKey = PEFileKeyGenerator.GetKey(Path.GetFileName(fileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+                if (fileKey is null)
+                {
+                    Trace.TraceWarning($"DownLoadPE: no key generated for module {fileName} ");
+                    return null;
+                }
+            }
+            else if ((flags & KeyTypeFlags.SymbolKey) != 0)
+            {
+                IEnumerable<PdbFileInfo> pdbInfos = module.GetPdbFileInfos();
+                if (!pdbInfos.Any())
+                {
+                    return null;
+                }
+                foreach (PdbFileInfo pdbInfo in pdbInfos)
+                {
+                    if (pdbInfo.IsPortable)
+                    {
+                        fileKey = PortablePDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid);
+                        if (fileKey is not null)
+                        {
+                            fileName = pdbInfo.Path;
+                            break;
+                        }
+                    }
+                }
+                if (fileKey is null)
+                {
+                    foreach (PdbFileInfo pdbInfo in pdbInfos)
+                    {
+                        if (!pdbInfo.IsPortable)
+                        {
+                            fileKey = PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
+                            if (fileKey is not null)
+                            {
+                                fileName = pdbInfo.Path;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (fileKey is null)
+                {
+                    Trace.TraceWarning($"DownLoadPE: no key generated for module PDB {module.FileName} ");
+                    return null;
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Key flag not supported {flags}");
             }
 
-            SymbolStoreKey moduleKey = PEFileKeyGenerator.GetKey(Path.GetFileName(module.FileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
-            if (moduleKey is null)
+            // Check if the file is local and the key matches the module
+            if (File.Exists(fileName))
             {
-                Trace.TraceWarning($"DownLoadPE: no index generated for module {module.FileName} ");
-                return null;
-            }
-
-            if (File.Exists(module.FileName))
-            {
-                using Stream stream = Utilities.TryOpenFile(module.FileName);
+                using Stream stream = Utilities.TryOpenFile(fileName);
                 if (stream is not null)
                 {
                     var peFile = new PEFile(new StreamAddressSpace(stream), false);
-                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, module.FileName);
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                    foreach (SymbolStoreKey key in keys)
+                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, fileName);
+                    foreach (SymbolStoreKey key in generator.GetKeys(flags))
                     {
-                        if (moduleKey.Equals(key))
+                        if (fileKey.Equals(key))
                         {
-                            Trace.TraceInformation("DownloadPE: local file match {0}", module.FileName);
-                            return module.FileName;
+                            Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                            return fileName;
                         }
                     }
                 }
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = DownloadFile(moduleKey);
+            string downloadFilePath = DownloadFile(fileKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("DownloadPE: downloaded {0}", downloadFilePath);
@@ -600,42 +688,50 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Finds or downloads the ELF module
         /// </summary>
         /// <param name="module">module instance</param>
+        /// <param name="flags"></param>
         /// <returns>module path or null</returns>
-        private string DownloadELF(IModule module)
+        private string DownloadELF(IModule module, KeyTypeFlags flags)
         {
+            if ((flags & (KeyTypeFlags.IdentityKey | KeyTypeFlags.SymbolKey)) == 0)
+            {
+                throw new ArgumentException($"Key flag not supported {flags}");
+            }
+
             if (module.BuildId.IsDefaultOrEmpty)
             {
                 Trace.TraceWarning($"DownloadELF: module {module.FileName} has no build id");
                 return null;
             }
 
-            SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-            if (moduleKey is null)
+            string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? module.GetSymbolFileName() : null;
+            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
+            if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
                 return null;
             }
 
-            if (File.Exists(module.FileName))
+            // Check if the file is local and the key matches the module
+            string fileName = fileKey.FullPathName;
+            if (File.Exists(fileName))
             {
-                using Utilities.ELFModule elfModule = Utilities.OpenELFFile(module.FileName);
+                using ELFModule elfModule = ELFModule.OpenFile(fileName);
                 if (elfModule is not null)
                 {
-                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfModule, module.FileName);
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                    foreach (SymbolStoreKey key in keys)
+                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfModule, fileName);
+                    foreach (SymbolStoreKey key in generator.GetKeys(flags))
                     {
-                        if (moduleKey.Equals(key))
+                        if (fileKey.Equals(key))
                         {
-                            Trace.TraceInformation("DownloadELF: local file match {0}", module.FileName);
-                            return module.FileName;
+                            Trace.TraceInformation("DownloadELF: local file match {0}", fileName);
+                            return fileName;
                         }
                     }
                 }
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = DownloadFile(moduleKey);
+            string downloadFilePath = DownloadFile(fileKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("DownloadELF: downloaded {0}", downloadFilePath);
@@ -649,42 +745,50 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Finds or downloads the MachO module.
         /// </summary>
         /// <param name="module">module instance</param>
+        /// <param name="flags"></param>
         /// <returns>module path or null</returns>
-        private string DownloadMachO(IModule module)
+        private string DownloadMachO(IModule module, KeyTypeFlags flags)
         {
+            if ((flags & (KeyTypeFlags.IdentityKey | KeyTypeFlags.SymbolKey)) == 0)
+            {
+                throw new ArgumentException($"Key flag not supported {flags}");
+            }
+
             if (module.BuildId.IsDefaultOrEmpty)
             {
                 Trace.TraceWarning($"DownloadMachO: module {module.FileName} has no build id");
                 return null;
             }
 
-            SymbolStoreKey moduleKey = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).SingleOrDefault();
-            if (moduleKey is null)
+            SymbolStoreKey fileKey = MachOFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, module.GetSymbolFileName()).SingleOrDefault();
+            if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadMachO: no index generated for module {module.FileName} ");
                 return null;
             }
 
-            if (File.Exists(module.FileName))
+            // Check if the file is local and the key matches the module
+            string fileName = fileKey.FullPathName;
+            if (File.Exists(fileName))
             {
-                using Utilities.MachOModule machOModule = Utilities.OpenMachOFile(module.FileName);
+                using MachOModule machOModule = MachOModule.OpenFile(fileName);
                 if (machOModule is not null)
                 {
-                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOModule, module.FileName);
-                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOModule, fileName);
+                    IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
                     foreach (SymbolStoreKey key in keys)
                     {
-                        if (moduleKey.Equals(key))
+                        if (fileKey.Equals(key))
                         {
-                            Trace.TraceInformation("DownloadMachO: local file match {0}", module.FileName);
-                            return module.FileName;
+                            Trace.TraceInformation("DownloadMachO: local file match {0}", fileName);
+                            return fileName;
                         }
                     }
                 }
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = DownloadFile(moduleKey);
+            string downloadFilePath = DownloadFile(fileKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("DownloadMachO: downloaded {0}", downloadFilePath);
@@ -728,7 +832,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 string pdbPath = data.Path;
                 Stream pdbStream = null;
 
-                if (assemblyPath != null) 
+                if (assemblyPath != null)
                 {
                     try
                     {
@@ -815,12 +919,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
-            while (symbolStore != null)
+            
+            sb.AppendLine("Current symbol store settings:");
+            
+            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
             {
-                sb.AppendLine(symbolStore.ToString());
-                symbolStore = symbolStore.BackingStore;
-            }
+                if (symbolStore is HttpSymbolStore httpSymbolStore)
+                {
+                    sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
+                }
+                else
+                {
+                    sb.AppendLine($"-> {symbolStore.ToString()}");
+                }
+            });
             return sb.ToString();
         }
 
@@ -856,7 +968,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match) 
+        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
             where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
         {
             while (symbolStore != null)
@@ -875,13 +987,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Enumerates the symbol stores.
+        /// </summary>
+        /// <typeparam name="T">type of symbol store or SymbolStore for all</typeparam>
+        /// <param name="callback">called for each store found</param>
+        public void ForEachSymbolStore<T>(Action<T> callback)
+            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+        {
+            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
+            while (symbolStore != null)
+            {
+                if (symbolStore is T store)
+                {
+                    callback(store);
+                }
+                symbolStore = symbolStore.BackingStore;
+            }
+        }
+
+        /// <summary>
         /// Quick fix for Path.GetFileName which incorrectly handles Windows-style paths on Linux
         /// </summary>
         /// <param name="pathName"> File path to be processed </param>
         /// <returns>Last component of path</returns>
         internal static string GetFileName(string pathName)
         {
-            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\'});
+            int pos = pathName.LastIndexOfAny(new char[] { '/', '\\' });
             if (pos < 0)
             {
                 return pathName;
@@ -894,11 +1025,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private static bool IsPathEqual(string path1, string path2)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return StringComparer.OrdinalIgnoreCase.Equals(path1, path2);
             }
-            else 
+            else
             {
                 return string.Equals(path1, path2);
             }

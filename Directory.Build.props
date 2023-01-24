@@ -16,5 +16,6 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+    <GitHubRepositoryName>diagnostics</GitHubRepositoryName>
   </PropertyGroup>
 </Project>

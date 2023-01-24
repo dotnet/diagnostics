@@ -30,6 +30,7 @@ private:
     PDEBUG_SYSTEM_OBJECTS m_system;
     PDEBUG_ADVANCED       m_advanced;
     IMachine*             m_targetMachine;
+    bool                  m_flushNeeded;
 
 public:
     DbgEngServices(IDebugClient* client);
@@ -40,6 +41,8 @@ public:
     //----------------------------------------------------------------------------
     // Helper functions
     //----------------------------------------------------------------------------
+
+    void FlushCheck(Extensions* extensions);
 
     IMachine* GetMachine();
 
@@ -181,6 +184,17 @@ public:
         PULONG64 offset);
 
     ULONG STDMETHODCALLTYPE GetOutputWidth();
+
+    HRESULT STDMETHODCALLTYPE SupportsDml(
+        PULONG supported);
+
+    void STDMETHODCALLTYPE OutputDmlString(
+        ULONG mask,
+        PCSTR message);
+
+    HRESULT STDMETHODCALLTYPE AddModuleSymbol(
+        void* param,
+        const char* symbolFileName);
 
     //----------------------------------------------------------------------------
     // IRemoteMemoryService

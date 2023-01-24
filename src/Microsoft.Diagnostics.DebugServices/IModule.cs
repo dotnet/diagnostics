@@ -74,18 +74,29 @@ namespace Microsoft.Diagnostics.DebugServices
         bool? IsFileLayout { get; }
 
         /// <summary>
-        /// PDB information for Windows PE modules (managed or native).
+        /// Returns PDB information for Windows PE modules (managed or native).
         /// </summary>
-        IEnumerable<PdbFileInfo> PdbFileInfos { get; }
+        IEnumerable<PdbFileInfo> GetPdbFileInfos();
 
         /// <summary>
-        /// Version information for Window PE modules (managed or native). 
+        /// Returns the Linux or MacOS symbol file name.
         /// </summary>
-        VersionData VersionData { get; }
+        string GetSymbolFileName();
 
         /// <summary>
-        /// This is the file version string containing the build version and commit id.
+        /// Returns the version information for the modules. 
         /// </summary>
-        string VersionString { get; }
+        Version GetVersionData();
+
+        /// <summary>
+        /// Returns the file version string containing the build version and commit id.
+        /// </summary>
+        string GetVersionString();
+
+        /// <summary>
+        /// Loads or downloads the module's symbol file and registers it with the underlying host debugger.
+        /// </summary>
+        /// <returns>the symbol file name</returns>
+        string LoadSymbols();
     }
 }

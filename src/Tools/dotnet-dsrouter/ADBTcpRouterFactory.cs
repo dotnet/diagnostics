@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         public override void Start()
         {
             // Enable port reverse.
-            _ownsPortReverse = ADBCommandExec.AdbAddPortReverse(_port, _logger);
+            _ownsPortReverse = ADBCommandExec.AdbAddPortReverse(_port, Logger);
 
             base.Start();
         }
@@ -136,7 +136,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             await base.Stop().ConfigureAwait(false);
 
             // Disable port reverse.
-            ADBCommandExec.AdbRemovePortReverse(_port, _ownsPortReverse, _logger);
+            ADBCommandExec.AdbRemovePortReverse(_port, _ownsPortReverse, Logger);
             _ownsPortReverse = false;
         }
     }

@@ -85,43 +85,60 @@ namespace Microsoft.Diagnostics
 
         public delegate void RuntimeStartupCallbackDelegate(ICorDebug cordbg, object parameter, HResult hresult);
 
-        public static HResult RegisterForRuntimeStartup(int pid, object parameter, out IntPtr unregisterToken, RuntimeStartupCallbackDelegate callback)
+        public static HResult RegisterForRuntimeStartup(int pid, object parameter, out (IntPtr, GCHandle) unregister, RuntimeStartupCallbackDelegate callback)
         {
-            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out IntPtr nativeParameter);
-            return _registerForRuntimeStartup((uint)pid, nativeCallback, nativeParameter, out unregisterToken);
+            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out GCHandle gchNativeCallback, out IntPtr nativeParameter);
+            HResult hr = _registerForRuntimeStartup((uint)pid, nativeCallback, nativeParameter, out IntPtr unregisterToken);
+            unregister = (unregisterToken, gchNativeCallback);
+            return hr;
         }
 
-        public static HResult RegisterForRuntimeStartupEx(int pid, string applicationGroupId, object parameter, out IntPtr unregisterToken, RuntimeStartupCallbackDelegate callback)
+        public static HResult RegisterForRuntimeStartupEx(int pid, string applicationGroupId, object parameter, out (IntPtr, GCHandle) unregister, RuntimeStartupCallbackDelegate callback)
         {
-            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out IntPtr nativeParameter);
-            return _registerForRuntimeStartupEx((uint)pid, applicationGroupId, nativeCallback, nativeParameter, out unregisterToken);
+            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter);
+            HResult hr = _registerForRuntimeStartupEx((uint)pid, applicationGroupId, nativeCallback, nativeParameter, out IntPtr unregisterToken);
+            unregister = (unregisterToken, nativeCallbackHandle);
+            return hr;
         }
 
-        public static HResult RegisterForRuntimeStartup3(int pid, string applicationGroupId, object parameter, IntPtr libraryProvider, out IntPtr unregisterToken, RuntimeStartupCallbackDelegate callback)
+        public static HResult RegisterForRuntimeStartup3(int pid, string applicationGroupId, object parameter, IntPtr libraryProvider, out (IntPtr, GCHandle) unregister, RuntimeStartupCallbackDelegate callback)
         {
             if (_registerForRuntimeStartup3 == default)
             {
                 throw new NotSupportedException("RegisterForRuntimeStartup3 not supported");
             }
-            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out IntPtr nativeParameter);
-            return _registerForRuntimeStartup3((uint)pid, applicationGroupId, libraryProvider, nativeCallback, nativeParameter, out unregisterToken);
+            IntPtr nativeCallback = RuntimeStartupCallback(parameter, callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter);
+            HResult hr = _registerForRuntimeStartup3((uint)pid, applicationGroupId, libraryProvider, nativeCallback, nativeParameter, out IntPtr unregisterToken);
+            unregister = (unregisterToken, nativeCallbackHandle);
+            return hr;
         }
 
-        private delegate void NativeRuntimeStartupCallbackDelegate(IntPtr cordbg, IntPtr parameter, HResult hresult);
+        private delegate void NativeRuntimeStartupCallbackDelegate(IntPtr cordbg, IntPtr parameter, int hresult);
 
-        private static IntPtr RuntimeStartupCallback(object parameter, RuntimeStartupCallbackDelegate callback, out IntPtr nativeParameter)
+        private static IntPtr RuntimeStartupCallback(object parameter, RuntimeStartupCallbackDelegate callback, out GCHandle nativeCallbackHandle, out IntPtr nativeParameter)
         {
-            NativeRuntimeStartupCallbackDelegate native = (IntPtr cordbg, IntPtr param, HResult hresult) => {
+            NativeRuntimeStartupCallbackDelegate native = (IntPtr cordbg, IntPtr param, int hresult) => {
                 GCHandle gch = GCHandle.FromIntPtr(param);
                 callback(ICorDebug.Create(cordbg), gch.Target, hresult);
                 gch.Free();
             };
+            // Need to keep native callback delegate alive until UnregisterForRuntimeStartup
+            nativeCallbackHandle = GCHandle.Alloc(native);
+
+            // Need to keep parameter alive until the callback is invoked
             GCHandle gchParameter = GCHandle.Alloc(parameter);
             nativeParameter = GCHandle.ToIntPtr(gchParameter);
+
+            // Return the function pointer for the native callback
             return Marshal.GetFunctionPointerForDelegate(native);
         }
 
-        public static HResult UnregisterForRuntimeStartup(IntPtr unregisterToken) =>  _unregisterForRuntimeStartup(unregisterToken);
+        public static HResult UnregisterForRuntimeStartup((IntPtr unregisterToken, GCHandle nativeCallbackHandle) unregister)
+        {
+            HResult hr = _unregisterForRuntimeStartup(unregister.unregisterToken);
+            unregister.nativeCallbackHandle.Free();
+            return hr;
+        }
 
         private const int HRESULT_ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
         private const int HRESULT_ERROR_BAD_LENGTH = unchecked((int)0x80070018);
@@ -243,7 +260,7 @@ namespace Microsoft.Diagnostics
         #region DbgShim pinvoke delegates
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-        private delegate HResult CreateProcessForLaunchDelegate(
+        private delegate int CreateProcessForLaunchDelegate(
             [MarshalAs(UnmanagedType.LPWStr)] string lpCommandLine,
             [MarshalAs(UnmanagedType.Bool)] bool bSuspendProcess,
             IntPtr lpEnvironment,
@@ -252,22 +269,22 @@ namespace Microsoft.Diagnostics
             out IntPtr suspendHandle);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-        private delegate HResult ResumeProcessDelegate(
+        private delegate int ResumeProcessDelegate(
             IntPtr handle);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
-        private delegate HResult CloseResumeHandleDelegate(
+        private delegate int CloseResumeHandleDelegate(
             IntPtr handle);
             
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult RegisterForRuntimeStartupDelegate(
+        private delegate int RegisterForRuntimeStartupDelegate(
             uint processId,
             IntPtr callback,
             IntPtr parameter,
             out IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult RegisterForRuntimeStartupExDelegate(
+        private delegate int RegisterForRuntimeStartupExDelegate(
             uint processId,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
             IntPtr callback,
@@ -275,7 +292,7 @@ namespace Microsoft.Diagnostics
             out IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult RegisterForRuntimeStartup3Delegate(
+        private delegate int RegisterForRuntimeStartup3Delegate(
             uint processId,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
             IntPtr libraryProvider,
@@ -284,24 +301,24 @@ namespace Microsoft.Diagnostics
             out IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private delegate HResult UnregisterForRuntimeStartupDelegate(
+        private delegate int UnregisterForRuntimeStartupDelegate(
             IntPtr unregisterToken);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult EnumerateCLRsDelegate(
+        private unsafe delegate int EnumerateCLRsDelegate(
             int processId,
             out IntPtr* handleArray,
             out char** stringArray,
             out int arrayLength);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CloseCLREnumerationDelegate(
+        private unsafe delegate int CloseCLREnumerationDelegate(
             IntPtr* handleArray,
             char** stringArray,
             int arrayLength);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateVersionStringFromModuleDelegate(
+        private unsafe delegate int CreateVersionStringFromModuleDelegate(
             int processId,
             [MarshalAs(UnmanagedType.LPWStr)] string moduleName,
             char* versionString,
@@ -309,25 +326,25 @@ namespace Microsoft.Diagnostics
             out int actualVersionStringLength);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersionDelegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersionDelegate(
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersionExDelegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersionExDelegate(
             int debuggerVersion,
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersion2Delegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersion2Delegate(
             int debuggerVersion,
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CreateDebuggingInterfaceFromVersion3Delegate(
+        private unsafe delegate int CreateDebuggingInterfaceFromVersion3Delegate(
             int debuggerVersion,
             [MarshalAs(UnmanagedType.LPWStr)] string versionString,
             [MarshalAs(UnmanagedType.LPWStr)] string applicationGroupId,
@@ -335,7 +352,7 @@ namespace Microsoft.Diagnostics
             out IntPtr cordbg);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate HResult CLRCreateInstanceDelegate(
+        private unsafe delegate int CLRCreateInstanceDelegate(
             in Guid clrsid,
             in Guid riid,
             out IntPtr pInterface);

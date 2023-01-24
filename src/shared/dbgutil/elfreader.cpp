@@ -103,7 +103,7 @@ public:
         {
             return false;
         }
-        if (PAL_fseek(m_file, (LONG)address, SEEK_SET) != 0)
+        if (PAL_fseek(m_file, (LONG_PTR)address, SEEK_SET) != 0)
         {
             return false;
         }
@@ -148,7 +148,14 @@ TryGetBuildIdFromFile(const WCHAR* modulePath, BYTE* buffer, ULONG bufferSize, P
     {
         if (reader.EnumerateProgramHeaders(0, nullptr, nullptr))
         {
-            return reader.GetBuildId(buffer, bufferSize, pBuildSize);
+            if (reader.GetBuildId(buffer, bufferSize, pBuildSize))
+            {
+                return true;
+            }
+        }
+        if (reader.GetBuildIdFromSectionHeader(0, buffer, bufferSize, pBuildSize))
+        {
+            return true;
         }
     }
     return false;
@@ -543,6 +550,40 @@ ElfReader::GetBuildId(BYTE* buffer, ULONG bufferSize, PULONG pBuildSize)
 
 #ifdef HOST_UNIX
 
+bool
+ElfReader::GetBuildIdFromSectionHeader(uint64_t baseAddress, BYTE* buffer, ULONG bufferSize, PULONG pBuildSize)
+{
+    Elf_Ehdr ehdr;
+    if (!ReadHeader(baseAddress, ehdr)) {
+        return false;
+    }
+    if (ehdr.e_shoff == 0 || ehdr.e_shnum <= 0) {
+        return false;
+    }
+    Elf_Shdr* shdrAddr = reinterpret_cast<Elf_Shdr*>(baseAddress + ehdr.e_shoff);
+    for (int sectionIndex = 0; sectionIndex < ehdr.e_shnum; sectionIndex++, shdrAddr++)
+    {
+        Elf_Shdr sh;
+        if (!ReadMemory(shdrAddr, &sh, sizeof(sh))) {
+            Trace("GetBuildIdFromSectionHeader: %2d shdr %p ReadMemory FAILED\n", sectionIndex, shdrAddr);
+            return false;
+        }
+        Trace("GetBuildIdFromSectionHeader: %2d shdr %p type %2d (%x) addr %016lx offset %016lx size %016lx link %08x info %08x name %4d\n",
+            sectionIndex, shdrAddr, sh.sh_type, sh.sh_type, sh.sh_addr, sh.sh_offset, sh.sh_size, sh.sh_link, sh.sh_info, sh.sh_name);
+
+        if (sh.sh_type == SHT_NOTE)
+        {
+            m_noteStart = baseAddress + sh.sh_offset;
+            m_noteEnd = baseAddress + sh.sh_offset + sh.sh_size;
+            if (GetBuildId(buffer, bufferSize, pBuildSize))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 //
 // Enumerate all the ELF info starting from the root program header. This
 // function doesn't cache any state in the ElfReader class.
@@ -615,14 +656,12 @@ ElfReader::EnumerateLinkMapEntries(Elf_Dyn* dynamicAddr)
         }
         // Read the module's name and make sure the memory is added to the core dump
         std::string moduleName;
-        int i = 0;
-        if (map.l_name != nullptr)
+        if (map.l_name != 0)
         {
-            for (; i < PATH_MAX; i++)
+            for (int i = 0; i < PATH_MAX; i++)
             {
                 char ch;
-                char* l_name = const_cast<char*>(map.l_name);
-                if (!ReadMemory(l_name + i, &ch, sizeof(ch))) {
+                if (!ReadMemory(map.l_name + i, &ch, sizeof(ch))) {
                     Trace("DSO: ReadMemory link_map name %p + %d FAILED\n", map.l_name, i);
                     break;
                 }
@@ -632,7 +671,7 @@ ElfReader::EnumerateLinkMapEntries(Elf_Dyn* dynamicAddr)
                 moduleName.append(1, ch);
             }
         }
-        Trace("\nDSO: link_map entry %p l_ld %p l_addr (Ehdr) %" PRIx " %s\n", linkMapAddr, map.l_ld, map.l_addr, moduleName.c_str());
+        Trace("\nDSO: link_map entry %p l_ld %p l_addr (Ehdr) %p l_name %p %s\n", linkMapAddr, map.l_ld, map.l_addr, map.l_name, moduleName.c_str());
 
         // Call the derived class for each module
         VisitModule(map.l_addr, moduleName);
@@ -646,11 +685,10 @@ ElfReader::EnumerateLinkMapEntries(Elf_Dyn* dynamicAddr)
 #endif // HOST_UNIX
 
 bool
-ElfReader::EnumerateProgramHeaders(uint64_t baseAddress, uint64_t* ploadbias, Elf_Dyn** pdynamicAddr)
+ElfReader::ReadHeader(uint64_t baseAddress, Elf_Ehdr& ehdr)
 {
-    Elf_Ehdr ehdr;
-    if (!ReadMemory((void*)baseAddress, &ehdr, sizeof(ehdr))) {
-        Trace("ERROR: EnumerateProgramHeaders ReadMemory(%p, %" PRIx ") ehdr FAILED\n", (void*)baseAddress, sizeof(ehdr));
+    if (!ReadMemory((void*)baseAddress, &ehdr, sizeof(Elf_Ehdr))) {
+        Trace("ERROR: EnumerateProgramHeaders ReadMemory(%p, %" PRIx ") ehdr FAILED\n", (void*)baseAddress, sizeof(Elf_Ehdr));
         return false;
     }
     if (memcmp(ehdr.e_ident, ElfMagic, strlen(ElfMagic)) != 0) {
@@ -673,9 +711,18 @@ ElfReader::EnumerateProgramHeaders(uint64_t baseAddress, uint64_t* ploadbias, El
     }
     Trace("ELF: type %d mach 0x%x ver %d flags 0x%x phnum %d phoff %" PRIxA " phentsize 0x%02x shnum %d shoff %" PRIxA " shentsize 0x%02x shstrndx %d\n",
         ehdr.e_type, ehdr.e_machine, ehdr.e_version, ehdr.e_flags, phnum, ehdr.e_phoff, ehdr.e_phentsize, ehdr.e_shnum, ehdr.e_shoff, ehdr.e_shentsize, ehdr.e_shstrndx);
+    return true;
+}
 
+bool
+ElfReader::EnumerateProgramHeaders(uint64_t baseAddress, uint64_t* ploadbias, Elf_Dyn** pdynamicAddr)
+{
+    Elf_Ehdr ehdr;
+    if (!ReadHeader(baseAddress, ehdr)) {
+        return false;
+    }
     Elf_Phdr* phdrAddr = reinterpret_cast<Elf_Phdr*>(baseAddress + ehdr.e_phoff);
-    return EnumerateProgramHeaders(phdrAddr, phnum, baseAddress, ploadbias, pdynamicAddr);
+    return EnumerateProgramHeaders(phdrAddr, ehdr.e_phnum, baseAddress, ploadbias, pdynamicAddr);
 }
 
 //
@@ -797,6 +844,8 @@ Elf64_Ehdr::Elf64_Ehdr()
     e_machine = EM_X86_64;
 #elif defined(TARGET_ARM64)
     e_machine = EM_AARCH64;
+#elif defined(TARGET_LOONGARCH64)
+    e_machine = EM_LOONGARCH;
 #endif
     e_flags = 0;
     e_version = 1;

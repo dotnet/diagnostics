@@ -33,12 +33,11 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="console"></param>
         /// <param name="processId">The process to report the stack from.</param>
         /// <param name="name">The name of process to report the stack from.</param>
-        /// <param name="output">The output path for the collected trace data.</param>
         /// <param name="duration">The duration of to trace the target for. </param>
         /// <returns></returns>
         private static async Task<int> Report(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration)
         {
-            string tempNetTraceFilename = Path.GetRandomFileName() + ".nettrace";
+            string tempNetTraceFilename = Path.Join(Path.GetTempPath(), Path.GetRandomFileName() + ".nettrace");
             string tempEtlxFilename = "";
 
             try
@@ -98,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     await copyTask;
                 }
 
-                // using the generated trace file, symbolocate and compute stacks.
+                // using the generated trace file, symbolicate and compute stacks.
                 tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
                 using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
                 using (var eventLog = new TraceLog(tempEtlxFilename))
@@ -199,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         public static Option ProcessIdOption() =>
             new Option(
                 aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.")
+                description: "The process id to report the stack.")
             {
                 Argument = new Argument<int>(name: "pid")
             };
@@ -207,7 +206,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         public static Option NameOption() =>
             new Option(
                 aliases: new[] { "-n", "--name" },
-                description: "The name of the process to collect the trace.")
+                description: "The name of the process to report the stack.")
             {
                 Argument = new Argument<string>(name: "name")
             };

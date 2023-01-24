@@ -366,6 +366,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
+        SkipIfArm(config);
+
         if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || OS.IsAlpine)
         {
             throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
@@ -380,12 +382,23 @@ public class SOS
             outputHelper.WriteLine("Starting {0}", testName);
             outputHelper.WriteLine("{");
 
-            string program = "/usr/bin/python";
-            if (!File.Exists(program))
-            {
-                throw new ArgumentException($"{program} does not exists");
-            }
+            string program;
             var arguments = new StringBuilder();
+            if (OS.Kind == OSKind.OSX)
+            {
+                program = "xcrun";
+                arguments.Append("python3 ");
+            }
+            else 
+            {
+                // We should verify what python version this is. 2.7 is out of 
+                // support for a while now, but we have old OS's.
+                program = "/usr/bin/python";
+                if (!File.Exists(program))
+                {
+                    throw new ArgumentException($"{program} does not exists");
+                }
+            }
             string repoRootDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["RepoRootDir"]);
 
             // Get test python script path
@@ -421,7 +434,7 @@ public class SOS
 
             // Create the python script process runner
             ProcessRunner processRunner = new ProcessRunner(program, arguments.ToString()).
-                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot()).
+                WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                 WithTimeout(TimeSpan.FromMinutes(10)).
                 WithExpectedExitCode(0).

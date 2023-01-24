@@ -2,15 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 
@@ -169,11 +165,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         else
                         {
                             // Find or download the ELF image, if one.
-                            Reader virtualAddressReader = module.Services.GetService<ELFFile>()?.VirtualAddressReader;
+                            Reader virtualAddressReader = module.Services.GetService<ELFModule>()?.VirtualAddressReader;
                             if (virtualAddressReader is null)
                             {
                                 // Find or download the MachO image, if one.
-                                virtualAddressReader = module.Services.GetService<MachOFile>()?.VirtualAddressReader;
+                                virtualAddressReader = module.Services.GetService<MachOModule>()?.VirtualAddressReader;
                             }
                             if (virtualAddressReader is not null)
                             {
@@ -229,7 +225,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             PEMemoryBlock relocations = reader.GetSectionData(".reloc");
             if (relocations.Length > 0)
             {
-                ulong baseDelta = module.ImageBase - reader.PEHeaders.PEHeader.ImageBase;
+                ulong baseDelta = unchecked(module.ImageBase - reader.PEHeaders.PEHeader.ImageBase);
 #if TRACE_VERBOSE
                 Trace.TraceInformation("ApplyRelocations: dataVA {0:X8} dataCB {1} baseDelta: {2:X16}", dataVA, data.Length, baseDelta);
 #endif
@@ -271,7 +267,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         if ((offset + sizeof(uint)) <= data.Length)
                                         {
                                             uint value = BitConverter.ToUInt32(data, offset);
-                                            value += (uint)baseDelta;
+                                            unchecked { value += (uint)baseDelta; }
                                             byte[] source = BitConverter.GetBytes(value);
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }

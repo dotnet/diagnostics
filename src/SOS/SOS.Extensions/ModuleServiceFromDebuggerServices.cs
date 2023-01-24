@@ -4,8 +4,9 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime.Interop;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -23,7 +24,7 @@ namespace SOS.Extensions
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
 
             private readonly ModuleServiceFromDebuggerServices _moduleService;
-            private VersionData _versionData;
+            private Version _version;
             private string _versionString;
 
             public ModuleFromDebuggerServices(
@@ -61,50 +62,54 @@ namespace SOS.Extensions
 
             public override uint? IndexTimeStamp { get; }
 
-            public override VersionData VersionData
+            public override Version GetVersionData()
             {
-                get
+                if (InitializeValue(Module.Flags.InitializeVersion))
                 {
-                    if (InitializeValue(Module.Flags.InitializeVersion))
+                    HResult hr = _moduleService._debuggerServices.GetModuleVersionInformation(ModuleIndex, out VS_FIXEDFILEINFO fileInfo);
+                    if (hr.IsOK)
                     {
-                        int hr = _moduleService._debuggerServices.GetModuleVersionInformation(ModuleIndex, out VS_FIXEDFILEINFO fileInfo);
-                        if (hr == HResult.S_OK)
+                        int major = (int)(fileInfo.dwFileVersionMS >> 16);
+                        int minor = (int)(fileInfo.dwFileVersionMS & 0xffff);
+                        int build = (int)(fileInfo.dwFileVersionLS >> 16);
+                        int revision = (int)(fileInfo.dwFileVersionLS & 0xffff);
+                        _version = new Version(major, minor, build, revision);
+                    }
+                    else
+                    {
+                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
                         {
-                            int major = (int)(fileInfo.dwFileVersionMS >> 16);
-                            int minor = (int)(fileInfo.dwFileVersionMS & 0xffff);
-                            int revision = (int)(fileInfo.dwFileVersionLS >> 16);
-                            int patch = (int)(fileInfo.dwFileVersionLS & 0xffff);
-                            _versionData = new VersionData(major, minor, revision, patch);
-                        }
-                        else
-                        {
-                            if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
-                            {
-                                _versionData = GetVersion();
-                            }
+                            _version = GetVersionInner();
                         }
                     }
-                    return _versionData;
                 }
+                return _version;
             }
 
-            public override string VersionString
+            public override string GetVersionString()
             {
-                get
+                if (InitializeValue(Module.Flags.InitializeProductVersion))
                 {
-                    if (InitializeValue(Module.Flags.InitializeProductVersion))
+                    HResult hr = _moduleService._debuggerServices.GetModuleVersionString(ModuleIndex, out _versionString);
+                    if (!hr.IsOK)
                     {
-                        int hr = _moduleService._debuggerServices.GetModuleVersionString(ModuleIndex, out _versionString);
-                        if (hr != HResult.S_OK)
+                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
                         {
-                            if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
-                            {
-                                _versionString = _moduleService.GetVersionString(ImageBase);
-                            }
+                            _versionString = _moduleService.GetVersionString(this);
                         }
                     }
-                    return _versionString;
                 }
+                return _versionString;
+            }
+
+            public override string LoadSymbols()
+            {
+                string symbolFile = _moduleService.SymbolService.DownloadSymbolFile(this);
+                if (symbolFile is not null)
+                {
+                    _moduleService._debuggerServices.AddModuleSymbol(symbolFile);
+                }
+                return symbolFile;
             }
 
             #endregion
@@ -113,19 +118,19 @@ namespace SOS.Extensions
 
             bool IModuleSymbols.TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
             {
-                return _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement) == HResult.S_OK;
+                return _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement).IsOK;
             }
 
             bool IModuleSymbols.TryGetSymbolAddress(string name, out ulong address)
             {
-                return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address) == HResult.S_OK;
+                return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address).IsOK;
             }
 
             #endregion
 
             protected override bool TryGetSymbolAddressInner(string name, out ulong address)
             {
-                return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address) == HResult.S_OK;
+                return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address).IsOK;
             }
 
             protected override ModuleService ModuleService => _moduleService;
@@ -148,19 +153,19 @@ namespace SOS.Extensions
             var modules = new Dictionary<ulong, IModule>();
 
             HResult hr = _debuggerServices.GetNumberModules(out uint loadedModules, out uint unloadedModules);
-            if (hr == HResult.S_OK)
+            if (hr.IsOK)
             {
                 for (int moduleIndex = 0; moduleIndex < loadedModules; moduleIndex++)
                 {
                     hr = _debuggerServices.GetModuleInfo(moduleIndex, out ulong imageBase, out ulong imageSize, out uint timestamp, out uint checksum);
-                    if (hr == HResult.S_OK)
+                    if (hr.IsOK)
                     {
                         hr = _debuggerServices.GetModuleName(moduleIndex, out string imageName);
                         if (hr < HResult.S_OK)
                         {
                             Trace.TraceError("GetModuleName({0}) {1:X16} FAILED {2:X8}", moduleIndex, imageBase, hr);
                         }
-                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, (uint)imageSize, timestamp);
+                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, unchecked((uint)imageSize), timestamp);
                         if (!modules.TryGetValue(imageBase, out IModule original))
                         {
                             modules.Add(imageBase, module);

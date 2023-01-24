@@ -24,6 +24,8 @@ SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.Byte\[\]!\$0_)*System.Byte\[
 VERIFY:\s+Name:        System.Byte\[\]\s+
 VERIFY:\s+Array:       Rank 1, Number of elements 100, Type Byte\s+
 
+SOSCOMMAND:ObjSize <PREVPOUT>
+
 SOSCOMMAND:GCWhere <PREVPOUT>
 # we care that the Gen is 4 (POH)
 VERIFY:<HEXVAL>\s+4\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
@@ -35,6 +37,11 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+19\]\s+
+
+SOSCOMMAND:VerifyHeap
+VERIFY:\s*No heap corruption detected.\s*
+
+SOSCOMMAND:GCHeapStat
 
 SOSCOMMAND:DumpHeap
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+
@@ -54,13 +61,10 @@ VERIFY:\s+Jit code heap:\s+
 VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes\.\s+
 VERIFY:\s+Total LoaderHeap size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
-VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
-VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
-VERIFY:\s+generation\s+<DECVAL>\s+starts\s+at\s+0x<HEXVAL>\s+
 VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\(<DECVAL>\)\s+0x<HEXVAL>\(<DECVAL>\)\s+
-VERIFY:\s+Large object heap starts at 0x<HEXVAL>\s+
-VERIFY:\s+Pinned object heap starts at 0x<HEXVAL>\s+
+VERIFY:\s+Large object heap.*
+VERIFY:\s+Pinned object heap.*
 
 # Continue to the next DebugBreak
 CONTINUE

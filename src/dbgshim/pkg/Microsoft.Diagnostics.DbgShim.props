@@ -3,14 +3,12 @@
       <TargetFramework>netstandard2.0</TargetFramework>
       <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
       <!-- IncludeBuildOutput needs to be set to true to make NuGet include the passed in debug symbol files. -->
-      <IncludeBuildOutput>false</IncludeBuildOutput>
+      <IncludeBuildOutput>true</IncludeBuildOutput>
       <IncludeSymbols>true</IncludeSymbols>
-      <DebugSymbols>false</DebugSymbols>
-      <DebugType>none</DebugType>
       <IsPackable>true</IsPackable>
-      <AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>.pdb;.dbg;.dwarf</AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>
+      <AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>$(SymbolsSuffix)</AllowedOutputExtensionsInSymbolsPackageBuildOutputFolder>
       <!-- When KeepNativeSymbols is set, debug symbols are kept in the .so files.  Separate symbol files do not exist that need to be packed. -->
-      <!-- <TargetsForTfmSpecificDebugSymbolsInPackage Condition="'$(KeepNativeSymbols)' != 'true'">$(TargetsForTfmSpecificDebugSymbolsInPackage);AddRuntimeSpecificNativeSymbolToPackage</TargetsForTfmSpecificDebugSymbolsInPackage> -->
+      <TargetsForTfmSpecificDebugSymbolsInPackage Condition="'$(KeepNativeSymbols)' != 'true'">$(TargetsForTfmSpecificDebugSymbolsInPackage);AddRuntimeSpecificNativeSymbolToPackage</TargetsForTfmSpecificDebugSymbolsInPackage>
       <UseRuntimePackageDisclaimer>true</UseRuntimePackageDisclaimer>
       <!-- This is a native package and doesn't contain any ref/lib assets. -->
       <NoWarn>$(NoWarn);NU5128</NoWarn>
@@ -18,14 +16,22 @@
 
     <ItemGroup>
       <None Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)"
-            PackagePath="runtimes/$(OutputRid)/native"
+            PackagePath="runtimes/$(PackageRID)/native"
             Pack="true" />
     </ItemGroup>
 
     <Target Name="AddRuntimeSpecificNativeSymbolToPackage">
+      <PropertyGroup>
+        <_SymbolFilePath>$([MSBuild]::NormalizePath('$(NativeBinDir)', '$(LibPrefix)dbgshim$(LibSuffix)$(SymbolsSuffix)'))</_SymbolFilePath>
+        <_SymbolFilePath Condition="$(PackageRID.StartsWith('win'))">$([MSBuild]::NormalizePath('$(NativeBinDir)', 'PDB', '$(LibPrefix)dbgshim$(SymbolsSuffix)'))</_SymbolFilePath>
+      </PropertyGroup>
+
+      <Error Condition="!Exists('$(_SymbolFilePath)')"
+            Text="Symbol file to package not found at: $(_SymbolFilePath)"/>
+
       <ItemGroup>
-        <TfmSpecificDebugSymbolsFile Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)$(SymbolsSuffix)"
-                                     TargetPath="/runtimes/$(OutputRid)/native"
+        <TfmSpecificDebugSymbolsFile Include="$(_SymbolFilePath)"
+                                     TargetPath="/runtimes/$(PackageRID)/native"
                                      TargetFramework="$(TargetFramework)" />
       </ItemGroup>
     </Target>

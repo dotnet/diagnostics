@@ -163,10 +163,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
-
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
                 {
-                    string processMainModuleFileName = "";
+                    string processMainModuleFileName = $"Process{processId}";
 
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
@@ -193,23 +192,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         // Reading the process MainModule filename can fail if the target process closes
                         // or isn't fully setup. Retry a few times to attempt to address the issue
-                        for (int attempts = 0; true; attempts++)
+                        for (int attempts = 0; attempts < 10; attempts++)
                         {
                             try
                             {
                                 processMainModuleFileName = process.MainModule.FileName;
                                 break;
                             }
+
                             catch
                             {
-                                if (attempts > 10)
-                                {
-                                    Console.Error.WriteLine("Unable to examine process.");
-                                    return ReturnCode.SessionCreationError;
-                                }
                                 Thread.Sleep(200);
                             }
                         }
+
                     }
 
                     if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
@@ -245,6 +241,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         catch (DiagnosticsClientException e)
                         {
                             Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                            return ReturnCode.SessionCreationError;
+                        }
+                        catch (UnauthorizedAccessException e)
+                        {
+                            Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
+                            return ReturnCode.SessionCreationError;
                         }
 
                         if (session == null)
@@ -301,7 +303,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
                                 printStatus();
 
-                            // if the CopyToAsync ended early (target program exited, etc.), the we don't need to stop the session.
+                            // if the CopyToAsync ended early (target program exited, etc.), then we don't need to stop the session.
                             if (!copyTask.Wait(0))
                             {
                                 // Behavior concerning Enter moving text in the terminal buffer when at the bottom of the buffer
@@ -348,6 +350,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
+            catch (CommandLineErrorException e)
+            {
+                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                collectionStopped = true;
+                ret = ReturnCode.TracingError;
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
@@ -361,20 +369,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (console.GetTerminal() != null)
                         Console.CursorVisible = true;
                 }
-                
+            
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
                     {
                         ret = ReturnCode.TracingError;
                     }
-
-                    // If we launched a child proc that hasn't exited yet, terminate it before we exit.
-                    if (!ProcessLauncher.Launcher.ChildProc.HasExited)
-                    {
-                        ProcessLauncher.Launcher.ChildProc.Kill();
-                    }
                 }
+                ProcessLauncher.Launcher.Cleanup();
             }
             return await Task.FromResult(ret);
         }

@@ -39,18 +39,18 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
     DumpHeap (dumpheap)                DumpStack (dumpstack)
     DumpVC                             EEStack (eestack)
     GCRoot (gcroot)                    CLRStack (clrstack)
-    PrintException (pe)                GCInfo
-                                       EHInfo
+    ObjSize                            GCInfo
+    PrintException (pe)                EHInfo
                                        bpmd (bpmd)
 
     Examining CLR data structures      Diagnostic Utilities
     -----------------------------      -----------------------------
     DumpDomain (dumpdomain)            VerifyHeap
-    EEHeap (eeheap)                    FindAppDomain          
-    Name2EE (name2ee)                  DumpLog (dumplog)
-    DumpMT (dumpmt)
-    DumpClass (dumpclass)
-    DumpMD (dumpmd)                    
+    EEHeap (eeheap)                    FindAppDomain
+    Name2EE (name2ee)                  GCHandles
+    DumpMT (dumpmt)                    DumpLog (dumplog)
+    DumpClass (dumpclass)              SuppressJitOptimization
+    DumpMD (dumpmd)                    ThreadPool (threadpool)
     Token2EE                           
     DumpModule (dumpmodule)
     DumpAssembly
@@ -98,6 +98,7 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
 |**EHInfo** [\<*MethodDesc address*>] [\<*Code address*>]|Displays the exception handling blocks in a specified method.  This command displays the code addresses and offsets for the clause block (the `try` block) and the handler block (the `catch` block).|
 |**FAQ**|Displays frequently asked questions.|
 |**FindAppDomain** \<*Object address*>|Determines the application domain of an object at the specified address.|
+|**GCHandles** [**-perdomain**]|Displays statistics about garbage collector handles in the process.<br /><br /> The **-perdomain** option arranges the statistics by application domain.<br /><br /> Use the **GCHandles** command to find memory leaks caused by garbage collector handle leaks. For example, a memory leak occurs when code retains a large array because a strong garbage collector handle still points to it, and the handle is discarded without freeing it.|
 |**GCInfo** \<*MethodDesc address*>\<*Code address*>|Displays data that indicates when registers or stack locations contain managed objects. If a garbage collection occurs, the collector must know the locations of references to objects so it can update them with new object pointer values.|
 |**GCRoot** [**-nostacks**] [**-all**] \<*Object address*>|Displays information about references (or roots) to an object at the specified address.<br /><br /> The **GCRoot** command examines the entire managed heap and the handle table for handles within other objects and handles on the stack. Each stack is then searched for pointers to objects, and the finalizer queue is also searched.<br /><br /> This command does not determine whether a stack root is valid or is discarded. Use the **clrstack** and **U** commands to disassemble the frame that the local or argument value belongs to in order to determine if the stack root is still in use.<br /><br /> The **-nostacks** option restricts the search to garbage collector handles and reachable objects.<br /><br /> The **-all** option forces all roots to be displayed instead of just the unique roots.|
 |**GCWhere**  *\<object address>*|Displays the location and size in the garbage collection heap of the argument passed in. When the argument lies in the managed heap but is not a valid object address, the size is displayed as 0 (zero).|
@@ -109,6 +110,7 @@ importance. Shortcut names for popular functions are listed in parenthesis. Type
 |**HistRoot** *\<root>*|Displays information related to both promotions and relocations of the specified root.<br /><br /> The root value can be used to track the movement of an object through the garbage collections.|
 |**IP2MD** (**ip2md**) \<*Code address*>|Displays the `MethodDesc` structure at the specified address in code that has been JIT-compiled.|
 |**Name2EE** (**name2ee**) \<*module name*> \<*type or method name*><br /><br /> -or-<br /><br /> **Name2EE** \<*module name*>**!**\<*type or method name*>|Displays the `MethodTable` structure and `EEClass` structure for the specified type or method in the specified module.<br /><br /> The specified module must be loaded in the process.<br /><br /> To get the proper type name you can browse the module by using the an IL reflection tool like Ildasm or ILSpy. You can also pass `*` as the module name parameter to search all loaded managed modules. The *module name* parameter can also be the debugger's name for a module, such as `mscorlib` or `image00400000`.<br /><br /> This command supports the Windows debugger syntax of <`module`>`!`<`type`>. The type must be fully qualified.|
+|**ObjSize** [\<*Object address*>] &#124; [**-aggregate**] [**-stat**]|Displays the size of the specified object. If you do not specify any parameters, the **ObjSize** command displays the size of all objects found on managed threads, displays all garbage collector handles in the process, and totals the size of any objects pointed to by those handles. The **ObjSize** command includes the size of all child objects in addition to the parent.<br /><br /> The **-aggregate** option can be used in conjunction with the **-stat** argument to get a detailed view of the types that are still rooted. By using **!dumpheap -stat** and **!objsize -aggregate -stat**, you can determine which objects are no longer rooted and diagnose various memory issues.|
 |**PrintException** [**-nested**] [**-lines**] [\<*Exception object address*>]<br /><br /> -or-<br /><br /> **PE** [**-nested**] [\<*Exception object address*>]|Displays and formats fields of any object derived from the <xref:System.Exception> class at the specified address. If you do not specify an address, the **PrintException** command displays the last exception thrown on the current thread.<br /><br /> The **-nested** option displays details about nested exception objects.<br /><br /> The **-lines** option displays source information, if available.<br /><br /> You can use this command to format and view the `_stackTrace` field, which is a binary array.|
 |**SyncBlk** [**-all** &#124; \<*syncblk number*>]|Displays the specified `SyncBlock` structure or all `SyncBlock` structures.  If you do not pass any arguments, the **SyncBlk** command displays the `SyncBlock` structure corresponding to objects that are owned by a thread.<br /><br /> A `SyncBlock` structure is a container for extra information that does not need to be created for every object. It can hold COM interop data, hash codes, and locking information for thread-safe operations.|
 |**SOSFlush**|Flushes an internal SOS cache.|

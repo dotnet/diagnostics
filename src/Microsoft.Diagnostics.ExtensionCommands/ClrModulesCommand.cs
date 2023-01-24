@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using System;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -39,17 +40,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         WriteLine("    AssemblyName:    {0}", module.AssemblyName);
                         WriteLine("    ImageBase:       {0:X16}", module.ImageBase);
                         WriteLine("    Size:            {0:X8}", module.Size);
-                        WriteLine("    Address:         {0:X16}", module.Address);
+                        WriteLine("    ModuleAddress:   {0:X16}", module.Address);
+                        WriteLine("    AssemblyAddress: {0:X16}", module.AssemblyAddress);
                         WriteLine("    IsPEFile:        {0}", module.IsPEFile);
                         WriteLine("    Layout:          {0}", module.Layout);
                         WriteLine("    IsDynamic:       {0}", module.IsDynamic);
                         WriteLine("    MetadataAddress: {0:X16}", module.MetadataAddress);
                         WriteLine("    MetadataSize:    {0:X16}", module.MetadataLength);
                         WriteLine("    PdbInfo:         {0}", module.Pdb?.ToString() ?? "<none>");
-                        VersionData version = null;
+                        Version version = null;
                         try
                         {
-                            version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).VersionData;
+                            version = ModuleService.GetModuleFromBaseAddress(module.ImageBase).GetVersionData();
                         }
                         catch (DiagnosticsException)
                         {

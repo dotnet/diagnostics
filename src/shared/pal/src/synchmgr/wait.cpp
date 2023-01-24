@@ -33,13 +33,8 @@ SET_DEFAULT_DEBUG_CHANNEL(SYNC);
 
 using namespace CorUnix;
 
-static PalObjectTypeId sg_rgWaitObjectsIds[] =
-    {
-        otiProcess,
-        otiThread
-    };
-static CAllowedObjectTypes sg_aotWaitObject(sg_rgWaitObjectsIds,
-    sizeof(sg_rgWaitObjectsIds)/sizeof(sg_rgWaitObjectsIds[0]));
+static PalObjectTypeId sg_rgWaitObjectsIds[] = { otiProcess, otiThread };
+static CAllowedObjectTypes sg_aotWaitObject(sg_rgWaitObjectsIds, ARRAY_SIZE(sg_rgWaitObjectsIds));
 
 /*++
 Function:

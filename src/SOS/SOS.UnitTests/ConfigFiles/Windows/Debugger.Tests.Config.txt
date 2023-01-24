@@ -30,23 +30,23 @@
   <TestDesktop Condition="'$(InternalReleaseTesting)' == 'true'">false</TestDesktop>
   <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
 
-  <!-- Build the debuggee for this framework version but run it on latest -->
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '5')">net5.0</BuildProjectFrameworkLatest>
-  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '3.1')">netcoreapp3.1</BuildProjectFrameworkLatest>
 
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFramework>net462</DesktopFramework>
 
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
 
-  <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
-  <CliPath>$(RepoRootDir)\.dotnet\dotnet.exe</CliPath>
+  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
   <NuGetPackageFeeds>
+      dotnet7=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet7/nuget/v3/index.json;
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
       dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
       dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
@@ -66,11 +66,20 @@
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <RuntimeFrameworkVersion>$(SingleFileRuntimeLatestVersion)</RuntimeFrameworkVersion>
           <PublishSingleFile>true</PublishSingleFile>
           <!-- Add the symbol server so SOS can find DAC/DBI for single file apps which
                may not have been built with the runtime pointed by RuntimeSymbolsPath
                since we use the arcade provided SDK (in .dotnet) to build them. -->
+          <SetSymbolServer>-ms</SetSymbolServer>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+        </Option>
+        <Option Condition="'$(RuntimeVersion60)' != ''">
+          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+          <BuildProjectFramework>net6.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(SingleFileRuntime60Version)</RuntimeFrameworkVersion>
+          <PublishSingleFile>true</PublishSingleFile>
           <SetSymbolServer>-ms</SetSymbolServer>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
         </Option>
@@ -82,14 +91,9 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
-        <Option Condition="'$(RuntimeVersion50)' != ''">
-          <BuildProjectFramework>net5.0</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(RuntimeVersion31)' != ''">
-          <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-          <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+        <Option Condition="'$(RuntimeVersion60)' != ''">
+          <BuildProjectFramework>net6.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
         </Option>
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
@@ -102,7 +106,15 @@
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <RuntimeFrameworkVersion>$(SingleFileRuntimeLatestVersion)</RuntimeFrameworkVersion>
+              <PublishSingleFile>true</PublishSingleFile>
+              <SetSymbolServer>-ms</SetSymbolServer>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersion60)' != ''">
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <BuildProjectFramework>net6.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(SingleFileRuntime60Version)</RuntimeFrameworkVersion>
               <PublishSingleFile>true</PublishSingleFile>
               <SetSymbolServer>-ms</SetSymbolServer>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
@@ -111,13 +123,9 @@
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(RuntimeVersion50)' != ''">
-              <BuildProjectFramework>net5.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(RuntimeVersion31)' != ''">
-              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
+            <Option Condition="'$(RuntimeVersion60)' != ''">
+              <BuildProjectFramework>net6.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
             </Option>
           </Options>
         </Option>
@@ -141,24 +149,19 @@
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
               <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <RuntimeFrameworkVersion>$(SingleFileRuntimeLatestVersion)</RuntimeFrameworkVersion>
               <PublishSingleFile>true</PublishSingleFile>
               <SetSymbolServer>-ms</SetSymbolServer>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-            </Option>
+            </Option> 
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
             </Option>
-            <Option Condition="'$(AspNetCoreVersion50)' != ''">
-              <BuildProjectFramework>net5.0</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion50)</RuntimeFrameworkVersion>
-              <FrameworkVersion>$(AspNetCoreVersion50)</FrameworkVersion>
-            </Option>
-            <Option Condition="'$(AspNetCoreVersion31)' != ''">
-              <BuildProjectFramework>netcoreapp3.1</BuildProjectFramework>
-              <RuntimeFrameworkVersion>$(RuntimeVersion31)</RuntimeFrameworkVersion>
-              <FrameworkVersion>$(AspNetCoreVersion31)</FrameworkVersion>
+            <Option Condition="'$(AspNetCoreVersion60)' != ''">
+              <BuildProjectFramework>net6.0</BuildProjectFramework>
+              <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+              <FrameworkVersion>$(AspNetCoreVersion60)</FrameworkVersion>
             </Option>
           </Options>
         </Option>
@@ -198,7 +201,7 @@
 
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
   <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
-  <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\netcoreapp3.1\publish\dotnet-dump.dll</DotNetDumpPath>
+  <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\net6.0\publish\dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 </Configuration>

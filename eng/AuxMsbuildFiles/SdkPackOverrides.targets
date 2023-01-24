@@ -1,0 +1,19 @@
+<Project InitialTargets="OverrideTestingVersions">
+  <Target Name="OverrideTestingVersions">
+    <ItemGroup>
+      <KnownFrameworkReference>
+        <TargetingPackVersion Condition="'%(TargetFramework)' == 'net6.0'">$(MicrosoftNETCoreApp60Version)</TargetingPackVersion>
+        <LatestRuntimeFrameworkVersion Condition="'%(TargetFramework)' == 'net6.0'">$(MicrosoftNETCoreApp60Version)</LatestRuntimeFrameworkVersion>
+      </KnownFrameworkReference>
+      <KnownAppHostPack>
+        <AppHostPackVersion Condition="'%(TargetFramework)' == 'net6.0'">$(MicrosoftNETCoreApp60Version)</AppHostPackVersion>
+      </KnownAppHostPack>
+      <KnownCrossgen2Pack>
+        <Crossgen2PackVersion Condition="'%(TargetFramework)' == 'net6.0'">$(MicrosoftNETCoreApp60Version)</Crossgen2PackVersion>
+      </KnownCrossgen2Pack>
+      <KnownRuntimePack>
+        <LatestRuntimeFrameworkVersion Condition="'%(TargetFramework)' == 'net6.0'">$(MicrosoftNETCoreApp60Version)</LatestRuntimeFrameworkVersion>
+      </KnownRuntimePack>
+    </ItemGroup>
+  </Target>
+</Project>

@@ -26,14 +26,15 @@ Object Inspection                  Examining code and stacks
 DumpObj (dumpobj)                  Threads (clrthreads)
 DumpALC (dumpalc)                  ThreadState
 DumpArray                          IP2MD (ip2md)
-DumpAsync (dumpasync)              u (clru)
-DumpDelegate (dumpdelegate)        DumpStack (dumpstack)
-DumpStackObjects (dso)             EEStack (eestack)
-DumpHeap (dumpheap)                ClrStack (clrstack)
-DumpVC                             GCInfo
-FinalizeQueue (finalizequeue)      EHInfo
-GCRoot (gcroot)                    bpmd (bpmd)
+DumpDelegate (dumpdelegate)        u (clru)
+DumpStackObjects (dso)             DumpStack (dumpstack)
+DumpHeap (dumpheap)                EEStack (eestack)
+DumpVC                             ClrStack (clrstack)
+FinalizeQueue (finalizequeue)      GCInfo
+GCRoot (gcroot)                    EHInfo
+ObjSize (objsize)                  bpmd (bpmd)
 PrintException (pe)
+TraverseHeap (traverseheap)
                                    
 Examining CLR data structures      Diagnostic Utilities
 -----------------------------      -----------------------------
@@ -42,12 +43,12 @@ EEHeap (eeheap)                    FindAppDomain
 Name2EE (name2ee)                  DumpLog (dumplog)
 SyncBlk (syncblk)                  SuppressJitOptimization
 DumpMT (dumpmt)                    ThreadPool (threadpool)
-DumpClass (dumpclass)
-DumpMD (dumpmd)                    
-Token2EE                           
+DumpClass (dumpclass)              AnalyzeOOM (analyzeoom)
+DumpMD (dumpmd)                    VerifyObj (verifyobj)
+Token2EE                           GCHandles (gchandles)
 DumpModule (dumpmodule)
 DumpAssembly (dumpassembly)
-DumpRuntimeTypes
+DumpRuntimeTypes (dumpruntimetypes)
 DumpIL (dumpil)
 DumpSig
 DumpSigElem
@@ -227,23 +228,6 @@ specified object was loaded.
         0000000000000000  4000eb0      b30                       0   static 0000000000000000 s_asyncLocalCurrent
         00007ff7c9cb26d0  4000001       48 ...ependencyResolver  0 instance 000001c28000d1c0 _resolver
 
-\\
-
-COMMAND: dumpasync.
-DumpAsync [-addr <Object Address>]
-          [-mt <MethodTable address>]
-          [-type <partial type name>]
-          [-tasks]
-          [-completed]
-          [-fields]
-          [-stacks]
-          [-roots]
-
-DumpAsync traverses the garbage collected heap, looking for objects representing
-async state machines as created when an async method's state is transferred to the
-heap.  This command recognizes async state machines defined as "async void", "async Task",
-"async Task<T>", "async ValueTask", and "async ValueTask<T>".  It also optionally supports
-any other tasks.
 \\
 
 COMMAND: dso.
@@ -460,27 +444,6 @@ DumpVC is quite a specialized function. Some managed programs make heavy use
 of value classes, while others do not.
 \\
 
-COMMAND: finalizequeue
-FinalizeQueue [-detail] | [-allReady] [-short]
-
-Displays all objects registered for finalization.
-The "-detail" option displays extra information about any SyncBlocks that need
-to be cleaned up. This data structure is cached and cleaned up by the 
-finalizer thread when it runs.
-
-The "-allReady" option displays all objects that are ready for finalization,
-regardless of whether they are already marked by the garbage collection
-as such, or will be marked by the next garbage collection. The objects that
-are in the "ready for finalization" list are finalizable objects that are
-no longer rooted. This option can be very expensive, because it verifies
-whether all the objects in the finalizable queues are still rooted.
-
-The "-short" option limits the output to the address of each object. If it is
-used in conjunction with -allReady, it enumerates all objects that have
-a finalizer that are no longer rooted. If it is used independently, it lists
-all objects in the finalizable and "ready for finalization" queues.
-\\
-
 COMMAND: gcroot.
 GCRoot [-nostacks] [-all] <Object address>
 
@@ -505,6 +468,99 @@ objects, there is a -nostacks option.
 The -all option forces all roots to be displayed instead of just the unique roots.
 \\
 
+COMMAND: objsize.
+ObjSize [<Object address>]
+
+With no parameters, ObjSize lists the size of all objects found on managed 
+threads. It also enumerates all GCHandles in the process, and totals the size 
+of any objects pointed to by those handles. In calculating object size, 
+ObjSize includes the size of all child objects in addition to the parent.
+
+For example, DumpObj lists a size of 20 bytes for this Customer object:
+
+    (lldb) dumpobj a79d40
+    Name: Customer
+    MethodTable: 009038ec
+    EEClass: 03ee1b84
+    Size: 20(0x14) bytes
+     (C:\pub\unittest.exe)
+    Fields:
+          MT    Field   Offset                 Type       Attr    Value Name
+    009038ec  4000008        4                CLASS   instance 00a79ce4 name
+    009038ec  4000009        8                CLASS   instance 00a79d2c bank
+    009038ec  400000a        c       System.Boolean   instance        1 valid
+
+but ObjSize lists 152 bytes:
+
+    (lldb) ObjSize a79d40
+    sizeof(00a79d40) =      152 (    0x98) bytes (Customer)
+
+This is because a Customer points to a Bank, has a name, and the Bank points to
+an Address string. You can use ObjSize to identify any particularly large 
+objects, such as a managed cache in a web server.
+
+While running ObjSize with no arguments may point to specific roots that hold 
+onto large amounts of memory it does not provide information regarding the 
+amount of managed memory that is still alive.  This is due to the fact that a 
+number of roots can share a common subgraph, and that part will be reported in 
+the size of all the roots that reference the subgraph.
+\\
+
+COMMAND: finalizequeue.
+FinalizeQueue [-detail] | [-allReady] [-short]
+
+This command lists the objects registered for finalization. Here is output from
+a simple program:
+
+    (lldb) finalizequeue
+    SyncBlocks to be cleaned up: 0
+    MTA Interfaces to be released: 0
+    STA Interfaces to be released: 1
+    generation 0 has 4 finalizable objects (0015bc90->0015bca0)
+    generation 1 has 0 finalizable objects (0015bc90->0015bc90)
+    generation 2 has 0 finalizable objects (0015bc90->0015bc90)
+    Ready for finalization 0 objects (0015bca0->0015bca0)
+    Statistics:
+          MT    Count TotalSize Class Name
+    5ba6cf78        1        24 Microsoft.Win32.SafeHandles.SafeFileHandle
+    5ba5db04        1        68 System.Threading.Thread
+    5ba73e28        2       112 System.IO.StreamWriter
+    Total 4 objects
+
+The GC heap is divided into generations, and objects are listed accordingly. We
+see that only generation 0 (the youngest generation) has any objects registered
+for finalization. The notation "(0015bc90->0015bca0)" means that if you look at
+memory in that range, you'll see the object pointers that are registered:
+
+0:000> dd 15bc90 15bca0-4
+0015bc90  00a743f4 00a79f00 00a7b3d8 00a7b47c
+
+You could run dumpobj on any of those pointers to learn more. In this example,
+there are no objects ready for finalization, presumably because they still have
+roots (You can use gcroot to find out). The statistics section provides a 
+higher-level summary of the objects registered for finalization. Note that 
+objects ready for finalization are also included in the statistics (if any).
+
+Specifying -short will inhibit any display related to SyncBlocks or RCWs.
+
+The arguments in detail:
+
+-allReady Specifying this argument will allow for the display of all objects 
+          that are ready for finalization, whether they are already marked by 
+          the GC as such, or whether the next GC will.  The objects that are 
+          not in the "Ready for finalization" list are finalizable objects that 
+          are no longer rooted.  This option can be very expensive, as it 
+          verifies whether all the objects in the finalizable queues are still 
+          rooted or not.
+-short    Limits the output to just the address of each object.  If used in 
+          conjunction with -allReady it enumerates all objects that have a 
+          finalizer that are no longer rooted.  If used independently it lists 
+          all objects in the finalizable and "ready for finalization" queues.
+-detail   Will display extra information on any SyncBlocks that need to be 
+          cleaned up, and on any RuntimeCallableWrappers (RCWs) that await 
+          cleanup.  Both of these data structures are cached and cleaned up by 
+          the finalizer thread when it gets a chance to run.
+\\
 COMMAND: pe.
 COMMAND: printexception.
 PrintException [-nested] [-lines] [-ccw] [<Exception object address>] [<CCW pointer>]
@@ -535,6 +591,48 @@ which can be specified using the -ccw option.
 The abbreviation 'pe' can be used for brevity.
 \\
 
+COMMAND: traverseheap.
+Traverseheap [-xml] [-verify] <filename>
+
+traverseheap writes out a file in a format understood by the CLR Profiler. 
+You can download the CLR Profiler from this link:
+
+http://www.microsoft.com/downloads/details.aspx?FamilyId=86CE6052-D7F4-4AEB-
+9B7A-94635BEEBDDA&displaylang=en
+
+It creates a graphical display of the GC heap to help you analyze the state of
+your application. 
+
+If you pass the -verify option it will do more sanity checking of the heap
+as it dumps it.   Use this option if heap corruption is suspected.
+
+If you pass the "-xml" flag, the file is instead written out in an easy to 
+understand xml format:
+
+    <gcheap>
+        <types>
+            <type id="1" name="System.String">
+            ...
+        </types>
+        <roots>
+            <root kind="handle" address="0x00a73ff0"/>
+            <root kind="stack" address="0x0069f0e0"/>
+            ...
+        </roots>
+        <objects>
+            <object address="0x00b73030" typeid="1" size="300"/>
+            <object address="0x00b75054" typeid="5" size="20">
+                <member address="0x00b75088" />
+                ...
+            </object>
+            ...
+        </objects>
+    </gcheap>
+
+You can break into your process, load SOS, take a snapshot of your heap with 
+this function, then continue.
+
+\\
 COMMAND: threadstate.
 ThreadState value
 
@@ -1271,14 +1369,14 @@ It means that Thread e04 owns object 00a7a194, and Thread ab8 owns object
         0404ea04 77f5c524 SharedUserData!SystemCallStub+0x4
         0404ea08 77e75ee0 ntdll!NtWaitForMultipleObjects+0xc
         0404eaa4 5d9de9d6 KERNEL32!WaitForMultipleObjectsEx+0x12c
-        0404eb38 5d9def80 clr!Thread::DoAppropriateAptStateWait+0x156
-        0404ecc4 5d9dd8bb clr!Thread::DoAppropriateWaitWorker+0x360
-        0404ed20 5da628dd clr!Thread::DoAppropriateWait+0xbb
-        0404ede4 5da4e2e2 clr!CLREvent::Wait+0x29d
-        0404ee70 5da4dd41 clr!AwareLock::EnterEpilog+0x132
-        0404ef34 5da4efa3 clr!AwareLock::Enter+0x2c1
-        0404f09c 5d767880 clr!AwareLock::Contention+0x483
-        0404f1c4 03f00229 clr!JITutil_MonContention+0x2c0
+        0404eb38 5d9def80 coreclr!Thread::DoAppropriateAptStateWait+0x156
+        0404ecc4 5d9dd8bb coreclr!Thread::DoAppropriateWaitWorker+0x360
+        0404ed20 5da628dd coreclr!Thread::DoAppropriateWait+0xbb
+        0404ede4 5da4e2e2 coreclr!CLREvent::Wait+0x29d
+        0404ee70 5da4dd41 coreclr!AwareLock::EnterEpilog+0x132
+        0404ef34 5da4efa3 coreclr!AwareLock::Enter+0x2c1
+        0404f09c 5d767880 coreclr!AwareLock::Contention+0x483
+        0404f1c4 03f00229 coreclr!JITutil_MonContention+0x2c0
         0404f1f4 5b6ef077 image00400000!Worker.Work()+0x79
         ...
 
@@ -1601,6 +1699,7 @@ is a simple example of the output for a dynamic method:
   IL_0010: stloc.0
   IL_0011: ldloc.0
   IL_0012: ret
+
 \\
 
 COMMAND: verifyheap.
@@ -1641,6 +1740,127 @@ in the CLR. In user code, an error in constructing PInvoke calls can cause
 this problem, and running with Managed Debugging Assistants is advised. If that
 possibility is eliminated, consider contacting Microsoft Product Support for
 help.
+
+\\
+
+COMMAND: verifyobj.
+VerifyObj <object address>
+
+VerifyObj is a diagnostic tool that checks the object that is passed as an 
+argument for signs of corruption.
+
+    0:002> verifyobj 028000ec
+    object 0x28000ec does not have valid method table
+
+    0:002> verifyobj 0680017c 
+    object 0x680017c: bad member 00000001 at 06800184
+
+\\
+
+COMMAND: findroots.
+FindRoots -gen <N> | -gen any | <object address>
+
+The "-gen" form causes the debugger to break in the debuggee on the next 
+collection of the specified generation.  The effect is reset as soon as the 
+break occurs, in other words, if you need to break on the next collection you 
+would need to reissue the command.
+
+The last form of this command is meant to be used after the break caused by the 
+other forms has occurred.  Now the debuggee is in the right state for 
+findroots to be able to identify roots for objects from the current condemned 
+generations.
+
+FindRoots is a diagnostic command that is meant to answer the following 
+question:
+
+"I see that GCs are happening, however my objects have still not been 
+collected. Why? Who is holding onto them?"
+
+The process of answering the question would go something like this:
+
+1. Find out the generation of the object of interest using the gcwhere 
+command, say it is gen 1:
+    (lldb) gcwhere <object address>
+
+2. Instruct the runtime to stop the next time it collects that generation using 
+the findroots command:
+    findroots -gen 1
+    g
+
+3. When the next GC starts, and has proceeded past the mark phase a CLR 
+notification will cause a break in the debugger:
+    (fd0.ec4): CLR notification exception - code e0444143 (first chance)
+    CLR notification: GC - end of mark phase.
+        Condemned generation: 1.
+
+4. Now we can use the findroots <object address> to find out the cross 
+generational references to the object of interest.  In other words, even if the 
+object is not referenced by any "proper" root it may still be referenced by an 
+older object (from an older generation), from a generation that has not yet been 
+scheduled for collection.  At this point findroots will search those older 
+generations too, and report those roots.
+    (lldb) findroots 06808094 
+    older generations::Root:  068012f8(AAA.Test+a)->
+      06808094(AAA.Test+b)
+
+\\
+
+COMMAND: analyzeoom.
+analyzeoom
+
+AnalyzeOOM displays the info of the last OOM occurred on an allocation request to
+the GC heap (in Server GC it displays OOM, if any, on each GC heap). 
+
+To see the managed exception(s) use the clrthreads command which will show you 
+managed exception(s), if any, on each managed thread. If you do see an 
+OutOfMemoryException exception you can use the printexception command on it.
+To get the full callstack use the "kb" command in the debugger for that thread.
+For example, to display thread 3's stack use ~3kb.
+
+OOM exceptions could be because of the following reasons:
+
+1) allocation request to GC heap 
+   in which case you will see JIT_New* on the call stack because managed code called new.
+2) other runtime allocation failure
+   for example, failure to expand the finalize queue when GC.ReRegisterForFinalize is
+   called.
+3) some other code you use throws a managed OOM exception 
+   for example, some .NET framework code converts a native OOM exception to managed 
+   and throws it.
+
+The analyzeoom command aims to help you with investigating 1) which is the most
+difficult because it requires some internal info from GC. The only exception is
+we don't support allocating objects larger than 2GB on CLR v2.0 or prior. And this
+command will not display any managed OOM because we will throw OOM right away 
+instead of even trying to allocate it on the GC heap.
+
+There are 2 legitimate scenarios where GC would return OOM to allocation requests - 
+one is if the process is running out of VM space to reserve a segment; the other
+is if the system is running out physical memory (+ page file if you have one) so
+GC can not commit memory it needs. You can look at these scenarios by using performance
+counters or debugger commands. For example for the former scenario the "!address 
+-summary" debugger command will show you the largest free region in the VM. For
+the latter scenario you can look at the "Memory% Committed Bytes In Use" see
+if you are running low on commit space. One important thing to keep in mind is
+when you do this kind of memory analysis it could an aftereffect and doesn't 
+completely agree with what this command tells you, in which case the command should
+be respected because it truly reflects what happened during GC.
+
+The other cases should be fairly obvious from the callstack.
+
+Sample output:
+
+0:011> analyzeoom
+---------Heap 2 ---------
+Managed OOM occurred after GC #28 (Requested to allocate 1234 bytes)
+Reason: Didn't have enough memory to commit
+Detail: SOH: Didn't have enough memory to grow the internal GC datastructures (800000 bytes) - 
+        on GC entry available commit space was 500 MB
+---------Heap 4 ---------
+Managed OOM occurred after GC #12 (Requested to allocate 100000 bytes)
+Reason: Didn't have enough memory to allocate an LOH segment
+Detail: LOH: Failed to reserve memory (16777216 bytes)
+
 \\
 
 COMMAND: gcwhere.
@@ -1658,6 +1878,40 @@ the "size" is displayed as 0:
     0:002> sos GCWhere 0280003c
     Address  Gen Heap segment  begin    allocated size
     0280003c 2    0   02800000 02800038 0282b740  0
+\\
+
+COMMAND: listnearobj.
+ListNearObj <object address>
+
+ListNearObj is a diagnostic tool that displays the object preceeding and 
+succeeding the address passed in:
+
+The command looks for the address in the GC heap that looks like a valid 
+beginning of a managed object (based on a valid method table) and the object 
+following the argument address.
+
+    0:002> listnearobj 028000ec
+    Before: 0x28000a4           72 (0x48      ) System.StackOverflowException
+    After:  0x2800134           72 (0x48      ) System.Threading.ThreadAbortException
+    Heap local consistency confirmed.
+
+    0:002> listnearobj 028000f0
+    Before: 0x28000ec           72 (0x48      ) System.ExecutionEngineException
+    After:  0x2800134           72 (0x48      ) System.Threading.ThreadAbortException
+    Heap local consistency confirmed.
+
+The command considers the heap as "locally consistent" if:
+    prev_obj_addr + prev_obj_size = arg_addr && arg_obj + arg_size = next_obj_addr
+OR
+    prev_obj_addr + prev_obj_size = next_obj_addr
+
+When the condition is not satisfied:
+
+    0:002> listnearobj 028000ec
+    Before: 0x28000a4           72 (0x48      ) System.StackOverflowException
+    After:  0x2800134           72 (0x48      ) System.Threading.ThreadAbortException
+    Heap local consistency not confirmed.
+
 \\
 
 COMMAND: dumplog.
@@ -1779,6 +2033,84 @@ You can find out more about the AppDomain with the DumpDomain command. Not
 every object has enough clues about it's origin to determine the AppDomain. 
 Objects with Finalizers are the easiest case, as the CLR needs to be able to 
 call those when an AppDomain shuts down.
+\\
+
+COMMAND: gchandles.
+GCHandles [-type handletype] [-stat] [-perdomain]
+
+GCHandles provides statistics about GCHandles in the process.
+
+Paremeters:
+    stat - Only display the statistics and not the list of handles and
+           what they point to.
+    perdomain - Break down the statistics by the app domain in which
+                the handles reside.
+    type - A type of handle to filter it by.  The handle types are:
+           Pinned
+           RefCounted
+           WeakShort
+           WeakLong
+           Strong
+           Variable
+           AsyncPinned
+           SizedRef
+
+Sometimes the  source of a memory leak is a GCHandle leak. For example, code
+might keep a 50 Megabyte array alive because a strong GCHandle points to it,
+and the handle was discarded without freeing it.
+
+The most common handles are "Strong Handles," which keep the object they point 
+to alive until the handle is explicitly freed. "Pinned Handles" are used to 
+prevent the garbage collector from moving an object during collection. These 
+should be used sparingly, and for short periods of time. If you don't follow 
+that precept, the gc heap can become very fragmented.
+
+Here is sample output from a very simple program.  Note that the "RefCount"
+field only applies to RefCount Handles, and this field will contain the
+reference count:
+
+    0:000> gchandles
+      Handle Type          Object     Size RefCount Type
+    001611c0 Strong      01d00b58       84          System.IndexOutOfRangeException
+    001611c4 Strong      01d00b58       84          System.IndexOutOfRangeException
+    001611c8 Strong      01d1b48c       40          System.Diagnostics.LogSwitch
+    001611d0 Strong      01cfd2c0       36          System.Security.PermissionSet
+    001611d4 Strong      01cf7484       56          System.Object[]
+    001611d8 Strong      01cf1238       32          System.SharedStatics
+    001611dc Strong      01cf11c8       84          System.Threading.ThreadAbortException
+    001611e0 Strong      01cf1174       84          System.Threading.ThreadAbortException
+    001611e4 Strong      01cf1120       84          System.ExecutionEngineException
+    001611e8 Strong      01cf10cc       84          System.StackOverflowException
+    001611ec Strong      01cf1078       84          System.OutOfMemoryException
+    001611f0 Strong      01cf1024       84          System.Exception
+    001611f8 Strong      01cf2068       48          System.Threading.Thread
+    001611fc Strong      01cf1328      112          System.AppDomain
+    001613ec Pinned      02cf3268     8176          System.Object[]
+    001613f0 Pinned      02cf2258     4096          System.Object[]
+    001613f4 Pinned      02cf2038      528          System.Object[]
+    001613f8 Pinned      01cf121c       12          System.Object
+    001613fc Pinned      02cf1010     4116          System.Object[]
+
+    Statistics:
+          MT    Count    TotalSize Class Name
+    563266dc        1           12 System.Object
+    56329708        1           32 System.SharedStatics
+    5632bc38        1           36 System.Security.PermissionSet
+    5635f934        1           40 System.Diagnostics.LogSwitch
+    5632759c        1           48 System.Threading.Thread
+    5632735c        1           84 System.ExecutionEngineException
+    56327304        1           84 System.StackOverflowException
+    563272ac        1           84 System.OutOfMemoryException
+    563270c4        1           84 System.Exception
+    56328914        1          112 System.AppDomain
+    56335f78        2          168 System.IndexOutOfRangeException
+    563273b4        2          168 System.Threading.ThreadAbortException
+    563208d0        5        16972 System.Object[]
+    Total 19 objects
+
+    Handles:
+        Strong Handles:       14
+        Pinned Handles:       5
 \\
 
 COMMAND: histinit.
@@ -1938,8 +2270,7 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 
 COMMAND: setsymbolserver.
 COMMAND: loadsymbols.
-COMMAND: sympath.
-SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [-sympath <windows-symbol-path>] [<symbol-server-URL>]
+SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
 
 -ms - Use the public Microsoft symbol server.
 -disable - Disable symbol download support.
@@ -1947,7 +2278,6 @@ SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-
 -timeout - Specify the symbol server timeout in minutes
 -pat - Access token to the authenticated server.
 -cache - Specific a symbol cache directory. The default is $HOME/.dotnet/symbolcache if not specified.
--sympath - Add server, cache and directory paths in the Windows symbol path format.
 -loadsymbols - Attempts to download the native .NET Core symbols for the runtime
 <symbol-server-URL> - Symbol server URL.
 
@@ -1970,10 +2300,6 @@ To add a directory to search for symbols:
 
 This command can be used so the module/symbol file structure does not have to match the machine 
 file structure that the core dump was generated.
-
-The "sympath" option/command alias allows Windows symbol paths to be parsed:
-
-    (lldb) sympath "/home/mikem/localsymbols;srv*/home/mikem/symbolcache*https://msdl.microsoft.com/download/symbols".
 
 To clear the default cache run "rm -r $HOME/.dotnet/symbolcache" in a command shell.
 
