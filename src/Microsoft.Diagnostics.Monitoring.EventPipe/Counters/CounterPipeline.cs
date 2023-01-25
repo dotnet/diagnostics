@@ -61,14 +61,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out List<ICounterPayload> counterPayload))
+                    if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload counterPayload))
                     {
-                        ExecuteCounterLoggerAction((metricLogger) => {
-                            foreach (var payload in counterPayload)
-                            {
-                                metricLogger.Log(payload);
-                            }
-                        });
+                        ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
                 }
                 catch (Exception)
