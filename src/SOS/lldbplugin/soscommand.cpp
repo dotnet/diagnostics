@@ -156,6 +156,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
 {
     g_services->AddCommand("sos", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
     g_services->AddCommand("ext", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. ext <command-name> <args>");
+    g_services->AddCommand("analyzeoom", new sosCommand("AnalyzeOOM"), "Provides a stack trace of managed code only.");
     g_services->AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
     g_services->AddManagedCommand("clrmodules", "Lists the managed modules in the process.");
     g_services->AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
@@ -186,11 +187,11 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpvc", new sosCommand("DumpVC"), "Displays info about the fields of a value class.");
     g_services->AddCommand("eeheap", new sosCommand("EEHeap"), "Displays info about process memory consumed by internal runtime data structures.");
     g_services->AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
-    g_services->AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime version.");
+    g_services->AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime and SOS versions.");
     g_services->AddCommand("ehinfo", new sosCommand("EHInfo"), "Displays the exception handling blocks in a jitted method.");
     g_services->AddCommand("finalizequeue", new sosCommand("FinalizeQueue"), "Displays all objects registered for finalization.");
     g_services->AddCommand("findappdomain", new sosCommand("FindAppDomain"), "Attempts to resolve the AppDomain of a GC object.");
-    g_services->AddCommand("findroots", new sosCommand("FindRoots"), "");
+    g_services->AddCommand("findroots", new sosCommand("FindRoots"), "Find object roots across GC collections.");
     g_services->AddCommand("gchandles", new sosCommand("GCHandles"), "Displays statistics about garbage collector handles in the process.");
     g_services->AddCommand("gcheapstat", new sosCommand("GCHeapStat"), "Displays statistics about garbage collector.");
     g_services->AddCommand("gcinfo", new sosCommand("GCInfo"), "Displays info JIT GC encoding for a method.");
@@ -203,7 +204,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
     g_services->AddCommand("histstats", new sosCommand("HistStats"), "Displays stress log stats.");
     g_services->AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
-    g_services->AddCommand("listnearobj", new sosCommand("ListNearObj"), "displays the object preceeding and succeeding the address passed.");
+    g_services->AddCommand("listnearobj", new sosCommand("ListNearObj"), "Displays the object preceeding and succeeding the address passed.");
     g_services->AddManagedCommand("loadsymbols", "Load the .NET Core native module symbols.");
     g_services->AddManagedCommand("logging", "Enable/disable internal SOS logging.");
     g_services->AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
@@ -212,7 +213,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("pe", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
     g_services->AddCommand("printexception", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
     g_services->AddCommand("runtimes", new sosCommand("runtimes"), "List the runtimes in the target or change the default runtime.");
-    g_services->AddCommand("stoponcatch", new sosCommand("StopOnCatch"), "Debuggee will break the next time a managed exception is caught during execution");
+    g_services->AddCommand("stoponcatch", new sosCommand("StopOnCatch"), "Target process will break the next time a managed exception is caught during execution.");
     g_services->AddCommand("setclrpath", new sosCommand("SetClrPath"), "Set the path to load the runtime DAC/DBI files.");
     g_services->AddManagedCommand("setsymbolserver", "Enables the symbol server support ");
     g_services->AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
