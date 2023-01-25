@@ -4,11 +4,12 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
 using Xunit;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
 using Microsoft.Diagnostics.Tools.Counters;
+
+#pragma warning disable CA1507 // Use nameof to express symbol names
 
 namespace DotnetCounters.UnitTests
 {
