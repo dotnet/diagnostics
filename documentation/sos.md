@@ -19,7 +19,7 @@ Getting a version of lldb that works for your platform can be a problem sometime
 
 ## Using SOS
 
-* [SOS debugging](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/sos-debugging-extension)
+* [SOS debugging](https://learn.microsoft.com/dotnet/core/diagnostics/sos-debugging-extension)
 * [Debugging a core dump](debugging-coredump.md)
 
 ## New SOS Features
