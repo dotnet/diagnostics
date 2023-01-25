@@ -9,7 +9,7 @@ using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "parallelstacks", Aliases = new string[] { "pstacks" }, Help = "Display merged threads stack a la Visual Studio 'Parallel Stacks' panel.")]
+    [Command(Name = "parallelstacks", Aliases = new string[] { "pstacks" }, Help = "Displays merged threads stack a la Visual Studio 'Parallel Stacks' panel.")]
     public class ParallelStacksCommand : ExtensionCommandBase
     {
         public ClrRuntime Runtime { get; set; }
