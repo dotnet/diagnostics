@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         EventCounter = 0x1,
         Meter = 0x2,
+        All = 0xFF
     }
 
     internal class EventPipeCounterGroup
@@ -34,7 +35,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string[] CounterNames { get; set; }
 
-        public CounterGroupType Type { get; set; } = CounterGroupType.EventCounter | CounterGroupType.Meter;
+        public CounterGroupType Type { get; set; } = CounterGroupType.All;
 
         public float? IntervalSeconds { get; set; }
     }
