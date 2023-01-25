@@ -17,7 +17,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     public enum MetricType
     {
         EventCounter = 0x1,
-        Meter = 0x2
+        Meter = 0x2,
+        All = 0xFF
     }
 
     public sealed class MetricEventPipeProvider
@@ -26,7 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public float? IntervalSeconds { get; set; }
 
-        public MetricType Type { get; set; } = MetricType.EventCounter | MetricType.Meter;
+        public MetricType Type { get; set; } = MetricType.All;
     }
 
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
