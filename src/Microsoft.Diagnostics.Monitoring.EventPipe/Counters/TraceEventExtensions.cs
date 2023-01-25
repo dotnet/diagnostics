@@ -11,9 +11,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static class TraceEventExtensions
     {
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, out List<ICounterPayload> payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
-            payload = new List<ICounterPayload>();
+            payload = null;
 
             if ("EventCounters".Equals(traceEvent.EventName))
             {
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
                 // We no longer added it here.
 
-                payload.Add(new CounterPayload(
+                payload = new CounterPayload(
                     traceEvent.TimeStamp,
                     traceEvent.ProviderName,
                     counterName, displayName,
@@ -67,15 +67,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     value,
                     counterType,
                     intervalSec,
-                    metadata));
+                    metadata);
 
                 return true;
             }
 
             if (sessionId != null && "System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
             {
-                ICounterPayload individualPayload = null;
-
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
                     // Do we want to log something for this?
@@ -87,51 +85,37 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "GaugeValuePublished")
                 {
-                    HandleGauge(traceEvent, filter, sessionId, out individualPayload);
+                    HandleGauge(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "CounterRateValuePublished")
                 {
-                    HandleCounterRate(traceEvent, filter, sessionId, out individualPayload);
+                    HandleCounterRate(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
-                    HandleTimeSeriesLimitReached(traceEvent, sessionId, out individualPayload);
+                    HandleTimeSeriesLimitReached(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "HistogramLimitReached")
                 {
-                    HandleHistogramLimitReached(traceEvent, sessionId, out individualPayload);
+                    HandleHistogramLimitReached(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "Error")
                 {
-                    HandleError(traceEvent, sessionId, out individualPayload);
+                    HandleError(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
                 {
-                    HandleObservableInstrumentCallbackError(traceEvent, sessionId, out individualPayload);
+                    HandleObservableInstrumentCallbackError(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                 {
-                    HandleMultipleSessionsNotSupportedError(traceEvent, sessionId, out individualPayload);
+                    HandleMultipleSessionsNotSupportedError(traceEvent, sessionId, out payload);
                 }
 
-                if (null != individualPayload)
-                {
-                    payload.Add(individualPayload);
-                }
-
-                return null != payload && payload.Any();
+                return payload != null;
             }
 
             return false;
-        }
-
-        public static bool TryGetIndividualCounterPayload(this TraceEvent traceEvent, CounterFilter filter, out ICounterPayload payload)
-        {
-            bool gotCounterPayload = TryGetCounterPayload(traceEvent, filter, null, out List<ICounterPayload> payloadsList);
-
-            payload = payloadsList.FirstOrDefault();
-
-            return gotCounterPayload;
         }
 
         private static void HandleGauge(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
@@ -205,12 +189,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out List<ICounterPayload> payload)
+        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
-            payload = new List<ICounterPayload>();
+            payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-
             if (payloadSessionId != sessionId)
             {
                 return;
@@ -228,15 +211,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
-            KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
-            foreach ((double key, double val) in quantiles)
+            if (string.IsNullOrEmpty(quantilesText))
             {
-                string tagsWithPercentile = AppendPercentile(tags, FormattableString.Invariant($"Percentile={(int)(100*key)}"));
-                payload.Add(new PercentilePayload(meterName, instrumentName, null, unit, tagsWithPercentile, val, obj.TimeStamp));
             }
+
+            IList<(double, double)> quantiles = ParseQuantiles(quantilesText);
+            payload = new PercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
         }
 
-        private static string AppendPercentile(string tags, string percentile) => string.IsNullOrEmpty(tags) ? percentile : FormattableString.Invariant($"{tags},{percentile}");
+
 
         private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
@@ -324,52 +307,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
-        //The metadata payload is formatted as a string of comma separated key:value pairs.
-        //This limitation means that metadata values cannot include commas; otherwise, the
-        //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
-        //is treated as invalid and excluded from the payload.
-        public static IDictionary<string, string> GetMetadata(string metadataPayload, char kvSeparator = ':')
-        {
-            var metadataDict = new Dictionary<string, string>();
-
-            ReadOnlySpan<char> metadata = metadataPayload;
-
-            while (!metadata.IsEmpty)
-            {
-                int commaIndex = metadata.IndexOf(',');
-
-                ReadOnlySpan<char> kvPair;
-
-                if (commaIndex < 0)
-                {
-                    kvPair = metadata;
-                    metadata = default;
-                }
-                else
-                {
-                    kvPair = metadata[..commaIndex];
-                    metadata = metadata.Slice(commaIndex + 1);
-                }
-
-                int colonIndex = kvPair.IndexOf(kvSeparator);
-                if (colonIndex < 0)
-                {
-                    metadataDict.Clear();
-                    break;
-                }
-
-                string metadataKey = kvPair[..colonIndex].ToString();
-                string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
-                metadataDict[metadataKey] = metadataValue;
-            }
-
-            return metadataDict;
-        }
-
-        private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
+        private static IList<(double, double)> ParseQuantiles(string quantileList)
         {
             string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            List<KeyValuePair<double, double>> quantiles = new List<KeyValuePair<double, double>>();
+            var quantiles = new List<(double, double)>();
             foreach (string quantile in quantileParts)
             {
                 string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
@@ -385,9 +326,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     continue;
                 }
-                quantiles.Add(new KeyValuePair<double, double>(key, val));
+                quantiles.Add((key, val));
             }
-            return quantiles.ToArray();
+            return quantiles;
         }
 
         private static int GetInterval(string series)

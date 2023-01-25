@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -105,14 +106,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal class PercentilePayload : CounterPayload
     {
-        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double val, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, metadata, val, timestamp, "Metric", EventType.Histogram)
+        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<(double quantile, double value)> quantiles, DateTime timestamp) :
+            base(providerName, name, displayName, displayUnits, metadata, 0.0, timestamp, "Metric", EventType.Histogram)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
             DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+            Quantiles = quantiles.Select(v => new Quantile(v.quantile, v.value)).ToArray();
         }
+
+        public Quantile[] Quantiles { get; }
     }
+
+    internal record struct Quantile(double Percentage, double Value);
 
     internal class ErrorPayload : CounterPayload
     {
