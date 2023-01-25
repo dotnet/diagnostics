@@ -154,8 +154,8 @@ public:
 bool
 sosCommandInitialize(lldb::SBDebugger debugger)
 {
-    g_services->AddCommand("sos", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. sos <command-name> <args>");
-    g_services->AddCommand("ext", new sosCommand(nullptr), "Various .NET Core debugging commands. See 'soshelp' for more details. ext <command-name> <args>");
+    g_services->AddCommand("sos", new sosCommand(nullptr), "Executes various coreclr debugging commands. Use the syntax 'sos <command - name> <args>'. For more information, see 'soshelp'.");
+    g_services->AddCommand("ext", new sosCommand(nullptr), "Executes various coreclr debugging commands. Use the syntax 'sos <command - name> <args>'. For more information, see 'soshelp'.");
     g_services->AddCommand("analyzeoom", new sosCommand("AnalyzeOOM"), "Provides a stack trace of managed code only.");
     g_services->AddCommand("bpmd", new sosCommand("bpmd"), "Creates a breakpoint at the specified managed method in the specified module.");
     g_services->AddManagedCommand("clrmodules", "Lists the managed modules in the process.");
@@ -169,18 +169,18 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpassembly", new sosCommand("DumpAssembly"), "Displays details about an assembly.");
     g_services->AddCommand("dumpclass", new sosCommand("DumpClass"), "Displays information about a EE class structure at the specified address.");
     g_services->AddCommand("dumpdelegate", new sosCommand("DumpDelegate"), "Displays information about a delegate.");
-    g_services->AddCommand("dumpdomain", new sosCommand("DumpDomain"), "Displays information all the AppDomains and all assemblies within the domains.");
+    g_services->AddCommand("dumpdomain", new sosCommand("DumpDomain"), "Displays information about the all assemblies within all the AppDomains or the specified one.");
     g_services->AddCommand("dumpgcdata", new sosCommand("DumpGCData"), "Displays information about the GC data.");
     g_services->AddCommand("dumpheap", new sosCommand("DumpHeap"), "Displays info about the garbage-collected heap and collection statistics about objects.");
-    g_services->AddCommand("dumpil", new sosCommand("DumpIL"), "Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.");
+    g_services->AddCommand("dumpil", new sosCommand("DumpIL"), "Displays the Microsoft intermediate language (MSIL) that's associated with a managed method.");
     g_services->AddCommand("dumplog", new sosCommand("DumpLog"), "Writes the contents of an in-memory stress log to the specified file.");
     g_services->AddCommand("dumpmd", new sosCommand("DumpMD"), "Displays information about a MethodDesc structure at the specified address.");
     g_services->AddCommand("dumpmodule", new sosCommand("DumpModule"), "Displays information about a EE module structure at the specified address.");
     g_services->AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
     g_services->AddCommand("dumpobj", new sosCommand("DumpObj"), "Displays info about an object at the specified address.");
-    g_services->AddCommand("dumpruntimetypes", new sosCommand("DumpRuntimeTypes"), "Finds all System.RuntimeType objects in the gc heap and prints the type name and MethodTable they refer too.");
-    g_services->AddCommand("dumpsig", new sosCommand("DumpSig"), "This command dumps the signature of a method or field given by <sigaddr> <moduleaddr>.");
-    g_services->AddCommand("dumpsigelem", new sosCommand("DumpSigElem"), "This command dumps a single element of a signature object.");
+    g_services->AddCommand("dumpruntimetypes", new sosCommand("DumpRuntimeTypes"), "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.");
+    g_services->AddCommand("dumpsig", new sosCommand("DumpSig"), "Dumps the signature of a method or field specified by '<sigaddr> <moduleaddr>'.");
+    g_services->AddCommand("dumpsigelem", new sosCommand("DumpSigElem"), "Dumps a single element of a signature object.");
     g_services->AddCommand("dumpstack", new sosCommand("DumpStack"), "Displays a native and managed stack trace.");
     g_services->AddCommand("dumpstackobjects", new sosCommand("DumpStackObjects"), "Displays all managed objects found within the bounds of the current stack.");
     g_services->AddCommand("dso", new sosCommand("DumpStackObjects"), "Displays all managed objects found within the bounds of the current stack.");
@@ -188,7 +188,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("eeheap", new sosCommand("EEHeap"), "Displays info about process memory consumed by internal runtime data structures.");
     g_services->AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
     g_services->AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime and SOS versions.");
-    g_services->AddCommand("ehinfo", new sosCommand("EHInfo"), "Displays the exception handling blocks in a jitted method.");
+    g_services->AddCommand("ehinfo", new sosCommand("EHInfo"), "Displays the exception handling blocks in a JIT-ed method.");
     g_services->AddCommand("finalizequeue", new sosCommand("FinalizeQueue"), "Displays all objects registered for finalization.");
     g_services->AddCommand("findappdomain", new sosCommand("FindAppDomain"), "Attempts to resolve the AppDomain of a GC object.");
     g_services->AddCommand("findroots", new sosCommand("FindRoots"), "Finds and displays object roots across GC collections.");
@@ -196,7 +196,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("gcheapstat", new sosCommand("GCHeapStat"), "Displays statistics about garbage collector.");
     g_services->AddCommand("gcinfo", new sosCommand("GCInfo"), "Displays info JIT GC encoding for a method.");
     g_services->AddCommand("gcroot", new sosCommand("GCRoot"), "Displays info about references (or roots) to an object at the specified address.");
-    g_services->AddCommand("gcwhere", new sosCommand("GCWhere"), "Displays the location in the GC heap of the argument passed in.");
+    g_services->AddCommand("gcwhere", new sosCommand("GCWhere"), "Displays the location in the GC heap of the specified address.");
     g_services->AddCommand("histclear", new sosCommand("HistClear"), "Releases any resources used by the family of Hist commands.");
     g_services->AddCommand("histinit", new sosCommand("HistInit"), "Initializes the SOS structures from the stress log saved in the debuggee.");
     g_services->AddCommand("histobj", new sosCommand("HistObj"), "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.");
@@ -204,7 +204,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
     g_services->AddCommand("histstats", new sosCommand("HistStats"), "Displays stress log stats.");
     g_services->AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
-    g_services->AddCommand("listnearobj", new sosCommand("ListNearObj"), "Displays the object preceeding and succeeding the address passed.");
+    g_services->AddCommand("listnearobj", new sosCommand("ListNearObj"), "Displays the object preceding and succeeding the specified address.");
     g_services->AddManagedCommand("loadsymbols", "Loads the .NET Core native module symbols.");
     g_services->AddManagedCommand("logging", "Enables/disables internal SOS logging.");
     g_services->AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
@@ -216,7 +216,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("stoponcatch", new sosCommand("StopOnCatch"), "Target process will break the next time a managed exception is caught during execution.");
     g_services->AddCommand("setclrpath", new sosCommand("SetClrPath"), "Sets the path to load the runtime DAC/DBI files.");
     g_services->AddManagedCommand("setsymbolserver", "Enables the symbol server support ");
-    g_services->AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command. soshelp <command>");
+    g_services->AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command: 'soshelp <command>'.");
     g_services->AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
     g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
