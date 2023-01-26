@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
 
             int n = nodesToReport.Count;
-            int maxDigit = n.ToString().Count();
+            int maxDigit = (int) Math.Log10(n) + 1;
             string extra = new string(' ', maxDigit - 1);
 
             string header = "Top " + n.ToString() + " Functions (" + measureType + ")";
@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             for(int i = 0; i < n; i++)
             {
 
-                int iLength = (i+1).ToString().Count();
+                int iLength = (int) Math.Log10(i + 1) + 1;
                 int numSpace = maxDigit - iLength + 1;
 
                 CallTreeNodeBase node = nodesToReport[i];

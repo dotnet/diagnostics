@@ -164,8 +164,11 @@ namespace Graphs
         /// 
         /// TODO I can eliminate the need for AllowReading.  
         /// </summary>
-        public Graph(int expectedNodeCount)
+        /// <remarks>if isVeryLargeGraph argument is true, then StreamLabels will be serialized as longs
+        /// too acommodate for the extra size of the graph's stream representation.</remarks>
+        public Graph(int expectedNodeCount, bool isVeryLargeGraph = false)
         {
+            m_isVeryLargeGraph = isVeryLargeGraph;
             m_expectedNodeCount = expectedNodeCount;
             m_types = new GrowableArray<TypeInfo>(Math.Max(expectedNodeCount / 100, 2000));
             m_nodes = new SegmentedList<StreamLabel>(SegmentSize, m_expectedNodeCount);
@@ -465,7 +468,8 @@ namespace Graphs
             RootIndex = NodeIndex.Invalid;
             if (m_writer == null)
             {
-                m_writer = new SegmentedMemoryStreamWriter(m_expectedNodeCount * 8);
+                m_writer = new SegmentedMemoryStreamWriter(m_expectedNodeCount * 8,
+                    m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
             }
 
             m_totalSize = 0;
@@ -513,7 +517,15 @@ namespace Graphs
             }
 
             // Write out the Nodes 
-            serializer.Write(m_nodes.Count);
+            if (m_isVeryLargeGraph)
+            {
+                serializer.Write(m_nodes.Count);
+            }
+            else
+            {
+                serializer.Write((int)m_nodes.Count);
+            }
+
             for (int i = 0; i < m_nodes.Count; i++)
             {
                 serializer.Write((int)m_nodes[i]);
@@ -551,7 +563,7 @@ namespace Graphs
 
                     // You can place tagged values in here always adding right before the WriteTaggedEnd
                     // for any new fields added after version 1 
-                    serializer.WriteTaggedEnd(); // This insures tagged things don't read junk after the region.  
+                    serializer.WriteTaggedEnd(); // This ensures tagged things don't read junk after the region.  
                 });
             }
         }
@@ -574,10 +586,10 @@ namespace Graphs
             }
 
             // Read in the Nodes 
-            int nodeCount = deserializer.ReadInt();
+            long nodeCount = m_isVeryLargeGraph ? deserializer.ReadInt64() : deserializer.ReadInt();
             m_nodes = new SegmentedList<StreamLabel>(SegmentSize, nodeCount);
 
-            for (int i = 0; i < nodeCount; i++)
+            for (long i = 0; i < nodeCount; i++)
             {
                 m_nodes.Add((StreamLabel)(uint)deserializer.ReadInt());
             }
@@ -585,7 +597,9 @@ namespace Graphs
             // Read in the Blob stream.  
             // TODO be lazy about reading in the blobs.  
             int blobCount = deserializer.ReadInt();
-            SegmentedMemoryStreamWriter writer = new SegmentedMemoryStreamWriter(blobCount);
+            SegmentedMemoryStreamWriter writer = new SegmentedMemoryStreamWriter(blobCount,
+                m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
+
             while (8 <= blobCount)
             {
                 writer.Write(deserializer.ReadInt64());
@@ -644,7 +658,7 @@ namespace Graphs
             }
         }
 
-        private int m_expectedNodeCount;                // Initial guess at graph Size. 
+        private long m_expectedNodeCount;                // Initial guess at graph Size.
         private long m_totalSize;                       // Total Size of all the nodes in the graph.  
         internal int m_totalRefs;                       // Total Number of references in the graph
         internal GrowableArray<TypeInfo> m_types;       // We expect only thousands of these
@@ -656,6 +670,7 @@ namespace Graphs
         // There should not be any of these left as long as every node referenced
         // by another node has a definition.
         internal SegmentedMemoryStreamWriter m_writer; // Used only during construction to serialize the nodes.
+        protected bool m_isVeryLargeGraph;
         #endregion
     }
 
@@ -1065,7 +1080,7 @@ namespace Graphs
         /// </summary>
         public DateTime BuildTime;      // From in the PE header
         /// <summary>
-        /// The name of hte PDB file assoicated with this module.   Ma bye null if unknown
+        /// The name of the PDB file associated with this module. May be null if unknown
         /// </summary>
         public string PdbName;
         /// <summary>
@@ -1376,7 +1391,7 @@ public class RefGraph
     /// Given an arbitrary code:NodeIndex that identifies the node, Get a code:Node object.  
     /// 
     /// This routine does not allocated but uses the space passed in by 'storage.  
-    /// 'storage' should be allocated with coode:AllocNodeStorage, and should be agressively reused.  
+    /// 'storage' should be allocated with coode:AllocNodeStorage, and should be aggressively reused.  
     /// </summary>
     public RefNode GetNode(NodeIndex nodeIndex, RefNode storage)
     {
@@ -1829,8 +1844,8 @@ public class SpanningTree
     /// <summary>
     /// A helper for AddOrphansToQueue, so we only add orphans that are not reachable from other orphans.  
     /// 
-    /// Mark all decendents (but not nodeIndex itself) as being visited.    Any arcs that form
-    /// cycles are ignored, so nodeIndex is guarenteed to NOT be marked.     
+    /// Mark all descendants (but not nodeIndex itself) as being visited.    Any arcs that form
+    /// cycles are ignored, so nodeIndex is guaranteed to NOT be marked.     
     /// </summary>
     private void MarkDecendentsIgnoringCycles(NodeIndex nodeIndex, int recursionCount)
     {
@@ -2393,7 +2408,7 @@ public class GraphSampler
             stats.TotalMetric += node.Size;
         }
 
-        // Also insure that if there are a large number of types, that we sample them at least some. 
+        // Also ensure that if there are a large number of types, that we sample them at least some. 
         if (stats.SampleCount == 0 && !mustAdd && (m_numDistictTypesWithSamples + .5F) * m_filteringRatio <= m_numDistictTypes)
         {
             mustAdd = true;
@@ -2626,7 +2641,7 @@ public class GraphSampler
 
     /// <summary>
     /// This value goes in the m_newIndex[].   If we accept the node into the sampled graph, we put the node
-    /// index in the NET graph in m_newIndex.   If we reject the node we use the special RegjectedNode value
+    /// index in the NET graph in m_newIndex.   If we reject the node we use the special RejectedNode value
     /// below
     /// </summary>
     private const NodeIndex RejectedNode = (NodeIndex)(-2);

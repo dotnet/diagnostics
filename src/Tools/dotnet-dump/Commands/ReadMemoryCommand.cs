@@ -8,15 +8,15 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    [Command(Name = "readmemory", Aliases = new string[] { "d" }, Help = "Dump memory contents.")]
-    [Command(Name = "db", DefaultOptions = "--ascii:true  --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:1  -w:16", Help = "Dump memory as bytes.")]
-    [Command(Name = "dc", DefaultOptions = "--ascii:false --unicode:true  --ascii-string:false --unicode-string:false -c:64  -l:2  -w:8",  Help = "Dump memory as chars.")]
-    [Command(Name = "da", DefaultOptions = "--ascii:false --unicode:false --ascii-string:true  --unicode-string:false -c:128 -l:1  -w:0",  Help = "Dump memory as zero-terminated byte strings.")]
-    [Command(Name = "du", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:true  -c:128 -l:2  -w:0",  Help = "Dump memory as zero-terminated char strings.")]
-    [Command(Name = "dw", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:2  -w:0",  Help = "Dump memory as words (ushort).")]
-    [Command(Name = "dd", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:64  -l:4  -w:0",  Help = "Dump memory as dwords (uint).")]
-    [Command(Name = "dp", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:-1 -w:0",  Help = "Dump memory as pointers.")]
-    [Command(Name = "dq", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:8  -w:0",  Help = "Dump memory as qwords (ulong).")]
+    [Command(Name = "readmemory", Aliases = new string[] { "d" }, Help = "Dumps memory contents.")]
+    [Command(Name = "db", DefaultOptions = "--ascii:true  --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:1  -w:16", Help = "Dumps memory as bytes.")]
+    [Command(Name = "dc", DefaultOptions = "--ascii:false --unicode:true  --ascii-string:false --unicode-string:false -c:64  -l:2  -w:8",  Help = "Dumps memory as chars.")]
+    [Command(Name = "da", DefaultOptions = "--ascii:false --unicode:false --ascii-string:true  --unicode-string:false -c:128 -l:1  -w:0",  Help = "Dumps memory as zero-terminated byte strings.")]
+    [Command(Name = "du", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:true  -c:128 -l:2  -w:0",  Help = "Dumps memory as zero-terminated char strings.")]
+    [Command(Name = "dw", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:2  -w:0",  Help = "Dumps memory as words (ushort).")]
+    [Command(Name = "dd", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:64  -l:4  -w:0",  Help = "Dumps memory as dwords (uint).")]
+    [Command(Name = "dp", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:-1 -w:0",  Help = "Dumps memory as pointers.")]
+    [Command(Name = "dq", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:8  -w:0",  Help = "Dumps memory as qwords (ulong).")]
     public sealed class ReadMemoryCommand : CommandBase
     {
         [Argument(Name = "address", Help = "Address to dump.")]

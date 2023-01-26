@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.Build.NoTargets">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    <SkipGetTargetFrameworkProperties>false</SkipGetTargetFrameworkProperties>
+  </PropertyGroup> 
+
+  <Import Project="$(RepositoryEngineeringDir)\InstallRuntimes.proj" />
+</Project>

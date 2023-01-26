@@ -10,7 +10,7 @@ using System.Security;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "logging", Help = "Enable/disable internal diagnostic logging", Flags = CommandFlags.Global)]
+    [Command(Name = "logging", Help = "Enables/disables internal diagnostic logging.", Flags = CommandFlags.Global)]
     public class LoggingCommand : CommandBase
     {
         public IDiagnosticLoggingService DiagnosticLoggingService { get; set; }

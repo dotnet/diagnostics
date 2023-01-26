@@ -13,6 +13,10 @@ using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
+// Newer SDKs flag MemberData(nameof(Configurations)) with this error
+// Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
+#pragma warning disable CA1825 
+
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class EventCounterPipelineUnitTests
