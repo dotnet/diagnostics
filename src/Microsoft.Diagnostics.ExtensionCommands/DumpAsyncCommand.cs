@@ -459,7 +459,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Outputs a line of information for each instance field on the object.</summary>
             void RenderFields(IAddressableTypedEntity? obj, int depth)
             {
-                if (obj is not null)
+                if (obj?.Type is not null)
                 {
                     string depthTab = new string(' ', depth * TabWidth);
 
@@ -489,33 +489,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Gets a printable description for the specified object.</summary>
             string Describe(ClrObject obj)
             {
-                // Default the description to the type name.
-                string description = obj.Type.Name;
-
-                if (IsStateMachineBox(obj.Type))
+                string description = string.Empty;
+                if (obj.Type?.Name is not null)
                 {
-                    // Remove the boilerplate box type from the name.
-                    int pos = description.IndexOf("StateMachineBox<", StringComparison.Ordinal);
-                    if (pos >= 0)
+                    // Default the description to the type name.
+                    description = obj.Type.Name;
+
+                    if (IsStateMachineBox(obj.Type))
                     {
-                        ReadOnlySpan<char> slice = description.AsSpan(pos + "StateMachineBox<".Length);
-                        slice = slice.Slice(0, slice.Length - 1); // remove trailing >
-                        description = slice.ToString();
+                        // Remove the boilerplate box type from the name.
+                        int pos = description.IndexOf("StateMachineBox<", StringComparison.Ordinal);
+                        if (pos >= 0)
+                        {
+                            ReadOnlySpan<char> slice = description.AsSpan(pos + "StateMachineBox<".Length);
+                            slice = slice.Slice(0, slice.Length - 1); // remove trailing >
+                            description = slice.ToString();
+                        }
+                    }
+                    else if (TryGetValidObjectField(obj, "m_action", out ClrObject taskDelegate))
+                    {
+                        // If we can figure out what the task's delegate points to, append the method signature.
+                        if (TryGetMethodFromDelegate(runtime, taskDelegate, out ClrMethod? method))
+                        {
+                            description = $"{description} {{{method!.Signature}}}";
+                        }
+                    }
+                    else if (obj.Address != 0 && taskCompletionSentinel.Address == obj.Address)
+                    {
+                        description = "TaskCompletionSentinel";
                     }
                 }
-                else if (TryGetValidObjectField(obj, "m_action", out ClrObject taskDelegate))
-                {
-                    // If we can figure out what the task's delegate points to, append the method signature.
-                    if (TryGetMethodFromDelegate(runtime, taskDelegate, out ClrMethod? method))
-                    {
-                        description = $"{description} {{{method!.Signature}}}";
-                    }
-                }
-                else if (obj.Address != 0 && taskCompletionSentinel.Address == obj.Address)
-                {
-                    description = "TaskCompletionSentinel";
-                }
-
                 return description;
             }
 
@@ -527,14 +530,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return false;
                 }
 
-                if (MethodTableAddress is ulong mt && obj.Type.MethodTable != mt)
+                if (obj.Type is not null)
                 {
-                    return false;
-                }
+                    if (MethodTableAddress is ulong mt && obj.Type.MethodTable != mt)
+                    {
+                        return false;
+                    }
 
-                if (NameSubstring is not null && !obj.Type.Name.Contains(NameSubstring))
-                {
-                    return false;
+                    if (NameSubstring is not null && obj.Type.Name is not null && !obj.Type.Name.Contains(NameSubstring))
+                    {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -655,37 +661,42 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // </remarks>
             void AddContinuation(ClrObject continuation, List<ClrObject> continuations)
             {
-                if (continuation.Type.Name.StartsWith("System.Collections.Generic.List<", StringComparison.Ordinal))
+                if (continuation.Type is not null)
                 {
-                    if (continuation.Type.GetFieldByName("_items") is ClrInstanceField itemsField)
+                    if (continuation.Type.Name is not null &&
+                        continuation.Type.Name.StartsWith("System.Collections.Generic.List<", StringComparison.Ordinal))
                     {
-                        ClrObject itemsObj = itemsField.ReadObject(continuation.Address, interior: false);
-                        if (!itemsObj.IsNull)
+                        if (continuation.Type.GetFieldByName("_items") is ClrInstanceField itemsField)
                         {
-                            ClrArray items = itemsObj.AsArray();
-                            if (items.Rank == 1)
+                            ClrObject itemsObj = itemsField.ReadObject(continuation.Address, interior: false);
+                            if (!itemsObj.IsNull)
                             {
-                                for (int i = 0; i < items.Length; i++)
+                                ClrArray items = itemsObj.AsArray();
+                                if (items.Rank == 1)
                                 {
-                                    if (items.GetObjectValue(i) is ClrObject { IsValid: true } c)
+                                    for (int i = 0; i < items.Length; i++)
                                     {
-                                        continuations.Add(ResolveContinuation(c));
+                                        if (items.GetObjectValue(i) is ClrObject { IsValid: true } c)
+                                        {
+                                            continuations.Add(ResolveContinuation(c));
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                else
-                {
-                    continuations.Add(continuation);
+                    else
+                    {
+                        continuations.Add(continuation);
+                    }
                 }
             }
 
             // <summary>Tries to get the object contents of a Task's continuations field</summary>
             bool TryGetContinuation(ClrObject obj, out ClrObject continuation)
             {
-                if (obj.Type.GetFieldByName("m_continuationObject") is ClrInstanceField continuationObjectField &&
+                if (obj.Type is not null &&
+                    obj.Type.GetFieldByName("m_continuationObject") is ClrInstanceField continuationObjectField &&
                     continuationObjectField.ReadObject(obj.Address, interior: false) is ClrObject { IsValid: true } continuationObject)
                 {
                     continuation = ResolveContinuation(continuationObject);
@@ -888,7 +899,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Gets whether the specified type is an AsyncStateMachineBox{T}.</summary>
-        private static bool IsStateMachineBox(ClrType type)
+        private static bool IsStateMachineBox(ClrType? type)
         {
             // Ideally we would compare the metadata token and module for the generic template for the type,
             // but that information isn't fully available via ClrMd, nor can it currently find DebugFinalizableAsyncStateMachineBox
