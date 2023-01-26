@@ -7,7 +7,7 @@ using System.IO;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "setclrpath", Help = "Set the path to load coreclr DAC/DBI files.")]
+    [Command(Name = "setclrpath", Help = "Sets the path to load coreclr DAC/DBI files.")]
     public class SetClrPath: CommandBase
     {
         public IRuntime Runtime { get; set; }

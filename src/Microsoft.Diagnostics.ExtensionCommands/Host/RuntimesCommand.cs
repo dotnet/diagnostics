@@ -4,15 +4,12 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "runtimes", Help = "List the runtimes in the target or change the default runtime.")]
+    [Command(Name = "runtimes", Help = "Lists the runtimes in the target or changes the default runtime.")]
     public class RuntimesCommand : CommandBase
     {
         public IRuntimeService RuntimeService { get; set; }
