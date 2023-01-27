@@ -213,6 +213,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (string.IsNullOrEmpty(quantilesText))
             {
+                return;
             }
 
             IList<(double, double)> quantiles = ParseQuantiles(quantilesText);
