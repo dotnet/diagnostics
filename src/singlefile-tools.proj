@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <SupportedRids>win-x64;win-x86;win-arm;win-arm64;linux-x64;linux-musl-arm64;osx-x64;osx-arm64;linux-arm64;linux-musl-x64;linux-arm</SupportedRids>
+    <SupportedRids>win-x64;win-x86;win-arm;win-arm64;linux-x64;linux-musl-arm64;linux-arm64;linux-musl-x64;linux-arm</SupportedRids>
     <ArcadeSdkMSBuildProjectDir>$([System.IO.Path]::GetDirectoryName('$(ArcadeSdkBuildTasksAssembly)'))\..\</ArcadeSdkMSBuildProjectDir>
     <ArcadeSdkSignProject>$(ArcadeSdkMSBuildProjectDir)Sign.proj</ArcadeSdkSignProject>
     <BundledToolsZipDirectory>$(BundledToolsPath)$(Configuration)/zips/</BundledToolsZipDirectory>
