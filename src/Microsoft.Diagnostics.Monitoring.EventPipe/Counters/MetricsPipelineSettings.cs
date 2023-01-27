@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal class CounterPipelineSettings : EventSourcePipelineSettings
+    internal class MetricsPipelineSettings : EventSourcePipelineSettings
     {
         public EventPipeCounterGroup[] CounterGroups { get; set; }
 

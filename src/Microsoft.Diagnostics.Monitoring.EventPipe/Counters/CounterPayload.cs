@@ -106,13 +106,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal class PercentilePayload : CounterPayload
     {
-        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<(double quantile, double value)> quantiles, DateTime timestamp) :
+        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, metadata, 0.0, timestamp, "Metric", EventType.Histogram)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
             DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
-            Quantiles = quantiles.Select(v => new Quantile(v.quantile, v.value)).ToArray();
+            Quantiles = quantiles.ToArray();
         }
 
         public Quantile[] Quantiles { get; }

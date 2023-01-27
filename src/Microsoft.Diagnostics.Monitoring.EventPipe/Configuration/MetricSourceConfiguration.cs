@@ -64,20 +64,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (meterProviders.Any())
             {
-                const long TimeSeriesValues = 0x2;
+                const long TimeSeriesValuesEventKeyword = 0x2;
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
                 SessionId = Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
-                    new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+                    new EventPipeProvider(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
                         new Dictionary<string, string>()
                         {
                             { "SessionId", SessionId },
                             { "Metrics", metrics },
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
-                            { "MaxTimeSeries", maxTimeSeries.ToString() },
-                            { "MaxHistograms", maxHistograms.ToString() }
+                            { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
+                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) }
                         }
                     );
 
