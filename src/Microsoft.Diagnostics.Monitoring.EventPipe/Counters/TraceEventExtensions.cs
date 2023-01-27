@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
@@ -72,7 +73,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
-            if (sessionId != null && "System.Diagnostics.Metrics".Equals(traceEvent.ProviderName))
+            if (sessionId != null && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
@@ -142,7 +143,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(lastValueText, out double lastValue))
+            if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
                 payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
             }
@@ -177,7 +178,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
-            if (double.TryParse(rateText, out double rate))
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
                 payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.IntervalSeconds, traceEvent.TimeStamp);
             }
@@ -211,12 +212,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
-            if (string.IsNullOrEmpty(quantilesText))
-            {
-                return;
-            }
-
-            IList<(double, double)> quantiles = ParseQuantiles(quantilesText);
+            //Note quantiles can be empty.
+            IList<Quantile> quantiles = ParseQuantiles(quantilesText);
             payload = new PercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
         }
 
@@ -308,10 +305,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
-        private static IList<(double, double)> ParseQuantiles(string quantileList)
+        private static IList<Quantile> ParseQuantiles(string quantileList)
         {
             string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            var quantiles = new List<(double, double)>();
+            var quantiles = new List<Quantile>();
             foreach (string quantile in quantileParts)
             {
                 string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
@@ -327,7 +324,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     continue;
                 }
-                quantiles.Add((key, val));
+                quantiles.Add(new Quantile(key, val));
             }
             return quantiles;
         }

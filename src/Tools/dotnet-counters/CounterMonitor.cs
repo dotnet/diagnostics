@@ -171,6 +171,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
+
         }
 
         private void HandleGauge(TraceEvent obj)

@@ -52,3 +52,4 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private static string AppendPercentile(string tags, string percentile) => string.IsNullOrEmpty(tags) ? percentile : string.Concat(tags, ",", percentile);
     }
 }
+ 
