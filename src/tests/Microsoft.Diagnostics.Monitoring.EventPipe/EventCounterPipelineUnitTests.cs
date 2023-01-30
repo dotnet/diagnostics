@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 var client = new DiagnosticsClient(testRunner.Pid);
 
-                await using CounterPipeline pipeline = new CounterPipeline(client, new CounterPipelineSettings
+                await using MetricsPipeline pipeline = new MetricsPipeline(client, new MetricsPipelineSettings
                 {
                     Duration = Timeout.InfiniteTimeSpan,
                     CounterGroups = new[]
