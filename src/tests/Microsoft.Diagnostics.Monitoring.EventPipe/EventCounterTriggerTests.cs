@@ -502,7 +502,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             const string value1 = "V1";
             const string key2 = "K2";
             const string value2 = "V:2";
-            Dictionary<string, string> metadataDict = TraceEventExtensions.GetMetadata($"{key1}:{value1},{key2}:{value2}");
+            IDictionary<string, string> metadataDict = CounterUtilities.GetMetadata($"{key1}:{value1},{key2}:{value2}");
 
             Assert.Equal(2, metadataDict.Count);
             Assert.Equal(value1, metadataDict[key1]);
@@ -518,7 +518,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [InlineData("K1")]
         public void ValidateMetadataParsing_Failure(string invalidMetadata)
         {
-            Dictionary<string, string> metadataDict = TraceEventExtensions.GetMetadata(invalidMetadata);
+            IDictionary<string, string> metadataDict = CounterUtilities.GetMetadata(invalidMetadata);
 
             Assert.Empty(metadataDict);
         }

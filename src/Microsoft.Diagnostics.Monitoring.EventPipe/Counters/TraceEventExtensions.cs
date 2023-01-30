@@ -5,12 +5,14 @@
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static class TraceEventExtensions
     {
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, out ICounterPayload payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -23,7 +25,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string series = payloadFields["Series"].ToString();
                 string counterName = payloadFields["Name"].ToString();
 
-                Dictionary<string, string> metadataDict = GetMetadata(payloadFields["Metadata"].ToString());
+                string metadata = payloadFields["Metadata"].ToString();
 
                 //CONSIDER
                 //Concurrent counter sessions do not each get a separate interval. Instead the payload
@@ -57,6 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 // Note that dimensional data such as pod and namespace are automatically added in prometheus and azure monitor scenarios.
                 // We no longer added it here.
+
                 payload = new CounterPayload(
                     traceEvent.TimeStamp,
                     traceEvent.ProviderName,
@@ -65,53 +68,265 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     value,
                     counterType,
                     intervalSec,
-                    metadataDict);
+                    metadata);
+
                 return true;
+            }
+
+            if (sessionId != null && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
+            {
+                if (traceEvent.EventName == "BeginInstrumentReporting")
+                {
+                    // Do we want to log something for this?
+                    //HandleBeginInstrumentReporting(traceEvent);
+                }
+                if (traceEvent.EventName == "HistogramValuePublished")
+                {
+                    HandleHistogram(traceEvent, filter, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "GaugeValuePublished")
+                {
+                    HandleGauge(traceEvent, filter, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "CounterRateValuePublished")
+                {
+                    HandleCounterRate(traceEvent, filter, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "TimeSeriesLimitReached")
+                {
+                    HandleTimeSeriesLimitReached(traceEvent, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "HistogramLimitReached")
+                {
+                    HandleHistogramLimitReached(traceEvent, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "Error")
+                {
+                    HandleError(traceEvent, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
+                {
+                    HandleObservableInstrumentCallbackError(traceEvent, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
+                {
+                    HandleMultipleSessionsNotSupportedError(traceEvent, sessionId, out payload);
+                }
+
+                return payload != null;
             }
 
             return false;
         }
 
-        //The metadata payload is formatted as a string of comma separated key:value pairs.
-        //This limitation means that metadata values cannot include commas; otherwise, the
-        //metadata will be parsed incorrectly. If a value contains a comma, then all metadata
-        //is treated as invalid and excluded from the payload.
-        internal static Dictionary<string, string> GetMetadata(string metadataPayload)
+        private static void HandleGauge(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
-            var metadataDict = new Dictionary<string, string>();
+            payload = null;
 
-            ReadOnlySpan<char> metadata = metadataPayload;
+            string payloadSessionId = (string)obj.PayloadValue(0);
 
-            while (!metadata.IsEmpty)
+            if (payloadSessionId != sessionId)
             {
-                int commaIndex = metadata.IndexOf(',');
-
-                ReadOnlySpan<char> kvPair;
-
-                if (commaIndex < 0)
-                {
-                    kvPair = metadata;
-                    metadata = default;
-                }
-                else
-                {
-                    kvPair = metadata[..commaIndex];
-                    metadata = metadata.Slice(commaIndex + 1);
-                }
-
-                int colonIndex = kvPair.IndexOf(':');
-                if (colonIndex < 0)
-                {
-                    metadataDict.Clear();
-                    break;
-                }
-
-                string metadataKey = kvPair[..colonIndex].ToString();
-                string metadataValue = kvPair.Slice(colonIndex + 1).ToString();
-                metadataDict[metadataKey] = metadataValue;
+                return;
             }
 
-            return metadataDict;
+            string meterName = (string)obj.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)obj.PayloadValue(3);
+            string unit = (string)obj.PayloadValue(4);
+            string tags = (string)obj.PayloadValue(5);
+            string lastValueText = (string)obj.PayloadValue(6);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
+            // the value might be an empty string indicating no measurement was provided this collection interval
+            if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
+            {
+                payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the Gauge callback function throws an exception.
+                payload = new CounterEndedPayload(meterName, instrumentName, null, obj.TimeStamp);
+            }
+        }
+
+        private static void HandleCounterRate(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)traceEvent.PayloadValue(0);
+
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string meterName = (string)traceEvent.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)traceEvent.PayloadValue(3);
+            string unit = (string)traceEvent.PayloadValue(4);
+            string tags = (string)traceEvent.PayloadValue(5);
+            string rateText = (string)traceEvent.PayloadValue(6);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
+            {
+                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.IntervalSeconds, traceEvent.TimeStamp);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the ObservableCounter callback function throws an exception.
+                payload = new CounterEndedPayload(meterName, instrumentName, null, traceEvent.TimeStamp);
+            }
+        }
+
+        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string meterName = (string)obj.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)obj.PayloadValue(3);
+            string unit = (string)obj.PayloadValue(4);
+            string tags = (string)obj.PayloadValue(5);
+            string quantilesText = (string)obj.PayloadValue(6);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
+            //Note quantiles can be empty.
+            IList<Quantile> quantiles = ParseQuantiles(quantilesText);
+            payload = new PercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
+        }
+
+
+
+        private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string errorMessage = $"Warning: Histogram tracking limit reached. Not all data is being shown. The limit can be changed with maxHistograms but will use more memory in the target process.";
+
+            payload = new ErrorPayload(errorMessage);
+        }
+
+        private static void HandleTimeSeriesLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string errorMessage = "Warning: Time series tracking limit reached. Not all data is being shown. The limit can be changed with maxTimeSeries but will use more memory in the target process.";
+
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+        }
+
+        private static void HandleError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+            string error = (string)obj.PayloadValue(1);
+            if (sessionId != payloadSessionId)
+            {
+                return;
+            }
+
+            string errorMessage = "Error reported from target process:" + Environment.NewLine + error;
+
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+        }
+
+        private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+            if (payloadSessionId == sessionId)
+            {
+                // If our session is the one that is running then the error is not for us,
+                // it is for some other session that came later
+                return;
+            }
+            else
+            {
+                string errorMessage = "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+                "Concurrent sessions are not supported.";
+
+                payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+            }
+        }
+
+        private static void HandleObservableInstrumentCallbackError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+            string error = (string)obj.PayloadValue(1);
+
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string errorMessage = "Exception thrown from an observable instrument callback in the target process:" + Environment.NewLine +
+                error;
+
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+        }
+
+        private static IList<Quantile> ParseQuantiles(string quantileList)
+        {
+            string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            var quantiles = new List<Quantile>();
+            foreach (string quantile in quantileParts)
+            {
+                string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
+                if (keyValParts.Length != 2)
+                {
+                    continue;
+                }
+                if (!double.TryParse(keyValParts[0], out double key))
+                {
+                    continue;
+                }
+                if (!double.TryParse(keyValParts[1], out double val))
+                {
+                    continue;
+                }
+                quantiles.Add(new Quantile(key, val));
+            }
+            return quantiles;
         }
 
         private static int GetInterval(string series)

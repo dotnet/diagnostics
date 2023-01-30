@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public const string TplEventSource = "System.Threading.Tasks.TplEventSource";
         public const string SampleProfilerProviderName = "Microsoft-DotNETCore-SampleProfiler";
         public const string EventPipeProviderName = "Microsoft-DotNETCore-EventPipe";
+        public const string SystemDiagnosticsMetricsProviderName = "System.Diagnostics.Metrics";
 
         public static IEnumerable<string> DefaultMetricProviders => new[] { SystemRuntimeEventSourceName, MicrosoftAspNetCoreHostingEventSourceName, GrpcAspNetCoreServer };
 
