@@ -807,8 +807,6 @@ LLDBServices::ReadVirtual(
     nextPageStart = (offset + PAGE_SIZE) & PAGE_MASK;
     bytesRead = 0;
 
-    printf("ReadVirtual: offset %016lx bufferSize %08x nextPageStart %016lx\n", offset, bufferSize, nextPageStart);
-
     while (bufferSize > 0)
     {
         size_t size = nextPageStart - offset;
@@ -817,7 +815,6 @@ LLDBServices::ReadVirtual(
             size = bufferSize;
         }
         size_t read = process.ReadMemory(offset, buffer, size, error);
-        printf("ReadVirtual: %08zx = ReadMemory(offset %016lx size %08zx)\n", read, offset, size);
 
         bytesRead += read;
         offset += read;
@@ -857,7 +854,6 @@ LLDBServices::ReadVirtual(
                     if (sectionData.IsValid())
                     {
                         bytesRead += sectionData.ReadRawData(error, 0, buffer, bufferSize);
-                        printf("ReadVirtual: offset %016lx loadAddr %016lx endAddr %016lx %08zx = ReadRawData(bufferSize %08x)\n", offset, loadAddr, endAddr, bytesRead, bufferSize);
                         goto exit;
                     }
                 }
