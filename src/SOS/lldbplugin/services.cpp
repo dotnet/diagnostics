@@ -804,9 +804,10 @@ LLDBServices::ReadVirtual(
     // As it turns out the lldb ReadMemory API doesn't do partial reads and the SOS
     // caching depends on that behavior. Round up to the next page boundary and attempt
     // to read up to the page boundaries.
-    nextPageStart = (offset + PAGE_SIZE - 1) & PAGE_MASK;
+    nextPageStart = (offset + PAGE_SIZE) & PAGE_MASK;
+    bytesRead = 0;
 
-    printf("ReadVirtual: offset %016lx nextPageStart %016lx bytesRead %zu\n", offset, nextPageStart, bytesRead);
+    printf("ReadVirtual: offset %016lx bufferSize %08x nextPageStart %016lx\n", offset, bufferSize, nextPageStart);
 
     while (bufferSize > 0)
     {
