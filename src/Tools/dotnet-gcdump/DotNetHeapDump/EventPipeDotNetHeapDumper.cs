@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                     eventPipeDataPresent = true;
 
-                    if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
+                    if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC && data.Reason == GCReason.Induced)
                     {
                         gcNum = data.Count;
                         log.WriteLine("{0,5:n1}s: .NET Dump Started...", getElapsed().TotalSeconds);

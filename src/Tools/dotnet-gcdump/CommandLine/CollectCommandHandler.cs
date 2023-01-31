@@ -116,8 +116,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         {
             var heapInfo = new DotNetHeapInfo();
             var log = verbose ? Console.Out : TextWriter.Null; 
-            
-            memoryGraph = new MemoryGraph(50_000);
+
+            memoryGraph = new MemoryGraph(expectedSize: 500_000, isVeryLargeGraph: true);
 
             if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, log, timeout, heapInfo))
             {

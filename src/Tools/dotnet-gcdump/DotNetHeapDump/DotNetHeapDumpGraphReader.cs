@@ -512,6 +512,7 @@ public class DotNetHeapDumpGraphReader
         }
 
         m_converted = true;
+        const int MaxNodeCount = 10_000_000;
 
         if (!m_seenStart)
         {
@@ -712,11 +713,26 @@ public class DotNetHeapDumpGraphReader
 
             Debug.Assert(!m_graph.IsDefined(nodeIdx));
             m_graph.SetNode(nodeIdx, typeIdx, objSize, m_children);
+
+            if (m_graph.NodeCount >= MaxNodeCount)
+            {
+                doCompletionCheck = false;
+                m_log.WriteLine("[WARNING: ]",
+                    $"Exceeded max node count {MaxNodeCount}. Processed {m_curNodeIdx}/{m_curNodeBlock.Count} nodes with {m_nodeBlocks.Count} node bulk events to go.");
+                break;
+            }
         }
 
-        if (doCompletionCheck && m_curEdgeBlock != null && m_curEdgeBlock.Count != m_curEdgeIdx)
+
+        if (m_curEdgeBlock != null && m_curEdgeBlock.Count != m_curEdgeIdx)
         {
-            throw new ApplicationException("Error: extra edge data.  Giving up on heap dump.");
+            m_log.WriteLine("[WARNING: ]",
+                $"Extra edge data found. Processing edge {m_curEdgeIdx}/{m_curEdgeBlock.Count} with {m_edgeBlocks.Count} edge bulk events to go.");
+
+            if (doCompletionCheck)
+            {
+                throw new ApplicationException("Error:  Giving up on heap dump.");
+            }
         }
 
         m_root.Build();
