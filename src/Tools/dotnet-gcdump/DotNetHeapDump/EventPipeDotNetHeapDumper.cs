@@ -90,6 +90,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC && data.Reason == GCReason.Induced)
                     {
                         gcNum = data.Count;
+                        memoryGraph.Is64Bit = data.PointerSize == 8;
                         log.WriteLine("{0,5:n1}s: .NET Dump Started...", getElapsed().TotalSeconds);
                     }
                 };
