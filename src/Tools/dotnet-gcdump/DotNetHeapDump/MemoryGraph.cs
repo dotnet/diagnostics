@@ -19,10 +19,10 @@ namespace Graphs
                 m_addressToNodeIndex = new SegmentedDictionary<Address, NodeIndex>(expectedSize);
             }
             else
-            {
-                m_addressToNodeIndex = new Dictionary<Address, NodeIndex>(expectedSize);
+        {
+            m_addressToNodeIndex = new Dictionary<Address, NodeIndex>(expectedSize);
             }
-
+                                                              
             m_nodeAddresses = new SegmentedList<Address>(SegmentSize, expectedSize);
         }
 
@@ -133,13 +133,13 @@ namespace Graphs
             // Write out the Memory addresses of each object 
             if (m_isVeryLargeGraph)
             {
-                serializer.Write(m_nodeAddresses.Count);
+            serializer.Write(m_nodeAddresses.Count);
             }
             else
             {
                 serializer.Write((int)m_nodeAddresses.Count);
             }
-
+            
             for (int i = 0; i < m_nodeAddresses.Count; i++)
             {
                 serializer.Write((long)m_nodeAddresses[i]);
