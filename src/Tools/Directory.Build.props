@@ -12,6 +12,7 @@
   <Choose>
     <When Condition="'$(BundleTools)' == 'true'">
       <PropertyGroup>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
         <SelfContained>false</SelfContained>
         <PublishDir>$(BundledToolsPath)$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
         <PublishSingleFile>true</PublishSingleFile>

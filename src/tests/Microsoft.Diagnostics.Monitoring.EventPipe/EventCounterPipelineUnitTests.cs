@@ -13,6 +13,10 @@ using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
+// Newer SDKs flag MemberData(nameof(Configurations)) with this error
+// Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
+#pragma warning disable CA1825 
+
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class EventCounterPipelineUnitTests
@@ -67,13 +71,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 }
             }
 
-            public void PipelineStarted()
-            {
-            }
+            public Task PipelineStarted(CancellationToken token) => Task.CompletedTask;
 
-            public void PipelineStopped()
-            {
-            }
+            public Task PipelineStopped(CancellationToken token) => Task.CompletedTask;
 
             private static string CreateKey(ICounterPayload payload)
             {
@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 var client = new DiagnosticsClient(testRunner.Pid);
 
-                await using EventCounterPipeline pipeline = new EventCounterPipeline(client, new EventPipeCounterPipelineSettings
+                await using MetricsPipeline pipeline = new MetricsPipeline(client, new MetricsPipelineSettings
                 {
                     Duration = Timeout.InfiniteTimeSpan,
                     CounterGroups = new[]

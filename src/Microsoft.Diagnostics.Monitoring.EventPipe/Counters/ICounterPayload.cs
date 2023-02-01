@@ -33,8 +33,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         DateTime Timestamp { get; }
 
+        /// <summary>
+        /// The interval between counters. Note this is the actual measure of time elapsed, not the requested interval.
+        /// </summary>
         float Interval { get; }
 
-        IReadOnlyDictionary<string, string> Metadata { get; }
+        /// <summary>
+        /// Optional metadata for counters. Note that normal counters use ':' as a separator character, while System.Diagnostics.Metrics use ';'.
+        /// We do not immediately convert string to Dictionary, since dotnet-counters does not need this conversion.
+        /// </summary>
+        string Metadata { get; }
+
+        EventType EventType { get; set; }
     }
 }

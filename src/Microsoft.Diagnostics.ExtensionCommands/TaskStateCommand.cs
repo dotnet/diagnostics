@@ -7,7 +7,7 @@ using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "taskstate", Aliases = new string[] { "tks" }, Help = "Display a Task state in a human readable format.")]
+    [Command(Name = "taskstate", Aliases = new string[] { "tks" }, Help = "Displays a Task state in a human readable format.")]
     public class TaskStateCommand : ExtensionCommandBase
     {
         [Argument(Help = "The Task instance address.")]

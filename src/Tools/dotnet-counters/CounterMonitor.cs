@@ -22,6 +22,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Globalization;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -165,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
 
             // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(rateText, out double rate))
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
                 CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
@@ -189,7 +190,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
             
             // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(lastValueText, out double lastValue))
+            if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
                 CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
@@ -305,11 +306,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     continue;
                 }
-                if (!double.TryParse(keyValParts[0], out double key))
+                if (!double.TryParse(keyValParts[0], NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double key))
                 {
                     continue;
                 }
-                if (!double.TryParse(keyValParts[1], out double val))
+                if (!double.TryParse(keyValParts[1], NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double val))
                 {
                     continue;
                 }

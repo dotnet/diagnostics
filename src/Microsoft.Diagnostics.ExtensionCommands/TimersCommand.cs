@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Display running timers details.")]
+    [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Displays information about running timers.")]
     public class TimersCommand : ExtensionCommandBase
     {
         public override void ExtensionInvoke()

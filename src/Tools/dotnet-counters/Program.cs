@@ -160,9 +160,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option RuntimeVersionOption() =>
             new Option(
                 aliases: new[] { "-r", "--runtime-version" },
-                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0") 
+                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0") 
             {
-                Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "3.1")
+                Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "6.0")
             };
 
         private static Option DiagnosticPortOption() =>
@@ -207,14 +207,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
 
-        private static readonly string[] s_SupportedRuntimeVersions = new[] { "3.0", "3.1", "5.0" };
+        private static readonly string[] s_SupportedRuntimeVersions = KnownData.s_AllVersions;
 
         public static int List(IConsole console, string runtimeVersion)
         {
             if (!s_SupportedRuntimeVersions.Contains(runtimeVersion))
             {
                 Console.WriteLine($"{runtimeVersion} is not a supported version string or a supported runtime version.");
-                Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0");
+                Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0");
                 return 0;
             }
             var profiles = KnownData.GetAllProviders(runtimeVersion);

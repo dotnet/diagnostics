@@ -6,18 +6,20 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal class EventCounterPipeline : EventSourcePipeline<EventPipeCounterPipelineSettings>
+    internal class MetricsPipeline : EventSourcePipeline<MetricsPipelineSettings>
     {
         private readonly IEnumerable<ICountersLogger> _loggers;
         private readonly CounterFilter _filter;
+        private string _sessionId;
 
-        public EventCounterPipeline(DiagnosticsClient client,
-            EventPipeCounterPipelineSettings settings,
+        public MetricsPipeline(DiagnosticsClient client,
+            MetricsPipelineSettings settings,
             IEnumerable<ICountersLogger> loggers) : base(client, settings)
         {
             _loggers = loggers ?? throw new ArgumentNullException(nameof(loggers));
@@ -38,18 +40,28 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            return new MetricSourceConfiguration(Settings.CounterIntervalSeconds, _filter.GetProviders());
+            var config = new MetricSourceConfiguration(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
+                {
+                    Provider = counterGroup.ProviderName,
+                    IntervalSeconds = counterGroup.IntervalSeconds,
+                    Type = (MetricType)counterGroup.Type
+                }),
+                Settings.MaxHistograms, Settings.MaxTimeSeries);
+
+            _sessionId = config.SessionId;
+
+            return config;
         }
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
-            ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStarted());
+            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token));
 
             eventSource.Dynamic.All += traceEvent =>
             {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_filter, out ICounterPayload counterPayload))
+                    if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload counterPayload))
                     {
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
@@ -67,7 +79,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             await sourceCompletedTaskSource.Task;
 
-            ExecuteCounterLoggerAction((metricLogger) => metricLogger.PipelineStopped());
+            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStopped(token));
+        }
+
+        private async Task ExecuteCounterLoggerActionAsync(Func<ICountersLogger, Task> action)
+        {
+            foreach (ICountersLogger logger in _loggers)
+            {
+                try
+                {
+                    await action(logger);
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+            }
         }
 
         private void ExecuteCounterLoggerAction(Action<ICountersLogger> action)

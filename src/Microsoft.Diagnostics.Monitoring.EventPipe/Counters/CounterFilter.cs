@@ -38,12 +38,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public IEnumerable<string> GetProviders() => _enabledCounters.Keys;
 
+        public int IntervalSeconds => _intervalMilliseconds / 1000;
+
         public bool IsIncluded(string providerName, string counterName, int intervalMilliseconds)
         {
             if (_intervalMilliseconds != intervalMilliseconds)
             {
                 return false;
             }
+
+            return IsIncluded(providerName, counterName);
+        }
+
+        public bool IsIncluded(string providerName, string counterName)
+        {
             if (_enabledCounters.Count == 0)
             {
                 return true;

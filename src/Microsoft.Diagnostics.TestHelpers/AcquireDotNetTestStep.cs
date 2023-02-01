@@ -5,7 +5,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
@@ -133,28 +133,17 @@ namespace Microsoft.Diagnostics.TestHelpers
         async static Task DownloadFile(string remotePath, string localPath, ITestOutputHelper output)
         {
             output.WriteLine("Downloading: " + remotePath + " -> " + localPath);
+            using HttpClient client = new ();
+            using HttpResponseMessage response = await client.GetAsync(remotePath);
+            response.EnsureSuccessStatusCode();
+            using Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             Directory.CreateDirectory(Path.GetDirectoryName(localPath));
-            WebRequest request = HttpWebRequest.Create(remotePath);
-            WebResponse response = await request.GetResponseAsync();
-            using (FileStream localZipStream = File.OpenWrite(localPath))
-            {
-                // TODO: restore the CopyToAsync code after System.Net.Http.dll is 
-                // updated to a newer version. The current old version has a bug 
-                // where the copy never finished.
-                // await response.GetResponseStream().CopyToAsync(localZipStream);
-                byte[] buffer = new byte[16 * 1024];
-                long bytesLeft = response.ContentLength;
-
-                while (bytesLeft > 0)
-                {
-                    int read = response.GetResponseStream().Read(buffer, 0, buffer.Length);
-                    if (read == 0)
-                        break;
-                    localZipStream.Write(buffer, 0, read);
-                    bytesLeft -= read;
-                }
-                output.WriteLine("Downloading finished");
-            }
+            using FileStream localZipStream = File.OpenWrite(localPath);
+            // TODO: restore the CopyToAsync code after System.Net.Http.dll is 
+            // updated to a newer version. The current old version has a bug 
+            // where the copy never finished.
+            await stream.CopyToAsync(localZipStream);
+            output.WriteLine("Downloading finished");
         }
 
         async static Task UnGZip(string gzipPath, string expandedFilePath, ITestOutputHelper output)

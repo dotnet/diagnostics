@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "threadpoolqueue", Aliases = new string[] { "tpq" }, Help = "Display queued ThreadPool work items.")]
+    [Command(Name = "threadpoolqueue", Aliases = new string[] { "tpq" }, Help = "Displays queued ThreadPool work items.")]
     public class ThreadPoolQueueCommand : ExtensionCommandBase
     {
         public override void ExtensionInvoke()

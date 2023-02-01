@@ -8,7 +8,7 @@ using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpconcurrentqueue", Aliases = new string[] { "dcq" }, Help = "Display concurrent queue content.")]
+    [Command(Name = "dumpconcurrentqueue", Aliases = new string[] { "dcq" }, Help = "Displays concurrent queue content.")]
     public class DumpConcurrentQueueCommand : ExtensionCommandBase
     {
         [Argument(Help = "The address of a ConcurrentQueue object.")]

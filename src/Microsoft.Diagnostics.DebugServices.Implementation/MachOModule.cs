@@ -13,10 +13,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Disposable MachOFile wrapper around the module file.
     /// </summary>
-    public class MachOModule : MachOFile, IDisposable
+    public class MachOModule : MachOFile
     {
-        private readonly Stream _stream;
-
         /// <summary>
         /// Opens and returns an MachOFile instance from the local file path
         /// </summary>
@@ -48,9 +46,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public MachOModule(Stream stream) :
             base(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false)
         {
-            _stream = stream;
         }
-
-        public void Dispose() => _stream.Dispose();
     }
 }
