@@ -48,7 +48,7 @@ handle_arguments() {
             __ShiftArgs=1
             ;;
 
-        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign)
+        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
@@ -63,7 +63,7 @@ handle_arguments() {
             __ShiftArgs=1
             ;;
 
-        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine)
+        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
@@ -131,7 +131,7 @@ mkdir -p "$__IntermediatesDir"
 mkdir -p "$__LogsDir"
 mkdir -p "$__CMakeBinDir"
 
-__ExtraCmakeArgs="$__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
+__ExtraCmakeArgs="$__CMakeArgs $__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
 
 # Specify path to be set for CMAKE_INSTALL_PREFIX.
 # This is where all built native libraries will copied to.
@@ -202,7 +202,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
     __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
 
     "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.csproj \
+        $__RepoRootDir/eng/CreateVersionFile.proj \
         /bl:$__GenerateVersionLog \
         /t:GenerateVersionFiles \
         /restore \
@@ -230,8 +230,9 @@ fi
 #
 
 if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
-    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/netcoreapp3.1/publish/$__DistroRid
-    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/netcoreapp3.1/publish/$__DistroRid
+    __targetRid=net6.0
+    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__DistroRid
+    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__DistroRid
 
     mkdir -p "$__dotnet_sos"
     mkdir -p "$__dotnet_dump"

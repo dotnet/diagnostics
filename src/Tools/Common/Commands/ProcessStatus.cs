@@ -142,7 +142,6 @@ namespace Microsoft.Internal.Common.Commands
                         String cmdLineArgs = GetArgs(process);
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
-
                         var commandInfo = new ProcessDetails()
                         {
                             ProcessId = process.Id,
@@ -174,7 +173,7 @@ namespace Microsoft.Internal.Common.Commands
                 FormatTableRows(printInfo, sb);
                 console.Out.WriteLine(sb.ToString());
             }
-            catch (InvalidOperationException ex)
+            catch (Exception  ex)
             {
                 console.Out.WriteLine(ex.ToString());
             }

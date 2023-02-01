@@ -7,7 +7,7 @@ using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "sosstatus", Help = "Display internal status or reset the internal cached state.")]
+    [Command(Name = "sosstatus", Help = "Displays internal status or resets the internal cached state.")]
     public class StatusCommand : CommandBase
     {
         public ITarget Target { get; set; }

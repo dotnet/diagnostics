@@ -8,7 +8,7 @@ using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpconcurrentdictionary", Aliases = new string[] { "dcd" }, Help = "Display concurrent dictionary content.")]
+    [Command(Name = "dumpconcurrentdictionary", Aliases = new string[] { "dcd" }, Help = "Displays concurrent dictionary content.")]
     public class DumpConcurrentDictionaryCommand : ExtensionCommandBase
     {
         [Argument(Help = "The address of a ConcurrentDictionary object.")]

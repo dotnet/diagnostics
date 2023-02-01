@@ -7,7 +7,7 @@ using System;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    [Command(Name = "help", Help = "Display help for a command.", Flags = CommandFlags.Global | CommandFlags.Manual)]
+    [Command(Name = "help", Help = "Displays help for a command.", Flags = CommandFlags.Global | CommandFlags.Manual)]
     public class HelpCommand : CommandBase
     {
         [Argument(Help = "Command to find help.")]

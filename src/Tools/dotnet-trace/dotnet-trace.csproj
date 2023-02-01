@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.Trace</RootNamespace>
     <ToolCommandName>dotnet-trace</ToolCommandName>
     <Description>.NET Performance Trace Tool</Description>

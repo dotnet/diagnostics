@@ -14,13 +14,6 @@
       <KnownRuntimePack>
         <LatestRuntimeFrameworkVersion Condition="'%(TargetFramework)' == 'net6.0'">$(MicrosoftNETCoreApp60Version)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
-
-      <KnownFrameworkReference>
-        <LatestRuntimeFrameworkVersion Condition="'%(TargetFramework)' == 'netcoreapp3.1'">$(MicrosoftNETCoreApp31Version)</LatestRuntimeFrameworkVersion>
-      </KnownFrameworkReference>
-      <KnownAppHostPack>
-        <AppHostPackVersion Condition="'%(TargetFramework)' == 'netcoreapp3.1'">$(MicrosoftNETCoreApp31Version)</AppHostPackVersion>
-      </KnownAppHostPack>
     </ItemGroup>
   </Target>
 </Project>
