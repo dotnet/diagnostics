@@ -717,8 +717,8 @@ public class DotNetHeapDumpGraphReader
             if (m_graph.NodeCount >= MaxNodeCount)
             {
                 doCompletionCheck = false;
-                m_log.WriteLine("[WARNING: ]",
-                    $"Exceeded max node count {MaxNodeCount}. Processed {m_curNodeIdx}/{m_curNodeBlock.Count} nodes with {m_nodeBlocks.Count} node bulk events to go.");
+                m_log.WriteLine("[WARNING]: Exceeded max node count {0}. Processed {1}/{2} nodes with {3} node bulk events to go.",
+                    MaxNodeCount, m_curNodeIdx, m_curNodeBlock.Count, m_nodeBlocks.Count);
                 break;
             }
         }
@@ -726,8 +726,8 @@ public class DotNetHeapDumpGraphReader
 
         if (m_curEdgeBlock != null && m_curEdgeBlock.Count != m_curEdgeIdx)
         {
-            m_log.WriteLine("[WARNING: ]",
-                $"Extra edge data found. Processing edge {m_curEdgeIdx}/{m_curEdgeBlock.Count} with {m_edgeBlocks.Count} edge bulk events to go.");
+            m_log.WriteLine("[WARNING]: Extra edge data found. Processing edge {0}/{1} with {2} edge bulk events to go.",
+                m_curEdgeIdx, m_curEdgeBlock.Count, m_edgeBlocks.Count);
 
             if (doCompletionCheck)
             {
