@@ -24,7 +24,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-alpha.1.23079.1</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>8.0.0-alpha.1.23079.1</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>8.0.100-preview.2.23101.9</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>8.0.100-alpha.1.23080.8</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
@@ -35,7 +35,7 @@
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>6.0.12</SingleFileRuntime60Version>
     <SingleFileRuntime70Version>7.0.2</SingleFileRuntime70Version>
-    <SingleFileRuntimeLatestVersion>8.0.0-alpha.1.23080.2</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntimeLatestVersion>8.0.0-alpha.1.23076.9</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
