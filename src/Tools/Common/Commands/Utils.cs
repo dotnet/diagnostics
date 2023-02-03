@@ -159,7 +159,16 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
-        private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
+        private static bool isSetCursorPositionSupported = true;
+        private void SystemConsoleLineRewriter() {
+            try {
+                if (isSetCursorPositionSupported)
+                    Console.SetCursorPosition(0, LineToClear);
+            } catch {
+                Console.WriteLine("Console.SetCursorPosition() is not supported in this env.");
+                isSetCursorPositionSupported = false;
+            }
+        }
     }
 
     internal class ReturnCode
