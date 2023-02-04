@@ -33,8 +33,8 @@
     <MicrosoftNETCoreApp70Version>7.0.2</MicrosoftNETCoreApp70Version>
     <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
-    <SingleFileRuntime60Version>6.0.12</SingleFileRuntime60Version>
-    <SingleFileRuntime70Version>7.0.2</SingleFileRuntime70Version>
+    <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
+    <SingleFileRuntime70Version>$(MicrosoftNETCoreApp70Version)</SingleFileRuntime70Version>
     <SingleFileRuntimeLatestVersion>8.0.0-alpha.1.23076.9</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>

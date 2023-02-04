@@ -77,10 +77,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     processInfoBeforeResume = await clientShim.GetProcessInfo();
                     ValidateProcessInfo(runner.Pid, processInfoBeforeResume);
-                    if (config.RuntimeFrameworkVersionMajor < 8)
-                    {
-                        Assert.True(string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
-                    }
+                    Assert.True((config.RuntimeFrameworkVersionMajor < 8) == string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
 
                     await clientShim.ResumeRuntime();
 
