@@ -7,6 +7,7 @@
   <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
  
+  <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '8')">net8.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '7')">net7.0</BuildProjectFrameworkLatest>
   <BuildProjectFrameworkLatest Condition="StartsWith('$(RuntimeVersionLatest)', '6')">net6.0</BuildProjectFrameworkLatest>
 
@@ -20,6 +21,7 @@
   <CliPath>$(DotNetRoot)/dotnet</CliPath>
 
   <NuGetPackageFeeds>
+      dotnet8=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet8/nuget/v3/index.json;
       dotnet7=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet7/nuget/v3/index.json;
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;
       dotnet-core=https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
@@ -64,12 +66,26 @@
         <!--
             Single file
          -->
-        <Option Condition="'$(RuntimeVersionLatest)' != ''">
+        <Option Condition="'$(SingleFileRuntimeLatestVersion)' != ''">
           <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(SingleFileRuntimeLatestVersion)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(SingleFileRuntime70Version)' != ''">
+          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+          <BuildProjectFramework>net7.0</BuildProjectFramework>
+          <PublishSingleFile>true</PublishSingleFile>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+          <RuntimeFrameworkVersion>$(SingleFileRuntime70Version)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(SingleFileRuntime60Version)' != ''">
+          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+          <BuildProjectFramework>net6.0</BuildProjectFramework>
+          <PublishSingleFile>true</PublishSingleFile>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+          <RuntimeFrameworkVersion>$(SingleFileRuntime60Version)</RuntimeFrameworkVersion>
         </Option>
         <!--
             Default
@@ -78,6 +94,11 @@
           <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
           <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+        </Option>
+        <Option Condition="'$(RuntimeVersion70)' != ''">
+          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
+          <BuildProjectFramework>net7.0</BuildProjectFramework>
+          <RuntimeFrameworkVersion>$(RuntimeVersion70)</RuntimeFrameworkVersion>
         </Option>
         <Option Condition="'$(RuntimeVersion60)' != ''">
           <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>

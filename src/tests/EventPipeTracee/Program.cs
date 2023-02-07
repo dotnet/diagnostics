@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Threading;
 
 namespace EventPipeTracee
 {
@@ -76,7 +77,7 @@ namespace EventPipeTracee
                 while (DateTime.UtcNow < targetDateTime)
                 {
                     acc++;
-                    if (acc % 1_000_000 == 0)
+                    if (acc % 10_000_000 == 0)
                     {
                         Console.WriteLine($"{pid} Spin waiting...");
                     }

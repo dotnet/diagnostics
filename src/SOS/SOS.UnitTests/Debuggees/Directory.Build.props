@@ -6,6 +6,6 @@
     <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>
-    <BuildTargetFrameworks>net6.0;net7.0</BuildTargetFrameworks>
+    <BuildTargetFrameworks>net6.0;net7.0;net8.0</BuildTargetFrameworks>
   </PropertyGroup>
 </Project>

@@ -121,6 +121,12 @@ VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
 VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
 ENDIF:MAJOR_RUNTIME_VERSION_GE_7
 
+IFDEF:MAJOR_RUNTIME_VERSION_GE_8
+SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
+VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
+VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
+ENDIF:MAJOR_RUNTIME_VERSION_GE_8
+
 SOSCOMMAND:FinalizeQueue
 VERIFY:\s*SyncBlocks to be cleaned up:\s+<DECVAL>\s+
 VERIFY:(\s*Free-Threaded Interfaces to be released:\s+<DECVAL>\s+)?

@@ -802,9 +802,10 @@ LLDBServices::ReadVirtual(
     }
 
     // As it turns out the lldb ReadMemory API doesn't do partial reads and the SOS
-    // caching depends on that behavior. Round up to the next page boundry and attempt
-    // to read up to the page boundries.
-    nextPageStart = (offset + PAGE_SIZE - 1) & PAGE_MASK;
+    // caching depends on that behavior. Round up to the next page boundary and attempt
+    // to read up to the page boundaries.
+    nextPageStart = (offset + PAGE_SIZE) & PAGE_MASK;
+    bytesRead = 0;
 
     while (bufferSize > 0)
     {
