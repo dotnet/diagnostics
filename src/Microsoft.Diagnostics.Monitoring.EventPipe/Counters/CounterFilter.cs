@@ -13,18 +13,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal sealed class CounterFilter
     {
         private Dictionary<string, (int? IntervalMilliseconds, List<string> CounterNames)> _enabledCounters;
-        private int _intervalMilliseconds;
+        private int _defaultIntervalMilliseconds;
 
-        public static CounterFilter AllCounters(float counterIntervalSeconds)
-            => new CounterFilter(counterIntervalSeconds);
+        public static CounterFilter AllCounters(float defaultIntervalSeconds)
+            => new CounterFilter(defaultIntervalSeconds);
 
-        public CounterFilter(float intervalSeconds)
+        public CounterFilter(float defaultIntervalSeconds)
         {
             //Provider names are not case sensitive, but counter names are.
             _enabledCounters = new(StringComparer.OrdinalIgnoreCase);
 
             //The Series payload of the counter which we use for filtering
-            _intervalMilliseconds = ConvertInterval(intervalSeconds);
+            _defaultIntervalMilliseconds = SecondsToMilliseconds(defaultIntervalSeconds);
         }
 
         // Called when we want to enable all counters under a provider name.
@@ -36,18 +36,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public void AddFilter(string providerName, string[] counters, float? intervalSeconds = null)
         {
             _enabledCounters[providerName] = (
-                IntervalMilliseconds: (intervalSeconds.HasValue ? ConvertInterval(intervalSeconds.Value) : null),
+                IntervalMilliseconds: (intervalSeconds.HasValue ? SecondsToMilliseconds(intervalSeconds.Value) : null),
                 CounterNames: new List<string>(counters ?? Array.Empty<string>()));
         }
 
         public IEnumerable<string> GetProviders() => _enabledCounters.Keys;
 
-        public int IntervalSeconds => _intervalMilliseconds / 1000;
+        public int DefaultIntervalSeconds => _defaultIntervalMilliseconds / 1000;
 
         public bool IsIncluded(string providerName, string counterName, int intervalMilliseconds)
         {
-            int requestedInterval = _intervalMilliseconds;
-            if (_enabledCounters.TryGetValue(providerName, out var enabledCounters))
+            int requestedInterval = _defaultIntervalMilliseconds;
+            if (_enabledCounters.TryGetValue(providerName, out (int? IntervalMilliseconds, List<string> CounterNames) enabledCounters))
             {
                 if (enabledCounters.IntervalMilliseconds.HasValue)
                 {
@@ -68,13 +68,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 return true;
             }
-            if (_enabledCounters.TryGetValue(providerName, out var enabledCounters))
+            if (_enabledCounters.TryGetValue(providerName, out (int? IntervalMilliseconds, List<string> CounterNames) enabledCounters))
             {
                 return enabledCounters.CounterNames.Count == 0 || enabledCounters.CounterNames.Contains(counterName, StringComparer.Ordinal);
             }
             return false;
         }
 
-        private int ConvertInterval(float intervalSeconds) => (int)(intervalSeconds * 1000);
+        private static int SecondsToMilliseconds(float intervalSeconds) => (int)(intervalSeconds * 1000);
     }
 }
