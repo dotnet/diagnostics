@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected override async Task Build(ITestOutputHelper output)
         {
-            string publishArgs = "publish";
+            string publishArgs = "publish --configuration Debug";
             if (RuntimeFramework != null)
             {
                 publishArgs += " --framework " + RuntimeFramework;
