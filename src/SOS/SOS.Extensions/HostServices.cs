@@ -211,7 +211,7 @@ namespace SOS.Extensions
                 _serviceManager.LoadExtensions();
 
                 // Loading extensions or adding service factories not allowed after this point.
-                _serviceManager.Finalized();
+                _serviceManager.FinalizeServices();
 
                 // Add all the global services to the global service container
                 _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);

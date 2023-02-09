@@ -229,6 +229,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Finalizes the service manager. Loading extensions or adding service factories are not allowed after this call.
         /// </summary>
-        public void Finalized() => _finalized = true;
+        public void FinalizeServices() => _finalized = true;
     }
 }

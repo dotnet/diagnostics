@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceManager.RegisterAssembly(typeof(Target).Assembly);
 
             // Loading extensions or adding service factories not allowed after this point.
-            _serviceManager.Finalized();
+            _serviceManager.FinalizeServices();
 
             _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
