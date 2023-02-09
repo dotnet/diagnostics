@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static IEnumerable<MetricEventPipeProvider> CreateProviders(IEnumerable<string> providers) =>
+        public static IEnumerable<MetricEventPipeProvider> CreateProviders(IEnumerable<string> providers) =>
             providers.Select(provider => new MetricEventPipeProvider {
                 Provider = provider,
                 Type = MetricType.EventCounter
