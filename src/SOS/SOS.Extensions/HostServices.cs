@@ -184,6 +184,14 @@ namespace SOS.Extensions
                 Trace.TraceError(ex.Message);
                 return HResult.E_NOINTERFACE;
             }
+            try
+            {
+                MemoryRegionServiceFromDebuggerServices memRegions = new(iunk);
+                _serviceProvider.AddService<IMemoryRegionService>(memRegions);
+            }
+            catch (InvalidCastException)
+            {
+            }
             HResult hr;
             try
             {
