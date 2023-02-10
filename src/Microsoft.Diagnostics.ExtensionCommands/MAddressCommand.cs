@@ -26,8 +26,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool TagReserveMemoryHeuristically { get; set; }
 
         public IMemoryRegionService MemoryRegionService { get; set; }
-        private IDataReader DataReader => Runtime.DataTarget.DataReader;
         public ClrRuntime Runtime { get; set; }
+
+        private IDataReader DataReader => Runtime.DataTarget.DataReader;
 
         public override void ExtensionInvoke()
         {
@@ -372,6 +373,52 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return nonReserved;
         }
 
+        internal IEnumerable<(ulong Address, ulong Pointer, DescribedRegion MemoryRange)> EnumerateRegionPointers(ulong start, ulong end, DescribedRegion[] ranges)
+        {
+            ulong[] array = ArrayPool<ulong>.Shared.Rent(4096);
+            int arrayBytes = array.Length * sizeof(ulong);
+            try
+            {
+                ulong curr = start;
+                ulong remaining = end - start;
+
+                while (remaining > 0)
+                {
+                    int size = Math.Min(remaining > int.MaxValue ? int.MaxValue : (int)remaining, arrayBytes);
+                    bool res = ReadMemory(curr, array, size, out int bytesRead);
+                    if (!res || bytesRead <= 0)
+                        break;
+
+                    for (int i = 0; i < bytesRead / sizeof(ulong); i++)
+                    {
+                        ulong ptr = array[i];
+
+                        DescribedRegion found = FindMemory(ranges, ptr);
+                        if (found is not null)
+                            yield return (curr + (uint)i * sizeof(ulong), ptr, found);
+                    }
+
+                    curr += (uint)bytesRead;
+                    remaining -= (uint)bytesRead; ;
+                }
+
+            }
+            finally
+            {
+                ArrayPool<ulong>.Shared.Return(array);
+            }
+        }
+
+        private unsafe bool ReadMemory(ulong start, ulong[] array, int size, out int bytesRead)
+        {
+            fixed (ulong* ptr = array)
+            {
+                Span<byte> buffer = new(ptr, size);
+                bytesRead = DataReader.Read(start, buffer);
+                return bytesRead == size;
+            }
+        }
+
         internal class DescribedRegion : IMemoryRegion
         {
             private readonly IMemoryRegion _region;
@@ -435,7 +482,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             return
 @"-------------------------------------------------------------------------------
-This is the help for !maddress.
+!maddress is a managed version of !address, which attempts to annotate all memory
+with information about CLR's heaps.
+
+usage: !maddress [--list] [--images] [--includeReserve [--tagReserve]]
+
+Flags:
+    --list
+        Shows the full list of annotated memory regions and not just the statistics
+        table.
+
+    --images
+        Summarizes the memory ranges consumed by images in the process.
+        
+    --includeReserve
+        Include reserved memory (MEM_RESERVE) in the output.  This is usually only
+        useful if there is virtual address exhaustion.
+
+    --tagReserve
+        If this flag is set, then !maddress will attempt to ""blame"" reserve segments
+        on the region that immediately proceeded it.  For example, if a ""Heap""
+        memory segment is immediately followed by a MEM_RESERVE region, we will call
+        that reserve region HeapReserve.  Note that this is a heuristic and NOT
+        intended to be completely accurate.  This can be useful to try to figure out
+        what is creating large amount of MEM_RESERVE regions.
 ";
         }
     }
