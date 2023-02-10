@@ -27,6 +27,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
+            if (Runtime is null)
+            {
+                WriteLine("ClrMD interfaces must be available for this command.");
+                return;
+            }
+
+            if (MemoryRegionService is null)
+            {
+                WriteLine("IMemoryRegionService must be available for this command.");
+                return;
+            }
+
             if (MemoryTypes is null || MemoryTypes.Length == 0)
             {
                 Console.WriteLine("Must specify at least one memory region type to search for.");
