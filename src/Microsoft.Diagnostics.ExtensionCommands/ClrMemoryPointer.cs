@@ -16,7 +16,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Kind = kind;
         }
 
-
         /// <summary>
         /// Enumerates pointers to various CLR heaps in memory.
         /// </summary>
