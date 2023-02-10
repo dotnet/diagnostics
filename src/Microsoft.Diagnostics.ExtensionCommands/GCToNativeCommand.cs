@@ -14,8 +14,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         internal const string All = "all";
 
-        const int Width = 120;
-
         [Argument(Help ="The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
 
@@ -24,6 +22,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryRegionService MemoryRegionService { get; set; }
         public ClrRuntime Runtime { get; set; }
+
+        private int Width
+        {
+            get
+            {
+                int width = Console.WindowWidth;
+                if (width == 0)
+                    width = 120;
+                if (width > 256)
+                    width = 256;
+
+                return width;
+            }
+        }
 
         public override void ExtensionInvoke()
         {
