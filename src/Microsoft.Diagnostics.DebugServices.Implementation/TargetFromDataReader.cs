@@ -47,6 +47,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IMemoryService memoryService = new MemoryServiceFromDataReader(_dataReader);
                 if (IsDump)
                 {
+                    // The target container factory needs to be cloned for the memory services so the original IMemoryService
+                    // factory can be removed so it doesn't inadvertently get called. The image mapping service is going to
+                    // replace it with the memory service instance passed. The clone.Build() creates a new separate service
+                    // container instance for the image mapping service.
                     ServiceContainerFactory clone = _serviceContainerFactory.Clone();
                     clone.RemoveServiceFactory<IMemoryService>();
 
