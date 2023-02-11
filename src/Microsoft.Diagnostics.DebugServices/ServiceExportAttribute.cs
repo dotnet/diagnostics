@@ -9,7 +9,6 @@ namespace Microsoft.Diagnostics.DebugServices
     {
         Global,
         Context,
-        Provider,
         Target,
         Module,
         Thread,
@@ -24,8 +23,8 @@ namespace Microsoft.Diagnostics.DebugServices
     public class ServiceExportAttribute : Attribute
     {
         /// <summary>
-        /// The interface or type to register the service. If null, the service type registered will be any
-        /// interfaces on the the class, the class itself if no interfaces or the return type of the method.
+        /// The interface or type to register the service. If null, the service type registered will be
+        /// the class itself or the return type of the method.
         /// </summary>
         public Type Type { get; set; }
 

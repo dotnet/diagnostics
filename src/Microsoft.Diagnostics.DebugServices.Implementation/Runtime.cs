@@ -177,10 +177,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetLocalPath(string fileName)
         {
-            if (File.Exists(fileName))
-            {
-                return fileName;
-            }
             string localFilePath;
             if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {

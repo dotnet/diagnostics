@@ -208,6 +208,7 @@ namespace SOS.Extensions
 
                 // Display any extension assembly loads on console
                 _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
+                _serviceManager.NotifyExtensionLoadFailure.Register((Exception ex) => fileLoggingConsoleService.WriteLine(ex.Message));
 
                 // Load any extra extensions in the search path
                 _serviceManager.LoadExtensions();
