@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     [Command(Name = "runtests", Help = "Runs the debug services xunit tests.")]
     public class RunTestsCommand : CommandBase, ITestOutputHelper
     {
+        [ServiceImport]
         public ITarget Target { get; set; }
 
         [Argument(Help = "Test data xml file path.")]

@@ -473,9 +473,7 @@ HRESULT SymbolReader::LoadSymbolsForPortablePDB(__in_z WCHAR* pModuleName, ___in
     {
         return E_NOINTERFACE;
     }
-    m_symbolReaderHandle = GetSymbolService()->LoadSymbolsForModule(
-        pModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
-
+    m_symbolReaderHandle = symbolService->LoadSymbolsForModule(pModuleName, isFileLayout, peAddress, (int)peSize, inMemoryPdbAddress, (int)inMemoryPdbSize);
     if (m_symbolReaderHandle == 0)
     {
         return E_FAIL;

@@ -26,10 +26,11 @@ namespace SOS.Hosting
 
         public IntPtr ICorDebugDataTarget { get; }
 
-        public CorDebugDataTargetWrapper(IServiceProvider services)
+        public CorDebugDataTargetWrapper(IServiceProvider services, IRuntime runtime)
         {
             Debug.Assert(services != null);
-            _target = services.GetService<ITarget>();
+            Debug.Assert(runtime != null);
+            _target = runtime.Target;
             _symbolService = services.GetService<ISymbolService>();
             _memoryService = services.GetService<IMemoryService>();
             _threadService = services.GetService<IThreadService>();

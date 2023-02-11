@@ -13,6 +13,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "logging", Help = "Enables/disables internal diagnostic logging.", Flags = CommandFlags.Global)]
     public class LoggingCommand : CommandBase
     {
+        [ServiceImport(Optional = true)]
         public IDiagnosticLoggingService DiagnosticLoggingService { get; set; }
 
         [Argument(Name = "path", Help = "Log file path.")]

@@ -97,13 +97,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
-        HostType IHost.HostType => HostType.DotnetDump;
+        public IServiceEvent<ITarget> OnTargetCreate { get; } = new ServiceEvent<ITarget>();
 
-        IServiceProvider IHost.Services => throw new NotImplementedException();
+        public HostType HostType => HostType.DotnetDump;
 
-        IEnumerable<ITarget> IHost.EnumerateTargets() => throw new NotImplementedException();
+        public IServiceProvider Services => throw new NotImplementedException();
 
-        void IHost.DestroyTarget(ITarget target) => throw new NotImplementedException();
+        public IEnumerable<ITarget> EnumerateTargets() => throw new NotImplementedException();
 
         #endregion
     }

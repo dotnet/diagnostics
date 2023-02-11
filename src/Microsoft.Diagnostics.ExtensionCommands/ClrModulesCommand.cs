@@ -13,8 +13,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
     public class ClrModulesCommand : CommandBase
     {
+        [ServiceImport(Optional = true)]
         public ClrRuntime Runtime { get; set; }
 
+        [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]

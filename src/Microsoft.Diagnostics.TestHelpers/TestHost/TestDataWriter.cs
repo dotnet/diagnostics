@@ -1,6 +1,7 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -20,19 +21,21 @@ namespace Microsoft.Diagnostics.TestHelpers
         public TestDataWriter()
         {
             Root = new XElement("TestData");
-            Root.Add(new XElement("Version", "1.0.1"));
+            Root.Add(new XElement("Version", "1.0.2"));
             Target = new XElement("Target");
             Root.Add(Target);
         }
 
-        public void Build(ITarget target)
+        public void Build(IServiceProvider services)
         {
+            ITarget target = services.GetService<ITarget>();
+            Debug.Assert(target is not null);
             AddMembers(Target, typeof(ITarget), target, nameof(ITarget.Id), nameof(ITarget.GetTempDirectory));
 
             var modulesElement = new XElement("Modules");
             Target.Add(modulesElement);
 
-            var moduleService = target.Services.GetService<IModuleService>();
+            var moduleService = services.GetService<IModuleService>();
             string runtimeModuleName = target.GetPlatformModuleName("coreclr");
             foreach (IModule module in moduleService.EnumerateModules())
             {
@@ -44,7 +47,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             var threadsElement = new XElement("Threads");
             Target.Add(threadsElement);
 
-            var threadService = target.Services.GetService<IThreadService>();
+            var threadService = services.GetService<IThreadService>();
             var registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
             foreach (IThread thread in threadService.EnumerateThreads())
             {
@@ -73,7 +76,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             var runtimesElement = new XElement("Runtimes");
             Target.Add(runtimesElement);
 
-            var runtimeService = target.Services.GetService<IRuntimeService>();
+            var runtimeService = services.GetService<IRuntimeService>();
             foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
             {
                 var runtimeElement = new XElement("Runtime");
@@ -93,7 +96,12 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void AddModuleMembers(XElement element, IModule module, string symbolModuleName)
         {
-            AddMembers(element, typeof(IModule), module, nameof(IModule.ModuleIndex), nameof(IModule.GetPdbFileInfos), nameof(IModule.GetVersionString), nameof(IModule.GetSymbolFileName));
+            AddMembers(element, typeof(IModule), module,
+                nameof(IModule.ModuleIndex),
+                nameof(IModule.GetPdbFileInfos),
+                nameof(IModule.GetVersionString),
+                nameof(IModule.GetSymbolFileName),
+                nameof(IModule.LoadSymbols));
 
             if (symbolModuleName != null && IsModuleEqual(module, symbolModuleName))
             {

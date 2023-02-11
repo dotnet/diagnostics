@@ -49,6 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             $"Show each stack that includes an object at a specific address, and include fields: !{CommandName} --address 0x000001264adce778 --fields";
 
         /// <summary>Gets the runtime for the process.  Set by the command framework.</summary>
+        [ServiceImport(Optional = true)]
         public ClrRuntime? Runtime { get; set; }
 
         /// <summary>Gets whether to only show stacks that include the object with the specified address.</summary>

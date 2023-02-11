@@ -10,8 +10,8 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestDump : TestHost, IHost
     {
-        private readonly ServiceProvider _serviceProvider;
-        private readonly ContextService _contextService;
+        private readonly ServiceManager _serviceManager;
+        private readonly ServiceContainer _serviceContainer;
         private readonly SymbolService _symbolService;
         private DataTarget _dataTarget;
         private int _targetIdFactory;
@@ -19,11 +19,23 @@ namespace Microsoft.Diagnostics.TestHelpers
         public TestDump(TestConfiguration config)
             : base(config)
         {
-            _serviceProvider = new ServiceProvider();
-            _contextService = new ContextService(this);
+            _serviceManager = new ServiceManager();
+
+            // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
+            _serviceManager.RegisterAssembly(typeof(Target).Assembly);
+
+            // Loading extensions or adding service factories not allowed after this point.
+            _serviceManager.FinalizeServices();
+
+            _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
+            _serviceContainer.AddService<IServiceManager>(_serviceManager);
+            _serviceContainer.AddService<IHost>(this);
+
+            var contextService = new ContextService(this);
+            _serviceContainer.AddService<IContextService>(contextService);
+
             _symbolService = new SymbolService(this);
-            _serviceProvider.AddService<IContextService>(_contextService);
-            _serviceProvider.AddService<ISymbolService>(_symbolService);
+            _serviceContainer.AddService<ISymbolService>(_symbolService);
 
             // Automatically enable symbol server support
             _symbolService.AddSymbolServer(msdl: true, symweb: false, timeoutInMinutes: 6, retryCount: 5);
@@ -46,25 +58,13 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
-        HostType IHost.HostType => HostType.DotnetDump;
+        public IServiceEvent<ITarget> OnTargetCreate { get; } = new ServiceEvent<ITarget>();
 
-        IServiceProvider IHost.Services => _serviceProvider;
+        public HostType HostType => HostType.DotnetDump;
 
-        IEnumerable<ITarget> IHost.EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
+        public IServiceProvider Services => _serviceContainer;
 
-        void IHost.DestroyTarget(ITarget target)
-        {
-            if (target == null) {
-                throw new ArgumentNullException(nameof(target));
-            }
-            if (target == Target)
-            {
-                _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable) {
-                    disposable.Dispose();
-                }
-            }
-        }
+        public IEnumerable <ITarget> EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
 
         #endregion
     }

@@ -15,7 +15,6 @@ namespace SOS.Extensions
     /// </summary>
     internal class MemoryServiceFromDebuggerServices : IMemoryService
     {
-        private readonly ITarget _target;
         private readonly DebuggerServices _debuggerServices;
 
         /// <summary>
@@ -27,7 +26,6 @@ namespace SOS.Extensions
         {
             Debug.Assert(target != null);
             Debug.Assert(debuggerServices != null);
-            _target = target;
             _debuggerServices = debuggerServices;
 
             switch (target.Architecture)

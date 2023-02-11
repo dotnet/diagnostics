@@ -950,16 +950,16 @@ LLDBServices::GetNameByOffset(
         goto exit;
     }
 
-    address = target.ResolveLoadAddress(offset);
-    if (!address.IsValid())
-    {
-        hr = E_INVALIDARG;
-        goto exit;
-    }
-
     // If module index is invalid, add module name to symbol
     if (moduleIndex == DEBUG_ANY_ID)
     {
+        address = target.ResolveLoadAddress(offset);
+        if (!address.IsValid())
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
+
         module = address.GetModule();
         if (!module.IsValid())
         {
@@ -977,6 +977,13 @@ LLDBServices::GetNameByOffset(
     {
         module = target.GetModuleAtIndex(moduleIndex);
         if (!module.IsValid())
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
+
+        address = module.ResolveFileAddress(offset);
+        if (!address.IsValid())
         {
             hr = E_INVALIDARG;
             goto exit;
@@ -2242,6 +2249,7 @@ LLDBServices::OutputString(
         file = m_debugger.GetOutputFileHandle();
     }
     fputs(str, file);
+    fflush(file);
 }
 
 HRESULT 
@@ -2386,6 +2394,131 @@ LLDBServices::GetOffsetBySymbol(
         goto exit;
     }
     *offset = startAddress.GetLoadAddress(target);
+exit:
+    return hr;
+}
+
+HRESULT
+LLDBServices::GetTypeId(
+    ULONG moduleIndex,
+    PCSTR typeName,
+    PULONG64 typeId)
+{
+    HRESULT hr = S_OK;
+
+    lldb::SBTarget target;
+    lldb::SBModule module;
+    lldb::SBTypeList typeList;
+    lldb::SBType type;
+
+    if (typeId == nullptr)
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    *typeId = -1;
+
+    target = m_debugger.GetSelectedTarget();
+    if (!target.IsValid())
+    {
+        hr = E_FAIL;
+        goto exit;
+    }
+
+    module = target.GetModuleAtIndex(moduleIndex);
+    if (!module.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    type = module.FindFirstType(typeName);
+    if (!type.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+exit:
+    return hr;
+}
+
+HRESULT
+LLDBServices::GetFieldOffset(
+    ULONG moduleIndex,
+    PCSTR typeName,
+    ULONG64 typeId,     // unused on lldb
+    PCSTR fieldName,
+    PULONG offset)
+{
+    HRESULT hr = S_OK;
+
+    lldb::SBTarget target;
+    lldb::SBModule module;
+    lldb::SBTypeList typeList;
+    lldb::SBType type;
+    lldb::SBTypeMember field;
+    lldb::SBTypeMember baseClassTypeMember;
+    lldb::SBType baseClass;
+    std::vector<lldb::SBType> baseClassTypes;
+
+    if (offset == nullptr)
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    *offset = -1;
+
+    target = m_debugger.GetSelectedTarget();
+    if (!target.IsValid())
+    {
+        hr = E_FAIL;
+        goto exit;
+    }
+
+    module = target.GetModuleAtIndex(moduleIndex);
+    if (!module.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    type = module.FindFirstType(typeName);
+    if (!type.IsValid())
+    {
+        hr = E_INVALIDARG;
+        goto exit;
+    }
+
+    // lldb only returns the information about the specific class you requested, not any base
+    // classes. So we have to do a DFS to find the field we care about.
+    baseClassTypes.push_back(type);
+    while (baseClassTypes.size() > 0)
+    {
+        type = baseClassTypes.back();
+        baseClassTypes.pop_back();
+
+        for (int fieldIndex = 0; fieldIndex < type.GetNumberOfFields(); ++fieldIndex)
+        {
+            field = type.GetFieldAtIndex(fieldIndex);
+            if (strcmp(fieldName, field.GetName()) == 0)
+            {
+                *offset = field.GetOffsetInBytes();
+                goto exit;
+            }
+        }
+
+        for (int baseClassIndex = 0; baseClassIndex < type.GetNumberOfDirectBaseClasses(); ++baseClassIndex)
+        {
+            baseClass = type.GetDirectBaseClassAtIndex(baseClassIndex).GetType();
+            baseClassTypes.push_back(baseClass);
+        }
+    }
+
+    hr = E_INVALIDARG;
+
 exit:
     return hr;
 }

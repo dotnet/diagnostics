@@ -19,42 +19,45 @@ namespace SOS.Hosting
     /// <summary>
     /// Helper code to hosting the native SOS code
     /// </summary>
+    [ServiceExport(Scope = ServiceScope.Target)]
     public sealed class SOSHost : IDisposable
     {
         // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
         internal const uint InvalidTimeStamp = 0xFFFFFFFE;
         internal const uint InvalidChecksum = 0xFFFFFFFF;
 
-        internal readonly IServiceProvider Services;
         internal readonly ITarget Target;
-        internal readonly TargetWrapper TargetWrapper;
-        internal readonly IConsoleService ConsoleService;
-        internal readonly IModuleService ModuleService;
-        internal readonly IThreadService ThreadService;
         internal readonly IMemoryService MemoryService;
+
+#pragma warning disable CS0649
+        [ServiceImport]
+        internal readonly IConsoleService ConsoleService;
+
+        [ServiceImport]
+        internal readonly IContextService ContextService;
+
+        [ServiceImport]
+        internal readonly IModuleService ModuleService;
+
+        [ServiceImport]
+        internal readonly IThreadService ThreadService;
+
+        [ServiceImport]
         private readonly SOSLibrary _sosLibrary;
+#pragma warning restore
+
         private readonly IntPtr _interface;
         private readonly ulong _ignoreAddressBitsMask;
         private bool _disposed;
 
         /// <summary>
-        /// Create an instance of the hosting class. Has the lifetime of the target. Depends on the
-        /// context service for the current thread and runtime.
+        /// Create an instance of the hosting class. Has the lifetime of the target.
         /// </summary>
-        /// <param name="services">service provider</param>
-        public SOSHost(IServiceProvider services)
+        public SOSHost(ITarget target, IMemoryService memoryService)
         {
-            Services = services;
-            Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("No target");
-            TargetWrapper = new TargetWrapper(services);
-            Target.DisposeOnDestroy(this);
-            ConsoleService = services.GetService<IConsoleService>();
-            ModuleService = services.GetService<IModuleService>();
-            ThreadService = services.GetService<IThreadService>();
-            MemoryService = services.GetService<IMemoryService>();
-            TargetWrapper.ServiceWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(services.GetService<ISymbolService>(), MemoryService));
-            _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
-            _sosLibrary = services.GetService<SOSLibrary>();
+            Target = target ?? throw new DiagnosticsException("No target");
+            MemoryService = memoryService;
+            _ignoreAddressBitsMask = memoryService.SignExtensionMask();
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -74,8 +77,7 @@ namespace SOS.Hosting
             if (!_disposed)
             {
                 _disposed = true;
-                TargetWrapper.Release();
-                COMHelper.Release(_interface);
+                ComWrapper.ReleaseWithCheck(_interface);
             }
         }
 
@@ -577,7 +579,7 @@ namespace SOS.Hosting
             IntPtr context,
             uint contextSize)
         {
-            IThread thread = Services.GetService<IThread>();
+            IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
             {
                 return GetThreadContextBySystemId(self, thread.ThreadId, 0, contextSize, context);
@@ -654,7 +656,7 @@ namespace SOS.Hosting
             IntPtr self,
             out uint id)
         {
-            IThread thread = Services.GetService<IThread>();
+            IThread thread = ContextService.GetCurrentThread();
             if (thread is not null) { 
                 return GetThreadIdBySystemId(self, thread.ThreadId, out id);
             }
@@ -668,11 +670,7 @@ namespace SOS.Hosting
         {
             try
             {
-                var contextService = Services.GetService<IContextService>();
-                if (contextService is null) {
-                    return HResult.E_FAIL;
-                }
-                contextService.SetCurrentThread(ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId);
+                ContextService.SetCurrentThread(ThreadService.GetThreadFromIndex(unchecked((int)id)).ThreadId);
             }
             catch (DiagnosticsException)
             {
@@ -685,7 +683,7 @@ namespace SOS.Hosting
             IntPtr self,
             out uint sysId)
         {
-            IThread thread = Services.GetService<IThread>();
+            IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
             { 
                 sysId = thread.ThreadId;
@@ -749,7 +747,7 @@ namespace SOS.Hosting
             IntPtr self,
             ulong* offset)
         {
-            IThread thread = Services.GetService<IThread>();
+            IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
             { 
                 try
@@ -848,7 +846,7 @@ namespace SOS.Hosting
             int index, 
             out ulong value)
         {
-            IThread thread = Services.GetService<IThread>();
+            IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
             { 
                 if (thread.TryGetRegisterValue(index, out value))
@@ -893,6 +891,39 @@ namespace SOS.Hosting
             if (pointer != null) {
                 *pointer = value;
             }
+        }
+    }
+
+    public static class ComWrapper
+    {
+        /// <summary>
+        /// Asserts the the reference count doesn't go below 0.
+        /// </summary>
+        /// <param name="comCallable">wrapper instance</param>
+        public static void ReleaseWithCheck(this COMCallableIUnknown comCallable)
+        {
+            int count = comCallable.Release();
+            Debug.Assert(count >= 0);
+        }
+
+        /// <summary>
+        /// Asserts the the reference count doesn't go below 0.
+        /// </summary>
+        /// <param name="callableCOM">wrapper instance</param>
+        public static void ReleaseWithCheck(this CallableCOMWrapper callableCOM)
+        {
+            int count = callableCOM.Release();
+            Debug.Assert(count >= 0);
+        }
+
+        /// <summary>
+        /// Asserts the the reference count doesn't go below 0.
+        /// </summary>
+        /// <param name="callableCOM">wrapper instance</param>
+        public static void ReleaseWithCheck(IntPtr punk)
+        {
+            int count = COMHelper.Release(punk);
+            Debug.Assert(count >= 0);
         }
     }
 }

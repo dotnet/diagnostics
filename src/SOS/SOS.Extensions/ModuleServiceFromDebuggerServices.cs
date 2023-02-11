@@ -18,6 +18,53 @@ namespace SOS.Extensions
     /// </summary>
     internal class ModuleServiceFromDebuggerServices : ModuleService
     {
+        class FieldFromDebuggerServices : IField
+        {
+            public FieldFromDebuggerServices(IType type, string fieldName, uint offset)
+            {
+                Type = type;
+                Name = fieldName;
+                Offset = offset;
+            }
+            public IType Type { get; }
+
+            public string Name { get; }
+
+            public uint Offset { get; }
+        }
+
+        class TypeFromDebuggerServices : IType
+        {
+            private ModuleServiceFromDebuggerServices _moduleService;
+            private ulong _typeId;
+
+            public TypeFromDebuggerServices(ModuleServiceFromDebuggerServices moduleService, IModule module, ulong typeId, string typeName)
+            {
+                _moduleService = moduleService;
+                _typeId = typeId;
+                Module = module;
+                Name = typeName;
+            }
+
+            public IModule Module { get; }
+
+            public string Name { get; }
+
+            public List<IField> Fields => throw new NotImplementedException();
+
+            public bool TryGetField(string fieldName, out IField field)
+            {
+                HResult hr = _moduleService._debuggerServices.GetFieldOffset(Module.ModuleIndex, _typeId, Name, fieldName, out uint offset);
+                if (hr != HResult.S_OK)
+                {
+                    field = null;
+                    return false;
+                }
+                field = new FieldFromDebuggerServices(this, fieldName, offset);
+                return true;
+            }
+        }
+
         class ModuleFromDebuggerServices : Module, IModuleSymbols
         {
             // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
@@ -34,8 +81,8 @@ namespace SOS.Extensions
                 ulong imageBase,
                 ulong imageSize,
                 uint indexFileSize,
-                uint indexTimeStamp) 
-                    : base(moduleService.Target)
+                uint indexTimeStamp)
+                : base(moduleService.Services)
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;
@@ -45,22 +92,16 @@ namespace SOS.Extensions
                 IndexFileSize = indexTimeStamp == InvalidTimeStamp ? null : indexFileSize;
                 IndexTimeStamp = indexTimeStamp == InvalidTimeStamp ? null : indexTimeStamp;
 
-                ServiceProvider.AddService<IModuleSymbols>(this);
+                _serviceContainer.AddService<IModuleSymbols>(this);
+            }
+
+            public override void Dispose()
+            { 
+                _serviceContainer.RemoveService(typeof(IModuleSymbols));
+                base.Dispose();
             }
 
             #region IModule
-
-            public override int ModuleIndex { get; }
-
-            public override string FileName { get; }
-
-            public override ulong ImageBase { get; }
-
-            public override ulong ImageSize { get; }
-
-            public override uint? IndexFileSize { get; }
-
-            public override uint? IndexTimeStamp { get; }
 
             public override Version GetVersionData()
             {
@@ -77,10 +118,7 @@ namespace SOS.Extensions
                     }
                     else
                     {
-                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
-                        {
-                            _version = GetVersionInner();
-                        }
+                        _version = GetVersionInner();
                     }
                 }
                 return _version;
@@ -93,10 +131,7 @@ namespace SOS.Extensions
                     HResult hr = _moduleService._debuggerServices.GetModuleVersionString(ModuleIndex, out _versionString);
                     if (!hr.IsOK)
                     {
-                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
-                        {
-                            _versionString = _moduleService.GetVersionString(this);
-                        }
+                        _versionString = GetVersionStringInner();
                     }
                 }
                 return _versionString;
@@ -126,6 +161,18 @@ namespace SOS.Extensions
                 return _moduleService._debuggerServices.GetOffsetBySymbol(ModuleIndex, name, out address).IsOK;
             }
 
+            bool IModuleSymbols.TryGetType(string typeName, out IType type)
+            {
+                HResult hr = _moduleService._debuggerServices.GetTypeId(ModuleIndex, typeName, out ulong typeId);
+                if (hr != HResult.S_OK)
+                {
+                    type = null;
+                    return false;
+                }
+                type = new TypeFromDebuggerServices(_moduleService, this, typeId, typeName);
+                return true;
+            }
+
             #endregion
 
             protected override bool TryGetSymbolAddressInner(string name, out ulong address)
@@ -138,8 +185,8 @@ namespace SOS.Extensions
 
         private readonly DebuggerServices _debuggerServices;
 
-        internal ModuleServiceFromDebuggerServices(ITarget target, IMemoryService rawMemoryService, DebuggerServices debuggerServices)
-            : base(target, rawMemoryService)
+        internal ModuleServiceFromDebuggerServices(IServiceProvider services, DebuggerServices debuggerServices)
+            : base(services)
         {
             Debug.Assert(debuggerServices != null);
             _debuggerServices = debuggerServices;

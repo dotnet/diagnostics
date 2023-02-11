@@ -23,7 +23,7 @@ namespace SOS.Hosting
             Trace.TraceInformation("ServiceWrapper.Dispose");
             foreach (var wrapper in _wrappers.Values)
             {
-                wrapper.Release();
+                wrapper.ReleaseWithCheck();
             }
             _wrappers.Clear();
         }
@@ -95,7 +95,6 @@ namespace SOS.Hosting
             if (wrapper == null) {
                 return HResult.E_NOINTERFACE;
             }
-            wrapper.AddRef();
             return COMHelper.QueryInterface(wrapper.IUnknownObject, guid, out ptr);
         }
     }

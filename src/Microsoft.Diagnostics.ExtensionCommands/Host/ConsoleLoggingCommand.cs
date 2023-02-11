@@ -10,6 +10,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "logclose", DefaultOptions = "--disable", Help = "Disables console file logging.", Flags = CommandFlags.Global)]
     public class ConsoleLoggingCommand : CommandBase
     {
+        [ServiceImport(Optional = true)]
         public IConsoleFileLoggingService FileLoggingService { get; set; }
 
         [Argument(Name = "path", Help = "Log file path.")]

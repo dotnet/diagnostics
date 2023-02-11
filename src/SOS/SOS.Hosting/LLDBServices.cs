@@ -97,7 +97,7 @@ namespace SOS.Hosting
         string GetCoreClrDirectory(
             IntPtr self)
         {
-            IRuntime currentRuntime = _soshost.Services.GetService<IRuntime>();
+            IRuntime currentRuntime = _soshost.ContextService.GetCurrentRuntime();
             if (currentRuntime is not null) {
                 return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }

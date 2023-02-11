@@ -16,13 +16,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime service implementation
     /// </summary>
-    internal class DataReader : IDataReader
+    [ServiceExport(Type = typeof(IDataReader), Scope = ServiceScope.Target)]
+    public class DataReader : IDataReader
     {
         private readonly ITarget _target;
         private IEnumerable<ModuleInfo> _modules;
-        private IModuleService _moduleService;
-        private IThreadService _threadService;
-        private IMemoryService _memoryService;
+
+        [ServiceImport]
+        private IModuleService ModuleService { get; set; }
+
+        [ServiceImport]
+        private IMemoryService MemoryService { get; set; }
+
+        [ServiceImport]
+        private IThreadService ThreadService { get; set; }
 
         public DataReader(ITarget target)
         {
@@ -105,12 +112,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
-
-        private IModuleService ModuleService => _moduleService ??= _target.Services.GetService<IModuleService>();
-
-        private IMemoryService MemoryService => _memoryService ??= _target.Services.GetService<IMemoryService>();
-
-        private IThreadService ThreadService => _threadService ??= _target.Services.GetService<IThreadService>();
 
         private class DataReaderModule : ModuleInfo
         {

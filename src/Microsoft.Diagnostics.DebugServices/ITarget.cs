@@ -68,5 +68,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Invoked when the target is destroyed.
         /// </summary>
         IServiceEvent OnDestroyEvent { get; }
+
+        /// <summary>
+        /// Cleans up the target and releases target's resources.
+        /// </summary>
+        void Destroy();
     }
 }

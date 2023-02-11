@@ -22,20 +22,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [Argument(Name = "address", Help = "Address to dump.")]
         public string AddressValue
         {
-            get => Address?.ToString();
-            set => Address = ParseAddress(value);
+            get => _address?.ToString();
+            set => _address = ParseAddress(value);
         }
-
-        public ulong? Address { get; set; }
 
         [Option(Name = "--end", Aliases = new string[] { "-e" }, Help = "Ending address to dump.")]
         public string EndAddressValue
         {
-            get => EndAddress?.ToString();
-            set => EndAddress = ParseAddress(value);
+            get => _endAddress?.ToString();
+            set => _endAddress = ParseAddress(value);
         }
-
-        public ulong? EndAddress { get; set; }
 
         // ****************************************************************************************
         // The following arguments are static so they are remembered for the "d" command. This 
@@ -71,16 +67,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [Option(Name = "--show-address", Help = "Display the addresses of data found.")]
         public bool ShowAddress { get; set; } = true;
 
+        [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
+        [ServiceImport]
         public ITarget Target { get; set; }
+
+        private ulong? _address;
+        private ulong? _endAddress;
 
         private static ulong _lastAddress;
 
         public override void Invoke()
         {
-            if (Address.HasValue) {
-                _lastAddress = Address.Value;
+            if (_address.HasValue) {
+                _lastAddress = _address.Value;
             }
 
             int length = Length;
@@ -100,11 +101,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             Length = length;
 
-            if (EndAddress.HasValue) {
-                if (EndAddress.Value <= _lastAddress) {
+            if (_endAddress.HasValue) {
+                if (_endAddress.Value <= _lastAddress) {
                     throw new ArgumentException("Cannot dump a negative range");
                 }
-                int range = (int)(EndAddress.Value - _lastAddress);
+                int range = (int)(_endAddress.Value - _lastAddress);
                 Count = range / length;
             }
 

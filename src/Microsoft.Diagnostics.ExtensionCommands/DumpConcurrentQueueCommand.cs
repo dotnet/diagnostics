@@ -14,6 +14,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help = "The address of a ConcurrentQueue object.")]
         public string Address { get; set; }
 
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         public override void ExtensionInvoke()

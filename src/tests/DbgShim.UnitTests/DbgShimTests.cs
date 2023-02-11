@@ -274,7 +274,7 @@ namespace Microsoft.Diagnostics
                 IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
                 IRuntime runtime = runtimeService.EnumerateRuntimes().Single();
 
-                CorDebugDataTargetWrapper dataTarget = new(target.Services);
+                CorDebugDataTargetWrapper dataTarget = new(target.Services, runtime);
                 LibraryProviderWrapper libraryProvider = new(target.OperatingSystem, runtime.RuntimeModule.BuildId, runtime.GetDbiFilePath(), runtime.GetDacFilePath());
                 ClrDebuggingVersion maxDebuggerSupportedVersion = new()
                 {

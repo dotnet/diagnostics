@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private string _versionString;
 
             public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
-                : base(moduleService.Target)
+                : base(moduleService.Services)
             {
                 _moduleService = moduleService;
                 _moduleInfo = moduleInfo;
@@ -38,8 +38,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             #region IModule
-
-            public override int ModuleIndex { get; }
 
             public override string FileName => _moduleInfo.FileName;
 
@@ -75,10 +73,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
-                        {
-                            _version = GetVersionInner();
-                        }
+                        _version = GetVersionInner();
                     }
                 }
                 return _version;
@@ -88,10 +83,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (InitializeValue(Module.Flags.InitializeProductVersion))
                 {
-                    if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
-                    {
-                        _versionString = _moduleService.GetVersionString(this);
-                    }
+                    _versionString = GetVersionStringInner();
                 }
                 return _versionString;
             }
@@ -114,8 +106,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IDataReader _dataReader;
 
-        public ModuleServiceFromDataReader(ITarget target, IMemoryService rawMemoryService, IDataReader dataReader)
-            : base(target, rawMemoryService)
+        public ModuleServiceFromDataReader(IServiceProvider services, IDataReader dataReader)
+            : base(services)
         {
             _dataReader = dataReader;
         }
@@ -159,14 +151,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     try
                     {
                         modules.Add(moduleInfo.ImageBase, module);
+                        moduleIndex++;
                     }
                     catch (ArgumentException)
                     {
                         Trace.TraceError($"GetModules(): duplicate module base '{module}' dup '{modules[moduleInfo.ImageBase]}'");
                     }
                 }
-
-                moduleIndex++;
             }
             return modules;
         }

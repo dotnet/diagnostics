@@ -5,26 +5,23 @@
 using Microsoft.Diagnostics.DebugServices;
 using System;
 
-namespace Microsoft.Diagnostics.Repl
+namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "help", Help = "Displays help for a command.", Flags = CommandFlags.Global | CommandFlags.Manual)]
+    [Command(Name = "help", Help = "Displays help for a command.", Flags = CommandFlags.Global)]
     public class HelpCommand : CommandBase
     {
         [Argument(Help = "Command to find help.")]
         public string Command { get; set; }
 
-        private readonly ICommandService _commandService;
-        private readonly IServiceProvider _services;
+        [ServiceImport]
+        public ICommandService CommandService { get; set; }
 
-        public HelpCommand(ICommandService commandService, IServiceProvider services)
-        {
-            _commandService = commandService;
-            _services = services;
-        }
+        [ServiceImport]
+        public IServiceProvider Services { get; set; }
 
         public override void Invoke()
         {
-            if (!_commandService.DisplayHelp(Command, _services))
+            if (!CommandService.DisplayHelp(Command, Services))
             {
                 throw new NotSupportedException($"Help for {Command} not found");
             }

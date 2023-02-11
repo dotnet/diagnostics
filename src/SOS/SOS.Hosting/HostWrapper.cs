@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace SOS.Hosting
@@ -14,16 +15,14 @@ namespace SOS.Hosting
         private static readonly Guid IID_IHost = new Guid("E0CD8534-A88B-40D7-91BA-1B4C925761E9");
 
         private readonly IHost _host;
-        private readonly Func<TargetWrapper> _getTarget;
 
         public ServiceWrapper ServiceWrapper { get; } = new ServiceWrapper();
 
         public IntPtr IHost { get; }
 
-        public HostWrapper(IHost host, Func<TargetWrapper> getTarget)
+        public HostWrapper(IHost host)
         {
             _host = host;
-            _getTarget = getTarget;
 
             VTableBuilder builder = AddInterface(IID_IHost, validate: false);
             builder.AddMethod(new GetHostTypeDelegate(GetHostType));
@@ -34,7 +33,11 @@ namespace SOS.Hosting
             AddRef();
         }
 
-        protected override void Destroy() => ServiceWrapper.Dispose();
+        protected override void Destroy()
+        {
+            Trace.TraceInformation("HostWrapper.Destroy");
+            ServiceWrapper.Dispose();
+        }
 
         #region IHost
 
@@ -50,7 +53,9 @@ namespace SOS.Hosting
         /// <returns>S_OK</returns>
         private int GetCurrentTarget(IntPtr self, out IntPtr targetWrapper)
         {
-            TargetWrapper wrapper = _getTarget();
+            IContextService contextService = _host.Services.GetService<IContextService>();
+            ITarget target = contextService.GetCurrentTarget();
+            TargetWrapper wrapper = target?.Services.GetService<TargetWrapper>();
             if (wrapper == null)
             {
                 targetWrapper = IntPtr.Zero;

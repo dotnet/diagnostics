@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--address", Aliases = new string[] { "-a" }, Help = "Lookup address in module list.")]
         public ulong? Address { get; set; }
 
+        [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
         public override void Invoke()
@@ -97,8 +98,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        [ServiceImport]
         public ITarget Target { get; set; }
 
+        [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
         void DisplaySegments(IModule module)

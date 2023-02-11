@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Module service base implementation
     /// </summary>
-    public abstract class ModuleService : IModuleService
+    public abstract class ModuleService : IModuleService, IDisposable
     {
         [Flags]
         internal enum ELFProgramHeaderAttributes : uint
@@ -34,8 +34,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         // MachO writable segment attribute
         const uint VmProtWrite = 0x02;
 
-        internal protected readonly ITarget Target;
-        internal protected IMemoryService RawMemoryService;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -45,26 +43,33 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
 
-        public ModuleService(ITarget target, IMemoryService rawMemoryService)
-        {
-            Debug.Assert(target != null);
-            Target = target;
-            RawMemoryService = rawMemoryService;
+        internal protected readonly IServiceProvider Services;
+        internal protected readonly ITarget Target;
 
-            target.OnFlushEvent.Register(() => {
-                _versionCache?.Clear();
-                if (_modules != null)
+        public ModuleService(IServiceProvider services)
+        {
+            Services = services;
+            Target = services.GetService<ITarget>();
+            Target.OnFlushEvent.Register(Flush);
+        }
+
+        public void Dispose() => Flush();
+
+        private void Flush()
+        {
+            _versionCache?.Clear();
+            if (_modules is not null)
+            {
+                foreach (IModule module in _modules.Values)
                 {
-                    foreach (IModule module in _modules.Values)
-                    {
-                        if (module is IDisposable disposable) {
-                            disposable.Dispose();
-                        }
+                    if (module is IDisposable disposable) {
+                        disposable.Dispose();
                     }
                 }
+                _modules.Clear();
                 _modules = null;
-                _sortedByBaseAddress = null;
-            });
+            }
+            _sortedByBaseAddress = null;
         }
 
         #region IModuleService
@@ -116,7 +121,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>module or null</returns>
         IModule IModuleService.GetModuleFromAddress(ulong address)
         {
-            Debug.Assert((address & ~RawMemoryService.SignExtensionMask()) == 0);
+            Debug.Assert((address & ~MemoryService.SignExtensionMask()) == 0);
             IModule[] modules = GetSortedModules();
             int min = 0, max = modules.Length - 1;
 
@@ -127,7 +132,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IModule module = modules[mid];
 
                 ulong start = module.ImageBase;
-                Debug.Assert((start & ~RawMemoryService.SignExtensionMask()) == 0);
+                Debug.Assert((start & ~MemoryService.SignExtensionMask()) == 0);
                 ulong end = start + module.ImageSize;
 
                 if (address >= start && address < end) {
@@ -170,7 +175,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<ulong, IModule> GetModules()
         {
-            if (_modules == null)
+            if (_modules is null)
             {
                 _modules = GetModulesInner();
             }
@@ -183,7 +188,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns></returns>
         private IModule[] GetSortedModules()
         {
-            if (_sortedByBaseAddress == null)
+            if (_sortedByBaseAddress is null)
             {
                 _sortedByBaseAddress = GetModules().OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
             }
@@ -260,7 +265,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             flags = 0;
             try
             {
-                Stream stream = RawMemoryService.CreateMemoryStream(address, size);
+                Stream stream = MemoryService.CreateMemoryStream(address, size);
                 PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
                 if (peFile.IsValid())
                 {
@@ -288,7 +293,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // This code is called by the image mapping memory service so it needs to use the
             // original or raw memory service to prevent recursion so it can't use the ELFFile
             // or MachOFile instance that is available from the IModule.Services provider.
-            Stream stream = RawMemoryService.CreateMemoryStream();
+            Stream stream = MemoryService.CreateMemoryStream();
             byte[] buildId = null;
             try
             {
@@ -321,7 +326,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="module">module to get version string</param>
         /// <returns>version string or null</returns>
-        protected string GetVersionString(IModule module)
+        internal string GetVersionString(IModule module)
         {
             try
             {
@@ -389,9 +394,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             byte[] buffer = new byte[s_versionString.Length];
 
-            if (_versionCache == null)
-            {
-                // We use the possibly mapped memory service to find the version string in case it isn't in the dump.
+            // We use the mapped memory service to find the version string in case it isn't in the dump.
+            if (_versionCache is null) {
                 _versionCache = new ReadVirtualCache(MemoryService);
             }
             _versionCache.Clear();
@@ -456,9 +460,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         } 
 
-        internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
+        internal protected IMemoryService MemoryService => _memoryService ??= Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        internal protected ISymbolService SymbolService => _symbolService ??= Services.GetService<ISymbolService>(); 
 
         /// <summary>
         /// Search memory helper class

@@ -9,6 +9,15 @@ namespace Microsoft.Diagnostics.DebugServices
     public static class ConsoleServiceExtensions
     {
         /// <summary>
+        /// Display a blank line
+        /// </summary>
+        /// <param name="console"></param>
+        public static void WriteLine(this IConsoleService console)
+        {
+            console.Write(Environment.NewLine);
+        }
+
+        /// <summary>
         /// Display text
         /// </summary>
         /// <param name="console">console service instance</param>

@@ -15,30 +15,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Provides thread and register info and values for the clrmd IDataReader
     /// </summary>
-    public abstract class ThreadService : IThreadService
+    public abstract class ThreadService : IThreadService, IDisposable
     {
-        internal protected readonly ITarget Target;
         private readonly int _contextSize;
         private readonly uint _contextFlags;
         private readonly Dictionary<string, RegisterInfo> _lookupByName;
         private readonly Dictionary<int, RegisterInfo> _lookupByIndex;
         private Dictionary<uint, IThread> _threads;
 
-        public ThreadService(ITarget target)
-        {
-            Target = target;
+        internal protected readonly IServiceProvider Services;
+        internal protected readonly ITarget Target;
 
-            target.OnFlushEvent.Register(() => {
-                _threads?.Clear();
-                _threads = null;
-            });
+        public ThreadService(IServiceProvider services)
+        {
+            Services = services;
+            Target = services.GetService<ITarget>();
+            Target.OnFlushEvent.Register(Flush);
 
             Type contextType;
-            switch (target.Architecture)
+            switch (Target.Architecture)
             {
                 case Architecture.X64:
                     // Dumps generated with newer dbgeng have bigger context buffers and clrmd requires the context size to at least be that size.
-                    _contextSize = target.OperatingSystem == OSPlatform.Windows ? 0x700 : AMD64Context.Size;
+                    _contextSize = Target.OperatingSystem == OSPlatform.Windows ? 0x700 : AMD64Context.Size;
                     _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments | AMD64Context.ContextFloatingPoint;
                     contextType = typeof(AMD64Context);
                     break;
@@ -62,7 +61,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     break;
 
                 default:
-                    throw new PlatformNotSupportedException($"Unsupported architecture: {target.Architecture}");
+                    throw new PlatformNotSupportedException($"Unsupported architecture: {Target.Architecture}");
             }
 
             var registers = new List<RegisterInfo>();
@@ -71,7 +70,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
             foreach (FieldInfo field in fields) {
                 RegisterAttribute registerAttribute = field.GetCustomAttributes<RegisterAttribute>(inherit: false).SingleOrDefault();
-                if (registerAttribute == null) {
+                if (registerAttribute is null) {
                     continue;
                 }
                 RegisterType registerType = registerAttribute.RegisterType & RegisterType.TypeMask;
@@ -102,6 +101,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _lookupByName = registers.ToDictionary((info) => info.RegisterName);
             _lookupByIndex = registers.ToDictionary((info) => info.RegisterIndex);
             Registers = registers;
+        }
+
+        void IDisposable.Dispose() => Flush();
+
+        private void Flush()
+        {
+            if (_threads is not null)
+            {
+                foreach (IThread thread in _threads.Values)
+                {
+                    if (thread is IDisposable disposable) {
+                        disposable.Dispose();
+                    }
+                }
+                _threads.Clear();
+                _threads = null;
+            }
         }
 
         #region IThreadService
@@ -226,7 +242,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<uint, IThread> GetThreads()
         {
-            if (_threads == null) {
+            if (_threads is null) {
                 _threads = GetThreadsInner().OrderBy((thread) => thread.ThreadId).ToDictionary((thread) => thread.ThreadId);
             }
             return _threads;

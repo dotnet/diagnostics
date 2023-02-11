@@ -41,20 +41,24 @@ namespace Microsoft.Diagnostics.Tools.Dump
             }
             if (_commandService.IsCommand(commandName))
             {
-                _commandService.Execute(commandLine, _services);
+                try
+                {
+                    _commandService.Execute(commandLine, _services);
+                    return;
+                }
+                catch (CommandNotSupportedException)
+                {
+                }
             }
-            else
+            if (_sosHost is null)
             {
+                _sosHost = _services.GetService<SOSHost>();
                 if (_sosHost is null)
                 {
-                    _sosHost = _services.GetService<SOSHost>();
-                    if (_sosHost is null)
-                    {
-                        throw new DiagnosticsException($"'{commandName}' command not found");
-                    }
+                    throw new DiagnosticsException($"'{commandName}' command not found");
                 }
-                _sosHost.ExecuteCommand(commandLine);
             }
+            _sosHost.ExecuteCommand(commandLine);
         }
     }
 }

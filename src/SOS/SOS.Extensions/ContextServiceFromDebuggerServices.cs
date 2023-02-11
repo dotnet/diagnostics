@@ -23,7 +23,7 @@ namespace SOS.Extensions
             _debuggerServices = debuggerServices;
         }
 
-        public override IThread GetCurrentThread()
+        protected override IThread GetCurrentThread()
         {
             HResult hr = _debuggerServices.GetCurrentThreadId(out uint threadId);
             if (hr != HResult.S_OK)
@@ -31,7 +31,10 @@ namespace SOS.Extensions
                 Trace.TraceError("GetCurrentThreadId() FAILED {0:X8}", hr);
                 return null;
             }
-            return ThreadService?.GetThreadFromId(threadId);
+            IThread currentThread = ThreadService?.GetThreadFromId(threadId);
+            // This call fires the context change event if the thread obtain by the host debugger differs from the current thread
+            base.SetCurrentThread(currentThread);
+            return currentThread;
         }
 
         public override void SetCurrentThread(IThread thread)

@@ -2,50 +2,61 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
 using Microsoft.FileFormats.MachO;
 using System;
-using System.Diagnostics;
-using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Disposable MachOFile wrapper around the module file.
+    /// MachOModule service that provides downloaded module MachOFile wrapper.
     /// </summary>
-    public class MachOModule : MachOFile
+    public class MachOModule : IDisposable
     {
+        private readonly IModule _module;
+        private readonly ISymbolService _symbolService;
+        private readonly IDisposable _onChangeEvent;
+        private MachOFile _machOFile;
+
         /// <summary>
-        /// Opens and returns an MachOFile instance from the local file path
+        /// Creates a MachOModule service instance of the downloaded or local (if exists) module file.
         /// </summary>
-        /// <param name="filePath">MachO file to open</param>
-        /// <returns>MachOFile instance or null</returns>
-        public static MachOModule OpenFile(string filePath)
+        [ServiceExport(Scope = ServiceScope.Module)]
+        public static MachOModule CreateMachOModule(ISymbolService symbolService, IModule module)
         {
-            Stream stream = Utilities.TryOpenFile(filePath);
-            if (stream is not null)
+            if (module.Target.OperatingSystem == OSPlatform.OSX)
             {
-                try
+                if (!module.BuildId.IsDefaultOrEmpty)
                 {
-                    var machoModule = new MachOModule(stream);
-                    if (!machoModule.IsValid())
-                    {
-                        Trace.TraceError($"OpenMachOFile: not a valid file");
-                        return null;
-                    }
-                    return machoModule;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenMachOFile: exception {ex.Message}");
+                    return new MachOModule(module, symbolService);
                 }
             }
             return null;
         }
 
-        public MachOModule(Stream stream) :
-            base(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false)
+        private MachOModule(IModule module, ISymbolService symbolService)
         {
+            _module = module;
+            _symbolService = symbolService;
+            _onChangeEvent = symbolService.OnChangeEvent.Register(() => {
+                _machOFile?.Dispose();
+                _machOFile = null; 
+            });
+        }
+
+        public MachOFile GetMachOFile()
+        {
+            if (_machOFile == null)
+            {
+                _machOFile = Utilities.OpenMachOFile(_symbolService.DownloadModuleFile(_module));
+            }
+            return _machOFile;
+        }
+
+        public void Dispose()
+        {
+            _machOFile?.Dispose();
+            _onChangeEvent.Dispose();
         }
     }
 }

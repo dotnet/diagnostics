@@ -26,4 +26,25 @@ namespace Microsoft.Diagnostics.DebugServices
         {
         }
     }
+
+    /// <summary>
+    /// Thrown if a command is not supported on the configuration, platform or runtime
+    /// </summary>
+    public class CommandNotSupportedException : DiagnosticsException
+    {
+        public CommandNotSupportedException()
+            : base()
+        {
+        }
+
+        public CommandNotSupportedException(string message)
+            : base(message)
+        {
+        }
+
+        public CommandNotSupportedException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
 }

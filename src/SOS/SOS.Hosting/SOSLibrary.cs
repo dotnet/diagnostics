@@ -15,7 +15,7 @@ namespace SOS.Hosting
     /// <summary>
     /// Helper code to load and initialize SOS
     /// </summary>
-    public sealed class SOSLibrary
+    public sealed class SOSLibrary : IDisposable
     {
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
@@ -33,7 +33,6 @@ namespace SOS.Hosting
         private const string SOSInitialize = "SOSInitializeByHost";
         private const string SOSUninitialize = "SOSUninitializeByHost";
 
-        private readonly IContextService _contextService;
         private readonly HostWrapper _hostWrapper;
         private IntPtr _sosLibrary = IntPtr.Zero;
 
@@ -42,6 +41,7 @@ namespace SOS.Hosting
         /// </summary>
         public string SOSPath { get; set; }
 
+        [ServiceExport(Scope = ServiceScope.Global)]
         public static SOSLibrary Create(IHost host)
         {
             SOSLibrary sosLibrary = null;
@@ -53,13 +53,8 @@ namespace SOS.Hosting
             catch
             {
                 sosLibrary.Uninitialize();
-                sosLibrary = null;
                 throw;
             }
-            host.OnShutdownEvent.Register(() => {
-                sosLibrary.Uninitialize();
-                sosLibrary = null;
-            });
             return sosLibrary;
         }
 
@@ -69,13 +64,12 @@ namespace SOS.Hosting
         /// <param name="target">target instance</param>
         private SOSLibrary(IHost host)
         {
-            _contextService = host.Services.GetService<IContextService>();
-
             string rid = InstallHelper.GetRid();
             SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
-
-            _hostWrapper = new HostWrapper(host, () => GetSOSHost()?.TargetWrapper);
+            _hostWrapper = new HostWrapper(host);
         }
+
+        void IDisposable.Dispose() => Uninitialize();
 
         /// <summary>
         /// Loads and initializes the SOS module.
@@ -143,7 +137,7 @@ namespace SOS.Hosting
                 Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.FreeLibrary(_sosLibrary);
                 _sosLibrary = IntPtr.Zero;
             }
-            _hostWrapper.Release();
+            _hostWrapper.ReleaseWithCheck();
         }
 
         /// <summary>
@@ -162,12 +156,14 @@ namespace SOS.Hosting
                 throw new DiagnosticsException($"SOS command not found: {command}");
             }
             int result = commandFunc(client, arguments ?? "");
+            if (result == HResult.E_NOTIMPL)
+            {
+                throw new CommandNotSupportedException($"SOS command not found: {command}");
+            }
             if (result != HResult.S_OK)
             {
                 Trace.TraceError($"SOS command FAILED 0x{result:X8}");
             }
         }
-
-        private SOSHost GetSOSHost() => _contextService.Services.GetService<SOSHost>();
     }
 }

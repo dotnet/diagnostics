@@ -8,20 +8,27 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    public class Thread : IThread
+    public class Thread : IThread, IDisposable
     {
         private readonly ThreadService _threadService;
         private byte[] _threadContext;
         private ulong? _teb;
 
-        public readonly ServiceProvider ServiceProvider;
+        protected readonly ServiceContainer _serviceContainer;
 
         public Thread(ThreadService threadService, int index, uint id)
         {
             _threadService = threadService;
             ThreadIndex = index;
             ThreadId = id;
-            ServiceProvider = new ServiceProvider();
+            _serviceContainer = threadService.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Thread, threadService.Services);
+            _serviceContainer.AddService<IThread>(this);
+        }
+
+        void IDisposable.Dispose()
+        {
+            _serviceContainer.RemoveService(typeof(IThread));
+            _serviceContainer.DisposeServices();
         }
 
         #region IThread
@@ -32,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target => _threadService.Target;
 
-        public IServiceProvider Services => ServiceProvider;
+        public IServiceProvider Services => _serviceContainer;
 
         public bool TryGetRegisterValue(int index, out ulong value)
         {

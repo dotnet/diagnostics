@@ -1,4 +1,6 @@
-﻿using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices;
+using System;
+using System.IO;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {

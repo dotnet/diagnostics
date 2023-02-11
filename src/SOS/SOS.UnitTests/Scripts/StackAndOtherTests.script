@@ -74,10 +74,10 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\
 
 SOSCOMMAND:runtimes
 !IFDEF:DESKTOP
-VERIFY:.*\.NET Core .*runtime at.*\s+
+VERIFY:.*\.NET Core .*runtime.*at.*\s+
 ENDIF:DESKTOP
 IFDEF:DESKTOP
-VERIFY:.*\Desktop .NET Framework.*runtime at.*\s+
+VERIFY:.*\Desktop .NET Framework.*runtime.*at.*\s+
 ENDIF:DESKTOP
 
 SOSCOMMAND:SOSStatus

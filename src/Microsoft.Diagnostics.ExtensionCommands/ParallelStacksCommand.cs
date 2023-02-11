@@ -12,6 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "parallelstacks", Aliases = new string[] { "pstacks" }, Help = "Displays the merged threads stack similarly to the Visual Studio 'Parallel Stacks' panel.")]
     public class ParallelStacksCommand : ExtensionCommandBase
     {
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         [Option(Name = "--allthreads", Aliases = new string[] { "-a" }, Help = "Displays all threads per group instead of at most 4 by default.")]

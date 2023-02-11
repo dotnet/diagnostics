@@ -3,13 +3,15 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.TestHelpers;
+using System;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
     [Command(Name = "writetestdata", Help = "Writes the test data xml file.")]
     public class WriteTestDataCommand : CommandBase
     {
-        public ITarget Target { get; set; }
+        [ServiceImport]
+        public IServiceProvider Services { get; set; }
 
         [Argument(Name = "FileName", Help = "Test data file path.")]
         public string FileName { get; set; }
@@ -21,7 +23,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 throw new DiagnosticsException("Test data file parameter needed");
             }
             var testDataWriter = new TestDataWriter();
-            testDataWriter.Build(Target);
+            testDataWriter.Build(Services);
             testDataWriter.Write(FileName);
             WriteLine($"Test data written to {FileName} successfully");
         }

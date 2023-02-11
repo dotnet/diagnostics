@@ -5,6 +5,7 @@
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -17,8 +18,8 @@ namespace SOS.Extensions
     {
         private readonly DebuggerServices _debuggerServices;
 
-        internal ThreadServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices)
-            : base(target)
+        internal ThreadServiceFromDebuggerServices(IServiceProvider services, DebuggerServices debuggerServices)
+            : base(services)
         {
             Debug.Assert(debuggerServices != null);
             _debuggerServices = debuggerServices;

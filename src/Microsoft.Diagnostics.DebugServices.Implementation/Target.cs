@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -15,12 +14,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ITarget base implementation
     /// </summary>
-    public abstract class Target : ITarget, IDisposable
+    public abstract class Target : ITarget
     {
         private readonly string _dumpPath;
         private string _tempDirectory;
+        private ServiceContainer _serviceContainer;
 
-        public readonly ServiceProvider ServiceProvider;
+        protected readonly ServiceContainerFactory _serviceContainerFactory;
 
         public Target(IHost host, int id, string dumpPath)
         {
@@ -32,13 +32,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnFlushEvent = new ServiceEvent();
             OnDestroyEvent = new ServiceEvent();
 
-            // Initialize the per-target services
-            ServiceProvider = new ServiceProvider(host.Services);
+            // Initialize the per-target services.
+            _serviceContainerFactory = host.Services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Target, host.Services);
+            _serviceContainerFactory.AddServiceFactory<ITarget>((_) => this);
+        }
 
-            // Add the per-target services
-            ServiceProvider.AddService<ITarget>(this);
-            ServiceProvider.AddServiceFactory<DataReader>(() => new DataReader(this));
-            ServiceProvider.AddServiceFactory<IRuntimeService>(() => new RuntimeService(this));
+        protected void Finished()
+        {
+            // Now the that the target is completely initialized, finalize container and fire event
+            _serviceContainer = _serviceContainerFactory.Build();
+            Host.OnTargetCreate.Fire(this);
         }
 
         #region ITarget
@@ -93,7 +96,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The per target services.
         /// </summary>
-        public IServiceProvider Services => ServiceProvider;
+        public IServiceProvider Services => _serviceContainer;
 
         /// <summary>
         /// Invoked when this target is flushed (via the Flush() call).
@@ -110,21 +113,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Invoked when the target is closed.
+        /// Invoked when the target is destroyed
         /// </summary>
         public IServiceEvent OnDestroyEvent { get; }
 
-        #endregion
-
         /// <summary>
-        /// Releases the target and the target's resources.
+        /// Cleans up the target and releases target's resources.
         /// </summary>
-        public void Dispose()
+        public void Destroy()
         {
-            Trace.TraceInformation($"Disposing target #{Id}");
+            Trace.TraceInformation($"Destroy target #{Id}");
             OnDestroyEvent.Fire();
+            _serviceContainer.RemoveService(typeof(ITarget));
+            _serviceContainer.DisposeServices();
             CleanupTempDirectory();
         }
+
+        #endregion
 
         private void CleanupTempDirectory()
         {
@@ -166,7 +171,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_dumpPath != null) {
                 sb.AppendLine($"Dump path: {_dumpPath}");
             }
-            var runtimeService = ServiceProvider.GetService<IRuntimeService>();
+            var runtimeService = Services.GetService<IRuntimeService>();
             if (runtimeService != null)
             {
                 sb.AppendLine(runtimeService.ToString());
