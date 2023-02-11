@@ -59,7 +59,8 @@ HistInit (histinit)                SetHostRuntime (sethostruntime)
 HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
 HistObj  (histobj)                 SetClrPath (setclrpath)
 HistObjFind (histobjfind)          SOSFlush (sosflush)
-HistClear (histclear)              SOSStatus (sosstatus)
+HistClear (histclear)              SOSReset (sosreset)
+                                   SOSStatus (sosstatus)
                                    FAQ
                                    Help (soshelp)
 \\
@@ -2324,7 +2325,14 @@ SOSStatus [-reset]
 
 -reset - reset all the cached internal SOS state.
 
-Display internal SOS status or reset the internal cached state.
+Displays internal SOS status or resets the internal cached state.
+\\
+
+COMMAND: sosreset.
+COMMAND: sosflush.
+sosreset
+
+Resets the internal cached state.
 \\
 
 COMMAND: setclrpath.

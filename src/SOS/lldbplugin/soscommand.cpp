@@ -218,7 +218,8 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("setsymbolserver", "Enables the symbol server support ");
     g_services->AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command: 'soshelp <command>'.");
     g_services->AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
-    g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
+    g_services->AddCommand("sosflush", new sosCommand("sosreset"), "Resets the internal cached state.");
+    g_services->AddCommand("sosreset", new sosCommand("sosreset"), "Resets the internal cached state.");
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
     g_services->AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");

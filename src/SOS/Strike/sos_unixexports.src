@@ -55,7 +55,7 @@ PathTo
 runtimes
 StopOnCatch
 SetClrPath
-SOSFlush
+sosreset
 SOSStatus
 runtimes
 SuppressJitOptimization

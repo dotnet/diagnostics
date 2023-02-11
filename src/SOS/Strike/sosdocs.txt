@@ -63,8 +63,9 @@ Examining the GC history           Other
 HistInit                           SetHostRuntime (sethostruntime)
 HistRoot                           SetSymbolServer (setsymbolserver)
 HistObj                            SetClrPath (setclrpath)
-HistObjFind                        SOSFlush
-HistClear                          SOSStatus (sosstatus)
+HistObjFind                        SOSFlush (sosflush)
+HistClear                          sosreset
+                                   SOSStatus (sosstatus)
                                    FAQ
                                    Help (soshelp)
 \\
@@ -2663,8 +2664,7 @@ COMMAND: sosstatus.
 
 -reset - reset all the cached internal SOS state.
 
-Display internal SOS status, reset the internal cached state, or change between the desktop .NET framework
-or .NET Core runtimes when both are loaded in the process or dump.
+Displays internal SOS status or resets the internal cached state.
 
     0:000> !sosstatus
     Target platform: 8664 Context size 04d0
@@ -2673,6 +2673,13 @@ or .NET Core runtimes when both are loaded in the process or dump.
     DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
     Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
     Server: http://msdl.microsoft.com/download/symbols/
+\\
+
+COMMAND: sosreset.
+COMMAND: sosflush.
+!sosreset
+
+Resets the internal cached state.
 \\
 
 COMMAND: setclrpath.

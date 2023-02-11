@@ -136,8 +136,9 @@ EXPORTS
     setsymbolserver=SetSymbolServer
     SetClrPath
     setclrpath=SetClrPath
-    SOSFlush
-    sosflush=SOSFlush
+    sosreset
+    SOSFlush=sosreset
+    sosflush=sosreset
     StopOnException
     soe=StopOnException
     stoponexception=StopOnException
