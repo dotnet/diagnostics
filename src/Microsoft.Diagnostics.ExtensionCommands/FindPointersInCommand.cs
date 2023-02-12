@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Microsoft.Diagnostics.ExtensionCommands.MAddressCommand;
+using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 using Microsoft.Diagnostics.DebugServices;
 using System.IO;
 using System.Diagnostics;
@@ -55,13 +55,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {
-            MAddressCommand address = new()
-            {
-                Runtime = Runtime,
-                MemoryRegionService = MemoryRegionService
-            };
+            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService);
 
-            DescribedRegion[] allRegions = address.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
+            DescribedRegion[] allRegions = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
 
             WriteLine("Scanning for pinned objects...");
             var ctx = CreateMemoryWalkContext();
@@ -79,7 +75,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (DescribedRegion mem in matchingRanges.OrderBy(r => r.Start))
                 {
-                    var pointersFound = address.EnumerateRegionPointers(mem.Start, mem.End, allRegions).Select(r => (r.Pointer, r.MemoryRange));
+                    var pointersFound = nativeAddresses.EnumerateRegionPointers(mem.Start, mem.End, allRegions).Select(r => (r.Pointer, r.MemoryRange));
                     RegionPointers result = ProcessOneRegion(pinnedOnly, pointersFound, ctx);
 
                     WriteMemoryHeaderLine(mem);

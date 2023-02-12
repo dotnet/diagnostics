@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using static Microsoft.Diagnostics.ExtensionCommands.MAddressCommand;
+using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -64,13 +64,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (memoryTypes.Length == 0)
                 return;
 
-            MAddressCommand maddressHelper = new()
-            {
-                Runtime = Runtime,
-                MemoryRegionService = MemoryRegionService
-            };
+            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService);
 
-            IEnumerable<DescribedRegion> rangeEnum = maddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
+            IEnumerable<DescribedRegion> rangeEnum = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
             rangeEnum = rangeEnum.Where(r => memoryTypes.Any(memType => r.Name.Equals(memType, StringComparison.OrdinalIgnoreCase)));
             rangeEnum = rangeEnum.OrderBy(r => r.Start);
 
@@ -87,7 +83,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Dictionary<ClrSegment, List<GCObjectToRange>> segmentLists = new();
 
             var items = Runtime.Heap.Segments
-                            .SelectMany(Segment => maddressHelper
+                            .SelectMany(Segment => nativeAddresses
                                                     .EnumerateRegionPointers(Segment.ObjectRange.Start, Segment.ObjectRange.End, ranges)
                                                     .Select(regionPointer => (Segment, regionPointer.Address, regionPointer.Pointer, regionPointer.MemoryRange)));
 
