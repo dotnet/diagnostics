@@ -12,11 +12,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "findpointersin", Help="Finds pointers to the GC heap within the given memory regions.")]
     public class FindPointersInCommand : ExtensionCommandBase
     {
-        private const string VtableConst = "vtable for ";
-
+        [ServiceImport]
         public IModuleService ModuleService { get; set; }
-        
+
+        [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
+
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         [Option(Name = "--showAllObjects", Aliases = new string[] { "-a", "--all" }, Help = "Show all objects instead of only objects Pinned on the heap.")]
@@ -24,6 +26,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Argument(Help = "The types of memory to search for pointers to the GC heap.")]
         public string[] Regions { get; set; }
+
+        private const string VtableConst = "vtable for ";
 
         private int Width
         {
@@ -41,29 +45,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
-            if (Runtime is null)
-            {
-                WriteLine("ClrMD interfaces must be available for this command.");
-                return;
-            }
-
-            if (ModuleService is null)
-            {
-                WriteLine("IModuleService must be available for this command.");
-                return;
-            }
-
-            if (MemoryRegionService is null)
-            {
-                WriteLine("IMemoryRegionService must be available for this command.");
-                return;
-            }
-
             if (Regions is null || Regions.Length == 0)
-            {
-                Console.WriteLine("Must specify at least one memory region type to search for.");
-                return;
-            }
+                throw new DiagnosticsException("Must specify at least one memory region type to search for.");
 
             Stopwatch sw = Stopwatch.StartNew();
             PrintPointers(!ShowAllObjects, Regions);

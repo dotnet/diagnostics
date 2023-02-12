@@ -25,30 +25,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--tagReserve", Help = "Heuristically tag MEM_RESERVE regions based on adjacent memory regions.")]
         public bool TagReserveMemoryHeuristically { get; set; }
 
+        [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
+
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         private IDataReader DataReader => Runtime.DataTarget.DataReader;
 
         public override void ExtensionInvoke()
         {
-            if (Runtime is null)
-            {
-                WriteLine("ClrMD interfaces must be available for this command.");
-                return;
-            }
-
-            if (MemoryRegionService is null)
-            {
-                WriteLine("IMemoryRegionService must be available for this command.");
-                return;
-            }
-
             if (TagReserveMemoryHeuristically && !IncludeReserveMemory)
-            {
-                WriteLine("Cannot use --tagReserve without --includeReserve");
-                return;
-            }
+                throw new DiagnosticsException("Cannot use --tagReserve without --includeReserve");
 
             PrintMemorySummary(ListAll, ShowImageTable, IncludeReserveMemory, TagReserveMemoryHeuristically);
         }

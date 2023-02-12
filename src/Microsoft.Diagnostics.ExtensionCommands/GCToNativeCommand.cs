@@ -12,15 +12,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
     public class GCToNativeCommand : ExtensionCommandBase
     {
-        internal const string All = "all";
-
         [Argument(Help ="The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
 
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Show the complete list of objects and not just a summary.")]
         public bool ShowAll { get; set; }
 
+        [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
+
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         private int Width
@@ -39,23 +40,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
-            if (Runtime is null)
-            {
-                WriteLine("ClrMD interfaces must be available for this command.");
-                return;
-            }
-
-            if (MemoryRegionService is null)
-            {
-                WriteLine("IMemoryRegionService must be available for this command.");
-                return;
-            }
-
             if (MemoryTypes is null || MemoryTypes.Length == 0)
-            {
-                Console.WriteLine("Must specify at least one memory region type to search for.");
-                return;
-            }
+                throw new DiagnosticsException("Must specify at least one memory region type to search for.");
 
             PrintGCPointersToMemory(ShowAll, MemoryTypes);
         }

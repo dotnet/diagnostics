@@ -8,6 +8,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     internal class ClrMemoryPointer
     {
         public ulong Address { get; }
+
         public ClrMemoryKind Kind { get; }
 
         public ClrMemoryPointer(ulong address, ClrMemoryKind kind)

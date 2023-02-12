@@ -184,14 +184,6 @@ namespace SOS.Extensions
                 Trace.TraceError(ex.Message);
                 return HResult.E_NOINTERFACE;
             }
-            try
-            {
-                MemoryRegionServiceFromDebuggerServices memRegions = new(iunk);
-                _serviceProvider.AddService<IMemoryRegionService>(memRegions);
-            }
-            catch (InvalidCastException)
-            {
-            }
             HResult hr;
             try
             {
@@ -259,6 +251,14 @@ namespace SOS.Extensions
                 // disposed in Uninitialize() below by the DisposeServices call.
                 remoteMemoryService.AddRef();
                 _serviceContainer.AddService<IRemoteMemoryService>(remoteMemoryService);
+            }
+            catch (InvalidCastException)
+            {
+            }
+            try
+            {
+                MemoryRegionServiceFromDebuggerServices memRegions = new(iunk);
+                _serviceContainer.AddService<IMemoryRegionService>(memRegions);
             }
             catch (InvalidCastException)
             {
