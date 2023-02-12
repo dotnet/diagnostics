@@ -10,7 +10,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.MAddressCommand;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
-    public class GCToNativeCommand : ExtensionCommandBase
+    public class GCToNativeCommand : CommandBase
     {
         [Argument(Help ="The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (MemoryTypes is null || MemoryTypes.Length == 0)
                 throw new DiagnosticsException("Must specify at least one memory region type to search for.");
@@ -498,7 +498,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        protected override string GetDetailedHelp()
+        [HelpInvoke]
+        public string GetDetailedHelp()
         {
             return @"
 !gctonative searches the GC heap for pointers to native memory.  This is used

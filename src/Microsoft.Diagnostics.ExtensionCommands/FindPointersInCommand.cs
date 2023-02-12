@@ -10,7 +10,7 @@ using System.Diagnostics;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "findpointersin", Help="Finds pointers to the GC heap within the given memory regions.")]
-    public class FindPointersInCommand : ExtensionCommandBase
+    public class FindPointersInCommand : CommandBase
     {
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (Regions is null || Regions.Length == 0)
                 throw new DiagnosticsException("Must specify at least one memory region type to search for.");
@@ -441,7 +441,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        protected override string GetDetailedHelp()
+        [HelpInvoke]
+        public string GetDetailedHelp()
         {
             return
 @"-------------------------------------------------------------------------------

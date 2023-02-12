@@ -11,7 +11,7 @@ using System.Buffers;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "maddress", Help = "Displays a breakdown of the virtual address space.")]
-    public class MAddressCommand : ExtensionCommandBase
+    public class MAddressCommand : CommandBase
     {
         [Option(Name = "--list", Aliases = new string[] { "-l", "--all", }, Help = "Prints the full list of annotated memory regions.")]
         public bool ListAll { get; set; }
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private IDataReader DataReader => Runtime.DataTarget.DataReader;
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (TagReserveMemoryHeuristically && !IncludeReserveMemory)
                 throw new DiagnosticsException("Cannot use --tagReserve without --includeReserve");
@@ -466,7 +466,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        protected override string GetDetailedHelp()
+        [HelpInvoke]
+        public string GetDetailedHelp()
         {
             return
 @"-------------------------------------------------------------------------------
