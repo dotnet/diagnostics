@@ -7,7 +7,8 @@ using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    internal class MAddressCommand : CommandBase
+    [Command(Name = "maddress", Help = "Displays a breakdown of the virtual address space.")]
+    public sealed class MAddressCommand : CommandBase
     {
         [Option(Name = "--list", Aliases = new string[] { "-l", "--all", }, Help = "Prints the full list of annotated memory regions.")]
         public bool ListAll { get; set; }

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    internal class ClrMemoryPointer
+    internal sealed class ClrMemoryPointer
     {
         public ulong Address { get; }
 

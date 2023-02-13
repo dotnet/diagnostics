@@ -10,7 +10,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
-    public class GCToNativeCommand : CommandBase
+    public sealed class GCToNativeCommand : CommandBase
     {
         [Argument(Help ="The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }

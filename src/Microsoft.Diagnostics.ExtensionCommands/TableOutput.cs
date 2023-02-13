@@ -1,12 +1,11 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    public class TableOutput
+    internal sealed class TableOutput
     {
         private readonly char _spacing = ' ';
         public string Divider { get; set; } = " ";

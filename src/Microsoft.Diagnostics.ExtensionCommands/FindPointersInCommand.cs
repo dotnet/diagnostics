@@ -10,7 +10,7 @@ using System.Diagnostics;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "findpointersin", Help="Finds pointers to the GC heap within the given memory regions.")]
-    public class FindPointersInCommand : CommandBase
+    public sealed class FindPointersInCommand : CommandBase
     {
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
