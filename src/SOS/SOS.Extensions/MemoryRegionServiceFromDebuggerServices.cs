@@ -13,22 +13,11 @@ namespace SOS.Extensions
         private readonly IDebugClient5 _client;
         private readonly IDebugControl5 _control;
 
-        public MemoryRegionServiceFromDebuggerServices(IntPtr iunk)
+        public MemoryRegionServiceFromDebuggerServices(IDebugClient5 client, IDebugControl5 control)
         {
-            // Currently, IMemoryRegionService is only implemented on top of DbgEng.
-            // Since that debugger only runs on Windows, we'll early-out if we aren't
-            // on Windows.
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                throw new InvalidCastException();
-
-            object comObj = Marshal.GetObjectForIUnknown(iunk);
-            if (comObj is not IDebugClient5 client)
-                throw new InvalidCastException();
-
             _client = client;
-            _control = (IDebugControl5)comObj;
+            _control = control;
         }
-
 
         public IEnumerable<IMemoryRegion> EnumerateRegions()
         {

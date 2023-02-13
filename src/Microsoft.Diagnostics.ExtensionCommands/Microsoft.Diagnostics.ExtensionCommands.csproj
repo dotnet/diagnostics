@@ -20,5 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>
 </Project>

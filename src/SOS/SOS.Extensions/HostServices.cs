@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
+using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -257,8 +258,23 @@ namespace SOS.Extensions
             }
             try
             {
-                MemoryRegionServiceFromDebuggerServices memRegions = new(iunk);
-                _serviceContainer.AddService<IMemoryRegionService>(memRegions);
+                // Currently, IMemoryRegionService is only implemented on top of DbgEng.
+                // Since that debugger only runs on Windows, we'll early-out if we aren't
+                // on Windows.
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    object comObj = Marshal.GetObjectForIUnknown(iunk);
+                    if (comObj is not null && comObj is IDebugClient5 client)
+                    {
+                        var control = (IDebugControl5)comObj;
+                        MemoryRegionServiceFromDebuggerServices memRegions = new(client, control);
+                        _serviceContainer.AddService<IMemoryRegionService>(memRegions);
+
+                        _serviceContainer.AddService(client);
+                        _serviceContainer.AddService(control);
+                        _serviceContainer.AddService((IDebugSymbols5)client);
+                    }
+                }
             }
             catch (InvalidCastException)
             {

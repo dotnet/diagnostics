@@ -331,6 +331,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     else if (State == MemoryRegionState.MEM_FREE)
                         return "FREE";
 
+                    if (Type == MemoryRegionType.MEM_IMAGE || !string.IsNullOrWhiteSpace(Image))
+                        return "IMAGE";
+
                     string result = Protection.ToString();
                     if (Type == MemoryRegionType.MEM_MAPPED)
                     {
