@@ -9,7 +9,7 @@ using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.IO;
 
 namespace SOS.Extensions
 {
@@ -73,6 +73,7 @@ namespace SOS.Extensions
             private readonly ModuleServiceFromDebuggerServices _moduleService;
             private Version _version;
             private string _versionString;
+            private SymbolStatus _symbolStatus = SymbolStatus.Unknown;
 
             public ModuleFromDebuggerServices(
                 ModuleServiceFromDebuggerServices moduleService,
@@ -173,6 +174,18 @@ namespace SOS.Extensions
                 return true;
             }
 
+            SymbolStatus IModuleSymbols.GetSymbolStatus()
+            {
+                if (_symbolStatus != SymbolStatus.Unknown)
+                    return _symbolStatus;
+                
+                // GetSymbolStatus is not implemented for anything other than DbgEng for now.
+                IDebugClient client = _moduleService._debuggerServices.DebugClient;
+                if (client is null || client is not IDebugSymbols5 symbols)
+                    return SymbolStatus.Unknown; 
+
+                return _symbolStatus = GetSymbolStatusFromDbgEng(symbols);
+            }
             #endregion
 
             protected override bool TryGetSymbolAddressInner(string name, out ulong address)
@@ -181,6 +194,61 @@ namespace SOS.Extensions
             }
 
             protected override ModuleService ModuleService => _moduleService;
+
+            private SymbolStatus GetSymbolStatusFromDbgEng(IDebugSymbols5 symbols)
+            {
+                // First, see if the symbol is already loaded.  Note that getting the symbol type
+                // from DbgEng won't force a symbol load, it will only tell us if it's already
+                // been loaded or not.
+                DEBUG_SYMTYPE symType = GetSymType(symbols, ImageBase);
+                if (symType != DEBUG_SYMTYPE.NONE && symType != DEBUG_SYMTYPE.DEFERRED)
+                    return DebugToSymbolStatus(symType);
+
+                // At this point, the symbol type is DEFERRED or NONE and we haven't tried reloading
+                // the symbol yet.  Try a reload, and then ask one last time what the symbol is.
+                if (!string.IsNullOrWhiteSpace(FileName))
+                {
+                    string module = Path.GetFileName(FileName);
+                    module = module.Replace('+', '_'); // Reload doesn't like '+' in module names
+                    HResult hr = symbols.Reload(module);
+                    if (!hr)
+                    {
+                        // Ugh, Reload might not like the module name that GetModuleName gives us.
+                        // Instead, force DbgEng to look up the base address as a symbol which will
+                        // force symbol load as well.
+                        symbols.GetNameByOffset(ImageBase, null, 0, out _, out _);
+                    }
+                }
+
+                // Whether we successfully reloaded or not, get the final symbol type and set
+                // the value so we only ever do this once per region.
+                symType = GetSymType(symbols, ImageBase);
+                return DebugToSymbolStatus(symType);
+            }
+
+            private static SymbolStatus DebugToSymbolStatus(DEBUG_SYMTYPE symType)
+            {
+                // By the time we get here, we've already tried forcing a symbol load.
+                // If it's NONE or DEFERRED at this point then we can't load it.  We
+                // will never return SymbolStatus.Unknown, so GetSymbolStatusFromDbgEng
+                // will only ever be called once per module.
+                return symType switch
+                {
+                    DEBUG_SYMTYPE.NONE => SymbolStatus.NotLoaded,
+                    DEBUG_SYMTYPE.DEFERRED => SymbolStatus.NotLoaded,
+                    DEBUG_SYMTYPE.EXPORT => SymbolStatus.ExportOnly,
+                    _ => SymbolStatus.Loaded,
+                };
+            }
+
+            private static DEBUG_SYMTYPE GetSymType(IDebugSymbols symbols, ulong imageBase)
+            {
+                DEBUG_MODULE_PARAMETERS[] moduleParams = new DEBUG_MODULE_PARAMETERS[1];
+                HResult hr = symbols.GetModuleParameters(1, new ulong[] { imageBase }, 0, moduleParams);
+
+                var symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
+                return symType;
+            }
         }
 
         private readonly DebuggerServices _debuggerServices;

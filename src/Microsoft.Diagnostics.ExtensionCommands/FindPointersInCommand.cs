@@ -6,9 +6,6 @@ using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 using Microsoft.Diagnostics.DebugServices;
 using System.IO;
 using System.Diagnostics;
-using SOS.Hosting.DbgEng.Interop;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using System.Text;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -20,9 +17,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
-
-        [ServiceImport]
-        public IDebugSymbols5 DebugSymbols { get; set; }
 
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
@@ -59,7 +53,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {
-            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService);
+            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService, ModuleService);
 
             DescribedRegion[] allRegions = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
 
@@ -121,7 +115,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (result.ResolvablePointers.Count > 0)
             {
                 WriteLine("");
-                WriteLine("Pointers to images:");
+                WriteLine("Pointers to images with symbols:");
 
                 WriteResolvablePointerTable(ctx, result, truncate);
             }
@@ -286,7 +280,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else if (found.Range.Type == MemoryRegionType.MEM_IMAGE)
                 {
-                    result.AddRegionPointer(found.Range, found.Pointer, hasSymbols: ctx.HasSymbols(DebugSymbols, found.Range, found.Pointer));
+                    bool hasSymbols = false;
+                    IModuleSymbols symbols = found.Range.Module?.Services.GetService<IModuleSymbols>();
+                    if (symbols is not null)
+                        hasSymbols = symbols.GetSymbolStatus() == SymbolStatus.Loaded;
+
+                    result.AddRegionPointer(found.Range, found.Pointer, hasSymbols);
                 }
                 else
                 {
@@ -375,8 +374,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private class MemoryWalkContext
         {
-            private readonly Dictionary<string, bool> _imageByNameHasSymbols = new();
-            private readonly Dictionary<DescribedRegion, bool> _imageHasSymbols = new();
             private readonly Dictionary<ulong, (string, int)> _resolved = new();
             private readonly ClrObject[] _pinned;
 
@@ -440,97 +437,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 return (null, -1);
-            }
-
-            public bool HasSymbols(IDebugSymbols5 symbols, DescribedRegion range, ulong addr)
-            {
-                // First, check if we've already cached the value
-                if (_imageHasSymbols.TryGetValue(range, out bool hasSymbols))
-                    return hasSymbols;
-
-                ulong imageBase = FindBaseAddress(symbols, range.Start, out string filename);
-
-                if (imageBase == 0)
-                    return _imageHasSymbols[range] = false;
-
-                if (filename is not null && _imageByNameHasSymbols.TryGetValue(filename, out hasSymbols))
-                    return hasSymbols;
-
-                // Next, see if the symbol is already loaded.  Note that getting the symbol type
-                // from DbgEng won't force a symbol load, it will only tell us if it's already
-                // been loaded or not.
-                DEBUG_SYMTYPE symType = GetSymType(symbols, imageBase);
-                if (symType != DEBUG_SYMTYPE.NONE && symType != DEBUG_SYMTYPE.DEFERRED)
-                    return SetValue(symType, range, filename);
-
-                // At this point, the symbol type is DEFERRED or NONE and we haven't tried reloading
-                // the symbol yet.  Try a reload, and then ask one last time what the symbol is.
-                if (filename is not null)
-                {
-                    string module = Path.GetFileName(filename);
-                    HResult hr = symbols.Reload(module);
-                    if (!hr)
-                    {
-                        // Ugh, Reload might not like the module name that GetModuleName gives us.
-                        // Instead, force DbgEng to look up the base address as a symbol which will
-                        // force symbol load as well.
-                        hr = symbols.GetNameByOffset(addr, null, 0, out uint size, out _);
-                        if (hr)
-                        {
-                            StringBuilder sb = new((int)size + 1);
-                            symbols.GetNameByOffset(addr, sb, sb.Capacity, out _, out _);
-                        }
-                    }
-                }
-
-                // Whether we successfully reloaded or not, get the final symbol type and set
-                // the value so we only ever do this once per region.=
-                return SetValue(GetSymType(symbols, imageBase), range, filename);
-            }
-
-            private static DEBUG_SYMTYPE GetSymType(IDebugSymbols symbols, ulong imageBase)
-            {
-                DEBUG_MODULE_PARAMETERS[] moduleParams = new DEBUG_MODULE_PARAMETERS[1];
-                HResult hr = symbols.GetModuleParameters(1, new ulong[] { imageBase }, 0, moduleParams);
-
-                var symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
-                return symType;
-            }
-
-            private bool SetValue(DEBUG_SYMTYPE symbolType, DescribedRegion range, string filename)
-            {
-                bool hasSymbols = symbolType != DEBUG_SYMTYPE.DEFERRED && symbolType != DEBUG_SYMTYPE.NONE;
-                _imageHasSymbols.Add(range, hasSymbols);
-
-                if (filename is not null)
-                    _imageByNameHasSymbols.Add(filename, hasSymbols);
-
-                return hasSymbols;
-            }
-
-            private static ulong FindBaseAddress(IDebugSymbols5 symbols, ulong ptr, out string filename)
-            {
-                filename = null;
-
-                const uint DEBUG_ANY_ID = 0xffffffffu;
-                HResult hr = symbols.GetModuleByOffset(ptr, 0, out _, out ulong baseAddr);
-                if (hr == HResult.S_OK)
-                {
-                    hr = symbols.GetModuleNameStringWide(DEBUG_MODNAME.IMAGE, DEBUG_ANY_ID, baseAddr, null, 0, out uint size);
-                    if (hr)
-                    {
-                        StringBuilder sb = new((int)size + 1);
-                        hr = symbols.GetModuleNameStringWide(DEBUG_MODNAME.IMAGE, DEBUG_ANY_ID, baseAddr, sb, sb.Capacity, out _);
-                        if (hr)
-                            filename = sb.ToString();
-                    }
-                }
-                else
-                {
-                    filename = "";
-                }
-
-                return baseAddr;
             }
         }
 

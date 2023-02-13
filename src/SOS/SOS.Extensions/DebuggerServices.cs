@@ -31,10 +31,23 @@ namespace SOS
 
         private readonly HostType _hostType;
 
+        /// <summary>
+        /// A pointer to the underlying IDebugClient interface if the host is DbgEng.
+        /// </summary>
+        public IDebugClient DebugClient { get; }
+
         internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
+
+            // This uses COM marshalling code, so we also check that the OSPlatform is Windows.
+            if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                object obj = Marshal.GetObjectForIUnknown(punk);
+                if (obj is IDebugClient client)
+                    DebugClient = client;
+            }
         }
 
         public HResult GetOperatingSystem(out DebuggerServices.OperatingSystem operatingSystem)

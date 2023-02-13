@@ -15,12 +15,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private readonly IDataReader _reader;
         private readonly ClrRuntime[] _runtimes;
         private readonly IMemoryRegionService _memory;
+        private readonly IModuleService _modules;
 
-        public NativeAddressHelper(IDataReader reader, ClrRuntime[] runtimes, IMemoryRegionService memory)
+        public NativeAddressHelper(IDataReader reader, ClrRuntime[] runtimes, IMemoryRegionService memory, IModuleService modules)
         {
             _reader = reader;
             _runtimes = runtimes;
             _memory = memory;
+            _modules = modules;
         }
 
         /// <summary>
@@ -46,7 +48,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             var addressResult = from region in _memory.EnumerateRegions()
                                 where region.State != MemoryRegionState.MEM_FREE
-                                select new DescribedRegion(region);
+                                select new DescribedRegion(region, _modules.GetModuleFromAddress(region.Start));
 
             if (!includeReserveMemory)
                 addressResult = addressResult.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
@@ -290,9 +292,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             private readonly IMemoryRegion _region;
 
-            public DescribedRegion(IMemoryRegion region)
+            public IModule Module { get; }
+
+            public DescribedRegion(IMemoryRegion region, IModule module)
             {
                 _region = region;
+                Module = module;
             }
 
             public ulong Start => _region.Start;

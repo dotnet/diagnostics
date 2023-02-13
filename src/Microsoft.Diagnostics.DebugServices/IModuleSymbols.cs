@@ -6,6 +6,34 @@
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
+    /// The status of the symbols for a module.
+    /// </summary>
+    public enum SymbolStatus
+    {
+        /// <summary>
+        /// The status of the symbols is unknown.  The symbol may be
+        /// loaded or unloaded.
+        /// </summary>
+        Unknown,
+        
+        /// <summary>
+        /// The debugger has successfully loaded symbols for this module.
+        /// </summary>
+        Loaded,
+
+        /// <summary>
+        /// The debugger does not have symbols loaded for this module.
+        /// </summary>
+        NotLoaded,
+
+        /// <summary>
+        /// The debugger does not have symbols loaded for this module, but
+        /// it is able to report addresses of exported functions.
+        /// </summary>
+        ExportOnly,
+    }
+
+    /// <summary>
     /// Module symbol lookup
     /// </summary>
     public interface IModuleSymbols
@@ -34,5 +62,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="type">returned type if found</param>
         /// <returns>true if type found</returns>
         bool TryGetType(string typeName, out IType type);
+
+        /// <summary>
+        /// Returns the status of the symbols for this module.  This function may cause
+        /// the debugger to load symbols for this module, which may take a long time.
+        /// </summary>
+        /// <returns>The status of symbols for this module.</returns>
+        SymbolStatus GetSymbolStatus();
     }
 }

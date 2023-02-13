@@ -23,6 +23,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool TagReserveMemoryHeuristically { get; set; }
 
         [ServiceImport]
+        public IModuleService ModuleService { get; set; }
+
+        [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
 
         [ServiceImport]
@@ -38,7 +41,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public void PrintMemorySummary(bool printAllMemory, bool showImageTable, bool includeReserveMemory, bool tagReserveMemoryHeuristically)
         {
-            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService);
+            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService, ModuleService);
             IEnumerable<DescribedRegion> memoryRanges = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory, tagReserveMemoryHeuristically);
             if (!includeReserveMemory)
                 memoryRanges = memoryRanges.Where(m => m.State != MemoryRegionState.MEM_RESERVE);

@@ -258,10 +258,10 @@ namespace SOS.Extensions
             }
             try
             {
-                // Currently, IMemoryRegionService is only implemented on top of DbgEng.
-                // Since that debugger only runs on Windows, we'll early-out if we aren't
-                // on Windows.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                // IMemoryRegionService is currently only implemented on top of DbgEng.  Since this
+                // code uses COM marshalling (which only works on a windows .Net runtime), we also
+                // check to make sure this is a Windows OS to be safe.
+                if (HostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     object comObj = Marshal.GetObjectForIUnknown(iunk);
                     if (comObj is not null && comObj is IDebugClient5 client)
@@ -269,10 +269,6 @@ namespace SOS.Extensions
                         var control = (IDebugControl5)comObj;
                         MemoryRegionServiceFromDebuggerServices memRegions = new(client, control);
                         _serviceContainer.AddService<IMemoryRegionService>(memRegions);
-
-                        _serviceContainer.AddService(client);
-                        _serviceContainer.AddService(control);
-                        _serviceContainer.AddService((IDebugSymbols5)client);
                     }
                 }
             }
