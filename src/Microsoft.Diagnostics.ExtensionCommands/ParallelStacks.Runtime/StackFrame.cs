@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -13,22 +14,21 @@ namespace ParallelStacks
     {
         public string TypeName { get; private set; }
         public string MethodName { get; private set; }
-        public List<string> Signature { get; }
-
-        public string Text { get; }
+        public string Text { get; private set; }
+        public List<string> Signature { get; } = new List<string>();
 
         public StackFrame(ClrStackFrame frame)
         {
-            var signature = frame.Method?.Signature;
-            Text = string.IsNullOrEmpty(signature) ? "?" : string.Intern(signature);
-            Signature = new List<string>();
+            if (frame.Method is null)
+                throw new ArgumentException("frame.Method is null");
+
             ComputeNames(frame);
         }
 
         private void ComputeNames(ClrStackFrame frame)
         {
             // start by parsing (short)type name
-            var typeName = frame.Method.Type.Name;
+            var typeName = frame.Method!.Type.Name;
             if (string.IsNullOrEmpty(typeName))
             {
                 // IL generated frames
@@ -41,15 +41,32 @@ namespace ParallelStacks
 
             // generic methods are not well formatted by ClrMD
             // foo<...>()  =>   foo[[...]]()
-            var fullName = frame.Method?.Signature;
-            MethodName = frame.Method.Name;
-            if (MethodName.EndsWith("]]"))
+            var signature = frame.Method.Signature;
+            if (string.IsNullOrEmpty(signature))
             {
-                // fix ClrMD bug with method name
-                MethodName = GetGenericMethodName(fullName);
+                Text = "?";
+            }
+            else
+            {
+                Text = string.Intern(signature);
+                Signature.AddRange(BuildSignature(signature));
             }
 
-            Signature.AddRange(BuildSignature(fullName));
+            var methodName = frame.Method.Name;
+            if (string.IsNullOrEmpty(methodName))
+            {
+                // IL generated frames
+                MethodName = "";
+            }
+            else if (methodName.EndsWith("]]"))
+            {
+                // fix ClrMD bug with method name
+                MethodName = GetGenericMethodName(signature);
+            }
+            else
+            {
+                MethodName = methodName;
+            }
         }
 
         public static string GetShortTypeName(string typeName, int start, int end)
