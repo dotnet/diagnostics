@@ -495,9 +495,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [HelpInvoke]
-        public string GetDetailedHelp()
+        public void HelpInvoke()
         {
-            return @"
+            WriteLine(
+@"-------------------------------------------------------------------------------
 !gctonative searches the GC heap for pointers to native memory.  This is used
 to help locate regions of native memory that are referenced (or possibly held
 alive) by objects on the GC heap.
@@ -556,7 +557,7 @@ Sample Output:
     System.Net.Sockets.SocketAsyncEngine                                             |        1 | 7f059800edd0
     Microsoft.Extensions.Caching.Memory.CacheEntry                                   |        1 | 7f05241e0000
     System.Runtime.CompilerServices.AsyncTaskMethodBuilder<...>+AsyncStateMachine... |        1 | 7f0500000004
-";
+");
         }
     }
 }

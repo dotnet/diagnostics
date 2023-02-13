@@ -438,9 +438,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [HelpInvoke]
-        public string GetDetailedHelp()
+        public void HelpInvoke()
         {
-            return
+            WriteLine(
 @"-------------------------------------------------------------------------------
 The findpointersin command will search the regions of memory given by MADDRESS_TYPE_LIST
 to find all pointers to other memory regions and display them.  By default, pointers
@@ -491,7 +491,7 @@ Sample Output:
 
                                                          ...
     --------------------------------------------------------- [ TOTALS ] ---------33,360---------72,029---------------
-";
+");
         }
     }
 }

@@ -344,37 +344,5 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
         }
-
-        [HelpInvoke]
-        public string GetDetailedHelp()
-        {
-            return
-@"-------------------------------------------------------------------------------
-!maddress is a managed version of !address, which attempts to annotate all memory
-with information about CLR's heaps.
-
-usage: !maddress [--list] [--images] [--includeReserve [--tagReserve]]
-
-Flags:
-    --list
-        Shows the full list of annotated memory regions and not just the statistics
-        table.
-
-    --images
-        Summarizes the memory ranges consumed by images in the process.
-        
-    --includeReserve
-        Include reserved memory (MEM_RESERVE) in the output.  This is usually only
-        useful if there is virtual address exhaustion.
-
-    --tagReserve
-        If this flag is set, then !maddress will attempt to ""blame"" reserve segments
-        on the region that immediately proceeded it.  For example, if a ""Heap""
-        memory segment is immediately followed by a MEM_RESERVE region, we will call
-        that reserve region HeapReserve.  Note that this is a heuristic and NOT
-        intended to be completely accurate.  This can be useful to try to figure out
-        what is creating large amount of MEM_RESERVE regions.
-";
-        }
     }
 }
