@@ -19,16 +19,13 @@ namespace ParallelStacks
 
         public StackFrame(ClrStackFrame frame)
         {
-            if (frame.Method is null)
-                throw new ArgumentException("frame.Method is null");
-
             ComputeNames(frame);
         }
 
         private void ComputeNames(ClrStackFrame frame)
         {
             // start by parsing (short)type name
-            var typeName = frame.Method!.Type.Name;
+            var typeName = frame.Method?.Type.Name;
             if (string.IsNullOrEmpty(typeName))
             {
                 // IL generated frames
@@ -41,7 +38,7 @@ namespace ParallelStacks
 
             // generic methods are not well formatted by ClrMD
             // foo<...>()  =>   foo[[...]]()
-            var signature = frame.Method.Signature;
+            var signature = frame.Method?.Signature;
             if (string.IsNullOrEmpty(signature))
             {
                 Text = "?";
@@ -52,7 +49,7 @@ namespace ParallelStacks
                 Signature.AddRange(BuildSignature(signature));
             }
 
-            var methodName = frame.Method.Name;
+            var methodName = frame.Method?.Name;
             if (string.IsNullOrEmpty(methodName))
             {
                 // IL generated frames
