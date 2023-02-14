@@ -34,7 +34,7 @@ namespace SOS
         /// <summary>
         /// A pointer to the underlying IDebugClient interface if the host is DbgEng.
         /// </summary>
-        public IDebugClient DebugClient { get; }
+        public IDebugClient5 DebugClient { get; }
 
         internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IDebuggerServices, punk)
@@ -45,7 +45,7 @@ namespace SOS
             if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 object obj = Marshal.GetObjectForIUnknown(punk);
-                if (obj is IDebugClient client)
+                if (obj is IDebugClient5 client)
                     DebugClient = client;
             }
         }
