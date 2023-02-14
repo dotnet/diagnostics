@@ -5,7 +5,6 @@ using System.Linq;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 using Microsoft.Diagnostics.DebugServices;
 using System.IO;
-using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -16,7 +15,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public IModuleService ModuleService { get; set; }
 
         [ServiceImport]
+        public IMemoryService MemoryService { get; set; }
+
+        [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
+
+        [ServiceImport]
+        public IThreadService ThreadService { get; set; }
 
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
@@ -53,7 +58,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {
-            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService, ModuleService);
+            NativeAddressHelper nativeAddresses = new(new ClrRuntime[] { Runtime }, MemoryService, MemoryRegionService, ModuleService, ThreadService);
 
             DescribedRegion[] allRegions = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
 

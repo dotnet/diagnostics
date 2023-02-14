@@ -17,7 +17,7 @@ namespace SOS.Extensions
         public DEBUG_OUTPUT InterestMask { get; set; }
 
         /// <summary>
-        /// Event fired when we receive output fromt he debugger.
+        /// Event fired when we receive output from the debugger.
         /// </summary>
         public Action<DEBUG_OUTPUT, string> OutputReceived;
 

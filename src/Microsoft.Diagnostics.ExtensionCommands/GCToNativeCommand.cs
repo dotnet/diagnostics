@@ -22,7 +22,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public IModuleService ModuleService { get; set; }
 
         [ServiceImport]
+        public IMemoryService MemoryService { get; set; }
+
+        [ServiceImport]
         public IMemoryRegionService MemoryRegionService { get; set; }
+
+        [ServiceImport]
+        public IThreadService ThreadService { get; set; }
 
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
@@ -67,7 +73,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (memoryTypes.Length == 0)
                 return;
 
-            NativeAddressHelper nativeAddresses = new(Runtime.DataTarget.DataReader, new ClrRuntime[] { Runtime }, MemoryRegionService, ModuleService);
+            NativeAddressHelper nativeAddresses = new(new ClrRuntime[] { Runtime }, MemoryService, MemoryRegionService, ModuleService, ThreadService);
 
             IEnumerable<DescribedRegion> rangeEnum = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
             rangeEnum = rangeEnum.Where(r => memoryTypes.Any(memType => r.Name.Equals(memType, StringComparison.OrdinalIgnoreCase)));

@@ -220,8 +220,7 @@ namespace SOS.Extensions
                     }
                 }
 
-                // Whether we successfully reloaded or not, get the final symbol type and set
-                // the value so we only ever do this once per region.
+                // Whether we successfully reloaded or not, get the final symbol type.
                 symType = GetSymType(symbols, ImageBase);
                 return DebugToSymbolStatus(symType);
             }

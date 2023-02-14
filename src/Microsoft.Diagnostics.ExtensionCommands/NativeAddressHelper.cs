@@ -12,17 +12,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 {
     internal sealed class NativeAddressHelper
     {
-        private readonly IDataReader _reader;
         private readonly ClrRuntime[] _runtimes;
-        private readonly IMemoryRegionService _memory;
+        private readonly IMemoryRegionService _regions;
+        private readonly IMemoryService _memory;
         private readonly IModuleService _modules;
+        private readonly IThreadService _threads;
 
-        public NativeAddressHelper(IDataReader reader, ClrRuntime[] runtimes, IMemoryRegionService memory, IModuleService modules)
+        public NativeAddressHelper(ClrRuntime[] runtimes, IMemoryService memory, IMemoryRegionService memoryRegions, IModuleService modules, IThreadService threads)
         {
-            _reader = reader;
             _runtimes = runtimes;
             _memory = memory;
+            _regions = memoryRegions;
             _modules = modules;
+            _threads = threads;
         }
 
         /// <summary>
@@ -46,7 +48,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <returns>An enumerable of memory ranges.</returns>
         internal IEnumerable<DescribedRegion> EnumerateAddressSpace(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically)
         {
-            var addressResult = from region in _memory.EnumerateRegions()
+            var addressResult = from region in _regions.EnumerateRegions()
                                 where region.State != MemoryRegionState.MEM_FREE
                                 select new DescribedRegion(region, _modules.GetModuleFromAddress(region.Start));
 
@@ -88,45 +90,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            // On Linux, !address doesn't mark stack space.  Go do that.
-            if (_reader.TargetPlatform == OSPlatform.Linux)
-                MarkStackSpace(ranges);
+            // On Linux, !address doesn't mark stack space
+            MarkStackSpace(ranges);
 
             return ranges;
         }
 
         private void MarkStackSpace(DescribedRegion[] ranges)
         {
-            IThreadReader threadReader = _reader as IThreadReader;
-            Architecture arch = _reader.Architecture;
-            int size = arch switch
+            if (!_threads.TryGetRegisterInfo(_threads.StackPointerIndex, out RegisterInfo reg))
+                return;
+
+            foreach (IThread thread in _threads.EnumerateThreads())
             {
-                Architecture.Arm => ArmContext.Size,
-                Architecture.Arm64 => Arm64Context.Size,
-                Architecture.X86 => X86Context.Size,
-                Architecture.X64 => AMD64Context.Size,
-                _ => 0
-            };
-
-            if (size > 0 && threadReader is not null)
-            {
-                byte[] rawBuffer = ArrayPool<byte>.Shared.Rent(size);
-                try
+                if (thread.TryGetRegisterValue(_threads.StackPointerIndex, out ulong sp) && sp != 0)
                 {
-                    Span<byte> buffer = rawBuffer.AsSpan().Slice(0, size);
-
-                    foreach (uint thread in threadReader.EnumerateOSThreadIds())
-                    {
-                        ulong sp = GetStackPointer(arch, buffer, thread);
-
-                        DescribedRegion range = FindMemory(ranges, sp);
-                        if (range is not null)
-                            range.Description = "Stack";
-                    }
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(rawBuffer);
+                    DescribedRegion range = FindMemory(ranges, sp);
+                    if (range is not null)
+                        range.Description = "Stack";
                 }
             }
         }
@@ -156,52 +137,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             return null;
-        }
-
-        private unsafe ulong GetStackPointer(Architecture arch, Span<byte> buffer, uint thread)
-        {
-            ulong sp = 0;
-
-            bool res = _reader.GetThreadContext(thread, 0, buffer);
-            if (res)
-            {
-                switch (arch)
-                {
-                    case Architecture.X86:
-                        fixed (byte* ptrCtx = buffer)
-                        {
-                            X86Context* ctx = (X86Context*)ptrCtx;
-                            sp = ctx->Esp;
-                        }
-                        break;
-
-                    case Architecture.X64:
-                        fixed (byte* ptrCtx = buffer)
-                        {
-                            AMD64Context* ctx = (AMD64Context*)ptrCtx;
-                            sp = ctx->Rsp;
-                        }
-                        break;
-
-                    case Architecture.Arm64:
-                        fixed (byte* ptrCtx = buffer)
-                        {
-                            Arm64Context* ctx = (Arm64Context*)ptrCtx;
-                            sp = ctx->Sp;
-                        }
-                        break;
-
-                    case Architecture.Arm:
-                        fixed (byte* ptrCtx = buffer)
-                        {
-                            ArmContext* ctx = (ArmContext*)ptrCtx;
-                            sp = ctx->Sp;
-                        }
-                        break;
-                }
-            }
-
-            return sp;
         }
 
         /// <summary>
@@ -283,8 +218,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             fixed (ulong* ptr = array)
             {
                 Span<byte> buffer = new(ptr, size);
-                bytesRead = _reader.Read(start, buffer);
-                return bytesRead == size;
+                return _memory.ReadMemory(start, buffer, out bytesRead);
             }
         }
 
