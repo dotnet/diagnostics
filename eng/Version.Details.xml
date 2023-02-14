@@ -4,13 +4,13 @@
       <Uri>https://github.com/dotnet/symstore</Uri>
       <Sha>c6ecba72647d4277bfe0f85f5ed0405fdfa3a445</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.3.408001">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="2.3.411301">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>2cb33315a52ca3f542c9a66e3ca84c1740d21d1a</Sha>
+      <Sha>e50ddce57e1e2a4cc3564f3e87a37e79e5a93c73</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.3.408001">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="2.3.411301">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>2cb33315a52ca3f542c9a66e3ca84c1740d21d1a</Sha>
+      <Sha>e50ddce57e1e2a4cc3564f3e87a37e79e5a93c73</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
