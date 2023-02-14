@@ -5,27 +5,30 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System;
-using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 using System.Buffers;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    internal sealed class NativeAddressHelper
+    [ServiceExport(Scope = ServiceScope.Target)]
+    public sealed class NativeAddressHelper
     {
-        private readonly ClrRuntime[] _runtimes;
-        private readonly IMemoryRegionService _regions;
-        private readonly IMemoryService _memory;
-        private readonly IModuleService _modules;
-        private readonly IThreadService _threads;
+        [ServiceImport]
+        public ITarget Target { get; set; } 
 
-        public NativeAddressHelper(ClrRuntime[] runtimes, IMemoryService memory, IMemoryRegionService memoryRegions, IModuleService modules, IThreadService threads)
-        {
-            _runtimes = runtimes;
-            _memory = memory;
-            _regions = memoryRegions;
-            _modules = modules;
-            _threads = threads;
-        }
+        [ServiceImport]
+        public IMemoryService MemoryService { get; set; } 
+
+        [ServiceImport]
+        public IThreadService ThreadService { get; set; } 
+
+        [ServiceImport]
+        public IRuntimeService RuntimeService { get; set; } 
+
+        [ServiceImport]
+        public IModuleService ModuleService { get; set; }
+
+        [ServiceImport]
+        public IMemoryRegionService MemoryRegionService { get; set; }
 
         /// <summary>
         /// Enumerates the entire address space, optionally tagging special CLR heaps, and optionally "collapsing"
@@ -48,9 +51,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <returns>An enumerable of memory ranges.</returns>
         internal IEnumerable<DescribedRegion> EnumerateAddressSpace(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically)
         {
-            var addressResult = from region in _regions.EnumerateRegions()
+            var addressResult = from region in MemoryRegionService.EnumerateRegions()
                                 where region.State != MemoryRegionState.MEM_FREE
-                                select new DescribedRegion(region, _modules.GetModuleFromAddress(region.Start));
+                                select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
 
             if (!includeReserveMemory)
                 addressResult = addressResult.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
@@ -58,23 +61,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             DescribedRegion[] ranges = addressResult.OrderBy(r => r.Start).ToArray();
             if (tagClrMemoryRanges)
             {
-                foreach (var runtime in _runtimes)
+                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
-                    foreach (ClrMemoryPointer mem in ClrMemoryPointer.EnumerateClrMemoryAddresses(runtime))
+                    ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
+                    if (clrRuntime is not null)
                     {
-                        var found = ranges.Where(m => m.Start <= mem.Address && mem.Address < m.End).ToArray();
-
-                        if (found.Length == 0)
-                            Trace.WriteLine($"Warning:  Could not find a memory range for {mem.Address:x} - {mem.Kind}.");
-                        else if (found.Length > 1)
-                            Trace.WriteLine($"Warning:  Found multiple memory ranges for entry {mem.Address:x} - {mem.Kind}.");
-
-                        foreach (var entry in found)
+                        foreach (ClrMemoryPointer mem in ClrMemoryPointer.EnumerateClrMemoryAddresses(clrRuntime))
                         {
-                            if (entry.ClrMemoryKind != ClrMemoryKind.None && entry.ClrMemoryKind != mem.Kind)
-                                Trace.WriteLine($"Warning:  Overwriting range {entry.Start:x} {entry.ClrMemoryKind} -> {mem.Kind}.");
+                            var found = ranges.Where(m => m.Start <= mem.Address && mem.Address < m.End).ToArray();
 
-                            entry.ClrMemoryKind = mem.Kind;
+                            if (found.Length == 0)
+                                Trace.WriteLine($"Warning:  Could not find a memory range for {mem.Address:x} - {mem.Kind}.");
+                            else if (found.Length > 1)
+                                Trace.WriteLine($"Warning:  Found multiple memory ranges for entry {mem.Address:x} - {mem.Kind}.");
+
+                            foreach (var entry in found)
+                            {
+                                if (entry.ClrMemoryKind != ClrMemoryKind.None && entry.ClrMemoryKind != mem.Kind)
+                                    Trace.WriteLine($"Warning:  Overwriting range {entry.Start:x} {entry.ClrMemoryKind} -> {mem.Kind}.");
+
+                                entry.ClrMemoryKind = mem.Kind;
+                            }
                         }
                     }
                 }
@@ -90,20 +97,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            // On Linux, !address doesn't mark stack space
-            MarkStackSpace(ranges);
+            // On Linux, !address doesn't mark stack space.  Go do that.
+            if (Target.OperatingSystem == OSPlatform.Linux)
+                MarkStackSpace(ranges);
 
             return ranges;
         }
 
         private void MarkStackSpace(DescribedRegion[] ranges)
         {
-            if (!_threads.TryGetRegisterInfo(_threads.StackPointerIndex, out RegisterInfo reg))
-                return;
-
-            foreach (IThread thread in _threads.EnumerateThreads())
+            foreach (IThread thread in ThreadService.EnumerateThreads())
             {
-                if (thread.TryGetRegisterValue(_threads.StackPointerIndex, out ulong sp) && sp != 0)
+                if (thread.TryGetRegisterValue(ThreadService.StackPointerIndex, out ulong sp) && sp != 0)
                 {
                     DescribedRegion range = FindMemory(ranges, sp);
                     if (range is not null)
@@ -218,7 +223,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             fixed (ulong* ptr = array)
             {
                 Span<byte> buffer = new(ptr, size);
-                return _memory.ReadMemory(start, buffer, out bytesRead);
+                MemoryService.ReadMemory(start, buffer, out bytesRead);
+                return bytesRead == size;
             }
         }
 

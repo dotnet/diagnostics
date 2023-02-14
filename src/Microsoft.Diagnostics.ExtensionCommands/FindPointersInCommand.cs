@@ -1,10 +1,10 @@
-﻿using Microsoft.Diagnostics.Runtime;
+﻿using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
-using Microsoft.Diagnostics.DebugServices;
-using System.IO;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -15,16 +15,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public IModuleService ModuleService { get; set; }
 
         [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
-
-        [ServiceImport]
-        public IMemoryRegionService MemoryRegionService { get; set; }
-
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
-
-        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
+
+        [ServiceImport]
+        public NativeAddressHelper AddressHelper { get; set; }
 
         [Option(Name = "--showAllObjects", Aliases = new string[] { "-a", "--all" }, Help = "Show all objects instead of only objects Pinned on the heap.")]
         public bool ShowAllObjects { get; set; }
@@ -58,9 +52,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {
-            NativeAddressHelper nativeAddresses = new(new ClrRuntime[] { Runtime }, MemoryService, MemoryRegionService, ModuleService, ThreadService);
-
-            DescribedRegion[] allRegions = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
+            DescribedRegion[] allRegions = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
 
             WriteLine("Scanning for pinned objects...");
             var ctx = CreateMemoryWalkContext();
@@ -78,7 +70,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (DescribedRegion mem in matchingRanges.OrderBy(r => r.Start))
                 {
-                    var pointersFound = nativeAddresses.EnumerateRegionPointers(mem.Start, mem.End, allRegions).Select(r => (r.Pointer, r.MemoryRange));
+                    var pointersFound = AddressHelper.EnumerateRegionPointers(mem.Start, mem.End, allRegions).Select(r => (r.Pointer, r.MemoryRange));
                     RegionPointers result = ProcessOneRegion(pinnedOnly, pointersFound, ctx);
 
                     WriteMemoryHeaderLine(mem);

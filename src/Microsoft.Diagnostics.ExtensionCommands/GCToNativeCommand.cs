@@ -19,19 +19,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool ShowAll { get; set; }
 
         [ServiceImport]
-        public IModuleService ModuleService { get; set; }
-
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
-
-        [ServiceImport]
-        public IMemoryRegionService MemoryRegionService { get; set; }
-
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
-
-        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
+
+        [ServiceImport]
+        public NativeAddressHelper AddressHelper { get; set; }
 
         private int Width
         {
@@ -73,9 +64,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (memoryTypes.Length == 0)
                 return;
 
-            NativeAddressHelper nativeAddresses = new(new ClrRuntime[] { Runtime }, MemoryService, MemoryRegionService, ModuleService, ThreadService);
-
-            IEnumerable<DescribedRegion> rangeEnum = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
+            IEnumerable<DescribedRegion> rangeEnum = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
             rangeEnum = rangeEnum.Where(r => memoryTypes.Any(memType => r.Name.Equals(memType, StringComparison.OrdinalIgnoreCase)));
             rangeEnum = rangeEnum.OrderBy(r => r.Start);
 
@@ -92,7 +81,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Dictionary<ClrSegment, List<GCObjectToRange>> segmentLists = new();
 
             var items = Runtime.Heap.Segments
-                            .SelectMany(Segment => nativeAddresses
+                            .SelectMany(Segment => AddressHelper
                                                     .EnumerateRegionPointers(Segment.ObjectRange.Start, Segment.ObjectRange.End, ranges)
                                                     .Select(regionPointer => (Segment, regionPointer.Address, regionPointer.Pointer, regionPointer.MemoryRange)));
 

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,19 +22,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool TagReserveMemoryHeuristically { get; set; }
 
         [ServiceImport]
-        public IModuleService ModuleService { get; set; }
-
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
-
-        [ServiceImport]
-        public IMemoryRegionService MemoryRegionService { get; set; }
-
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public NativeAddressHelper AddressHelper { get; set; }
 
         public override void Invoke()
         {
@@ -47,8 +34,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public void PrintMemorySummary(bool printAllMemory, bool showImageTable, bool includeReserveMemory, bool tagReserveMemoryHeuristically)
         {
-            NativeAddressHelper nativeAddresses = new(new ClrRuntime[] { Runtime }, MemoryService, MemoryRegionService, ModuleService, ThreadService);
-            IEnumerable<DescribedRegion> memoryRanges = nativeAddresses.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory, tagReserveMemoryHeuristically);
+            IEnumerable<DescribedRegion> memoryRanges = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory, tagReserveMemoryHeuristically);
             if (!includeReserveMemory)
                 memoryRanges = memoryRanges.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
 
