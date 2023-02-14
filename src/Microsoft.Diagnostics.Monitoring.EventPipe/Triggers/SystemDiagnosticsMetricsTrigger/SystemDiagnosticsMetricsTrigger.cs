@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         {
             Validate(settings);
 
-            var config = new MetricSourceConfiguration(settings.CounterIntervalSeconds, MetricSourceConfiguration.CreateProviders(new string[] { settings.ProviderName }), settings.MaxHistograms, settings.MaxTimeSeries);
+            var config = new MetricSourceConfiguration(settings.CounterIntervalSeconds, MetricSourceConfiguration.CreateProviders(new string[] { settings.ProviderName }, MetricType.Meter), settings.MaxHistograms, settings.MaxTimeSeries);
             settings.SessionId = config.SessionId;
 
             return config;
