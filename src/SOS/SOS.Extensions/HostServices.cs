@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
+using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -237,6 +238,12 @@ namespace SOS.Extensions
                     {
                         Trace.TraceWarning($"Cannot add extension command {hr:X8} {name} - {help}");
                     }
+                }
+
+                if (DebuggerServices.DebugClient is IDebugControl5 control)
+                {
+                    MemoryRegionServiceFromDebuggerServices memRegions = new(DebuggerServices.DebugClient, control);
+                    _serviceContainer.AddService<IMemoryRegionService>(memRegions);
                 }
             }
             catch (Exception ex)

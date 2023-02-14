@@ -126,11 +126,15 @@ DbgEngServices::QueryInterface(
         AddRef();
         return S_OK;
     }
-    if (InterfaceId == __uuidof(IDebugEventCallbacks))
+    else if (InterfaceId == __uuidof(IDebugEventCallbacks))
     {
         *Interface = static_cast<IDebugEventCallbacks*>(this);
         AddRef();
         return S_OK;
+    }
+    else if (m_client != nullptr)
+    {
+        return m_client->QueryInterface(InterfaceId, Interface);
     }
     else
     {
