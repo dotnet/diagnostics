@@ -1117,12 +1117,6 @@ GetTargetCLRMetrics(
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
-    // A maximum size of 100 MB should be more than enough for coreclr.dll.
-    if ((cbFileHigh != 0) || (cbFileLow > 0x6400000) || (cbFileLow == 0))
-    {
-        return E_FAIL;
-    }
-
     HandleHolder hCoreClrMap = WszCreateFileMapping(hCoreClrFile, NULL, PAGE_READONLY, cbFileHigh, cbFileLow, NULL);
     if (hCoreClrMap == NULL)
     {
