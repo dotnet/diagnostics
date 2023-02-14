@@ -239,6 +239,12 @@ namespace SOS.Extensions
                         Trace.TraceWarning($"Cannot add extension command {hr:X8} {name} - {help}");
                     }
                 }
+
+                if (DebuggerServices.DebugClient is IDebugControl5 control)
+                {
+                    MemoryRegionServiceFromDebuggerServices memRegions = new(DebuggerServices.DebugClient, control);
+                    _serviceContainer.AddService<IMemoryRegionService>(memRegions);
+                }
             }
             catch (Exception ex)
             {
@@ -252,25 +258,6 @@ namespace SOS.Extensions
                 // disposed in Uninitialize() below by the DisposeServices call.
                 remoteMemoryService.AddRef();
                 _serviceContainer.AddService<IRemoteMemoryService>(remoteMemoryService);
-            }
-            catch (InvalidCastException)
-            {
-            }
-            try
-            {
-                // IMemoryRegionService is currently only implemented on top of DbgEng.  Since this
-                // code uses COM marshalling (which only works on a windows .Net runtime), we also
-                // check to make sure this is a Windows OS to be safe.
-                if (HostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    object comObj = Marshal.GetObjectForIUnknown(iunk);
-                    if (comObj is not null && comObj is IDebugClient5 client)
-                    {
-                        var control = (IDebugControl5)comObj;
-                        MemoryRegionServiceFromDebuggerServices memRegions = new(client, control);
-                        _serviceContainer.AddService<IMemoryRegionService>(memRegions);
-                    }
-                }
             }
             catch (InvalidCastException)
             {
