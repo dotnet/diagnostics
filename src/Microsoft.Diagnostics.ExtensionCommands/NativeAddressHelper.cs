@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             {
                                 if (mem.Kind == ClrMemoryKind.GCHeapReserve || mem.Kind == ClrMemoryKind.GCHeapSegment)
                                 {
-                                    // GC heap segments are special.  We only know report a small chunk of memory on the actual allocated
+                                    // GC heap segments are special.  We only know a small chunk of memory on the actual allocated
                                     // region.  We want to mark the whole region as GC/GCReserve and not try to divide up chunks for these.
                                     SetRegionKindWithWarning(mem.Kind, region);
                                 }
@@ -164,7 +164,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                             rangeList.Add(endRegion);
                                         }
 
-                                        // Now set the original region to dnd where the middle chunk begins.
+                                        // Now set the original region to end where the middle chunk begins.
                                         // Region is now the starting region of this set.
                                         region.End = middleRegion.Start;
                                     }
