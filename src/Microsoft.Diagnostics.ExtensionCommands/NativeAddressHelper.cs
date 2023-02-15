@@ -431,15 +431,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 get
                 {
                     if (ClrMemoryKind != ClrMemoryKind.None)
+                    {
+                        if (ClrMemoryKind == ClrMemoryKind.GCHeapReserve)
+                            return $"[{ClrMemoryKind}]";
+
                         return ClrMemoryKind.ToString();
+                    }
 
                     if (!string.IsNullOrWhiteSpace(Description))
                         return Description;
 
                     if (State == MemoryRegionState.MEM_RESERVE)
-                        return "RESERVED";
+                        return "[RESERVED]";
                     else if (State == MemoryRegionState.MEM_FREE)
-                        return "FREE";
+                        return "[FREE]";
 
                     if (Type == MemoryRegionType.MEM_IMAGE || !string.IsNullOrWhiteSpace(Image))
                         return "Image";
