@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         foreach (ClrMemoryPointer mem in ClrMemoryPointer.EnumerateClrMemoryAddresses(clrRuntime))
                         {
-                            var found = rangeList.Select((DescribedRegion Region, int Index) => (Region, Index)).Where(m => m.Region.Start <= mem.Address && mem.Address < m.Region.End).ToArray();
+                            var found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
 
                             if (found.Length == 0 && mem.Kind != ClrMemoryKind.GCHeapReserve)
                             {
@@ -111,34 +111,34 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 Trace.WriteLine($"Warning:  Found multiple memory ranges for entry {mem.Address:x} - {mem.Kind}.");
                             }
 
-                            foreach ((DescribedRegion Region, int Index) in found)
+                            foreach (DescribedRegion region in found)
                             {
                                 if (mem.Kind == ClrMemoryKind.GCHeapReserve || mem.Kind == ClrMemoryKind.GCHeapSegment)
                                 {
                                     // GC heap segments are special.  We only know report a small chunk of memory on the actual allocated
                                     // region.  We want to mark the whole region as GC/GCReserve and not try to divide up chunks for these.
-                                    SetRegionKindWithWarning(mem.Kind, Region);
+                                    SetRegionKindWithWarning(mem.Kind, region);
                                 }
                                 else if (mem.Size == 0)
                                 {
                                     // If we don't know the length of memory, just mark the Region with this tag.
-                                    SetRegionKindWithWarning(mem.Kind, Region);
+                                    SetRegionKindWithWarning(mem.Kind, region);
                                 }
                                 else
                                 {
                                     // If the CLR memory information does contain a length, we'll split up the optionally split up the range into
                                     // multiple entries if this doesn't span the entire segment.
-                                    if (Region.Start != mem.Address)
+                                    if (region.Start != mem.Address)
                                     {
                                         // If we don't otherwise know what this region is, we'll still blame it on mem.Kind.
                                         // If one contiguous VirtualAlloc call contains a HighFrequencyHeap (for example) then
                                         // it's more correct to say that memory is probably also HighFrequencyHeap than to
                                         // mark it as some other unknown type.  CLR still allocated it, and it's still close
                                         // by the other region kind.
-                                        if (Region.ClrMemoryKind == ClrMemoryKind.None)
-                                            Region.ClrMemoryKind = mem.Kind;
+                                        if (region.ClrMemoryKind == ClrMemoryKind.None)
+                                            region.ClrMemoryKind = mem.Kind;
 
-                                        DescribedRegion middleRegion = new(Region)
+                                        DescribedRegion middleRegion = new(region)
                                         {
                                             Start = mem.Address,
                                             End = mem.Address + mem.Size,
@@ -149,16 +149,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // we aren't sorted yet, so we don't need to worry about where we insert
                                         rangeList.Add(middleRegion);
 
-                                        if (middleRegion.End < Region.End)
+                                        if (middleRegion.End < region.End)
                                         {
                                             // The new region doesn't end where the previous region does, so we
                                             // have to create a third region for the end chunk.
                                             DescribedRegion endRegion = new(middleRegion)
                                             {
                                                 Start = middleRegion.End,
-                                                End = Region.End,           // original region end
-                                                Usage = Region.Usage,
-                                                ClrMemoryKind = Region.ClrMemoryKind
+                                                End = region.End,           // original region end
+                                                Usage = region.Usage,
+                                                ClrMemoryKind = region.ClrMemoryKind
                                             };
 
                                             rangeList.Add(endRegion);
@@ -166,11 +166,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                         // Now set the original region to dnd where the middle chunk begins.
                                         // Region is now the starting region of this set.
-                                        Region.End = middleRegion.Start;
+                                        region.End = middleRegion.Start;
                                     }
-                                    else if (Region.Size < mem.Size)
+                                    else if (region.Size < mem.Size)
                                     {
-                                        SetRegionKindWithWarning(mem.Kind, Region);
+                                        SetRegionKindWithWarning(mem.Kind, region);
 
                                         // That's odd.  The memory in the region is smaller than what the CLR thinks this region size should
                                         // be.  We won't go too deep here, only look for regions which start immediately after this one and
@@ -178,28 +178,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // if we keep spilling over, but we don't expect this to happen in practice.
 
                                         bool foundNext = false;
-                                        foreach (DescribedRegion region in rangeList.Where(r => r != Region && r.Start <= Region.End && Region.End <= r.End))
+                                        foreach (DescribedRegion next in rangeList.Where(r => r != region && r.Start <= region.End && region.End <= r.End))
                                         {
-                                            SetRegionKindWithWarning(mem.Kind, region);
+                                            SetRegionKindWithWarning(mem.Kind, next);
                                             foundNext = true;
                                         }
 
                                         // If we found no matching regions, expand the current region to be the right length.
                                         if (!foundNext)
-                                            Region.End = mem.Address + mem.Size;
+                                            region.End = mem.Address + mem.Size;
                                     }
-                                    else if (Region.Size > mem.Size)
+                                    else if (region.Size > mem.Size)
                                     {
                                         // The CLR memory segment is at the beginning of this region.
-                                        DescribedRegion newRange = new(Region)
+                                        DescribedRegion newRange = new(region)
                                         {
                                             End = mem.Address + mem.Size,
                                             ClrMemoryKind = mem.Kind
                                         };
 
-                                        Region.Start = newRange.End;
-                                        if (Region.ClrMemoryKind == ClrMemoryKind.None)  // see note above
-                                            Region.ClrMemoryKind = mem.Kind;
+                                        region.Start = newRange.End;
+                                        if (region.ClrMemoryKind == ClrMemoryKind.None)  // see note above
+                                            region.ClrMemoryKind = mem.Kind;
                                     }
                                 }
 
