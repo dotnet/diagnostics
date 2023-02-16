@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 output.WriteRowWithSpacing('-', "Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
                 foreach (DescribedRegion mem in ranges)
-                    output.WriteRow(mem.Name, mem.Start, mem.End, mem.Length.ConvertToHumanReadable(), mem.Type, mem.State, mem.Protection, mem.Image);
+                    output.WriteRow(mem.Name, mem.Start, mem.End, mem.Size.ConvertToHumanReadable(), mem.Type, mem.State, mem.Protection, mem.Image);
 
                 output.WriteSpacer('-');
             }

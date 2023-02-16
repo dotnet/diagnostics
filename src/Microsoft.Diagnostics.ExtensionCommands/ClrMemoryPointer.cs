@@ -9,11 +9,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         public ulong Address { get; }
 
+        /// <summary>
+        /// Size may be 0 if we do not know the size of a segment.
+        /// </summary>
+        public ulong Size { get; }
+
         public ClrMemoryKind Kind { get; }
 
         public ClrMemoryPointer(ulong address, ClrMemoryKind kind)
         {
             Address = address;
+            Kind = kind;
+        }
+
+        public ClrMemoryPointer(ulong address, ulong length, ClrMemoryKind kind)
+        {
+            Address = address;
+            Size = length;
             Kind = kind;
         }
 
@@ -36,14 +48,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         _ => ClrMemoryKind.UnknownCodeHeap
                     });
 
-                Console.WriteLine("GC Segments:");
                 foreach (var seg in runtime.Heap.Segments)
                 {
                     if (seg.CommittedMemory.Length > 0)
-                        yield return new ClrMemoryPointer(seg.CommittedMemory.Start, ClrMemoryKind.GCHeapSegment);
+                        yield return new ClrMemoryPointer(seg.CommittedMemory.Start, seg.CommittedMemory.Length, ClrMemoryKind.GCHeapSegment);
 
                     if (seg.ReservedMemory.Length > 0)
-                        yield return new ClrMemoryPointer(seg.ReservedMemory.Start, ClrMemoryKind.GCHeapReserve);
+                        yield return new ClrMemoryPointer(seg.ReservedMemory.Start, seg.ReservedMemory.Length, ClrMemoryKind.GCHeapReserve);
                 }
 
                 HashSet<ulong> seen = new();
@@ -84,15 +95,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             if (sos.GetAppDomainData(address, out AppDomainData domain))
             {
-                sos.TraverseLoaderHeap(domain.StubHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.StubHeap)));
-                sos.TraverseLoaderHeap(domain.HighFrequencyHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.HighFrequencyHeap)));
-                sos.TraverseLoaderHeap(domain.LowFrequencyHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.LowFrequencyHeap)));
-                sos.TraverseStubHeap(address, (int)VCSHeapType.IndcellHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.IndcellHeap)));
-                sos.TraverseStubHeap(address, (int)VCSHeapType.LookupHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.LookupHeap)));
-                sos.TraverseStubHeap(address, (int)VCSHeapType.ResolveHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.ResolveHeap)));
-                sos.TraverseStubHeap(address, (int)VCSHeapType.DispatchHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.DispatchHeap)));
-                sos.TraverseStubHeap(address, (int)VCSHeapType.CacheEntryHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, ClrMemoryKind.CacheEntryHeap)));
+                sos.TraverseLoaderHeap(domain.StubHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.StubHeap)));
+                sos.TraverseLoaderHeap(domain.HighFrequencyHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.HighFrequencyHeap)));
+                sos.TraverseLoaderHeap(domain.LowFrequencyHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.LowFrequencyHeap)));
+                sos.TraverseStubHeap(address, (int)VCSHeapType.IndcellHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.IndcellHeap)));
+                sos.TraverseStubHeap(address, (int)VCSHeapType.LookupHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.LookupHeap)));
+                sos.TraverseStubHeap(address, (int)VCSHeapType.ResolveHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.ResolveHeap)));
+                sos.TraverseStubHeap(address, (int)VCSHeapType.DispatchHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.DispatchHeap)));
+                sos.TraverseStubHeap(address, (int)VCSHeapType.CacheEntryHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.CacheEntryHeap)));
             }
+        }
+
+        private static ulong GetSize(IntPtr size)
+        {
+            long longSize = size.ToInt64();
+            if (longSize <= 0)
+                return 0;
+
+            return (ulong)longSize;
         }
     }
 
