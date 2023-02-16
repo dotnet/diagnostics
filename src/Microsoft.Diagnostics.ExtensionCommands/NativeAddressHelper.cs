@@ -117,12 +117,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 {
                                     // GC heap segments are special.  We only know a small chunk of memory on the actual allocated
                                     // region.  We want to mark the whole region as GC/GCReserve and not try to divide up chunks for these.
-                                    SetRegionKindWithWarning(mem.Kind, region);
+                                    SetRegionKindWithWarning(mem, region);
                                 }
                                 else if (mem.Size == 0)
                                 {
                                     // If we don't know the length of memory, just mark the Region with this tag.
-                                    SetRegionKindWithWarning(mem.Kind, region);
+                                    SetRegionKindWithWarning(mem, region);
                                 }
                                 else
                                 {
@@ -170,7 +170,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                     }
                                     else if (region.Size < mem.Size)
                                     {
-                                        SetRegionKindWithWarning(mem.Kind, region);
+                                        SetRegionKindWithWarning(mem, region);
 
                                         // That's odd.  The memory in the region is smaller than what the CLR thinks this region size should
                                         // be.  We won't go too deep here, only look for regions which start immediately after this one and
@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         bool foundNext = false;
                                         foreach (DescribedRegion next in rangeList.Where(r => r != region && r.Start <= region.End && region.End <= r.End))
                                         {
-                                            SetRegionKindWithWarning(mem.Kind, next);
+                                            SetRegionKindWithWarning(mem, next);
                                             foundNext = true;
                                         }
 
@@ -228,9 +228,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return ranges;
         }
 
-        private static void SetRegionKindWithWarning(ClrMemoryKind memKind, DescribedRegion region)
+        private static void SetRegionKindWithWarning(ClrMemoryPointer mem, DescribedRegion region)
         {
-            if (region.ClrMemoryKind != memKind)
+            if (region.ClrMemoryKind != mem.Kind)
             {
                 // Only warn when the region kind meaningfully changes.  Many regions are reported as
                 // HighFrequencyHeap originally but are classified into more specific regions, so we
@@ -238,10 +238,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (region.ClrMemoryKind != ClrMemoryKind.None
                     && region.ClrMemoryKind != ClrMemoryKind.HighFrequencyHeap)
                 {
-                    Trace.WriteLine($"Warning:  Overwriting range {region.Start:x} {region.ClrMemoryKind} -> {memKind}.");
+                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address+mem.Size:x}] {mem.Kind}.");
                 }
 
-                region.ClrMemoryKind = memKind;
+                region.ClrMemoryKind = mem.Kind;
             }
 
             if (region.Usage == MemoryRegionUsage.Unknown)

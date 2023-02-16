@@ -40,13 +40,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (var handle in runtime.EnumerateHandles())
                     yield return new ClrMemoryPointer(handle.Address, ClrMemoryKind.HandleTable);
 
+                List<ClrMemoryPointer> heaps = new();
                 foreach (var mem in sos.GetCodeHeapList(jitMgr.Address))
-                    yield return new ClrMemoryPointer(mem.Address, mem.Type switch
+                {
+                    if (mem.Type == CodeHeapType.Loader)
                     {
-                        CodeHeapType.Loader => ClrMemoryKind.LoaderHeap,
-                        CodeHeapType.Host => ClrMemoryKind.Host,
-                        _ => ClrMemoryKind.UnknownCodeHeap
-                    });
+                        sos.TraverseLoaderHeap(mem.Address, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.CodeHeap)));
+                    }
+                    else
+                    {
+                        yield return new ClrMemoryPointer(mem.Address, mem.Type switch
+                        {
+                            CodeHeapType.Loader => ClrMemoryKind.LoaderHeap,
+                            CodeHeapType.Host => ClrMemoryKind.Host,
+                            _ => ClrMemoryKind.UnknownCodeHeap
+                        });
+                    }
+                }
+
+                foreach (ClrMemoryPointer ptr in heaps)
+                    yield return ptr;
+
+                heaps.Clear();
 
                 foreach (var seg in runtime.Heap.Segments)
                 {
@@ -59,12 +74,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 HashSet<ulong> seen = new();
 
-                List<ClrMemoryPointer> heaps = new();
                 if (runtime.SystemDomain is not null)
-                    AddAppDomainHeaps(sos, runtime.SystemDomain.Address, heaps);
+                    AddAppDomainHeaps(runtime, sos, runtime.SystemDomain.Address, heaps);
 
                 if (runtime.SharedDomain is not null)
-                    AddAppDomainHeaps(sos, runtime.SharedDomain.Address, heaps);
+                    AddAppDomainHeaps(runtime, sos, runtime.SharedDomain.Address, heaps);
 
                 foreach (var heap in heaps)
                     if (seen.Add(heap.Address))
@@ -73,7 +87,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (ClrDataAddress address in sos.GetAppDomainList())
                 {
                     heaps.Clear();
-                    AddAppDomainHeaps(sos, address, heaps);
+                    AddAppDomainHeaps(runtime, sos, address, heaps);
 
                     foreach (var heap in heaps)
                         if (seen.Add(heap.Address))
@@ -91,13 +105,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             CacheEntryHeap
         }
 
-        private static void AddAppDomainHeaps(SOSDac sos, ClrDataAddress address, List<ClrMemoryPointer> heaps)
+        private static void AddAppDomainHeaps(ClrRuntime runtime, SOSDac sos, ClrDataAddress address, List<ClrMemoryPointer> heaps)
         {
             if (sos.GetAppDomainData(address, out AppDomainData domain))
             {
-                sos.TraverseLoaderHeap(domain.StubHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.StubHeap)));
-                sos.TraverseLoaderHeap(domain.HighFrequencyHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.HighFrequencyHeap)));
-                sos.TraverseLoaderHeap(domain.LowFrequencyHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.LowFrequencyHeap)));
+                sos.TraverseLoaderHeap(AdjustAddress(runtime, domain.StubHeap), (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.StubHeap)));
+                sos.TraverseLoaderHeap(AdjustAddress(runtime, domain.HighFrequencyHeap), (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.HighFrequencyHeap)));
+                sos.TraverseLoaderHeap(AdjustAddress(runtime, domain.LowFrequencyHeap), (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.LowFrequencyHeap)));
                 sos.TraverseStubHeap(address, (int)VCSHeapType.IndcellHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.IndcellHeap)));
                 sos.TraverseStubHeap(address, (int)VCSHeapType.LookupHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.LookupHeap)));
                 sos.TraverseStubHeap(address, (int)VCSHeapType.ResolveHeap, (address, size, isCurrent) => heaps.Add(new ClrMemoryPointer(address, GetSize(size), ClrMemoryKind.ResolveHeap)));
@@ -106,13 +120,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private static ulong GetSize(IntPtr size)
+        private static ulong AdjustAddress(ClrRuntime runtime, ulong address)
         {
-            long longSize = size.ToInt64();
-            if (longSize <= 0)
+            // .Net 7 has an issue where it changed the kind of LoaderHeap it expects in TraverseLoaderHeap.
+            // On this runtime, we will shift the pointer forward to skip the vtable, as the type of heap
+            // the dac expects to walk has the same layout of LoaderHeap, except for the vtable.
+            if (runtime.ClrInfo.Flavor == ClrFlavor.Core && runtime.ClrInfo.Version.Major == 7)
+                return address + (uint)runtime.DataTarget.DataReader.PointerSize;
+
+            return address;
+        }
+
+        private static ulong GetSize(nint size)
+        {
+            // Some sanity checks on size in case we get bad data in the future.
+            if (size <= 0 || size > int.MaxValue)
                 return 0;
 
-            return (ulong)longSize;
+            return (ulong)size;
         }
     }
 
@@ -133,5 +158,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         DispatchHeap,
         CacheEntryHeap,
         HandleTable,
+        CodeHeap,
     }
 }
