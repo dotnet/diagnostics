@@ -163,8 +163,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 NotifyExtensionLoad.Fire(assembly);
             }
             catch (Exception ex) when 
-                (ex is DiagnosticsException || 
-                 ex is NotSupportedException || 
+                (ex is DiagnosticsException ||
+                 ex is ArgumentException ||
+                 ex is NotSupportedException ||
                  ex is FileLoadException ||
                  ex is FileNotFoundException)
             {
