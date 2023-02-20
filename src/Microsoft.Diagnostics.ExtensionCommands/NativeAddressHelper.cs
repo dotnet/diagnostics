@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
                     if (clrRuntime is not null)
                     {
-                        foreach (var mem in EnumerateClrMemoryAddresses(clrRuntime).OrderBy(r => r.Address))
+                        foreach (var mem in EnumerateClrMemoryAddresses(clrRuntime))
                         {
                             var found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
 
