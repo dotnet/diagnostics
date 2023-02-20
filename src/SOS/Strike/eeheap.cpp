@@ -2170,7 +2170,7 @@ DWORD_PTR JitHeapInfo()
                     if (codeHeapInfo[iHeaps].codeHeapType == CODEHEAP_LOADER)
                     {
                         ExtOut("LoaderCodeHeap:    ");
-                        totalSize += LoaderHeapInfo(codeHeapInfo[iHeaps].LoaderHeap, &wasted);
+                        totalSize += LoaderHeapInfo(codeHeapInfo[iHeaps].LoaderHeap, LoaderHeapKindExplicitControl, &wasted);
                     }
                     else if (codeHeapInfo[iHeaps].codeHeapType == CODEHEAP_HOST)
                     {
@@ -2207,13 +2207,50 @@ DWORD_PTR JitHeapInfo()
 *    Returns: The size of this heap.                                   *
 *                                                                      *
 \**********************************************************************/
-DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, DWORD_PTR *wasted)
+DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, LoaderHeapKind kind, DWORD_PTR *wasted)
 {
     g_trav_totalSize = 0;
     g_trav_wastedSize = 0;
 
     if (pLoaderHeapAddr)
-        g_sos->TraverseLoaderHeap(pLoaderHeapAddr, LoaderHeapTraverse);
+    {
+        ReleaseHolder<ISOSDacInterface13> sos13;
+        if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface13), &sos13)))
+        {
+            // If we have ISOSDacInterface13, simply use the working TraverseLoaderHeap.
+
+            sos13->TraverseLoaderHeap(pLoaderHeapAddr, kind, LoaderHeapTraverse);
+        }
+        else
+        {
+            // If we don't have ISOSDacInterface13, any ExplicitControl loader heap needs to have
+            // a "fake" vtable pointer.  To do this we simply subtract off a pointer...since the vtable
+            // is not used/verified this works fine.
+            // On .Net 7, the logic was inverted for just that release.  For that runtime, we add a
+            // pointer to LoaderHeap pointers to remove the vtable.
+
+            VS_FIXEDFILEINFO verInfo = { 0 };
+
+            bool isNetCore7 = g_pRuntime->GetRuntimeConfiguration() != IRuntime::RuntimeConfiguration::WindowsDesktop;
+            isNetCore7 &= SUCCEEDED(g_pRuntime->GetEEVersion(&verInfo, nullptr, 0));
+            isNetCore7 &= HIWORD(verInfo.dwFileVersionMS) == 7;
+
+            if (isNetCore7)
+            {
+                if (kind == LoaderHeapKind::LoaderHeapKindNormal)
+                    pLoaderHeapAddr += POINTERSIZE_BYTES;
+
+                g_sos->TraverseLoaderHeap(pLoaderHeapAddr, LoaderHeapTraverse);
+            }
+            else
+            {
+                if (kind == LoaderHeapKind::LoaderHeapKindExplicitControl)
+                    pLoaderHeapAddr -= POINTERSIZE_BYTES;
+
+                g_sos->TraverseLoaderHeap(pLoaderHeapAddr, LoaderHeapTraverse);
+            }
+        }
+    }
 
     PrintHeapSize(g_trav_totalSize, g_trav_wastedSize);
 
@@ -2241,7 +2278,13 @@ static DWORD_PTR PrintOneVSDHeap(const char *name, VCSHeapType type, CLRDATA_ADD
     g_trav_totalSize = 0; g_trav_wastedSize = 0;
 
     ExtOut(name);
-    g_sos->TraverseVirtCallStubHeap(appDomain, type, LoaderHeapTraverse);
+    HRESULT hr = g_sos->TraverseVirtCallStubHeap(appDomain, type, LoaderHeapTraverse);
+
+    if (hr == E_INVALIDARG)
+    {
+        ExtOut("Not implemented in this runtime.\n");
+        return 0;
+    }
 
     PrintHeapSize(g_trav_totalSize, g_trav_wastedSize);
     if (wasted)
@@ -2272,6 +2315,7 @@ DWORD_PTR VSDHeapInfo(CLRDATA_ADDRESS appDomain, DWORD_PTR *wasted)
         totalSize += PrintOneVSDHeap("  ResolveHeap:     ", ResolveHeap, appDomain, wasted);
         totalSize += PrintOneVSDHeap("  DispatchHeap:    ", DispatchHeap, appDomain, wasted);
         totalSize += PrintOneVSDHeap("  CacheEntryHeap:  ", CacheEntryHeap, appDomain, wasted);
+        totalSize += PrintOneVSDHeap("  VtableHeap:      ", VtableHeap, appDomain, wasted);
     }
 
     return totalSize;
@@ -2315,13 +2359,13 @@ HRESULT PrintDomainHeapInfo(const char *name, CLRDATA_ADDRESS adPtr, DWORD_PTR *
     DWORD_PTR wasted = 0;
 
     ExtOut("LowFrequencyHeap:  ");
-    domainHeapSize += LoaderHeapInfo(appDomain.pLowFrequencyHeap, &wasted);
+    domainHeapSize += LoaderHeapInfo(appDomain.pLowFrequencyHeap, LoaderHeapKindNormal, &wasted);
 
     ExtOut("HighFrequencyHeap: ");
-    domainHeapSize += LoaderHeapInfo(appDomain.pHighFrequencyHeap, &wasted);
+    domainHeapSize += LoaderHeapInfo(appDomain.pHighFrequencyHeap, LoaderHeapKindNormal, &wasted);
 
     ExtOut("StubHeap:          ");
-    domainHeapSize += LoaderHeapInfo(appDomain.pStubHeap, &wasted);
+    domainHeapSize += LoaderHeapInfo(appDomain.pStubHeap, LoaderHeapKindNormal, &wasted);
 
     ExtOut("Virtual Call Stub Heap:\n");
     domainHeapSize += VSDHeapInfo(appDomain.AppDomainPtr, &wasted);
@@ -2375,7 +2419,7 @@ DWORD_PTR PrintModuleHeapInfo(__out_ecount(count) DWORD_PTR *moduleList, int cou
             {
                 DMLOut("Module %s: ", DMLModule(addr));
                 CLRDATA_ADDRESS heap = type == ModuleHeapType_ThunkHeap ? dmd.pThunkHeap : dmd.pLookupTableHeap;
-                thunkHeapSize += LoaderHeapInfo(heap, &wasted);
+                thunkHeapSize += LoaderHeapInfo(heap, LoaderHeapKindNormal, &wasted);
             }
         }
 

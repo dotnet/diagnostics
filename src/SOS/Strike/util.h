@@ -1782,7 +1782,7 @@ DWORD_PTR PrintModuleHeapInfo(DWORD_PTR *moduleList, int count, ModuleHeapType t
 void PrintHeapSize(DWORD_PTR total, DWORD_PTR wasted);
 void DomainInfo(DacpAppDomainData *pDomain);
 void AssemblyInfo(DacpAssemblyData *pAssembly);
-DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, DWORD_PTR *wasted = 0);
+DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, LoaderHeapKind kind, DWORD_PTR *wasted = 0);
 DWORD_PTR JitHeapInfo();
 DWORD_PTR VSDHeapInfo(CLRDATA_ADDRESS appDomain, DWORD_PTR *wasted = 0);
 
