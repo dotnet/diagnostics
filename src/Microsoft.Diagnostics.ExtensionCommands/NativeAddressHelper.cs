@@ -254,7 +254,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (var seg in runtime.Heap.Segments)
             {
                 if (seg.CommittedMemory.Length > 0)
-                    yield return (seg.CommittedMemory.Start, null, ClrMemoryKind.GCHeapSegment);
+                    yield return (seg.CommittedMemory.Start, null, ClrMemoryKind.GCHeap);
 
                 if (seg.ReservedMemory.Length > 0)
                     yield return (seg.ReservedMemory.Start, null, ClrMemoryKind.GCHeapReserve);
@@ -292,7 +292,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     DescribedRegion range = FindMemory(ranges, sp);
                     if (range is not null)
-                        range.Description = "Stack";
+                        range.Usage = MemoryRegionUsage.Stack;
                 }
             }
         }
@@ -358,7 +358,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (nonReserved is null)
                 return null;
 
-            mem.Description = nonReserved.Name;
+            mem.PrevRegionName = nonReserved.Name;
             return nonReserved;
         }
 
@@ -426,7 +426,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Skip ahead so new ClrMD NativeHeapKind values don't break the enum.
             Unknown = 100,
-            GCHeapSegment,
+            GCHeap,
             GCHeapReserve,
             HandleTable,
         }
@@ -459,8 +459,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Protection = copyFrom.Protection;
                 Usage = copyFrom.Usage;
                 Image = copyFrom.Image;
-                Description = copyFrom.Description;
                 ClrMemoryKind = copyFrom.ClrMemoryKind;
+                PrevRegionName = copyFrom.PrevRegionName;
             }
 
             public IModule Module { get; internal set; }
@@ -479,11 +479,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             public string Image { get; internal set; }
 
-            public string Description { get; internal set; }
-
             public ClrMemoryKind ClrMemoryKind { get; internal set; }
 
             public ulong Size => End <= Start ? 0 : End - Start;
+
+            /// <summary>
+            /// Only used for heuristically marking reserve regions with what it might
+            /// be reserved for.
+            /// </summary>
+            public string PrevRegionName { get; internal set; }
 
             public string Name
             {
@@ -497,11 +501,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         return ClrMemoryKind.ToString();
                     }
 
-                    if (!string.IsNullOrWhiteSpace(Description))
-                        return Description;
+                    if (Usage != MemoryRegionUsage.Unknown)
+                        return Usage.ToString();
 
                     if (State == MemoryRegionState.MEM_RESERVE)
+                    {
+                        if (PrevRegionName is not null)
+                            return $"[{PrevRegionName}Reserve]";
+
                         return "[RESERVED]";
+                    }
                     else if (State == MemoryRegionState.MEM_FREE)
                         return "[FREE]";
 

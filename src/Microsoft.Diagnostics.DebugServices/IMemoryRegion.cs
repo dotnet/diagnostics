@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Diagnostics.DebugServices
+﻿using System;
+
+namespace Microsoft.Diagnostics.DebugServices
 {
     public enum MemoryRegionType
     {
@@ -16,6 +18,7 @@
         MEM_RESERVE = 0x2000
     }
 
+    [Flags]
     public enum MemoryRegionProtection
     {
         PAGE_UNKNOWN = 0,

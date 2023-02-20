@@ -258,7 +258,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach ((ulong Pointer, DescribedRegion Range) found in pointersFound)
             {
-                if (found.Range.ClrMemoryKind == ClrMemoryKind.GCHeapSegment)
+                if (found.Range.ClrMemoryKind == ClrMemoryKind.GCHeap)
                 {
                     if (pinnedOnly)
                     {
