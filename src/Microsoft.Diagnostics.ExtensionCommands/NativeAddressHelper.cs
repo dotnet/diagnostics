@@ -73,8 +73,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         foreach (var mem in EnumerateClrMemoryAddresses(clrRuntime).OrderBy(r => r.Address))
                         {
-                            Console.WriteLine($"[{mem.Address:X},{mem.Address + mem.Size:x}] - {mem.Kind}");
-
                             var found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
 
                             if (found.Length == 0 && mem.Kind != ClrMemoryKind.GCHeapReserve)
