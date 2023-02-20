@@ -2229,13 +2229,7 @@ DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, LoaderHeapKind kind, D
             // On .Net 7, the logic was inverted for just that release.  For that runtime, we add a
             // pointer to LoaderHeap pointers to remove the vtable.
 
-            VS_FIXEDFILEINFO verInfo = { 0 };
-
-            bool isNetCore7 = g_pRuntime->GetRuntimeConfiguration() != IRuntime::RuntimeConfiguration::WindowsDesktop;
-            isNetCore7 &= SUCCEEDED(g_pRuntime->GetEEVersion(&verInfo, nullptr, 0));
-            isNetCore7 &= HIWORD(verInfo.dwFileVersionMS) == 7;
-
-            if (isNetCore7)
+            if (IsRuntimeVersion(7))
             {
                 if (kind == LoaderHeapKind::LoaderHeapKindNormal)
                     pLoaderHeapAddr += POINTERSIZE_BYTES;
