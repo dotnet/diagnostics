@@ -28,20 +28,28 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
                 throw new ArgumentNullException(nameof(settings));
             }
 
-            if (settings.HistogramMode.HasValue)
+            if (!string.IsNullOrEmpty(settings.HistogramPercentile))
             {
-                Func<double, double, bool> evalFunc = settings.HistogramMode.Value == HistogramMode.GreaterThan ?
-                    (actual, expected) => actual > expected :
-                    (actual, expected) => actual < expected;
+                Func<double, double?, double?, bool> evalFunc = null;
+
+                if (settings.GreaterThan.HasValue && settings.LessThan.HasValue)
+                {
+                    evalFunc = (actual, lowerBound, upperBound) => actual > lowerBound && actual < upperBound;
+                }
+                else if (settings.GreaterThan.HasValue)
+                {
+                    evalFunc = (actual, lowerBound, upperBound) => actual > lowerBound;
+                }
+                else if (settings.LessThan.HasValue)
+                {
+                    evalFunc = (actual, lowerBound, upperBound) => actual < upperBound;
+                }
 
                 _valueFilterHistogram = histogramValues =>
                 {
-                    foreach (var kvp in settings.HistogramPercentiles)
+                    if (!histogramValues.TryGetValue(settings.HistogramPercentile, out var value) || !evalFunc(value, settings.LessThan, settings.GreaterThan))
                     {
-                        if (!histogramValues.TryGetValue(kvp.Key, out var value) || !evalFunc(value, kvp.Value))
-                        {
-                            return false;
-                        }
+                        return false;
                     }
 
                     return true;
@@ -77,19 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         private Dictionary<string, double> CreatePayloadDict(PercentilePayload percentilePayload)
         {
-            return percentilePayload.Quantiles.ToDictionary(keySelector: p => p.Percentage.ToString(), elementSelector: p => p.Value);
-        }
-
-        private double GetPercentile(string metadata)
-        {
-            string percentile = metadata.Substring(metadata.IndexOf(Constants.HistogramPercentileKey));
-            if (percentile.Contains(","))
-            {
-                percentile = percentile[..percentile.IndexOf(",")];
-            }
-            percentile = percentile.Replace(Constants.HistogramPercentileKey, string.Empty);
-
-            return Convert.ToDouble(percentile);
+            return percentilePayload.Quantiles.ToDictionary(keySelector: p => CounterUtilities.CreatePercentile(p.Percentage), elementSelector: p => p.Value);
         }
     }
 }

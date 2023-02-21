@@ -16,9 +16,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
     internal sealed class SystemDiagnosticsMetricsTriggerSettings :
         IValidatableObject
     {
-        internal const string MissingHistogramModeOrPercentilesMessage = "Either the " + nameof(HistogramMode) + " field or the " + nameof(HistogramPercentiles) + " field is missing.";
-        internal const string CannotHaveGreaterThanLessThanWithHistogram = "When specifying " + nameof(HistogramMode) + " and " + nameof(HistogramPercentiles) + ", " + nameof(GreaterThan) + " and " + nameof(LessThan) + " must be empty.";
-
         /// <summary>
         /// The name of the event provider from which counters/gauges/histograms/etc. will be monitored.
         /// </summary>
@@ -44,17 +41,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public double? LessThan { get; set; }
 
         /// <summary>
-        /// When monitoring a histogram, this dictates whether histogram values
-        /// should be greater or less than the specified percentiles.
+        /// When monitoring a histogram, this dictates which percentile
+        /// to compare against using the value in GreaterThan/LessThan
         /// </summary>
-        public HistogramMode? HistogramMode { get; set; }
-
-        /// <summary>
-        /// The thresholds for each percentile that the value must hold for
-        /// the duration specified in <see cref="SlidingWindowDuration"/>
-        /// </summary>
-        public IDictionary<string, double> HistogramPercentiles { get; set; }
-            = new Dictionary<string, double>(0);
+        public string HistogramPercentile { get; set; }
 
         /// <summary>
         /// The sliding duration of time in which the event counter must maintain a value
@@ -77,42 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {
-            List<ValidationResult> results = new();
-
-            if (HistogramMode.HasValue && HistogramPercentiles.Count > 0)
-            {
-                if (GreaterThan.HasValue || LessThan.HasValue)
-                {
-                    results.Add(new ValidationResult(
-                        string.Format(CannotHaveGreaterThanLessThanWithHistogram)));
-                }
-            }
-            else if (HistogramMode.HasValue && !HistogramPercentiles.Any())
-            {
-                results.Add(new ValidationResult(
-                    MissingHistogramModeOrPercentilesMessage,
-                    new[]
-                    {
-                        nameof(HistogramPercentiles),
-                        nameof(HistogramMode)
-                    }));
-            }
-            else if (!HistogramMode.HasValue && HistogramPercentiles.Count > 0)
-            {
-                results.Add(new ValidationResult(
-                    MissingHistogramModeOrPercentilesMessage,
-                    new[]
-                    {
-                        nameof(HistogramPercentiles),
-                        nameof(HistogramMode)
-                    }));
-            }
-            else
-            {
-                return SharedTriggerSettingsValidation.Validate(GreaterThan, LessThan);
-            }
-
-            return results;
+            return SharedTriggerSettingsValidation.Validate(GreaterThan, LessThan);
         }
     }
 }
