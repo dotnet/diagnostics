@@ -14294,14 +14294,14 @@ DECLARE_API( VMMap )
 
 #endif // FEATURE_PAL
 
-DECLARE_API(sosreset)
+DECLARE_API(SOSFlush)
 {
     INIT_API_NOEE();
 
     IHostServices* hostServices = GetHostServices();
     if (hostServices != nullptr)
     {
-        Status = hostServices->DispatchCommand("sosreset", args);
+        Status = hostServices->DispatchCommand("sosflush", args);
     }
     else
     {

@@ -64,8 +64,7 @@ HistInit                           SetHostRuntime (sethostruntime)
 HistRoot                           SetSymbolServer (setsymbolserver)
 HistObj                            SetClrPath (setclrpath)
 HistObjFind                        SOSFlush (sosflush)
-HistClear                          sosreset
-                                   SOSStatus (sosstatus)
+HistClear                          SOSStatus (sosstatus)
                                    FAQ
                                    Help (soshelp)
 \\
@@ -2675,9 +2674,8 @@ Displays internal SOS status or resets the internal cached state.
     Server: http://msdl.microsoft.com/download/symbols/
 \\
 
-COMMAND: sosreset.
 COMMAND: sosflush.
-!sosreset
+!sosflush
 
 Resets the internal cached state.
 \\

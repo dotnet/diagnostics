@@ -8,7 +8,7 @@ using System;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "sosstatus", Help = "Displays internal status.")]
-    [Command(Name = "sosreset", DefaultOptions = "--reset", Aliases = new[] { "sosflush" }, Help = "Resets the internal cached state.")]
+    [Command(Name = "sosflush", DefaultOptions = "--reset", Help = "Resets the internal cached state.")]
     public class StatusCommand : CommandBase
     {
         [ServiceImport]
