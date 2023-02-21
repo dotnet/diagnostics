@@ -10417,8 +10417,12 @@ DECLARE_API(SOSStatus)
         }
         if (bReset)
         {
-            ReleaseTarget();
-            ExtOut("SOS state reset\n");
+            ITarget* target = GetTarget();
+            if (target != nullptr)
+            {
+                target->Flush();
+            }
+            ExtOut("Internal cached state reset\n");
             return S_OK;
         }
         Target::DisplayStatus();
@@ -14292,11 +14296,22 @@ DECLARE_API( VMMap )
 
 DECLARE_API(SOSFlush)
 {
-    INIT_API_EXT();
-    ITarget* target = GetTarget();
-    if (target != nullptr)
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        target->Flush();
+        Status = hostServices->DispatchCommand("sosflush", args);
+    }
+    else
+    {
+        ITarget* target = GetTarget();
+        if (target != nullptr)
+        {
+            target->Flush();
+        }
+        ExtOut("Internal cached state reset\n");
+        return S_OK;
     }
     return Status;
 }

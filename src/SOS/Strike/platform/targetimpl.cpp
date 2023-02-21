@@ -284,7 +284,9 @@ void Target::Flush()
     if (m_netcore != nullptr) {
         m_netcore->Flush();
     }
-#ifndef FEATURE_PAL
+#ifdef FEATURE_PAL
+    FlushMetadataRegions();
+#else
     if (m_desktop != nullptr) {
         m_desktop->Flush();
     }

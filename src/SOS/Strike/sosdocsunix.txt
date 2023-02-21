@@ -2324,7 +2324,13 @@ SOSStatus [-reset]
 
 -reset - reset all the cached internal SOS state.
 
-Display internal SOS status or reset the internal cached state.
+Displays internal SOS status or resets the internal cached state.
+\\
+
+COMMAND: sosflush.
+sosflush
+
+Resets the internal cached state.
 \\
 
 COMMAND: setclrpath.
