@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 _filter = new CounterFilter(Settings.CounterIntervalSeconds);
                 foreach (var counterGroup in settings.CounterGroups)
                 {
-                    _filter.AddFilter(counterGroup.ProviderName, counterGroup.CounterNames);
+                    _filter.AddFilter(counterGroup.ProviderName, counterGroup.CounterNames, counterGroup.IntervalSeconds);
                 }
             }
             else

@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
-                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.IntervalSeconds, traceEvent.TimeStamp);
+                payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.DefaultIntervalSeconds, traceEvent.TimeStamp);
             }
             else
             {
