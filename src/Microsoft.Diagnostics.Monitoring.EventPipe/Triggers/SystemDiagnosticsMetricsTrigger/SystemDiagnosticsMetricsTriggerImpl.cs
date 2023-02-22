@@ -28,26 +28,26 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
                 throw new ArgumentNullException(nameof(settings));
             }
 
-            if (!string.IsNullOrEmpty(settings.HistogramPercentile))
+            if (settings.HistogramPercentile.HasValue)
             {
-                Func<double, double?, double?, bool> evalFunc = null;
+                Func<double, bool> evalFunc = null;
 
                 if (settings.GreaterThan.HasValue && settings.LessThan.HasValue)
                 {
-                    evalFunc = (actual, lowerBound, upperBound) => actual > lowerBound && actual < upperBound;
+                    evalFunc = (actual) => actual > settings.GreaterThan.Value && actual < settings.LessThan.Value;
                 }
                 else if (settings.GreaterThan.HasValue)
                 {
-                    evalFunc = (actual, lowerBound, upperBound) => actual > lowerBound;
+                    evalFunc = (actual) => actual > settings.GreaterThan.Value;
                 }
                 else if (settings.LessThan.HasValue)
                 {
-                    evalFunc = (actual, lowerBound, upperBound) => actual < upperBound;
+                    evalFunc = (actual) => actual < settings.LessThan.Value;
                 }
 
                 _valueFilterHistogram = histogramValues =>
                 {
-                    if (!histogramValues.TryGetValue(settings.HistogramPercentile, out var value) || !evalFunc(value, settings.LessThan, settings.GreaterThan))
+                    if (!histogramValues.TryGetValue(settings.HistogramPercentile.Value.ToString(), out var value) || !evalFunc(value))
                     {
                         return false;
                     }

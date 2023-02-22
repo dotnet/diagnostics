@@ -44,7 +44,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         /// When monitoring a histogram, this dictates which percentile
         /// to compare against using the value in GreaterThan/LessThan
         /// </summary>
-        public string HistogramPercentile { get; set; }
+        [Range(SharedTriggerSettingsConstants.Percentage_MinValue, SharedTriggerSettingsConstants.Percentage_MaxValue)]
+        public int? HistogramPercentile { get; set; }
 
         /// <summary>
         /// The sliding duration of time in which the event counter must maintain a value

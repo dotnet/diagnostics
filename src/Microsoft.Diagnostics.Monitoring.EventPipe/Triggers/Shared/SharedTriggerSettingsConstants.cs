@@ -13,6 +13,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared
         internal const float CounterIntervalSeconds_MaxValue = 24 * 60 * 60; // 1 day
         internal const float CounterIntervalSeconds_MinValue = 1; // 1 second
 
+        internal const int Percentage_MaxValue = 100;
+        internal const int Percentage_MinValue = 0;
+
         internal const string EitherGreaterThanLessThanMessage = "Either the " + nameof(EventCounterTriggerSettings.GreaterThan) + " field or the " + nameof(EventCounterTriggerSettings.LessThan) + " field are required.";
 
         internal const string GreaterThanMustBeLessThanLessThanMessage = "The " + nameof(EventCounterTriggerSettings.GreaterThan) + " field must be less than the " + nameof(EventCounterTriggerSettings.LessThan) + " field.";
