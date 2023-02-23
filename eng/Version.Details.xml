@@ -39,7 +39,7 @@
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>af18fd07d1bb5a0d923a49c39b19c6fbcb6dc07b</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.2.23120.6">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.2.23123.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>75eac9643f3d8952df3cffd928e7987887bb7dab</Sha>
     </Dependency>
