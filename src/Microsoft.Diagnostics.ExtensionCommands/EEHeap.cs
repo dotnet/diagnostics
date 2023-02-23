@@ -437,7 +437,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             int hexWidth = Math.Max(totalCommitted.ToString("x").Length, totalReserved.ToString("x").Length) + 2;
 
-            TableOutput totalTable = new(Console, (16, ""), (hexWidth, ""), (64, "")) { AlignLeft = true };
+            TableOutput totalTable = new(Console, (16, ""), (64, "")) { AlignLeft = true };
 
             totalTable.WriteRow("Total GC Heaps:", heapTotal);
             totalTable.WriteRow("Total Allocated:", FormatMemorySize(totalAllocated, "0"));
