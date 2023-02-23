@@ -56,73 +56,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return totalSize;
         }
 
-        private ulong PrintModuleThunkTable(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime)
-        {
-            IEnumerable<ClrModule> modulesWithThunks = clrRuntime.EnumerateModules().Where(r => r.ThunkHeap != 0);
-            if (!modulesWithThunks.Any())
-                return 0;
-
-            WriteDivider();
-            WriteLine("Module Thunk heaps:");
-
-            return PrintModules(output, ref text, modulesWithThunks);
-        }
-
-        private ulong PrintModuleLoaderAllocators(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
-        {
-            // On .Net Core, modules share their LoaderAllocator with their AppDomain (and AppDomain shares theirs
-            // with SystemDomain).  Only collectable assemblies have unique loader allocators, and that's what we
-            // are essentially enumerating here.
-            IEnumerable<ClrModule> collectable = from module in clrRuntime.EnumerateModules()
-                                                 where module.LoaderAllocator != 0
-                                                 where loaderAllocatorsSeen is null || loaderAllocatorsSeen.Contains(module.LoaderAllocator)
-                                                 select module;
-
-            if (!collectable.Any())
-                return 0;
-
-            WriteDivider();
-            WriteLine("Module LoaderAllocators:");
-
-            return PrintModules(output, ref text, collectable);
-        }
-
-        private ulong PrintModules(TableOutput output, ref StringBuilder text, IEnumerable<ClrModule> modules)
-        {
-            text ??= new(128);
-            ulong totalSize = 0, totalWasted = 0;
-            foreach (ClrModule module in modules)
-            {
-                ulong moduleSize = 0, moduleWasted = 0;
-
-                text.Clear();
-                foreach (ClrNativeHeapInfo info in module.EnumerateThunkHeap())
-                {
-                    if (text.Length > 0)
-                        text.Append(' ');
-
-                    (ulong actualSize, ulong wasted) = CalculateSizeAndWasted(text, info);
-
-                    moduleSize += actualSize;
-                    moduleWasted += wasted;
-
-                }
-
-                text.Append(' ');
-                WriteSizeAndWasted(text, moduleSize, moduleWasted);
-                text.Append('.');
-
-                totalSize += moduleSize;
-                totalWasted += moduleWasted;
-            }
-
-            text.Clear();
-            WriteSizeAndWasted(text, totalSize, totalWasted);
-            output.WriteRow("Total size:", text);
-
-            return totalSize;
-        }
-
         private ulong PrintAppDomains(TableOutput output, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
         {
             ulong totalBytes = 0;
@@ -299,6 +232,73 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             return (0, 0);
+        }
+
+        private ulong PrintModuleThunkTable(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime)
+        {
+            IEnumerable<ClrModule> modulesWithThunks = clrRuntime.EnumerateModules().Where(r => r.ThunkHeap != 0);
+            if (!modulesWithThunks.Any())
+                return 0;
+
+            WriteDivider();
+            WriteLine("Module Thunk heaps:");
+
+            return PrintModules(output, ref text, modulesWithThunks);
+        }
+
+        private ulong PrintModuleLoaderAllocators(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
+        {
+            // On .Net Core, modules share their LoaderAllocator with their AppDomain (and AppDomain shares theirs
+            // with SystemDomain).  Only collectable assemblies have unique loader allocators, and that's what we
+            // are essentially enumerating here.
+            IEnumerable<ClrModule> collectable = from module in clrRuntime.EnumerateModules()
+                                                 where module.LoaderAllocator != 0
+                                                 where loaderAllocatorsSeen is null || loaderAllocatorsSeen.Contains(module.LoaderAllocator)
+                                                 select module;
+
+            if (!collectable.Any())
+                return 0;
+
+            WriteDivider();
+            WriteLine("Module LoaderAllocators:");
+
+            return PrintModules(output, ref text, collectable);
+        }
+
+        private ulong PrintModules(TableOutput output, ref StringBuilder text, IEnumerable<ClrModule> modules)
+        {
+            text ??= new(128);
+            ulong totalSize = 0, totalWasted = 0;
+            foreach (ClrModule module in modules)
+            {
+                ulong moduleSize = 0, moduleWasted = 0;
+
+                text.Clear();
+                foreach (ClrNativeHeapInfo info in module.EnumerateThunkHeap())
+                {
+                    if (text.Length > 0)
+                        text.Append(' ');
+
+                    (ulong actualSize, ulong wasted) = CalculateSizeAndWasted(text, info);
+
+                    moduleSize += actualSize;
+                    moduleWasted += wasted;
+
+                }
+
+                text.Append(' ');
+                WriteSizeAndWasted(text, moduleSize, moduleWasted);
+                text.Append('.');
+
+                totalSize += moduleSize;
+                totalWasted += moduleWasted;
+            }
+
+            text.Clear();
+            WriteSizeAndWasted(text, totalSize, totalWasted);
+            output.WriteRow("Total size:", text);
+
+            return totalSize;
         }
 
         private static void WriteSizeAndWasted(StringBuilder sb, ulong heapSize, ulong heapWasted)
