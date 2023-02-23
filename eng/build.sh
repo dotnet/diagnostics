@@ -115,6 +115,9 @@ handle_arguments() {
 }
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
+source "$repoRootDir/eng/native/init-os-and-arch.sh"
+
+__BuildArch="$arch"
 
 __LogsDir="$__RootBinDir/log/$__BuildType"
 __ConfigTriplet="$__TargetOS.$__BuildArch.$__BuildType"
