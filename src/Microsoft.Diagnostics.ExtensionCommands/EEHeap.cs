@@ -16,7 +16,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
-                
+
+        [Option(Name = "--gc", Aliases = new string[] { "-gc" }, Help = "Only display the GC.")]
+        public bool ShowGC { get; set; }
+
+        [Option(Name = "--loader", Aliases = new string[] { "-loader "}, Help = "Only display the Loader.")]
+        public bool ShowLoader { get; set; }
+
         public override void Invoke()
         {
             IRuntime[] runtimes = RuntimeService.EnumerateRuntimes().ToArray();
@@ -32,7 +38,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 totalBytes += PrintOneRuntime(ref stringBuilder, clrRuntime);
             }
 
-            if (runtimes.Length > 1)
+            // Only print the total bytes if we walked everything.
+            if (runtimes.Length > 1 && !ShowGC && !ShowLoader)
                 WriteLine($"Total bytes consumed by all CLRs: {FormatMemorySize(totalBytes, "0")}");
         }
 
@@ -47,15 +54,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ulong totalSize = 0;
 
-            totalSize += PrintAppDomains(output, clrRuntime, seen);
-            totalSize += PrintCodeHeaps(output, clrRuntime);
-            totalSize += PrintModuleThunkTable(output, ref stringBuilder, clrRuntime);
-            totalSize += PrintModuleLoaderAllocators(output, ref stringBuilder, clrRuntime, seen);
-            totalSize += PrintGCHeap(clrRuntime);
+            if (ShowLoader || !ShowGC)
+            {
+                totalSize += PrintAppDomains(output, clrRuntime, seen);
+                totalSize += PrintCodeHeaps(output, clrRuntime);
+                totalSize += PrintModuleThunkTable(output, ref stringBuilder, clrRuntime);
+                totalSize += PrintModuleLoaderAllocators(output, ref stringBuilder, clrRuntime, seen);
+            }
 
-            WriteLine();
-            WriteLine($"Total bytes consumed by CLR: {FormatMemorySize(totalSize, "0"}");
-            WriteLine();
+            if (ShowGC || !ShowLoader)
+                totalSize += PrintGCHeap(clrRuntime);
+
+            // Only print the total bytes if we walked everything.
+            if (!ShowGC && !ShowLoader)
+            {
+                WriteLine();
+                WriteLine($"Total bytes consumed by CLR: {FormatMemorySize(totalSize, "0"}");
+                WriteLine();
+            }
 
             return totalSize;
         }
