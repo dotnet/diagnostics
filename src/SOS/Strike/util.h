@@ -1771,6 +1771,9 @@ void isRetAddr(DWORD_PTR retAddr, DWORD_PTR* whereCalled);
 DWORD_PTR GetValueFromExpression (___in __in_z const char *const str);
 void LoadRuntimeSymbols();
 
+void DomainInfo(DacpAppDomainData* pDomain);
+void AssemblyInfo(DacpAssemblyData* pAssembly);
+
 size_t GetNumComponents(TADDR obj);
 
 struct GenUsageStat

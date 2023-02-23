@@ -374,6 +374,24 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
     return hr;
 }
 
+
+//
+// Executes managed extension commands
+//
+HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
+{
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        if (commandName != nullptr && strlen(commandName) > 0)
+        {
+            return hostServices->DispatchCommand(commandName, args);
+        }
+    }
+    return E_NOTIMPL;
+}
+
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -16059,22 +16077,6 @@ DECLARE_API(runtimes)
         }
     }
     return Status;
-}
-
-//
-// Executes managed extension commands
-//
-HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
-{
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
-    {
-        if (commandName != nullptr && strlen(commandName) > 0)
-        {
-            return hostServices->DispatchCommand(commandName, args);
-        }
-    }
-    return E_NOTIMPL;
 }
 
 #ifdef HOST_WINDOWS
