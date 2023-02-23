@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--gc", Aliases = new string[] { "-gc" }, Help = "Only display the GC.")]
         public bool ShowGC { get; set; }
 
-        [Option(Name = "--loader", Aliases = new string[] { "-loader"}, Help = "Only display the Loader.")]
+        [Option(Name = "--loader", Aliases = new string[] { "-loader" }, Help = "Only display the Loader.")]
         public bool ShowLoader { get; set; }
 
         public override void Invoke()
@@ -183,11 +183,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             text.Clear();
-            WriteSizeAndWasted(text, totalSize, totalWasted);
 
-            output.WriteRow("Total size:", text);
+            if (totalSize > 0)
+            {
+                WriteSizeAndWasted(text, totalSize, totalWasted);
+                output.WriteRow("Total size:", text);
+            }
+            else
+            {
+                Console.WriteLine("No unique loader heaps found.");
+            }
+
             WriteDivider();
-
             return totalSize;
         }
 
@@ -324,11 +331,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static void WriteSizeAndWasted(StringBuilder sb, ulong heapSize, ulong heapWasted)
         {
             sb.Append("Size: ");
-            sb.AppendFormat("0x{0:x} ({0:n0}) bytes total", heapSize);
+            sb.Append(FormatMemorySize(heapSize));
+            sb.Append(" bytes total");
 
             if (heapWasted > 0)
             {
-                sb.AppendFormat(", 0x{0:x} ({0:n0}) bytes wasted", heapWasted);
+                sb.Append(", ");
+                sb.Append(FormatMemorySize(heapWasted));
+                sb.Append(" bytes wasted");
             }
         }
 
@@ -416,7 +426,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             int hexWidth = Math.Max(totalCommitted.ToString("x").Length, totalReserved.ToString("x").Length) + 2;
 
-            TableOutput totalTable = new(Console, (16, ""), (hexWidth, ""), (32, "")) { AlignLeft = true };
+            TableOutput totalTable = new(Console, (16, ""), (hexWidth, ""), (64, "")) { AlignLeft = true };
 
             totalTable.WriteRow("Total GC Heaps:", heapTotal);
             totalTable.WriteRow("Total Allocated:", FormatMemorySize(totalAllocated, "0"));
