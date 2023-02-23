@@ -3591,10 +3591,6 @@ DECLARE_API(DumpPermissionSet)
 }
 
 #endif // _DEBUG
-
-void GCPrintGenerationInfo(DacpGcHeapDetails &heap);
-void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
-
 #endif // FEATURE_PAL
 
 /**********************************************************************\
@@ -3605,200 +3601,8 @@ void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
 \**********************************************************************/
 DECLARE_API(EEHeap)
 {
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-
-    BOOL dml = FALSE;
-    BOOL showgc = FALSE;
-    BOOL showloader = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-gc", &showgc, COBOOL, FALSE},
-        {"-loader", &showloader, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    if (showloader || !showgc)
-    {
-        // Loader heap.
-        DWORD_PTR allHeapSize = 0;
-        DWORD_PTR wasted = 0;
-        DacpAppDomainStoreData adsData;
-        if ((Status=adsData.Request(g_sos))!=S_OK)
-        {
-            ExtOut("Unable to get AppDomain information\n");
-            return Status;
-        }
-
-        // The first one is the system domain.
-        ExtOut("Loader Heap:\n");
-        IfFailRet(PrintDomainHeapInfo("System Domain", adsData.systemDomain, &allHeapSize, &wasted));
-        if (adsData.sharedDomain != NULL)
-        {
-            IfFailRet(PrintDomainHeapInfo("Shared Domain", adsData.sharedDomain, &allHeapSize, &wasted));
-        }
-
-        ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[adsData.DomainCount];
-
-        if (pArray==NULL)
-        {
-            ReportOOM();
-            return Status;
-        }
-
-        if ((Status=g_sos->GetAppDomainList(adsData.DomainCount, pArray, NULL))!=S_OK)
-        {
-            ExtOut("Unable to get the array of all AppDomains.\n");
-            return Status;
-        }
-
-        for (int n=0;n<adsData.DomainCount;n++)
-        {
-            if (IsInterrupt())
-                break;
-
-            char domain[16];
-            sprintf_s(domain, ARRAY_SIZE(domain), "Domain %d", n+1);
-
-            IfFailRet(PrintDomainHeapInfo(domain, pArray[n], &allHeapSize, &wasted));
-
-        }
-
-        // Jit code heap
-        ExtOut("--------------------------------------\n");
-        ExtOut("Jit code heap:\n");
-
-        if (IsMiniDumpFile())
-        {
-            ExtOut("<no information>\n");
-        }
-        else
-        {
-            allHeapSize += JitHeapInfo();
-        }
-
-
-        // Module Data
-        {
-            int numModule;
-            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);
-            if (moduleList == NULL)
-            {
-                ExtOut("Failed to request module list.\n");
-            }
-            else
-            {
-                // Module Thunk Heaps
-                ExtOut("--------------------------------------\n");
-                ExtOut("Module Thunk heaps:\n");
-                allHeapSize += PrintModuleHeapInfo(moduleList, numModule, ModuleHeapType_ThunkHeap, &wasted);
-
-                // Module Lookup Table Heaps
-                ExtOut("--------------------------------------\n");
-                ExtOut("Module Lookup Table heaps:\n");
-                allHeapSize += PrintModuleHeapInfo(moduleList, numModule, ModuleHeapType_LookupTableHeap, &wasted);
-            }
-        }
-
-        ExtOut("--------------------------------------\n");
-        ExtOut("Total LoaderHeap size:   ");
-        PrintHeapSize(allHeapSize, wasted);
-        ExtOut("=======================================\n");
-    }
-
-    if (showgc || !showloader)
-    {
-        // GC Heap
-        DWORD dwNHeaps = 1;
-
-        if (!GetGcStructuresValid())
-        {
-            DisplayInvalidStructuresMessage();
-        }
-
-        DacpGcHeapData gcheap;
-        if (gcheap.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting GC Heap data\n");
-            return Status;
-        }
-
-        if (gcheap.bServerMode)
-        {
-            dwNHeaps = gcheap.HeapCount;
-        }
-
-        ExtOut("Number of GC Heaps: %d\n", dwNHeaps);
-        DWORD_PTR totalAllocatedSize = 0;
-        DWORD_PTR totalCommittedSize = 0;
-        if (!gcheap.bServerMode)
-        {
-            DacpGcHeapDetails heapDetails;
-            if (heapDetails.Request(g_sos) != S_OK)
-            {
-                ExtOut("Error requesting details\n");
-                return Status;
-            }
-
-            GCHeapInfo (heapDetails, totalAllocatedSize, totalCommittedSize);
-            ExtOut("Total Allocated Size:              ");
-            PrintHeapSize(totalAllocatedSize, 0);
-            ExtOut("Total Committed Size:              ");
-            PrintHeapSize(totalCommittedSize, 0);
-        }
-        else
-        {
-            DWORD dwAllocSize;
-            if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-            {
-                ExtOut("Failed to get GCHeaps: integer overflow\n");
-                return Status;
-            }
-
-            CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-            if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-            {
-                ExtOut("Failed to get GCHeaps\n");
-                return Status;
-            }
-
-            DWORD n;
-            for (n = 0; n < dwNHeaps; n ++)
-            {
-                DacpGcHeapDetails dacHeapDetails;
-                if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
-                {
-                    ExtOut("Error requesting details\n");
-                    return Status;
-                }
-                ExtOut("------------------------------\n");
-                ExtOut("Heap %d (%p)\n", n, SOS_PTR(heapAddrs[n]));
-                DWORD_PTR heapAllocSize = 0;
-                DWORD_PTR heapCommitSize = 0;
-                GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
-                GCHeapInfo (heapDetails, heapAllocSize, heapCommitSize);
-                totalAllocatedSize += heapAllocSize;
-                totalCommittedSize += heapCommitSize;
-                ExtOut("Allocated Heap Size:       " WIN86_8SPACES);
-                PrintHeapSize(heapAllocSize, 0);
-                ExtOut("Committed Heap Size:       " WIN86_8SPACES);
-                PrintHeapSize(heapCommitSize, 0);
-            }
-        }
-        ExtOut("------------------------------\n");
-        ExtOut("GC Allocated Heap Size:    " WIN86_8SPACES);
-        PrintHeapSize(totalAllocatedSize, 0);
-        ExtOut("GC Committed Heap Size:    " WIN86_8SPACES);
-        PrintHeapSize(totalCommittedSize, 0);
-    }
-    return Status;
+    INIT_API_EXT();
+    return ExecuteCommand("eeheap", args);
 }
 
 void PrintGCStat(HeapStat *inStat, const char* label=NULL)
@@ -16257,8 +16061,6 @@ DECLARE_API(runtimes)
     return Status;
 }
 
-#ifdef HOST_WINDOWS
-
 //
 // Executes managed extension commands
 //
@@ -16275,6 +16077,7 @@ HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
     return E_NOTIMPL;
 }
 
+#ifdef HOST_WINDOWS
 //
 // Sets the symbol server path.
 //
