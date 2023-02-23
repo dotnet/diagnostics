@@ -1,15 +1,10 @@
 ﻿using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.DacInterface;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
-using System.Threading;
-using static Microsoft.Diagnostics.Runtime.DacInterface.SOSDac13;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -37,35 +32,43 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private void PrintOneRuntime(ref StringBuilder stringBuilder, ClrRuntime clrRuntime)
+        private ulong PrintOneRuntime(ref StringBuilder stringBuilder, ClrRuntime clrRuntime)
         {
             TableOutput output = new(Console, (21, "x12"), (0, "x12"))
             {
                 AlignLeft = true
             };
 
-            PrintAppDomains(output, clrRuntime, out HashSet<ulong> loaderAllocatorsSeen);
-            PrintCodeHeaps(output, clrRuntime);
-            PrintModuleThunkTable(output, ref stringBuilder, clrRuntime);
-            PrintModuleLoaderAllocators(output, ref stringBuilder, clrRuntime, loaderAllocatorsSeen);
-            PrintGCHeap(clrRuntime);
+            HashSet<ulong> seen = new();
+
+            ulong totalSize = 0;
+
+            totalSize += PrintAppDomains(output, clrRuntime, seen);
+            totalSize += PrintCodeHeaps(output, clrRuntime);
+            totalSize += PrintModuleThunkTable(output, ref stringBuilder, clrRuntime);
+            totalSize += PrintModuleLoaderAllocators(output, ref stringBuilder, clrRuntime, seen);
+            totalSize += PrintGCHeap(clrRuntime);
 
             WriteLine();
+            WriteLine($"Total bytes consumed by CLR: 0x{totalSize:x} ({totalSize.ConvertToHumanReadable()})");
+            WriteLine();
+
+            return totalSize;
         }
 
-        private void PrintModuleThunkTable(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime)
+        private ulong PrintModuleThunkTable(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime)
         {
             IEnumerable<ClrModule> modulesWithThunks = clrRuntime.EnumerateModules().Where(r => r.ThunkHeap != 0);
             if (!modulesWithThunks.Any())
-                return;
+                return 0;
 
             WriteDivider();
             WriteLine("Module Thunk heaps:");
 
-            PrintModules(output, ref text, modulesWithThunks);
+            return PrintModules(output, ref text, modulesWithThunks);
         }
 
-        private void PrintModuleLoaderAllocators(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
+        private ulong PrintModuleLoaderAllocators(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
         {
             // On .Net Core, modules share their LoaderAllocator with their AppDomain (and AppDomain shares theirs
             // with SystemDomain).  Only collectable assemblies have unique loader allocators, and that's what we
@@ -76,15 +79,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                                  select module;
 
             if (!collectable.Any())
-                return;
+                return 0;
 
             WriteDivider();
             WriteLine("Module LoaderAllocators:");
 
-            PrintModules(output, ref text, collectable);
+            return PrintModules(output, ref text, collectable);
         }
 
-        private void PrintModules(TableOutput output, ref StringBuilder text, IEnumerable<ClrModule> modules)
+        private ulong PrintModules(TableOutput output, ref StringBuilder text, IEnumerable<ClrModule> modules)
         {
             text ??= new(128);
             ulong totalSize = 0, totalWasted = 0;
@@ -116,26 +119,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             text.Clear();
             WriteSizeAndWasted(text, totalSize, totalWasted);
             output.WriteRow("Total size:", text);
+
+            return totalSize;
         }
 
-        private void PrintAppDomains(TableOutput output, ClrRuntime clrRuntime, out HashSet<ulong> loaderAllocatorsSeen)
+        private ulong PrintAppDomains(TableOutput output, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
         {
-            loaderAllocatorsSeen = null;
+            ulong totalBytes = 0;
 
-            PrintAppDomain(output, clrRuntime.SystemDomain, "System Domain", ref loaderAllocatorsSeen);
-            PrintAppDomain(output, clrRuntime.SharedDomain, "Shared Domain", ref loaderAllocatorsSeen);
+            totalBytes += PrintAppDomain(output, clrRuntime.SystemDomain, "System Domain", loaderAllocatorsSeen);
+            totalBytes += PrintAppDomain(output, clrRuntime.SharedDomain, "Shared Domain", loaderAllocatorsSeen);
 
             for (int i = 0; i < clrRuntime.AppDomains.Count; i++)
             {
                 ClrAppDomain appDomain = clrRuntime.AppDomains[i];
-                PrintAppDomain(output, appDomain, $"Domain {i + 1}:", ref loaderAllocatorsSeen);
+                totalBytes += PrintAppDomain(output, appDomain, $"Domain {i + 1}:", loaderAllocatorsSeen);
             }
+
+            return totalBytes;
         }
 
-        private void PrintAppDomain(TableOutput output, ClrAppDomain appDomain, string name, ref HashSet<ulong> loaderAllocatorsSeen)
+        private ulong PrintAppDomain(TableOutput output, ClrAppDomain appDomain, string name, HashSet<ulong> loaderAllocatorsSeen)
         {
             if (appDomain is null)
-                return;
+                return 0;
 
             output.WriteRow(name, appDomain.Address);
 
@@ -150,11 +157,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 loaderAllocatorsSeen ??= new();
                 if (!loaderAllocatorsSeen.Add(appDomain.LoaderAllocator))
-                    return;
+                    return 0;
             }
 
-            var heapsByKind = appDomain.EnumerateLoaderAllocatorHeaps().GroupBy(g => g.Kind).OrderBy(g => GetSortOrder(g.Key));
-            PrintAppDomainHeapsByKind(output, heapsByKind);
+            //
+
+            var heapsByKind = from heap in appDomain.EnumerateLoaderAllocatorHeaps()
+                              where loaderAllocatorsSeen.Add(heap.Address)
+                              group heap by heap.Kind into g
+                              orderby GetSortOrder(g.Key)
+                              select g;
+
+            return PrintAppDomainHeapsByKind(output, heapsByKind);
         }
 
         private int GetSortOrder(NativeHeapKind key)
@@ -180,7 +194,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             };
         }
 
-        private void PrintAppDomainHeapsByKind(TableOutput output, IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> heapsByKind)
+        private ulong PrintAppDomainHeapsByKind(TableOutput output, IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> heapsByKind)
         {
             // Just build and print the table.
             ulong totalSize = 0;
@@ -220,10 +234,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             output.WriteRow("Total size:", text);
             WriteDivider();
+
+            return totalSize;
         }
 
-        private void PrintCodeHeaps(TableOutput output, ClrRuntime clrRuntime)
+        private ulong PrintCodeHeaps(TableOutput output, ClrRuntime clrRuntime)
         {
+            ulong totalSize = 0;
+
             StringBuilder text = new(512);
             foreach (ClrJitManager jitManager in clrRuntime.EnumerateJitManagers())
             {
@@ -231,14 +249,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 var heaps = jitManager.EnumerateNativeHeaps().OrderBy(r => r.Kind).ThenBy(r => r.Address);
 
-                ulong totalSize = 0, totalWasted = 0;
+                ulong jitMgrSize = 0, jitMgrWasted = 0;
                 foreach (ClrNativeHeapInfo heap in heaps)
                 {
                     text.Clear();
 
                     (ulong actualSize, ulong wasted) = CalculateSizeAndWasted(text, heap);
-                    totalSize += actualSize;
-                    totalWasted += wasted;
+                    jitMgrSize += actualSize;
+                    jitMgrWasted += wasted;
 
                     text.Append(' ');
                     WriteSizeAndWasted(text, actualSize, wasted);
@@ -248,12 +266,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 text.Clear();
-                WriteSizeAndWasted(text, totalSize, totalWasted);
+                WriteSizeAndWasted(text, jitMgrSize, jitMgrWasted);
                 text.Append('.');
 
                 output.WriteRow("Total size:", text);
                 WriteDivider();
+
+                totalSize += jitMgrSize;
             }
+
+            return totalSize;
         }
 
         private (ulong Size, ulong Wasted) CalculateSizeAndWasted(StringBuilder sb, ClrNativeHeapInfo heap)
@@ -312,9 +334,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return 0;
         }
 
-
-
-        private void PrintGCHeap(ClrRuntime clrRuntime)
+        private ulong PrintGCHeap(ClrRuntime clrRuntime)
         {
             TableOutput segmentTable = new(Console, (8, ""), (9, ""), (14, "x12"), (14, "x12"), (14, "x12"), (14, "x12"), (24, ""), (24, ""), (24, ""));
             TableOutput ephemeralSegmentTable = new(Console, (8, ""), (-9, ""), (14, "x12"), (14, "x12"), (-24, "x12"));
@@ -382,6 +402,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             totalTable.WriteRow("Total Allocated:", $"0x{totalAllocated:x}", $"({totalAllocated.ConvertToHumanReadable()})");
             totalTable.WriteRow("Total Committed:", $"0x{totalCommitted:x}", $"({totalCommitted.ConvertToHumanReadable()})");
             totalTable.WriteRow("Total Reserved: ", $"0x{totalReserved:x}", $"({totalReserved.ConvertToHumanReadable()})");
+
+            return totalCommitted;
         }
 
         static string FormatSegmentSize(ulong length)
