@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             IRuntime[] runtimes = RuntimeService.EnumerateRuntimes().ToArray();
 
+            ulong totalBytes = 0;
             StringBuilder stringBuilder = null;
             foreach (IRuntime iRuntime in RuntimeService.EnumerateRuntimes())
             {
@@ -28,8 +29,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteDivider($"{iRuntime.RuntimeType} {iRuntime.RuntimeModule?.GetVersionData()}");
 
                 ClrRuntime clrRuntime = iRuntime.Services.GetService<ClrRuntime>();
-                PrintOneRuntime(ref stringBuilder, clrRuntime);
+                totalBytes += PrintOneRuntime(ref stringBuilder, clrRuntime);
             }
+
+            if (runtimes.Length > 1)
+                WriteLine($"Total bytes consumed by all CLRs: {FormatMemorySize(totalBytes, "0")}");
         }
 
         private ulong PrintOneRuntime(ref StringBuilder stringBuilder, ClrRuntime clrRuntime)
@@ -50,7 +54,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             totalSize += PrintGCHeap(clrRuntime);
 
             WriteLine();
-            WriteLine($"Total bytes consumed by CLR: 0x{totalSize:x} ({totalSize.ConvertToHumanReadable()})");
+            WriteLine($"Total bytes consumed by CLR: {FormatMemorySize(totalSize, "0"}");
             WriteLine();
 
             return totalSize;
@@ -371,20 +375,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         segment.ObjectRange.End,
                         segment.CommittedMemory.End,
                         segment.ReservedMemory.End,
-                        FormatSegmentSize(segment.ObjectRange.Length),
-                        FormatSegmentSize(segment.CommittedMemory.Length),
-                        FormatSegmentSize(segment.Length)
+                        FormatMemorySize(segment.ObjectRange.Length),
+                        FormatMemorySize(segment.CommittedMemory.Length),
+                        FormatMemorySize(segment.Length)
                         );
 
                     if (segment.IsEphemeralSegment)
                     {
-                        ephemeralSegmentTable.WriteRow("", "-> gen0", segment.Generation0.Start, segment.Generation0.End, "  " + FormatSegmentSize(segment.Generation0.Length));
-                        ephemeralSegmentTable.WriteRow("", "-> gen1", segment.Generation1.Start, segment.Generation1.End, "  " + FormatSegmentSize(segment.Generation1.Length));
-                        ephemeralSegmentTable.WriteRow("", "-> gen2", segment.Generation2.Start, segment.Generation2.End, "  " + FormatSegmentSize(segment.Generation2.Length));
+                        ephemeralSegmentTable.WriteRow("", "-> gen0", segment.Generation0.Start, segment.Generation0.End, "  " + FormatMemorySize(segment.Generation0.Length));
+                        ephemeralSegmentTable.WriteRow("", "-> gen1", segment.Generation1.Start, segment.Generation1.End, "  " + FormatMemorySize(segment.Generation1.Length));
+                        ephemeralSegmentTable.WriteRow("", "-> gen2", segment.Generation2.Start, segment.Generation2.End, "  " + FormatMemorySize(segment.Generation2.Length));
                     }
                 }
 
-                string footer = $" [ HEAP {heapSegments.Heap} ] ---- [ ALLOCATED: {FormatSegmentSize(heapSegments.TotalAllocated)} ] ---- [ COMMITTED: {FormatSegmentSize(heapSegments.TotalCommitted)} ] ---- [ RESERVED: {FormatSegmentSize(heapSegments.TotalReserved)} ] ";
+                string footer = $" [ HEAP {heapSegments.Heap} ] ---- [ ALLOCATED: {FormatMemorySize(heapSegments.TotalAllocated)} ] ---- [ COMMITTED: {FormatMemorySize(heapSegments.TotalCommitted)} ] ---- [ RESERVED: {FormatMemorySize(heapSegments.TotalReserved)} ] ";
                 Console.WriteLine(footer.PadLeft(segmentTable.TotalWidth / 2 + footer.Length / 2, '-').PadRight(segmentTable.TotalWidth, '-'));
                 Console.WriteLine();
 
@@ -399,18 +403,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             TableOutput totalTable = new(Console, (16, ""), (hexWidth, ""), (32, "")) { AlignLeft = true };
 
             totalTable.WriteRow("Total GC Heaps:", heapTotal);
-            totalTable.WriteRow("Total Allocated:", $"0x{totalAllocated:x}", $"({totalAllocated.ConvertToHumanReadable()})");
-            totalTable.WriteRow("Total Committed:", $"0x{totalCommitted:x}", $"({totalCommitted.ConvertToHumanReadable()})");
-            totalTable.WriteRow("Total Reserved: ", $"0x{totalReserved:x}", $"({totalReserved.ConvertToHumanReadable()})");
+            totalTable.WriteRow("Total Allocated:", FormatMemorySize(totalAllocated, "0"));
+            totalTable.WriteRow("Total Committed:", FormatMemorySize(totalCommitted, "0"));
+            totalTable.WriteRow("Total Reserved: ", FormatMemorySize(totalReserved, "0"));
 
             return totalCommitted;
         }
 
-        static string FormatSegmentSize(ulong length)
+        static string FormatMemorySize(ulong length, string zeroValue = "")
         {
             if (length > 0)
                 return $"0x{length:x} ({length.ConvertToHumanReadable()})";
-            return "";
+            return zeroValue;
         }
 
         string GetSegmentKind(ClrSegment segment)
