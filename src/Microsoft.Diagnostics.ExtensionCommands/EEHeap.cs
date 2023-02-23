@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (!ShowGC && !ShowLoader)
             {
                 WriteLine();
-                WriteLine($"Total bytes consumed by CLR: {FormatMemorySize(totalSize, "0"}");
+                WriteLine($"Total bytes consumed by CLR: {FormatMemorySize(totalSize, "0")}");
                 WriteLine();
             }
 
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             totalBytes += PrintAppDomain(output, clrRuntime.SystemDomain, "System Domain", loaderAllocatorsSeen);
             totalBytes += PrintAppDomain(output, clrRuntime.SharedDomain, "Shared Domain", loaderAllocatorsSeen);
 
-            for (int i = 0; i < clrRuntime.AppDomains.Count; i++)
+            for (int i = 0; i < clrRuntime.AppDomains.Length; i++)
             {
                 ClrAppDomain appDomain = clrRuntime.AppDomains[i];
                 totalBytes += PrintAppDomain(output, appDomain, $"Domain {i + 1}:", loaderAllocatorsSeen);
