@@ -366,8 +366,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private ulong PrintGCHeap(ClrRuntime clrRuntime)
         {
-            TableOutput segmentTable = new(Console, (8, ""), (9, ""), (14, "x12"), (14, "x12"), (14, "x12"), (14, "x12"), (24, ""), (24, ""), (24, ""));
-            TableOutput ephemeralSegmentTable = new(Console, (8, ""), (-9, ""), (14, "x12"), (14, "x12"), (-24, "x12"));
+            Console.WriteLine();
+
+            int heapCount = clrRuntime.Heap.Segments.Max(seg => seg.LogicalHeap) + 1;
+            int heapColSize = heapCount == 1 ? 0 : 8;
+
+            TableOutput segmentTable = new(Console, (heapColSize, ""), (9, ""), (14, "x12"), (14, "x12"), (14, "x12"), (14, "x12"), (24, ""), (24, ""), (24, ""));
+            TableOutput ephemeralSegmentTable = new(Console, (heapColSize, ""), (-9, ""), (14, "x12"), (14, "x12"), (-24, "x12"));
 
             var segmentByHeap = from seg in clrRuntime.Heap.Segments
                                 group seg by seg.LogicalHeap into g
@@ -390,12 +395,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong totalReserved = 0;
             foreach (var heapSegments in segmentByHeap)
             {
-                segmentTable.WriteRowWithSpacing('-', "[ Heap ]", "[ Kind ]", "[ Begin ]", "[ Allocated ]", "[ Committed ]", "[ Reserved ]", "[ Allocated Size ]", "[ Committed Size ]", "[ Reserved Size ]");
+                if (heapCount > 1)
+                    segmentTable.WriteRowWithSpacing('-', "[ Heap ]", "[ Kind ]", "[ Begin ]", "[ Allocated ]", "[ Committed ]", "[ Reserved ]", "[ Allocated Size ]", "[ Committed Size ]", "[ Reserved Size ]");
+                else
+                    segmentTable.WriteRowWithSpacing('-', "", " Kind ", " Begin ", " Allocated ", " Committed ", " Reserved ", " Allocated Size ", " Committed Size ", " Reserved Size ");
 
                 foreach (ClrSegment segment in heapSegments.Segments)
                 {
                     segmentTable.WriteRow(
-                        segment.LogicalHeap,
+                        heapCount > 1 ? segment.LogicalHeap.ToString() : "",
                         GetSegmentKind(segment),
                         segment.ObjectRange.Start,
                         segment.ObjectRange.End,
@@ -414,9 +422,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
 
-                string footer = $" [ HEAP {heapSegments.Heap} ] ---- [ ALLOCATED: {FormatMemorySize(heapSegments.TotalAllocated)} ] ---- [ COMMITTED: {FormatMemorySize(heapSegments.TotalCommitted)} ] ---- [ RESERVED: {FormatMemorySize(heapSegments.TotalReserved)} ] ";
-                Console.WriteLine(footer.PadLeft(segmentTable.TotalWidth / 2 + footer.Length / 2, '-').PadRight(segmentTable.TotalWidth, '-'));
-                Console.WriteLine();
+                if (heapCount > 1)
+                {
+                    string footer = $" [ HEAP {heapSegments.Heap} ] ---- [ ALLOCATED: {FormatMemorySize(heapSegments.TotalAllocated)} ] ---- [ COMMITTED: {FormatMemorySize(heapSegments.TotalCommitted)} ] ---- [ RESERVED: {FormatMemorySize(heapSegments.TotalReserved)} ] ";
+                    Console.WriteLine(footer.PadLeft(segmentTable.TotalWidth / 2 + footer.Length / 2, '-').PadRight(segmentTable.TotalWidth, '-'));
+                    Console.WriteLine();
+                }
 
                 heapTotal++;
                 totalAllocated += heapSegments.TotalAllocated;
