@@ -8,8 +8,8 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "eeheap", Aliases = new string[] { "EEHeap" }, Help = "Displays information about native memory that CLR has allocated.")]
-    public class EEHeap : CommandBase
+    [Command(Name = "eeheap", Help = "Displays information about native memory that CLR has allocated.")]
+    public class EEHeapCommand : CommandBase
     {
         [ServiceImport]
         public IRuntimeService RuntimeService { get; set; }
