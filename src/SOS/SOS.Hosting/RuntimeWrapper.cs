@@ -257,50 +257,44 @@ namespace SOS.Hosting
             byte* fileVersionBuffer,
             int fileVersionBufferSizeInBytes)
         {
-            IModuleService moduleService = _services.GetService<IModuleService>();
-            IModule module;
-            try
+            if (pFileInfo == null)
             {
-                module = moduleService.GetModuleFromBaseAddress(_runtime.RuntimeModule.ImageBase);
-            }
-            catch (DiagnosticsException)
-            {
-                return HResult.E_FAIL;
-            }
-            Version version = module.GetVersionData();
-            if (version is null)
-            {
-                return HResult.E_FAIL;
+                return HResult.E_INVALIDARG;
             }
             pFileInfo->dwSignature = 0;
             pFileInfo->dwStrucVersion = 0;
             pFileInfo->dwFileFlagsMask = 0;
             pFileInfo->dwFileFlags = 0;
-            pFileInfo->dwFileVersionMS = (uint)version.Minor & 0xffff | (uint)version.Major << 16;
-            pFileInfo->dwFileVersionLS = (uint)version.Revision & 0xffff | (uint)version.Build << 16;
+            pFileInfo->dwFileVersionMS = 0;
+            pFileInfo->dwFileVersionLS = 0;
+
+            Version version = _runtime.RuntimeVersion;
+            if (version is not null)
+            {
+                pFileInfo->dwFileVersionMS = (uint)version.Minor & 0xffff | (uint)version.Major << 16;
+                pFileInfo->dwFileVersionLS = (uint)version.Revision & 0xffff | (uint)version.Build << 16;
+            }
 
             // Attempt to get the FileVersion string that contains version and the "built by" and commit id info
             if (fileVersionBuffer != null)
             {
-                if (fileVersionBufferSizeInBytes > 0) {
+                if (fileVersionBufferSizeInBytes > 0)
+                {
                     *fileVersionBuffer = 0;
                 }
-                string versionString = module.GetVersionString();
+                string versionString = _runtime.RuntimeModule.GetVersionString();
                 if (versionString != null)
                 {
                     try
                     {
                         byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
-                        Marshal.Copy(source, 0, new IntPtr(fileVersionBuffer), Math.Min(source.Length, (int)fileVersionBufferSizeInBytes));
-                        return HResult.S_OK;
+                        Marshal.Copy(source, 0, new IntPtr(fileVersionBuffer), Math.Min(source.Length, fileVersionBufferSizeInBytes));
                     }
                     catch (ArgumentOutOfRangeException)
                     {
-                        return HResult.E_INVALIDARG;
                     }
                 }
             }
-
             return HResult.S_OK;
         }
 

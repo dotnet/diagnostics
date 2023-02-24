@@ -56,6 +56,40 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Helper function to that parses the version out of the version string that looks something 
+        /// like "8.0.23.10701 @Commit: e71a4fb10d7ea6b502dd5efe7a8fcefa2b9c1550"
+        /// </summary>
+        public static Version ParseVersionString(string versionString)
+        {
+            if (versionString != null)
+            {
+                int spaceIndex = versionString.IndexOf(' ');
+                if (spaceIndex < 0)
+                {
+                    // It is probably a private build version that doesn't end with a space (no commit id after)
+                    spaceIndex = versionString.Length;
+                }
+                if (spaceIndex > 0)
+                {
+                    if (versionString[spaceIndex - 1] == '.')
+                    {
+                        spaceIndex--;
+                    }
+                    string versionToParse = versionString.Substring(0, spaceIndex);
+                    try
+                    {
+                        return Version.Parse(versionToParse);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        Trace.TraceError($"ParseVersionString FAILURE: '{versionToParse}' '{versionString}' {ex}");
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Convert from symstore PEPdbRecord to DebugServices PdbFileInfo
         /// </summary>
         public static PdbFileInfo ToPdbFileInfo(this PEPdbRecord pdbInfo)

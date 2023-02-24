@@ -44,6 +44,12 @@ namespace Microsoft.Diagnostics.DebugServices
         RuntimeType RuntimeType { get; }
 
         /// <summary>
+        /// Returns the runtime version. This may be different from the runtime 
+        /// module's file version for single-file apps. Can be null.
+        /// </summary>
+        Version RuntimeVersion { get; }
+
+        /// <summary>
         /// Returns the runtime module
         /// </summary>
         IModule RuntimeModule { get; }
