@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 output.WriteRow("JIT Manager:", jitManager.Address);
 
-                var heaps = jitManager.EnumerateNativeHeaps().OrderBy(r => r.Kind).ThenBy(r => r.Address);
+                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().OrderBy(r => r.Kind).ThenBy(r => r.Address);
 
                 ulong jitMgrSize = 0, jitMgrWasted = 0;
                 foreach (ClrNativeHeapInfo heap in heaps)

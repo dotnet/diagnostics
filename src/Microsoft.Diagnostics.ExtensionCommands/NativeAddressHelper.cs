@@ -56,9 +56,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             bool printedTruncatedWarning = false;
 
-            var addressResult = from region in MemoryRegionService.EnumerateRegions()
-                                where region.State != MemoryRegionState.MEM_FREE
-                                select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
+            IEnumerable<DescribedRegion> addressResult = from region in MemoryRegionService.EnumerateRegions()
+                                                         where region.State != MemoryRegionState.MEM_FREE
+                                                         select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
 
             if (!includeReserveMemory)
                 addressResult = addressResult.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
@@ -71,9 +71,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
                     if (clrRuntime is not null)
                     {
-                        foreach (var mem in EnumerateClrMemoryAddresses(clrRuntime))
+                        foreach ((ulong Address, ulong? Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime))
                         {
-                            var found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
+                            DescribedRegion[] found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
 
                             if (found.Length == 0 && mem.Kind != ClrMemoryKind.GCHeapReserve)
                             {
@@ -203,7 +203,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            var ranges = rangeList.OrderBy(r => r.Start).ToArray();
+            DescribedRegion[] ranges = rangeList.OrderBy(r => r.Start).ToArray();
 
             if (tagReserveMemoryHeuristically)
             {
@@ -232,7 +232,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ulong prevHandle = 0;
             ulong granularity = 0x100;
-            foreach (var handle in runtime.EnumerateHandles())
+            foreach (ClrHandle handle in runtime.EnumerateHandles())
             {
                 // There can be a very large number of HandleTable entries.  We don't need to enumerate every
                 // single one of them to find proper regions of memory.  Instead, we'll skip handles that are
@@ -249,7 +249,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // We don't really have the true bounds of the committed or reserved segments.
             // Return null for the size so that we will mark the entire region with this type.
-            foreach (var seg in runtime.Heap.Segments)
+            foreach (ClrSegment seg in runtime.Heap.Segments)
             {
                 if (seg.CommittedMemory.Length > 0)
                     yield return (seg.CommittedMemory.Start, null, ClrMemoryKind.GCHeap);
