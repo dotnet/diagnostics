@@ -411,7 +411,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         segment.ReservedMemory.End,
                         FormatMemorySize(segment.ObjectRange.Length),
                         FormatMemorySize(segment.CommittedMemory.Length),
-                        FormatMemorySize(segment.Length)
+                        FormatMemorySize(segment.ReservedMemory.Length)
                         );
 
                     if (segment.IsEphemeralSegment)
