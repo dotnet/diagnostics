@@ -664,7 +664,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             var cd = _heap.GetObject(address);
             if (!cd.IsValid)
-                throw new InvalidOperationException("Adress does not correspond to a ConcurrentDictionary");
+                throw new InvalidOperationException("Address does not correspond to a ConcurrentDictionary");
             var tables = cd.ReadObjectField(tablesFieldName);
             if (!tables.IsValid)
                 throw new InvalidOperationException($"ConcurrentDictionary does not own {tablesFieldName} attribute");
@@ -675,8 +675,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             for (int i = 0; i < bucketsArray.Length; i++)
             {
-                var node = bucketsArray.GetObjectValue(i);
-                IAddressableTypedEntity keyField = null, valueField = null;
+                ClrObject node;
+                // This field is only in .NET 8 and above. Currently can't use "_clr.ClrInfo.Version.Major >= 8" because
+                // this version isn't the runtime version for single-file apps.
+                if (cd.Type?.GetFieldByName("_comparerIsDefaultForClasses") != null)
+                {
+                    // On .NET 8 or more, the array entry is a VolatileNode wrapper (struct)
+                    ClrValueType volatileNode = bucketsArray.GetStructValue(i);
+                    node = volatileNode.ReadObjectField("_node");
+                }
+                else
+                {
+                    // For older runtimes, the array entry is the Node object
+                    node = bucketsArray.GetObjectValue(i);
+                }
+                IAddressableTypedEntity keyField, valueField;
                 if (!node.IsNull && node.IsValid)
                 {
                     keyField = node.GetFieldFrom(keyFieldName);
