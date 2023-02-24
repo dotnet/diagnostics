@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ulong totalBytes = 0;
             StringBuilder stringBuilder = null;
-            foreach (IRuntime iRuntime in RuntimeService.EnumerateRuntimes())
+            foreach (IRuntime iRuntime in runtimes)
             {
                 if (runtimes.Length > 1)
                     WriteDivider($"{iRuntime.RuntimeType} {iRuntime.RuntimeModule?.GetVersionData()}");
