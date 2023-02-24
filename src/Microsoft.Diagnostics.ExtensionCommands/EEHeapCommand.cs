@@ -358,6 +358,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     address += PageSize;
                 }
 
+                ArrayPool<byte>.Shared.Return(buffer);
                 return actualSize;
             }
 
