@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared;
 using System;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter

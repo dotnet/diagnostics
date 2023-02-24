@@ -25,10 +25,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>> _eventMapCache =
             new ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>>(StringComparer.OrdinalIgnoreCase);
 
-        // Only care for the SystemDiagnosticsMetrics events from any of the specified providers, thus
-        // create a static readonly instance that is shared among all event maps.
-        private static readonly string _eventProviderEvent = "System.Diagnostics.Metrics";
-
         private readonly CounterFilter _filter;
         private readonly SystemDiagnosticsMetricsTriggerImpl _impl;
         private readonly string _providerName;
@@ -89,7 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             return new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(
                 new Dictionary<string, IReadOnlyCollection<string>>()
                 {
-                    { _eventProviderEvent, new ReadOnlyCollection<string>(Array.Empty<string>()) }
+                    { "System.Diagnostics.Metrics", new ReadOnlyCollection<string>(Array.Empty<string>()) }
                 });
         }
     }

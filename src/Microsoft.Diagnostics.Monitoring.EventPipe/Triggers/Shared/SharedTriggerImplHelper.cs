@@ -3,11 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime;
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared
 {
     internal static class SharedTriggerImplHelper
     {

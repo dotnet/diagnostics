@@ -2,13 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics
 {
-    // The core implementation of the EventCounter trigger that processes
+    // The core implementation of the SystemDiagnosticsMetrics trigger that processes
     // the trigger settings and evaluates the counter payload. Primary motivation
     // for the implementation is for unit testability separate from TraceEvent.
     internal sealed class SystemDiagnosticsMetricsTriggerImpl

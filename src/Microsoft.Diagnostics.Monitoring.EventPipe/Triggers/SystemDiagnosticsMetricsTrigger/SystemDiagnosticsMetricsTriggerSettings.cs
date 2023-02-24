@@ -48,14 +48,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public int? HistogramPercentile { get; set; }
 
         /// <summary>
-        /// The sliding duration of time in which the event counter must maintain a value
+        /// The sliding duration of time in which the instrument must maintain a value
         /// above, below, or between the thresholds specified by <see cref="GreaterThan"/> and <see cref="LessThan"/>.
         /// </summary>
         [Range(typeof(TimeSpan), SharedTriggerSettingsConstants.SlidingWindowDuration_MinValue, SharedTriggerSettingsConstants.SlidingWindowDuration_MaxValue)]
         public TimeSpan SlidingWindowDuration { get; set; }
 
         /// <summary>
-        /// The sampling interval of the event counter.
+        /// The sampling interval of the instrument.
         /// </summary>
         [Range(SharedTriggerSettingsConstants.CounterIntervalSeconds_MinValue, SharedTriggerSettingsConstants.CounterIntervalSeconds_MaxValue)]
         public float CounterIntervalSeconds { get; set; }
