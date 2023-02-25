@@ -115,7 +115,7 @@ handle_arguments() {
 }
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
-source "$repoRootDir/eng/native/init-os-and-arch.sh"
+source "$__RepoRootDir/eng/native/init-os-and-arch.sh"
 
 __BuildArch="$arch"
 
