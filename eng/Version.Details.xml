@@ -23,25 +23,25 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>ccfe6da198c5f05534863bbb1bff66e830e0c6ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="8.0.100-preview.2.23123.3">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="8.0.100-preview.2.23124.7">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>e83e125b8d41411fe17f71b9c35765404d00c977</Sha>
+      <Sha>dc69610af915341dfcb759812ed46acc00e36ae4</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="8.0.0-preview.2.23116.9">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="8.0.0-preview.2.23124.5">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>bb3f0d626627d399695a9fa0741e4803c0c23eb8</Sha>
+      <Sha>a11fec5fad546a315b4565af534f9efccec010b9</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="8.0.0-preview.2.23116.9">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="8.0.0-preview.2.23124.5">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>bb3f0d626627d399695a9fa0741e4803c0c23eb8</Sha>
+      <Sha>a11fec5fad546a315b4565af534f9efccec010b9</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-preview.2.23123.1">
+    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-preview.2.23124.2">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>af18fd07d1bb5a0d923a49c39b19c6fbcb6dc07b</Sha>
+      <Sha>9281022e56856094d2bade01908060a7536c3b75</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.2.23123.1">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.2.23124.2">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>af18fd07d1bb5a0d923a49c39b19c6fbcb6dc07b</Sha>
+      <Sha>9281022e56856094d2bade01908060a7536c3b75</Sha>
     </Dependency>
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23120.2">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
