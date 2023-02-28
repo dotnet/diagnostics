@@ -49,7 +49,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns></returns>
         public ServiceContainerFactory CreateServiceContainerFactory(ServiceScope scope, IServiceProvider parent)
         {
-            if (!_finalized) throw new InvalidOperationException();
+            if (!_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             return new ServiceContainerFactory(parent, _factories[(int)scope]);
         }
 
@@ -60,7 +64,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>the provider factories for the type</returns>
         public IEnumerable<ServiceFactory> EnumerateProviderFactories(Type providerType)
         {
-            if (!_finalized) throw new InvalidOperationException();
+            if (!_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             if (_providerFactories.TryGetValue(providerType, out List<ServiceFactory> factories))
             {
@@ -90,7 +97,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="serviceType">service implementation type</param>
         public void RegisterExportedServices(Type serviceType)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             for (Type currentType = serviceType; currentType is not null; currentType = currentType.BaseType)
             {
@@ -132,8 +142,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="factory">function to create service instance</param>
         public void AddServiceFactory(ServiceScope scope, Type serviceType, ServiceFactory factory)
         {
-            if (factory is null) throw new ArgumentNullException(nameof(factory));
-            if (_finalized) throw new InvalidOperationException();
+            if (factory is null)
+            {
+                throw new ArgumentNullException(nameof(factory));
+            }
+
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             if (scope == ServiceScope.Provider)
             {
@@ -154,7 +171,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public void LoadExtensions()
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             List<string> extensionPaths = new();
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
@@ -192,7 +212,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="extensionPath">extension assembly path</param>
         public void LoadExtension(string extensionPath)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             Assembly assembly = null;
             try
             {
@@ -214,7 +238,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="assembly">extension assembly</param>
         public void RegisterAssembly(Assembly assembly)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             try
             {
                 RegisterExportedServices(assembly);

@@ -37,7 +37,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (JitManagerInfo jitMgr in sos.GetJitManagers())
             {
                 foreach (var handle in runtime.EnumerateHandles())
+                {
                     yield return new ClrMemoryPointer(handle.Address, ClrMemoryKind.HandleTable);
+                }
 
                 List<ClrMemoryPointer> heaps = new();
                 foreach (var mem in sos.GetCodeHeapList(jitMgr.Address))
@@ -58,30 +60,44 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 foreach (ClrMemoryPointer ptr in heaps)
+                {
                     yield return ptr;
+                }
 
                 heaps.Clear();
 
                 foreach (var seg in runtime.Heap.Segments)
                 {
                     if (seg.CommittedMemory.Length > 0)
+                    {
                         yield return new ClrMemoryPointer(seg.CommittedMemory.Start, seg.CommittedMemory.Length, ClrMemoryKind.GCHeapSegment);
+                    }
 
                     if (seg.ReservedMemory.Length > 0)
+                    {
                         yield return new ClrMemoryPointer(seg.ReservedMemory.Start, seg.ReservedMemory.Length, ClrMemoryKind.GCHeapReserve);
+                    }
                 }
 
                 HashSet<ulong> seen = new();
 
                 if (runtime.SystemDomain is not null)
+                {
                     AddAppDomainHeaps(runtime, sos, runtime.SystemDomain.Address, heaps);
+                }
 
                 if (runtime.SharedDomain is not null)
+                {
                     AddAppDomainHeaps(runtime, sos, runtime.SharedDomain.Address, heaps);
+                }
 
                 foreach (var heap in heaps)
+                {
                     if (seen.Add(heap.Address))
+                    {
                         yield return heap;
+                    }
+                }
 
                 foreach (ClrDataAddress address in sos.GetAppDomainList())
                 {
@@ -89,8 +105,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     AddAppDomainHeaps(runtime, sos, address, heaps);
 
                     foreach (var heap in heaps)
+                    {
                         if (seen.Add(heap.Address))
+                        {
                             yield return heap;
+                        }
+                    }
                 }
             }
         }
@@ -125,7 +145,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // On this runtime, we will shift the pointer forward to skip the vtable, as the type of heap
             // the dac expects to walk has the same layout of LoaderHeap, except for the vtable.
             if (runtime.ClrInfo.Flavor == ClrFlavor.Core && runtime.ClrInfo.Version.Major == 7)
+            {
                 return address + (uint)runtime.DataTarget.DataReader.PointerSize;
+            }
 
             return address;
         }
@@ -134,7 +156,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             // Some sanity checks on size in case we get bad data in the future.
             if (size <= 0 || size > int.MaxValue)
+            {
                 return 0;
+            }
 
             return (ulong)size;
         }

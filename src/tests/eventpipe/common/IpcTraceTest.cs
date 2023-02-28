@@ -31,7 +31,10 @@ namespace EventPipe.UnitTests.Common
         public void Log(string message)
         {
             if (!_sw.IsRunning)
+            {
                 _sw.Start();
+            }
+
             _log.WriteLine($"{_sw.Elapsed.TotalSeconds,5:f1}s: {message}");
         }
     }
@@ -172,7 +175,9 @@ namespace EventPipe.UnitTests.Common
         {
             var isClean = EnsureCleanEnvironment();
             if (!isClean)
+            {
                 return -1;
+            }
             // CollectTracing returns before EventPipe::Enable has returned, so the
             // the sources we want to listen for may not have been enabled yet.
             // We'll use this sentinel EventSource to check if Enable has finished
@@ -218,7 +223,10 @@ namespace EventPipe.UnitTests.Common
                         if (eventData.ProviderName == "SentinelEventSource")
                         {
                             if (!sentinelEventReceived.WaitOne(0))
+                            {
                                 Logger.logger.Log("Saw sentinel event");
+                            }
+
                             sentinelEventReceived.Set();
                         }
 
@@ -412,9 +420,14 @@ namespace EventPipe.UnitTests.Common
             var test = new IpcTraceTest(expectedEventCounts, eventGeneratingAction, providers, circularBufferMB, optionalTraceValidator);
             var ret = test.Validate();
             if (ret == 100)
+            {
                 Logger.logger.Log("==TEST FINISHED: PASSED!==");
+            }
             else
+            {
                 Logger.logger.Log("==TEST FINISHED: FAILED!==");
+            }
+
             return ret;
         }
     }

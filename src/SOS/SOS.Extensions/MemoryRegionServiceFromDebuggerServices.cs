@@ -25,19 +25,25 @@ namespace SOS.Extensions
 
             (int hr, string text) = RunCommandWithOutput("!address");
             if (hr < 0)
+            {
                 throw new InvalidOperationException($"!address failed with hresult={hr:x}");
+            }
 
             foreach (string line in text.Split('\n'))
             {
                 if (line.Length == 0)
+                {
                     continue;
+                }
 
                 if (!foundHeader)
                 {
                     // find the !address header
                     string[] split = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     if (split.Length > 0)
+                    {
                         foundHeader = split[0] == "BaseAddress" && split.Last() == "Usage";
+                    }
                 }
                 else if (!skipped)
                 {
@@ -52,16 +58,22 @@ namespace SOS.Extensions
 
                     int index = 3;
                     if (Enum.TryParse(parts[index], ignoreCase: true, out MemoryRegionType type))
+                    {
                         index++;
+                    }
 
                     if (Enum.TryParse(parts[index], ignoreCase: true, out MemoryRegionState state))
+                    {
                         index++;
+                    }
 
                     StringBuilder sbRemainder = new();
                     for (int i = index; i < parts.Length; i++)
                     {
                         if (i != index)
+                        {
                             sbRemainder.Append(' ');
+                        }
 
                         sbRemainder.Append(parts[i]);
                     }
@@ -76,7 +88,9 @@ namespace SOS.Extensions
                         {
                             protect |= result;
                             if (parts[index + 1] == "|")
+                            {
                                 index++;
+                            }
                         }
                         else
                         {
@@ -90,7 +104,9 @@ namespace SOS.Extensions
 
                     // On Linux, !address is reporting this as MEM_PRIVATE or MEM_UNKNOWN
                     if (description == "Image")
+                    {
                         type = MemoryRegionType.MEM_IMAGE;
+                    }
 
                     // On Linux, !address is reporting this as nothing
                     if (type == MemoryRegionType.MEM_UNKNOWN && state == MemoryRegionState.MEM_UNKNOWN && protect == MemoryRegionProtection.PAGE_UNKNOWN)
@@ -107,7 +123,9 @@ namespace SOS.Extensions
                     }
 
                     if (description.Equals("<unknown>", StringComparison.OrdinalIgnoreCase))
+                    {
                         description = "";
+                    }
 
                     MemoryRegionUsage usage = description switch
                     {
@@ -161,8 +179,9 @@ namespace SOS.Extensions
             }
 
             if (!foundHeader)
+            {
                 throw new InvalidOperationException($"!address did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run !address and make sure the output looks correct.");
-
+            }
         }
 
         private (int hresult, string output) RunCommandWithOutput(string command)

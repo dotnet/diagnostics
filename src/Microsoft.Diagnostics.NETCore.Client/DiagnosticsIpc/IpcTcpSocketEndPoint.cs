@@ -137,7 +137,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     var hostEntry = Dns.GetHostEntry(host);
                     if (hostEntry.AddressList.Length > 0)
+                    {
                         ipAddress = hostEntry.AddressList[0];
+                    }
                 }
             }
             catch(Exception)
@@ -145,7 +147,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             if (ipAddress == null)
+            {
                 throw new ArgumentException(string.Format("Could not resolve {0} into an IP address", host));
+            }
 
             return new IPEndPoint(ipAddress, port);
         }

@@ -147,7 +147,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _acceptTransportTask = AcceptTransportAsync(_transport, _disposalSource.Token);
 
             if (_acceptTransportTask.IsFaulted)
+            {
                 _acceptTransportTask.Wait(); // Rethrow aggregated exception.
+            }
         }
 
         /// <summary>

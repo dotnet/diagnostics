@@ -38,7 +38,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // could be other Task-prefixed types in the same namespace such as TaskCompletionSource
                 if (type.GetFieldByName(stateFieldName) == null)
+                {
                     return 0;
+                }
 
                 return (ulong)_heap.GetObject(address).ReadField<int>(stateFieldName);
             }
@@ -50,15 +52,42 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             TaskStatus tks;
 
-            if ((flag & TASK_STATE_FAULTED) != 0) tks = TaskStatus.Faulted;
-            else if ((flag & TASK_STATE_CANCELED) != 0) tks = TaskStatus.Canceled;
-            else if ((flag & TASK_STATE_RAN_TO_COMPLETION) != 0) tks = TaskStatus.RanToCompletion;
-            else if ((flag & TASK_STATE_WAITING_ON_CHILDREN) != 0) tks = TaskStatus.WaitingForChildrenToComplete;
-            else if ((flag & TASK_STATE_DELEGATE_INVOKED) != 0) tks = TaskStatus.Running;
-            else if ((flag & TASK_STATE_STARTED) != 0) tks = TaskStatus.WaitingToRun;
-            else if ((flag & TASK_STATE_WAITINGFORACTIVATION) != 0) tks = TaskStatus.WaitingForActivation;
-            else if (flag == 0) tks = TaskStatus.Created;
-            else return null;
+            if ((flag & TASK_STATE_FAULTED) != 0)
+            {
+                tks = TaskStatus.Faulted;
+            }
+            else if ((flag & TASK_STATE_CANCELED) != 0)
+            {
+                tks = TaskStatus.Canceled;
+            }
+            else if ((flag & TASK_STATE_RAN_TO_COMPLETION) != 0)
+            {
+                tks = TaskStatus.RanToCompletion;
+            }
+            else if ((flag & TASK_STATE_WAITING_ON_CHILDREN) != 0)
+            {
+                tks = TaskStatus.WaitingForChildrenToComplete;
+            }
+            else if ((flag & TASK_STATE_DELEGATE_INVOKED) != 0)
+            {
+                tks = TaskStatus.Running;
+            }
+            else if ((flag & TASK_STATE_STARTED) != 0)
+            {
+                tks = TaskStatus.WaitingToRun;
+            }
+            else if ((flag & TASK_STATE_WAITINGFORACTIVATION) != 0)
+            {
+                tks = TaskStatus.WaitingForActivation;
+            }
+            else if (flag == 0)
+            {
+                tks = TaskStatus.Created;
+            }
+            else
+            {
+                return null;
+            }
 
             return tks.ToString();
         }
@@ -87,7 +116,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // each queue refers to TimerQueueTimer linked list via its m_timers or _shortTimers/_longTimers fields
             var timerQueueType = GetMscorlib().GetTypeByName("System.Threading.TimerQueue");
             if (timerQueueType == null)
+            {
                 yield break;
+            }
 
             // .NET Core case
             ClrStaticField instancesField = timerQueueType.GetStaticFieldByName("<Instances>k__BackingField");
@@ -98,10 +129,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (var obj in _heap.EnumerateObjects())
                 {
                     var objType = obj.Type;
-                    if (objType == null) continue;
-                    if (objType == _heap.FreeType) continue;
-                    if (string.CompareOrdinal(objType.Name, "System.Threading.TimerQueue") != 0)
+                    if (objType == null)
+                    {
                         continue;
+                    }
+
+                    if (objType == _heap.FreeType)
+                    {
+                        continue;
+                    }
+
+                    if (string.CompareOrdinal(objType.Name, "System.Threading.TimerQueue") != 0)
+                    {
+                        continue;
+                    }
 
                     // m_timers is the start of the linked list of TimerQueueTimer in pre 3.0
                     var timersField = objType.GetFieldByName("m_timers");
@@ -118,7 +159,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         // get short timers
                         timersField = objType.GetFieldByName("_shortTimers");
                         if (timersField == null)
+                        {
                             throw new InvalidOperationException("Missing _shortTimers field. Check the .NET Core version implementation of TimerQueue.");
+                        }
 
                         var currentTimerQueueTimer = obj.ReadObjectField("_shortTimers");
                         foreach (var timer in GetTimers(currentTimerQueueTimer, true))
@@ -142,13 +185,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // .NET Framework implementation
                 var instanceField = timerQueueType.GetStaticFieldByName("s_queue");
                 if (instanceField == null)
+                {
                     yield break;
+                }
 
                 foreach (var domain in _clr.AppDomains)
                 {
                     var timerQueue = instanceField.ReadObject(domain);
                     if ((timerQueue.IsNull) || (!timerQueue.IsValid))
+                    {
                         continue;
+                    }
 
                     // m_timers is the start of the list of TimerQueueTimer
                     var currentTimerQueueTimer = timerQueue.ReadObjectField("m_timers");
@@ -166,7 +213,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 var ti = GetTimerInfo(timerQueueTimer);
                 if (ti == null)
+                {
                     continue;
+                }
 
                 yield return ti;
 
@@ -308,21 +357,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
             var heap = _clr.Heap;
             if (!heap.CanWalkHeap)
+            {
                 yield break;
+            }
 
             foreach (var obj in _heap.EnumerateObjects())
             {
 
                 var objType = obj.Type;
-                if (objType == null) continue;
-                if (objType == _heap.FreeType) continue;
+                if (objType == null)
+                {
+                    continue;
+                }
+
+                if (objType == _heap.FreeType)
+                {
+                    continue;
+                }
 
                 if (string.CompareOrdinal(objType.Name, "System.Threading.ThreadPoolWorkQueue") == 0)
                 {
                     // work items are stored in a ConcurrentQueue stored in the "workItems" field
                     var workItemsField = objType.GetFieldByName("workItems");
                     if (workItemsField == null)
+                    {
                         throw new InvalidOperationException("Unsupported version of .NET: missing 'workItems' field in ThreadPoolWorkQueue");
+                    }
 
                     var workItems = obj.ReadObjectField("workItems");
 
@@ -393,7 +453,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 var schedulerType = taskScheduler.Type.ToString();
                 if (string.CompareOrdinal("System.Threading.Tasks.ThreadPoolTaskScheduler", schedulerType) != 0)
+                {
                     tpi.MethodName = $"{tpi.MethodName} [{schedulerType}]";
+                }
             }
             return tpi;
         }
@@ -503,7 +565,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     // skip empty null slots
                     if (slotEntry == UIntPtr.Zero)
+                    {
                         continue;
+                    }
 
                     yield return _heap.GetObject(slotEntry.ToUInt64());
                 }
@@ -519,15 +583,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
             var heap = _clr.Heap;
             if (!heap.CanWalkHeap)
+            {
                 yield break;
+            }
 
             foreach (var obj in heap.EnumerateObjects())
             {
                 if (!obj.IsValid)
+                {
                     continue;
+                }
+
                 var type = obj.Type;
                 if (type == null)
+                {
                     continue;
+                }
 
                 if (string.CompareOrdinal(type.Name, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue") == 0)
                 {
@@ -537,7 +608,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         var workItem = workItems.GetObjectValue(current);
                         if (!workItem.IsValid)
+                        {
                             continue;
+                        }
 
                         yield return GetThreadPoolItem(workItem);
                     }
@@ -557,25 +630,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ClrType queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolGlobals");
             if (queueType == null)
+            {
                 yield break;
+            }
 
             ClrStaticField workQueueField = queueType.GetStaticFieldByName("workQueue");
             if (workQueueField == null)
+            {
                 yield break;
+            }
 
             // the CLR keeps one static instance per application domain
             foreach (var appDomain in _clr.AppDomains)
             {
                 var workQueue = workQueueField.ReadObject(appDomain);
                 if (!workQueue.IsValid)
+                {
                     continue;
+                }
 
                 // should be  System.Threading.ThreadPoolWorkQueue
                 var workQueueType = workQueue.Type;
                 if (workQueueType == null)
+                {
                     continue;
+                }
+
                 if (string.CompareOrdinal(workQueueType.Name, "System.Threading.ThreadPoolWorkQueue") != 0)
+                {
                     continue;
+                }
 
                 foreach (var item in EnumerateThreadPoolWorkQueue(workQueue))
                 {
@@ -596,7 +680,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     var item = nodes.GetObjectValue(currentNode);
                     if (!item.IsValid)
+                    {
                         continue;
+                    }
 
                     yield return GetThreadPoolItem(item);
                 }
@@ -613,24 +699,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             //
             var queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
             if (queueType == null)
+            {
                 yield break;
+            }
 
             ClrStaticField threadQueuesField = queueType.GetStaticFieldByName("allThreadQueues");
             if (threadQueuesField == null)
+            {
                 yield break;
+            }
 
             foreach (ClrAppDomain domain in _clr.AppDomains)
             {
                 var threadQueue = threadQueuesField.ReadObject(domain);
                 if (!threadQueue.IsValid)
+                {
                     continue;
+                }
 
                 var sparseArray = threadQueue.ReadObjectField("m_array").AsArray();
                 for (int current = 0; current < sparseArray.Length; current++)
                 {
                     var stealingQueue = sparseArray.GetObjectValue(current);
                     if (!stealingQueue.IsValid)
+                    {
                         continue;
+                    }
 
                     foreach (var item in EnumerateThreadPoolStealingQueue(stealingQueue))
                     {
@@ -647,7 +741,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 var item = array.GetObjectValue(current);
                 if (!item.IsValid)
+                {
                     continue;
+                }
 
                 yield return GetThreadPoolItem(item);
             }
@@ -664,13 +760,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             var cd = _heap.GetObject(address);
             if (!cd.IsValid)
+            {
                 throw new InvalidOperationException("Address does not correspond to a ConcurrentDictionary");
+            }
+
             var tables = cd.ReadObjectField(tablesFieldName);
             if (!tables.IsValid)
+            {
                 throw new InvalidOperationException($"ConcurrentDictionary does not own {tablesFieldName} attribute");
+            }
+
             var buckets = tables.ReadObjectField(bucketsFieldName);
             if (!buckets.IsValid)
+            {
                 throw new InvalidOperationException($"ConcurrentDictionary tables does not own {bucketsFieldName} attribute");
+            }
+
             var bucketsArray = buckets.AsArray();
 
             for (int i = 0; i < bucketsArray.Length; i++)
@@ -718,7 +823,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (var segment in _heap.Segments)
             {
                 if (!TryGetSegmentMemoryRange(segment, generation, out var start, out var end))
+                {
                     continue;
+                }
 
                 var currentObjectAddress = start;
                 ClrObject currentObject;
@@ -726,7 +833,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     currentObject = _heap.GetObject(currentObjectAddress);
                     if (currentObject.Type != null)
+                    {
                         yield return currentObject;
+                    }
 
                     currentObjectAddress = segment.GetNextObjectAddress(currentObject);
                 } while (currentObjectAddress > 0 && currentObjectAddress < end);
@@ -866,7 +975,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         // skip empty null slots
                         if (slotEntry == UIntPtr.Zero)
+                        {
                             continue;
+                        }
 
                         var slotType = _heap.GetObjectType(slotEntry.ToUInt64());
                         if (slotType.IsString)
@@ -1152,7 +1263,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             var coreLib = GetMscorlib();
             if (coreLib == null)
+            {
                 throw new InvalidOperationException("Impossible to find core library");
+            }
 
             return (coreLib.Name.ToLower().Contains("corelib"));
         }

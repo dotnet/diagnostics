@@ -74,9 +74,21 @@ namespace SOS.Hosting
 
         private static OSPlatform GetRunningOS()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return OSPlatform.Windows;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return OSPlatform.Linux;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return OSPlatform.OSX;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return OSPlatform.Windows;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return OSPlatform.Linux;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return OSPlatform.OSX;
+            }
+
             throw new NotSupportedException($"OS not supported {RuntimeInformation.OSDescription}");
         }
 
@@ -422,9 +434,21 @@ namespace SOS.Hosting
         {
             get
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "mscordbi.dll";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "libmscordbi.so";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "libmscordbi.dylib";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return "mscordbi.dll";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return "libmscordbi.so";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return "libmscordbi.dylib";
+                }
+
                 throw new NotSupportedException($"OS not supported {RuntimeInformation.OSDescription}");
             }
         }
@@ -433,9 +457,21 @@ namespace SOS.Hosting
         {
             get 
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "mscordaccore.dll";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "libmscordaccore.so";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "libmscordaccore.dylib";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return "mscordaccore.dll";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return "libmscordaccore.so";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return "libmscordaccore.dylib";
+                }
+
                 throw new NotSupportedException($"OS not supported {RuntimeInformation.OSDescription}");
             }
         }

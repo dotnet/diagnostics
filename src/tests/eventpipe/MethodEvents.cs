@@ -57,9 +57,11 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                     for(int i=0; i<100; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"M_verbose occured {i} times...");
+                        }
 
-                        using(M_verbose verbose = new M_verbose())
+                        using (M_verbose verbose = new M_verbose())
                         {
                             verbose.IsZero('f');
                             verbose.Dispose();

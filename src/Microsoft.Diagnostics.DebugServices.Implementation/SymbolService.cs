@@ -310,7 +310,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         public void AddCachePath(string symbolCachePath)
         {
-            if (symbolCachePath == null) throw new ArgumentNullException(nameof(symbolCachePath));
+            if (symbolCachePath == null)
+            {
+                throw new ArgumentNullException(nameof(symbolCachePath));
+            }
 
             Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolCachePath = Path.GetFullPath(symbolCachePath);
@@ -329,7 +332,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
         public void AddDirectoryPath(string symbolDirectoryPath)
         {
-            if (symbolDirectoryPath == null) throw new ArgumentNullException(nameof(symbolDirectoryPath));
+            if (symbolDirectoryPath == null)
+            {
+                throw new ArgumentNullException(nameof(symbolDirectoryPath));
+            }
 
             Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolDirectoryPath = Path.GetFullPath(symbolDirectoryPath);
@@ -488,15 +494,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(string assemblyPath, bool isFileLayout, Stream peStream)
         {
-            if (assemblyPath == null && peStream == null) throw new ArgumentNullException(nameof(assemblyPath));
-            if (peStream is not null && !peStream.CanSeek) throw new ArgumentException(nameof(peStream));
+            if (assemblyPath == null && peStream == null)
+            {
+                throw new ArgumentNullException(nameof(assemblyPath));
+            }
+
+            if (peStream is not null && !peStream.CanSeek)
+            {
+                throw new ArgumentException(nameof(peStream));
+            }
 
             PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
             if (peStream == null)
             {
                 peStream = Utilities.TryOpenFile(assemblyPath);
                 if (peStream == null)
+                {
                     return null;
+                }
 
                 options = PEStreamOptions.Default;
             }
@@ -543,8 +558,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(Stream pdbStream)
         {
-            if (pdbStream != null) throw new ArgumentNullException(nameof(pdbStream));
-            if (!pdbStream.CanSeek) throw new ArgumentException(nameof(pdbStream));
+            if (pdbStream != null)
+            {
+                throw new ArgumentNullException(nameof(pdbStream));
+            }
+
+            if (!pdbStream.CanSeek)
+            {
+                throw new ArgumentException(nameof(pdbStream));
+            }
 
             byte[] buffer = new byte[sizeof(uint)];
             pdbStream.Position = 0;

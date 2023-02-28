@@ -87,11 +87,15 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             {
                 var type = memoryGraph.m_types[index];
                 if (string.IsNullOrEmpty(type.Name) || type.Size == 0)
+                {
                     continue;
+                }
 
                 var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
                 if (sizeAndCount == null || sizeAndCount.Count == 0)
+                {
                     continue;
+                }
 
                 yield return new ReportItem
                 {

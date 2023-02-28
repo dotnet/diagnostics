@@ -94,7 +94,10 @@ System.Collections.Concurrent.ConcurrentDictionary<System.Int32, ForDump.DumpStr
         private string Truncate(string str, int nbMaxChars)
         {
             if (str.Length <= nbMaxChars)
+            {
                 return str;
+            }
+
             return str.Substring(0, nbMaxChars) + "...";
         }
     }

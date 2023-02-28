@@ -29,19 +29,25 @@ namespace SOS.Extensions
             _client.GetOutputCallbacksWide(out _previous);
             HResult hr = _client.SetOutputCallbacksWide(this);
             if (!hr)
+            {
                 throw Marshal.GetExceptionForHR(hr);
+            }
         }
 
         public void Dispose()
         {
             if (_previous is not null)
+            {
                 _client.SetOutputCallbacksWide(_previous);
+            }
         }
 
         public int Output(DEBUG_OUTPUT Mask, [In, MarshalAs(UnmanagedType.LPStr)] string Text)
         {
             if ((InterestMask & Mask) != 0 && Text is not null)
+            {
                 OutputReceived?.Invoke(Mask, Text);
+            }
 
             return 0;
         }

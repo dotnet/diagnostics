@@ -47,7 +47,10 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     for (int i = 0; i < 1000; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Create new task {i} times...");
+                        }
+
                         taskArray[i] = Task.Run(() => TestTask());
                     }
                     Task.WaitAll(taskArray);

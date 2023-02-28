@@ -15,7 +15,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             @this.Write(value != null ? (value.Length + 1) : 0);
             if (value != null)
+            {
                 @this.Write(Encoding.Unicode.GetBytes(value + '\0'));
+            }
         }
 
     }

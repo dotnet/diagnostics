@@ -44,9 +44,21 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <exception cref="InvalidOperationException">thrown if factory has been finalized</exception>
         public void AddServiceFactory(Type type, ServiceFactory factory)
         {
-            if (type is null) throw new ArgumentNullException(nameof(type));
-            if (factory is null) throw new ArgumentNullException(nameof(factory));
-            if (_finalized) throw new InvalidOperationException();
+            if (type is null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            if (factory is null)
+            {
+                throw new ArgumentNullException(nameof(factory));
+            }
+
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             _factories.Add(type, factory);
         }
 
@@ -65,8 +77,16 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <exception cref="InvalidOperationException">thrown if factory has been finalized</exception>
         public void RemoveServiceFactory(Type type)
         {
-            if (type is null) throw new ArgumentNullException(nameof(type));
-            if (_finalized) throw new InvalidOperationException();
+            if (type is null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             _factories.Remove(type);
         }
 
@@ -94,7 +114,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>clone</returns>
         public ServiceContainerFactory Clone()
         {
-            if (!_finalized) throw new InvalidOperationException();
+            if (!_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             return new ServiceContainerFactory(_parent, _factories);
         }
     }

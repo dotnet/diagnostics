@@ -85,9 +85,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 LogLevel logLevel = LogLevel.Information;
                 if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                {
                     logLevel = LogLevel.Debug;
+                }
                 else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                {
                     logLevel = LogLevel.Trace;
+                }
+
                 return logLevel;
             }
 
@@ -109,7 +114,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 {
                     await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
                     if (routerTask.IsCompleted)
+                    {
                         break;
+                    }
 
                     if (!Console.IsInputRedirected && Console.KeyAvailable)
                     {
@@ -187,7 +194,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
 
                 if (string.IsNullOrEmpty(ipcServer))
+                {
                     ipcServer = GetDefaultIpcServerPath(logger);
+                }
 
                 var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
                 return routerTask;
@@ -215,7 +224,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
                 if (string.IsNullOrEmpty(ipcServer))
+                {
                     ipcServer = GetDefaultIpcServerPath(logger);
+                }
 
                 var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
                 return routerTask;
@@ -277,7 +288,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
                     if (string.IsNullOrEmpty(ipcServer))
+                    {
                         ipcServer = GetDefaultIpcServerPath(logger);
+                    }
 
                     var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
                     return routerTask;

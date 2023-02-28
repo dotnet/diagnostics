@@ -90,13 +90,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // be set to false.
                     networkStream.Socket.Blocking = false;
                     if (networkStream.Socket.Receive(new byte[1], 0, 1, System.Net.Sockets.SocketFlags.Peek) == 0)
+                    {
                         connected = false;
+                    }
 
                     // Check connection write state by sending non-blocking zero-byte data.
                     // A closed connection should raise exception, but then socket connected state should
                     // be set to false.
                     if (connected)
+                    {
                         networkStream.Socket.Send(Array.Empty<byte>(), 0, System.Net.Sockets.SocketFlags.None);
+                    }
                 }
                 catch (Exception)
                 {
@@ -193,7 +197,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _logger = logger;
             _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
             if (runtimeTimeoutMs != Timeout.Infinite)
+            {
                 RuntimeTimeoutMs = runtimeTimeoutMs;
+            }
 
             _netServerEndpointInfo = new IpcEndpointInfo();
 
@@ -239,7 +245,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         Logger?.LogDebug("No runtime instance connected before timeout.");
 
                         if (IsAutoShutdown)
+                        {
                             throw new RuntimeTimeoutException(RuntimeTimeoutMs);
+                        }
                     }
 
                     throw;
@@ -268,7 +276,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             if (netServerStream != null)
+            {
                 Logger?.LogDebug($"Successfully connected {ServerTransportName} stream, runtime id={RuntimeInstanceId}, runtime pid={RuntimeProcessId}.");
+            }
 
             return netServerStream;
         }
@@ -328,7 +338,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override void CreatedNewServer(EndPoint localEP)
         {
             if (localEP is IPEndPoint ipEP)
+            {
                 _tcpServerAddress = _tcpServerAddress.Replace(":0", string.Format(":{0}", ipEP.Port));
+            }
         }
     }
 
@@ -418,7 +430,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _tcpClientAddress = IpcTcpSocketEndPoint.NormalizeTcpIpEndPoint(string.IsNullOrEmpty(tcpClient) ? "127.0.0.1:" + string.Format("{0}", 56000 + (Environment.ProcessId % 1000)) : tcpClient);
             _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
             if (runtimeTimeoutMs != Timeout.Infinite)
+            {
                 TcpClientTimeoutMs = runtimeTimeoutMs;
+            }
         }
 
         public virtual async Task<Stream> ConnectTcpStreamAsync(CancellationToken token)
@@ -471,7 +485,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         _logger?.LogDebug("No tcp stream connected, timing out.");
 
                         if (_auto_shutdown)
+                        {
                             throw new RuntimeTimeoutException(TcpClientTimeoutMs);
+                        }
 
                         throw new TimeoutException();
                     }
@@ -544,7 +560,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public IpcServerRouterFactory(string ipcServer, ILogger logger)
         {
             if (string.IsNullOrEmpty(ipcServer))
+            {
                 throw new ArgumentException("Missing IPC server path.");
+            }
 
             _logger = logger;
             _ipcServerPath = ipcServer;
@@ -590,7 +608,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             if (ipcServerStream != null)
+            {
                 _logger?.LogDebug("Successfully connected ipc stream.");
+            }
 
             return ipcServerStream;
         }
@@ -643,7 +663,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     namedPipe?.Dispose();
 
                     if (ex is TimeoutException)
+                    {
                         _logger?.LogDebug("No ipc stream connected, timing out.");
+                    }
 
                     throw;
                 }
@@ -694,7 +716,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             if (ipcClientStream != null)
+            {
                 _logger?.LogDebug("Successfully connected ipc stream.");
+            }
 
             return ipcClientStream;
         }
@@ -809,7 +833,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         // Check if we have an accepted tcp stream.
                         if (IsCompletedSuccessfully(netServerStreamTask))
+                        {
                             netServerStreamTask.Result?.Dispose();
+                        }
 
                         if (checkIpcStreamTask.IsFaulted)
                         {
@@ -844,7 +870,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         // Check if we have an accepted ipc stream.
                         if (IsCompletedSuccessfully(ipcServerStreamTask))
+                        {
                             ipcServerStreamTask.Result?.Dispose();
+                        }
 
                         if (checkTcpStreamTask.IsFaulted)
                         {
@@ -869,7 +897,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         // Check if we have an ipc stream.
                         if (IsCompletedSuccessfully(ipcServerStreamTask))
+                        {
                             ipcServerStreamTask.Result?.Dispose();
+                        }
+
                         throw;
                     }
                 }
@@ -985,7 +1016,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     // Check if we have an accepted tcp stream.
                     if (IsCompletedSuccessfully(tcpClientStreamTask))
+                    {
                         tcpClientStreamTask.Result?.Dispose();
+                    }
 
                     if (checkIpcStreamTask.IsFaulted)
                     {
@@ -1060,7 +1093,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override Task Start(CancellationToken token)
         {
             if (string.IsNullOrEmpty(_ipcClientRouterFactory.IpcClientPath))
+            {
                 throw new ArgumentException("No IPC client path specified.");
+            }
 
             _tcpServerRouterFactory.Start();
 
@@ -1115,7 +1150,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     // Check if we have an accepted ipc stream.
                     if (IsCompletedSuccessfully(ipcClientStreamTask))
+                    {
                         ipcClientStreamTask.Result?.Dispose();
+                    }
 
                     if (checkTcpStreamTask.IsFaulted)
                     {
@@ -1255,7 +1292,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     // Check if we have an accepted ipc stream.
                     if (IsCompletedSuccessfully(ipcClientStreamTask))
+                    {
                         ipcClientStreamTask.Result?.Dispose();
+                    }
 
                     if (checkTcpStreamTask.IsFaulted)
                     {
@@ -1292,7 +1331,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _logger?.LogDebug("Failed creating new router instance.");
 
                 if (tcpClientStream == null || (tcpClientStream != null && ipcClientStream == null))
+                {
                     _updateRuntimeInfo = true;
+                }
 
                 // Cleanup and rethrow.
                 tcpClientStream?.Dispose();
@@ -1330,7 +1371,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             catch (Exception)
             {
                 if (readTask.IsFaulted)
+                {
                     _logger?.LogInformation("Broken ipc connection detected.");
+                }
 
                 if (checkTcpStreamTask.IsFaulted)
                 {
@@ -1356,7 +1399,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private async Task UpdateRuntimeInfo(CancellationToken token)
         {
             if (!_updateRuntimeInfo)
+            {
                 return;
+            }
 
             try
             {
@@ -1437,7 +1482,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public void Start()
         {
             if (_backendReadFrontendWriteTask != null || _frontendReadBackendWriteTask != null || _disposed)
+            {
                 throw new InvalidOperationException();
+            }
 
             _backendReadFrontendWriteTask = BackendReadFrontendWrite(_cancelRouterTokenSource.Token);
             _frontendReadBackendWriteTask = FrontendReadBackendWrite(_cancelRouterTokenSource.Token);
@@ -1446,17 +1493,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public async void Stop()
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(Router));
+            }
 
             _cancelRouterTokenSource.Cancel();
 
             List<Task> runningTasks = new List<Task>();
 
             if (_backendReadFrontendWriteTask != null)
+            {
                 runningTasks.Add(_backendReadFrontendWriteTask);
+            }
 
             if (_frontendReadBackendWriteTask != null)
+            {
                 runningTasks.Add(_frontendReadBackendWriteTask);
+            }
 
             await Task.WhenAll(runningTasks.ToArray()).ConfigureAwait(false);
 
@@ -1473,7 +1526,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             get
             {
                 if (_backendReadFrontendWriteTask == null || _frontendReadBackendWriteTask == null || _disposed)
+                {
                     return false;
+                }
 
                 return !_backendReadFrontendWriteTask.IsCompleted && !_frontendReadBackendWriteTask.IsCompleted;
             }

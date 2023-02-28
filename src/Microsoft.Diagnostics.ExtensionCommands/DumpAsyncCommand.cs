@@ -1145,20 +1145,63 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 void Append(string s)
                 {
                     sb ??= new StringBuilder();
-                    if (sb.Length != 0) sb.Append("|");
+                    if (sb.Length != 0)
+                    {
+                        sb.Append("|");
+                    }
+
                     sb.Append(s);
                 }
 
-                if ((stateFlags & 0x10000) != 0) Append("Started");
-                if ((stateFlags & 0x20000) != 0) Append("DelegateInvoked");
-                if ((stateFlags & 0x40000) != 0) Append("Disposed");
-                if ((stateFlags & 0x80000) != 0) Append("ExceptionObservedByParent");
-                if ((stateFlags & 0x100000) != 0) Append("CancellationAcknowledged");
-                if ((stateFlags & 0x200000) != 0) Append("Faulted");
-                if ((stateFlags & 0x400000) != 0) Append("Canceled");
-                if ((stateFlags & 0x800000) != 0) Append("WaitingOnChildren");
-                if ((stateFlags & 0x1000000) != 0) Append("RanToCompletion");
-                if ((stateFlags & 0x4000000) != 0) Append("CompletionReserved");
+                if ((stateFlags & 0x10000) != 0)
+                {
+                    Append("Started");
+                }
+
+                if ((stateFlags & 0x20000) != 0)
+                {
+                    Append("DelegateInvoked");
+                }
+
+                if ((stateFlags & 0x40000) != 0)
+                {
+                    Append("Disposed");
+                }
+
+                if ((stateFlags & 0x80000) != 0)
+                {
+                    Append("ExceptionObservedByParent");
+                }
+
+                if ((stateFlags & 0x100000) != 0)
+                {
+                    Append("CancellationAcknowledged");
+                }
+
+                if ((stateFlags & 0x200000) != 0)
+                {
+                    Append("Faulted");
+                }
+
+                if ((stateFlags & 0x400000) != 0)
+                {
+                    Append("Canceled");
+                }
+
+                if ((stateFlags & 0x800000) != 0)
+                {
+                    Append("WaitingOnChildren");
+                }
+
+                if ((stateFlags & 0x1000000) != 0)
+                {
+                    Append("RanToCompletion");
+                }
+
+                if ((stateFlags & 0x4000000) != 0)
+                {
+                    Append("CompletionReserved");
+                }
 
                 if (sb is not null)
                 {

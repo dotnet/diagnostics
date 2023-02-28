@@ -22,13 +22,17 @@ namespace ParallelStacks.Runtime
                 foreach (var stackFrame in thread.EnumerateStackTrace().Reverse())
                 {
                     if ((stackFrame.Kind != ClrStackFrameKind.ManagedMethod) || (stackFrame.Method == null))
+                    {
                         continue;
+                    }
 
                     stackFrames.Add(stackFrame);
                 }
 
                 if (stackFrames.Count == 0)
+                {
                     continue;
+                }
 
                 ps.AddStack(thread.OSThreadId, stackFrames.ToArray());
             }

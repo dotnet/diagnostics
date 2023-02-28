@@ -246,7 +246,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             var socket = new IpcSocket(SocketType.Stream, ProtocolType.Tcp);
             if (_endPoint.DualMode)
+            {
                 socket.DualMode = _endPoint.DualMode;
+            }
+
             socket.Bind(_endPoint);
             socket.Listen(_backlog);
             socket.LingerState.Enabled = false;

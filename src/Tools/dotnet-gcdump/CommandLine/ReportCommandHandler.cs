@@ -47,9 +47,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             // Determine report source
             //
             if (gcdump_filename != null)
+            {
                 source = ReportSource.DumpFile;
+            }
             else if (processId.HasValue)
+            {
                 source = ReportSource.Process;
+            }
 
             return (source, type) switch
             {

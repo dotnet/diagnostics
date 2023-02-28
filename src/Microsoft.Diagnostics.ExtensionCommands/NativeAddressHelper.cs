@@ -61,7 +61,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
 
             if (!includeReserveMemory)
+            {
                 addressResult = addressResult.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
+            }
 
             List<DescribedRegion> rangeList = addressResult.ToList();
             if (tagClrMemoryRanges)
@@ -136,7 +138,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // mark it as some other unknown type.  CLR still allocated it, and it's still close
                                         // by the other region kind.
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)
+                                        {
                                             region.ClrMemoryKind = mem.Kind;
+                                        }
 
                                         DescribedRegion middleRegion = new(region)
                                         {
@@ -186,7 +190,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                         // If we found no matching regions, expand the current region to be the right length.
                                         if (!foundNext)
+                                        {
                                             region.End = mem.Address + mem.Size;
+                                        }
                                     }
                                     else if (region.Size > mem.Size)
                                     {
@@ -199,7 +205,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                         region.Start = newRange.End;
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)  // see note above
+                                        {
                                             region.ClrMemoryKind = mem.Kind;
+                                        }
                                     }
                                 }
 
@@ -217,13 +225,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     string memName = mem.Name;
                     if (memName == "RESERVED")
+                    {
                         TagMemoryRecursive(mem, ranges);
+                    }
                 }
             }
 
             // On Linux, !address doesn't mark stack space.  Go do that.
             if (Target.OperatingSystem == OSPlatform.Linux)
+            {
                 MarkStackSpace(ranges);
+            }
 
             return ranges;
         }
@@ -245,7 +257,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             if (region.Usage == MemoryRegionUsage.Unknown)
+            {
                 region.Usage = MemoryRegionUsage.CLR;
+            }
         }
 
         private void MarkStackSpace(DescribedRegion[] ranges)
@@ -256,7 +270,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     DescribedRegion range = FindMemory(ranges, sp);
                     if (range is not null)
+                    {
                         range.Description = "Stack";
+                    }
                 }
             }
         }
@@ -264,7 +280,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static DescribedRegion FindMemory(DescribedRegion[] ranges, ulong ptr)
         {
             if (ptr < ranges[0].Start || ptr >= ranges.Last().End)
+            {
                 return null;
+            }
 
             int low = 0;
             int high = ranges.Length - 1;
@@ -305,22 +323,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 string memName = mem.Name;
                 if (memName == "RESERVED")
+                {
                     TagMemoryRecursive(mem, ranges);
+                }
             }
         }
 
         private static DescribedRegion TagMemoryRecursive(DescribedRegion mem, DescribedRegion[] ranges)
         {
             if (mem.Name != "RESERVED")
+            {
                 return mem;
+            }
 
             DescribedRegion found = ranges.SingleOrDefault(r => r.End == mem.Start);
             if (found is null)
+            {
                 return null;
+            }
 
             DescribedRegion nonReserved = TagMemoryRecursive(found, ranges);
             if (nonReserved is null)
+            {
                 return null;
+            }
 
             mem.Description = nonReserved.Name;
             return nonReserved;
@@ -340,7 +366,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     int size = Math.Min(remaining > int.MaxValue ? int.MaxValue : (int)remaining, arrayBytes);
                     bool res = ReadMemory(curr, array, size, out int bytesRead);
                     if (!res || bytesRead <= 0)
+                    {
                         break;
+                    }
 
                     for (int i = 0; i < bytesRead / sizeof(ulong); i++)
                     {
@@ -348,7 +376,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         DescribedRegion found = FindMemory(ranges, ptr);
                         if (found is not null)
+                        {
                             yield return (curr + (uint)i * sizeof(ulong), ptr, found);
+                        }
                     }
 
                     curr += (uint)bytesRead;
@@ -433,29 +463,43 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (ClrMemoryKind != ClrMemoryKind.None)
                     {
                         if (ClrMemoryKind == ClrMemoryKind.GCHeapReserve)
+                        {
                             return $"[{ClrMemoryKind}]";
+                        }
 
                         return ClrMemoryKind.ToString();
                     }
 
                     if (!string.IsNullOrWhiteSpace(Description))
+                    {
                         return Description;
+                    }
 
                     if (State == MemoryRegionState.MEM_RESERVE)
+                    {
                         return "[RESERVED]";
+                    }
                     else if (State == MemoryRegionState.MEM_FREE)
+                    {
                         return "[FREE]";
+                    }
 
                     if (Type == MemoryRegionType.MEM_IMAGE || !string.IsNullOrWhiteSpace(Image))
+                    {
                         return "Image";
+                    }
 
                     string result = Protection.ToString();
                     if (Type == MemoryRegionType.MEM_MAPPED)
                     {
                         if (string.IsNullOrWhiteSpace(result))
+                        {
                             result = Type.ToString();
+                        }
                         else
+                        {
                             result = result.Replace("PAGE", "MAPPED");
+                        }
                     }
 
                     return result;

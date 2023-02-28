@@ -33,12 +33,20 @@ namespace SOS.Hosting.DbgEng.Interop
             FuncTableEntry = dsf.FuncTableEntry;
 
             fixed (ulong* pParams = Params)
+            {
                 for (int i = 0; i < 4; ++i)
+                {
                     pParams[i] = dsf.Params[i];
+                }
+            }
 
             fixed (ulong* pReserved = Params)
+            {
                 for (int i = 0; i < 6; ++i)
+                {
                     pReserved[i] = dsf.Reserved[i];
+                }
+            }
 
             Virtual = dsf.Virtual;
             FrameNumber = dsf.FrameNumber;

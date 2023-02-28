@@ -115,7 +115,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             string[] stringsInOutput = new string[] { "\nthis\n", "\nis\n", "\na\n" };
             foreach (string s in stringsInOutput)
+            {
                 Assert.DoesNotContain(s, stdOut);
+            }
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
@@ -127,7 +129,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             string[] stringsInOutput = new string[] { "\nthis\n", "\nis\n", "\na\n" };
             foreach (string s in stringsInOutput)
+            {
                 Assert.Contains(s, stdOut);
+            }
         }
     }
 }

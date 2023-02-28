@@ -16,7 +16,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 ownsPortForward = RunAdbCommandInternal($"forward tcp:{port} tcp:{port}", "", 0, logger);
                 if (!ownsPortForward)
+                {
                     logger?.LogError($"Failed setting up port forward for tcp:{port}.");
+                }
             }
             return ownsPortForward;
         }
@@ -28,7 +30,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 ownsPortForward = RunAdbCommandInternal($"reverse tcp:{port} tcp:{port}", "", 0, logger);
                 if (!ownsPortForward)
+                {
                     logger?.LogError($"Failed setting up port forward for tcp:{port}.");
+                }
             }
             return ownsPortForward;
         }
@@ -38,7 +42,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (ownsPortForward)
             {
                 if (!RunAdbCommandInternal($"forward --remove tcp:{port}", "", 0, logger))
+                {
                     logger?.LogError($"Failed removing port forward for tcp:{port}.");
+                }
             }
         }
 
@@ -47,7 +53,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (ownsPortForward)
             {
                 if (!RunAdbCommandInternal($"reverse --remove tcp:{port}", "", 0, logger))
+                {
                     logger?.LogError($"Failed removing port forward for tcp:{port}.");
+                }
             }
         }
 
@@ -57,7 +65,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             var adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
+            {
                 adbTool = sdkRoot + Path.DirectorySeparatorChar + "platform-tools" + Path.DirectorySeparatorChar + adbTool;
+            }
 
             logger?.LogDebug($"Executing {adbTool} {command}.");
 
@@ -88,13 +98,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 var stderr = process.StandardError.ReadToEnd();
 
                 if (!string.IsNullOrEmpty(expectedOutput))
+                {
                     expectedOutputResult = !string.IsNullOrEmpty(stdout) ? stdout.Contains(expectedOutput) : false;
+                }
 
                 if (!string.IsNullOrEmpty(stdout))
+                {
                     logger.LogTrace($"stdout: {stdout}");
+                }
 
                 if (!string.IsNullOrEmpty(stderr))
+                {
                     logger.LogError($"stderr: {stderr}");
+                }
             }
 
             if (processStartedResult)

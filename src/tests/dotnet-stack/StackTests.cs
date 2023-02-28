@@ -90,7 +90,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             int partIdx = 0;
             while (stackParts[partIdx].StartsWith("#") || stackParts[partIdx].StartsWith("Thread") || stackParts[partIdx].StartsWith("Found"))
+            {
                 partIdx++;
+            }
 
             Assert.True(stackParts.Length - partIdx == correctStackParts.Length, $"{stackParts.Length - partIdx} != {correctStackParts.Length}");
 

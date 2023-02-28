@@ -20,7 +20,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             try
             {
                 foreach (var profile in DotNETRuntimeProfiles)
+                {
                     Console.Out.WriteLine($"\t{profile.Name,-16} - {profile.Description}");
+                }
 
                 await Task.FromResult(0);
                 return 0;

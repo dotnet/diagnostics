@@ -59,7 +59,10 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
+                        }
+
                         TestClass testClass = new TestClass();
                         testClass = null;
                         GC.Collect();
@@ -141,7 +144,10 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
+                        }
+
                         TestClass testClass = new TestClass();
                         testClass = null;
                         GC.Collect();

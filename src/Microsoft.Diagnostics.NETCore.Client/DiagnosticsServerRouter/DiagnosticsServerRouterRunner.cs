@@ -64,7 +64,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 await routerFactory.Start(token);
                 if (!token.IsCancellationRequested)
+                {
                     callbacks?.OnRouterStarted(routerFactory.TcpAddress);
+                }
 
                 while (!token.IsCancellationRequested)
                 {
@@ -82,7 +84,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                             runningTasks.Clear();
                             foreach (var runningRouter in runningRouters)
+                            {
                                 runningTasks.Add(runningRouter.RouterTaskCompleted.Task);
+                            }
+
                             runningTasks.Add(routerTask);
                         }
                         while (await Task.WhenAny(runningTasks.ToArray()).ConfigureAwait(false) != routerTask);
@@ -142,7 +147,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             finally
             {
                 if (token.IsCancellationRequested)
+                {
                     routerFactory.Logger?.LogInformation("Shutting down due to cancelation request.");
+                }
 
                 runningRouters.RemoveAll(IsRouterDead);
                 runningRouters.Clear();
@@ -159,7 +166,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             bool isRunning = router.IsRunning && !router.RouterTaskCompleted.Task.IsCompleted;
             if (!isRunning)
+            {
                 router.Dispose();
+            }
+
             return !isRunning;
         }
     }

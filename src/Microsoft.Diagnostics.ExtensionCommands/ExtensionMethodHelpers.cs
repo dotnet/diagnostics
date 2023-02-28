@@ -14,11 +14,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             updated /= 1024;
             if (updated < 1024)
+            {
                 return $"{updated:0.00}kb";
+            }
 
             updated /= 1024;
             if (updated < 1024)
+            {
                 return $"{updated:0.00}mb";
+            }
 
             updated /= 1024;
             return $"{updated:0.00}gb";

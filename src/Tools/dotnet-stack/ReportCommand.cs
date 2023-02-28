@@ -115,7 +115,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     {
                         var stackIndex = sample.StackIndex;
                         while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                        {
                             stackIndex = stackSource.GetCallerIndex(stackIndex);
+                        }
 
                         // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
                         // Thread id is in the frame name as "Thread (<ID>)"
@@ -151,9 +153,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
             finally
             {
                 if (File.Exists(tempNetTraceFilename))
+                {
                     File.Delete(tempNetTraceFilename);
+                }
+
                 if (File.Exists(tempEtlxFilename))
+                {
                     File.Delete(tempEtlxFilename);
+                }
             }
 
             return 0;

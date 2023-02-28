@@ -27,7 +27,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             if (TagReserveMemoryHeuristically && !IncludeReserveMemory)
+            {
                 throw new DiagnosticsException("Cannot use --tagReserve without --includeReserve");
+            }
 
             PrintMemorySummary(ListAll, ShowImageTable, IncludeReserveMemory, TagReserveMemoryHeuristically);
         }
@@ -36,7 +38,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             IEnumerable<DescribedRegion> memoryRanges = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory, tagReserveMemoryHeuristically);
             if (!includeReserveMemory)
+            {
                 memoryRanges = memoryRanges.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
+            }
 
             DescribedRegion[] ranges = memoryRanges.ToArray();
 
@@ -44,7 +48,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Tag reserved memory based on what's adjacent.
             if (tagReserveMemoryHeuristically)
+            {
                 CollapseReserveRegions(ranges);
+            }
 
             if (printAllMemory)
             {
@@ -60,7 +66,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 output.WriteRowWithSpacing('-', "Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
                 foreach (DescribedRegion mem in ranges)
+                {
                     output.WriteRow(mem.Name, mem.Start, mem.End, mem.Size.ConvertToHumanReadable(), mem.Type, mem.State, mem.Protection, mem.Image);
+                }
 
                 output.WriteSpacer('-');
             }

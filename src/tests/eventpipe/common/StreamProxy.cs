@@ -42,12 +42,16 @@ namespace EventPipe.UnitTests.Common
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (buffer == null || offset < 0 || count < 0)
+            {
                 throw new ArgumentException("Invalid input into Read");
+            }
 
             byte[] localBuffer = ArrayPool<byte>.Shared.Rent(count);
             var readCount = ProxiedStream.Read(localBuffer, 0, count);
             if (readCount == 0)
+            {
                 return readCount;
+            }
 
             InternalStream.Write(localBuffer, 0, readCount);
 

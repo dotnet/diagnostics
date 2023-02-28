@@ -18,9 +18,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown=true)
         {
             if (circularBufferSizeMB == 0)
+            {
                 throw new ArgumentException($"Buffer size cannot be zero.");
+            }
+
             if (format != EventPipeSerializationFormat.NetPerf && format != EventPipeSerializationFormat.NetTrace)
+            {
                 throw new ArgumentException("Unrecognized format");
+            }
+
             ArgumentNullException.ThrowIfNull(providers);
 
             CircularBufferSizeInMB = circularBufferSizeMB;

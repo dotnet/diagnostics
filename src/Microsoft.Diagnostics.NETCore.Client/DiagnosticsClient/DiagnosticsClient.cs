@@ -311,10 +311,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     var fileName = new FileInfo(port).Name;
                     var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
-                    if (!match.Success) continue;
+                    if (!match.Success)
+                    {
+                        continue;
+                    }
+
                     var group = match.Groups[1].Value;
                     if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out var processId))
+                    {
                         continue;
+                    }
 
                     yield return processId;
                 }
@@ -541,7 +547,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static IpcMessage CreateWriteDumpMessage(DumpType dumpType, string dumpPath, bool logDumpGeneration)
         {
             if (string.IsNullOrEmpty(dumpPath))
+            {
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
+            }
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, logDumpGeneration);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
@@ -550,7 +558,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static IpcMessage CreateWriteDumpMessage(DumpCommandId command, DumpType dumpType, string dumpPath, WriteDumpFlags flags)
         {
             if (string.IsNullOrEmpty(dumpPath))
+            {
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
+            }
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);

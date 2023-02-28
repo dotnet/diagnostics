@@ -273,7 +273,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             ConsoleWriteLine($"Process        : {processMainModuleFileName}");
                             ConsoleWriteLine($"Output File    : {fs.Name}");
                             if (shouldStopAfterDuration)
+                            {
                                 ConsoleWriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                            }
+
                             ConsoleWriteLine("\n\n");
 
                             var fileInfo = new FileInfo(output.FullName);
@@ -297,11 +300,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
 
                                 if (rundownRequested)
+                                {
                                     ConsoleWriteLine("Stopping the trace. This may take several minutes depending on the application being traced.");
+                                }
                             };
 
                             while (!shouldExit.WaitOne(100) && !(cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter))
+                            {
                                 printStatus();
+                            }
 
                             // if the CopyToAsync ended early (target program exited, etc.), then we don't need to stop the session.
                             if (!copyTask.Wait(0))
@@ -333,7 +340,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         ConsoleWriteLine($"\nTrace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
+                        {
                             TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                        }
                     }
 
                     if (!collectionStopped && !ct.IsCancellationRequested)
@@ -367,7 +376,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (printStatusOverTime)
                 {
                     if (console.GetTerminal() != null)
+                    {
                         Console.CursorVisible = true;
+                    }
                 }
             
                 if (ProcessLauncher.Launcher.HasChildProc)
@@ -399,13 +410,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static string GetSize(long length)
         {
             if (length > 1e9)
+            {
                 return String.Format("{0,-8} (GB)", $"{length / 1e9:0.00##}");
+            }
             else if (length > 1e6)
+            {
                 return String.Format("{0,-8} (MB)", $"{length / 1e6:0.00##}");
+            }
             else if (length > 1e3)
+            {
                 return String.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
+            }
             else
+            {
                 return String.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
+            }
         }
 
         public static Command CollectCommand() =>

@@ -46,7 +46,9 @@ namespace SOS
             {
                 object obj = Marshal.GetObjectForIUnknown(punk);
                 if (obj is IDebugClient5 client)
+                {
                     DebugClient = client;
+                }
             }
         }
 
@@ -67,7 +69,10 @@ namespace SOS
 
         public HResult AddCommand(string command, string help, IEnumerable<string> aliases)
         {
-            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(help) || aliases == null) throw new ArgumentNullException();
+            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(help) || aliases == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             byte[] commandBytes = Encoding.ASCII.GetBytes(command + "\0");
             byte[] helpBytes = Encoding.ASCII.GetBytes(help + "\0");
@@ -92,7 +97,10 @@ namespace SOS
 
         public void OutputString(DEBUG_OUTPUT mask, string message)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
 
             byte[] messageBytes = Encoding.ASCII.GetBytes(message + "\0");
             fixed (byte* messagePtr = messageBytes)
@@ -212,8 +220,15 @@ namespace SOS
 
         public HResult GetThreadIdsByIndex(uint start, uint count, uint[] ids, uint[] sysIds)
         {
-            if (ids != null && (start >= ids.Length || start + count > ids.Length)) throw new ArgumentOutOfRangeException(nameof(ids));
-            if (sysIds != null && (start >= sysIds.Length || start + count > sysIds.Length)) throw new ArgumentOutOfRangeException(nameof(sysIds));
+            if (ids != null && (start >= ids.Length || start + count > ids.Length))
+            {
+                throw new ArgumentOutOfRangeException(nameof(ids));
+            }
+
+            if (sysIds != null && (start >= sysIds.Length || start + count > sysIds.Length))
+            {
+                throw new ArgumentOutOfRangeException(nameof(sysIds));
+            }
 
             fixed (uint* pids = ids)
             {
@@ -330,7 +345,10 @@ namespace SOS
 
         public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)
         {
-            if (symbol == null) throw new ArgumentNullException(nameof(symbol));
+            if (symbol == null)
+            {
+                throw new ArgumentNullException(nameof(symbol));
+            }
 
             byte[] symbolBytes = Encoding.ASCII.GetBytes(symbol + "\0");
             fixed (byte* symbolPtr = symbolBytes)
@@ -341,7 +359,10 @@ namespace SOS
         
         public HResult GetTypeId(int moduleIndex, string typeName, out ulong typeId)
         {
-            if (string.IsNullOrEmpty(typeName)) throw new ArgumentException(nameof(typeName));
+            if (string.IsNullOrEmpty(typeName))
+            {
+                throw new ArgumentException(nameof(typeName));
+            }
 
             byte[] typeNameBytes = Encoding.ASCII.GetBytes(typeName + "\0");
             fixed (byte* typeNamePtr = typeNameBytes)
@@ -352,7 +373,10 @@ namespace SOS
 
         public HResult GetFieldOffset(int moduleIndex, ulong typeId, string typeName, string fieldName, out uint offset)
         {
-            if (string.IsNullOrEmpty(fieldName)) throw new ArgumentException(nameof(fieldName));
+            if (string.IsNullOrEmpty(fieldName))
+            {
+                throw new ArgumentException(nameof(fieldName));
+            }
 
             byte[] typeNameBytes = Encoding.ASCII.GetBytes(typeName + "\0");
             byte[] fieldNameBytes = Encoding.ASCII.GetBytes(fieldName + "\0");
@@ -377,7 +401,10 @@ namespace SOS
 
         public void OutputDmlString(DEBUG_OUTPUT mask, string message)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
 
             byte[] messageBytes = Encoding.ASCII.GetBytes(message + "\0");
             fixed (byte* messagePtr = messageBytes)

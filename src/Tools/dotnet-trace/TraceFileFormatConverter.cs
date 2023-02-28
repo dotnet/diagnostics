@@ -26,7 +26,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
         {
             if (string.IsNullOrWhiteSpace(outputFilename))
+            {
                 outputFilename = fileToConvert;
+            }
 
             outputFilename = Path.ChangeExtension(outputFilename, TraceFileFormatExtensions[format]);
             Console.Out.WriteLine($"Writing:\t{outputFilename}");

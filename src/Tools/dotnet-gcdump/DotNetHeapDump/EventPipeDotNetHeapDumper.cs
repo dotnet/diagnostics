@@ -134,7 +134,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 {
                     // cancelled before we began
                     if (ct.IsCancellationRequested)
+                    {
                         return;
+                    }
+
                     log.WriteLine("{0,5:n1}s: Starting to process events", getElapsed().TotalSeconds);
                     gcDumpSession.Source.Process();
                     log.WriteLine("{0,5:n1}s: EventPipe Listener dying", getElapsed().TotalSeconds);
@@ -181,7 +184,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 try
                 {
                     while (!Task.WaitAll(new Task[] { readerTask, stopTask }, 1000))
+                    {
                         log.WriteLine("{0,5:n1}s: still reading...", getElapsed().TotalSeconds);
+                    }
                 }
                 catch (AggregateException ae) // no need to throw if we're just cancelling the tasks
                 {
@@ -197,7 +202,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session closed", getElapsed().TotalSeconds);
 
                 if (ct.IsCancellationRequested)
+                {
                     return false;
+                }
 
                 if (eventPipeDataPresent)
                 {

@@ -34,9 +34,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 int width = Console.WindowWidth;
                 if (width == 0)
+                {
                     width = 120;
+                }
+
                 if (width > 256)
+                {
                     width = 256;
+                }
 
                 return width;
             }
@@ -45,7 +50,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             if (Regions is null || Regions.Length == 0)
+            {
                 throw new DiagnosticsException("Must specify at least one memory region type to search for.");
+            }
 
             PrintPointers(!ShowAllObjects, Regions);
         }
@@ -77,7 +84,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     WriteLine($"Type:  {mem.Name}");
                     if (mem.Image is not null)
+                    {
                         WriteLine($"Image: {mem.Image}");
+                    }
 
                     WriteTables(ctx, result, false);
 
@@ -131,7 +140,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             string header = $"REGION [{mem.Start:x}-{mem.End:x}] {mem.Type} {mem.State} {mem.Protection}";
             int lpad = (Width - header.Length) / 2;
             if (lpad > 0)
+            {
                 header = header.PadLeft(Width - lpad, '=');
+            }
+
             WriteLine(header.PadRight(Width, '='));
         }
 
@@ -210,7 +222,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             var resolved = query.ToArray();
             if (resolved.Length == 0)
+            {
                 return;
+            }
 
             int single = resolved.Count(r => r.Count == 1);
             int multi = resolved.Length - single;
@@ -227,10 +241,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             var items = truncate ? resolved.Take(multi) : resolved;
             foreach (var (Name, Count, Unique, Pointers) in items)
+            {
                 table.WriteRow(Name, Unique, Count, Pointers.FindMostCommonPointer());
+            }
 
             if (truncate)
+            {
                 table.WriteRow(truncatedName, single, single);
+            }
 
             table.WriteRowWithSpacing('-', " [ TOTALS ] ", resolved.Sum(r => r.Unique), resolved.Sum(r => r.Count), "");
         }
@@ -238,16 +256,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static string FixTypeName(string typeName, HashSet<int> offsets)
         {
             if (typeName.EndsWith("!") && typeName.Count(r => r == '!') == 1)
+            {
                 typeName = typeName.Substring(0, typeName.Length - 1);
+            }
 
             int vtableIdx = typeName.IndexOf(VtableConst);
             if (vtableIdx > 0)
+            {
                 typeName = typeName.Replace(VtableConst, "") + "::vtable";
+            }
 
             if (offsets.Count == 1 && offsets.Single() > 0)
+            {
                 typeName = $"{typeName}+{offsets.Single():x}";
+            }
             else if (offsets.Count > 1)
+            {
                 typeName = $"{typeName}+...";
+            }
 
             return typeName;
         }
@@ -263,16 +289,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (pinnedOnly)
                     {
                         if (ctx.IsPinnedObject(found.Pointer, out ClrObject obj))
-
+                        {
                             result.AddGCPointer(obj);
+                        }
                         else
+                        {
                             result.AddGCPointer(found.Pointer);
+                        }
                     }
                     else
                     {
                         ClrObject obj = Runtime.Heap.GetObject(found.Pointer);
                         if (obj.IsValid)
+                        {
                             result.AddGCPointer(obj);
+                        }
                     }
                 }
                 else if (found.Range.Type == MemoryRegionType.MEM_IMAGE)
@@ -280,7 +311,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     bool hasSymbols = false;
                     IModuleSymbols symbols = found.Range.Module?.Services.GetService<IModuleSymbols>();
                     if (symbols is not null)
+                    {
                         hasSymbols = symbols.GetSymbolStatus() == SymbolStatus.Loaded;
+                    }
 
                     result.AddRegionPointer(found.Range, found.Pointer, hasSymbols);
                 }
@@ -301,8 +334,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (var root in Runtime.Heap.EnumerateRoots().Where(r => r.IsPinned))
             {
                 if (root.Object.IsValid && !root.Object.IsFree)
+                {
                     if (seen.Add(root.Object))
+                    {
                         pinned.Add(root.Object);
+                    }
+                }
             }
 
             foreach (ClrSegment seg in Runtime.Heap.Segments.Where(s => s.IsPinnedObjectSegment || s.IsLargeObjectSegment))
@@ -310,7 +347,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (ClrObject obj in seg.EnumerateObjects().Where(o => seen.Add(o)))
                 {
                     if (!obj.IsFree && obj.IsValid)
+                    {
                         pinned.Add(obj);
+                    }
                 }
             }
 
@@ -344,7 +383,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 var pointerMap = hasSymbols ? ResolvablePointers : UnresolvablePointers;
 
                 if (!pointerMap.TryGetValue(range, out List<ulong> pointers))
+                {
                     pointers = pointerMap[range] = new();
+                }
 
                 pointers.Add(pointer);
             }
@@ -362,9 +403,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (var item in sourceDict)
                 {
                     if (destDict.TryGetValue(item.Key, out List<ulong> values))
+                    {
                         values.AddRange(item.Value);
+                    }
                     else
+                    {
                         destDict[item.Key] = new(item.Value);
+                    }
                 }
             }
         }
@@ -415,11 +460,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             public (string Symbol, int Offset) ResolveSymbol(IModuleService modules, ulong ptr)
             {
                 if (_resolved.TryGetValue(ptr, out (string, int) result))
+                {
                     return result;
+                }
 
                 // _resolved is just a cache.  Don't let it get so big we eat all of the memory.
                 if (_resolved.Count > 16 * 1024)
+                {
                     _resolved.Clear();
+                }
 
                 IModule module = modules.GetModuleFromAddress(ptr);
                 IModuleSymbols symbols = module?.Services.GetService<IModuleSymbols>();
@@ -428,7 +477,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     string moduleName = module.FileName;
                     if (!string.IsNullOrWhiteSpace(moduleName))
+                    {
                         symbolName = Path.GetFileName(moduleName) + "!" + symbolName;
+                    }
 
                     return _resolved[ptr] = (symbolName, displacement > int.MaxValue ? int.MaxValue : (int)displacement);
                 }

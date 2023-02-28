@@ -121,18 +121,26 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             int bytesRead = 0;
 
             if (offset + count > buffer.Length)
+            {
                 throw new InvalidOperationException ("Potential write beyond end of buffer");
+            }
 
             if (offset < 0)
+            {
                 throw new InvalidOperationException ("Write before beginning of buffer");
+            }
 
             if (count < 0)
+            {
                 throw new InvalidOperationException ("Negative read count");
+            }
 
             while (true)
             {
                 if (!IsOpen)
+                {
                     throw new EndOfStreamException();
+                }
 
                 unsafe
                 {
@@ -143,7 +151,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
 
                 if (bytesRead == -1 && Marshal.GetLastWin32Error() == USBMuxInterop.EINTR)
+                {
                     continue;
+                }
 
                 return bytesRead;
             }
@@ -190,7 +200,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             while (continueWrite && bytesToWrite - totalBytesWritten > 0)
             {
                 if (!IsOpen)
+                {
                     throw new EndOfStreamException();
+                }
 
                 unsafe
                 {
@@ -201,12 +213,16 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
 
                 if (currentBytesWritten == -1 && Marshal.GetLastWin32Error() == USBMuxInterop.EINTR)
+                {
                     continue;
+                }
 
                 continueWrite = currentBytesWritten != -1;
 
                 if (!continueWrite)
+                {
                     break;
+                }
 
                 totalBytesWritten += currentBytesWritten;
             }
@@ -306,7 +322,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         _logger?.LogDebug("No USB stream connected, timing out.");
 
                         if (_auto_shutdown)
+                        {
                             throw new RuntimeTimeoutException(TcpClientTimeoutMs);
+                        }
 
                         throw new TimeoutException();
                     }
@@ -341,13 +359,17 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             lock (this)
             {
                 if (_deviceConnectionID == 0)
+                {
                     throw new Exception($"Failed to connect device over USB, no device currently connected.");
+                }
 
                 result = USBMuxInterop.USBMuxConnectByPort(_deviceConnectionID, networkPort, out handle);
             }
 
             if (result != 0)
+            {
                 throw new Exception($"Failed to connect device over USB using connection {_deviceConnectionID} and port {_port}.");
+            }
 
             return handle;
         }
@@ -355,7 +377,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         bool ConnectDevice(IntPtr newDevice)
         {
             if (_device != IntPtr.Zero)
+            {
                 return false;
+            }
 
             _device = newDevice;
             if (USBMuxInterop.AMDeviceConnect(_device) == 0)
@@ -492,7 +516,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             lock (this)
             {
                 if (_loopingThread != IntPtr.Zero)
+                {
                     USBMuxInterop.CFRunLoopStop(_loopingThread);
+                }
             }
         }
     }

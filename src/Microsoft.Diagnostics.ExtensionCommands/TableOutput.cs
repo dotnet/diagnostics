@@ -28,15 +28,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             for (int i = 0; i < columns.Length; i++)
             {
                 if (i != 0)
+                {
                     sb.Append(Divider);
+                }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
 
                 string value;
                 if (string.IsNullOrWhiteSpace(format))
+                {
                     value = columns[i]?.ToString();
+                }
                 else
+                {
                     value = Format(columns[i], format);
+                }
 
                 AddValue(_spacing, sb, width, value ?? "");
             }
@@ -51,15 +57,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             for (int i = 0; i < columns.Length; i++)
             {
                 if (i != 0)
+                {
                     sb.Append(spacing, Divider.Length);
+                }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
 
                 string value;
                 if (string.IsNullOrWhiteSpace(format))
+                {
                     value = columns[i]?.ToString();
+                }
                 else
+                {
                     value = Format(columns[i], format);
+                }
 
                 AddValue(spacing, sb, width, value ?? "");
             }
@@ -115,7 +127,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static string Format(object obj, string format)
         {
             if (obj is null)
+            {
                 return null;
+            }
 
             return obj switch
             {

@@ -177,12 +177,16 @@ namespace SOS.Extensions
             SymbolStatus IModuleSymbols.GetSymbolStatus()
             {
                 if (_symbolStatus != SymbolStatus.Unknown)
+                {
                     return _symbolStatus;
-                
+                }
+
                 // GetSymbolStatus is not implemented for anything other than DbgEng for now.
                 IDebugClient client = _moduleService._debuggerServices.DebugClient;
                 if (client is null || client is not IDebugSymbols5 symbols)
-                    return SymbolStatus.Unknown; 
+                {
+                    return SymbolStatus.Unknown;
+                }
 
                 return _symbolStatus = GetSymbolStatusFromDbgEng(symbols);
             }
@@ -202,7 +206,9 @@ namespace SOS.Extensions
                 // been loaded or not.
                 DEBUG_SYMTYPE symType = GetSymType(symbols, ImageBase);
                 if (symType != DEBUG_SYMTYPE.NONE && symType != DEBUG_SYMTYPE.DEFERRED)
+                {
                     return DebugToSymbolStatus(symType);
+                }
 
                 // At this point, the symbol type is DEFERRED or NONE and we haven't tried reloading
                 // the symbol yet.  Try a reload, and then ask one last time what the symbol is.

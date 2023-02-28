@@ -11,7 +11,9 @@ namespace Tracee
         static int Main(string[] args)
         {
             foreach (string s in args)
+            {
                 Console.WriteLine(s);
+            }
 
             return Int32.Parse(args[0]);
         }

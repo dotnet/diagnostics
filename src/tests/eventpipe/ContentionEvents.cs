@@ -56,7 +56,10 @@ namespace EventPipe.UnitTests.ContentionValidation
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Thread lock occured {i} times...");
+                        }
+
                         var myobject = new TestClass();
                         Thread thread1 = new Thread(new ThreadStart(() => myobject.DoSomething(myobject)));
                         Thread thread2 = new Thread(new ThreadStart(() => myobject.DoSomething(myobject)));

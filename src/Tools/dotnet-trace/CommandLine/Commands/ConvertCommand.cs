@@ -32,7 +32,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             if (output == null)
+            {
                 output = inputFilename;
+            }
 
             TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
             return 0;

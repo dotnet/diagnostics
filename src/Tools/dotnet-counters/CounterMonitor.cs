@@ -324,7 +324,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             // If it's not a counter we asked for, ignore it.
             string name = payloadFields["Name"].ToString();
-            if (!_counterList.Contains(obj.ProviderName, name)) return;
+            if (!_counterList.Contains(obj.ProviderName, name))
+            {
+                return;
+            }
 
             // init providerEventState if this is the first time we've seen an event from this provider
             if (!_providerEventStates.TryGetValue(obj.ProviderName, out ProviderEventState providerState))

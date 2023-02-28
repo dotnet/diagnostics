@@ -293,7 +293,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="provider">service provider</param>
         public static void ImportServices(object instance, IServiceProvider provider)
         {
-            if (instance == null) throw new ArgumentNullException(nameof(instance));
+            if (instance == null)
+            {
+                throw new ArgumentNullException(nameof(instance));
+            }
 
             for (Type currentType = instance.GetType(); currentType is not null; currentType = currentType.BaseType)
             {

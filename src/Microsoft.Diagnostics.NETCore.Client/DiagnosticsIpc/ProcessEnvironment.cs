@@ -45,7 +45,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] envBlock = stream.ToArray();
 
             if (envBlock.Length != (long)ExpectedSizeInBytes)
+            {
                 throw new ApplicationException($"ProcessEnvironment continuation length did not match expected length. Expected: {ExpectedSizeInBytes} bytes, Received: {envBlock.Length} bytes");
+            }
 
             var env = new Dictionary<string, string>();
             int cursor = 0;

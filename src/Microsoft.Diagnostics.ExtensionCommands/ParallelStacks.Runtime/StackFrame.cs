@@ -79,7 +79,9 @@ namespace ParallelStacks
         public static string GetNextTypeName(string typeName, ref int start, ref int end)
         {
             if (string.IsNullOrEmpty(typeName))
+            {
                 return string.Empty;
+            }
 
             var sb = new StringBuilder();
 
@@ -211,7 +213,10 @@ namespace ParallelStacks
 
                 //                             skip   .      ,
                 parameter = GetParameter(fullName, pos + 1, next - 1);
-                if (parameter != null) parameters.Add(parameter);
+                if (parameter != null)
+                {
+                    parameters.Add(parameter);
+                }
 
                 pos = next + 1;
             }
@@ -224,7 +229,9 @@ namespace ParallelStacks
             const string BYREF = " ByRef";
             //   ()  no parameter
             if (start >= end)
+            {
                 return null;
+            }
 
             var sb = new StringBuilder();
 
@@ -240,7 +247,9 @@ namespace ParallelStacks
             sb.Append(typeName);
 
             if (isByRef)
+            {
                 sb.Append(BYREF);
+            }
 
             return sb.ToString();
         }

@@ -2097,13 +2097,21 @@ internal class PriorityQueue
         // Sort the items in descending order 
         var items = new List<DataItem>(m_count);
         for (int i = 0; i < m_count; i++)
+        {
             items.Add(m_heap[i]);
+        }
+
         items.Sort((x, y) => y.priority.CompareTo(x.priority));
         if (items.Count > 0)
+        {
             Debug.Assert(items[0].value == m_heap[0].value);
+        }
 
         foreach (var item in items)
+        {
             sb.Append("{").Append((int)item.value).Append(", ").Append(item.priority.ToString("f1")).Append("}").AppendLine();
+        }
+
         sb.AppendLine("</PriorityQueue>");
         return sb.ToString();
     }

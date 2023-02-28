@@ -47,7 +47,9 @@ namespace Microsoft.Internal.Common.Utils
                 }
 
                 if (i != args.Length)
+                {
                     arguments += " ";
+                }
             }
             _childProc.StartInfo.Arguments = arguments;
         }
@@ -56,7 +58,10 @@ namespace Microsoft.Internal.Common.Utils
         {
             for (int i = 0; i < args.Length; i++)
             {
-                if (args[i] == "--" && i < (args.Length - 1)) return i+1;
+                if (args[i] == "--" && i < (args.Length - 1))
+                {
+                    return i+1;
+                }
             }
             return -1;
         }

@@ -99,7 +99,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         pdbCnt++;
                         peCnt--;
                     }
-                    if (pdbCnt == pdbFiles.Count) break;
+                    if (pdbCnt == pdbFiles.Count)
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception e)
@@ -138,7 +141,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     string ret = TrySymbolicateLine(fileStreamReader.ReadLine());
                     fileStreamWriter?.WriteLine(ret);
-                    if (isStdout) console.Out.WriteLine(ret);
+                    if (isStdout)
+                    {
+                        console.Out.WriteLine(ret);
+                    }
                 }
                 console.Out.WriteLine($"\nOutput: {outputPath}\n");
             }
@@ -265,10 +271,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
                             foreach (SequencePoint point in sequencePoints)
                             {
                                 if (point.Offset > Convert.ToInt64(stInfo.Offset, 16))
+                                {
                                     break;
+                                }
 
                                 if (point.StartLine != SequencePoint.HiddenLine)
+                                {
                                     bestPointSoFar = point;
+                                }
                             }
 
                             if (bestPointSoFar.HasValue)
