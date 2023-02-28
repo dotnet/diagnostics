@@ -72,7 +72,7 @@ namespace SOS.Hosting
             AddRef();
         }
 
-        void AddDataTarget(VTableBuilder builder)
+        private void AddDataTarget(VTableBuilder builder)
         {
             builder.AddMethod(new GetMachineTypeDelegate(GetMachineType));
             builder.AddMethod(new GetPointerSizeDelegate(GetPointerSize));
@@ -87,7 +87,7 @@ namespace SOS.Hosting
             builder.AddMethod(new RequestDelegate(Request));
         }
 
-        void AddDataTarget2(VTableBuilder builder)
+        private void AddDataTarget2(VTableBuilder builder)
         {
             AddDataTarget(builder);
             builder.AddMethod(new AllocVirtualDelegate(AllocVirtual));

@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        static string GetTimerString(TimerInfo timer)
+        private static string GetTimerString(TimerInfo timer)
         {
             if (timer.IsShort.HasValue)
             {
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
             "-------------------------------------------------------------------------------" + Environment.NewLine +
             "TimerInfo" + Environment.NewLine +
             Environment.NewLine +

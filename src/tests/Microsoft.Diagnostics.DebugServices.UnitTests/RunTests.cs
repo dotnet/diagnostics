@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         #endregion
     }
 
-    class TestDebugger : TestHost
+    internal class TestDebugger : TestHost
     {
         private readonly ITarget _target;
 

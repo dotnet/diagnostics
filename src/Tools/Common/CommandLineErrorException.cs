@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Tools
     //
     // For any other error conditions that were unanticipated or do not have
     // contextualized error messages, don't use this type.
-    class CommandLineErrorException : Exception
+    internal class CommandLineErrorException : Exception
     {
         public CommandLineErrorException(string errorMessage) : base(errorMessage) { }
     }

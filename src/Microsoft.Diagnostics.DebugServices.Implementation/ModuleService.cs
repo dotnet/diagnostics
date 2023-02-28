@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         // MachO writable segment attribute
-        const uint VmProtWrite = 0x02;
+        private const uint VmProtWrite = 0x02;
 
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;

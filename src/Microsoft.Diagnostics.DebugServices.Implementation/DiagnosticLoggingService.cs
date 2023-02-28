@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        class LoggingListener : TraceListener
+        private class LoggingListener : TraceListener
         {
             private readonly DiagnosticLoggingService _diagnosticLoggingService;
 

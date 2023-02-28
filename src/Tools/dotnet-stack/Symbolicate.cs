@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new Dictionary<string, string>();
         private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new Dictionary<string, MetadataReader>();
 
-        delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
+        private delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
 
         /// <summary>
         /// Get the line number from the Method Token and IL Offset in a stacktrace

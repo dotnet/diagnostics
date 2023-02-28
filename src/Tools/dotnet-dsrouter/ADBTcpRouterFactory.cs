@@ -125,8 +125,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
     internal class ADBTcpServerRouterFactory : TcpServerRouterFactory
     {
-        readonly int _port;
-        bool _ownsPortReverse;
+        private readonly int _port;
+        private bool _ownsPortReverse;
 
         public static TcpServerRouterFactory CreateADBInstance(string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
@@ -159,8 +159,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
     internal class ADBTcpClientRouterFactory : TcpClientRouterFactory
     {
-        readonly int _port;
-        bool _ownsPortForward;
+        private readonly int _port;
+        private bool _ownsPortForward;
 
         public static TcpClientRouterFactory CreateADBInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {

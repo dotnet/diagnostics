@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat);
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat);
         
         public static Command ReportCommand() =>
             new Command(

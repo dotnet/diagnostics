@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal class IpcHeader
     {
-        IpcHeader() { }
+        private IpcHeader() { }
 
         public IpcHeader(DiagnosticsServerCommandSet commandSet, byte commandId)
         {

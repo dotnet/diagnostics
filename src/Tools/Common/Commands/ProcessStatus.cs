@@ -28,8 +28,9 @@ namespace Microsoft.Internal.Common.Commands
                 HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler()
             };
 
-        delegate void ProcessStatusDelegate(IConsole console);
-        static void MakeFixedWidth(string text, int width, StringBuilder sb, bool leftPad = false, bool truncateFront = false)
+        private delegate void ProcessStatusDelegate(IConsole console);
+
+        private static void MakeFixedWidth(string text, int width, StringBuilder sb, bool leftPad = false, bool truncateFront = false)
         {
             int textLength = text.Length;
             sb.Append(" ");
@@ -64,7 +65,8 @@ namespace Microsoft.Internal.Common.Commands
             }
             sb.Append(" ");
         }
-        struct ProcessDetails
+
+        private struct ProcessDetails
         {
             public int ProcessId;
             public string ProcessName;

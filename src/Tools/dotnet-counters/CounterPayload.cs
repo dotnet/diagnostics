@@ -27,8 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public string Tags { get; private set; }
     }
 
-
-    class GaugePayload : CounterPayload
+    internal class GaugePayload : CounterPayload
     {
         public GaugePayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, tags, value, timestamp, "Metric")
@@ -39,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
     }
 
-    class RatePayload : CounterPayload
+    internal class RatePayload : CounterPayload
     {
         public RatePayload(string providerName, string name, string displayName, string displayUnits, string tags, double value, double intervalSecs, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, tags, value, timestamp, "Rate")
@@ -52,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
     }
 
-    class PercentilePayload : CounterPayload
+    internal class PercentilePayload : CounterPayload
     {
         public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string tags, double val, DateTime timestamp) :
             base(providerName, name, displayName, displayUnits, tags, val, timestamp, "Metric")

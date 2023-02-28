@@ -10,9 +10,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class SdkPrebuiltDebuggeeCompiler : IDebuggeeCompiler
     {
-        readonly string _sourcePath;
-        readonly string _binaryPath;
-        readonly string _binaryExePath;
+        private readonly string _sourcePath;
+        private readonly string _binaryPath;
+        private readonly string _binaryExePath;
 
         public SdkPrebuiltDebuggeeCompiler(TestConfiguration config, string debuggeeName)
         {

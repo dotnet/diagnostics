@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class JSONExporter : ICounterRenderer
+    internal class JSONExporter : ICounterRenderer
     {
         private object _lock = new object();
         private string _output;
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Console.WriteLine("File saved to " + _output);
         }
 
-        static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
+        private static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
 
         private string JsonEscape(string input)
         {

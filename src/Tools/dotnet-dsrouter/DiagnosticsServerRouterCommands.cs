@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        class IpcClientTcpServerRunner : SpecificRunnerBase
+        private class IpcClientTcpServerRunner : SpecificRunnerBase
         {
             public IpcClientTcpServerRunner(string verbose) : base(verbose) { }
 
@@ -170,7 +170,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token);
         }
 
-        class IpcServerTcpServerRunner : SpecificRunnerBase
+        private class IpcServerTcpServerRunner : SpecificRunnerBase
         {
             public IpcServerTcpServerRunner(string verbose) : base(verbose) { }
 
@@ -203,7 +203,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token);
         }
 
-        class IpcServerTcpClientRunner : SpecificRunnerBase
+        private class IpcServerTcpClientRunner : SpecificRunnerBase
         {
             public IpcServerTcpClientRunner(string verbose) : base(verbose) { }
 
@@ -233,7 +233,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token);
         }
 
-        class IpcClientTcpClientRunner : SpecificRunnerBase
+        private class IpcClientTcpClientRunner : SpecificRunnerBase
         {
             public IpcClientTcpClientRunner(string verbose) : base(verbose) { }
 
@@ -258,7 +258,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token);
         }
 
-        class IpcServerWebSocketServerRunner : SpecificRunnerBase
+        private class IpcServerWebSocketServerRunner : SpecificRunnerBase
         {
             public IpcServerWebSocketServerRunner(string verbose) : base(verbose) { }
 
@@ -302,7 +302,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        class IpcClientWebSocketServerRunner : SpecificRunnerBase
+        private class IpcClientWebSocketServerRunner : SpecificRunnerBase
         {
             public IpcClientWebSocketServerRunner(string verbose) : base(verbose) { }
 
@@ -341,8 +341,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-
-        static string GetDefaultIpcServerPath(ILogger logger)
+        private static string GetDefaultIpcServerPath(ILogger logger)
         {
             int processId = Environment.ProcessId;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -382,7 +381,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         }
 
-        static TcpClientRouterFactory.CreateInstanceDelegate ChooseTcpClientRouterFactory(string forwardPort, ILogger logger)
+        private static TcpClientRouterFactory.CreateInstanceDelegate ChooseTcpClientRouterFactory(string forwardPort, ILogger logger)
         {
             TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
@@ -403,7 +402,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return tcpClientRouterFactory;
         }
 
-        static NetServerRouterFactory.CreateInstanceDelegate ChooseTcpServerRouterFactory(string forwardPort, ILogger logger)
+        private static NetServerRouterFactory.CreateInstanceDelegate ChooseTcpServerRouterFactory(string forwardPort, ILogger logger)
         {
             NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
@@ -420,7 +419,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return tcpServerRouterFactory;
         }
 
-        static void checkLoopbackOnly(string tcpServer)
+        private static void checkLoopbackOnly(string tcpServer)
         {
             if (!string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
             {

@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
     internal class USBMuxStream : Stream
     {
-        int _handle = -1;
+        private int _handle = -1;
 
         public USBMuxStream(int handle)
         {
@@ -257,11 +257,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
     internal class USBMuxTcpClientRouterFactory : TcpClientRouterFactory
     {
-        readonly int _port;
-
-        IntPtr _device = IntPtr.Zero;
-        uint _deviceConnectionID = 0;
-        IntPtr _loopingThread = IntPtr.Zero;
+        private readonly int _port;
+        private IntPtr _device = IntPtr.Zero;
+        private uint _deviceConnectionID = 0;
+        private IntPtr _loopingThread = IntPtr.Zero;
 
         public static TcpClientRouterFactory CreateUSBMuxInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {
@@ -296,7 +295,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             StopNotificationSubscribeThread();
         }
 
-        async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
+        private async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
             int handle = -1;
             ushort networkPort = (ushort)IPAddress.HostToNetworkOrder(unchecked((short)_port));
@@ -350,7 +349,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return new USBMuxStream(handle);
         }
 
-        int ConnectTcpClientOverUSBMux()
+        private int ConnectTcpClientOverUSBMux()
         {
             uint result = 0;
             int handle = -1;
@@ -374,7 +373,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return handle;
         }
 
-        bool ConnectDevice(IntPtr newDevice)
+        private bool ConnectDevice(IntPtr newDevice)
         {
             if (_device != IntPtr.Zero)
             {
@@ -395,7 +394,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        bool DisconnectDevice()
+        private bool DisconnectDevice()
         {
             if (_device != IntPtr.Zero)
             {
@@ -412,7 +411,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return true;
         }
 
-        void AMDeviceNotificationCallback(ref USBMuxInterop.AMDeviceNotificationCallbackInfo info)
+        private void AMDeviceNotificationCallback(ref USBMuxInterop.AMDeviceNotificationCallbackInfo info)
         {
             _logger?.LogTrace($"AMDeviceNotificationInternal callback, device={info.am_device}, action={info.message}");
 
@@ -453,7 +452,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        void AMDeviceNotificationSubscribeLoop()
+        private void AMDeviceNotificationSubscribeLoop()
         {
             IntPtr context = IntPtr.Zero;
 
@@ -506,12 +505,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        void StartNotificationSubscribeThread()
+        private void StartNotificationSubscribeThread()
         {
             new Thread(new ThreadStart(() => AMDeviceNotificationSubscribeLoop())).Start();
         }
 
-        void StopNotificationSubscribeThread()
+        private void StopNotificationSubscribeThread()
         {
             lock (this)
             {

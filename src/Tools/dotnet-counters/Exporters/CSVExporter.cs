@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class CSVExporter : ICounterRenderer
+    internal class CSVExporter : ICounterRenderer
     {
         private object _lock = new object(); // protects the StringBuilder instance.
         private string _output;

@@ -23,14 +23,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         internal static bool IsQuiet
         {get; set; }
-        static void ConsoleWriteLine(string str)
+
+        private static void ConsoleWriteLine(string str)
         {
             if (!IsQuiet)
             {
                 Console.Out.WriteLine(str);
             }
         }
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
+
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.

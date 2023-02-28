@@ -27,9 +27,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { return _instance.Value; }
         }
 
-        static Lazy<TestRunConfiguration> _instance = new Lazy<TestRunConfiguration>(() => ParseDefaultConfigFile());
+        private static Lazy<TestRunConfiguration> _instance = new Lazy<TestRunConfiguration>(() => ParseDefaultConfigFile());
 
-        static TestRunConfiguration ParseDefaultConfigFile()
+        private static TestRunConfiguration ParseDefaultConfigFile()
         {
             string configFilePath = Path.Combine(TestConfiguration.BaseDir, "Debugger.Tests.Config.txt");
             TestRunConfiguration testRunConfig = new TestRunConfiguration();
@@ -37,11 +37,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             return testRunConfig;
         }
 
-        DateTime _timestamp = DateTime.Now;
+        private DateTime _timestamp = DateTime.Now;
 
         public IEnumerable<TestConfiguration> Configurations { get; private set; }
 
-        void ParseConfigFile(string path)
+        private void ParseConfigFile(string path)
         {
             string nugetPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
             if (nugetPackages == null)
@@ -90,7 +90,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             Configurations = configs.Select(c => new TestConfiguration(c)).ToList();
         }
 
-        static string GetRid()
+        private static string GetRid()
         {
             string os = OS.Kind switch
             {
@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             return $"{os}-{architecture}";
         }
 
-        Dictionary<string, string>[] ParseConfigFile(string path, Dictionary<string, string>[] templates)
+        private Dictionary<string, string>[] ParseConfigFile(string path, Dictionary<string, string>[] templates)
         {
             XDocument doc = XDocument.Load(path);
             XElement elem = doc.Root;
@@ -111,17 +111,17 @@ namespace Microsoft.Diagnostics.TestHelpers
             return ParseConfigSettings(templates, elem);
         }
 
-        string GetTimeStampText()
+        private string GetTimeStampText()
         {
             return _timestamp.ToString("yyyy\\_MM\\_dd\\_hh\\_mm\\_ss\\_ffff");
         }
 
-        string GetInitialWorkingDir()
+        private string GetInitialWorkingDir()
         {
             return Path.Combine(Path.GetTempPath(), "TestRun_" + GetTimeStampText());
         }
 
-        Dictionary<string, string>[] ParseConfigSettings(Dictionary<string, string>[] templates, XElement node)
+        private Dictionary<string, string>[] ParseConfigSettings(Dictionary<string, string>[] templates, XElement node)
         {
             Dictionary<string, string>[] currentTemplates = templates;
             foreach (XElement child in node.Elements())
@@ -131,7 +131,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             return currentTemplates;
         }
 
-        Dictionary<string, string>[] ParseConfigSetting(Dictionary<string, string>[] templates, XElement node)
+        private Dictionary<string, string>[] ParseConfigSetting(Dictionary<string, string>[] templates, XElement node)
         {
             // As long as the templates are added at the end of the list, the "current" 
             // config for this section is the last one in the array.
@@ -196,7 +196,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         //  '<string>' == '<string>'
         //  '<string>' != '<string>'
         // strings support variable embedding with $(<var_name>). e.g Exists('$(PropsFile)')
-        bool EvaluateConditional(Dictionary<string, string> config, XElement node)
+        private bool EvaluateConditional(Dictionary<string, string> config, XElement node)
         {
             void ValidateAndResolveParameters(string funcName, int expectedParamCount, List<string> paramList)
             {
@@ -378,8 +378,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class TestConfiguration
     {
-        const string DebugTypeKey = "DebugType";
-        const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
+        private const string DebugTypeKey = "DebugType";
+        private const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
         
         public static string BaseDir { get; set; } = Path.GetFullPath(".");
 

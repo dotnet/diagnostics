@@ -155,7 +155,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             CopyNativeDependencies(output);
         }
 
-        void PrepareProjectSolution(ITestOutputHelper output)
+        private void PrepareProjectSolution(ITestOutputHelper output)
         {
             AssertDebuggeeSolutionTemplateDirExists(output);
 
@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeProjectFileExists(output);
         }
 
-        SemaphoreSlim _dotnetRestoreLock = new SemaphoreSlim(1);
+        private SemaphoreSlim _dotnetRestoreLock = new SemaphoreSlim(1);
 
         protected async Task Restore(string extraArgs, ITestOutputHelper output)
         {
@@ -287,7 +287,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             await Build("build", output);
         }
 
-        void CopyNativeDependencies(ITestOutputHelper output)
+        private void CopyNativeDependencies(ITestOutputHelper output)
         {
             if (Directory.Exists(DebuggeeNativeLibDirPath))
             {

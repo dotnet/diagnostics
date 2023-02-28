@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
-        ITestOutputHelper Output { get; set; }
+        private ITestOutputHelper Output { get; set; }
 
         public DebugServicesTests(ITestOutputHelper output)
         {

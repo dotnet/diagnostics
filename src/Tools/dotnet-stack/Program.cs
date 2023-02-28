@@ -9,7 +9,7 @@ using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
-    static class Program
+    internal static class Program
     {
         public static Task<int> Main(string[] args)
         {

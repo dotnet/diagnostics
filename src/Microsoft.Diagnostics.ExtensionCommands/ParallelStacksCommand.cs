@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
     "-------------------------------------------------------------------------------" + Environment.NewLine +
     "ParallelStacks" + Environment.NewLine +
     Environment.NewLine +

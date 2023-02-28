@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runRouter(CancellationToken token, DiagnosticsServerRouterFactory routerFactory, Callbacks callbacks)
+        private static async Task<int> runRouter(CancellationToken token, DiagnosticsServerRouterFactory routerFactory, Callbacks callbacks)
         {
             List<Task> runningTasks = new List<Task>();
             List<Router> runningRouters = new List<Router>();
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return 0;
         }
 
-        static bool IsRouterDead(Router router)
+        private static bool IsRouterDead(Router router)
         {
             bool isRunning = router.IsRunning && !router.RouterTaskCompleted.Task.IsCompleted;
             if (!isRunning)

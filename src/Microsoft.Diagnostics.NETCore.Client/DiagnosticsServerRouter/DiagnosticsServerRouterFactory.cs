@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class DiagnosticsServerRouterFactory
     {
-        int IsStreamConnectedTimeoutMs { get; set; } = 500;
+        private int IsStreamConnectedTimeoutMs { get; set; } = 500;
 
         public virtual string IpcAddress { get; }
 
@@ -289,10 +289,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class TcpServerRouterFactory : NetServerRouterFactory
     {
-
-        string _tcpServerAddress;
-
-        ReversedDiagnosticsServer _tcpServer;
+        private string _tcpServerAddress;
+        private ReversedDiagnosticsServer _tcpServer;
 
         public string TcpServerAddress
         {
@@ -351,8 +349,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
 
         private readonly string _webSocketURL;
-
-        ReversedDiagnosticsServer _webSocketServer;
+        private ReversedDiagnosticsServer _webSocketServer;
 
         public string WebSocketURL => _webSocketURL;
 
@@ -545,13 +542,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class IpcServerRouterFactory
     {
-        readonly ILogger _logger;
+        private readonly ILogger _logger;
+        private readonly string _ipcServerPath;
+        private IpcServerTransport _ipcServer;
 
-        readonly string _ipcServerPath;
-
-        IpcServerTransport _ipcServer;
-
-        int IpcServerTimeoutMs { get; set; } = Timeout.Infinite;
+        private int IpcServerTimeoutMs { get; set; } = Timeout.Infinite;
 
         public string IpcServerPath {
             get { return _ipcServerPath; }
@@ -621,13 +616,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class IpcClientRouterFactory
     {
-        readonly ILogger _logger;
+        private readonly ILogger _logger;
+        private readonly string _ipcClientPath;
 
-        readonly string _ipcClientPath;
+        private int IpcClientTimeoutMs { get; set; } = Timeout.Infinite;
 
-        int IpcClientTimeoutMs { get; set; } = Timeout.Infinite;
-
-        int IpcClientRetryTimeoutMs { get; set; } = 500;
+        private int IpcClientRetryTimeoutMs { get; set; } = 500;
 
         public string IpcClientPath {
             get { return _ipcClientPath; }
@@ -730,9 +724,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class IpcServerTcpServerRouterFactory : DiagnosticsServerRouterFactory
     {
-        ILogger _logger;
-        NetServerRouterFactory _netServerRouterFactory;
-        IpcServerRouterFactory _ipcServerRouterFactory;
+        private ILogger _logger;
+        private NetServerRouterFactory _netServerRouterFactory;
+        private IpcServerRouterFactory _ipcServerRouterFactory;
 
         public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
@@ -929,9 +923,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class IpcServerTcpClientRouterFactory : DiagnosticsServerRouterFactory
     {
-        ILogger _logger;
-        IpcServerRouterFactory _ipcServerRouterFactory;
-        TcpClientRouterFactory _tcpClientRouterFactory;
+        private ILogger _logger;
+        private IpcServerRouterFactory _ipcServerRouterFactory;
+        private TcpClientRouterFactory _tcpClientRouterFactory;
 
         public IpcServerTcpClientRouterFactory(string ipcServer, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
@@ -1055,9 +1049,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class IpcClientTcpServerRouterFactory : DiagnosticsServerRouterFactory
     {
-        ILogger _logger;
-        IpcClientRouterFactory _ipcClientRouterFactory;
-        NetServerRouterFactory _tcpServerRouterFactory;
+        private ILogger _logger;
+        private IpcClientRouterFactory _ipcClientRouterFactory;
+        private NetServerRouterFactory _tcpServerRouterFactory;
 
         public IpcClientTcpServerRouterFactory(string ipcClient, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
@@ -1200,12 +1194,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal class IpcClientTcpClientRouterFactory : DiagnosticsServerRouterFactory
     {
-        bool _updateRuntimeInfo;
-        Guid _runtimeInstanceId;
-        ulong _runtimeProcessId;
-        ILogger _logger;
-        IpcClientRouterFactory _ipcClientRouterFactory;
-        TcpClientRouterFactory _tcpClientRouterFactory;
+        private bool _updateRuntimeInfo;
+        private Guid _runtimeInstanceId;
+        private ulong _runtimeProcessId;
+        private ILogger _logger;
+        private IpcClientRouterFactory _ipcClientRouterFactory;
+        private TcpClientRouterFactory _tcpClientRouterFactory;
 
         public IpcClientTcpClientRouterFactory(string ipcClient, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
@@ -1443,22 +1437,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class Router : IDisposable
     {
-        readonly ILogger _logger;
-
-        Stream _frontendStream = null;
-        Stream _backendStream = null;
-
-        Task _backendReadFrontendWriteTask = null;
-        Task _frontendReadBackendWriteTask = null;
-
-        CancellationTokenSource _cancelRouterTokenSource = null;
-
-        bool _disposed = false;
-
-        ulong _backendToFrontendByteTransfer;
-        ulong _frontendToBackendByteTransfer;
-
-        static int s_routerInstanceCount;
+        private readonly ILogger _logger;
+        private Stream _frontendStream = null;
+        private Stream _backendStream = null;
+        private Task _backendReadFrontendWriteTask = null;
+        private Task _frontendReadBackendWriteTask = null;
+        private CancellationTokenSource _cancelRouterTokenSource = null;
+        private bool _disposed = false;
+        private ulong _backendToFrontendByteTransfer;
+        private ulong _frontendToBackendByteTransfer;
+        private static int s_routerInstanceCount;
 
         public TaskCompletionSource<bool> RouterTaskCompleted { get; }
 

@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
     "-------------------------------------------------------------------------------" + Environment.NewLine +
     "DumpConcurrentQueue" + Environment.NewLine +
     Environment.NewLine +

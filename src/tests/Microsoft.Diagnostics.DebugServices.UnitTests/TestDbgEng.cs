@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public override string ToString() => "DbgEng: " + DumpFile;
 
-        class DbgEngController : IDebugOutputCallbacks
+        private class DbgEngController : IDebugOutputCallbacks
         {
             [UnmanagedFunctionPointer(CallingConvention.Winapi)]
             private delegate int DebugCreateDelegate(

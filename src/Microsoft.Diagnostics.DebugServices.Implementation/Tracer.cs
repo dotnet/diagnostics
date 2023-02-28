@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Information(format, arguments);
         }
 
-        sealed class NullTracer : ITracer
+        private sealed class NullTracer : ITracer
         {
             internal NullTracer()
             {

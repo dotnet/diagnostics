@@ -13,8 +13,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class FileTestOutputHelper : ITestOutputHelper, IDisposable
     {
-        readonly StreamWriter _logWriter;
-        readonly object _lock;
+        private readonly StreamWriter _logWriter;
+        private readonly object _lock;
 
         public FileTestOutputHelper(string logFilePath, FileMode fileMode = FileMode.Create)
         {

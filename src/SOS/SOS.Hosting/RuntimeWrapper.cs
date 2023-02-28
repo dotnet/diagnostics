@@ -20,7 +20,7 @@ namespace SOS.Hosting
         /// <summary>
         /// The runtime OS and type. Must match IRuntime::RuntimeConfiguration in runtime.h.
         /// </summary>
-        enum RuntimeConfiguration
+        private enum RuntimeConfiguration
         {
             WindowsDesktop = 0,
             WindowsCore = 1,

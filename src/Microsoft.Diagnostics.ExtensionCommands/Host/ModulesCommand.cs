@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        void DisplayModule(IModule module)
+        private void DisplayModule(IModule module)
         {
             if (Verbose)
             {
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
-        void DisplaySegments(IModule module)
+        private void DisplaySegments(IModule module)
         {
             try
             {

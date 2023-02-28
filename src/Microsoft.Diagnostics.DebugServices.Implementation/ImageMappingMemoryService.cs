@@ -233,7 +233,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return data;
         }
 
-        enum BaseRelocationType
+        private enum BaseRelocationType
         {
             ImageRelBasedAbsolute   = 0,
             ImageRelBasedHigh       = 1,

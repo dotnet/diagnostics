@@ -26,7 +26,7 @@ public class SOS
         Output = output;
     }
 
-    ITestOutputHelper Output { get; set; }
+    private ITestOutputHelper Output { get; set; }
 
     public static IEnumerable<object[]> GetConfigurations(string key, string value)
     {

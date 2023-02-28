@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return new ForwardEnumerable<T>(this);
         }
 
-        class ForwardEnumerable<T> : IEnumerable<T> 
+        private class ForwardEnumerable<T> : IEnumerable<T> 
             where T : LinkedListNode
         {
             private readonly LinkedListNode _list;
@@ -118,16 +118,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return GetEnumerator();
             }
 
-            Enumerator GetEnumerator()
+            private Enumerator GetEnumerator()
             {
                 return new Enumerator(_list);
             }
 
-            class Enumerator : IEnumerator<T>
+            private class Enumerator : IEnumerator<T>
             {
-                readonly LinkedListNode _tail;
-                LinkedListNode _current;
-                LinkedListNode _next;
+                private readonly LinkedListNode _tail;
+                private LinkedListNode _current;
+                private LinkedListNode _next;
 
                 internal Enumerator(LinkedListNode list)
                 {

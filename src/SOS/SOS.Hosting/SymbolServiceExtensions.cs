@@ -19,7 +19,7 @@ namespace SOS.Hosting
     public static class SymbolServiceExtensions
     {
         // HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) 
-        const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
+        private const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
 
         /// <summary>
         /// Set the windows symbol path converting the default "srv*" to the cached public symbol server URL.

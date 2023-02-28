@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
 
         /// <summary>
         /// Reports a stack trace

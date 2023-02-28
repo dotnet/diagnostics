@@ -130,7 +130,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task DownloadFile(string remotePath, string localPath, ITestOutputHelper output)
+        private static async Task DownloadFile(string remotePath, string localPath, ITestOutputHelper output)
         {
             output.WriteLine("Downloading: " + remotePath + " -> " + localPath);
             using HttpClient client = new ();
@@ -146,7 +146,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             output.WriteLine("Downloading finished");
         }
 
-        async static Task UnGZip(string gzipPath, string expandedFilePath, ITestOutputHelper output)
+        private static async Task UnGZip(string gzipPath, string expandedFilePath, ITestOutputHelper output)
         {
             output.WriteLine("Unziping: " + gzipPath + " -> " + expandedFilePath);
             using (FileStream gzipStream = File.OpenRead(gzipPath))
@@ -161,7 +161,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task Unzip(string zipPath, string expandedDirPath, ITestOutputHelper output)
+        private static async Task Unzip(string zipPath, string expandedDirPath, ITestOutputHelper output)
         {
             output.WriteLine("Unziping: " + zipPath + " -> " + expandedDirPath);
             using (FileStream zipStream = File.OpenRead(zipPath))
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async static Task Untar(string tarPath, string expandedDirPath, ITestOutputHelper output)
+        private static async Task Untar(string tarPath, string expandedDirPath, ITestOutputHelper output)
         {
             Directory.CreateDirectory(expandedDirPath);
             string tarToolPath = null;

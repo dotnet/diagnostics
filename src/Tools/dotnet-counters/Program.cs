@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal class Program
     {
-        delegate Task<int> CollectDelegate(
+        private delegate Task<int> CollectDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -37,7 +37,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxHistograms,
             int maxTimeSeries,
             TimeSpan duration);
-        delegate Task<int> MonitorDelegate(
+
+        private delegate Task<int> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,

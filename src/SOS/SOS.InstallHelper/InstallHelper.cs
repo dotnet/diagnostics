@@ -192,8 +192,8 @@ namespace SOS
             }
         }
 
-        const string InitFileStart = "#START - ADDED BY SOS INSTALLER";
-        const string InitFileEnd = "#END - ADDED BY SOS INSTALLER";
+        private const string InitFileStart = "#START - ADDED BY SOS INSTALLER";
+        private const string InitFileEnd = "#END - ADDED BY SOS INSTALLER";
 
         /// <summary>
         /// Configure lldb to load SOS.

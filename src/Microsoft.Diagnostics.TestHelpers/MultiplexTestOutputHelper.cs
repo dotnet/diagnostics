@@ -8,7 +8,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class MultiplexTestOutputHelper : ITestOutputHelper
     {
-        readonly ITestOutputHelper[] _outputs;
+        private readonly ITestOutputHelper[] _outputs;
 
         public MultiplexTestOutputHelper(params ITestOutputHelper[] outputs)
         {

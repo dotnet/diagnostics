@@ -6,9 +6,9 @@ using System;
 
 namespace Tracee
 {
-    class Program
+    internal class Program
     {
-        static int Main(string[] args)
+        private static int Main(string[] args)
         {
             foreach (string s in args)
             {

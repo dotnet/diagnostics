@@ -94,7 +94,7 @@ namespace SOS.Hosting
 
         #region ILLDBServices
 
-        string GetCoreClrDirectory(
+        private string GetCoreClrDirectory(
             IntPtr self)
         {
             IRuntime currentRuntime = _soshost.ContextService.GetCurrentRuntime();
@@ -104,7 +104,7 @@ namespace SOS.Hosting
             return null;
         }
 
-        int VirtualUnwind(
+        private int VirtualUnwind(
             IntPtr self,
             uint threadId,
             uint contextSize,
@@ -113,20 +113,20 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        int SetExceptionCallback(
+        private int SetExceptionCallback(
             IntPtr self,
             PFN_EXCEPTION_CALLBACK callback)
         {
             return HResult.S_OK;
         }
 
-        int ClearExceptionCallback(
+        private int ClearExceptionCallback(
             IntPtr self)
         {
             return HResult.S_OK;
         }
 
-        int GetContextStackTrace(
+        private int GetContextStackTrace(
             IntPtr self,
             IntPtr startContext,
             uint startContextSize,
@@ -142,7 +142,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        int GetValueByName(
+        private int GetValueByName(
             IntPtr self,
             string name,
             out UIntPtr value)
@@ -152,11 +152,11 @@ namespace SOS.Hosting
             return hr;
         }
 
-        #endregion 
+        #endregion
 
         #region ILLDBServices2
 
-        int LoadNativeSymbols2(
+        private int LoadNativeSymbols2(
             IntPtr self,
             bool runtimeOnly,
             ModuleLoadCallback callback)
@@ -177,7 +177,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        int AddModuleSymbol(
+        private int AddModuleSymbol(
             IntPtr self,
             IntPtr parameter,
             string symbolFilename)
@@ -185,7 +185,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        unsafe int GetModuleInfo(
+        private unsafe int GetModuleInfo(
             IntPtr self,
             uint index,
             ulong *moduleBase,

@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public class CounterMonitor
     {
-        const int BufferDelaySecs = 1;
+        private const int BufferDelaySecs = 1;
 
         private int _processId;
         private int _interval;
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private int _maxHistograms;
         private TimeSpan _duration;
 
-        class ProviderEventState
+        private class ProviderEventState
         {
             public DateTime FirstReceiveTimestamp;
             public bool InstrumentEventObserved;
@@ -740,7 +740,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         //   System.Runtime
         //   System.Runtime[exception-count]
         //   System.Runtime[exception-count,cpu-usage]
-        void ParseCounterProvider(string providerText, CounterSet counters)
+        private void ParseCounterProvider(string providerText, CounterSet counters)
         {
             string[] tokens = providerText.Split('[');
             if(tokens.Length == 0)

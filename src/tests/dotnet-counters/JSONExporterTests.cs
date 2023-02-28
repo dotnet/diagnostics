@@ -235,7 +235,7 @@ namespace DotnetCounters.UnitTests
         }
     }
 
-    class JSONCounterPayload
+    internal class JSONCounterPayload
     {
         [JsonProperty("timestamp")]
         public string timestamp { get; set; }
@@ -256,7 +256,7 @@ namespace DotnetCounters.UnitTests
         public double value { get; set; }
     }
 
-    class JSONCounterTrace
+    internal class JSONCounterTrace
     {
         [JsonProperty("TargetProcess")]
         public string targetProcess { get; set; }

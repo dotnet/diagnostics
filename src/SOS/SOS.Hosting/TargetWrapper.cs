@@ -14,7 +14,7 @@ namespace SOS.Hosting
     public sealed unsafe class TargetWrapper : COMCallableIUnknown, IDisposable
     {
         // Must be the same as ITarget::OperatingSystem
-        enum OperatingSystem
+        private enum OperatingSystem
         {
             Unknown         = 0,
             Windows         = 1,

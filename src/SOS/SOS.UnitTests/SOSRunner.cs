@@ -180,15 +180,14 @@ public class SOSRunner : IDisposable
         get { return Debugger.ToString().ToUpperInvariant(); }
     }
 
-    readonly TestConfiguration _config;
-    readonly TestRunner.OutputHelper _outputHelper;
-    readonly Dictionary<string, string> _variables;
-    readonly ScriptLogger _scriptLogger;
-    readonly ProcessRunner _processRunner;
-    readonly DumpType? _dumpType;
-
-    string _lastCommandOutput;
-    string _previousCommandCapture;
+    private readonly TestConfiguration _config;
+    private readonly TestRunner.OutputHelper _outputHelper;
+    private readonly Dictionary<string, string> _variables;
+    private readonly ScriptLogger _scriptLogger;
+    private readonly ProcessRunner _processRunner;
+    private readonly DumpType? _dumpType;
+    private string _lastCommandOutput;
+    private string _previousCommandCapture;
 
     private SOSRunner(NativeDebugger debugger, TestConfiguration config, TestRunner.OutputHelper outputHelper, Dictionary<string, string> variables,
         ScriptLogger scriptLogger, ProcessRunner processRunner, DumpType? dumpType)
@@ -1478,7 +1477,7 @@ public class SOSRunner : IDisposable
         return output;
     }
 
-    class ScriptLogger : TestOutputProcessLogger
+    private class ScriptLogger : TestOutputProcessLogger
     {
         public struct CommandResult
         {
@@ -1492,10 +1491,10 @@ public class SOSRunner : IDisposable
             }
         }
 
-        readonly List<Task<CommandResult>> _taskQueue;
-        readonly StringBuilder _lineBuffer;
-        readonly StringBuilder _lastCommandOutput;
-        TaskCompletionSource<CommandResult> _taskSource;
+        private readonly List<Task<CommandResult>> _taskQueue;
+        private readonly StringBuilder _lineBuffer;
+        private readonly StringBuilder _lastCommandOutput;
+        private TaskCompletionSource<CommandResult> _taskSource;
 
         public bool HasProcessExited { get; private set; }
 
@@ -1555,8 +1554,8 @@ public class SOSRunner : IDisposable
             }
         }
 
-        static readonly string s_endCommandOutput = "<END_COMMAND_OUTPUT>";
-        static readonly string s_endCommandError = "<END_COMMAND_ERROR>";
+        private static readonly string s_endCommandOutput = "<END_COMMAND_OUTPUT>";
+        private static readonly string s_endCommandError = "<END_COMMAND_ERROR>";
 
         public override void WriteLine(ProcessRunner runner, string data, ProcessStream stream)
         {

@@ -10,9 +10,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class PrebuiltDebuggeeCompiler : IDebuggeeCompiler
     {
-        string _sourcePath;
-        string _binaryPath;
-        string _binaryExePath;
+        private string _sourcePath;
+        private string _binaryPath;
+        private string _binaryExePath;
 
         public PrebuiltDebuggeeCompiler(TestConfiguration config, string debuggeeName)
         {

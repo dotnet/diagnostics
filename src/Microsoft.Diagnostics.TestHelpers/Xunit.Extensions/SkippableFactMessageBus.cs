@@ -6,7 +6,7 @@ namespace Xunit.Extensions
 {
     public class SkippableFactMessageBus : IMessageBus
     {
-        readonly IMessageBus innerBus;
+        private readonly IMessageBus innerBus;
 
         public SkippableFactMessageBus(IMessageBus innerBus)
         {

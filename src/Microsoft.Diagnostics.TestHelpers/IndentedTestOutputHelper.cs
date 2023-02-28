@@ -12,8 +12,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class IndentedTestOutputHelper : ITestOutputHelper
     {
-        readonly string _indentText;
-        readonly ITestOutputHelper _output;
+        private readonly string _indentText;
+        private readonly ITestOutputHelper _output;
 
         public IndentedTestOutputHelper(ITestOutputHelper innerOutput, string indentText = "    ")
         {

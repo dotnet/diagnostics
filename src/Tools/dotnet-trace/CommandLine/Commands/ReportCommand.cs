@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class ReportCommandHandler 
     {
-        static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process"};
+        private static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process"};
 
         //Create an extension function to help 
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
@@ -26,7 +26,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
             return ret;
         }
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
+
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
         private static Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
         {
             Console.Error.WriteLine("Error: subcommand was not provided. Available subcommands:");
@@ -34,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Task.FromResult(-1);
         }
 
-        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
+        private delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
         private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose) 
         {          
             try 

@@ -23,9 +23,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 #endif
         }
 
-        PortType _portType;
-
-        TransportType _transportType;
+        private PortType _portType;
+        private TransportType _transportType;
 
         // For TcpSocket TransportType, the address format will be <hostname_or_ip>:<port>
         public string Address { get; }
@@ -36,10 +35,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public TransportType Transport => _transportType;
 
-        const string NamedPipeSchema = "namedpipe";
-        const string UnixDomainSocketSchema = "uds";
-        const string NamedPipeDefaultIPCRoot = @"\\.\pipe\";
-        const string NamedPipeSchemaDefaultIPCRootPath = "/pipe/";
+        private const string NamedPipeSchema = "namedpipe";
+        private const string UnixDomainSocketSchema = "uds";
+        private const string NamedPipeDefaultIPCRoot = @"\\.\pipe\";
+        private const string NamedPipeSchemaDefaultIPCRootPath = "/pipe/";
 
         public IpcEndpointConfig(string address, TransportType transportType, PortType portType)
         {

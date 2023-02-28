@@ -26,8 +26,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </remarks>
     public abstract class BaseDebuggeeCompiler : IDebuggeeCompiler
     {
-        AcquireDotNetTestStep _acquireTask;
-        DotNetBuildDebuggeeTestStep _buildDebuggeeTask;
+        private AcquireDotNetTestStep _acquireTask;
+        private DotNetBuildDebuggeeTestStep _buildDebuggeeTask;
 
         /// <summary>
         /// Creates a new BaseDebuggeeCompiler. This compiler acquires the CLI tools and uses them to build debuggees via dotnet build.

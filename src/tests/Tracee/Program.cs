@@ -8,7 +8,7 @@ using System.IO.Pipes;
 
 namespace Tracee
 {
-    static class Program
+    internal static class Program
     {
         public static int Main(string[] args)
         {

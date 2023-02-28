@@ -169,7 +169,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class DiagnosticPortIpcEndpoint : IpcEndpoint
     {
-        IpcEndpointConfig _config;
+        private IpcEndpointConfig _config;
 
         public DiagnosticPortIpcEndpoint(string diagnosticPort)
         {
@@ -222,9 +222,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
-        int _pid;
-
-        IpcEndpointConfig _config;
+        private int _pid;
+        private IpcEndpointConfig _config;
 
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport

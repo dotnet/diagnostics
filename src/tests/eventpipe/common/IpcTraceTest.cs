@@ -130,7 +130,7 @@ namespace EventPipe.UnitTests.Common
             new EventPipeProvider("SentinelEventSource", EventLevel.Verbose, -1)
         };
 
-        IpcTraceTest(
+        private IpcTraceTest(
             Dictionary<string, ExpectedEventCount> expectedEventCounts,
             Action eventGeneratingAction,
             List<EventPipeProvider> providers,

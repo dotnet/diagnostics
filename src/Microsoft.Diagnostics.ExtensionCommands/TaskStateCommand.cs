@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
             "-------------------------------------------------------------------------------" + Environment.NewLine +
             "TaskState [hexa address] [-v <decimal state value>]" + Environment.NewLine +
             Environment.NewLine +

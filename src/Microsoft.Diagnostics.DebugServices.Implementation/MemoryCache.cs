@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// This class represents a chunk of cached memory, more or less a page.
         /// </summary>
-        class Cluster
+        private class Cluster
         {
             internal const int Size = 4096;
 

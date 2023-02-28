@@ -28,9 +28,9 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class TestStep
     {
-        string _logFilePath;
-        string _stateFilePath;
-        TimeSpan _timeout;
+        private string _logFilePath;
+        private string _stateFilePath;
+        private TimeSpan _timeout;
 
         public TestStep(string logFilePath, string friendlyName)
         {
@@ -409,14 +409,14 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        enum TestStepRunState
+        private enum TestStepRunState
         {
             InProgress,
             Complete,
             Faulted
         }
 
-        class TestStepState
+        private class TestStepState
         {
             public TestStepState()
             {
@@ -468,7 +468,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 return WithFinalState(TestStepRunState.Complete, DateTimeOffset.Now, null, null);
             }
 
-            TestStepState WithFinalState(TestStepRunState runState, DateTimeOffset? taskCompleteTime, string errorMessage, string errorStackTrace)
+            private TestStepState WithFinalState(TestStepRunState runState, DateTimeOffset? taskCompleteTime, string errorMessage, string errorStackTrace)
             {
                 return new TestStepState(runState, Machine, ProcessID, ProcessName, StartTime, taskCompleteTime, errorMessage, errorStackTrace);
             }

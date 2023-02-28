@@ -152,9 +152,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public class OutputHelper : ITestOutputHelper, IDisposable
         {
-            readonly ITestOutputHelper _output;
-            readonly FileTestOutputHelper _fileLogger;
-            readonly ConsoleTestOutputHelper _consoleLogger;
+            private readonly ITestOutputHelper _output;
+            private readonly FileTestOutputHelper _fileLogger;
+            private readonly ConsoleTestOutputHelper _consoleLogger;
 
             public readonly ITestOutputHelper IndentedOutput;
 
@@ -188,8 +188,8 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public class TestLogger : TestOutputProcessLogger
         {
-            readonly StringBuilder _standardOutput;
-            readonly StringBuilder _standardError;
+            private readonly StringBuilder _standardOutput;
+            private readonly StringBuilder _standardError;
 
             public TestLogger(ITestOutputHelper output)
                 : base(output)

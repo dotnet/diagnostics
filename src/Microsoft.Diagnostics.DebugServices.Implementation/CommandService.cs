@@ -269,7 +269,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The normal command handler.
         /// </summary>
-        class CommandHandler : ICommandHandler
+        private class CommandHandler : ICommandHandler
         {
             private readonly CommandAttribute _commandAttribute;
             private readonly IEnumerable<(PropertyInfo Property, Argument Argument)> _arguments;
@@ -460,7 +460,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Local help builder that allows commands to provide more detailed help 
         /// text via the "InvokeHelp" function.
         /// </summary>
-        class LocalHelpBuilder : IHelpBuilder
+        private class LocalHelpBuilder : IHelpBuilder
         {
             private readonly CommandService _commandService;
             private readonly LocalConsole _console;
@@ -496,7 +496,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// pipes through the System.CommandLine parsing allowing per command invocation data (service 
         /// provider and raw command line) to be passed through.
         /// </summary>
-        class LocalConsole : IConsole
+        private class LocalConsole : IConsole
         {
             private IConsoleService _console;
 
@@ -533,9 +533,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             bool IStandardIn.IsInputRedirected { get { return false; } }
 
-            class StandardStreamWriter : IStandardStreamWriter
+            private class StandardStreamWriter : IStandardStreamWriter
             {
-                readonly Action<string> _write;
+                private readonly Action<string> _write;
 
                 public StandardStreamWriter(Action<string> write) => _write = write;
 

@@ -18,7 +18,7 @@ namespace SOS.Extensions
     /// </summary>
     internal class ModuleServiceFromDebuggerServices : ModuleService
     {
-        class FieldFromDebuggerServices : IField
+        private class FieldFromDebuggerServices : IField
         {
             public FieldFromDebuggerServices(IType type, string fieldName, uint offset)
             {
@@ -33,7 +33,7 @@ namespace SOS.Extensions
             public uint Offset { get; }
         }
 
-        class TypeFromDebuggerServices : IType
+        private class TypeFromDebuggerServices : IType
         {
             private ModuleServiceFromDebuggerServices _moduleService;
             private ulong _typeId;
@@ -65,7 +65,7 @@ namespace SOS.Extensions
             }
         }
 
-        class ModuleFromDebuggerServices : Module, IModuleSymbols
+        private class ModuleFromDebuggerServices : Module, IModuleSymbols
         {
             // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
