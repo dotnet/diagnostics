@@ -180,7 +180,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private string GetTransportName(string toolName)
         {
-            string transportName = $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
+            string transportName = $"{toolName}-{Environment.ProcessId}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return transportName;

@@ -301,7 +301,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         errorMessage.AppendLine("As of " + DateTimeOffset.Now + " the process executing this step (ID: 0x" + currentState.ProcessID.ToString("x") + ")" + Environment.NewLine +
                                                 "is no longer running. Perhaps it was killed or exited unexpectedly?");
                     }
-                    else if (openedStepState.ProcessID != Process.GetCurrentProcess().Id)
+                    else if (openedStepState.ProcessID != Environment.ProcessId)
                     {
                         errorMessage.AppendLine("As of " + DateTimeOffset.Now + " the process executing this step (ID: 0x" + currentState.ProcessID.ToString("x") + ")" + Environment.NewLine +
                                                 "is still running. The process may have stopped responding or is running more slowly than expected?");
@@ -422,7 +422,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 RunState = TestStepRunState.InProgress;
                 Machine = Environment.MachineName;
-                ProcessID = Process.GetCurrentProcess().Id;
+                ProcessID = Environment.ProcessId;
                 ProcessName = Process.GetCurrentProcess().ProcessName;
                 StartTime = DateTimeOffset.Now;
             }

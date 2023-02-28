@@ -18,7 +18,7 @@ namespace EventPipeTracee
 
         public static int Main(string[] args)
         {
-            int pid = Process.GetCurrentProcess().Id;
+            int pid = Environment.ProcessId;
             string pipeServerName = args.Length > 0 ? args[0] : null;
             if (pipeServerName == null) 
             {

@@ -127,7 +127,7 @@ namespace Microsoft.Internal.Common.Commands
                     .OrderBy(process => process.ProcessName)
                     .ThenBy(process => process.Id);
 
-                var currentPid = Process.GetCurrentProcess().Id;
+                var currentPid = Environment.ProcessId;
                 List<Microsoft.Internal.Common.Commands.ProcessStatusCommandHandler.ProcessDetails> printInfo = new ();
                 foreach (var process in processes)
                 {

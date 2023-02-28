@@ -300,7 +300,7 @@ public class SOSRunner : IDisposable
                 // Setup a pipe server for the debuggee to connect to sync when to take a dump
                 if (information.UsePipeSync)
                 {
-                    int runnerId = Process.GetCurrentProcess().Id;
+                    int runnerId = Environment.ProcessId;
                     pipeName = $"SOSRunner.{runnerId}.{information.DebuggeeName}";
                     pipeServer = new NamedPipeServerStream(pipeName);
                     arguments.Append(" ");
