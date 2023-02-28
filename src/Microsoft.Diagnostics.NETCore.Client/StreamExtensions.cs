@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int remaining = length;
             while (remaining > 0)
             {
-                int read = await stream.ReadAsync(buffer, totalRead, remaining, cancellationToken);
+                int read = await stream.ReadAsync(buffer.AsMemory(totalRead, remaining), cancellationToken);
                 if (0 == read)
                 {
                     throw new EndOfStreamException();
