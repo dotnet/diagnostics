@@ -181,10 +181,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                     }
                     // If no core or desktop runtime, get the first one if any
-                    if (_currentRuntime is null)
-                    {
-                        _currentRuntime = runtimes.FirstOrDefault();
-                    }
+                    _currentRuntime ??= runtimes.FirstOrDefault();
                 }
             }
             return _currentRuntime;

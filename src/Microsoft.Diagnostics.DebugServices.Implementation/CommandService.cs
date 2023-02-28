@@ -188,10 +188,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if ((commandAttribute.Flags & CommandFlags.Manual) == 0 || factory != null)
                         {
-                            if (factory == null)
-                            {
-                                factory = (services) => Utilities.CreateInstance(type, services);
-                            }
+                            factory ??= (services) => Utilities.CreateInstance(type, services);
                             CreateCommand(baseType, commandAttribute, factory);
                         }
                     }
@@ -513,10 +510,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 get
                 {
-                    if (_console is null)
-                    {
-                        _console = Services.GetService<IConsoleService>();
-                    }
+                    _console ??= Services.GetService<IConsoleService>();
                     return _console;
                 }
             }

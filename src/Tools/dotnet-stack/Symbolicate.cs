@@ -38,10 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                if (output == null)
-                {
-                    output = new FileInfo(inputPath.FullName + ".symbolicated");
-                }
+                output ??= new FileInfo(inputPath.FullName + ".symbolicated");
 
                 SetAssemblyFilePathDictionary(console, searchDir);
 

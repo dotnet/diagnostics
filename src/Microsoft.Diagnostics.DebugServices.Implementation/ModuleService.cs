@@ -175,10 +175,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<ulong, IModule> GetModules()
         {
-            if (_modules is null)
-            {
-                _modules = GetModulesInner();
-            }
+            _modules ??= GetModulesInner();
             return _modules;
         }
 
@@ -188,10 +185,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns></returns>
         private IModule[] GetSortedModules()
         {
-            if (_sortedByBaseAddress is null)
-            {
-                _sortedByBaseAddress = GetModules().OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
-            }
+            _sortedByBaseAddress ??= GetModules().OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
             return _sortedByBaseAddress;
         }
 
@@ -395,9 +389,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             byte[] buffer = new byte[s_versionString.Length];
 
             // We use the mapped memory service to find the version string in case it isn't in the dump.
-            if (_versionCache is null) {
-                _versionCache = new ReadVirtualCache(MemoryService);
-            }
+            _versionCache ??= new ReadVirtualCache(MemoryService);
             _versionCache.Clear();
 
             while (size > 0)

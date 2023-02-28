@@ -79,10 +79,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public byte[] GetThreadContext()
         {
-            if (_threadContext == null)
-            {
-                _threadContext = _threadService.GetThreadContext(this);
-            }
+            _threadContext ??= _threadService.GetThreadContext(this);
             return _threadContext;
         }
 

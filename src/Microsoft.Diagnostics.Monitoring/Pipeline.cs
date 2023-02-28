@@ -74,10 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 else
                 {
-                    if (_runTask == null)
-                    {
-                        _runTask = RunAsyncCore(token);
-                    }
+                    _runTask ??= RunAsyncCore(token);
                     runTask = _runTask;
                 }
             }
@@ -135,10 +132,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 else
                 {
-                    if (_stopTask == null)
-                    {
-                        _stopTask = StopAsyncCore(token);
-                    }
+                    _stopTask ??= StopAsyncCore(token);
                     stopTask = _stopTask;
                 }
             }
@@ -169,10 +163,7 @@ namespace Microsoft.Diagnostics.Monitoring
             Task cleanupTask = null;
             lock (_lock)
             {
-                if (_cleanupTask == null)
-                {
-                    _cleanupTask = OnCleanup();
-                }
+                _cleanupTask ??= OnCleanup();
                 cleanupTask = _cleanupTask;
             }
             return cleanupTask;

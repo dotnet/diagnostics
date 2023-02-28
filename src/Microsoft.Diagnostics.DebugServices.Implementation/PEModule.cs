@@ -32,10 +32,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public PEReader GetPEReader()
         {
-            if (_reader == null)
-            {
-                _reader = Utilities.OpenPEReader(_symbolService.DownloadModuleFile(_module));
-            }
+            _reader ??= Utilities.OpenPEReader(_symbolService.DownloadModuleFile(_module));
             return _reader;
         }
 

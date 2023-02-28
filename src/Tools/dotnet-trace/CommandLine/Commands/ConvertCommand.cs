@@ -31,10 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return ErrorCodes.ArgumentError;
             }
 
-            if (output == null)
-            {
-                output = inputFilename;
-            }
+            output ??= inputFilename;
 
             TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
             return 0;

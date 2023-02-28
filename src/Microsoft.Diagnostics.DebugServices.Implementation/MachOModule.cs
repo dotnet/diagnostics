@@ -46,10 +46,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public MachOFile GetMachOFile()
         {
-            if (_machOFile == null)
-            {
-                _machOFile = Utilities.OpenMachOFile(_symbolService.DownloadModuleFile(_module));
-            }
+            _machOFile ??= Utilities.OpenMachOFile(_symbolService.DownloadModuleFile(_module));
             return _machOFile;
         }
 

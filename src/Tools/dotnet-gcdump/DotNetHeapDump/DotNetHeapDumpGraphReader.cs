@@ -466,10 +466,7 @@ public class DotNetHeapDumpGraphReader
             ulong start = data.RangeStart;
             ulong end = start + data.RangeUsedLength;
 
-            if (m_dotNetHeapInfo.Segments == null)
-            {
-                m_dotNetHeapInfo.Segments = new List<GCHeapDumpSegment>();
-            }
+            m_dotNetHeapInfo.Segments ??= new List<GCHeapDumpSegment>();
 
             GCHeapDumpSegment segment = new GCHeapDumpSegment();
             segment.Start = start;

@@ -46,10 +46,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ELFFile GetELFFile()
         {
-            if (_elfFile == null)
-            {
-                _elfFile = Utilities.OpenELFFile(_symbolService.DownloadModuleFile(_module));
-            }
+            _elfFile ??= Utilities.OpenELFFile(_symbolService.DownloadModuleFile(_module));
             return _elfFile;
         }
 

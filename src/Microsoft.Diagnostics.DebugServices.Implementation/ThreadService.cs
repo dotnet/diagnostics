@@ -242,9 +242,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<uint, IThread> GetThreads()
         {
-            if (_threads is null) {
-                _threads = GetThreadsInner().OrderBy((thread) => thread.ThreadId).ToDictionary((thread) => thread.ThreadId);
-            }
+            _threads ??= GetThreadsInner().OrderBy((thread) => thread.ThreadId).ToDictionary((thread) => thread.ThreadId);
             return _threads;
         }
 

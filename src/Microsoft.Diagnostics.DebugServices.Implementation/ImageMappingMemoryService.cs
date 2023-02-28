@@ -190,11 +190,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             // Find or download the ELF image, if one.
                             Reader virtualAddressReader = module.Services.GetService<ELFModule>()?.GetELFFile()?.VirtualAddressReader;
-                            if (virtualAddressReader is null)
-                            {
-                                // Find or download the MachO image, if one.
-                                virtualAddressReader = module.Services.GetService<MachOModule>()?.GetMachOFile()?.VirtualAddressReader;
-                            }
+                            // Find or download the MachO image, if one.
+                            virtualAddressReader ??= module.Services.GetService<MachOModule>()?.GetMachOFile()?.VirtualAddressReader;
                             if (virtualAddressReader is not null)
                             {
                                 // Read the memory from the image.

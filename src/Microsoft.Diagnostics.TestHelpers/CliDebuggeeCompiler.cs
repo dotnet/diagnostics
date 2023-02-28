@@ -41,11 +41,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 buildProperties.Add("SelfContained", "true");
             }
             string debugType = config.DebugType;
-            if (debugType == null)
-            {
-                // The default PDB type is portable
-                debugType = "portable";
-            }
+            // The default PDB type is portable
+            debugType ??= "portable";
             buildProperties.Add("DebugType", debugType);
             return buildProperties;
         }

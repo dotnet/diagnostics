@@ -105,19 +105,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public string GetDacFilePath()
         {
-            if (_dacFilePath is null)
-            {
-                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
-            }
+            _dacFilePath ??= GetLibraryPath(DebugLibraryKind.Dac);
             return _dacFilePath;
         }
 
         public string GetDbiFilePath()
         {
-            if (_dbiFilePath is null)
-            {
-                _dbiFilePath = GetLibraryPath(DebugLibraryKind.Dbi);
-            }
+            _dbiFilePath ??= GetLibraryPath(DebugLibraryKind.Dbi);
             return _dbiFilePath;
         }
 
