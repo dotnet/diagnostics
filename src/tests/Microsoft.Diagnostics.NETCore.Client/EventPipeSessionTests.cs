@@ -119,19 +119,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [SkippableTheory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionUnavailableTest(TestConfiguration config)
         {
-            return EventPipeSessionUnavailableTestCore(config, useAsync: false);
+            return EventPipeSessionTests.EventPipeSessionUnavailableTestCore(config, useAsync: false);
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionUnavailableTestAsync(TestConfiguration config)
         {
-            return EventPipeSessionUnavailableTestCore(config, useAsync: true);
+            return EventPipeSessionTests.EventPipeSessionUnavailableTestCore(config, useAsync: true);
         }
 
         /// <summary>
         /// Tries to start an EventPipe session on a non-existent process
         /// </summary>
-        private async Task EventPipeSessionUnavailableTestCore(TestConfiguration config, bool useAsync)
+        private static async Task EventPipeSessionUnavailableTestCore(TestConfiguration config, bool useAsync)
         {
             List<int> pids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
             int arbitraryPid = 1;

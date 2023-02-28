@@ -15,7 +15,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
 {
     public class M_verbose : IDisposable
     {
-        public bool IsZero(char c)
+        public static bool IsZero(char c)
         {
             return c == 0;
         }
@@ -61,7 +61,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
 
                         using (M_verbose verbose = new M_verbose())
                         {
-                            verbose.IsZero('f');
+                            M_verbose.IsZero('f');
                             verbose.Dispose();
                         }
                     }

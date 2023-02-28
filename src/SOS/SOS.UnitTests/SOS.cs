@@ -35,7 +35,7 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
 
-    private void SkipIfArm(TestConfiguration config)
+    private static void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture == "arm" || config.TargetArchitecture == "arm64")
         {
@@ -97,7 +97,7 @@ public class SOS
         }
     }
 
-    private void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
+    private static void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
     {
         string crashReportPath = dumpName + ".crashreport.json";
         TestRunner.OutputHelper outputHelper = TestRunner.ConfigureLogging(information.TestConfiguration, information.OutputHelper, information.TestName + ".CrashReportTest");

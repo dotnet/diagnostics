@@ -15,7 +15,7 @@ namespace SOS.Hosting.DbgEng
         {
             VTableBuilder builder = client.AddInterface(typeof(IDebugAdvanced).GUID, validate: true);
             builder.AddMethod(new GetThreadContextDelegate(soshost.GetThreadContext));
-            builder.AddMethod(new SetThreadContextDelegate(soshost.SetThreadContext));
+            builder.AddMethod(new SetThreadContextDelegate(SOSHost.SetThreadContext));
             builder.Complete();
         }
 

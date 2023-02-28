@@ -54,7 +54,7 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.Arguments = arguments;
         }
 
-        private int FindUnparsedTokenIndex(string[] args)
+        private static int FindUnparsedTokenIndex(string[] args)
         {
             for (int i = 0; i < args.Length; i++)
             {
@@ -66,7 +66,7 @@ namespace Microsoft.Internal.Common.Utils
             return -1;
         }
 
-        private async Task ReadAndIgnoreAllStreamAsync(StreamReader streamToIgnore, CancellationToken cancelToken)
+        private static async Task ReadAndIgnoreAllStreamAsync(StreamReader streamToIgnore, CancellationToken cancelToken)
         {
             Memory<char> memory = new char[4096];
             while (await streamToIgnore.ReadAsync(memory, cancelToken) != 0)
@@ -181,7 +181,7 @@ namespace Microsoft.Internal.Common.Utils
         private string _toolName;
         private int _timeoutInSec;
 
-        private string GetTransportName(string toolName)
+        private static string GetTransportName(string toolName)
         {
             string transportName = $"{toolName}-{Process.GetCurrentProcess().Id}-{DateTime.Now:yyyyMMdd_HHmmss}.socket";
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

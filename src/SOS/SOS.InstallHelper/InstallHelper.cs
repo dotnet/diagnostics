@@ -280,7 +280,7 @@ namespace SOS
         /// <param name="errorMessage">text message or null (don't throw exception)</param>
         /// <param name="operation">callback</param>
         /// <exception cref="SOSInstallerException">errorMessage</exception>
-        private void RetryOperation(string errorMessage, Action operation)
+        private static void RetryOperation(string errorMessage, Action operation)
         {
             Exception lastfailure = null;
 

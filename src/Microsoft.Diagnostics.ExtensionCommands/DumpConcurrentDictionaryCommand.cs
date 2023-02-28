@@ -91,7 +91,7 @@ System.Collections.Concurrent.ConcurrentDictionary<System.Int32, ForDump.DumpStr
 ";
         }
 
-        private string Truncate(string str, int nbMaxChars)
+        private static string Truncate(string str, int nbMaxChars)
         {
             if (str.Length <= nbMaxChars)
             {

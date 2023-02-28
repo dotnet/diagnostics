@@ -86,20 +86,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionDefaultHandlerTest()
         {
-            await HandleableCollectionDefaultHandlerTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionDefaultHandlerTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionDefaultHandlerTestAsync()
         {
-            await HandleableCollectionDefaultHandlerTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionDefaultHandlerTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that the default handler handles one item at a time and
         /// removes each item after each successful handling.
         /// </summary>
-        private async Task HandleableCollectionDefaultHandlerTestCore(bool useAsync)
+        private static async Task HandleableCollectionDefaultHandlerTestCore(bool useAsync)
         {
             using var collection = new HandleableCollection<int>();
             Assert.Empty(collection);
@@ -126,13 +126,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionComplexHandlerTest()
         {
-            await HandleableCollectionComplexHandlerTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionComplexHandlerTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionComplexHandlerTestAsync()
         {
-            await HandleableCollectionComplexHandlerTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionComplexHandlerTestCore(useAsync: true);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// handling an item and that the handled item is the item on which
         /// the handler completed.
         /// </summary>
-        private async Task HandleableCollectionComplexHandlerTestCore(bool useAsync)
+        private static async Task HandleableCollectionComplexHandlerTestCore(bool useAsync)
         {
             using var collection = new HandleableCollection<int>();
             Assert.Empty(collection);
@@ -171,19 +171,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionHandleBeforeAddTest()
         {
-            await HandleableCollectionHandleBeforeAddTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionHandleBeforeAddTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionHandleBeforeAddTestAsync()
         {
-            await HandleableCollectionHandleBeforeAddTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionHandleBeforeAddTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that handler can be added before an item is provided to the collection.
         /// </summary>
-        private async Task HandleableCollectionHandleBeforeAddTestCore(bool useAsync)
+        private static async Task HandleableCollectionHandleBeforeAddTestCore(bool useAsync)
         {
             using var collection = new TestHandleableCollection<int>();
             Assert.Empty(collection);
@@ -235,20 +235,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionHandleNoRemovalTest()
         {
-            await HandleableCollectionHandleNoRemovalTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionHandleNoRemovalTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionHandleNoRemovalTestAsync()
         {
-            await HandleableCollectionHandleNoRemovalTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionHandleNoRemovalTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that handler does not have to remove an item from the collection
         /// and that the handled item is the item on which the handler completed.
         /// </summary>
-        private async Task HandleableCollectionHandleNoRemovalTestCore(bool useAsync)
+        private static async Task HandleableCollectionHandleNoRemovalTestCore(bool useAsync)
         {
             using var collection = new HandleableCollection<int>();
             Assert.Empty(collection);
@@ -333,20 +333,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionHandlerThrowsTest()
         {
-            await HandleableCollectionHandlerThrowsTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionHandlerThrowsTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionHandlerThrowsTestAsync()
         {
-            await HandleableCollectionHandlerThrowsTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionHandlerThrowsTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that handler does not have to remove an item from the collection
         /// and that the handled item is the item on which the handler completed.
         /// </summary>
-        private async Task HandleableCollectionHandlerThrowsTestCore(bool useAsync)
+        private static async Task HandleableCollectionHandlerThrowsTestCore(bool useAsync)
         {
             using var collection = new HandleableCollection<int>();
             Assert.Empty(collection);

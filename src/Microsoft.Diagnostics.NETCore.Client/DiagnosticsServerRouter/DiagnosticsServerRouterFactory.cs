@@ -559,7 +559,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _ipcServer = IpcServerTransport.Create(_ipcServerPath, IpcServerTransport.MaxAllowedConnections, ReversedDiagnosticsServer.Kind.Ipc);
         }
 
-        public void Start()
+        public static void Start()
         {
         }
 
@@ -754,7 +754,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override Task Start(CancellationToken token)
         {
             _netServerRouterFactory.Start();
-            _ipcServerRouterFactory.Start();
+            IpcServerRouterFactory.Start();
 
             _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> {_netServerRouterFactory.ServerTransportName} server ({_netServerRouterFactory.ServerAddress}) router.");
 
@@ -949,7 +949,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Task Start(CancellationToken token)
         {
-            _ipcServerRouterFactory.Start();
+            IpcServerRouterFactory.Start();
             _tcpClientRouterFactory.Start();
             _logger?.LogInformation($"Starting IPC server ({_ipcServerRouterFactory.IpcServerPath}) <--> TCP client ({_tcpClientRouterFactory.TcpClientAddress}) router.");
 

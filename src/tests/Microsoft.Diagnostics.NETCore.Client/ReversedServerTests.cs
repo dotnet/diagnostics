@@ -229,7 +229,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // Start client pointing to diagnostics server
             await using (TestRunner runner = await StartTracee(config, transportName))
             {
-                info = await AcceptEndpointInfo(server, useAsync);
+                info = await ReversedServerTests.AcceptEndpointInfo(server, useAsync);
 
                 await VerifyEndpointInfo(runner, info, useAsync);
 
@@ -247,7 +247,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(info, useAsync, expectTimeout: true);
+            await ReversedServerTests.VerifyWaitForConnection(info, useAsync, expectTimeout: true);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
@@ -284,7 +284,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using (TestRunner runner = await StartTracee(config, transportName))
             {
                 // Get client connection
-                info = await AcceptEndpointInfo(server, useAsync);
+                info = await ReversedServerTests.AcceptEndpointInfo(server, useAsync);
 
                 await VerifyEndpointInfo(runner, info, useAsync);
 
@@ -295,14 +295,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 await runner.WaitForTracee();
 
-                await VerifyWaitForConnection(info, useAsync);
+                await ReversedServerTests.VerifyWaitForConnection(info, useAsync);
             }
 
             // Wait some time for the process to exit
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             // Process exited so the endpoint should not have a valid transport anymore.
-            await VerifyWaitForConnection(info, useAsync, expectTimeout: true);
+            await ReversedServerTests.VerifyWaitForConnection(info, useAsync, expectTimeout: true);
 
             Assert.True(server.RemoveConnection(info.RuntimeInstanceCookie), "Expected to be able to remove connection from server.");
 
@@ -331,7 +331,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using (TestRunner runner = await StartTracee(config, transportName))
             {
                 // Get client connection
-                IpcEndpointInfo info = await AcceptEndpointInfo(server, useAsync: true);
+                IpcEndpointInfo info = await ReversedServerTests.AcceptEndpointInfo(server, useAsync: true);
 
                 await VerifyEndpointInfo(runner, info, useAsync: true);
 
@@ -342,7 +342,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 await runner.WaitForTracee();
 
-                await VerifyWaitForConnection(info, useAsync: true);
+                await ReversedServerTests.VerifyWaitForConnection(info, useAsync: true);
 
                 transportVersion = await transportCallback.GetStableTransportVersion();
 
@@ -360,7 +360,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new ReversedDiagnosticsServer(transportName);
         }
 
-        private async Task<IpcEndpointInfo> AcceptEndpointInfo(ReversedDiagnosticsServer server, bool useAsync)
+        private static async Task<IpcEndpointInfo> AcceptEndpointInfo(ReversedDiagnosticsServer server, bool useAsync)
         {
             var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
 
@@ -375,7 +375,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return runner;
         }
 
-        private async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
+        private static async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
             var shim = new IpcEndpointApiShim(info.Endpoint, useAsync);
 
@@ -408,7 +408,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.NotEqual(Guid.Empty, info.RuntimeInstanceCookie);
             Assert.NotNull(info.Endpoint);
 
-            await VerifyWaitForConnection(info, useAsync, expectTimeout);
+            await ReversedServerTests.VerifyWaitForConnection(info, useAsync, expectTimeout);
 
             runner.WriteLine($"Connection: {info.DebuggerDisplay}");
         }
@@ -435,7 +435,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private async Task VerifySingleSession(IpcEndpointInfo info, bool useAsync)
         {
-            await VerifyWaitForConnection(info, useAsync);
+            await ReversedServerTests.VerifyWaitForConnection(info, useAsync);
 
             var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(info.Endpoint), useAsync);
 

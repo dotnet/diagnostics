@@ -273,7 +273,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             return true;
         }
 
-        private bool TryGetParametersForFunction(string expression, string targetFunctionName, out List<string> exprParams)
+        private static bool TryGetParametersForFunction(string expression, string targetFunctionName, out List<string> exprParams)
         {
             int functionKeyworkIndex = expression.IndexOf($"{targetFunctionName}(");
             if (functionKeyworkIndex == -1)
@@ -338,7 +338,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             return true;
         }
 
-        private string ResolveProperties(Dictionary<string, string> config, string rawNodeValue)
+        private static string ResolveProperties(Dictionary<string, string> config, string rawNodeValue)
         {
             StringBuilder resolvedValue = new StringBuilder();
             for (int i = 0; i < rawNodeValue.Length;)

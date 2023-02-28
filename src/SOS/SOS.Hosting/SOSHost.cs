@@ -190,7 +190,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        internal int Execute(
+        internal static int Execute(
             IntPtr self,
             DEBUG_OUTCTL outputControl,
             string command,
@@ -215,7 +215,7 @@ namespace SOS.Hosting
             throw new NotImplementedException("GetLastEventInformation");
         }
 
-        internal unsafe int Disassemble(
+        internal static unsafe int Disassemble(
             IntPtr self,
             ulong offset,
             DEBUG_DISASM flags,
@@ -262,7 +262,7 @@ namespace SOS.Hosting
             return HResult.E_FAIL;
         }
 
-        internal int GetSymbolOptions(
+        internal static int GetSymbolOptions(
             IntPtr self,
             out SYMOPT options)
         {
@@ -270,7 +270,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        internal unsafe int GetNameByOffset(
+        internal static unsafe int GetNameByOffset(
             IntPtr self,
             ulong offset,
             StringBuilder nameBuffer,
@@ -521,7 +521,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        internal unsafe int GetLineByOffset(
+        internal static unsafe int GetLineByOffset(
             IntPtr self,
             ulong offset,
             uint* line,
@@ -536,7 +536,7 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        internal unsafe int GetSourceFileLineOffsets(
+        internal static unsafe int GetSourceFileLineOffsets(
             IntPtr self,
             string file,
             ulong[] buffer,
@@ -547,7 +547,7 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        internal unsafe int FindSourceFile(
+        internal static unsafe int FindSourceFile(
             IntPtr self,
             uint startElement,
             string file,
@@ -562,7 +562,7 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        internal unsafe int GetSymbolPath(
+        internal static unsafe int GetSymbolPath(
             IntPtr self,
             StringBuilder buffer,
             int bufferSize,
@@ -616,7 +616,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        internal int SetThreadContext(
+        internal static int SetThreadContext(
             IntPtr self,
             IntPtr context,
             uint contextSize)

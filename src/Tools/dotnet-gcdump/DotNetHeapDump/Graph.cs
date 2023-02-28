@@ -2628,7 +2628,7 @@ public class GraphSampler
     /// </summary>
     private const NodeIndex PotentialNode = (NodeIndex)(-3);
 
-    private bool IsSampledNode(NodeIndex nodeIdx) { return 0 <= nodeIdx; }
+    private static bool IsSampledNode(NodeIndex nodeIdx) { return 0 <= nodeIdx; }
 
     private MemoryGraph m_graph;
     private int m_targetNodeCount;

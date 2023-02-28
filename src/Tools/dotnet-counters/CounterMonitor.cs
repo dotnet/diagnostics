@@ -740,7 +740,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         //   System.Runtime
         //   System.Runtime[exception-count]
         //   System.Runtime[exception-count,cpu-usage]
-        private void ParseCounterProvider(string providerText, CounterSet counters)
+        private static void ParseCounterProvider(string providerText, CounterSet counters)
         {
             string[] tokens = providerText.Split('[');
             if (tokens.Length == 0)

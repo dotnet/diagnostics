@@ -240,7 +240,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ImageRelBasedDir64 = 10,
         }
 
-        private void ApplyRelocations(IModule module, PEReader reader, int dataVA, byte[] data)
+        private static void ApplyRelocations(IModule module, PEReader reader, int dataVA, byte[] data)
         {
             PEMemoryBlock relocations = reader.GetSectionData(".reloc");
             if (relocations.Length > 0)

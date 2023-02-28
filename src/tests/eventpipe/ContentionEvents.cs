@@ -18,7 +18,7 @@ namespace EventPipe.UnitTests.ContentionValidation
     public class TestClass
     {
         public int a;
-        public void DoSomething(TestClass obj)
+        public static void DoSomething(TestClass obj)
         {
             lock (obj)
             {
@@ -60,8 +60,8 @@ namespace EventPipe.UnitTests.ContentionValidation
                         }
 
                         var myobject = new TestClass();
-                        Thread thread1 = new Thread(new ThreadStart(() => myobject.DoSomething(myobject)));
-                        Thread thread2 = new Thread(new ThreadStart(() => myobject.DoSomething(myobject)));
+                        Thread thread1 = new Thread(new ThreadStart(() => TestClass.DoSomething(myobject)));
+                        Thread thread2 = new Thread(new ThreadStart(() => TestClass.DoSomething(myobject)));
                         thread1.Start();
                         thread2.Start();
                         thread1.Join();

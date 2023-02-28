@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics
             return HResult.S_OK;
         }
 
-        private HResult WriteLine(string message)
+        private static HResult WriteLine(string message)
         {
             Trace.TraceInformation("ManagedCallbackWrapper." + message);
             return HResult.E_NOTIMPL;

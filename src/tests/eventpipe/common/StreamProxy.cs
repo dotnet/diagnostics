@@ -16,7 +16,7 @@ namespace EventPipe.UnitTests.Common
     public class StreamProxy : Stream
     {
         private Stream ProxiedStream { get; }
-        private MemoryStream InternalStream => new MemoryStream();
+        private static MemoryStream InternalStream => new MemoryStream();
         public override bool CanRead => ProxiedStream.CanRead;
 
         public override bool CanSeek => ProxiedStream.CanSeek;
@@ -53,7 +53,7 @@ namespace EventPipe.UnitTests.Common
                 return readCount;
             }
 
-            InternalStream.Write(localBuffer, 0, readCount);
+            StreamProxy.InternalStream.Write(localBuffer, 0, readCount);
 
             if (buffer.Length - offset < count)
             {
@@ -92,7 +92,7 @@ namespace EventPipe.UnitTests.Common
                 if (disposing)
                 {
                     ProxiedStream.Dispose();
-                    InternalStream.Dispose();
+                    StreamProxy.InternalStream.Dispose();
                 }
 
                 disposed = true;
@@ -107,8 +107,8 @@ namespace EventPipe.UnitTests.Common
             using (var streamDumpFile = File.Create(filePath))
             {
                 Logger.logger.Log($"\t Writing stream for PID {System.Diagnostics.Process.GetCurrentProcess().Id} to {filePath}");
-                InternalStream.Seek(0, SeekOrigin.Begin);
-                InternalStream.CopyTo(streamDumpFile);
+                StreamProxy.InternalStream.Seek(0, SeekOrigin.Begin);
+                StreamProxy.InternalStream.CopyTo(streamDumpFile);
             }
         }
     }

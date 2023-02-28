@@ -44,24 +44,24 @@ namespace SOS.Hosting
             builder.AddMethod(new GetDebuggeeTypeDelegate(soshost.GetDebuggeeType));
             builder.AddMethod(new GetPageSizeDelegate(soshost.GetPageSize));
             builder.AddMethod(new GetExecutingProcessorTypeDelegate(soshost.GetExecutingProcessorType));
-            builder.AddMethod(new ExecuteDelegate(soshost.Execute));
+            builder.AddMethod(new ExecuteDelegate(SOSHost.Execute));
             builder.AddMethod(new GetLastEventInformationDelegate(soshost.GetLastEventInformation));
-            builder.AddMethod(new DisassembleDelegate(soshost.Disassemble));
+            builder.AddMethod(new DisassembleDelegate(SOSHost.Disassemble));
 
             builder.AddMethod(new GetContextStackTraceDelegate(GetContextStackTrace));
             builder.AddMethod(new ReadVirtualDelegate(soshost.ReadVirtual));
             builder.AddMethod(new WriteVirtualDelegate(soshost.WriteVirtual));
 
-            builder.AddMethod(new GetSymbolOptionsDelegate(soshost.GetSymbolOptions));
-            builder.AddMethod(new GetNameByOffsetDelegate(soshost.GetNameByOffset));
+            builder.AddMethod(new GetSymbolOptionsDelegate(SOSHost.GetSymbolOptions));
+            builder.AddMethod(new GetNameByOffsetDelegate(SOSHost.GetNameByOffset));
             builder.AddMethod(new GetNumberModulesDelegate(soshost.GetNumberModules));
             builder.AddMethod(new GetModuleByIndexDelegate(soshost.GetModuleByIndex));
             builder.AddMethod(new GetModuleByModuleNameDelegate(soshost.GetModuleByModuleName));
             builder.AddMethod(new GetModuleByOffsetDelegate(soshost.GetModuleByOffset));
             builder.AddMethod(new GetModuleNamesDelegate(soshost.GetModuleNames));
-            builder.AddMethod(new GetLineByOffsetDelegate(soshost.GetLineByOffset));
-            builder.AddMethod(new GetSourceFileLineOffsetsDelegate(soshost.GetSourceFileLineOffsets));
-            builder.AddMethod(new FindSourceFileDelegate(soshost.FindSourceFile));
+            builder.AddMethod(new GetLineByOffsetDelegate(SOSHost.GetLineByOffset));
+            builder.AddMethod(new GetSourceFileLineOffsetsDelegate(SOSHost.GetSourceFileLineOffsets));
+            builder.AddMethod(new FindSourceFileDelegate(SOSHost.FindSourceFile));
 
             builder.AddMethod(new GetCurrentProcessSystemIdDelegate(soshost.GetCurrentProcessSystemId));
             builder.AddMethod(new GetCurrentThreadIdDelegate(soshost.GetCurrentThreadId));

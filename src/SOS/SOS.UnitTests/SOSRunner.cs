@@ -1421,7 +1421,7 @@ public class SOSRunner : IDisposable
         return defines;
     }
 
-    private bool IsActiveDefineRegionEnabled(Dictionary<string, bool> activeDefines, HashSet<string> enabledDefines)
+    private static bool IsActiveDefineRegionEnabled(Dictionary<string, bool> activeDefines, HashSet<string> enabledDefines)
     {
         foreach (KeyValuePair<string, bool> activeDefine in activeDefines)
         {

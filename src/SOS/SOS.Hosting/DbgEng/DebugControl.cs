@@ -48,7 +48,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new GetNotifyEventHandleDelegate((self, handle) => DebugClient.NotImplemented));
             builder.AddMethod(new SetNotifyEventHandleDelegate((self, handle) => DebugClient.NotImplemented));
             builder.AddMethod(new AssembleDelegate((self, offset, instr, endoffset) => DebugClient.NotImplemented));
-            builder.AddMethod(new DisassembleDelegate(soshost.Disassemble));
+            builder.AddMethod(new DisassembleDelegate(SOSHost.Disassemble));
             builder.AddMethod(new GetDisassembleEffectiveOffsetDelegate((self, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new OutputDisassemblyDelegate((self, outputControl, offset, flags, endOffset) => DebugClient.NotImplemented));
             builder.AddMethod(new OutputDisassemblyLinesDelegate((self, outputControl, previousLines, totalLines, offset, flags, offsetLine, startOffset, EndOffset, lineOffsets) => DebugClient.NotImplemented));
@@ -88,7 +88,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new EvaluateDelegate((self, expression, desiredType, value, remainderIndex) => DebugClient.NotImplemented));
             builder.AddMethod(new CoerceValueDelegate((self, inValue, outType, outValue) => DebugClient.NotImplemented));
             builder.AddMethod(new CoerceValuesDelegate((self, count, inValues, outTypes, outValues) => DebugClient.NotImplemented));
-            builder.AddMethod(new ExecuteDelegate(soshost.Execute));
+            builder.AddMethod(new ExecuteDelegate(SOSHost.Execute));
             builder.AddMethod(new ExecuteCommandFileDelegate((self, outputControl, commandFile, flags) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNumberBreakpointsDelegate((self, number) => DebugClient.NotImplemented));
             builder.AddMethod(new GetBreakpointByIndexDelegate((self, index, bp) => DebugClient.NotImplemented));

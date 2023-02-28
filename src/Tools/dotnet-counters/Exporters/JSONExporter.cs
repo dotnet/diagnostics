@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
 
-        private string JsonEscape(string input)
+        private static string JsonEscape(string input)
         {
             if (input is null)
             {

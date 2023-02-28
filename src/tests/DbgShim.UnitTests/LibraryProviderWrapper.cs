@@ -374,7 +374,7 @@ namespace SOS.Hosting
             return downloadedPath;
         }
 
-        private void TestGetPEInfo(string filePath, uint timeStamp, uint sizeOfImage)
+        private static void TestGetPEInfo(string filePath, uint timeStamp, uint sizeOfImage)
         {
             if (filePath != null && timeStamp != 0 && sizeOfImage != 0)
             {
@@ -396,7 +396,7 @@ namespace SOS.Hosting
             }
         }
 
-        private void TestBuildId(ImmutableArray<byte> expectedBuildId, byte[] actualBuildId)
+        private static void TestBuildId(ImmutableArray<byte> expectedBuildId, byte[] actualBuildId)
         {
             if (expectedBuildId.Length > 0)
             {
@@ -430,7 +430,7 @@ namespace SOS.Hosting
             return ImmutableArray<byte>.Empty;
         }
 
-        private string DbiName
+        private static string DbiName
         {
             get {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -452,7 +452,7 @@ namespace SOS.Hosting
             }
         }
 
-        private string DacName
+        private static string DacName
         {
             get {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

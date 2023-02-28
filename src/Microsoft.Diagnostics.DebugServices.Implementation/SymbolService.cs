@@ -820,7 +820,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        private void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
+        private static void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
         {
             // See spec: https://github.com/dotnet/runtime/blob/main/docs/design/specs/PE-COFF.md
 
@@ -908,7 +908,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return result;
         }
 
-        private SymbolFile TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
+        private static SymbolFile TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
         {
             SymbolFile result = null;
             MetadataReaderProvider provider = null;
@@ -989,7 +989,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
+        private static bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
             where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
         {
             while (symbolStore != null)

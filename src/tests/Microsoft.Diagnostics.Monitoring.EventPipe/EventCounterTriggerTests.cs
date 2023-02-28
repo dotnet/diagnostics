@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             settings.CounterIntervalSeconds = 2;
 
             // Either GreaterThan or LessThan must be specified
-            ValidateFieldValidation(
+            EventCounterTriggerTests.ValidateFieldValidation(
                 settings,
                 EventCounterTriggerSettings.EitherGreaterThanLessThanMessage,
                 new[] { nameof(EventCounterTriggerSettings.GreaterThan), nameof(EventCounterTriggerSettings.LessThan) });
@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             // GreaterThan must be less than LessThan
             settings.LessThan = 5;
-            ValidateFieldValidation(
+            EventCounterTriggerTests.ValidateFieldValidation(
                 settings,
                 EventCounterTriggerSettings.GreaterThanMustBeLessThanLessThanMessage,
                 new[] { nameof(EventCounterTriggerSettings.GreaterThan), nameof(EventCounterTriggerSettings.LessThan) });
@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Validates that the usage of the settings will result in a ValidationException thrown
         /// with the expected error message and member names.
         /// </summary>
-        private void ValidateFieldValidation(EventCounterTriggerSettings settings, string expectedMessage, string[] expectedMemberNames)
+        private static void ValidateFieldValidation(EventCounterTriggerSettings settings, string expectedMessage, string[] expectedMemberNames)
         {
             var exception = Assert.Throws<ValidationException>(() => new EventCounterTrigger(settings));
 
@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private void ValidateRequiredFieldValidation(EventCounterTriggerSettings settings, string memberName)
         {
             RequiredAttribute requiredAttribute = new();
-            ValidateFieldValidation(settings, requiredAttribute.FormatErrorMessage(memberName), new[] { memberName });
+            EventCounterTriggerTests.ValidateFieldValidation(settings, requiredAttribute.FormatErrorMessage(memberName), new[] { memberName });
         }
 
         /// <summary>
@@ -123,7 +123,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private void ValidateRangeFieldValidation<T>(EventCounterTriggerSettings settings, string memberName, string min, string max)
         {
             RangeAttribute rangeAttribute = new(typeof(T), min, max);
-            ValidateFieldValidation(settings, rangeAttribute.FormatErrorMessage(memberName), new[] { memberName });
+            EventCounterTriggerTests.ValidateFieldValidation(settings, rangeAttribute.FormatErrorMessage(memberName), new[] { memberName });
         }
 
         /// <summary>

@@ -842,7 +842,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private bool TryGetSegmentMemoryRange(ClrSegment segment, GCGeneration generation, out ulong start, out ulong end)
+        private static bool TryGetSegmentMemoryRange(ClrSegment segment, GCGeneration generation, out ulong start, out ulong end)
         {
             start = 0;
             end = 0;

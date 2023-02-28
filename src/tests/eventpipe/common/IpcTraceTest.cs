@@ -173,7 +173,7 @@ namespace EventPipe.UnitTests.Common
 
         private int Validate()
         {
-            var isClean = EnsureCleanEnvironment();
+            var isClean = IpcTraceTest.EnsureCleanEnvironment();
             if (!isClean)
             {
                 return -1;
@@ -352,7 +352,7 @@ namespace EventPipe.UnitTests.Common
         // run into these zombie pipes if there are failures over time.
         // Note: Windows has some guarantees about named pipes not living longer
         // the process that created them, so we don't need to check on that platform.
-        private bool EnsureCleanEnvironment()
+        private static bool EnsureCleanEnvironment()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

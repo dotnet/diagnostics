@@ -167,7 +167,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        private void AddMembers(XElement element, Type type, object instance, params string[] membersToSkip)
+        private static void AddMembers(XElement element, Type type, object instance, params string[] membersToSkip)
         {
             MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance);
             foreach (MemberInfo member in members)
@@ -251,13 +251,13 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        private string ToHex<T>(T value) where T : struct
+        private static string ToHex<T>(T value) where T : struct
         {
             int digits = Marshal.SizeOf(typeof(T)) * 2;
             return string.Format($"0x{{0:X{digits}}}", value);
         }
 
-        private bool IsModuleEqual(IModule module, string moduleName)
+        private static bool IsModuleEqual(IModule module, string moduleName)
         {
             if (module.Target.OperatingSystem == OSPlatform.Windows)
             {

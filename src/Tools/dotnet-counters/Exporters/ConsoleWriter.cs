@@ -313,7 +313,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return lineCount;
         }
 
-        private string FormatValue(double value)
+        private static string FormatValue(double value)
         {
             string valueText;
             // The value field is one of:
