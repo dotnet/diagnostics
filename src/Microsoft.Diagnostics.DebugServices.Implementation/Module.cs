@@ -251,32 +251,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else 
             {
                 // If we can't get the version from the PE, search for version string embedded in the module data
-                string versionString = GetVersionString();
-                if (versionString != null)
-                {
-                    int spaceIndex = versionString.IndexOf(' ');
-                    if (spaceIndex < 0)
-                    {
-                        // It is probably a private build version that doesn't end with a space (no commit id after)
-                        spaceIndex = versionString.Length;
-                    }
-                    if (spaceIndex > 0)
-                    {
-                        if (versionString[spaceIndex - 1] == '.')
-                        {
-                            spaceIndex--;
-                        }
-                        string versionToParse = versionString.Substring(0, spaceIndex);
-                        try
-                        {
-                            version = Version.Parse(versionToParse);
-                        }
-                        catch (ArgumentException ex)
-                        {
-                            Trace.TraceError($"Module.GetVersion FAILURE: '{versionToParse}' '{versionString}' {ex}");
-                        }
-                    }
-                }
+                version = Utilities.ParseVersionString(GetVersionString());
             }
 
             return version;
@@ -290,6 +265,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             return null;
         }
+
         protected bool InitializeValue(Flags flag)
         {
             if ((_flags & flag) == 0)

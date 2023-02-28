@@ -23,6 +23,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly ClrInfo _clrInfo;
         private readonly IDisposable _onFlushEvent;
         private readonly ISymbolService _symbolService;
+        private Version _runtimeVersion;
         private string _dacFilePath;
         private string _dbiFilePath;
 
@@ -83,6 +84,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public IModule RuntimeModule { get; }
 
         public string RuntimeModuleDirectory { get; set; }
+
+
+        public Version RuntimeVersion
+        {
+            get
+            {
+                if (_runtimeVersion is null)
+                {
+                    Version version = _clrInfo.Version;
+                    if (version is null || version.Equals(Utilities.EmptyVersion))
+                    {
+                        version = Utilities.ParseVersionString(RuntimeModule.GetVersionString());
+                    }
+                    _runtimeVersion = version;
+                }
+                return _runtimeVersion;
+            }
+        }
 
         public string GetDacFilePath()
         {
