@@ -84,7 +84,7 @@ namespace EventPipe.UnitTests.Common
             throw new System.NotImplementedException();
         }
 
-        protected bool disposed = false;
+        protected bool disposed;
         protected override void Dispose(bool disposing)
         {
             if (!disposed)

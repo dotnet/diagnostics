@@ -72,7 +72,7 @@ namespace SOS.Extensions
         /// <summary>
         /// The retry count passed to the HTTP symbol store
         /// </summary>
-        public static int DefaultRetryCount { get; set; } = 0;
+        public static int DefaultRetryCount { get; set; }
 
         /// <summary>
         /// This is the main managed entry point that the native hosting code calls. It needs to be a single function

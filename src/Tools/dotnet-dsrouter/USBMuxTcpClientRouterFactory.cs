@@ -258,7 +258,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
     {
         private readonly int _port;
         private IntPtr _device = IntPtr.Zero;
-        private uint _deviceConnectionID = 0;
+        private uint _deviceConnectionID;
         private IntPtr _loopingThread = IntPtr.Zero;
 
         public static TcpClientRouterFactory CreateUSBMuxInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)

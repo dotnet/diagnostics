@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         private readonly char _spacing = ' ';
         public string Divider { get; set; } = " ";
-        public bool AlignLeft { get; set; } = false;
+        public bool AlignLeft { get; set; }
 
         public IConsoleService Console { get; }
 

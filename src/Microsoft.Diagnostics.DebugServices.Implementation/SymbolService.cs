@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
-        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore = null;
+        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore;
 
         public SymbolService(IHost host)
         {
@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
         /// </summary>
-        public int DefaultRetryCount { get; set; } = 0;
+        public int DefaultRetryCount { get; set; }
 
         /// <summary>
         /// Reset any HTTP symbol stores marked with a client failure

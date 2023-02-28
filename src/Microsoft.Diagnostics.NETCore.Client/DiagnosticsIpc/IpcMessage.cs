@@ -87,8 +87,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
-        public byte[] Payload { get; private set; } = null;
-        public IpcHeader Header { get; private set; } = default;
+        public byte[] Payload { get; private set; }
+        public IpcHeader Header { get; private set; }
 
         public byte[] Serialize()
         {

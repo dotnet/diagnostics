@@ -14,7 +14,7 @@ namespace SOS.Extensions
     /// </summary>
     public static class AssemblyResolver
     {
-        private static bool s_initialized = false;
+        private static bool s_initialized;
 
         /// <summary>
         /// Call to enable the assembly resolver for the current AppDomain.

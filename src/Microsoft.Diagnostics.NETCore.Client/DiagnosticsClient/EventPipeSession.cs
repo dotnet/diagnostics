@@ -15,8 +15,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private long _sessionId;
         private IpcEndpoint _endpoint;
-        private bool _disposedValue = false; // To detect redundant calls
-        private bool _stopped = false; // To detect redundant calls
+        private bool _disposedValue; // To detect redundant calls
+        private bool _stopped; // To detect redundant calls
         private readonly IpcResponse _response;
 
         private EventPipeSession(IpcEndpoint endpoint, IpcResponse response, long sessionId)

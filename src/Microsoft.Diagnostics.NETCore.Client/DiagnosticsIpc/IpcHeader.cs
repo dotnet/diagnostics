@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public ushort Size = HeaderSizeInBytes;
         public byte CommandSet;
         public byte CommandId;
-        public ushort Reserved = 0x0000;
+        public ushort Reserved;
 
 
         // Helper expression to quickly get V1 magic string for comparison

@@ -104,7 +104,7 @@ namespace EventPipe.UnitTests.Common
         // and don't care about the number of events sent
         private Dictionary<string, ExpectedEventCount> _expectedEventCounts;
         private Dictionary<string, int> _actualEventCounts = new Dictionary<string, int>();
-        private int _droppedEvents = 0;
+        private int _droppedEvents;
 
         // A function to be called with the EventPipeEventSource _before_
         // the call to `source.Process()`.  The function should return another

@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
         private readonly string _address;
 
-        private bool _disposed = false;
+        private bool _disposed;
         private Task _acceptTransportTask;
         private IpcServerTransport _transport;
         private Kind _kind = Kind.Ipc;

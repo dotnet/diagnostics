@@ -686,7 +686,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             private readonly Timer _transportVersionTimer;
             private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
 
-            private int _transportVersion = 0;
+            private int _transportVersion;
             private TaskCompletionSource<int> _transportVersionSource;
 
             public IpcServerTransportCallback()

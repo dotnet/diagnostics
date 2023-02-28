@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics
 {
     public class DbgShimAPI
     {
-        private static bool _initialized = false;
+        private static bool _initialized;
 
         private static CreateProcessForLaunchDelegate _createProcessForLaunch;
         private static CloseResumeHandleDelegate _closeResumeHandle;

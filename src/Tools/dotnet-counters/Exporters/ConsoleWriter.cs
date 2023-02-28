@@ -59,15 +59,15 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private const int Indent = 4; // Counter name indent size.
         private const int CounterValueLength = 15;
 
-        private int _maxNameLength = 0;
+        private int _maxNameLength;
         private int _statusRow; // Row # of where we print the status of dotnet-counters
         private int _topRow;
-        private bool _paused = false;
-        private bool _initialized = false;
-        private string _errorText = null;
+        private bool _paused;
+        private bool _initialized;
+        private string _errorText;
 
         private int _maxRow = -1;
-        private bool _useAnsi = false;
+        private bool _useAnsi;
 
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;

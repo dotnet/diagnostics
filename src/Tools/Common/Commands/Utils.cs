@@ -129,7 +129,7 @@ namespace Microsoft.Internal.Common.Utils
 
     internal class LineRewriter
     {
-        public int LineToClear { get; set; } = 0;
+        public int LineToClear { get; set; }
 
         public LineRewriter() { }
 
@@ -164,7 +164,7 @@ namespace Microsoft.Internal.Common.Utils
 
     internal static class ReturnCode
     {
-        public static int Ok = 0;
+        public static int Ok;
         public static int SessionCreationError = 1;
         public static int TracingError = 2;
         public static int ArgumentError = 3;

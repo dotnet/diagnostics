@@ -18,7 +18,7 @@ namespace Microsoft.Internal.Common.Utils
     // </summary>
     internal class ProcessLauncher
     {
-        private Process _childProc = null;
+        private Process _childProc;
         private Task _stdOutTask = Task.CompletedTask;
         private Task _stdErrTask = Task.CompletedTask;
         internal static ProcessLauncher Launcher = new ProcessLauncher();

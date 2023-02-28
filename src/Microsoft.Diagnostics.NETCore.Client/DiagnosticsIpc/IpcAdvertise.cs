@@ -111,9 +111,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return $"{{ Magic={Magic}; ClrInstanceId={RuntimeInstanceCookie}; ProcessId={ProcessId}; Future={Future} }}";
         }
 
-        private ushort Future { get; } = 0;
+        private ushort Future { get; }
         public byte[] Magic { get; } = Magic_V1;
-        public ulong ProcessId { get; } = 0;
+        public ulong ProcessId { get; }
         public Guid RuntimeInstanceCookie { get; } = Guid.Empty;
     }
 }

@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
 
         private sealed class DelayPipeline : Pipeline
         {
-            public int ExecutedCleanup { get; private set; } = 0;
+            public int ExecutedCleanup { get; private set; }
             public TimeSpan Delay { get; }
 
             public DelayPipeline() : this(Timeout.InfiniteTimeSpan)

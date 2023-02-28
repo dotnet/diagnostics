@@ -1428,12 +1428,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal class Router : IDisposable
     {
         private readonly ILogger _logger;
-        private Stream _frontendStream = null;
-        private Stream _backendStream = null;
-        private Task _backendReadFrontendWriteTask = null;
-        private Task _frontendReadBackendWriteTask = null;
-        private CancellationTokenSource _cancelRouterTokenSource = null;
-        private bool _disposed = false;
+        private Stream _frontendStream;
+        private Stream _backendStream;
+        private Task _backendReadFrontendWriteTask;
+        private Task _frontendReadBackendWriteTask;
+        private CancellationTokenSource _cancelRouterTokenSource;
+        private bool _disposed;
         private ulong _backendToFrontendByteTransfer;
         private ulong _frontendToBackendByteTransfer;
         private static int s_routerInstanceCount;

@@ -137,7 +137,7 @@ public class SOSRunner : IDisposable
             set { _dumpType = value; }
         }
 
-        public bool UsePipeSync { get; set; } = false;
+        public bool UsePipeSync { get; set; }
 
         public bool DumpDiagnostics { get; set; } = true;
 
