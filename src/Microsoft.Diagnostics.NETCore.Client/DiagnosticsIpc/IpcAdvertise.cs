@@ -74,7 +74,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             index += 8;
 
             ushort future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(buffer, index, 2));
-            index += 2;
 
             // FUTURE: switch on incoming magic and change if version ever increments
             return new IpcAdvertise(magic, cookie, pid, future);

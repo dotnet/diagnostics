@@ -842,9 +842,8 @@ namespace Graphs
         // Node information is stored in a compressed form because we have alot of them.
         internal static int ReadCompressedInt(SegmentedMemoryStreamReader reader)
         {
-            int ret = 0;
             byte b = reader.ReadByte();
-            ret = b << 25 >> 25;
+            int ret = b << 25 >> 25;
             if ((b & 0x80) == 0)
             {
                 return ret;
@@ -1731,7 +1730,6 @@ public class SpanningTree
             float nodePriority;
             if (nodesToVisit.Count == 0)
             {
-                nodePriority = 0;
                 if (!scanedForOrphans)
                 {
                     scanedForOrphans = true;

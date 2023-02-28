@@ -324,9 +324,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             bool lastCharWasCarriageReturn = false;
             do
             {
-                int charsRead = 0;
                 int lastStartLine = 0;
-                charsRead = reader.ReadBlock(buffer, 0, readChunkSize);
+                int charsRead = reader.ReadBlock(buffer, 0, readChunkSize);
 
                 // this lock keeps the standard out/error streams from being intermixed
                 lock (loggers)

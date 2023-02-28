@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
         {
             const int functionColumnWidth = 70;
             const int measureColumnWidth = 20;
-            string measureType = null;
+            string measureType;
             if (isInclusive)
             {
                 measureType = "Inclusive";

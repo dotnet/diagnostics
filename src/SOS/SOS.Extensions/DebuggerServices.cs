@@ -265,7 +265,6 @@ namespace SOS
         public HResult GetThreadTeb(uint threadId, out ulong teb)
         {
             // The native code may zero out this return pointer
-            teb = 0;
             return VTable.GetThreadTeb(Self, threadId, out teb);
         }
 

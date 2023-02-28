@@ -218,7 +218,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return true;
             }
 
-            bool stopHandling = false;
+            bool stopHandling;
             try
             {
                 stopHandling = handler(item, out removeItem);

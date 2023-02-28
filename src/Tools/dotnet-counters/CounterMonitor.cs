@@ -346,7 +346,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
 
-            CounterPayload payload = null;
+            CounterPayload payload;
             if (payloadFields["CounterType"].Equals("Sum"))
             {
                 payload = new RatePayload(

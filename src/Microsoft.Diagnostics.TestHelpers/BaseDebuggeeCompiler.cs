@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             if (dotNetPath.EndsWith(".zip") || dotNetPath.EndsWith(".tar.gz"))
             {
                 localCliZipPath = dotNetPath;
-                string cliVersionDirName = null;
+                string cliVersionDirName;
                 if (dotNetPath.EndsWith(".tar.gz"))
                 {
                     localCliTarPath = localCliZipPath.Substring(0, dotNetPath.Length - 3);

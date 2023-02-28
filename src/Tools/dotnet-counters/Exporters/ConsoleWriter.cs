@@ -315,7 +315,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private string FormatValue(double value)
         {
-            string valueText = null;
+            string valueText;
             // The value field is one of:
             //  a) If abs(value) >= 10^9 then it is formatted as 0.####e+00
             //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,

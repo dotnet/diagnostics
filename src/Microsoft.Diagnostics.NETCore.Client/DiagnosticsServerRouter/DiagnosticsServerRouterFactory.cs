@@ -453,18 +453,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
-            Stream tcpClientStream = null;
-
             _logger?.LogDebug($"Connecting new tcp endpoint \"{_tcpClientAddress}\".");
 
             IpcTcpSocketEndPoint clientTcpEndPoint = new IpcTcpSocketEndPoint(_tcpClientAddress);
-            Socket clientSocket = null;
-
             using var connectTimeoutTokenSource = new CancellationTokenSource();
             using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             connectTimeoutTokenSource.CancelAfter(TcpClientTimeoutMs);
 
+            Socket clientSocket;
             do
             {
                 clientSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
@@ -508,7 +505,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             while (retry);
 
-            tcpClientStream = new ExposedSocketNetworkStream(clientSocket, ownsSocket: true);
+            Stream tcpClientStream = new ExposedSocketNetworkStream(clientSocket, ownsSocket: true);
             _logger?.LogDebug("Successfully connected tcp stream.");
 
             return tcpClientStream;
@@ -670,7 +667,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else
             {
-                bool retry = false;
                 IpcUnixDomainSocket unixDomainSocket;
 
                 using var connectTimeoutTokenSource = new CancellationTokenSource();
@@ -678,6 +674,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 connectTimeoutTokenSource.CancelAfter(IpcClientTimeoutMs);
 
+                bool retry;
                 do
                 {
                     unixDomainSocket = new IpcUnixDomainSocket();

@@ -185,7 +185,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static async Task Untar(string tarPath, string expandedDirPath, ITestOutputHelper output)
         {
             Directory.CreateDirectory(expandedDirPath);
-            string tarToolPath = null;
+            string tarToolPath;
             if (OS.Kind == OSKind.Linux)
             {
                 tarToolPath = "/bin/tar";

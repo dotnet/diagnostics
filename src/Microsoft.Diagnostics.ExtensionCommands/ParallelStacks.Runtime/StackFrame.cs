@@ -201,7 +201,6 @@ namespace ParallelStacks
 
             // look for each parameter, one after the other
             int next = pos;
-            string parameter = string.Empty;
             while (next != (fullName.Length - 1))
             {
                 next = fullName.IndexOf(", ", pos);
@@ -212,7 +211,7 @@ namespace ParallelStacks
                 }
 
                 //                             skip   .      ,
-                parameter = GetParameter(fullName, pos + 1, next - 1);
+                string parameter = GetParameter(fullName, pos + 1, next - 1);
                 if (parameter != null)
                 {
                     parameters.Add(parameter);

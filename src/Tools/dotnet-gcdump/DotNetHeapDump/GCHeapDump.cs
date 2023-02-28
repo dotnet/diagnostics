@@ -792,11 +792,10 @@ internal static class XmlGcHeapDump
             throw new InvalidOperationException("Must advance to MemoryGraph element (e.g. call ReadToDescendant)");
         }
 
-        var expectedSize = 1000;
         var nodeCount = reader.GetAttribute("NodeCount");
         if (nodeCount != null)
         {
-            expectedSize = int.Parse(nodeCount) + 1;        // 1 for undefined
+            int expectedSize = int.Parse(nodeCount) + 1;
         }
 
         MemoryGraph graph = new MemoryGraph(10);

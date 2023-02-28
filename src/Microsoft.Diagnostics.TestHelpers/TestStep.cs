@@ -212,12 +212,10 @@ namespace Microsoft.Diagnostics.TestHelpers
         private async Task<TestStepState> AcquireStepStateLock(ITestOutputHelper output)
         {
             TestStepState initialStepState = new TestStepState();
-
-            bool stepStateFileExists = false;
             while (true)
             {
                 TestStepState openedStepState = null;
-                stepStateFileExists = File.Exists(_stateFilePath);
+                bool stepStateFileExists = File.Exists(_stateFilePath);
                 if (!stepStateFileExists && TryWriteInitialStepState(initialStepState, output))
                 {
                     // this thread gets to do the work, persist the initial lock state

@@ -126,8 +126,8 @@ namespace Microsoft.Internal.Common.Utils
         private static IntPtr GetPebNative(IntPtr hProcess)
         {
             var pbi = new ProcessNativeMethods.ProcessInformation();
-            int res_len = 0;
             int pbiSize = Marshal.SizeOf(pbi);
+            int res_len;
             ProcessNativeMethods.NtQueryInformationProcess(
                 hProcess,
                 ProcessNativeMethods.ProcessBasicInformation,
