@@ -425,7 +425,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public TcpClientRouterFactory(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {
             _logger = logger;
-            _tcpClientAddress = IpcTcpSocketEndPoint.NormalizeTcpIpEndPoint(string.IsNullOrEmpty(tcpClient) ? "127.0.0.1:" + string.Format("{0}", 56000 + (Environment.ProcessId % 1000)) : tcpClient);
+            _tcpClientAddress = IpcTcpSocketEndPoint.NormalizeTcpIpEndPoint(string.IsNullOrEmpty(tcpClient) ? "127.0.0.1:" + string.Format("{0}", 56000 + (Process.GetCurrentProcess().Id % 1000)) : tcpClient);
             _auto_shutdown = runtimeTimeoutMs != Timeout.Infinite;
             if (runtimeTimeoutMs != Timeout.Infinite)
             {
@@ -1417,7 +1417,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             catch (Exception)
             {
-                _runtimeProcessId = (ulong)Environment.ProcessId;
+                _runtimeProcessId = (ulong)Process.GetCurrentProcess().Id;
                 _runtimeInstanceId = Guid.NewGuid();
                 _logger?.LogWarning($"Failed to retrieve runtime process info, fallback to current process information, pid={_runtimeProcessId}, cookie={_runtimeInstanceId}.");
             }

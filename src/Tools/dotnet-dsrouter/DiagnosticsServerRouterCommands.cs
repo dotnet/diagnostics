@@ -334,7 +334,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private static string GetDefaultIpcServerPath(ILogger logger)
         {
-            int processId = Environment.ProcessId;
+            int processId = Process.GetCurrentProcess().Id;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");

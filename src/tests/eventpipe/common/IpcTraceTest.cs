@@ -192,7 +192,7 @@ namespace EventPipe.UnitTests.Common
             });
             sentinelTask.Start();
 
-            int processId = Environment.ProcessId;
+            int processId = Process.GetCurrentProcess().Id;
             object threadSync = new object(); // for locking eventpipeSession access
             Func<int> optionalTraceValidationCallback = null;
             DiagnosticsClient client = new DiagnosticsClient(processId);
@@ -360,11 +360,11 @@ namespace EventPipe.UnitTests.Common
                 // mimic the RuntimeClient's code for finding OS Transports
                 IEnumerable<FileInfo> ipcPorts = Directory.GetFiles(Path.GetTempPath())
                     .Select(namedPipe => new FileInfo(namedPipe))
-                    .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{Environment.ProcessId}-(\\d+)-socket$"));
+                    .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{System.Diagnostics.Process.GetCurrentProcess().Id}-(\\d+)-socket$"));
 
                 if (ipcPorts.Count() > 1)
                 {
-                    Logger.logger.Log($"Found {ipcPorts.Count()} OS transports for pid {Environment.ProcessId}:");
+                    Logger.logger.Log($"Found {ipcPorts.Count()} OS transports for pid {System.Diagnostics.Process.GetCurrentProcess().Id}:");
                     foreach (var match in ipcPorts)
                     {
                         Logger.logger.Log($"\t{match.Name}");
@@ -381,7 +381,7 @@ namespace EventPipe.UnitTests.Common
 
                     var afterIpcPorts = Directory.GetFiles(Path.GetTempPath())
                         .Select(namedPipe => new FileInfo(namedPipe))
-                        .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{Environment.ProcessId}-(\\d+)-socket$"));
+                        .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{System.Diagnostics.Process.GetCurrentProcess().Id}-(\\d+)-socket$"));
 
                     if (afterIpcPorts.Count() == 1)
                     {

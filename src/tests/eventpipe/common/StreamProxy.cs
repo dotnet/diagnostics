@@ -106,7 +106,7 @@ namespace EventPipe.UnitTests.Common
             var filePath = Path.Combine(streamDumpDir, Path.GetRandomFileName() + ".nettrace");
             using (var streamDumpFile = File.Create(filePath))
             {
-                Logger.logger.Log($"\t Writing stream for PID {Environment.ProcessId} to {filePath}");
+                Logger.logger.Log($"\t Writing stream for PID {System.Diagnostics.Process.GetCurrentProcess().Id} to {filePath}");
                 InternalStream.Seek(0, SeekOrigin.Begin);
                 InternalStream.CopyTo(streamDumpFile);
             }

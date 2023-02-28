@@ -12,7 +12,7 @@ namespace Tracee
     {
         public static int Main(string[] args)
         {
-            int pid = Environment.ProcessId;
+            int pid = Process.GetCurrentProcess().Id;
             string pipeServerName = args.Length > 0 ? args[0] : null;
             if (pipeServerName == null)
             {
