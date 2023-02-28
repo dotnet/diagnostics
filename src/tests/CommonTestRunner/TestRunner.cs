@@ -14,15 +14,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics./ TestHelpers;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.CommonTestRunner
 {
     public class TestRunner : IAsyncDisposable
     {
-        private static readonly string _timeFormat = "mm\\:ss\\.fff";
-        private readonly ITestOutputHelper _outputHelper;
+        private const string _timeFormat = "mm\\:ss\\.fff";
+        private readonly IndentedTestOutputHelper _outputHelper;
         private readonly ProcessRunner _runner;
         private readonly DateTime _startTime;
         private readonly NamedPipeServerStream _pipeServer;
