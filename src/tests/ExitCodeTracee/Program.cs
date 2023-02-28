@@ -15,7 +15,7 @@ namespace Tracee
                 Console.WriteLine(s);
             }
 
-            return Int32.Parse(args[0]);
+            return int.Parse(args[0]);
         }
     }
 }

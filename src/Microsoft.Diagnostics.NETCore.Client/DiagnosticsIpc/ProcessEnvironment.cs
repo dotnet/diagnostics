@@ -51,8 +51,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             var env = new Dictionary<string, string>();
             int cursor = 0;
-            UInt32 nElements = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(envBlock, cursor, 4));
-            cursor += sizeof(UInt32);
+            uint nElements = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(envBlock, cursor, 4));
+            cursor += sizeof(uint);
             while (cursor < envBlock.Length)
             {
                 string pair = IpcHelpers.ReadString(envBlock, ref cursor);
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
 
-        private UInt32 ExpectedSizeInBytes { get; set; }
-        private UInt16 Future { get; set; }
+        private uint ExpectedSizeInBytes { get; set; }
+        private ushort Future { get; set; }
     }
 }

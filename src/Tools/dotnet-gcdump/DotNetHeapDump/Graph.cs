@@ -1060,7 +1060,7 @@ namespace Graphs
         /// <summary>
         /// Create new module.  You must have at least a image base.   Everything else is optional.
         /// </summary>
-        public Module(Address imageBase) { ImageBase = imageBase; }
+        public Module(ulong imageBase) { ImageBase = imageBase; }
 
         /// <summary>
         /// The path to the Module (can be null if not known)
@@ -1069,7 +1069,7 @@ namespace Graphs
         /// <summary>
         /// The location where the image was loaded into memory
         /// </summary>
-        public Address ImageBase;
+        public ulong ImageBase;
         /// <summary>
         /// The size of the image when loaded in memory
         /// </summary>
@@ -1111,7 +1111,7 @@ namespace Graphs
         public void FromStream(Deserializer deserializer)
         {
             deserializer.Read(out Path);
-            ImageBase = (Address)deserializer.ReadInt64();
+            ImageBase = (ulong)deserializer.ReadInt64();
             deserializer.Read(out Size);
             BuildTime = new DateTime(deserializer.ReadInt64());
             deserializer.Read(out PdbName);

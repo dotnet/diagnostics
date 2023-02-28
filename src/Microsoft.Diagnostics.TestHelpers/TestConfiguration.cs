@@ -323,7 +323,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     }
                     expectDelimiter = false;
                 }
-                else if (!Char.IsWhiteSpace(currentChar))
+                else if (!char.IsWhiteSpace(currentChar))
                 {
                     throw new InvalidDataException($"Non whitespace, non comma value found outside of string within: {expression}");
                 }

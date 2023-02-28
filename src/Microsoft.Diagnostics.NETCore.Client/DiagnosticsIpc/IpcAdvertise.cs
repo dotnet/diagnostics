@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static byte[] Magic_V1 => Encoding.ASCII.GetBytes("ADVR_V1" + '\0');
         private static readonly int IpcAdvertiseV1SizeInBytes = Magic_V1.Length + 16 + 8 + 2; // 34 bytes
 
-        private IpcAdvertise(byte[] magic, Guid cookie, UInt64 pid, UInt16 future)
+        private IpcAdvertise(byte[] magic, Guid cookie, ulong pid, ushort future)
         {
             Future = future;
             Magic = magic;
@@ -70,10 +70,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Guid cookie = new Guid(cookieBuffer);
             index += 16;
 
-            UInt64 pid = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(buffer, index, 8));
+            ulong pid = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(buffer, index, 8));
             index += 8;
 
-            UInt16 future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(buffer, index, 2));
+            ushort future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(buffer, index, 2));
             index += 2;
 
             // FUTURE: switch on incoming magic and change if version ever increments
@@ -112,9 +112,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return $"{{ Magic={Magic}; ClrInstanceId={RuntimeInstanceCookie}; ProcessId={ProcessId}; Future={Future} }}";
         }
 
-        private UInt16 Future { get; } = 0;
+        private ushort Future { get; } = 0;
         public byte[] Magic { get; } = Magic_V1;
-        public UInt64 ProcessId { get; } = 0;
+        public ulong ProcessId { get; } = 0;
         public Guid RuntimeInstanceCookie { get; } = Guid.Empty;
     }
 }

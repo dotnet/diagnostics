@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 return new List<string> {shortName};
             }
 
-            if (String.IsNullOrEmpty(str) || n < 1)
+            if (string.IsNullOrEmpty(str) || n < 1)
             {
                 throw new ArgumentException();
             }

@@ -39,7 +39,7 @@ namespace SOS.Extensions
 
             // Look next to requesting assembly
             assemblyPath = args.RequestingAssembly?.Location;
-            if (!String.IsNullOrEmpty(assemblyPath))
+            if (!string.IsNullOrEmpty(assemblyPath))
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
                 Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
@@ -51,7 +51,7 @@ namespace SOS.Extensions
 
             // Look next to the executing assembly
             assemblyPath = Assembly.GetExecutingAssembly().Location;
-            if (!String.IsNullOrEmpty(assemblyPath))
+            if (!string.IsNullOrEmpty(assemblyPath))
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
                 Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");

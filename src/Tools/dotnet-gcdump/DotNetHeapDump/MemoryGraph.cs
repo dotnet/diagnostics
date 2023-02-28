@@ -16,14 +16,14 @@ namespace Graphs
             // Therefore use a new implementation of it that is similar in performance but that can handle the extra load.
             if (isVeryLargeGraph)
             {
-                m_addressToNodeIndex = new SegmentedDictionary<Address, NodeIndex>(expectedSize);
+                m_addressToNodeIndex = new SegmentedDictionary<ulong, NodeIndex>(expectedSize);
             }
             else
         {
-            m_addressToNodeIndex = new Dictionary<Address, NodeIndex>(expectedSize);
+            m_addressToNodeIndex = new Dictionary<ulong, NodeIndex>(expectedSize);
             }
                                                               
-            m_nodeAddresses = new SegmentedList<Address>(SegmentSize, expectedSize);
+            m_nodeAddresses = new SegmentedList<ulong>(SegmentSize, expectedSize);
         }
 
         public void WriteAsBinaryFile(string outputFileName)
@@ -46,7 +46,7 @@ namespace Graphs
         /// acting as storage.  
         /// </summary>
         public bool Is64Bit { get; set; }
-        public Address GetAddress(NodeIndex nodeIndex)
+        public ulong GetAddress(NodeIndex nodeIndex)
         {
             if (nodeIndex == NodeIndex.Invalid)
             {
@@ -55,7 +55,7 @@ namespace Graphs
 
             return m_nodeAddresses[(int)nodeIndex];
         }
-        public void SetAddress(NodeIndex nodeIndex, Address nodeAddress)
+        public void SetAddress(NodeIndex nodeIndex, ulong nodeAddress)
         {
             Debug.Assert(m_nodeAddresses[(int)nodeIndex] == 0, "Calling SetAddress twice for node index " + nodeIndex);
             m_nodeAddresses[(int)nodeIndex] = nodeAddress;
@@ -101,7 +101,7 @@ namespace Graphs
         /// GetNodeIndex maps an Memory address of an object (used by CLRProfiler), to the NodeIndex we have assigned to it
         /// It is essentially an interning table (we assign it new index if we have  not seen it before)
         /// </summary>
-        public NodeIndex GetNodeIndex(Address objectAddress)
+        public NodeIndex GetNodeIndex(ulong objectAddress)
         {
             NodeIndex nodeIndex;
             if (!m_addressToNodeIndex.TryGetValue(objectAddress, out nodeIndex))
@@ -113,7 +113,7 @@ namespace Graphs
             Debug.Assert(m_nodeAddresses[(int)nodeIndex] == objectAddress);
             return nodeIndex;
         }
-        public bool IsInGraph(Address objectAddress)
+        public bool IsInGraph(ulong objectAddress)
         {
             return m_addressToNodeIndex.ContainsKey(objectAddress);
         }
@@ -123,7 +123,7 @@ namespace Graphs
         /// THis table maps the ID that CLRProfiler uses (an address), to the NodeIndex we have assigned to it.  
         /// It is only needed while the file is being read in.  
         /// </summary>
-        protected IDictionary<Address, NodeIndex> m_addressToNodeIndex;    // This field is only used during construction
+        protected IDictionary<ulong, NodeIndex> m_addressToNodeIndex;    // This field is only used during construction
 
         #endregion
         #region private
@@ -153,11 +153,11 @@ namespace Graphs
             base.FromStream(deserializer);
             // Read in the Memory addresses of each object 
             long addressCount = m_isVeryLargeGraph ? deserializer.ReadInt64() : deserializer.ReadInt();
-            m_nodeAddresses = new SegmentedList<Address>(SegmentSize, addressCount);
+            m_nodeAddresses = new SegmentedList<ulong>(SegmentSize, addressCount);
 
             for (long i = 0; i < addressCount; i++)
             {
-                m_nodeAddresses.Add((Address)deserializer.ReadInt64());
+                m_nodeAddresses.Add((ulong)deserializer.ReadInt64());
             }
 
             bool is64bit = false;
@@ -167,7 +167,7 @@ namespace Graphs
 
         // This array survives after the constructor completes
         // TODO Fold this into the existing blob. Currently this dominates the Size cost of the graph!
-        protected SegmentedList<Address> m_nodeAddresses;
+        protected SegmentedList<ulong> m_nodeAddresses;
         #endregion
     }
 
@@ -176,7 +176,7 @@ namespace Graphs
     /// </summary>
     public class MemoryNode : Node
     {
-        public Address Address { get { return m_memoryGraph.GetAddress(Index); } }
+        public ulong Address { get { return m_memoryGraph.GetAddress(Index); } }
         #region private
         internal MemoryNode(MemoryGraph graph)
             : base(graph)
@@ -186,7 +186,7 @@ namespace Graphs
 
         public override void WriteXml(System.IO.TextWriter writer, bool includeChildren = true, string prefix = "", NodeType typeStorage = null, string additinalAttribs = "")
         {
-            Address end = Address + (uint)Size;
+            ulong end = Address + (uint)Size;
             // base.WriteXml(writer, prefix, storage, typeStorage, additinalAttribs + " Address=\"0x" + Address.ToString("x") + "\"");
             base.WriteXml(writer, includeChildren, prefix, typeStorage,
                 additinalAttribs + " Address=\"0x" + Address.ToString("x") + "\""

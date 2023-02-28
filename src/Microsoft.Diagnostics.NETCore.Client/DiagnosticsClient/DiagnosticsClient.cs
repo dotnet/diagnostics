@@ -488,7 +488,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(profilerGuid)} must be a valid Guid");
             }
 
-            if (String.IsNullOrEmpty(profilerPath))
+            if (string.IsNullOrEmpty(profilerPath))
             {
                 throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
             }
@@ -519,7 +519,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static IpcMessage CreateSetEnvironmentVariableMessage(string name, string value)
         {
-            if (String.IsNullOrEmpty(name))
+            if (string.IsNullOrEmpty(name))
             {
                 throw new ArgumentException($"{nameof(name)} must be non-null.");
             }
@@ -535,7 +535,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"{nameof(profilerGuid)} must be a valid Guid");
             }
 
-            if (String.IsNullOrEmpty(profilerPath))
+            if (string.IsNullOrEmpty(profilerPath))
             {
                 throw new ArgumentException($"{nameof(profilerPath)} must be non-null");
             }

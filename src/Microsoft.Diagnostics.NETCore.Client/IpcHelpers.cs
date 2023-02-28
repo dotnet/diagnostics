@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             // Length of the string of UTF-16 characters
             int length = BinaryPrimitives.ReadInt32LittleEndian(new ReadOnlySpan<byte>(buffer, index, 4));
-            index += sizeof(UInt32);
+            index += sizeof(uint);
 
             int size = (int)length * sizeof(char);
             // The string contains an ending null character; remove it before returning the value

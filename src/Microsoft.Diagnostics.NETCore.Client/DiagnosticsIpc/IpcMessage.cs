@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         { 
             byte[] serializedData = null;
             // Verify things will fit in the size capacity
-            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length));
+            Header.Size = checked((ushort)(IpcHeader.HeaderSizeInBytes + Payload.Length));
             byte[] headerBytes = Header.Serialize();
 
             using (var stream = new MemoryStream())

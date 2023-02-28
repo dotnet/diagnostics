@@ -21,14 +21,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         // the number of bytes for the DiagnosticsIpc::IpcHeader type in native code
-        public static readonly UInt16 HeaderSizeInBytes = 20;
-        private static readonly UInt16 MagicSizeInBytes = 14;
+        public static readonly ushort HeaderSizeInBytes = 20;
+        private static readonly ushort MagicSizeInBytes = 14;
 
         public byte[] Magic = DotnetIpcV1; // byte[14] in native code
-        public UInt16 Size = HeaderSizeInBytes;
+        public ushort Size = HeaderSizeInBytes;
         public byte CommandSet;
         public byte CommandId;
-        public UInt16 Reserved = 0x0000;
+        public ushort Reserved = 0x0000;
 
 
         // Helper expression to quickly get V1 magic string for comparison
@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.Write(Size);
                 writer.Write(CommandSet);
                 writer.Write(CommandId);
-                writer.Write((UInt16)0x0000);
+                writer.Write((ushort)0x0000);
                 writer.Flush();
                 return stream.ToArray();
             }

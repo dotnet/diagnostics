@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
                     if (threadService.TryGetRegisterInfo(registerIndex, out RegisterInfo info))
                     {
-                        AddMembers(registerElement, typeof(RegisterInfo), info, nameof(Object.ToString), nameof(Object.GetHashCode));
+                        AddMembers(registerElement, typeof(RegisterInfo), info, nameof(object.ToString), nameof(object.GetHashCode));
                     }
                     if (thread.TryGetRegisterValue(registerIndex, out ulong value))
                     {

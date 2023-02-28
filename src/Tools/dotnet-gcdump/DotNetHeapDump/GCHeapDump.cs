@@ -428,9 +428,9 @@ public class InteropInfo : IFastSerializable
     {
         internal NodeIndex node;
         internal int refCount;
-        internal Address addrIUnknown;
-        internal Address addrJupiter;
-        internal Address addrVTable;
+        internal ulong addrIUnknown;
+        internal ulong addrJupiter;
+        internal ulong addrVTable;
         internal int firstComInf;
         internal int countComInf;
     }
@@ -439,8 +439,8 @@ public class InteropInfo : IFastSerializable
     {
         internal NodeIndex node;
         internal int refCount;
-        internal Address addrIUnknown;
-        internal Address addrHandle;
+        internal ulong addrIUnknown;
+        internal ulong addrHandle;
         internal int firstComInf;
         internal int countComInf;
     }
@@ -450,15 +450,15 @@ public class InteropInfo : IFastSerializable
         internal bool fRCW;
         internal int owner;
         internal NodeTypeIndex typeID;
-        internal Address addrInterface;
-        internal Address addrFirstVTable;
-        internal Address addrFirstFunc;
+        internal ulong addrInterface;
+        internal ulong addrFirstVTable;
+        internal ulong addrFirstFunc;
     }
 
 
     public class InteropModuleInfo
     {
-        public Address baseAddress;
+        public ulong baseAddress;
         public uint fileSize;
         public uint timeStamp;
         public string fileName;
@@ -641,9 +641,9 @@ public class InteropInfo : IFastSerializable
             RCWInfo infoRCW = new RCWInfo();
             infoRCW.node = (NodeIndex)deserializer.ReadInt();
             infoRCW.refCount = deserializer.ReadInt();
-            infoRCW.addrIUnknown = (Address)deserializer.ReadInt64();
-            infoRCW.addrJupiter = (Address)deserializer.ReadInt64();
-            infoRCW.addrVTable = (Address)deserializer.ReadInt64();
+            infoRCW.addrIUnknown = (ulong)deserializer.ReadInt64();
+            infoRCW.addrJupiter = (ulong)deserializer.ReadInt64();
+            infoRCW.addrVTable = (ulong)deserializer.ReadInt64();
             infoRCW.firstComInf = deserializer.ReadInt();
             infoRCW.countComInf = deserializer.ReadInt();
             m_listRCWInfo.Add(infoRCW);
@@ -655,8 +655,8 @@ public class InteropInfo : IFastSerializable
             CCWInfo infoCCW = new CCWInfo();
             infoCCW.node = (NodeIndex)deserializer.ReadInt();
             infoCCW.refCount = deserializer.ReadInt();
-            infoCCW.addrIUnknown = (Address)deserializer.ReadInt64();
-            infoCCW.addrHandle = (Address)deserializer.ReadInt64();
+            infoCCW.addrIUnknown = (ulong)deserializer.ReadInt64();
+            infoCCW.addrHandle = (ulong)deserializer.ReadInt64();
             infoCCW.firstComInf = deserializer.ReadInt();
             infoCCW.countComInf = deserializer.ReadInt();
             m_listCCWInfo.Add(infoCCW);
@@ -668,16 +668,16 @@ public class InteropInfo : IFastSerializable
             infoInterface.fRCW = ((deserializer.ReadByte() == 1) ? true : false);
             infoInterface.owner = deserializer.ReadInt();
             infoInterface.typeID = (NodeTypeIndex)deserializer.ReadInt();
-            infoInterface.addrInterface = (Address)deserializer.ReadInt64();
-            infoInterface.addrFirstVTable = (Address)deserializer.ReadInt64();
-            infoInterface.addrFirstFunc = (Address)deserializer.ReadInt64();
+            infoInterface.addrInterface = (ulong)deserializer.ReadInt64();
+            infoInterface.addrFirstVTable = (ulong)deserializer.ReadInt64();
+            infoInterface.addrFirstFunc = (ulong)deserializer.ReadInt64();
             m_listComInterfaceInfo.Add(infoInterface);
         }
 
         for (int i = 0; i < m_countModules; i++)
         {
             InteropModuleInfo infoModule = new InteropModuleInfo();
-            infoModule.baseAddress = (Address)deserializer.ReadInt64();
+            infoModule.baseAddress = (ulong)deserializer.ReadInt64();
             infoModule.fileSize = (uint)deserializer.ReadInt();
             infoModule.timeStamp = (uint)deserializer.ReadInt();
             deserializer.Read(out infoModule.fileName);

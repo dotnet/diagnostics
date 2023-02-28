@@ -1136,40 +1136,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             switch (typeName)
             {
                 case "System.Char":
-                    content = $"'{items.GetValue<System.Char>(index)}'";
+                    content = $"'{items.GetValue<char>(index)}'";
                     break;
                 case "System.Boolean":
-                    content = items.GetValue<System.Boolean>(index).ToString();
+                    content = items.GetValue<bool>(index).ToString();
                     break;
                 case "System.SByte":
-                    content = items.GetValue<System.SByte>(index).ToString();
+                    content = items.GetValue<sbyte>(index).ToString();
                     break;
                 case "System.Byte":
-                    content = items.GetValue<System.Byte>(index).ToString();
+                    content = items.GetValue<byte>(index).ToString();
                     break;
                 case "System.Int16":
-                    content = items.GetValue<System.Int16>(index).ToString();
+                    content = items.GetValue<short>(index).ToString();
                     break;
                 case "System.UInt16":
-                    content = items.GetValue<System.UInt16>(index).ToString();
+                    content = items.GetValue<ushort>(index).ToString();
                     break;
                 case "System.Int32":
-                    content = items.GetValue<System.Int32>(index).ToString();
+                    content = items.GetValue<int>(index).ToString();
                     break;
                 case "System.UInt32":
-                    content = items.GetValue<System.UInt32>(index).ToString();
+                    content = items.GetValue<uint>(index).ToString();
                     break;
                 case "System.Int64":
-                    content = items.GetValue<System.Int64>(index).ToString();
+                    content = items.GetValue<long>(index).ToString();
                     break;
                 case "System.UInt64":
-                    content = items.GetValue<System.UInt64>(index).ToString();
+                    content = items.GetValue<ulong>(index).ToString();
                     break;
                 case "System.Single":
-                    content = items.GetValue<System.Single>(index).ToString();
+                    content = items.GetValue<float>(index).ToString();
                     break;
                 case "System.Double":
-                    content = items.GetValue<System.Double>(index).ToString();
+                    content = items.GetValue<double>(index).ToString();
                     break;
                 case "System.IntPtr":
                     {
@@ -1198,40 +1198,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             switch (typeName)
             {
                 case "System.Char":
-                    content = $"'{item.ReadField<System.Char>(fieldName)}'";
+                    content = $"'{item.ReadField<char>(fieldName)}'";
                     break;
                 case "System.Boolean":
-                    content = item.ReadField<System.Boolean>(fieldName).ToString();
+                    content = item.ReadField<bool>(fieldName).ToString();
                     break;
                 case "System.SByte":
-                    content = item.ReadField<System.SByte>(fieldName).ToString();
+                    content = item.ReadField<sbyte>(fieldName).ToString();
                     break;
                 case "System.Byte":
-                    content = item.ReadField<System.Byte>(fieldName).ToString();
+                    content = item.ReadField<byte>(fieldName).ToString();
                     break;
                 case "System.Int16":
-                    content = item.ReadField<System.Int16>(fieldName).ToString();
+                    content = item.ReadField<short>(fieldName).ToString();
                     break;
                 case "System.UInt16":
-                    content = item.ReadField<System.UInt16>(fieldName).ToString();
+                    content = item.ReadField<ushort>(fieldName).ToString();
                     break;
                 case "System.Int32":
-                    content = item.ReadField<System.Int32>(fieldName).ToString();
+                    content = item.ReadField<int>(fieldName).ToString();
                     break;
                 case "System.UInt32":
-                    content = item.ReadField<System.UInt32>(fieldName).ToString();
+                    content = item.ReadField<uint>(fieldName).ToString();
                     break;
                 case "System.Int64":
-                    content = item.ReadField<System.Int64>(fieldName).ToString();
+                    content = item.ReadField<long>(fieldName).ToString();
                     break;
                 case "System.UInt64":
-                    content = item.ReadField<System.UInt64>(fieldName).ToString();
+                    content = item.ReadField<ulong>(fieldName).ToString();
                     break;
                 case "System.Single":
-                    content = item.ReadField<System.Single>(fieldName).ToString();
+                    content = item.ReadField<float>(fieldName).ToString();
                     break;
                 case "System.Double":
-                    content = item.ReadField<System.Double>(fieldName).ToString();
+                    content = item.ReadField<double>(fieldName).ToString();
                     break;
                 case "System.IntPtr":
                     {

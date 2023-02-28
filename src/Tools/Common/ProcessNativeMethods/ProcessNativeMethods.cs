@@ -59,7 +59,7 @@ namespace Microsoft.Internal.Common.Utils
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool OpenProcessToken(
             IntPtr hProcess,
-            UInt32 dwDesiredAccess,
+            uint dwDesiredAccess,
             out IntPtr processToken);
 
         [StructLayout(LayoutKind.Sequential)]

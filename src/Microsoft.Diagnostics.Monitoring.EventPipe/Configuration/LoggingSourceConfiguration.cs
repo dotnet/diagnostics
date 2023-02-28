@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             if (!useAppFilters && (filterSpecs?.Count).GetValueOrDefault(0) == 0)
             {
-                return String.Empty;
+                return string.Empty;
             }
 
             StringBuilder filterSpecsBuilder = new StringBuilder();

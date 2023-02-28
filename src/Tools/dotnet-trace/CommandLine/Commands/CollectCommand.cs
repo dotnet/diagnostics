@@ -210,7 +210,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     }
 
-                    if (String.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
                     {
                         DateTime now = DateTime.Now;
                         var processMainModuleFileInfo = new FileInfo(processMainModuleFileName);
@@ -398,34 +398,34 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             ConsoleWriteLine("");
-            ConsoleWriteLine(String.Format("{0, -40}","Provider Name") + String.Format("{0, -20}","Keywords") +
-                String.Format("{0, -20}","Level") + "Enabled By");  // +4 is for the tab
+            ConsoleWriteLine(string.Format("{0, -40}","Provider Name") + string.Format("{0, -20}","Keywords") +
+                string.Format("{0, -20}","Level") + "Enabled By");  // +4 is for the tab
             foreach (var provider in providers)
             {
-                ConsoleWriteLine(String.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
+                ConsoleWriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }
             ConsoleWriteLine("");
         }
         private static string GetProviderDisplayString(EventPipeProvider provider) =>
-            String.Format("{0, -40}", provider.Name) + String.Format("0x{0, -18}", $"{provider.Keywords:X16}") + String.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
+            string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
 
         private static string GetSize(long length)
         {
             if (length > 1e9)
             {
-                return String.Format("{0,-8} (GB)", $"{length / 1e9:0.00##}");
+                return string.Format("{0,-8} (GB)", $"{length / 1e9:0.00##}");
             }
             else if (length > 1e6)
             {
-                return String.Format("{0,-8} (MB)", $"{length / 1e6:0.00##}");
+                return string.Format("{0,-8} (MB)", $"{length / 1e6:0.00##}");
             }
             else if (length > 1e3)
             {
-                return String.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
+                return string.Format("{0,-8} (KB)", $"{length / 1e3:0.00##}");
             }
             else
             {
-                return String.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
+                return string.Format("{0,-8} (B)", $"{length / 1.0:0.00##}");
             }
         }
 

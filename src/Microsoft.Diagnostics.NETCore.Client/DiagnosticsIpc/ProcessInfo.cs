@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             ProcessInfo processInfo = new ProcessInfo();
 
             processInfo.ProcessId = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(payload, index, 8));
-            index += sizeof(UInt64);
+            index += sizeof(ulong);
 
             byte[] cookieBuffer = new byte[GuidSizeInBytes];
             Array.Copy(payload, index, cookieBuffer, 0, GuidSizeInBytes);
@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return processInfo;
         }
 
-        public UInt64 ProcessId { get; private set; }
+        public ulong ProcessId { get; private set; }
         public Guid RuntimeInstanceCookie { get; private set; }
         public string CommandLine { get; private set; }
         public string OperatingSystem { get; private set; }

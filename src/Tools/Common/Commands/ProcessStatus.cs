@@ -84,7 +84,7 @@ namespace Microsoft.Internal.Common.Commands
                 int consoleWidth = 0;
                 if (Console.IsOutputRedirected)
                 {
-                    consoleWidth = Int32.MaxValue;
+                    consoleWidth = int.MaxValue;
                 }
                 else
                 {
@@ -139,7 +139,7 @@ namespace Microsoft.Internal.Common.Commands
                     }
                     try
                     {
-                        String cmdLineArgs = GetArgs(process);
+                        string cmdLineArgs = GetArgs(process);
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
                         var commandInfo = new ProcessDetails()
@@ -198,12 +198,12 @@ namespace Microsoft.Internal.Common.Commands
                 try
                 {
                     string commandLine = WindowsProcessExtension.GetCommandLine(process);
-                    if (!String.IsNullOrWhiteSpace(commandLine))
+                    if (!string.IsNullOrWhiteSpace(commandLine))
                     {
                         string[] commandLineSplit = commandLine.Split(' ');
                         if (commandLineSplit.FirstOrDefault() == process.ProcessName)
                         {
-                            return String.Join(" ", commandLineSplit.Skip(1));
+                            return string.Join(" ", commandLineSplit.Skip(1));
                         }
                         return commandLine;
                     }
@@ -219,13 +219,13 @@ namespace Microsoft.Internal.Common.Commands
                 try
                 {
                     string commandLine = File.ReadAllText($"/proc/{process.Id}/cmdline");
-                    if(!String.IsNullOrWhiteSpace(commandLine))
+                    if(!string.IsNullOrWhiteSpace(commandLine))
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');
                         if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
                         {
-                            return String.Join(" ", commandLineSplit.Skip(1));
+                            return string.Join(" ", commandLineSplit.Skip(1));
                         }
                         return commandLine.Replace("\0", " ");
                     }
