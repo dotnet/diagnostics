@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                await routerFactory.Start(token);
+                await routerFactory.Start(token).ConfigureAwait(false);
                 if (!token.IsCancellationRequested)
                 {
                     callbacks?.OnRouterStarted(routerFactory.TcpAddress);
@@ -154,7 +154,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runningRouters.RemoveAll(IsRouterDead);
                 runningRouters.Clear();
 
-                await routerFactory?.Stop();
+                await (routerFactory?.Stop()).ConfigureAwait(false);
                 callbacks?.OnRouterStopped();
 
                 routerFactory.Logger?.LogInformation("Router stopped.");

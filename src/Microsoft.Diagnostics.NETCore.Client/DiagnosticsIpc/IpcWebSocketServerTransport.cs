@@ -21,6 +21,6 @@ internal sealed class IpcWebSocketServerTransport : IpcServerTransport
     public override async Task<Stream> AcceptAsync(CancellationToken token)
     {
         WebSocketServer.IWebSocketServer server = WebSocketServer.WebSocketServerProvider.GetWebSocketServerInstance();
-        return await server.AcceptConnection(token);
+        return await server.AcceptConnection(token).ConfigureAwait(false);
     }
 }

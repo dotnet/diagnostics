@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public async Task<Dictionary<string,string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
         {
             using var memoryStream = new MemoryStream();
-            await continuation.CopyToAsync(memoryStream, CopyBufferSize, token);
+            await continuation.CopyToAsync(memoryStream, CopyBufferSize, token).ConfigureAwait(false);
             return ReadEnvironmentCore(memoryStream);
         }
 

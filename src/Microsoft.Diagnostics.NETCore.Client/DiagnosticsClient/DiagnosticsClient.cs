@@ -360,7 +360,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal async Task<ProcessInfo> GetProcessInfoAsync(CancellationToken token)
         {
             // Attempt to get ProcessInfo v2
-            ProcessInfo processInfo = await TryGetProcessInfo2Async(token);
+            ProcessInfo processInfo = await TryGetProcessInfo2Async(token).ConfigureAwait(false);
             if (null != processInfo)
             {
                 return processInfo;
