@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             throw new NotImplementedException();
         }
 
-        protected bool IsStreamConnected(Stream stream, CancellationToken token)
+        protected static bool IsStreamConnected(Stream stream)
         {
             bool connected = true;
 
@@ -111,13 +111,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     networkStream.Socket.Blocking = blockingState;
                 }
             }
-            else if (stream is WebSocketServer.IWebSocketStreamAdapter adapter)
-            {
-                connected = adapter.IsConnected;
-            }
             else
             {
-                connected = false;
+                connected = stream is WebSocketServer.IWebSocketStreamAdapter adapter ? adapter.IsConnected : false;
             }
 
             return connected;
@@ -128,7 +124,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             while (!token.IsCancellationRequested)
             {
                 // Check if tcp stream connection is still available.
-                if (!IsStreamConnected(stream, token))
+                if (!DiagnosticsServerRouterFactory.IsStreamConnected(stream))
                 {
                     throw new EndOfStreamException();
                 }
@@ -142,7 +138,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        protected bool IsCompletedSuccessfully(Task t)
+        protected static bool IsCompletedSuccessfully(Task t)
         {
 #if NETCOREAPP2_0_OR_GREATER
             return t.IsCompletedSuccessfully;
@@ -796,12 +792,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 await Task.WhenAny(ipcServerStreamTask, netServerStreamTask).ConfigureAwait(false);
 
-                if (IsCompletedSuccessfully(ipcServerStreamTask) && IsCompletedSuccessfully(netServerStreamTask))
+                if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(ipcServerStreamTask) && DiagnosticsServerRouterFactory.IsCompletedSuccessfully(netServerStreamTask))
                 {
                     ipcServerStream = ipcServerStreamTask.Result;
                     tcpServerStream = netServerStreamTask.Result;
                 }
-                else if (IsCompletedSuccessfully(ipcServerStreamTask))
+                else if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(ipcServerStreamTask))
                 {
                     ipcServerStream = ipcServerStreamTask.Result;
 
@@ -822,7 +818,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     catch (Exception)
                     {
                         // Check if we have an accepted tcp stream.
-                        if (IsCompletedSuccessfully(netServerStreamTask))
+                        if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(netServerStreamTask))
                         {
                             netServerStreamTask.Result?.Dispose();
                         }
@@ -838,7 +834,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     tcpServerStream = netServerStreamTask.Result;
                 }
-                else if (IsCompletedSuccessfully(netServerStreamTask))
+                else if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(netServerStreamTask))
                 {
                     tcpServerStream = netServerStreamTask.Result;
 
@@ -859,7 +855,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     catch (Exception)
                     {
                         // Check if we have an accepted ipc stream.
-                        if (IsCompletedSuccessfully(ipcServerStreamTask))
+                        if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(ipcServerStreamTask))
                         {
                             ipcServerStreamTask.Result?.Dispose();
                         }
@@ -886,7 +882,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     catch (Exception)
                     {
                         // Check if we have an ipc stream.
-                        if (IsCompletedSuccessfully(ipcServerStreamTask))
+                        if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(ipcServerStreamTask))
                         {
                             ipcServerStreamTask.Result?.Dispose();
                         }
@@ -1002,7 +998,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 catch (Exception)
                 {
                     // Check if we have an accepted tcp stream.
-                    if (IsCompletedSuccessfully(tcpClientStreamTask))
+                    if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(tcpClientStreamTask))
                     {
                         tcpClientStreamTask.Result?.Dispose();
                     }
@@ -1133,7 +1129,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 catch (Exception)
                 {
                     // Check if we have an accepted ipc stream.
-                    if (IsCompletedSuccessfully(ipcClientStreamTask))
+                    if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(ipcClientStreamTask))
                     {
                         ipcClientStreamTask.Result?.Dispose();
                     }
@@ -1275,7 +1271,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 catch (Exception)
                 {
                     // Check if we have an accepted ipc stream.
-                    if (IsCompletedSuccessfully(ipcClientStreamTask))
+                    if (DiagnosticsServerRouterFactory.IsCompletedSuccessfully(ipcClientStreamTask))
                     {
                         ipcClientStreamTask.Result?.Dispose();
                     }
@@ -1556,7 +1552,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     _logger?.LogTrace($"Start writing {bytesRead} bytes to front end.");
 
                     await _frontendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+#pragma warning disable CA2016 // Forward the 'CancellationToken' parameter to methods
                     await _frontendStream.FlushAsync().ConfigureAwait(false);
+#pragma warning restore CA2016 // Forward the 'CancellationToken' parameter to methods
 
                     _logger?.LogTrace($"Wrote {bytesRead} bytes to front end.");
                 }
@@ -1597,7 +1595,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     _logger?.LogTrace($"Start writing {bytesRead} bytes to back end.");
 
                     await _backendStream.WriteAsync(buffer, 0, bytesRead, token).ConfigureAwait(false);
+#pragma warning disable CA2016 // Forward the 'CancellationToken' parameter to methods
                     await _backendStream.FlushAsync().ConfigureAwait(false);
+#pragma warning restore CA2016 // Forward the 'CancellationToken' parameter to methods
 
                     _logger?.LogTrace($"Wrote {bytesRead} bytes to back end.");
                 }
