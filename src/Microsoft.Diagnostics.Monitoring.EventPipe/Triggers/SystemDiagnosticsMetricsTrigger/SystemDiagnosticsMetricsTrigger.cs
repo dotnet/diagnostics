@@ -12,7 +12,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics
 {
     /// <summary>
-    /// Trigger that detects when the specified event source counter value is held
+    /// Trigger that detects when the specified instrument's value is held
     /// above, below, or between threshold values for a specified duration of time.
     /// </summary>
     internal sealed class SystemDiagnosticsMetricsTrigger :

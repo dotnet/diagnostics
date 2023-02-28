@@ -29,13 +29,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public string InstrumentName { get; set; }
 
         /// <summary>
-        /// The lower bound threshold that the event counter value must hold for
+        /// The lower bound threshold that the instrument value must hold for
         /// the duration specified in <see cref="SlidingWindowDuration"/>.
         /// </summary>
         public double? GreaterThan { get; set; }
 
         /// <summary>
-        /// The upper bound threshold that the event counter value must hold for
+        /// The upper bound threshold that the instrument value must hold for
         /// the duration specified in <see cref="SlidingWindowDuration"/>.
         /// </summary>
         public double? LessThan { get; set; }

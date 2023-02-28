@@ -32,19 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             if (settings.HistogramPercentile.HasValue)
             {
                 Func<double, bool> evalFunc = null;
-
-                if (settings.GreaterThan.HasValue && settings.LessThan.HasValue)
-                {
-                    evalFunc = (actual) => actual > settings.GreaterThan.Value && actual < settings.LessThan.Value;
-                }
-                else if (settings.GreaterThan.HasValue)
-                {
-                    evalFunc = (actual) => actual > settings.GreaterThan.Value;
-                }
-                else if (settings.LessThan.HasValue)
-                {
-                    evalFunc = (actual) => actual < settings.LessThan.Value;
-                }
+                SharedTriggerImplHelper.SetDefaultValueFilter(ref evalFunc, settings.GreaterThan, settings.LessThan);
 
                 _valueFilterHistogram = histogramValues =>
                 {
