@@ -41,11 +41,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
             var config = new MetricSourceConfiguration(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
-                {
-                    Provider = counterGroup.ProviderName,
-                    IntervalSeconds = counterGroup.IntervalSeconds,
-                    Type = (MetricType)counterGroup.Type
-                }),
+            {
+                Provider = counterGroup.ProviderName,
+                IntervalSeconds = counterGroup.IntervalSeconds,
+                Type = (MetricType)counterGroup.Type
+            }),
                 Settings.MaxHistograms, Settings.MaxTimeSeries);
 
             _sessionId = config.SessionId;
@@ -57,8 +57,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token));
 
-            eventSource.Dynamic.All += traceEvent =>
-            {
+            eventSource.Dynamic.All += traceEvent => {
                 try
                 {
                     if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload counterPayload))

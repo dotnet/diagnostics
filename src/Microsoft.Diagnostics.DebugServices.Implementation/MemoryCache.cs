@@ -137,7 +137,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 Cluster cluster = GetCluster(address);
                 int read = cluster.ReadBlock(address, buffer.Slice(offset), bytesRequested);
-                if (read <= 0) {
+                if (read <= 0)
+                {
                     break;
                 }
                 address += (uint)read;

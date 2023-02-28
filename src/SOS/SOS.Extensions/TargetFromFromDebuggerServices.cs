@@ -38,7 +38,8 @@ namespace SOS.Extensions
 
             hr = debuggerServices.GetDebuggeeType(out DEBUG_CLASS debugClass, out DEBUG_CLASS_QUALIFIER qualifier);
             Debug.Assert(hr == HResult.S_OK);
-            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP) {
+            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP)
+            {
                 IsDump = true;
             }
 

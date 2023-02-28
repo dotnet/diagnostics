@@ -274,10 +274,12 @@ namespace SOS.Hosting
             uint protectFlags,
             ulong* buffer)
         {
-            if (_remoteMemoryService == null) {
+            if (_remoteMemoryService == null)
+            {
                 return HResult.E_NOTIMPL;
             }
-            if (!_remoteMemoryService.AllocateMemory(address, size, typeFlags, protectFlags, out ulong remoteAddress)) {
+            if (!_remoteMemoryService.AllocateMemory(address, size, typeFlags, protectFlags, out ulong remoteAddress))
+            {
                 return HResult.E_FAIL;
             }
             SOSHost.Write(buffer, remoteAddress);
@@ -290,10 +292,12 @@ namespace SOS.Hosting
             uint size,
             uint typeFlags)
         {
-            if (_remoteMemoryService == null) {
+            if (_remoteMemoryService == null)
+            {
                 return HResult.E_NOTIMPL;
             }
-            if (!_remoteMemoryService.FreeMemory(address, size, typeFlags)) {
+            if (!_remoteMemoryService.FreeMemory(address, size, typeFlags))
+            {
                 return HResult.E_FAIL;
             }
             return HResult.S_OK;
@@ -311,7 +315,8 @@ namespace SOS.Hosting
         {
             try
             {
-                if (_threadUnwindService == null) {
+                if (_threadUnwindService == null)
+                {
                     return HResult.E_NOTIMPL;
                 }
                 return _threadUnwindService.Unwind(threadId, contextSize, context);
@@ -473,7 +478,7 @@ namespace SOS.Hosting
             [In][MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In] uint imageTimestamp,
             [In] uint imageSize,
-            [In] [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
+            [In][MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
             [In] uint mdRva,
             [In] uint flags,
             [In] uint bufferSize,

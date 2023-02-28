@@ -217,7 +217,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                    var argument = new Argument {
+                    var argument = new Argument
+                    {
                         Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
                         Description = argumentAttribute.Help,
                         ArgumentType = property.PropertyType,
@@ -231,7 +232,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
                     if (optionAttribute != null)
                     {
-                        var option = new Option(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help) {
+                        var option = new Option(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help)
+                        {
                             Argument = new Argument { ArgumentType = property.PropertyType }
                         };
                         command.AddOption(option);
@@ -257,7 +259,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private static string BuildOptionAlias(string parameterName)
         {
-            if (string.IsNullOrWhiteSpace(parameterName)) {
+            if (string.IsNullOrWhiteSpace(parameterName))
+            {
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(parameterName));
             }
             return parameterName.Length > 1 ? $"--{parameterName.ToKebabCase()}" : $"-{parameterName.ToLowerInvariant()}";
@@ -356,7 +359,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <returns>true help called, false no help function</returns>
             internal bool InvokeHelp(Parser parser, IServiceProvider services)
             {
-                if (_methodInfoHelp == null) {
+                if (_methodInfoHelp == null)
+                {
                     return false;
                 }
                 // The InvocationContext is null so the options and arguments in the
@@ -381,7 +385,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                 // Parse the default options if any
                 string defaultOptions = _commandAttribute.DefaultOptions;
-                if (defaultOptions != null) {
+                if (defaultOptions != null)
+                {
                     defaultParseResult = parser.Parse(Name + " " + defaultOptions);
                 }
 
@@ -395,14 +400,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (defaultParseResult != null)
                         {
                             OptionResult defaultOptionResult = defaultParseResult.FindResultFor(property.Option);
-                            if (defaultOptionResult != null) {
+                            if (defaultOptionResult != null)
+                            {
                                 value = defaultOptionResult.GetValueOrDefault();
                             }
                         }
                         if (context != null)
                         {
                             OptionResult optionResult = context.ParseResult.FindResultFor(property.Option);
-                            if (optionResult != null) {
+                            if (optionResult != null)
+                            {
                                 value = optionResult.GetValueOrDefault();
                             }
                         }
@@ -420,7 +427,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (argument.Property.PropertyType.IsArray && argument.Property.PropertyType.GetElementType() == typeof(string))
                     {
                         array = new List<string>();
-                        if (value is IEnumerable<string> entries) {
+                        if (value is IEnumerable<string> entries)
+                        {
                             array.AddRange(entries);
                         }
                     }
@@ -431,7 +439,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (defaultArgumentResult != null)
                         {
                             value = defaultArgumentResult.GetValueOrDefault();
-                            if (array != null && value is IEnumerable<string> entries) {
+                            if (array != null && value is IEnumerable<string> entries)
+                            {
                                 array.AddRange(entries);
                             }
                         }
@@ -442,7 +451,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (argumentResult != null)
                         {
                             value = argumentResult.GetValueOrDefault();
-                            if (array != null && value is IEnumerable<string> entries) {
+                            if (array != null && value is IEnumerable<string> entries)
+                            {
                                 array.AddRange(entries);
                             }
                         }
@@ -475,7 +485,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 bool useHelpBuilder = _useHelpBuilder;
                 if (_commandService._commandHandlers.TryGetValue(command.Name, out CommandHandler handler))
                 {
-                    if (handler.InvokeHelp(_commandService.Parser, _console.Services)) {
+                    if (handler.InvokeHelp(_commandService.Parser, _console.Services))
+                    {
                         return;
                     }
                     useHelpBuilder = true;
@@ -508,8 +519,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             internal IConsoleService ConsoleService
             {
-                get
-                {
+                get {
                     _console ??= Services.GetService<IConsoleService>();
                     return _console;
                 }

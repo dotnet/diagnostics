@@ -106,7 +106,8 @@ namespace SOS.Hosting
         /// <param name="arguments">the command arguments and options</param>
         public void ExecuteCommand(string command, string arguments)
         {
-            if (_disposed) {
+            if (_disposed)
+            {
                 throw new ObjectDisposedException("SOSHost instance disposed");
             }
             _sosLibrary.ExecuteCommand(_interface, command, arguments);
@@ -567,7 +568,8 @@ namespace SOS.Hosting
             int bufferSize,
             uint* pathSize)
         {
-            if (buffer != null) {
+            if (buffer != null)
+            {
                 buffer.Clear();
             }
             Write(pathSize);
@@ -644,7 +646,8 @@ namespace SOS.Hosting
             IntPtr self,
             out uint id)
         {
-            if (!Target.ProcessId.HasValue) {
+            if (!Target.ProcessId.HasValue)
+            {
                 id = 0;
                 return HResult.E_FAIL;
             }
@@ -657,7 +660,8 @@ namespace SOS.Hosting
             out uint id)
         {
             IThread thread = ContextService.GetCurrentThread();
-            if (thread is not null) {
+            if (thread is not null)
+            {
                 return GetThreadIdBySystemId(self, thread.ThreadId, out id);
             }
             id = 0;
@@ -710,10 +714,12 @@ namespace SOS.Hosting
             {
                 if (index >= start && index < start + count)
                 {
-                    if (ids != null) {
+                    if (ids != null)
+                    {
                         ids[index] = (uint)threadInfo.ThreadIndex;
                     }
-                    if (sysIds != null) {
+                    if (sysIds != null)
+                    {
                         sysIds[index] = threadInfo.ThreadId;
                     }
                 }
@@ -790,7 +796,8 @@ namespace SOS.Hosting
             string name,
             out uint index)
         {
-            if (!ThreadService.TryGetRegisterIndexByName(name, out int value)) {
+            if (!ThreadService.TryGetRegisterIndexByName(name, out int value))
+            {
                 index = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -810,14 +817,16 @@ namespace SOS.Hosting
             switch (MemoryService.PointerSize)
             {
                 case 8:
-                    value = new DEBUG_VALUE {
+                    value = new DEBUG_VALUE
+                    {
                         Type = DEBUG_VALUE_TYPE.INT64,
                         I64 = offset
                     };
                     break;
 
                 case 4:
-                    value = new DEBUG_VALUE {
+                    value = new DEBUG_VALUE
+                    {
                         Type = DEBUG_VALUE_TYPE.INT32,
                         I32 = (uint)offset
                     };
@@ -835,7 +844,8 @@ namespace SOS.Hosting
             string register,
             out ulong value)
         {
-            if (!ThreadService.TryGetRegisterIndexByName(register, out int index)) {
+            if (!ThreadService.TryGetRegisterIndexByName(register, out int index))
+            {
                 value = 0;
                 return HResult.E_INVALIDARG;
             }
@@ -871,7 +881,8 @@ namespace SOS.Hosting
             where T : Delegate
         {
             IntPtr functionAddress = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.GetLibraryExport(library, functionName);
-            if (functionAddress == IntPtr.Zero) {
+            if (functionAddress == IntPtr.Zero)
+            {
                 return default;
             }
             return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
@@ -881,14 +892,16 @@ namespace SOS.Hosting
 
         internal unsafe static void Write(uint* pointer, uint value = 0)
         {
-            if (pointer != null) {
+            if (pointer != null)
+            {
                 *pointer = value;
             }
         }
 
         internal unsafe static void Write(ulong* pointer, ulong value = 0)
         {
-            if (pointer != null) {
+            if (pointer != null)
+            {
                 *pointer = value;
             }
         }

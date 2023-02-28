@@ -179,7 +179,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerTwo.Keywords == 2);
             Assert.True(providerTwo.EventLevel == System.Diagnostics.Tracing.EventLevel.Error);
             Assert.True(providerTwo.Arguments.Count == 1);
-            Assert.True(providerTwo.Arguments["FilterAndPayloadSpecs"]== "QuotedValue");
+            Assert.True(providerTwo.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
 
             Assert.True(providerThree.Name == "ProviderThree");
             Assert.True(providerThree.Keywords == 3);

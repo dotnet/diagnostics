@@ -68,9 +68,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             int index = 0;
 
             FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (FieldInfo field in fields) {
+            foreach (FieldInfo field in fields)
+            {
                 RegisterAttribute registerAttribute = field.GetCustomAttributes<RegisterAttribute>(inherit: false).SingleOrDefault();
-                if (registerAttribute is null) {
+                if (registerAttribute is null)
+                {
                     continue;
                 }
                 RegisterType registerType = registerAttribute.RegisterType & RegisterType.TypeMask;
@@ -83,13 +85,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     default:
                         continue;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.ProgramCounter) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.ProgramCounter) != 0)
+                {
                     InstructionPointerIndex = index;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.StackPointer) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.StackPointer) != 0)
+                {
                     StackPointerIndex = index;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.FramePointer) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.FramePointer) != 0)
+                {
                     FramePointerIndex = index;
                 }
                 FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
@@ -111,7 +116,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 foreach (IThread thread in _threads.Values)
                 {
-                    if (thread is IDisposable disposable) {
+                    if (thread is IDisposable disposable)
+                    {
                         disposable.Dispose();
                     }
                 }
@@ -205,7 +211,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
         public IThread GetThreadFromId(uint threadId)
         {
-            if (!GetThreads().TryGetValue(threadId, out IThread thread)) {
+            if (!GetThreads().TryGetValue(threadId, out IThread thread))
+            {
                 throw new DiagnosticsException($"Invalid thread id: {threadId}");
             }
             return thread;
@@ -221,7 +228,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         internal byte[] GetThreadContext(Thread thread)
         {
             var threadContext = new byte[_contextSize];
-            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext)) {
+            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext))
+            {
                 throw new DiagnosticsException();
             }
             return threadContext;

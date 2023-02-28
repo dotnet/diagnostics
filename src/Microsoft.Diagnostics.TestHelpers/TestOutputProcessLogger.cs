@@ -28,10 +28,10 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 _output.WriteLine("Running Process: " + runner.ReplayCommand);
                 _output.WriteLine("Working Directory: " + runner.WorkingDirectory);
-                IEnumerable<KeyValuePair<string,string>> additionalEnvVars =
+                IEnumerable<KeyValuePair<string, string>> additionalEnvVars =
                     runner.EnvironmentVariables.Where(kv => Environment.GetEnvironmentVariable(kv.Key) != kv.Value);
 
-                if(additionalEnvVars.Any())
+                if (additionalEnvVars.Any())
                 {
                     _output.WriteLine("Additional Environment Variables: " +
                         string.Join(", ", additionalEnvVars.Select(kv => kv.Key + "=" + kv.Value)));
@@ -129,9 +129,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             // it is written into the xml results which ultimately results in
             // the xml being improperly truncated. For example MDbg has a test case that prints
             // \0 and dotnet tools print \u001B to colorize their console output.
-            foreach(char c in data)
+            foreach (char c in data)
             {
-                if(!char.IsControl(c))
+                if (!char.IsControl(c))
                 {
                     lineBuffer.Append(c);
                 }

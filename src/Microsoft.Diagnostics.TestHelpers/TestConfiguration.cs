@@ -276,7 +276,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         private bool TryGetParametersForFunction(string expression, string targetFunctionName, out List<string> exprParams)
         {
             int functionKeyworkIndex = expression.IndexOf($"{targetFunctionName}(");
-            if (functionKeyworkIndex == -1) {
+            if (functionKeyworkIndex == -1)
+            {
                 exprParams = null;
                 return false;
             }
@@ -296,7 +297,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             StringBuilder resolvedValue = new StringBuilder();
 
             // Account for the trailing parenthesis.
-            while(curParsingIndex + 1 < expression.Length)
+            while (curParsingIndex + 1 < expression.Length)
             {
                 char currentChar = expression[curParsingIndex];
                 // toggle string nesting on ', except if scaped
@@ -330,7 +331,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 curParsingIndex++;
             }
 
-            if (isWithinString) {
+            if (isWithinString)
+            {
                 throw new InvalidDataException($"Non-terminated string detected within {expression}");
             }
             return true;
@@ -339,7 +341,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private string ResolveProperties(Dictionary<string, string> config, string rawNodeValue)
         {
             StringBuilder resolvedValue = new StringBuilder();
-            for(int i = 0; i < rawNodeValue.Length; )
+            for (int i = 0; i < rawNodeValue.Length;)
             {
                 int propStartIndex = rawNodeValue.IndexOf("$(", i);
                 if (propStartIndex == -1)
@@ -352,7 +354,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
                 else
                 {
-                    int propEndIndex = rawNodeValue.IndexOf(")", propStartIndex+1);
+                    int propEndIndex = rawNodeValue.IndexOf(")", propStartIndex + 1);
                     Assert.NotEqual(-1, propEndIndex);
                     if (propStartIndex != i)
                     {
@@ -468,8 +470,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public string LogSuffix
         {
-            get
-            {
+            get {
                 string version = RuntimeFrameworkVersion;
 
                 // The log name can't contain wild cards, which are used in some testing scenarios.
@@ -499,7 +500,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(pdbType));
 
-            var currentSettings = new Dictionary<string, string>(_settings) {
+            var currentSettings = new Dictionary<string, string>(_settings)
+            {
 
                 // Set or replace if the pdb debug type
                 [DebugTypeKey] = pdbType,
@@ -712,10 +714,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             get {
                 string version = RuntimeFrameworkVersion;
-                if (version != null) {
+                if (version != null)
+                {
                     string[] parts = version.Split('.');
-                    if (parts.Length > 0) {
-                        if (int.TryParse(parts[0], out int major)) {
+                    if (parts.Length > 0)
+                    {
+                        if (int.TryParse(parts[0], out int major))
+                        {
                             return major;
                         }
                     }
@@ -801,8 +806,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public string DotNetRoot
         {
-            get
-            {
+            get {
                 string dotnetRoot = GetValue("DotNetRoot");
                 return MakeCanonicalPath(dotnetRoot);
             }
@@ -815,8 +819,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool CreateDumpExists
         {
-            get
-            {
+            get {
                 return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor >= 2 ||
                        OS.Kind == OSKind.OSX && IsNETCore && RuntimeFrameworkVersionMajor >= 5 ||
                        OS.Kind == OSKind.Windows && IsNETCore && RuntimeFrameworkVersionMajor >= 5;
@@ -881,7 +884,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 return null;
             }
             // we will assume any path referencing an http endpoint is canonical already
-            if(maybeRelativePath.StartsWith("http:") ||
+            if (maybeRelativePath.StartsWith("http:") ||
                maybeRelativePath.StartsWith("https:"))
             {
                 return maybeRelativePath;

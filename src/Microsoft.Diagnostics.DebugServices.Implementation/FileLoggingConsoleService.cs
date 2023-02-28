@@ -67,7 +67,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void AddStream(Stream stream)
         {
             Debug.Assert(stream is not null);
-            _writers.Add(new StreamWriter(stream) {
+            _writers.Add(new StreamWriter(stream)
+            {
                 AutoFlush = true
             });
         }

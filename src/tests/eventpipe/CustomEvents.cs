@@ -33,15 +33,13 @@ namespace EventPipe.UnitTests.CustomEventsValidation
         [Fact]
         public async void CustomEventProducesEventsWithNoKeywords()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "MyEventSource", -1 },
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 1000; i++)
                     {
                         MyEventSource.Log.Event1();

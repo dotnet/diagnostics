@@ -31,8 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             int gcNum = -1;
 
-            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) =>
-            {
+            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) => {
                 taskComplete();
 
                 if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
@@ -41,13 +40,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             };
 
-            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) =>
-            {
+            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) => {
                 taskComplete();
             };
 
-            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) =>
-            {
+            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) => {
                 if (data.Count == gcNum)
                 {
                     taskComplete();

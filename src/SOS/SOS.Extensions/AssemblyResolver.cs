@@ -43,7 +43,8 @@ namespace SOS.Extensions
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
                 Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assembly)) {
+                if (Probe(probingPath, referenceName.Version, out assembly))
+                {
                     Debug.WriteLine($"Matched {probingPath} based on RequestingAssembly");
                     return assembly;
                 }
@@ -55,7 +56,8 @@ namespace SOS.Extensions
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
                 Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assembly)) {
+                if (Probe(probingPath, referenceName.Version, out assembly))
+                {
                     Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
                     return assembly;
                 }
@@ -77,7 +79,8 @@ namespace SOS.Extensions
             if (File.Exists(filePath))
             {
                 AssemblyName name = AssemblyName.GetAssemblyName(filePath);
-                if (name.Version >= minimumVersion) {
+                if (name.Version >= minimumVersion)
+                {
                     assembly = Assembly.LoadFile(filePath);
                     return true;
                 }

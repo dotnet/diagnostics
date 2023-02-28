@@ -213,7 +213,8 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppClrDataProcess)
         {
-            if (ppClrDataProcess == null) {
+            if (ppClrDataProcess == null)
+            {
                 return HResult.E_INVALIDARG;
             }
             if (_clrDataProcess == IntPtr.Zero)
@@ -228,7 +229,8 @@ namespace SOS.Hosting
                 }
             }
             *ppClrDataProcess = _clrDataProcess;
-            if (*ppClrDataProcess == IntPtr.Zero) {
+            if (*ppClrDataProcess == IntPtr.Zero)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
@@ -238,14 +240,17 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppCorDebugProcess)
         {
-            if (ppCorDebugProcess == null) {
+            if (ppCorDebugProcess == null)
+            {
                 return HResult.E_INVALIDARG;
             }
-            if (_corDebugProcess == IntPtr.Zero) {
+            if (_corDebugProcess == IntPtr.Zero)
+            {
                 _corDebugProcess = CreateCorDebugProcess();
             }
             *ppCorDebugProcess = _corDebugProcess;
-            if (*ppCorDebugProcess == IntPtr.Zero) {
+            if (*ppCorDebugProcess == IntPtr.Zero)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
@@ -352,7 +357,8 @@ namespace SOS.Hosting
                 }
                 Debug.Assert(_dbiHandle != IntPtr.Zero);
             }
-            ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion {
+            ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion
+            {
                 StructVersion = 0,
                 Major = 4,
                 Minor = 0,
@@ -515,12 +521,12 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetClrDataProcessDelegate(
             [In] IntPtr self,
-            [Out] IntPtr *ppClrDataProcess);
+            [Out] IntPtr* ppClrDataProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCorDebugInterfaceDelegate(
             [In] IntPtr self,
-            [Out] IntPtr *ppCorDebugProcess);
+            [Out] IntPtr* ppCorDebugProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetEEVersionDelegate(

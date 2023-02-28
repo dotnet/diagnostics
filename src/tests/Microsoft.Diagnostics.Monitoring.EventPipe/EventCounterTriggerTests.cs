@@ -353,8 +353,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                         TriggerSettings = settings,
                         Duration = Timeout.InfiniteTimeSpan
                     },
-                    traceEvent =>
-                    {
+                    traceEvent => {
                         waitSource.TrySetResult(null);
                     });
 
@@ -425,7 +424,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             /// <summary>
             /// The expected result of evaluating the trigger on this data.
             /// </summary>
-            public bool? Result { get;}
+            public bool? Result { get; }
 
             /// <summary>
             /// The sample CPU value to be given to the trigger for evaluation.

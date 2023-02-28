@@ -88,8 +88,7 @@ public class SOSRunner : IDisposable
 
         public bool TestDump
         {
-            get
-            {
+            get {
                 return _testDump &&
                     // Only single file dumps on Windows
                     (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) &&
@@ -111,8 +110,7 @@ public class SOSRunner : IDisposable
 
         public DumpGenerator DumpGenerator
         {
-            get
-            {
+            get {
                 DumpGenerator dumpGeneration = _dumpGenerator;
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
@@ -131,8 +129,7 @@ public class SOSRunner : IDisposable
 
         public DumpType DumpType
         {
-            get
-            {
+            get {
                 // Currently neither cdb or dotnet-dump collect generates valid dumps on Windows for an single file app
                 // Issue: https://github.com/dotnet/diagnostics/issues/2515
                 return TestConfiguration.PublishSingleFile ? SOSRunner.DumpType.Full : _dumpType;
@@ -208,7 +205,8 @@ public class SOSRunner : IDisposable
     /// <returns>full dump name</returns>
     public static async Task<string> CreateDump(TestInformation information)
     {
-        if (!information.IsValid()) {
+        if (!information.IsValid())
+        {
             throw new ArgumentException("Invalid TestInformation");
         }
         TestConfiguration config = information.TestConfiguration;
@@ -383,7 +381,7 @@ public class SOSRunner : IDisposable
 
                         // Start dotnet-dump collect
                         DumpType dumpType = information.DumpType;
-                        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor <  6)
+                        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 6)
                         {
                             dumpType = DumpType.Full;
                         }
@@ -473,7 +471,8 @@ public class SOSRunner : IDisposable
             // Make sure the dump file exists
             if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
             {
-                if (!variables.TryGetValue("%DUMP_NAME%", out string dumpName) || !File.Exists(dumpName)) {
+                if (!variables.TryGetValue("%DUMP_NAME%", out string dumpName) || !File.Exists(dumpName))
+                {
                     throw new FileNotFoundException($"Dump file does not exist: {dumpName ?? ""}");
                 }
             }
@@ -1140,7 +1139,8 @@ public class SOSRunner : IDisposable
     public static string GenerateDumpFileName(TestInformation information, string debuggeeName, DebuggerAction action)
     {
         string dumpRoot = action == DebuggerAction.GenerateDump ? information.DebuggeeDumpOutputRootDir : information.DebuggeeDumpInputRootDir;
-        if (!string.IsNullOrEmpty(dumpRoot)) {
+        if (!string.IsNullOrEmpty(dumpRoot))
+        {
             var sb = new StringBuilder();
             sb.Append(information.TestName);
             sb.Append(".");
@@ -1185,7 +1185,8 @@ public class SOSRunner : IDisposable
         switch (OS.Kind)
         {
             case OSKind.Windows:
-                switch (action) {
+                switch (action)
+                {
                     case DebuggerAction.LoadDumpWithDotNetDump:
                         return NativeDebugger.DotNetDump;
                     default:
@@ -1194,7 +1195,8 @@ public class SOSRunner : IDisposable
 
             case OSKind.Linux:
             case OSKind.OSX:
-                switch (action) {
+                switch (action)
+                {
                     case DebuggerAction.GenerateDump:
                         return config.GenerateDumpWithLLDB() ? NativeDebugger.Lldb : NativeDebugger.Gdb;
                     case DebuggerAction.LoadDumpWithDotNetDump:
@@ -1470,7 +1472,7 @@ public class SOSRunner : IDisposable
     private static string ReplaceVariables(Dictionary<string, string> vars, string input)
     {
         string output = input;
-        foreach (KeyValuePair<string,string> kv in vars)
+        foreach (KeyValuePair<string, string> kv in vars)
         {
             output = output.Replace(kv.Key, kv.Value);
         }
@@ -1620,7 +1622,7 @@ public static class TestConfigurationExtensions
     public static string LLDBPath(this TestConfiguration config)
     {
         string lldbPath = config.GetValue("LLDBPath");
-        if(string.IsNullOrEmpty(lldbPath))
+        if (string.IsNullOrEmpty(lldbPath))
         {
             lldbPath = Environment.GetEnvironmentVariable("LLDB_PATH");
         }
@@ -1630,7 +1632,7 @@ public static class TestConfigurationExtensions
     public static string GDBPath(this TestConfiguration config)
     {
         string gdbPath = config.GetValue("GDBPath");
-        if(string.IsNullOrEmpty(gdbPath))
+        if (string.IsNullOrEmpty(gdbPath))
         {
             gdbPath = Environment.GetEnvironmentVariable("GDB_PATH");
         }

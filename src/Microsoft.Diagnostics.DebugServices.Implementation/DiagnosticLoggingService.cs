@@ -46,7 +46,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 FileStream stream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 CloseLogging();
-                _writer = new StreamWriter(stream) {
+                _writer = new StreamWriter(stream)
+                {
                     AutoFlush = true
                 };
                 _fileLoggingService?.AddStream(stream);
@@ -87,7 +88,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Instance.Enable(logfile == "1" ? null : logfile);
                 }
             }
-            catch (Exception ex) when ( ex is IOException || ex is NotSupportedException || ex is SecurityException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException || ex is NotSupportedException || ex is SecurityException || ex is UnauthorizedAccessException)
             {
             }
         }

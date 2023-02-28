@@ -62,7 +62,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 foreach (IModule module in _modules.Values)
                 {
-                    if (module is IDisposable disposable) {
+                    if (module is IDisposable disposable)
+                    {
                         disposable.Dispose();
                     }
                 }
@@ -108,7 +109,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">base address not found</exception>
         IModule IModuleService.GetModuleFromBaseAddress(ulong baseAddress)
         {
-            if (!GetModules().TryGetValue(baseAddress, out IModule module)) {
+            if (!GetModules().TryGetValue(baseAddress, out IModule module))
+            {
                 throw new DiagnosticsException($"Invalid module base address: {baseAddress:X16}");
             }
             return module;
@@ -135,14 +137,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Debug.Assert((start & ~MemoryService.SignExtensionMask()) == 0);
                 ulong end = start + module.ImageSize;
 
-                if (address >= start && address < end) {
+                if (address >= start && address < end)
+                {
                     return module;
                 }
 
-                if (module.ImageBase < address) {
+                if (module.ImageBase < address)
+                {
                     min = mid + 1;
                 }
-                else {
+                else
+                {
                     max = mid - 1;
                 }
             }
@@ -444,10 +449,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private bool IsModuleEqual(IModule module, string moduleName)
         {
-            if (Target.OperatingSystem == OSPlatform.Windows) {
+            if (Target.OperatingSystem == OSPlatform.Windows)
+            {
                 return StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-            else {
+            else
+            {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
         }

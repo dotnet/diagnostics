@@ -37,16 +37,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _symbolService = services.GetService<ISymbolService>();
 
             RuntimeType = RuntimeType.Unknown;
-            if (clrInfo.Flavor == ClrFlavor.Core) {
+            if (clrInfo.Flavor == ClrFlavor.Core)
+            {
                 RuntimeType = RuntimeType.NetCore;
             }
-            else if (clrInfo.Flavor == ClrFlavor.Desktop) {
+            else if (clrInfo.Flavor == ClrFlavor.Desktop)
+            {
                 RuntimeType = RuntimeType.Desktop;
             }
             RuntimeModule = services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
 
             ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Runtime, services);
-            containerFactory .AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
+            containerFactory.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
             _serviceContainer = containerFactory.Build();
             _serviceContainer.AddService<IRuntime>(this);
             _serviceContainer.AddService<ClrInfo>(clrInfo);
@@ -88,8 +90,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public Version RuntimeVersion
         {
-            get
-            {
+            get {
                 if (_runtimeVersion is null)
                 {
                     Version version = _clrInfo.Version;
@@ -297,21 +298,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string config = s_runtimeTypeNames[(int)RuntimeType];
             string index = _clrInfo.BuildId.IsDefaultOrEmpty ? $"{_clrInfo.IndexTimeStamp:X8} {_clrInfo.IndexFileSize:X8}" : _clrInfo.BuildId.ToHex();
             sb.AppendLine($"#{Id} {config} runtime {_clrInfo} at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8} index {index}");
-            if (_clrInfo.IsSingleFile) {
+            if (_clrInfo.IsSingleFile)
+            {
                 sb.Append($"    Single-file runtime module path: {RuntimeModule.FileName}");
             }
-            else {
+            else
+            {
                 sb.Append($"    Runtime module path: {RuntimeModule.FileName}");
             }
-            if (RuntimeModuleDirectory is not null) {
+            if (RuntimeModuleDirectory is not null)
+            {
                 sb.AppendLine();
                 sb.Append($"    Runtime module directory: {RuntimeModuleDirectory}");
             }
-            if (_dacFilePath is not null) {
+            if (_dacFilePath is not null)
+            {
                 sb.AppendLine();
                 sb.Append($"    DAC: {_dacFilePath}");
             }
-            if (_dbiFilePath is not null) {
+            if (_dbiFilePath is not null)
+            {
                 sb.AppendLine();
                 sb.Append($"    DBI: {_dbiFilePath}");
             }

@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Command IpcClientTcpServerRouterCommand() =>
             new Command(
                 name: "client-server",
-                description:    "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP client. " +
+                description: "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP client. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Command IpcServerTcpServerRouterCommand() =>
             new Command(
                 name: "server-server",
-                description:    "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP client. " +
+                description: "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP client. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option IpcClientAddressOption() =>
             new Option(
                 aliases: new[] { "--ipc-client", "-ipcc" },
-                description:    "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
+                description: "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
                                 "Router connects diagnostic tool ipc server when establishing a " +
                                 "new route between runtime and diagnostic tool.")
             {
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option IpcServerAddressOption() =>
             new Option(
                 aliases: new[] { "--ipc-server", "-ipcs" },
-                description:    "The diagnostics server ipc address to route. Router accepts ipc connections from diagnostic tools " +
+                description: "The diagnostics server ipc address to route. Router accepts ipc connections from diagnostic tools " +
                                 "establishing a new route between runtime and diagnostic tool. If not specified " +
                                 "router will use default ipc diagnostics server path.")
             {
@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option TcpServerAddressOption() =>
             new Option(
                 aliases: new[] { "--tcp-server", "-tcps" },
-                description:    "The router TCP/IP address using format [host]:[port]. " +
+                description: "The router TCP/IP address using format [host]:[port]. " +
                                 "Router can bind one (127.0.0.1, [::1], 0.0.0.0, [::], ipv4 address, ipv6 address, hostname) " +
                                 "or all (*) interfaces. Launch runtime using DOTNET_DiagnosticPorts environment variable " +
                                 "connecting router TCP server during startup.")
@@ -159,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option RuntimeTimeoutOption() =>
             new Option(
                 aliases: new[] { "--runtime-timeout", "-rt" },
-                description:    "Automatically shutdown router if no runtime connects to it before specified timeout (seconds)." +
+                description: "Automatically shutdown router if no runtime connects to it before specified timeout (seconds)." +
                                 "If not specified, router won't trigger an automatic shutdown.")
             {
                 Argument = new Argument<int>(name: "runtimeTimeout", getDefaultValue: () => Timeout.Infinite)
@@ -168,7 +168,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option VerboseOption() =>
             new Option(
                 aliases: new[] { "--verbose", "-v" },
-                description:    "Enable verbose logging (debug|trace)")
+                description: "Enable verbose logging (debug|trace)")
             {
                 Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "")
             };

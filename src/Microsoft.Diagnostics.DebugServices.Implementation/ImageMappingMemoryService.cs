@@ -232,12 +232,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private enum BaseRelocationType
         {
-            ImageRelBasedAbsolute   = 0,
-            ImageRelBasedHigh       = 1,
-            ImageRelBasedLow        = 2,
-            ImageRelBasedHighLow    = 3,
-            ImageRelBasedHighAdj    = 4,
-            ImageRelBasedDir64      = 10,
+            ImageRelBasedAbsolute = 0,
+            ImageRelBasedHigh = 1,
+            ImageRelBasedLow = 2,
+            ImageRelBasedHighLow = 3,
+            ImageRelBasedHighAdj = 4,
+            ImageRelBasedDir64 = 10,
         }
 
         private void ApplyRelocations(IModule module, PEReader reader, int dataVA, byte[] data)
@@ -255,7 +255,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // Read IMAGE_BASE_RELOCATION struct
                     int virtualAddress = blob.ReadInt32();
                     int sizeOfBlock = blob.ReadInt32();
-                    if (sizeOfBlock <= 0) {
+                    if (sizeOfBlock <= 0)
+                    {
                         break;
                     }
                     // Each relocation block covers 4K
@@ -270,7 +271,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             // Read relocation type/offset
                             ushort entry = blob.ReadUInt16();
-                            if (entry == 0) {
+                            if (entry == 0)
+                            {
                                 break;
                             }
                             var type = (BaseRelocationType)(entry >> 12);       // type is 4 upper bits

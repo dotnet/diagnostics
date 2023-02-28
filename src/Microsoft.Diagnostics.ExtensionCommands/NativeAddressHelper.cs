@@ -250,7 +250,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (region.ClrMemoryKind != ClrMemoryKind.None
                     && region.ClrMemoryKind != ClrMemoryKind.HighFrequencyHeap)
                 {
-                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address+mem.Size:x}] {mem.Kind}.");
+                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + mem.Size:x}] {mem.Kind}.");
                 }
 
                 region.ClrMemoryKind = mem.Kind;
@@ -458,8 +458,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             public string Name
             {
-                get
-                {
+                get {
                     if (ClrMemoryKind != ClrMemoryKind.None)
                     {
                         if (ClrMemoryKind == ClrMemoryKind.GCHeapReserve)

@@ -39,11 +39,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public static int CombineHashCodes(int hashCode0, int hashCode1)
         {
-            unchecked {
+            unchecked
+            {
                 // This specific hash function is based on the Boost C++ library's CombineHash function:
                 // http://stackoverflow.com/questions/4948780/magic-numbers-in-boosthash-combine
                 // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html
-                return hashCode0 ^ (hashCode1 + (int) 0x9e3779b9 + (hashCode0 << 6) + (hashCode0 >> 2));
+                return hashCode0 ^ (hashCode1 + (int)0x9e3779b9 + (hashCode0 << 6) + (hashCode0 >> 2));
             }
         }
 
@@ -245,10 +246,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public static string GetDotNetHomeDirectory()
         {
             string dotnetHome;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
                 dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE") ?? throw new ArgumentNullException("USERPROFILE environment variable not found"), ".dotnet");
             }
-            else {
+            else
+            {
                 dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? throw new ArgumentNullException("HOME environment variable not found"), ".dotnet");
             }
             return dotnetHome;

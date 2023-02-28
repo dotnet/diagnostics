@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private const int CopyBufferSize = (16 << 10) /* 16KiB */;
 
-        private ProcessEnvironmentHelper() {}
+        private ProcessEnvironmentHelper() { }
         public static ProcessEnvironmentHelper Parse(byte[] payload)
         {
             ProcessEnvironmentHelper helper = new ProcessEnvironmentHelper();
@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return ReadEnvironmentCore(memoryStream);
         }
 
-        public async Task<Dictionary<string,string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
         {
             using var memoryStream = new MemoryStream();
             await continuation.CopyToAsync(memoryStream, CopyBufferSize, token).ConfigureAwait(false);

@@ -29,7 +29,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="startingRuntimeId">The starting runtime id for this provider</param>
         public IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId)
         {
-            DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>())) {
+            DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>()))
+            {
                 FileLocator = null
             };
             for (int i = 0; i < dataTarget.ClrVersions.Length; i++)

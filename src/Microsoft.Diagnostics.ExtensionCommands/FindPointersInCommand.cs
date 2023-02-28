@@ -8,7 +8,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "findpointersin", Help="Finds pointers to the GC heap within the given memory regions.")]
+    [Command(Name = "findpointersin", Help = "Finds pointers to the GC heap within the given memory regions.")]
     public sealed class FindPointersInCommand : CommandBase
     {
         [ServiceImport]
@@ -30,8 +30,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private int Width
         {
-            get
-            {
+            get {
                 int width = Console.WindowWidth;
                 if (width == 0)
                 {

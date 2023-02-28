@@ -58,7 +58,8 @@ namespace SOS.Extensions
         public bool ReadMemory(ulong address, Span<byte> buffer, out int bytesRead)
         {
             HResult hr = _debuggerServices.ReadVirtual(address, buffer, out bytesRead);
-            if (hr != HResult.S_OK) {
+            if (hr != HResult.S_OK)
+            {
                 bytesRead = 0;
             }
             return bytesRead > 0;
@@ -74,7 +75,8 @@ namespace SOS.Extensions
         public bool WriteMemory(ulong address, Span<byte> buffer, out int bytesWritten)
         {
             HResult hr = _debuggerServices.WriteVirtual(address, buffer, out bytesWritten);
-            if (hr != HResult.S_OK) {
+            if (hr != HResult.S_OK)
+            {
                 bytesWritten = 0;
             }
             return bytesWritten > 0;

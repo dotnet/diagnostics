@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
                     }
                 }
 
-                foreach(string requestId in requestsToRemove)
+                foreach (string requestId in requestsToRemove)
                 {
                     _requests.Remove(requestId);
                 }

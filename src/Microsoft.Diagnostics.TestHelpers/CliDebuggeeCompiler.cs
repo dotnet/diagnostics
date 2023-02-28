@@ -19,9 +19,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 		///   LinkerPackageVersion   If set, this version of the linker package will be used to link the debuggee during publish.
 		/// </param>
         /// </summary>
-        public CliDebuggeeCompiler(TestConfiguration config, string debuggeeName) : base(config, debuggeeName) {}
+        public CliDebuggeeCompiler(TestConfiguration config, string debuggeeName) : base(config, debuggeeName) { }
 
-        private static Dictionary<string,string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier)
+        private static Dictionary<string, string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier)
         {
             Dictionary<string, string> buildProperties = new Dictionary<string, string>();
             string buildProjectMicrosoftNetCoreAppVersion = config.BuildProjectMicrosoftNetCoreAppVersion;

@@ -94,7 +94,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 MetadataRegion region = FindRegion(address);
                 if (region != null)
                 {
-                    if (region.ReadMetaData(address, buffer, out bytesRead)) {
+                    if (region.ReadMetaData(address, buffer, out bytesRead))
+                    {
                         return true;
                     }
                 }

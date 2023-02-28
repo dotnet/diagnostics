@@ -41,8 +41,7 @@ namespace EventPipeTracee
             Console.Out.Flush();
 
             ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging(builder =>
-            {
+            serviceCollection.AddLogging(builder => {
                 builder.AddEventSourceLogger();
                 // Set application defined levels
                 builder.AddFilter(null, LogLevel.Error); // Default

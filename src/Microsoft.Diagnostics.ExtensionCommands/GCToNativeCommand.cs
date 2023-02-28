@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
     public sealed class GCToNativeCommand : CommandBase
     {
-        [Argument(Help ="The types of memory to search the GC heap for.")]
+        [Argument(Help = "The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
 
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Show the complete list of objects and not just a summary.")]
@@ -26,8 +26,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private int Width
         {
-            get
-            {
+            get {
                 int width = Console.WindowWidth;
                 if (width == 0)
                 {
@@ -227,8 +226,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                                  let Count = g.Count()
                                                  let TotalSize = g.Sum(k => (long)GetSize(sizeHints, k))
                                                  orderby TotalSize descending, Name ascending
-                                                 select new
-                                                 {
+                                                 select new {
                                                      Name,
                                                      Count,
                                                      TotalSize,
@@ -268,8 +266,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                               let Name = g.Key
                                               let Count = g.Count()
                                               orderby Count descending
-                                              select new
-                                              {
+                                              select new {
                                                   Name,
                                                   Count,
                                                   Pointer = g.Select(p => p.Pointer).FindMostCommonPointer()

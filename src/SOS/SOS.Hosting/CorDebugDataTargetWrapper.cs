@@ -179,7 +179,8 @@ namespace SOS.Hosting
         {
             try
             {
-                if (_threadUnwindService == null) {
+                if (_threadUnwindService == null)
+                {
                     return HResult.E_NOTIMPL;
                 }
                 return _threadUnwindService.Unwind(threadId, contextSize, context);

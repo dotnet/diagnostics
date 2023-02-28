@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     await Unzip(LocalDotNetZipPath, LocalDotNetZipExpandDirPath, output);
                 }
-                else if(LocalDotNetZipPath.EndsWith(".tar.gz"))
+                else if (LocalDotNetZipPath.EndsWith(".tar.gz"))
                 {
                     await UnGZip(LocalDotNetZipPath, LocalDotNetTarPath, output);
                     await Untar(LocalDotNetTarPath, LocalDotNetZipExpandDirPath, output);
@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static async Task DownloadFile(string remotePath, string localPath, ITestOutputHelper output)
         {
             output.WriteLine("Downloading: " + remotePath + " -> " + localPath);
-            using HttpClient client = new ();
+            using HttpClient client = new();
             using HttpResponseMessage response = await client.GetAsync(remotePath);
             response.EnsureSuccessStatusCode();
             using Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);

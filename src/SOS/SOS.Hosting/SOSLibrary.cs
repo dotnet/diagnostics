@@ -79,16 +79,20 @@ namespace SOS.Hosting
             if (_sosLibrary == IntPtr.Zero)
             {
                 string sos;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
                     sos = "sos.dll";
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
                     sos = "libsos.so";
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
                     sos = "libsos.dylib";
                 }
-                else {
+                else
+                {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                 }
                 string sosPath = Path.Combine(SOSPath, sos);

@@ -149,10 +149,12 @@ namespace Microsoft.Diagnostics.DebugServices
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                if (Position + count > Length) {
+                if (Position + count > Length)
+                {
                     return 0;
                 }
-                if (_memoryService.ReadMemory(_address + (ulong)Position, new Span<byte>(buffer, offset, count), out int bytesRead)) {
+                if (_memoryService.ReadMemory(_address + (ulong)Position, new Span<byte>(buffer, offset, count), out int bytesRead))
+                {
                     Position += bytesRead;
                 }
                 return bytesRead;
@@ -160,7 +162,8 @@ namespace Microsoft.Diagnostics.DebugServices
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                switch (origin) {
+                switch (origin)
+                {
                     case SeekOrigin.Begin:
                         Position = offset;
                         break;

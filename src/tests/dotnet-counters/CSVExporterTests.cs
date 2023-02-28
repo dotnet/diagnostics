@@ -22,7 +22,7 @@ namespace DotnetCounters.UnitTests
         public void IncrementingCounterTest()
         {
             string fileName = "IncrementingCounterTest.csv";
-        	CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -107,7 +107,7 @@ namespace DotnetCounters.UnitTests
         public void DifferentDisplayRateTest()
         {
             string fileName = "displayRateTest.csv";
-        	CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new CSVExporter(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -136,7 +136,7 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal("myProvider", tokens[1]);
                     Assert.Equal($"Incrementing Counter One (Count / 60 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
-                    Assert.Equal((i-1).ToString(), tokens[4]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
             }
             finally
@@ -178,7 +178,7 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal("myProvider", tokens[1]);
                     Assert.Equal($"Allocation Rate Gen (MB / 60 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
-                    Assert.Equal((i-1).ToString(), tokens[4]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
             }
             finally

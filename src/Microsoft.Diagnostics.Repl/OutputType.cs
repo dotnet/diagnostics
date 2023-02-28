@@ -9,8 +9,8 @@ namespace Microsoft.Diagnostics.Repl
     /// </summary>
     public enum OutputType
     {
-        Normal      = 1,
-        Error       = 2,
-        Warning     = 3,
+        Normal = 1,
+        Error = 2,
+        Warning = 3,
     }
 }

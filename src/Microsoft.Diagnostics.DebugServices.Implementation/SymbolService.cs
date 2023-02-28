@@ -68,8 +68,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public string DefaultSymbolCache
         {
-            get
-            {
+            get {
                 if (_defaultSymbolCache == null)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -88,8 +87,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 return _defaultSymbolCache;
             }
-            set
-            {
+            set {
                 _defaultSymbolCache = value;
             }
         }
@@ -946,8 +944,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             sb.AppendLine("Current symbol store settings:");
 
-            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
-            {
+            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
                     sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");

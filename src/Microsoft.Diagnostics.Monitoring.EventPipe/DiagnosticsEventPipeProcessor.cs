@@ -44,8 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
             IDisposable registration = token.Register(() => TryCancelCompletionSources(token));
-            await await Task.Factory.StartNew(async () =>
-            {
+            await await Task.Factory.StartNew(async () => {
                 EventPipeEventSource source = null;
                 EventPipeStreamProvider streamProvider = null;
                 Task handleEventsTask = Task.CompletedTask;

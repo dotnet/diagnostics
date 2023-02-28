@@ -234,7 +234,7 @@ namespace Microsoft.Diagnostics
             HResult hr = _createDebuggingInterfaceFromVersion3(debuggerVersion, versionString, applicationGroupId, libraryProvider, out IntPtr punk);
             cordbg = ICorDebug.Create(punk);
             return hr;
-         }
+        }
 
         public static HResult CLRCreateInstance(out ICLRDebugging clrDebugging)
         {
@@ -247,7 +247,8 @@ namespace Microsoft.Diagnostics
             where T : Delegate
         {
             IntPtr functionAddress = DataTarget.PlatformFunctions.GetLibraryExport(_dbgshimModuleHandle, functionName);
-            if (functionAddress == IntPtr.Zero) {
+            if (functionAddress == IntPtr.Zero)
+            {
                 if (optional)
                 {
                     return default;

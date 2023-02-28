@@ -38,8 +38,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCCollect_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -54,8 +53,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
@@ -69,8 +67,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCStartEvents = 0;
                     int GCEndEvents = 0;
                     source.Clr.GCStart += (eventData) => GCStartEvents += 1;
@@ -86,8 +83,8 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     source.Clr.GCSuspendEEStart += (eventData) => GCSuspendEEEvents += 1;
                     source.Clr.GCSuspendEEStop += (eventData) => GCSuspendEEEndEvents += 1;
 
-                    int GCHeapStatsEvents =0;
-                    source.Clr.GCHeapStats += (eventData) => GCHeapStatsEvents +=1;
+                    int GCHeapStatsEvents = 0;
+                    source.Clr.GCHeapStats += (eventData) => GCHeapStatsEvents += 1;
 
                     return () => {
                         Logger.logger.Log("Event counts validation");
@@ -123,8 +120,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCWaitForPendingFinalizers_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -139,8 +135,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
@@ -155,8 +150,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCFinalizersEndEvents = 0;
                     source.Clr.GCFinalizersStop += (eventData) => GCFinalizersEndEvents += 1;
                     int GCFinalizersStartEvents = 0;
@@ -176,8 +170,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         [Fact]
         public async void GCCollect_ProducesVerboseEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -192,10 +185,9 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     List<string> testList = new List<string>();
-                    for (int i = 0; i < 100_000_000; i ++)
+                    for (int i = 0; i < 100_000_000; i++)
                     {
                         // This test was failing (no GCFreeSegment callbacks) on x86 until this GC Collects happened.
                         if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
@@ -211,8 +203,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     GC.Collect();
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCCreateSegmentEvents = 0;
                     int GCFreeSegmentEvents = 0;
                     source.Clr.GCCreateSegment += (eventData) => GCCreateSegmentEvents += 1;

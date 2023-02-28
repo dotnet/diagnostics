@@ -16,8 +16,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public TestDataReader TestData
         {
-            get
-            {
+            get {
                 _testData ??= new TestDataReader(TestDataFile);
                 return _testData;
             }
@@ -25,8 +24,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public ITarget Target
         {
-            get
-            {
+            get {
                 _target ??= GetTarget();
                 return _target;
             }

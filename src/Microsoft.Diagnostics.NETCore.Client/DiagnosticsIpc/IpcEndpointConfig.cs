@@ -50,23 +50,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
             switch (transportType)
             {
                 case TransportType.NamedPipe:
-                {
-                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         {
                             throw new PlatformNotSupportedException($"{NamedPipeSchema} is only supported on Windows.");
                         }
 
                         break;
-                }
+                    }
                 case TransportType.UnixDomainSocket:
-                {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         {
                             throw new PlatformNotSupportedException($"{UnixDomainSocketSchema} is not supported on Windows, use {NamedPipeSchema}.");
                         }
 
                         break;
-                }
+                    }
 #if DIAGNOSTICS_RUNTIME
                 case TransportType.TcpSocket:
                 {
@@ -74,9 +74,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
 #endif
                 default:
-                {
-                    throw new NotSupportedException($"{transportType} not supported.");
-                }
+                    {
+                        throw new NotSupportedException($"{transportType} not supported.");
+                    }
             }
 
             Address = address;
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 result = Parse(config);
             }
-            catch(Exception)
+            catch (Exception)
             {
                 result = null;
             }

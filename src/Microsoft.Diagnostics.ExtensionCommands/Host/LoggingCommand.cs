@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--enable", Aliases = new string[] { "enable", "-e" }, Help = "Enable internal logging.")]
         public bool Enable { get; set; }
 
-        [Option(Name = "--disable", Aliases = new string[] { "disable", "-d"}, Help = "Disable internal logging.")]
+        [Option(Name = "--disable", Aliases = new string[] { "disable", "-d" }, Help = "Disable internal logging.")]
         public bool Disable { get; set; }
 
         public override void Invoke()

@@ -53,7 +53,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void SetCurrentTarget(int targetId)
         {
             ITarget target = _host.EnumerateTargets().SingleOrDefault((target) => target.Id == targetId);
-            if (target is null) {
+            if (target is null)
+            {
                 throw new DiagnosticsException($"Invalid target id {targetId}");
             }
             SetCurrentTarget(target);
@@ -84,7 +85,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void SetCurrentRuntime(int runtimeId)
         {
             IRuntime runtime = RuntimeService?.EnumerateRuntimes().SingleOrDefault((runtime) => runtime.Id == runtimeId);
-            if (runtime is null) {
+            if (runtime is null)
+            {
                 throw new DiagnosticsException($"Invalid runtime id {runtimeId}");
             }
             SetCurrentRuntime(runtime);
@@ -202,7 +204,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected bool IsTargetEqual(ITarget left, ITarget right)
         {
-            if (left is null || right is null) {
+            if (left is null || right is null)
+            {
                 return left == right;
             }
             return left == right;
@@ -210,7 +213,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected bool IsThreadEqual(IThread left, IThread right)
         {
-            if (left is null || right is null) {
+            if (left is null || right is null)
+            {
                 return left == right;
             }
             return left == right;
@@ -218,7 +222,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected bool IsRuntimeEqual(IRuntime left, IRuntime right)
         {
-            if (left is null || right is null) {
+            if (left is null || right is null)
+            {
                 return left == right;
             }
             return left == right;

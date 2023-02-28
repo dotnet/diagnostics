@@ -36,8 +36,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
         [Fact]
         public async void MethodVerbose_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     //registering Dynamic_All and Clr event callbacks will override each other, disable the check for the provider and check the events counts in the callback
@@ -52,9 +51,8 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0b10000)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
-                    for(int i=0; i<100; i++)
+                Action _eventGeneratingAction = () => {
+                    for (int i = 0; i < 100; i++)
                     {
                         if (i % 10 == 0)
                         {
@@ -69,8 +67,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int MethodLoadVerboseEvents = 0;
                     int MethodUnloadVerboseEvents = 0;
                     source.Clr.MethodLoadVerbose += (eventData) => MethodLoadVerboseEvents += 1;

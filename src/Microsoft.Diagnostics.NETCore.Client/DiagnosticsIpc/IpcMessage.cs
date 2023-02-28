@@ -15,14 +15,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal enum DiagnosticsIpcError : uint
     {
-        Fail                  = 0x80004005,
-        InvalidArgument       = 0x80070057,
-        NotSupported          = 0x80131515,
+        Fail = 0x80004005,
+        InvalidArgument = 0x80070057,
+        NotSupported = 0x80131515,
         ProfilerAlreadyActive = 0x8013136A,
-        BadEncoding           = 0x80131384,
-        UnknownCommand        = 0x80131385,
-        UnknownMagic          = 0x80131386,
-        UnknownError          = 0x80131387,
+        BadEncoding = 0x80131384,
+        UnknownCommand = 0x80131385,
+        UnknownMagic = 0x80131386,
+        UnknownError = 0x80131387,
     }
 
     /// <summary>

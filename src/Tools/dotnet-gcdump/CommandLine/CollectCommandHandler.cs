@@ -74,8 +74,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
-                var dumpTask = Task.Run(() =>
-                {
+                var dumpTask = Task.Run(() => {
                     if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");

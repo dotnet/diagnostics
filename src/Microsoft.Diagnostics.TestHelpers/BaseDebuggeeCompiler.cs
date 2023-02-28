@@ -181,13 +181,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         protected static Dictionary<string, string> GetNugetFeeds(TestConfiguration config)
         {
             Dictionary<string, string> nugetFeeds = new Dictionary<string, string>();
-            if(!string.IsNullOrWhiteSpace(config.NuGetPackageFeeds))
+            if (!string.IsNullOrWhiteSpace(config.NuGetPackageFeeds))
             {
                 string[] feeds = config.NuGetPackageFeeds.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach(string feed in feeds)
+                foreach (string feed in feeds)
                 {
                     string[] feedParts = feed.Trim().Split('=');
-                    if(feedParts.Length != 2)
+                    if (feedParts.Length != 2)
                     {
                         throw new Exception("Expected feed \'" + feed + "\' to value <key>=<value> format");
                     }

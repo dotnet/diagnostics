@@ -350,11 +350,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 return "successful steps are always reused";
             }
-            else if(!IsPreviousMachineSame(openedStepState))
+            else if (!IsPreviousMachineSame(openedStepState))
             {
                 return "steps on run on other machines are always reused, regardless of success";
             }
-            else if(IsPreviousProcessRunning(openedStepState))
+            else if (IsPreviousProcessRunning(openedStepState))
             {
                 return "steps run in currently executing processes are always reused, regardless of success";
             }
@@ -403,7 +403,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void ThrowExceptionIfFaulted(TestStepState cachedStepState)
         {
-            if(cachedStepState.RunState == TestStepRunState.Faulted)
+            if (cachedStepState.RunState == TestStepRunState.Faulted)
             {
                 throw new TestStepException(FriendlyName, cachedStepState.ErrorMessage, cachedStepState.ErrorStackTrace);
             }
@@ -511,7 +511,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     // The XmlReader is not happy with two root nodes so we crudely split them.
                     int indexOfInitialStepStateElementEnd = text.IndexOf("</InitialStepState>");
-                    if(indexOfInitialStepStateElementEnd == -1)
+                    if (indexOfInitialStepStateElementEnd == -1)
                     {
                         return false;
                     }
@@ -570,7 +570,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // as if the stream had terminated at the end of the InitialTaskState node.
                 // This covers a small window of time when appending the FinalTaskState node is in progress.
                 //
-                if(string.IsNullOrWhiteSpace(text))
+                if (string.IsNullOrWhiteSpace(text))
                 {
                     return;
                 }

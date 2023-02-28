@@ -45,16 +45,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public void AddProviderCounters(string providerName, string[] counters)
         {
-            if(!_providerCounters.TryGetValue(providerName, out List<string> enabledCounters))
+            if (!_providerCounters.TryGetValue(providerName, out List<string> enabledCounters))
             {
                 enabledCounters = new List<string>(counters.Distinct());
                 _providerCounters.Add(providerName, enabledCounters);
             }
-            else if(enabledCounters.Count != 0) // empty list means all counters are enabled already
+            else if (enabledCounters.Count != 0) // empty list means all counters are enabled already
             {
-                foreach(string counter in counters)
+                foreach (string counter in counters)
                 {
-                    if(!enabledCounters.Contains(counter))
+                    if (!enabledCounters.Contains(counter))
                     {
                         enabledCounters.Add(counter);
                     }

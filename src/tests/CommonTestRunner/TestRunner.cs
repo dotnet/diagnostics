@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics./TestHelpers;
+using Microsoft.Diagnostics./ TestHelpers;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.CommonTestRunner
@@ -173,8 +173,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 try
                 {
                     var source = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                    await Task.Run(cancellationToken: source.Token, action: () =>
-                    {
+                    await Task.Run(cancellationToken: source.Token, action: () => {
                         while (true)
                         {
                             string[] matchingFiles;

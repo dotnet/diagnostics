@@ -40,8 +40,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 throw new InvalidOperationException("Failed to start the event pipe session", ex);
             }
 
-            _currentTask = Task.Run(async () =>
-            {
+            _currentTask = Task.Run(async () => {
                 using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 linkedSource.CancelAfter(duration);
                 using var _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));

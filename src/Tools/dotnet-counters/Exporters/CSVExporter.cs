@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     .Append(payload.Timestamp.ToString()).Append(',')
                     .Append(payload.ProviderName).Append(',')
                     .Append(payload.DisplayName);
-                if(!string.IsNullOrEmpty(payload.Tags))
+                if (!string.IsNullOrEmpty(payload.Tags))
                 {
                     builder.Append('[').Append(payload.Tags.Replace(',', ';')).Append(']');
                 }

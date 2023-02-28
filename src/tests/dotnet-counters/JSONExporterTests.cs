@@ -87,7 +87,7 @@ namespace DotnetCounters.UnitTests
             JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
-            for (int i = 0 ; i < 20; i++)
+            for (int i = 0; i < 20; i++)
             {
                 exporter.CounterPayloadReceived(new GaugePayload("myProvider", "heapSize", "Heap Size", "MB", "", i, start + TimeSpan.FromSeconds(i)), false);
             }
@@ -101,7 +101,7 @@ namespace DotnetCounters.UnitTests
                 Assert.Equal("myProcess.exe", counterTrace.targetProcess);
                 Assert.Equal(20, counterTrace.events.Length);
                 var i = 0;
-                foreach(JSONCounterPayload payload in counterTrace.events)
+                foreach (JSONCounterPayload payload in counterTrace.events)
                 {
                     Assert.Equal("myProvider", payload.provider);
                     Assert.Equal("Heap Size (MB)", payload.name);
@@ -121,7 +121,7 @@ namespace DotnetCounters.UnitTests
             JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
-            for (int i = 0 ; i < 20; i++)
+            for (int i = 0; i < 20; i++)
             {
                 exporter.CounterPayloadReceived(new RatePayload("myProvider", "heapSize", "Heap Size", "MB", "", 0, 60, start + TimeSpan.FromSeconds(i)), false);
             }

@@ -61,8 +61,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
                 // Only allow events described in the mapping to be forwarded to the trigger.
                 // If a provider has no events specified, then all events from that provider are forwarded.
                 _eventSource.Dynamic.AddCallbackForProviderEvents(
-                    (string providerName, string eventName) =>
-                    {
+                    (string providerName, string eventName) => {
                         if (!providerEventMap.TryGetValue(providerName, out IEnumerable<string> eventNames))
                         {
                             return EventFilterResponse.RejectProvider;

@@ -417,7 +417,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new TcpClientRouterFactory(tcpClient, runtimeTimeoutMs, logger);
         }
 
-        public string TcpClientAddress {
+        public string TcpClientAddress
+        {
             get { return _tcpClientAddress; }
         }
 
@@ -519,8 +520,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) =>
-                    {
+                    Func<AsyncCallback, object, IAsyncResult> beginConnect = (callback, state) => {
                         return clientSocket.BeginConnect(remoteEP, callback, state);
                     };
                     await Task.Factory.FromAsync(beginConnect, clientSocket.EndConnect, this).ConfigureAwait(false);
@@ -548,7 +548,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private int IpcServerTimeoutMs { get; set; } = Timeout.Infinite;
 
-        public string IpcServerPath {
+        public string IpcServerPath
+        {
             get { return _ipcServerPath; }
         }
 
@@ -623,7 +624,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private int IpcClientRetryTimeoutMs { get; set; } = 500;
 
-        public string IpcClientPath {
+        public string IpcClientPath
+        {
             get { return _ipcClientPath; }
         }
 
@@ -737,24 +739,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcServerRouterFactory.IpcServerPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _netServerRouterFactory.ServerAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -936,24 +935,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcServerRouterFactory.IpcServerPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _tcpClientRouterFactory.TcpClientAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -1062,24 +1058,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get
-            {
+            get {
                 return _ipcClientRouterFactory.IpcClientPath;
             }
         }
 
         public override string TcpAddress
         {
-            get
-            {
+            get {
                 return _tcpServerRouterFactory.ServerAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get
-            {
+            get {
                 return _logger;
             }
         }
@@ -1211,23 +1204,23 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _tcpClientRouterFactory = factory(tcpClient, runtimeTimeoutMs, logger);
         }
 
-        public override string IpcAddress {
-            get
-            {
+        public override string IpcAddress
+        {
+            get {
                 return _ipcClientRouterFactory.IpcClientPath;
             }
         }
 
-        public override string TcpAddress {
-            get
-            {
+        public override string TcpAddress
+        {
+            get {
                 return _tcpClientRouterFactory.TcpClientAddress;
             }
         }
 
-        public override ILogger Logger {
-            get
-            {
+        public override ILogger Logger
+        {
+            get {
                 return _logger;
             }
         }
@@ -1510,9 +1503,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _frontendReadBackendWriteTask = null;
         }
 
-        public bool IsRunning {
-            get
-            {
+        public bool IsRunning
+        {
+            get {
                 if (_backendReadFrontendWriteTask == null || _frontendReadBackendWriteTask == null || _disposed)
                 {
                     return false;

@@ -131,7 +131,7 @@ namespace Microsoft.Internal.Common.Utils
     {
         public int LineToClear { get; set; } = 0;
 
-        public LineRewriter() {}
+        public LineRewriter() { }
 
         // ANSI escape codes:
         //  [2K => clear current line

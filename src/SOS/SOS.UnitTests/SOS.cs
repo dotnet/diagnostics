@@ -149,7 +149,8 @@ public class SOS
 
     private async Task RunTest(TestConfiguration config, string debuggeeName, string scriptName, string testName = null, bool testLive = true, bool testDump = true, bool testTriage = false)
     {
-        await RunTest(scriptName, new SOSRunner.TestInformation {
+        await RunTest(scriptName, new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             TestName = testName,
             TestLive = testLive,
@@ -162,7 +163,8 @@ public class SOS
         // Issue: https://github.com/dotnet/diagnostics/issues/2515
         if (testTriage && !config.PublishSingleFile)
         {
-            await RunTest(scriptName, new SOSRunner.TestInformation {
+            await RunTest(scriptName, new SOSRunner.TestInformation
+            {
                 TestConfiguration = config,
                 TestName = testName,
                 TestLive = false,
@@ -201,7 +203,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
-        await RunTest("Overflow.script", new SOSRunner.TestInformation {
+        await RunTest("Overflow.script", new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             DebuggeeName = "Overflow",
             // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
@@ -254,7 +257,8 @@ public class SOS
     public async Task OtherCommands(TestConfiguration config)
     {
         // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-        await RunTest("OtherCommands.script", new SOSRunner.TestInformation {
+        await RunTest("OtherCommands.script", new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             TestName = "SOS.OtherCommands",
             DebuggeeName = "SymbolTestApp",
@@ -274,7 +278,8 @@ public class SOS
             string debuggeeDumpInputRootDir = Path.Combine(currentConfig.DebuggeeDumpInputRootDir(), currentConfig.DebugType);
 
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-            await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation {
+            await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation
+            {
                 TestConfiguration = currentConfig,
                 TestName = "SOS.StackAndOtherTests",
                 DebuggeeName = "SymbolTestApp",
@@ -288,10 +293,12 @@ public class SOS
             // to using native implementations of the host/target/runtime.
             if (currentConfig.DebugType == "full")
             {
-                var settings = new Dictionary<string, string>(currentConfig.AllSettings) {
+                var settings = new Dictionary<string, string>(currentConfig.AllSettings)
+                {
                     ["SetHostRuntime"] = "-none"
                 };
-                await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation {
+                await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation
+                {
                     TestConfiguration = new TestConfiguration(settings),
                     TestName = "SOS.StackAndOtherTests",
                     DebuggeeName = "SymbolTestApp",
@@ -307,7 +314,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.WebApp3")]
     public async Task WebApp3(TestConfiguration config)
     {
-        await RunTest("WebApp.script", new SOSRunner.TestInformation {
+        await RunTest("WebApp.script", new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             TestLive = false,
             DebuggeeName = "WebApp3",
@@ -329,7 +337,8 @@ public class SOS
         {
             throw new SkipTestException("DesktopTestParameters config value does not exists");
         }
-        await RunTest("DualRuntimes.script", new SOSRunner.TestInformation {
+        await RunTest("DualRuntimes.script", new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             TestLive = false,
             TestName = "SOS.DualRuntimes",
@@ -343,7 +352,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
-        await RunTest("ConcurrentDictionaries.script", new SOSRunner.TestInformation {
+        await RunTest("ConcurrentDictionaries.script", new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             TestLive = false,
             DebuggeeName = "DotnetDumpCommands",
@@ -357,7 +367,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DumpGen(TestConfiguration config)
     {
-        await RunTest("DumpGen.script", new SOSRunner.TestInformation {
+        await RunTest("DumpGen.script", new SOSRunner.TestInformation
+        {
             TestConfiguration = config,
             TestLive = false,
             DebuggeeName = "DotnetDumpCommands",

@@ -172,7 +172,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance);
             foreach (MemberInfo member in members)
             {
-                if (membersToSkip.Any((skip) => member.Name == skip)) {
+                if (membersToSkip.Any((skip) => member.Name == skip))
+                {
                     continue;
                 }
                 string result = null;
@@ -258,10 +259,12 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private bool IsModuleEqual(IModule module, string moduleName)
         {
-            if (module.Target.OperatingSystem == OSPlatform.Windows) {
+            if (module.Target.OperatingSystem == OSPlatform.Windows)
+            {
                 return StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-            else {
+            else
+            {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
         }

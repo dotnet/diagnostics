@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public delegate void DeviceNotificationDelegate(ref AMDeviceNotificationCallbackInfo info);
 
-#region MobileDeviceLibrary
+        #region MobileDeviceLibrary
         [DllImport(MobileDeviceLibrary)]
         public static extern uint AMDeviceNotificationSubscribe(DeviceNotificationDelegate callback, uint unused0, uint unused1, uint unused2, out IntPtr context);
 
@@ -60,8 +60,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         [DllImport(MobileDeviceLibrary)]
         public static extern uint USBMuxConnectByPort(uint connection, ushort port, out int socketHandle);
-#endregion
-#region CoreFoundationLibrary
+        #endregion
+        #region CoreFoundationLibrary
         [DllImport(CoreFoundationLibrary)]
         public static extern void CFRunLoopRun();
 
@@ -70,8 +70,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         [DllImport(CoreFoundationLibrary)]
         public static extern IntPtr CFRunLoopGetCurrent();
-#endregion
-#region LibC
+        #endregion
+        #region LibC
         [DllImport(LibC, SetLastError = true)]
         public static extern unsafe int send(int handle, byte* buffer, IntPtr length, int flags);
 
@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         [DllImport(LibC, SetLastError = true)]
         public static extern int close(int handle);
-#endregion
+        #endregion
     }
 
     internal class USBMuxStream : Stream
@@ -102,7 +102,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override long Length => throw new NotImplementedException();
 
-        public override long Position {
+        public override long Position
+        {
             get => throw new NotImplementedException();
             set => throw new NotImplementedException();
         }
@@ -122,17 +123,17 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             if (offset + count > buffer.Length)
             {
-                throw new InvalidOperationException ("Potential write beyond end of buffer");
+                throw new InvalidOperationException("Potential write beyond end of buffer");
             }
 
             if (offset < 0)
             {
-                throw new InvalidOperationException ("Write before beginning of buffer");
+                throw new InvalidOperationException("Write before beginning of buffer");
             }
 
             if (count < 0)
             {
-                throw new InvalidOperationException ("Negative read count");
+                throw new InvalidOperationException("Negative read count");
             }
 
             while (true)
@@ -146,7 +147,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 {
                     fixed (byte* fixedBuffer = buffer)
                     {
-                        bytesRead = USBMuxInterop.recv(_handle, fixedBuffer + offset, new IntPtr (count), 0);
+                        bytesRead = USBMuxInterop.recv(_handle, fixedBuffer + offset, new IntPtr(count), 0);
                     }
                 }
 
@@ -161,8 +162,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 int result = 0;
                 using (cancellationToken.Register(() => Close()))
                 {
@@ -230,8 +230,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 using (cancellationToken.Register(() => Close()))
                 {
                     Write(buffer, offset, count);

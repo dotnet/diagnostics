@@ -468,8 +468,7 @@ public class InteropInfo : IFastSerializable
 
         public string moduleName
         {
-            get
-            {
+            get {
                 if (_moduleName == null)
                 {
                     int pos = fileName.LastIndexOf('\\');

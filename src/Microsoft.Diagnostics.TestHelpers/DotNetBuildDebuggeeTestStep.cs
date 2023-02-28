@@ -78,7 +78,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                        string debuggeeBinaryDllPath,
                                        string debuggeeBinaryExePath,
                                        string nugetPackageCacheDirPath,
-                                       Dictionary<string,string> nugetFeeds,
+                                       Dictionary<string, string> nugetFeeds,
                                        string logPath) :
             base(logPath, "Build Debuggee")
         {
@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             DebuggeeBinaryExePath = debuggeeBinaryExePath;
             NuGetPackageCacheDirPath = nugetPackageCacheDirPath;
             NugetFeeds = nugetFeeds;
-            if(NugetFeeds != null && NugetFeeds.Count > 0)
+            if (NugetFeeds != null && NugetFeeds.Count > 0)
             {
                 NuGetConfigPath = Path.Combine(DebuggeeSolutionDirPath, "NuGet.config");
             }
@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// a default cache.
         public string NuGetPackageCacheDirPath { get; private set; }
         public string NuGetConfigPath { get; private set; }
-        public IDictionary<string,string> NugetFeeds { get; private set; }
+        public IDictionary<string, string> NugetFeeds { get; private set; }
         public abstract string ProjectTemplateFileName { get; }
 
         async protected override Task DoWork(ITestOutputHelper output)
@@ -304,7 +304,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             output.WriteLine("Copying: " + sourceDirPath + " -> " + destDirPath);
             Directory.CreateDirectory(destDirPath);
-            foreach(string dirPath in Directory.EnumerateDirectories(sourceDirPath))
+            foreach (string dirPath in Directory.EnumerateDirectories(sourceDirPath))
             {
                 CopySourceDirectory(dirPath, Path.Combine(destDirPath, Path.GetFileName(dirPath)), output);
             }
@@ -334,11 +334,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             sb.AppendLine("<configuration>");
-            if(NugetFeeds != null && NugetFeeds.Count > 0)
+            if (NugetFeeds != null && NugetFeeds.Count > 0)
             {
                 sb.AppendLine("  <packageSources>");
                 sb.AppendLine("    <clear />");
-                foreach(KeyValuePair<string, string> kv in NugetFeeds)
+                foreach (KeyValuePair<string, string> kv in NugetFeeds)
                 {
                     sb.AppendLine("    <add key=\"" + kv.Key + "\" value=\"" + kv.Value + "\" />");
                 }

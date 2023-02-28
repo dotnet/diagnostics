@@ -77,8 +77,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 int gcNum = -1;
 
-                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
-                {
+                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data) {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -93,8 +92,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 };
 
-                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data)
-                {
+                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data) {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -107,8 +105,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 };
 
-                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
-                {
+                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data) {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -130,8 +127,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
 
                 // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded.
-                Task readerTask = Task.Run(() =>
-                {
+                Task readerTask = Task.Run(() => {
                     // cancelled before we began
                     if (ct.IsCancellationRequested)
                     {
@@ -174,8 +170,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 }
 
-                var stopTask = Task.Run(() =>
-                {
+                var stopTask = Task.Run(() => {
                     log.WriteLine("{0,5:n1}s: Shutting down gcdump EventPipe session", getElapsed().TotalSeconds);
                     gcDumpSession.EndSession();
                     log.WriteLine("{0,5:n1}s: gcdump EventPipe session shut down", getElapsed().TotalSeconds);

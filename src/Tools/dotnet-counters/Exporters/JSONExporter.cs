@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             int offset = input.IndexOfAny(s_escapeChars);
-            if(offset == -1)
+            if (offset == -1)
             {
                 // fast path
                 return input;
@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             // so I didn't feel justified writing a complex routine or adding a few 100KB for a dependency on a
             // better performing JSON library
             StringBuilder sb = new StringBuilder(input.Length + 10);
-            foreach(char c in input)
+            foreach (char c in input)
             {
                 switch (c)
                 {

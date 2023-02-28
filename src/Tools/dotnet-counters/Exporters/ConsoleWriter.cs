@@ -139,13 +139,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
             string instructions = "Press p to pause, r to resume, q to quit.";
             Console.WriteLine((instructions.Length < _consoleWidth) ? instructions : instructions.Substring(0, _consoleWidth)); row++;
-            Console.WriteLine($"    Status: {GetStatus()}");                _statusRow = row++;
+            Console.WriteLine($"    Status: {GetStatus()}"); _statusRow = row++;
             if (_errorText != null)
             {
                 Console.WriteLine(_errorText);
                 row += GetLineWrappedLines(_errorText);
             }
-            Console.WriteLine();                                            row++; // Blank line.
+            Console.WriteLine(); row++; // Blank line.
 
             foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
-                        if(row >= _consoleHeight) // prevents from displaying more counters than vertical space available
+                        if (row >= _consoleHeight) // prevents from displaying more counters than vertical space available
                         {
                             break;
                         }
@@ -169,7 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         Console.WriteLine(name);
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
-                            if(row >= _consoleHeight)
+                            if (row >= _consoleHeight)
                             {
                                 break;
                             }
@@ -227,7 +227,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     string displayName = payload.DisplayName;
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
                     _maxNameLength = Math.Max(_maxNameLength, displayName.Length);
-                    if(tags != null)
+                    if (tags != null)
                     {
                         counter.LastValue = payload.Value;
                     }
@@ -243,9 +243,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     redraw = true;
                 }
 
-                if(Console.WindowWidth != _consoleWidth || Console.WindowHeight != _consoleHeight)
+                if (Console.WindowWidth != _consoleWidth || Console.WindowHeight != _consoleHeight)
                 {
-                    redraw=true;
+                    redraw = true;
                 }
 
                 if (redraw)
@@ -287,7 +287,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     else
                     {
                         counter.TagSets.Remove(tags);
-                        if(counter.TagSets.Count == 0)
+                        if (counter.TagSets.Count == 0)
                         {
                             provider.Counters.Remove(counterName);
                         }
@@ -306,7 +306,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             string[] lines = text.Split(Environment.NewLine);
             int lineCount = lines.Length;
             int width = Console.BufferWidth;
-            foreach(string line in lines)
+            foreach (string line in lines)
             {
                 lineCount += (int)Math.Floor(((float)line.Length) / width);
             }
@@ -355,11 +355,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private static string MakeFixedWidth(string text, int width)
         {
-            if(text.Length == width)
+            if (text.Length == width)
             {
                 return text;
             }
-            else if(text.Length > width)
+            else if (text.Length > width)
             {
                 return text.Substring(0, width);
             }

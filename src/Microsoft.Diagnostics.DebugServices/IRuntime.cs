@@ -11,11 +11,11 @@ namespace Microsoft.Diagnostics.DebugServices
     /// </summary>
     public enum RuntimeType
     {
-        Unknown     = 0,
-        Desktop     = 1,
-        NetCore     = 2,
-        SingleFile  = 3,
-        Other       = 4
+        Unknown = 0,
+        Desktop = 1,
+        NetCore = 2,
+        SingleFile = 3,
+        Other = 4
     }
 
     /// <summary>

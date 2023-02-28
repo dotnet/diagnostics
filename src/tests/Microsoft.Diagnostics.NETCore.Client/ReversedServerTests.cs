@@ -464,8 +464,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.NotNull(session);
             Assert.NotNull(session.EventStream);
 
-            return Task.Run(async () =>
-            {
+            return Task.Run(async () => {
                 _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Creating event source.");
 
                 // This blocks for a while due to this bug: https://github.com/microsoft/perfview/issues/1172
@@ -477,8 +476,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 var receivedEventsSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-                using var _ = cancellation.Token.Register(() =>
-                {
+                using var _ = cancellation.Token.Register(() => {
                     if (receivedEventsSource.TrySetCanceled())
                     {
                         _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Cancelled event processing.");
@@ -487,15 +485,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 // Create continuation task that stops the session (which immediately stops event processing).
                 Task stoppedProcessingTask = receivedEventsSource.Task
-                    .ContinueWith(_ =>
-                    {
+                    .ContinueWith(_ => {
                         _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Stopping session.");
                         session.Stop();
                     });
 
                 // Signal task source when an event is received.
-                Action<TraceEvent> allEventsHandler = _ =>
-                {
+                Action<TraceEvent> allEventsHandler = _ => {
                     if (receivedEventsSource.TrySetResult(null))
                     {
                         _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Received an event and set result on completion source.");

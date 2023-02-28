@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public void WriteLine(string message)
         {
-            foreach(ITestOutputHelper output in _outputs)
+            foreach (ITestOutputHelper output in _outputs)
             {
                 output.WriteLine(message);
             }

@@ -72,9 +72,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     { "EventCounterIntervalSec", "2" }
                 });
 
-            for (var i = 0; i < providers.Length-1; i++)
+            for (var i = 0; i < providers.Length - 1; i++)
             {
-                for (var j = i+1; j < providers.Length; j++)
+                for (var j = i + 1; j < providers.Length; j++)
                 {
                     Assert.True(providers[i] != providers[j]);
                 }

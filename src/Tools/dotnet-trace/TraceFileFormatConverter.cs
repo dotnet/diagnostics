@@ -65,9 +65,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError=false)
+        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError = false)
         {
-            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
+            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError });
             using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
             using (var eventLog = new TraceLog(etlxFilePath))
             {

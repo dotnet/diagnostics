@@ -59,14 +59,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             // runners can override if necessary
             public virtual ILoggerFactory ConfigureLogging()
             {
-                var factory = LoggerFactory.Create(builder =>
-                            {
-                                builder.SetMinimumLevel(LogLevel);
-                                builder.AddSimpleConsole(configure =>
-                                {
-                                    configure.IncludeScopes = true;
-                                });
-                            });
+                var factory = LoggerFactory.Create(builder => {
+                    builder.SetMinimumLevel(LogLevel);
+                    builder.AddSimpleConsole(configure => {
+                        configure.IncludeScopes = true;
+                    });
+                });
                 return factory;
             }
 
@@ -146,11 +144,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             public override ILoggerFactory ConfigureLogging()
             {
-                var factory = LoggerFactory.Create(builder =>
-                    {
-                        builder.SetMinimumLevel(LogLevel);
-                        builder.AddConsole();
-                    });
+                var factory = LoggerFactory.Create(builder => {
+                    builder.SetMinimumLevel(LogLevel);
+                    builder.AddConsole();
+                });
                 return factory;
             }
         }
@@ -161,8 +158,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             var runner = new IpcClientTcpServerRunner(verbose);
 
-            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-            {
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
 
                 var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
@@ -189,8 +185,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             var runner = new IpcServerTcpServerRunner(verbose);
 
-            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-            {
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
 
                 if (string.IsNullOrEmpty(ipcServer))
@@ -219,8 +214,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
             var runner = new IpcServerTcpClientRunner(verbose);
-            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-            {
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
                 if (string.IsNullOrEmpty(ipcServer))
@@ -249,8 +243,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         public async Task<int> RunIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
             var runner = new IpcClientTcpClientRunner(verbose);
-            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-            {
+            return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
                 var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
@@ -283,8 +276,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 Task _ = Task.Run(() => server.StartServer(webSocket, token));
 
-                return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-                {
+                return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                     NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
                     if (string.IsNullOrEmpty(ipcServer))
@@ -327,8 +319,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 Task _ = Task.Run(() => server.StartServer(webSocket, token));
 
-                return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) =>
-                {
+                return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                     NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
                     var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);

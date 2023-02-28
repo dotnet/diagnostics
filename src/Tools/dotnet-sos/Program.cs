@@ -59,10 +59,12 @@ namespace Microsoft.Diagnostics.Tools.SOS
             try
             {
                 var sosInstaller = new InstallHelper((message) => console.Out.WriteLine(message), architecture);
-                if (install) {
+                if (install)
+                {
                     sosInstaller.Install();
                 }
-                else {
+                else
+                {
                     sosInstaller.Uninstall();
                 }
             }

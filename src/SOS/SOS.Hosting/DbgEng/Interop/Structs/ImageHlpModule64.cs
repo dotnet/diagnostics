@@ -80,8 +80,7 @@ namespace SOS.Hosting.DbgEng.Interop
 
         public string ModuleName
         {
-            get
-            {
+            get {
                 fixed (char* moduleNamePtr = _ModuleName)
                 {
                     return Marshal.PtrToStringUni((IntPtr)moduleNamePtr, 32);
@@ -91,8 +90,7 @@ namespace SOS.Hosting.DbgEng.Interop
 
         public string ImageName
         {
-            get
-            {
+            get {
                 fixed (char* imageNamePtr = _ImageName)
                 {
                     return Marshal.PtrToStringUni((IntPtr)imageNamePtr, 256);
@@ -102,8 +100,7 @@ namespace SOS.Hosting.DbgEng.Interop
 
         public string LoadedImageName
         {
-            get
-            {
+            get {
                 fixed (char* loadedImageNamePtr = _LoadedImageName)
                 {
                     return Marshal.PtrToStringUni((IntPtr)loadedImageNamePtr, 256);
@@ -113,8 +110,7 @@ namespace SOS.Hosting.DbgEng.Interop
 
         public string LoadedPdbName
         {
-            get
-            {
+            get {
                 fixed (char* loadedPdbNamePtr = _LoadedPdbName)
                 {
                     return Marshal.PtrToStringUni((IntPtr)loadedPdbNamePtr, 256);

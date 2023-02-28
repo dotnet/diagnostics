@@ -144,7 +144,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                 public bool MoveNext()
                 {
-                    if (_next == _tail) {
+                    if (_next == _tail)
+                    {
                         return false;
                     }
                     _current = _next;

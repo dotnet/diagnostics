@@ -19,15 +19,19 @@ namespace Microsoft.Diagnostics.Repl
 
         public void Input(byte[] buffer, int offset, int count)
         {
-            for (int i = 0; i < count; i++) {
+            for (int i = 0; i < count; i++)
+            {
                 char c = (char)buffer[offset + i];
-                if (c == '\r') {
+                if (c == '\r')
+                {
                     continue;
                 }
-                if (c == '\n') {
+                if (c == '\n')
+                {
                     Flush();
                 }
-                else if (c == '\t' || (c >= (char)0x20 && c <= (char)127)) {
+                else if (c == '\t' || (c >= (char)0x20 && c <= (char)127))
+                {
                     m_text.Append(c);
                 }
             }
@@ -35,14 +39,18 @@ namespace Microsoft.Diagnostics.Repl
 
         public void Input(string text)
         {
-            foreach (char c in text) {
-                if (c == '\r') {
+            foreach (char c in text)
+            {
+                if (c == '\r')
+                {
                     continue;
                 }
-                if (c == '\n') {
+                if (c == '\n')
+                {
                     Flush();
                 }
-                else if (c == '\t' || (c >= (char)0x20 && c <= (char)127)) {
+                else if (c == '\t' || (c >= (char)0x20 && c <= (char)127))
+                {
                     m_text.Append(c);
                 }
             }

@@ -50,8 +50,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ImmutableArray<byte> BuildId
             {
-                get
-                {
+                get {
                     if (_buildId.IsDefault)
                     {
                         ImmutableArray<byte> buildId = _moduleInfo.BuildId;

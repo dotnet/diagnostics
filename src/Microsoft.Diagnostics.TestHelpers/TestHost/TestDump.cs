@@ -47,7 +47,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             _dataTarget = DataTarget.LoadDump(DumpFile);
 
             OSPlatform targetPlatform = _dataTarget.DataReader.TargetPlatform;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
                 targetPlatform = OSPlatform.OSX;
             }
             _symbolService.AddDirectoryPath(Path.GetDirectoryName(DumpFile));
@@ -64,7 +65,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public IServiceProvider Services => _serviceContainer;
 
-        public IEnumerable <ITarget> EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
+        public IEnumerable<ITarget> EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
 
         #endregion
     }

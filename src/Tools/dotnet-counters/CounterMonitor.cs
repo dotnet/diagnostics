@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void DynamicAllMonitor(TraceEvent obj)
         {
-            if(_shouldExit.Task.IsCompleted)
+            if (_shouldExit.Task.IsCompleted)
             {
                 return;
             }
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void MeterInstrumentEventObserved(string meterName, string instrumentName, DateTime timestamp)
         {
-            if(!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
+            if (!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
             {
                 providerEventState = new ProviderEventState()
                 {
@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
             string instrumentName = (string)obj.PayloadValue(3);
-            if(sessionId != _metricsEventSourceSessionId)
+            if (sessionId != _metricsEventSourceSessionId)
             {
                 return;
             }
@@ -214,9 +214,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
-            foreach((double key, double val) in quantiles)
+            foreach ((double key, double val) in quantiles)
             {
-                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key*100}"), val, obj.TimeStamp);
+                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
@@ -379,7 +379,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // intervals, or counters that stop reporting.
             // I'm gambling this is good enough that the behavior will never be seen in practice, but if it is we could
             // either adjust the time delay or try to improve how the renderers handle it.
-            if(providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= obj.TimeStamp)
+            if (providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= obj.TimeStamp)
             {
                 _bufferedEvents.Enqueue(payload);
             }
@@ -520,7 +520,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-            catch(CommandLineErrorException e)
+            catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
@@ -622,7 +622,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-            catch(CommandLineErrorException e)
+            catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
@@ -631,7 +631,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         static private void ValidateNonNegative(int value, string argName)
         {
-            if(value < 0)
+            if (value < 0)
             {
                 throw new CommandLineErrorException($"Argument --{argName} must be non-negative");
             }
@@ -642,12 +642,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             CounterSet counters = new CounterSet();
             try
             {
-                if(commaSeparatedProviderListText != null)
+                if (commaSeparatedProviderListText != null)
                 {
                     ParseProviderList(commaSeparatedProviderListText, counters);
                 }
             }
-            catch(FormatException e)
+            catch (FormatException e)
             {
                 // the FormatException message strings thrown by ParseProviderList are controlled
                 // by us and anticipate being integrated into the command-line error text.
@@ -721,7 +721,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     inParen = false;
                 }
             }
-            if(inParen)
+            if (inParen)
             {
                 throw new FormatException("Expected to find closing ']' in counter_provider");
             }
@@ -743,11 +743,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void ParseCounterProvider(string providerText, CounterSet counters)
         {
             string[] tokens = providerText.Split('[');
-            if(tokens.Length == 0)
+            if (tokens.Length == 0)
             {
                 throw new FormatException("Expected non-empty counter_provider");
             }
-            if(tokens.Length > 2)
+            if (tokens.Length > 2)
             {
                 throw new FormatException("Expected at most one '[' in counter_provider");
             }
@@ -759,9 +759,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             else
             {
                 string counterNames = tokens[1];
-                if(!counterNames.EndsWith(']'))
+                if (!counterNames.EndsWith(']'))
                 {
-                    if(counterNames.IndexOf(']') == -1)
+                    if (counterNames.IndexOf(']') == -1)
                     {
                         throw new FormatException("Expected to find closing ']' in counter_provider");
                     }
@@ -785,13 +785,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             //System.Diagnostics.Metrics EventSource supports the new Meter/Instrument APIs
             const long TimeSeriesValues = 0x2;
             StringBuilder metrics = new StringBuilder();
-            foreach(string provider in _counterList.Providers)
+            foreach (string provider in _counterList.Providers)
             {
-                if(metrics.Length != 0)
+                if (metrics.Length != 0)
                 {
                     metrics.Append(",");
                 }
-                if(_counterList.IncludesAllCounters(provider))
+                if (_counterList.IncludesAllCounters(provider))
                 {
                     metrics.Append(provider);
                 }
@@ -864,7 +864,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 durationStopwatch = Stopwatch.StartNew();
             }
 
-            while(!_shouldExit.Task.Wait(250))
+            while (!_shouldExit.Task.Wait(250))
             {
                 HandleBufferedEvents();
                 if (!Console.IsInputRedirected && Console.KeyAvailable)

@@ -98,7 +98,8 @@ namespace SOS.Hosting
             IntPtr self)
         {
             IRuntime currentRuntime = _soshost.ContextService.GetCurrentRuntime();
-            if (currentRuntime is not null) {
+            if (currentRuntime is not null)
+            {
                 return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }
             return null;
@@ -188,8 +189,8 @@ namespace SOS.Hosting
         private unsafe int GetModuleInfo(
             IntPtr self,
             uint index,
-            ulong *moduleBase,
-            ulong *moduleSize,
+            ulong* moduleBase,
+            ulong* moduleSize,
             uint* timestamp,
             uint* checksum)
         {

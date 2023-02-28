@@ -78,20 +78,17 @@ namespace Microsoft.Diagnostics.TestHelpers
 
                 // unfortunately we can't use the default Process stream reading because it only returns full lines and we have scenarios
                 // that need to receive the output before the newline character is written
-                _readStdOutTask = startTask.ContinueWith(t =>
-                {
+                _readStdOutTask = startTask.ContinueWith(t => {
                     ReadStreamToLoggers(_p.StandardOutput, ProcessStream.StandardOut, _cancelSource.Token);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _readStdErrTask = startTask.ContinueWith(t =>
-                {
+                _readStdErrTask = startTask.ContinueWith(t => {
                     ReadStreamToLoggers(_p.StandardError, ProcessStream.StandardError, _cancelSource.Token);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _timeoutProcessTask = startTask.ContinueWith(t =>
-                {
+                _timeoutProcessTask = startTask.ContinueWith(t => {
                     Task.Delay(_timeout, _cancelSource.Token).ContinueWith(t2 => Kill(KillReason.TimedOut), TaskContinuationOptions.NotOnCanceled);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
@@ -211,7 +208,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { lock (_lock) { return _p.Id; } }
         }
 
-        public Dictionary<string,string> EnvironmentVariables
+        public Dictionary<string, string> EnvironmentVariables
         {
             get { lock (_lock) { return new Dictionary<string, string>(_p.StartInfo.Environment); } }
         }
@@ -419,8 +416,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             Process p = await startProcessTask;
             DebugTrace("InternalWaitForExit {0} '{1}'", p.Id, _replayCommand);
 
-            Task processExit = Task.Factory.StartNew(() =>
-            {
+            Task processExit = Task.Factory.StartNew(() => {
                 DebugTrace("starting Process.WaitForExit {0}", p.Id);
                 p.WaitForExit();
                 DebugTrace("ending Process.WaitForExit {0}", p.Id);

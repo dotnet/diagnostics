@@ -93,20 +93,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         // from CLR implementation in https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Threading/Tasks/Task.cs#L141
-        internal const int TASK_STATE_STARTED                      = 0x00010000;
-        internal const int TASK_STATE_DELEGATE_INVOKED             = 0x00020000;
-        internal const int TASK_STATE_DISPOSED                     = 0x00040000;
-        internal const int TASK_STATE_EXCEPTIONOBSERVEDBYPARENT    = 0x00080000;
-        internal const int TASK_STATE_CANCELLATIONACKNOWLEDGED     = 0x00100000;
-        internal const int TASK_STATE_FAULTED                      = 0x00200000;
-        internal const int TASK_STATE_CANCELED                     = 0x00400000;
-        internal const int TASK_STATE_WAITING_ON_CHILDREN          = 0x00800000;
-        internal const int TASK_STATE_RAN_TO_COMPLETION            = 0x01000000;
-        internal const int TASK_STATE_WAITINGFORACTIVATION         = 0x02000000;
-        internal const int TASK_STATE_COMPLETION_RESERVED          = 0x04000000;
+        internal const int TASK_STATE_STARTED = 0x00010000;
+        internal const int TASK_STATE_DELEGATE_INVOKED = 0x00020000;
+        internal const int TASK_STATE_DISPOSED = 0x00040000;
+        internal const int TASK_STATE_EXCEPTIONOBSERVEDBYPARENT = 0x00080000;
+        internal const int TASK_STATE_CANCELLATIONACKNOWLEDGED = 0x00100000;
+        internal const int TASK_STATE_FAULTED = 0x00200000;
+        internal const int TASK_STATE_CANCELED = 0x00400000;
+        internal const int TASK_STATE_WAITING_ON_CHILDREN = 0x00800000;
+        internal const int TASK_STATE_RAN_TO_COMPLETION = 0x01000000;
+        internal const int TASK_STATE_WAITINGFORACTIVATION = 0x02000000;
+        internal const int TASK_STATE_COMPLETION_RESERVED = 0x04000000;
         internal const int TASK_STATE_WAIT_COMPLETION_NOTIFICATION = 0x10000000;
-        internal const int TASK_STATE_EXECUTIONCONTEXT_IS_NULL     = 0x20000000;
-        internal const int TASK_STATE_TASKSCHEDULED_WAS_FIRED      = 0x40000000;
+        internal const int TASK_STATE_EXECUTIONCONTEXT_IS_NULL = 0x20000000;
+        internal const int TASK_STATE_TASKSCHEDULED_WAS_FIRED = 0x40000000;
 
         public IEnumerable<TimerInfo> EnumerateTimers()
         {

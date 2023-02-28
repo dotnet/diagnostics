@@ -35,7 +35,7 @@ namespace Microsoft.Internal.Common.Utils
             _childProc = new Process();
             _childProc.StartInfo.FileName = args[unparsedTokenIdx];
             string arguments = "";
-            for (int i = unparsedTokenIdx+1; i < args.Length; i++)
+            for (int i = unparsedTokenIdx + 1; i < args.Length; i++)
             {
                 if (args[i].Contains(' '))
                 {
@@ -60,7 +60,7 @@ namespace Microsoft.Internal.Common.Utils
             {
                 if (args[i] == "--" && i < (args.Length - 1))
                 {
-                    return i+1;
+                    return i + 1;
                 }
             }
             return -1;
@@ -76,20 +76,18 @@ namespace Microsoft.Internal.Common.Utils
 
         public bool HasChildProc
         {
-            get
-            {
+            get {
                 return _childProc != null;
             }
         }
 
         public Process ChildProc
         {
-            get
-            {
+            get {
                 return _childProc;
             }
         }
-        public bool Start( string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
+        public bool Start(string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
         {
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = !showChildIO;

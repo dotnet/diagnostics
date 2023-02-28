@@ -165,10 +165,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             var sb = new StringBuilder();
             string process = ProcessId.HasValue ? string.Format("{0} (0x{0:X})", ProcessId.Value) : "<none>";
             sb.AppendLine($"Target OS: {OperatingSystem} Architecture: {Architecture} ProcessId: {process}");
-            if (_tempDirectory != null) {
+            if (_tempDirectory != null)
+            {
                 sb.AppendLine($"Temp path: {_tempDirectory}");
             }
-            if (_dumpPath != null) {
+            if (_dumpPath != null)
+            {
                 sb.AppendLine($"Dump path: {_dumpPath}");
             }
             var runtimeService = Services.GetService<IRuntimeService>();

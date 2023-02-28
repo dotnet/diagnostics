@@ -119,7 +119,7 @@ namespace ParallelStacks
             if (pos == -1)
             {
                 // *.Int32,xxx  with xxx could contain a generic
-                AppendTypeNameWithoutNamespace(sb, typeName, start, next-1);
+                AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
                 // skip this type
                 start = next + 1;
@@ -137,7 +137,7 @@ namespace ParallelStacks
 
             // a non generic type before another type parameter
             // *.Int32,xxx
-            AppendTypeNameWithoutNamespace(sb, typeName, start, next-1);
+            AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
             // skip this type
             start = next + 1;
@@ -155,7 +155,7 @@ namespace ParallelStacks
             var pos = typeName.IndexOf('`', start, end - start);
 
             // build the name                                       V-- don't want ` in the name
-            AppendTypeNameWithoutNamespace(sb, typeName, start, pos-1);
+            AppendTypeNameWithoutNamespace(sb, typeName, start, pos - 1);
             sb.Append('<');
 
             // go to the first generic parameter

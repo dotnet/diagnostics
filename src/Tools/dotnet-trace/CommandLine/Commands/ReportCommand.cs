@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class ReportCommandHandler
     {
-        private static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process"};
+        private static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process" };
 
         //Create an extension function to help
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree)
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         OnlyManagedCodeStacks = true
                     };
 
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);
+                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
 
                     computer.GenerateThreadTimeStacks(stackSource);
 
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     List<CallTreeNodeBase> callTreeNodes = null;
 
-                    if(!inclusive)
+                    if (!inclusive)
                     {
                         callTreeNodes = callTree.ByIDSortedExclusiveMetric();
                     }
@@ -76,22 +76,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
 
                     int totalElements = callTreeNodes.Count;
-                        while(count < number && index < totalElements)
+                    while (count < number && index < totalElements)
+                    {
+                        CallTreeNodeBase node = callTreeNodes[index];
+                        index++;
+                        if (!unwantedMethodNames.Any(node.Name.Contains))
                         {
-                            CallTreeNodeBase node = callTreeNodes[index];
-                            index++;
-                            if(!unwantedMethodNames.Any(node.Name.Contains))
-                            {
-                                nodesToReport.Add(node);
-                                count++;
-                            }
+                            nodesToReport.Add(node);
+                            count++;
                         }
+                    }
 
                     PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
                 }
                 return await Task.FromResult(0);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
             }
@@ -131,27 +131,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option TopNOption()
         {
             return new Option(
-                aliases: new[] {"-n", "--number" },
+                aliases: new[] { "-n", "--number" },
                 description: $"Gives the top N methods on the callstack.")
-                {
-                    Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
-                };
+            {
+                Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
+            };
         }
 
         private static Option InclusiveOption() =>
             new Option(
                 aliases: new[] { "--inclusive" },
                 description: $"Output the top N methods based on inclusive time. If not specified, exclusive time is used by default.")
-                {
-                    Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
-                };
+            {
+                Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
+            };
 
         private static Option VerboseOption() =>
             new Option(
-                aliases: new[] {"-v", "--verbose"},
+                aliases: new[] { "-v", "--verbose" },
                 description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
-                {
-                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
-                };
+            {
+                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+            };
     }
 }

@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                     continue;
                 }
 
-                var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
+                var sizeAndCount = histogramByType.FirstOrDefault(c => (int)c.TypeIdx == index);
                 if (sizeAndCount == null || sizeAndCount.Count == 0)
                 {
                     continue;

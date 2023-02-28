@@ -15,8 +15,7 @@ namespace Microsoft.Diagnostics.Monitoring
         internal static Task CollectDumpAsync(Process process, string outputFile, NETCore.Client.DumpType type)
         {
             // We can't do this "asynchronously" so just Task.Run it. It shouldn't be "long-running" so this is fairly safe.
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 // Open the file for writing
                 using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {

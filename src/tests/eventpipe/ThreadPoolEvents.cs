@@ -27,8 +27,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
         [Fact]
         public async void ThreadPool_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -41,8 +40,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b10000_0000_0000_0000)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     Task[] taskArray = new Task[1000];
                     for (int i = 0; i < 1000; i++)
                     {
@@ -61,8 +59,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     Thread.Sleep(100);
                 }
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int ThreadStartEvents = 0;
                     source.Clr.ThreadPoolWorkerThreadStart += (eventData) => ThreadStartEvents += 1;
 

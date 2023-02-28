@@ -19,8 +19,8 @@ namespace Graphs
                 m_addressToNodeIndex = new SegmentedDictionary<ulong, NodeIndex>(expectedSize);
             }
             else
-        {
-            m_addressToNodeIndex = new Dictionary<ulong, NodeIndex>(expectedSize);
+            {
+                m_addressToNodeIndex = new Dictionary<ulong, NodeIndex>(expectedSize);
             }
 
             m_nodeAddresses = new SegmentedList<ulong>(SegmentSize, expectedSize);
@@ -133,7 +133,7 @@ namespace Graphs
             // Write out the Memory addresses of each object
             if (m_isVeryLargeGraph)
             {
-            serializer.Write(m_nodeAddresses.Count);
+                serializer.Write(m_nodeAddresses.Count);
             }
             else
             {

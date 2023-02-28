@@ -10,11 +10,11 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
     {
         private static string MakeFixedWidth(string text, int width)
         {
-            if(text.Length == width)
+            if (text.Length == width)
             {
                 return text;
             }
-            else if(text.Length > width)
+            else if (text.Length > width)
             {
                 return text.Substring(0, width);
             }
@@ -59,11 +59,11 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
         public static List<string> SplitInto(string str, int n)
         {
             int length = str.Length;
-            if(length < n)
+            if (length < n)
             {
                 string shortName = MakeFixedWidth(str, n);
 
-                return new List<string> {shortName};
+                return new List<string> { shortName };
             }
 
             if (string.IsNullOrEmpty(str) || n < 1)
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
             IEnumerable<string> uniformName = Enumerable.Range(0, length / n).Select(i => str.Substring(i * n, n));
             List<string> strList = uniformName.ToList<string>();
-            int remainder = (length / n)*n;
+            int remainder = (length / n) * n;
             strList.Add(str.Substring(remainder, length - remainder));
             return strList;
         }
@@ -93,11 +93,11 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
 
             int n = nodesToReport.Count;
-            int maxDigit = (int) Math.Log10(n) + 1;
+            int maxDigit = (int)Math.Log10(n) + 1;
             string extra = new string(' ', maxDigit - 1);
 
             string header = "Top " + n.ToString() + " Functions (" + measureType + ")";
-            string uniformHeader = MakeFixedWidth(header, functionColumnWidth+7);
+            string uniformHeader = MakeFixedWidth(header, functionColumnWidth + 7);
 
             string inclusive = "Inclusive";
             string uniformInclusive = MakeFixedWidth(inclusive, measureColumnWidth);
@@ -107,10 +107,10 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             Console.WriteLine(uniformHeader + extra + uniformInclusive + uniformExclusive);
 
             int numLines;
-            for(int i = 0; i < n; i++)
+            for (int i = 0; i < n; i++)
             {
 
-                int iLength = (int) Math.Log10(i + 1) + 1;
+                int iLength = (int)Math.Log10(i + 1) + 1;
                 int numSpace = maxDigit - iLength + 1;
 
                 CallTreeNodeBase node = nodesToReport[i];
@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 }
                 List<string> nameList = SplitInto(formatName, functionColumnWidth);
 
-                if(isVerbose)
+                if (isVerbose)
                 {
                     numLines = nameList.Count;
                 }
@@ -131,20 +131,20 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                     numLines = 1;
                 }
 
-                for(int j = 0; j < numLines; j++)
+                for (int j = 0; j < numLines; j++)
                 {
                     string inclusiveMeasure = "";
                     string exclusiveMeasure = "";
                     string number = new string(' ', maxDigit + 2); //+2 to account for '. '
 
-                    if(j == 0)
+                    if (j == 0)
                     {
                         inclusiveMeasure = Math.Round(node.InclusiveMetricPercent, 2).ToString() + "%";
                         exclusiveMeasure = Math.Round(node.ExclusiveMetricPercent, 2).ToString() + "%";
                         number = (i + 1).ToString() + "." + number.Substring(maxDigit - numSpace + 2);
                     }
 
-                    string uniformIMeasure = MakeFixedWidth(inclusiveMeasure, measureColumnWidth).PadLeft(measureColumnWidth+4);
+                    string uniformIMeasure = MakeFixedWidth(inclusiveMeasure, measureColumnWidth).PadLeft(measureColumnWidth + 4);
                     string uniformEMeasure = MakeFixedWidth(exclusiveMeasure, measureColumnWidth);
                     Console.WriteLine(number + nameList[j] + uniformIMeasure + uniformEMeasure);
                 }

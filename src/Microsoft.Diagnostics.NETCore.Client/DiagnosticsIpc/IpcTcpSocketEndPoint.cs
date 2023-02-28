@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 ParseTcpIpEndPoint(endPoint, out _, out _);
             }
-            catch(Exception)
+            catch (Exception)
             {
                 result = false;
             }
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             port = -1;
 
             bool usesWildcardHost = false;
-            string uriToParse= "";
+            string uriToParse = "";
 
             if (endPoint.Contains("://"))
             {
@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                 }
             }
-            catch(Exception)
+            catch (Exception)
             {
             }
 

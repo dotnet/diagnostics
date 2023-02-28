@@ -15,11 +15,12 @@ using Xunit.Abstractions;
 namespace EventPipe.UnitTests.ContentionValidation
 {
 
-    public class TestClass{
+    public class TestClass
+    {
         public int a;
         public void DoSomething(TestClass obj)
         {
-            lock(obj)
+            lock (obj)
             {
                 obj.a = 3;
                 Thread.Sleep(100);
@@ -38,8 +39,7 @@ namespace EventPipe.UnitTests.ContentionValidation
         [Fact]
         public async void Contention_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
@@ -51,8 +51,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b100_0000_0000_0000)
                 };
 
-                Action _eventGeneratingAction = () =>
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 50; i++)
                     {
                         if (i % 10 == 0)
@@ -70,8 +69,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int ContentionStartEvents = 0;
                     source.Clr.ContentionStart += (eventData) => ContentionStartEvents += 1;
                     int ContentionStopEvents = 0;

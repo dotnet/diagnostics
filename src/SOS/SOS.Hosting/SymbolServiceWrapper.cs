@@ -19,10 +19,10 @@ namespace SOS.Hosting
         /// </summary>
         public enum RuntimeConfiguration
         {
-            WindowsDesktop  = 0,
-            WindowsCore     = 1,
-            UnixCore        = 2,
-            OSXCore         = 3
+            WindowsDesktop = 0,
+            WindowsCore = 1,
+            UnixCore = 2,
+            OSXCore = 3
         }
 
         /// <summary>
@@ -84,7 +84,8 @@ namespace SOS.Hosting
             IntPtr self,
             string symbolPath)
         {
-            if (string.IsNullOrWhiteSpace(symbolPath)) {
+            if (string.IsNullOrWhiteSpace(symbolPath))
+            {
                 return false;
             }
             _symbolService.DisableSymbolStore();

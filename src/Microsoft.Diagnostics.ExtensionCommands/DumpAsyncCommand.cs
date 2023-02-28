@@ -201,8 +201,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // Grouping function.  We want to treat all objects that render the same as the same entity.
                     // For async state machines, we include the await state, both because we want it to render
                     // and because we want to see state machines at different positions as part of different groups.
-                    Func<ClrObject, string> groupBy = o =>
-                    {
+                    Func<ClrObject, string> groupBy = o => {
                         string description = Describe(o);
                         if (objects.TryGetValue(o, out AsyncObject asyncObject) && asyncObject.IsStateMachine)
                         {

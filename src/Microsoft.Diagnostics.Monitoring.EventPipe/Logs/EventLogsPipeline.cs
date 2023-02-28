@@ -46,8 +46,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             var logActivities = new Dictionary<Guid, LogActivityItem>();
             var stack = new Stack<Guid>();
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) =>
-            {
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) => {
                 var factoryId = (int)traceEvent.PayloadByName("FactoryID");
                 var categoryName = (string)traceEvent.PayloadByName("LoggerName");
                 var argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
@@ -72,8 +71,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 logActivities[traceEvent.ActivityID] = item;
             });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) =>
-            {
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
                 var factoryId = (int)traceEvent.PayloadByName("FactoryID");
                 var categoryName = (string)traceEvent.PayloadByName("LoggerName");
 
@@ -85,8 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) =>
-            {
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, ExceptionJson, ArgumentsJson
                 var logLevel = (LogLevel)traceEvent.PayloadByName("Level");
                 var factoryId = (int)traceEvent.PayloadByName("FactoryID");
@@ -165,8 +162,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "FormattedMessage", (traceEvent) =>
-            {
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "FormattedMessage", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, FormattedMessage
                 var logLevel = (LogLevel)traceEvent.PayloadByName("Level");
                 var factoryId = (int)traceEvent.PayloadByName("FactoryID");

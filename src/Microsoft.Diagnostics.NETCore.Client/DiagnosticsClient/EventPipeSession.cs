@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     Stop();
                 }
-                catch {} // swallow any exceptions that may be thrown from Stop.
+                catch { } // swallow any exceptions that may be thrown from Stop.
             }
 
             if (!_disposedValue)

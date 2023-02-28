@@ -49,8 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
             });
 
@@ -78,8 +77,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Warning;
             });
@@ -106,8 +104,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
@@ -138,8 +135,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             PipelineException exception = await Assert.ThrowsAsync<PipelineException>(
                 () => GetLogsAsync(
                     config,
-                    settings =>
-                    {
+                    settings => {
                         settings.UseAppFilters = false;
                         settings.LogLevel = LogLevel.None;
                     }));
@@ -182,8 +178,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
                     { LoggerRemoteTestName, LogLevel.Warning }
@@ -212,8 +207,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
@@ -339,7 +333,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
             Assert.NotNull(values);
-            foreach(var expectedValue in expectedValues)
+            foreach (var expectedValue in expectedValues)
             {
                 Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
                 //TODO For now this will always be a string

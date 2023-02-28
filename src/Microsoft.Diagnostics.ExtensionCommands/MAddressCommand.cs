@@ -79,8 +79,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                   group mem by mem.Image into g
                                   let Size = g.Sum(k => (long)(k.End - k.Start))
                                   orderby Size descending
-                                  select new
-                                  {
+                                  select new {
                                       Image = g.Key,
                                       Count = g.Count(),
                                       Size
@@ -118,8 +117,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                               let Count = g.Count()
                               let Size = g.Sum(f => (long)(f.End - f.Start))
                               orderby Size descending
-                              select new
-                              {
+                              select new {
                                   Name = g.Key,
                                   Count,
                                   Size

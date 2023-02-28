@@ -80,7 +80,7 @@ namespace Microsoft.Internal.Common.Utils
 
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsWow64Process(IntPtr hProcess, [MarshalAs(UnmanagedType.Bool)]out bool wow64Process);
+        public static extern bool IsWow64Process(IntPtr hProcess, [MarshalAs(UnmanagedType.Bool)] out bool wow64Process);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct ProcessInformation

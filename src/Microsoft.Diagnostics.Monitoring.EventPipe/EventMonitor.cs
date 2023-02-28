@@ -74,8 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         /// <returns></returns>
         public Task ProcessAsync(CancellationToken token)
         {
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 _eventSource = new EventPipeEventSource(_eventStream);
                 token.ThrowIfCancellationRequested();
                 using IDisposable registration = token.Register(() => _eventSource.Dispose());

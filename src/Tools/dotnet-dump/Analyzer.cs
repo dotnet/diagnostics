@@ -151,8 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _fileLoggingConsoleService.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _fileLoggingConsoleService.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) =>
-                    {
+                    _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) => {
                         _fileLoggingConsoleService.WriteLine("{0}{1}", prompt, commandLine);
                         _commandService.Execute(commandLine, contextService.Services);
                     });

@@ -61,9 +61,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public abstract Task<Stream> AcceptAsync(CancellationToken token);
 
-        public static int MaxAllowedConnections {
-            get
-            {
+        public static int MaxAllowedConnections
+        {
+            get {
                 return -1;
             }
         }

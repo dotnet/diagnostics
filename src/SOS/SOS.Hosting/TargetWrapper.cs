@@ -16,10 +16,10 @@ namespace SOS.Hosting
         // Must be the same as ITarget::OperatingSystem
         private enum OperatingSystem
         {
-            Unknown         = 0,
-            Windows         = 1,
-            Linux           = 2,
-            OSX             = 3,
+            Unknown = 0,
+            Windows = 1,
+            Linux = 2,
+            OSX = 3,
         }
 
         public static readonly Guid IID_ITarget = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
@@ -70,13 +70,16 @@ namespace SOS.Hosting
         private OperatingSystem GetOperatingSystem(
             IntPtr self)
         {
-            if (_target.OperatingSystem == OSPlatform.Windows) {
+            if (_target.OperatingSystem == OSPlatform.Windows)
+            {
                 return OperatingSystem.Windows;
             }
-            else if (_target.OperatingSystem == OSPlatform.Linux) {
+            else if (_target.OperatingSystem == OSPlatform.Linux)
+            {
                 return OperatingSystem.Linux;
             }
-            else if (_target.OperatingSystem == OSPlatform.OSX) {
+            else if (_target.OperatingSystem == OSPlatform.OSX)
+            {
                 return OperatingSystem.OSX;
             }
             return OperatingSystem.Unknown;
@@ -92,15 +95,18 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppRuntime)
         {
-            if (ppRuntime == null) {
+            if (ppRuntime == null)
+            {
                 return HResult.E_INVALIDARG;
             }
             IRuntime runtime = _contextService.GetCurrentRuntime();
-            if (runtime is null) {
+            if (runtime is null)
+            {
                 return HResult.E_NOINTERFACE;
             }
             RuntimeWrapper wrapper = runtime.Services.GetService<RuntimeWrapper>();
-            if (wrapper is null) {
+            if (wrapper is null)
+            {
                 return HResult.E_NOINTERFACE;
             }
             *ppRuntime = wrapper.IRuntime;

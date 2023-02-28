@@ -89,7 +89,7 @@ namespace EventPipe.UnitTests.Common
     // to synchronize.
     public sealed class SentinelEventSource : EventSource
     {
-        private SentinelEventSource() {}
+        private SentinelEventSource() { }
         public static SentinelEventSource Log = new SentinelEventSource();
         public void SentinelEvent() { WriteEvent(1, "SentinelEvent"); }
     }
@@ -182,8 +182,7 @@ namespace EventPipe.UnitTests.Common
             // the sources we want to listen for may not have been enabled yet.
             // We'll use this sentinel EventSource to check if Enable has finished
             ManualResetEvent sentinelEventReceived = new ManualResetEvent(false);
-            var sentinelTask = new Task(() =>
-            {
+            var sentinelTask = new Task(() => {
                 Logger.logger.Log("Started sending sentinel events...");
                 while (!sentinelEventReceived.WaitOne(50))
                 {
@@ -197,14 +196,13 @@ namespace EventPipe.UnitTests.Common
             object threadSync = new object(); // for locking eventpipeSession access
             Func<int> optionalTraceValidationCallback = null;
             DiagnosticsClient client = new DiagnosticsClient(processId);
-            var readerTask = new Task(() =>
-            {
+            var readerTask = new Task(() => {
                 Logger.logger.Log("Connecting to EventPipe...");
                 try
                 {
                     _eventPipeSession = client.StartEventPipeSession(_testProviders.Concat(_sentinelProviders));
                 }
-                catch(DiagnosticsClientException ex)
+                catch (DiagnosticsClientException ex)
                 {
                     Logger.logger.Log("Failed to connect to EventPipe!");
                     Logger.logger.Log(ex.ToString());
@@ -216,8 +214,7 @@ namespace EventPipe.UnitTests.Common
                 using EventPipeEventSource source = new EventPipeEventSource(eventPipeStream);
                 Logger.logger.Log("EventPipeEventSource created");
 
-                source.Dynamic.All += (eventData) =>
-                {
+                source.Dynamic.All += (eventData) => {
                     try
                     {
                         if (eventData.ProviderName == "SentinelEventSource")
@@ -281,8 +278,7 @@ namespace EventPipe.UnitTests.Common
             // Should throw if the reader task throws any exceptions
             var tokenSource = new CancellationTokenSource();
             CancellationToken ct = tokenSource.Token;
-            readerTask.ContinueWith((task) =>
-            {
+            readerTask.ContinueWith((task) => {
                 // if our reader task died earlier, we need to break the infinite wait below.
                 // We'll allow the AggregateException to be thrown and fail the test though.
                 Logger.logger.Log($"Task stats: isFaulted: {task.IsFaulted}, Exception == null: {task.Exception == null}");
@@ -294,8 +290,7 @@ namespace EventPipe.UnitTests.Common
                 return task;
             });
 
-            var stopTask = Task.Run(() =>
-            {
+            var stopTask = Task.Run(() => {
                 Logger.logger.Log("Sending StopTracing command...");
                 lock (threadSync) // eventpipeSession
                 {
@@ -395,7 +390,7 @@ namespace EventPipe.UnitTests.Common
                     else
                     {
                         Logger.logger.Log($"Unable to clean the environment.  The following transports are on the system:");
-                        foreach(var transport in afterIpcPorts)
+                        foreach (var transport in afterIpcPorts)
                         {
                             Logger.logger.Log($"\t{transport.FullName}");
                         }
@@ -413,7 +408,7 @@ namespace EventPipe.UnitTests.Common
             Dictionary<string, ExpectedEventCount> expectedEventCounts,
             Action eventGeneratingAction,
             List<EventPipeProvider> providers,
-            int circularBufferMB=1024,
+            int circularBufferMB = 1024,
             Func<EventPipeEventSource, Func<int>> optionalTraceValidator = null)
         {
             Logger.logger.Log("==TEST STARTING==");

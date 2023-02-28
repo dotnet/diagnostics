@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             AspNetRequestCountTriggerSettings settings = new()
             {
-                ExcludePaths = new[] {"/"},
+                ExcludePaths = new[] { "/" },
                 RequestCount = 3,
                 SlidingWindowDuration = TimeSpan.FromMinutes(1)
             };
@@ -204,7 +204,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Throws<ValidationException>(() => factory.Create(settings));
         }
 
-        private static void ValidateTriggers<T>(AspNetTrigger<T> requestTrigger, params SimulatedTraceEvent[] events) where T: AspNetTriggerSettings
+        private static void ValidateTriggers<T>(AspNetTrigger<T> requestTrigger, params SimulatedTraceEvent[] events) where T : AspNetTriggerSettings
         {
             ValidateTriggers(requestTrigger, events.Length - 1, events);
         }
@@ -239,7 +239,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 {
                     Timestamp = timestamp,
                     EventType = AspnetTriggerEventType.Start,
-                    ActivityId =  activityId ?? Guid.NewGuid().ToString(),
+                    ActivityId = activityId ?? Guid.NewGuid().ToString(),
                     Path = path
                 };
             }

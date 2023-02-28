@@ -34,8 +34,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         [Fact]
         public async void AssemblyLoad_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
-            {
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
@@ -48,9 +47,8 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b1000)
                 };
 
-                string assemblyPath=null;
-                Action _eventGeneratingAction = () =>
-                {
+                string assemblyPath = null;
+                Action _eventGeneratingAction = () => {
                     GetAssemblyPath();
                     try
                     {
@@ -62,14 +60,14 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                             }
 
                             AssemblyLoad assemblyLoad = new AssemblyLoad();
-                            assemblyLoad.LoadFromAssemblyPath(assemblyPath+"\\Microsoft.Diagnostics.Runtime.dll");
+                            assemblyLoad.LoadFromAssemblyPath(assemblyPath + "\\Microsoft.Diagnostics.Runtime.dll");
                             assemblyLoad.Unload();
                         }
                         GC.Collect();
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        Logger.logger.Log(ex.Message+ex.StackTrace);
+                        Logger.logger.Log(ex.Message + ex.StackTrace);
                     }
                 };
 
@@ -79,8 +77,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 }
 
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int LoaderAssemblyLoadEvents = 0;
                     int LoaderAssemblyUnloadEvents = 0;
                     source.Clr.LoaderAssemblyLoad += (eventData) => LoaderAssemblyLoadEvents += 1;

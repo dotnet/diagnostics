@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.AddEnvVar(testKey, testVal);
             await runner.Start();
             var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            Dictionary<string,string> env = await clientShim.GetProcessEnvironment();
+            Dictionary<string, string> env = await clientShim.GetProcessEnvironment();
 
             Assert.True(env.ContainsKey(testKey) && env[testKey].Equals(testVal));
 

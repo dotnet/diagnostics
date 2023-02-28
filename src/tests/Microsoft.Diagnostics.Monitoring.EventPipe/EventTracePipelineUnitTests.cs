@@ -48,8 +48,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 var foundProviderSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                await using var pipeline = new EventTracePipeline(client, settings, async (s, token) =>
-                {
+                await using var pipeline = new EventTracePipeline(client, settings, async (s, token) => {
                     eventStream = s;
 
                     using var eventSource = new EventPipeEventSource(s);
@@ -57,8 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     // Dispose event source when cancelled.
                     using var _ = token.Register(() => eventSource.Dispose());
 
-                    eventSource.Dynamic.All += (TraceEvent obj) =>
-                    {
+                    eventSource.Dynamic.All += (TraceEvent obj) => {
                         if (string.Equals(obj.ProviderName, MonitoringSourceConfiguration.SampleProfilerProviderName, StringComparison.OrdinalIgnoreCase))
                         {
                             foundProviderSource.TrySetResult(null);
@@ -97,8 +95,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     Configuration = new CpuProfileConfiguration()
                 };
 
-                await using var pipeline = new EventTracePipeline(client, settings, (s, token) =>
-                {
+                await using var pipeline = new EventTracePipeline(client, settings, (s, token) => {
                     eventStream = s; //Clients should not do this.
                     cancellationTokenSource.Cancel();
                     token.ThrowIfCancellationRequested();

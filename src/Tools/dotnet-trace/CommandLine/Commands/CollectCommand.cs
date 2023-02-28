@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal static class CollectCommandHandler
     {
         internal static bool IsQuiet
-        {get; set; }
+        { get; set; }
 
         private static void ConsoleWriteLine(string str)
         {
@@ -291,8 +291,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.CursorVisible = false;
                             }
 
-                            Action printStatus = () =>
-                            {
+                            Action printStatus = () => {
                                 if (printStatusOverTime)
                                 {
                                     rewriter?.RewriteConsoleLine();
@@ -398,8 +397,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             ConsoleWriteLine("");
-            ConsoleWriteLine(string.Format("{0, -40}","Provider Name") + string.Format("{0, -20}","Keywords") +
-                string.Format("{0, -20}","Level") + "Enabled By");  // +4 is for the tab
+            ConsoleWriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
+                string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
             foreach (var provider in providers)
             {
                 ConsoleWriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");

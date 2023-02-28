@@ -19,22 +19,26 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             ReadOnlySpan<char> metadata = metadataPayload;
 
-            while (!metadata.IsEmpty) {
+            while (!metadata.IsEmpty)
+            {
                 int commaIndex = metadata.IndexOf(',');
 
                 ReadOnlySpan<char> kvPair;
 
-                if (commaIndex < 0) {
+                if (commaIndex < 0)
+                {
                     kvPair = metadata;
                     metadata = default;
                 }
-                else {
+                else
+                {
                     kvPair = metadata[..commaIndex];
                     metadata = metadata.Slice(commaIndex + 1);
                 }
 
                 int colonIndex = kvPair.IndexOf(kvSeparator);
-                if (colonIndex < 0) {
+                if (colonIndex < 0)
+                {
                     metadataDict.Clear();
                     break;
                 }

@@ -52,7 +52,8 @@ namespace SOS.Extensions
         /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
+            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
+            {
                 AssemblyResolver.Enable();
             }
             DiagnosticLoggingService.Initialize();
@@ -172,7 +173,8 @@ namespace SOS.Extensions
             IntPtr iunk)
         {
             Trace.TraceInformation("HostServices.RegisterDebuggerServices");
-            if (iunk == IntPtr.Zero || DebuggerServices != null) {
+            if (iunk == IntPtr.Zero || DebuggerServices != null)
+            {
                 return HResult.E_FAIL;
             }
             // Create the wrapper for the host debugger services
@@ -281,7 +283,8 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
-            if (_target != null || DebuggerServices == null) {
+            if (_target != null || DebuggerServices == null)
+            {
                 return HResult.E_FAIL;
             }
             try

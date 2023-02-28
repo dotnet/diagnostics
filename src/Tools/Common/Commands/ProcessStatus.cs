@@ -34,13 +34,13 @@ namespace Microsoft.Internal.Common.Commands
         {
             int textLength = text.Length;
             sb.Append(" ");
-            if(textLength == width)
+            if (textLength == width)
             {
                 sb.Append(text);
             }
-            else if(textLength > width)
+            else if (textLength > width)
             {
-                if(truncateFront)
+                if (truncateFront)
                 {
                     sb.Append(text.Substring(textLength - width, width));
                 }
@@ -48,7 +48,7 @@ namespace Microsoft.Internal.Common.Commands
                 {
                     sb.Append(text.Substring(0, width));
                 }
-           }
+            }
             else
             {
                 if (leftPad)
@@ -90,7 +90,7 @@ namespace Microsoft.Internal.Common.Commands
                 {
                     consoleWidth = Console.WindowWidth;
                 }
-                int extra = (int)Math.Ceiling(consoleWidth*0.05);
+                int extra = (int)Math.Ceiling(consoleWidth * 0.05);
                 int largeLength = consoleWidth / 2 - 16 - extra;
                 return Math.Min(fieldWidths.Max(), largeLength);
             }
@@ -111,7 +111,7 @@ namespace Microsoft.Internal.Common.Commands
                 int fileLength = GetColumnWidth(fileNames);
                 int cmdLength = GetColumnWidth(commandLineArgs);
 
-                foreach(var info in rows)
+                foreach (var info in rows)
                 {
                     MakeFixedWidth(info.ProcessId.ToString(), iDLength, tableText, true, true);
                     MakeFixedWidth(info.ProcessName, nameLength, tableText, false, true);
@@ -130,7 +130,7 @@ namespace Microsoft.Internal.Common.Commands
                     .ThenBy(process => process.Id);
 
                 var currentPid = Environment.ProcessId;
-                List<Microsoft.Internal.Common.Commands.ProcessStatusCommandHandler.ProcessDetails> printInfo = new ();
+                List<Microsoft.Internal.Common.Commands.ProcessStatusCommandHandler.ProcessDetails> printInfo = new();
                 foreach (var process in processes)
                 {
                     if (process.Id == currentPid)
@@ -173,7 +173,7 @@ namespace Microsoft.Internal.Common.Commands
                 FormatTableRows(printInfo, sb);
                 console.Out.WriteLine(sb.ToString());
             }
-            catch (Exception  ex)
+            catch (Exception ex)
             {
                 console.Out.WriteLine(ex.ToString());
             }
@@ -219,7 +219,7 @@ namespace Microsoft.Internal.Common.Commands
                 try
                 {
                     string commandLine = File.ReadAllText($"/proc/{process.Id}/cmdline");
-                    if(!string.IsNullOrWhiteSpace(commandLine))
+                    if (!string.IsNullOrWhiteSpace(commandLine))
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');

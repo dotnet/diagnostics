@@ -56,13 +56,13 @@ namespace Microsoft.Internal.Common.Utils
                     return "[cannot determine command line arguments]";
                 }
 
-                if ((processBitness == 64 && System.Environment.Is64BitProcess)||
+                if ((processBitness == 64 && System.Environment.Is64BitProcess) ||
                     (processBitness == 32 && !System.Environment.Is64BitProcess))
                 {
                     //System and Process are both the same bitness.
 
                     ProcessNativeMethods.UNICODE_STRING unicodeString = new ProcessNativeMethods.UNICODE_STRING();
-                    if(!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr+unicodeStringOffset, ref unicodeString, new IntPtr(Marshal.SizeOf(unicodeString)), IntPtr.Zero))
+                    if (!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr + unicodeStringOffset, ref unicodeString, new IntPtr(Marshal.SizeOf(unicodeString)), IntPtr.Zero))
                     {
                         return "[cannot determine command line arguments]";
                     }
@@ -78,7 +78,7 @@ namespace Microsoft.Internal.Common.Utils
 
                     ProcessNativeMethods.UNICODE_STRING_32 unicodeString32 = new ProcessNativeMethods.UNICODE_STRING_32();
 
-                    if(!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr+unicodeStringOffset, ref unicodeString32, new IntPtr(Marshal.SizeOf(unicodeString32)), IntPtr.Zero))
+                    if (!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr + unicodeStringOffset, ref unicodeString32, new IntPtr(Marshal.SizeOf(unicodeString32)), IntPtr.Zero))
                     {
                         return "[cannot determine command line arguments]";
                     }
@@ -97,7 +97,7 @@ namespace Microsoft.Internal.Common.Utils
                 return Encoding.Unicode.GetString(commandLine);
             }
 
-            catch(Win32Exception)
+            catch (Win32Exception)
             {
                 return "[cannot determine command line arguments]";
             }
@@ -115,7 +115,7 @@ namespace Microsoft.Internal.Common.Utils
                 dataSize,
                 ref res_len))
             {
-                throw new Win32Exception("Reading of the pointer failed. Error: "+Marshal.GetLastWin32Error());
+                throw new Win32Exception("Reading of the pointer failed. Error: " + Marshal.GetLastWin32Error());
             }
 
             // This is more like an assert
@@ -137,7 +137,7 @@ namespace Microsoft.Internal.Common.Utils
 
             if (res_len != pbiSize)
             {
-                throw new Win32Exception("Query Information Process failed. Error: "+ Marshal.GetLastWin32Error());
+                throw new Win32Exception("Query Information Process failed. Error: " + Marshal.GetLastWin32Error());
             }
 
             return pbi.PebBaseAddress;

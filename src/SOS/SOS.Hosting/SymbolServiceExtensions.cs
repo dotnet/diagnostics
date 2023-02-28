@@ -67,7 +67,8 @@ namespace SOS.Hosting
             Debug.Assert(imageTimestamp != 0);
             Debug.Assert(imageSize != 0);
 
-            if (pMetadata == IntPtr.Zero) {
+            if (pMetadata == IntPtr.Zero)
+            {
                 return HResult.E_INVALIDARG;
             }
             int hr = HResult.S_OK;
@@ -85,7 +86,8 @@ namespace SOS.Hosting
                 hr = HResult.E_FAIL;
             }
 
-            if (pMetadataSize != IntPtr.Zero) {
+            if (pMetadataSize != IntPtr.Zero)
+            {
                 Marshal.WriteInt32(pMetadataSize, dataSize);
             }
             return hr;

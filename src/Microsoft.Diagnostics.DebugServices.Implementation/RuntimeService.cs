@@ -33,7 +33,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 foreach (IRuntime runtime in _runtimes)
                 {
-                    if (runtime is IDisposable disposable) {
+                    if (runtime is IDisposable disposable)
+                    {
                         disposable.Dispose();
                     }
                 }

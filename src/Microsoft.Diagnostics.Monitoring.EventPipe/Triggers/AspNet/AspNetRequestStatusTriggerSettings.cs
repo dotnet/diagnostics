@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
     public static class StatusCodeRangeValidator
     {
-        private static readonly string[] _validationMembers = new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes)};
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes) };
 
         public static ValidationResult ValidateStatusCodes(object statusCodes)
         {
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
             Func<int, bool> validateStatusCode = (int statusCode) => statusCode >= 100 && statusCode < 600;
 
-            foreach(StatusCodeRange statusCodeRange in statusCodeRanges)
+            foreach (StatusCodeRange statusCodeRange in statusCodeRanges)
             {
                 if (statusCodeRange.Min > statusCodeRange.Max)
                 {

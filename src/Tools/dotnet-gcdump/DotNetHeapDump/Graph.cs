@@ -371,8 +371,7 @@ namespace Graphs
                 sizeAndCount.Size += node.Size;
             }
 
-            Array.Sort(ret, delegate (SizeAndCount x, SizeAndCount y)
-            {
+            Array.Sort(ret, delegate (SizeAndCount x, SizeAndCount y) {
                 return y.Size.CompareTo(x.Size);
             });
 #if DEBUG
@@ -546,8 +545,7 @@ namespace Graphs
                 // it is create a deferred (lazy region).   The key is that ALL readers know how to skip this region, which allows
                 // you to add new fields 'at the end' of the region (just like for sealed objects).
                 DeferedRegion expansion = new DeferedRegion();
-                expansion.Write(serializer, delegate ()
-                {
+                expansion.Write(serializer, delegate () {
                     // I don't need to use Tagged types for my 'first' version of this new region
                     serializer.Write(m_deferedTypes.Count);
                     for (int i = 0; i < m_deferedTypes.Count; i++)
@@ -601,7 +599,7 @@ namespace Graphs
                 writer.Write(deserializer.ReadInt64());
                 blobCount -= 8;
             }
-            while(0 < blobCount)
+            while (0 < blobCount)
             {
                 writer.Write(deserializer.ReadByte());
                 --blobCount;
@@ -617,8 +615,7 @@ namespace Graphs
                 // it is create a deferred (lazy region).   The key is that ALL readers know how to skip this region, which allows
                 // you to add new fields 'at the end' of the region (just like for sealed objects).
                 DeferedRegion expansion = new DeferedRegion();
-                expansion.Read(deserializer, delegate ()
-                {
+                expansion.Read(deserializer, delegate () {
                     // I don't need to use Tagged types for my 'first' version of this new region
                     int count = deserializer.ReadInt();
                     for (int i = 0; i < count; i++)
@@ -643,8 +640,7 @@ namespace Graphs
         public int MinimumVersionCanRead { get { return 0; } }              // Declaration of the oldest format this code can read
         public int MinimumReaderVersion                                     // Will cause readers to fail if their code version is less than this.
         {
-            get
-            {
+            get {
                 if (m_deferedTypes.Count != 0)
                 {
                     return 1;    // We require that you upgrade to version 1 if you use m_deferedTypes (e.g. projectN)
@@ -681,8 +677,7 @@ namespace Graphs
     {
         public int Size
         {
-            get
-            {
+            get {
                 m_graph.m_reader.Goto(m_graph.m_nodes[(int)m_index]);
                 var typeAndSize = ReadCompressedInt(m_graph.m_reader);
                 if ((typeAndSize & 1) != 0)     // low bit indicates if Size is encoded explicitly
@@ -748,8 +743,7 @@ namespace Graphs
         /// </summary>
         public int ChildCount
         {
-            get
-            {
+            get {
                 m_graph.m_reader.Goto(m_graph.m_nodes[(int)m_index]);
                 if ((ReadCompressedInt(m_graph.m_reader) & 1) != 0)        // Skip nodeId and Size
                 {
@@ -761,8 +755,7 @@ namespace Graphs
         }
         public NodeTypeIndex TypeIndex
         {
-            get
-            {
+            get {
                 m_graph.m_reader.Goto(m_graph.m_nodes[(int)m_index]);
                 var ret = (NodeTypeIndex)(ReadCompressedInt(m_graph.m_reader) >> 1);
                 return ret;
@@ -941,8 +934,7 @@ namespace Graphs
         /// </summary>
         public string Name
         {
-            get
-            {
+            get {
                 var ret = m_graph.m_types[(int)m_index].Name;
                 if (ret == null && (int)m_index < m_graph.m_deferedTypes.Count)
                 {
@@ -967,8 +959,7 @@ namespace Graphs
         /// </summary>
         public string FullName
         {
-            get
-            {
+            get {
                 var moduleName = ModuleName;
                 if (moduleName == null)
                 {
@@ -998,8 +989,7 @@ namespace Graphs
         /// </summary>
         public string ModuleName
         {
-            get
-            {
+            get {
                 var ret = m_graph.m_types[(int)m_index].ModuleName;
                 if (ret == null && (int)m_index < m_graph.m_deferedTypes.Count)
                 {
@@ -1011,8 +1001,7 @@ namespace Graphs
                 }
                 return ret;
             }
-            set
-            {
+            set {
                 var typeInfo = m_graph.m_types[(int)m_index];
                 typeInfo.ModuleName = value;
                 m_graph.m_types[(int)m_index] = typeInfo;
@@ -1238,8 +1227,7 @@ namespace Graphs
                 sortedNodes[i] = (NodeIndex)i;
             }
 
-            Array.Sort<NodeIndex>(sortedNodes, delegate (NodeIndex x, NodeIndex y)
-            {
+            Array.Sort<NodeIndex>(sortedNodes, delegate (NodeIndex x, NodeIndex y) {
                 // Sort first by address
                 int ret = graph.GetAddress(x).CompareTo(graph.GetAddress(y));
                 if (ret != 0)
@@ -1557,8 +1545,7 @@ public class RefNode
     /// </summary>
     public int ChildCount
     {
-        get
-        {
+        get {
             var ret = 0;
             for (NodeIndex childIndex = GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = GetNextChildIndex())
             {
@@ -1679,8 +1666,7 @@ public class SpanningTree
     /// </summary>
     public string PriorityRegExs
     {
-        get
-        {
+        get {
             if (m_priorityRegExs == null)
             {
                 PriorityRegExs = DefaultPriorities;
@@ -1688,16 +1674,14 @@ public class SpanningTree
 
             return m_priorityRegExs;
         }
-        set
-        {
+        set {
             m_priorityRegExs = value;
             SetTypePriorities(value);
         }
     }
     public static string DefaultPriorities
     {
-        get
-        {
+        get {
             return
                 // By types (including user defined types) are 0
                 @"v4.0.30319\%!->-1;" +     // Framework is less than default
@@ -2284,8 +2268,7 @@ public class GraphSampler
             sortedTypes[i] = i;
         }
 
-        Array.Sort(sortedTypes, delegate (int x, int y)
-        {
+        Array.Sort(sortedTypes, delegate (int x, int y) {
             var ret = m_statsByType[y].TotalMetric.CompareTo(m_statsByType[x].TotalMetric);
             return ret;
         });
@@ -2322,8 +2305,7 @@ public class GraphSampler
     /// </summary>
     public float[] CountScalingByType
     {
-        get
-        {
+        get {
             var ret = new float[m_newGraph.NodeTypeCount];
             for (int i = 0; i < m_statsByType.Length; i++)
             {
@@ -2478,7 +2460,7 @@ public class GraphSampler
                     // for long chains of objects.
                     VisitNode(nodeIdx, true, true);
                 }
-                            }
+            }
         }
         else
         {

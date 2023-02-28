@@ -4,9 +4,9 @@
 
 namespace Microsoft.Diagnostics.DebugServices
 {
-	/// <summary>
-	/// Details about a register
-	/// </summary>
+    /// <summary>
+    /// Details about a register
+    /// </summary>
     public readonly struct RegisterInfo
     {
         public readonly int RegisterIndex;

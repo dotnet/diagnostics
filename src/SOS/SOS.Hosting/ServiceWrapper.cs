@@ -92,7 +92,8 @@ namespace SOS.Hosting
             ptr = IntPtr.Zero;
 
             COMCallableIUnknown wrapper = GetServiceWrapper(guid);
-            if (wrapper == null) {
+            if (wrapper == null)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return COMHelper.QueryInterface(wrapper.IUnknownObject, guid, out ptr);

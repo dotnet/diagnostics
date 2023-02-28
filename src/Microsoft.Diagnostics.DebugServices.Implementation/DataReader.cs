@@ -133,8 +133,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override Version Version
             {
-                get
-                {
+                get {
                     try
                     {
                         return _module.GetVersionData() ?? Utilities.EmptyVersion;
@@ -149,8 +148,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ImmutableArray<byte> BuildId
             {
-                get
-                {
+                get {
                     try
                     {
                         return _module.BuildId;
@@ -165,8 +163,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override PdbInfo Pdb
             {
-                get
-                {
+                get {
                     try
                     {
                         PdbFileInfo pdbFileInfo = _module.GetPdbFileInfos().Where((pdbFileInfo) => pdbFileInfo.IsPortable).LastOrDefault();

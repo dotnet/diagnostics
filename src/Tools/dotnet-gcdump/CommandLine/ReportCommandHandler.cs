@@ -57,9 +57,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             return (source, type) switch
             {
-                (ReportSource.Process, ReportType.HeapStat)  => ReportFromProcess(processId.Value, ct),
+                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId.Value, ct),
                 (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(gcdump_filename),
-                _                                            => HandleUnknownParam()
+                _ => HandleUnknownParam()
             };
         }
 

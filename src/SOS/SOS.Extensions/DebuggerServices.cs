@@ -381,7 +381,7 @@ namespace SOS
             byte[] typeNameBytes = Encoding.ASCII.GetBytes(typeName + "\0");
             byte[] fieldNameBytes = Encoding.ASCII.GetBytes(fieldName + "\0");
             fixed (byte* typeNamePtr = typeNameBytes)
-            fixed (byte *fieldNamePtr = fieldNameBytes)
+            fixed (byte* fieldNamePtr = fieldNameBytes)
             {
                 return VTable.GetFieldOffset(Self, moduleIndex, typeNamePtr, typeId, fieldNamePtr, out offset);
             }
@@ -391,8 +391,7 @@ namespace SOS
 
         public bool SupportsDml
         {
-            get
-            {
+            get {
                 uint supported = 0;
                 VTable.SupportsDml(Self, &supported);
                 return supported != 0;

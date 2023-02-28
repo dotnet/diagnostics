@@ -12,24 +12,24 @@ namespace Microsoft.Diagnostics.DebugServices
     [Flags]
     public enum CommandFlags : byte
     {
-        Windows     = 0x01,
-        Linux       = 0x02,
-        OSX         = 0x04,
+        Windows = 0x01,
+        Linux = 0x02,
+        OSX = 0x04,
 
         /// <summary>
         /// Command is supported when there is no target
         /// </summary>
-        Global      = 0x08,
+        Global = 0x08,
 
         /// <summary>
         /// Command is not added through reflection, but manually with command service API.
         /// </summary>
-        Manual      = 0x10,
+        Manual = 0x10,
 
         /// <summary>
         /// Default. All operating system, but target is required
         /// </summary>
-        Default     = Windows | Linux | OSX
+        Default = Windows | Linux | OSX
     }
 
     /// <summary>

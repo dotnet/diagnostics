@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class EventPipeSessionConfiguration
     {
-        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown=true)
+        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown = true)
         {
             if (circularBufferSizeMB == 0)
             {
