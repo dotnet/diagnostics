@@ -3,9 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Diagnostics.NETCore.Client;
 using Xunit;
 
 namespace Microsoft.Diagnostics.Tools.Trace

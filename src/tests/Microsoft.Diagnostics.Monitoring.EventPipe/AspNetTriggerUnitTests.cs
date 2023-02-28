@@ -3,15 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
 

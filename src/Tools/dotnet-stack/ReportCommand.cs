@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;

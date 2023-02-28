@@ -4,10 +4,8 @@
 
 using System;
 using System.Diagnostics;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.FileFormats;

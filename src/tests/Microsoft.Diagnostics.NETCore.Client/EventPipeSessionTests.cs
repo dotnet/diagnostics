@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;

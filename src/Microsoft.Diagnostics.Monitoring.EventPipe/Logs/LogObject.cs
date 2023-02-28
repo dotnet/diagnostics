@@ -5,7 +5,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe

@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
-using System.CommandLine.Invocation;
 using System.CommandLine.IO;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -14,14 +13,13 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands
-{        
+{
     public class ProcessStatusCommandHandler
     {
         public static Command ProcessStatusCommand(string description) =>

@@ -3,20 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 
 namespace SOS.Hosting
 {

@@ -5,7 +5,6 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.IO;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.NETCore.Client;

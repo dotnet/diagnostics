@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;

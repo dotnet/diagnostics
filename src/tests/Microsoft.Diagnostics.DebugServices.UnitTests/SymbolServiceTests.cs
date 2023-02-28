@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.SymbolStore.SymbolStores;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests

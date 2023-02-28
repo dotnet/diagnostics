@@ -6,11 +6,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore.KeyGenerators;
 
 namespace Microsoft.Diagnostics.DebugServices
 {

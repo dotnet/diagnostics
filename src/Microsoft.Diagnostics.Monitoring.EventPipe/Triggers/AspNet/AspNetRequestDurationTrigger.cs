@@ -4,8 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {

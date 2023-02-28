@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using FastSerialization;    // For IStreamReader
 using Graphs;
-using Microsoft.Diagnostics.Utilities;
 using Address = System.UInt64;
 
 // Copy of version in Microsoft/PerfView

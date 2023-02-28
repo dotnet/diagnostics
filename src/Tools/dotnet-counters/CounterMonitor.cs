@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
 using System.CommandLine.IO;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
@@ -13,16 +12,13 @@ using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {

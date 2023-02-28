@@ -4,9 +4,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
-using Microsoft.Diagnostics.Tracing.Parsers;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {

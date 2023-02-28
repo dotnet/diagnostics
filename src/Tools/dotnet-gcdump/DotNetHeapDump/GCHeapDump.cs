@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using FastSerialization;
 using Graphs;
-using Microsoft.Diagnostics.Utilities;
 using Address = System.UInt64;
 
 /// <summary>

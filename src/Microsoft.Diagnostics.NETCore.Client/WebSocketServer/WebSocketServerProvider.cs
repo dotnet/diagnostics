@@ -1,5 +1,4 @@
 using System;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
 

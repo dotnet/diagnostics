@@ -5,12 +5,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
-using System.IO;
-using System.Reflection;
-using System.Runtime.Loader;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
 

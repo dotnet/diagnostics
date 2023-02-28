@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
