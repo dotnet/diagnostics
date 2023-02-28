@@ -37,7 +37,7 @@ namespace Microsoft.Internal.Common.Utils
             string arguments = "";
             for (int i = unparsedTokenIdx+1; i < args.Length; i++)
             {
-                if (args[i].Contains(" "))
+                if (args[i].Contains(' '))
                 {
                     arguments += $"\"{args[i].Replace("\"", "\\\"")}\"";
                 }

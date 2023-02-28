@@ -67,8 +67,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return "";
             }
             return string.Join(";", Arguments.Select(a => {
-                var escapedKey = a.Key.Contains(";") || a.Key.Contains("=") ? $"\"{a.Key}\"" : a.Key;
-                var escapedValue = a.Value.Contains(";") || a.Value.Contains("=") ? $"\"{a.Value}\"" : a.Value;
+                var escapedKey = a.Key.Contains(';') || a.Key.Contains('=') ? $"\"{a.Key}\"" : a.Key;
+                var escapedValue = a.Value.Contains(';') || a.Value.Contains('=') ? $"\"{a.Value}\"" : a.Value;
                 return $"{escapedKey}={escapedValue}";
             }));
         }
