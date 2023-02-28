@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Stream implementation to read debugger target memory for in-memory PDBs
         /// </summary>
-        private class TargetStream : Stream
+        private sealed class TargetStream : Stream
         {
             private readonly ulong _address;
             private readonly IMemoryService _memoryService;

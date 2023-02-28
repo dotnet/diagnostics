@@ -6,7 +6,7 @@ using System;
 
 namespace Tracee
 {
-    internal class Program
+    internal sealed class Program
     {
         private static void Main()
         {

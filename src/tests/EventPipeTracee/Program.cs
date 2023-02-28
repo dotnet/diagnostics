@@ -101,7 +101,7 @@ namespace EventPipeTracee
                     { "BoolValue", "true" },
                     { "StringValue", "test" } }.ToList()))
             {
-                customCategoryLogger.LogInformation("Some warning message with {arg}", 6);
+                customCategoryLogger.LogInformation("Some warning message with {Arg}", 6);
             }
 
             customCategoryLogger.LogWarning(new EventId(7, "AnotherEventId"), "Another message");
