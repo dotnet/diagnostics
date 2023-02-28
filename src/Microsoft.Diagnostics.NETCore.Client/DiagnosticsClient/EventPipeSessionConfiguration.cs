@@ -27,7 +27,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException("Unrecognized format");
             }
 
-            ArgumentNullException.ThrowIfNull(providers);
+            if (providers is null)
+            {
+                throw new ArgumentNullException(nameof(providers));
+            };
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;

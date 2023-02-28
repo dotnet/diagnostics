@@ -344,7 +344,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static bool TestStream(Stream stream)
         {
-            ArgumentNullException.ThrowIfNull(stream);
+            if (stream is null)
+            {
+                throw new ArgumentNullException(nameof(stream));
+            };
 
             if (stream is ExposedSocketNetworkStream networkStream)
             {
