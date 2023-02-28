@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Diagnostics./TestHelpers;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.CommonTestRunner
@@ -154,7 +154,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
             {
                 await WaitForTracee();
             }
-            else 
+            else
             {
                 // Retry getting the module count because we can catch the process during startup and it fails temporarily.
                 for (int retry = 0; retry < 5; retry++)
@@ -317,7 +317,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
     }
 
     public static class TestConfigExtensions
-    { 
+    {
         public static string DotNetTraceHost(this TestConfiguration config)
         {
             string dotnetTraceHost = config.GetValue("DotNetTraceHost");

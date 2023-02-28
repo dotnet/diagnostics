@@ -172,7 +172,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     {
                         if (subValue.HasElements)
                         {
-                            // Has multiple elements (i.e. Modules, Threads, Runtimes, 
+                            // Has multiple elements (i.e. Modules, Threads, Runtimes,
                             // etc). Assumes the same name for each entry.
                             items.Add(Build(subValue));
                         }
@@ -285,8 +285,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                             }
                         }
                     }
-                    else 
-                    { 
+                    else
+                    {
                         Trace.TraceWarning($"CompareMembers {testDataKey} member not found");
                         return;
                     }
@@ -302,7 +302,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     public static class TestDataExtensions
     {
         /// <summary>
-        /// Helper function to get a test data value 
+        /// Helper function to get a test data value
         /// </summary>
         /// <typeparam name="T">type to convert test data value</typeparam>
         /// <param name="values">values collection to lookup name</param>

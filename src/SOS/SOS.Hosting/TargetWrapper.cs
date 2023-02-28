@@ -72,7 +72,7 @@ namespace SOS.Hosting
         {
             if (_target.OperatingSystem == OSPlatform.Windows) {
                 return OperatingSystem.Windows;
-            } 
+            }
             else if (_target.OperatingSystem == OSPlatform.Linux) {
                 return OperatingSystem.Linux;
             }

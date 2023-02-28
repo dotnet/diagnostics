@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 bool fDone = false;
                 log.WriteLine("{0,5:n1}s: Creating type table flushing task", getElapsed().TotalSeconds);
 
-                using (EventPipeSessionController typeFlushSession = new EventPipeSessionController(processID, new List<EventPipeProvider> { 
+                using (EventPipeSessionController typeFlushSession = new EventPipeSessionController(processID, new List<EventPipeProvider> {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 }, false))
                 {
@@ -67,11 +67,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
 
 
-                // Start the providers and trigger the GCs.  
+                // Start the providers and trigger the GCs.
                 log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", getElapsed().TotalSeconds);
 
-                using EventPipeSessionController gcDumpSession = new EventPipeSessionController(processID, new List<EventPipeProvider> { 
-                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot)) 
+                using EventPipeSessionController gcDumpSession = new EventPipeSessionController(processID, new List<EventPipeProvider> {
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot))
                 });
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
 
@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processID.ToString());
                 }
 
-                // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded. 
+                // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded.
                 Task readerTask = Task.Run(() =>
                 {
                     // cancelled before we began
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.  
+                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.
                     {
                         log.WriteLine("{0,5:n1}s: Assume no .NET Heap", getElapsed().TotalSeconds);
                         break;
@@ -208,7 +208,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (eventPipeDataPresent)
                 {
-                    dumper.ConvertHeapDataToGraph();        // Finish the conversion.  
+                    dumper.ConvertHeapDataToGraph();        // Finish the conversion.
                 }
             }
             catch (Exception e)

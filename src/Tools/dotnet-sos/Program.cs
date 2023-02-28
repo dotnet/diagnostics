@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
 
         private static Option ArchitectureOption() =>
             new Option(
-                aliases: new[] { "-a", "--arch", "--architecture" }, 
+                aliases: new[] { "-a", "--arch", "--architecture" },
                 description: "The processor architecture to install.")
             {
                 Argument = new Argument<Architecture>(name: "architecture")

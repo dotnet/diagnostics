@@ -211,7 +211,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return thread;
         }
 
-        #endregion 
+        #endregion
 
         /// <summary>
         /// Get the thread context

@@ -16,7 +16,7 @@ using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 [Collection("Windows Dump Generation")]
 public class SOS
@@ -284,7 +284,7 @@ public class SOS
                 DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
             });
 
-            // This tests using regular Windows PDBs with no managed hosting. SOS should fallback 
+            // This tests using regular Windows PDBs with no managed hosting. SOS should fallback
             // to using native implementations of the host/target/runtime.
             if (currentConfig.DebugType == "full")
             {
@@ -394,9 +394,9 @@ public class SOS
                 program = "xcrun";
                 arguments.Append("python3 ");
             }
-            else 
+            else
             {
-                // We should verify what python version this is. 2.7 is out of 
+                // We should verify what python version this is. 2.7 is out of
                 // support for a while now, but we have old OS's.
                 program = "/usr/bin/python";
                 if (!File.Exists(program))

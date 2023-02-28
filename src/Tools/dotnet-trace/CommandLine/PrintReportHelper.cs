@@ -38,13 +38,13 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             string[] usingStatement = functionList.Split(".");
             int length = usingStatement.Length;
 
-            if (length < 2) 
+            if (length < 2)
             {
                 if (length == 1)
                 {
                     classMethod = usingStatement[length - 1];
                 }
-                else 
+                else
                 {
                     classMethod = usingStatement[length];
                 }
@@ -72,13 +72,13 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
             IEnumerable<string> uniformName = Enumerable.Range(0, length / n).Select(i => str.Substring(i * n, n));
             List<string> strList = uniformName.ToList<string>();
-            int remainder = (length / n)*n; 
+            int remainder = (length / n)*n;
             strList.Add(str.Substring(remainder, length - remainder));
             return strList;
         }
 
 
-        internal static void TopNWriteToStdOut(List<CallTreeNodeBase> nodesToReport, bool isInclusive, bool isVerbose) 
+        internal static void TopNWriteToStdOut(List<CallTreeNodeBase> nodesToReport, bool isInclusive, bool isVerbose)
         {
             const int functionColumnWidth = 70;
             const int measureColumnWidth = 20;
@@ -148,7 +148,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                     string uniformEMeasure = MakeFixedWidth(exclusiveMeasure, measureColumnWidth);
                     Console.WriteLine(number + nameList[j] + uniformIMeasure + uniformEMeasure);
                 }
-                
+
             }
         }
     }

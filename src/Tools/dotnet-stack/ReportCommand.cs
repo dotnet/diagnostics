@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         public static Command ReportCommand() =>
             new Command(
                 name: "report",
-                description: "reports the managed stacks from a running .NET process") 
+                description: "reports the managed stacks from a running .NET process")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),

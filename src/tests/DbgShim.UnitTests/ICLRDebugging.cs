@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
 
 namespace Microsoft.Diagnostics
-{    
+{
     public unsafe class ICLRDebugging : CallableCOMWrapper
     {
         public static readonly Guid IID_ICLRDebugging = new Guid("D28F3C5A-9634-4206-A509-477552EEFB10");
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics
             ClrDebuggingVersion maxDebuggerSupportedVersion,
             in Guid riidProcess,
             out IntPtr process,
-            out ClrDebuggingVersion version, 
+            out ClrDebuggingVersion version,
             out ClrDebuggingProcessFlags flags)
         {
             return VTable.OpenVirtualProcess(

@@ -13,7 +13,7 @@ using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.NotNull(module);
 
                 if (host.Target.Host.HostType != HostType.Lldb)
-                { 
+                {
                     // Check that the resulting module matches the test data
                     host.TestData.CompareMembers(moduleData, module);
                 }
@@ -177,7 +177,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                             Assert.True(symbol.TryGetValue("Name", out string name));
                             Assert.True(symbol.TryGetValue("Value", out ulong value));
                             Trace.TraceInformation("IExportSymbols.GetSymbolAddress({0}) == {1:X16}", name, value);
-                            
+
                             Assert.True(exportSymbols.TryGetSymbolAddress(name, out ulong offset));
                             Assert.Equal(value, offset);
                         }
@@ -219,7 +219,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             foreach (ImmutableDictionary<string, TestDataReader.Value> threadData in host.TestData.Threads)
             {
                 Assert.True(threadData.TryGetValue("ThreadId", out uint threadId));
-                
+
                 IThread thread = threadService.GetThreadFromId(threadId);
                 Assert.NotNull(thread);
 

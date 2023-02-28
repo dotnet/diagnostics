@@ -9,16 +9,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /**
      * ==ProcessInfo==
      * The response payload to issuing the GetProcessInfo command.
-     * 
+     *
      * 8 bytes  - PID (little-endian)
      * 16 bytes - CLR Runtime Instance Cookie (little-endian)
      * # bytes  - Command line string length and data
      * # bytes  - Operating system string length and data
      * # bytes  - Process architecture string length and data
-     * 
+     *
      * ==ProcessInfo2==
      * The response payload to issuing the GetProcessInfo2 command.
-     * 
+     *
      * 8 bytes  - PID (little-endian)
      * 16 bytes - CLR Runtime Instance Cookie (little-endian)
      * # bytes  - Command line string length and data
@@ -26,8 +26,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
      * # bytes  - Process architecture string length and data
      * # bytes  - Managed entrypoint assembly name
      * # bytes  - CLR product version string (may include prerelease labels)
-     * 
-     * 
+     *
+     *
      * The "string length and data" fields are variable length:
      * 4 bytes            - Length of string data in UTF-16 characters
      * (2 * length) bytes - The data of the string encoded using Unicode

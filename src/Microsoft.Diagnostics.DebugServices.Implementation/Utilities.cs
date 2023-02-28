@@ -18,7 +18,7 @@ using Microsoft.FileFormats.PE;
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
-    { 
+    {
         /// <summary>
         /// An empty Version instance.
         /// </summary>
@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             unchecked {
                 // This specific hash function is based on the Boost C++ library's CombineHash function:
                 // http://stackoverflow.com/questions/4948780/magic-numbers-in-boosthash-combine
-                // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html 
+                // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html
                 return hashCode0 ^ (hashCode1 + (int) 0x9e3779b9 + (hashCode0 << 6) + (hashCode0 >> 2));
             }
         }
@@ -51,12 +51,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
         /// </summary>
         public static Version ToVersion(this VsFixedFileInfo fileInfo)
-        { 
+        {
             return new Version(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionBuild, fileInfo.FileVersionRevision);
         }
 
         /// <summary>
-        /// Helper function to that parses the version out of the version string that looks something 
+        /// Helper function to that parses the version out of the version string that looks something
         /// like "8.0.23.10701 @Commit: e71a4fb10d7ea6b502dd5efe7a8fcefa2b9c1550"
         /// </summary>
         public static Version ParseVersionString(string versionString)
@@ -248,7 +248,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE") ?? throw new ArgumentNullException("USERPROFILE environment variable not found"), ".dotnet");
             }
-            else { 
+            else {
                 dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? throw new ArgumentNullException("HOME environment variable not found"), ".dotnet");
             }
             return dotnetHome;

@@ -125,7 +125,7 @@ namespace ParallelStacks.Runtime
             var runtime = (dacFilePath != null) ? version.CreateRuntime(dacFilePath) : version.CreateRuntime();
             return runtime;
         }
-        
+
         private ParallelStack(ClrStackFrame frame = null)
         {
             Stacks = new List<ParallelStack>();

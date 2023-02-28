@@ -62,7 +62,7 @@ namespace Microsoft.Internal.Common.Utils
 
         /// <summary>
         /// A helper method for validating --process-id, --name, --diagnostic-port options for collect commands.
-        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
+        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
         /// such duplication, it prints the appropriate error message.
         /// </summary>
         /// <param name="processId">process ID</param>

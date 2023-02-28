@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 namespace EventPipe.UnitTests.MethodEventsValidation
 {
     public class M_verbose : IDisposable
-    {      
+    {
         public bool IsZero(char c)
         {
             return c == 0;
@@ -36,7 +36,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
         [Fact]
         public async void MethodVerbose_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -51,8 +51,8 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                     //MethodVerboseKeyword (0x10): 0b10000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0b10000)
                 };
-                
-                Action _eventGeneratingAction = () => 
+
+                Action _eventGeneratingAction = () =>
                 {
                     for(int i=0; i<100; i++)
                     {
@@ -69,20 +69,20 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int MethodLoadVerboseEvents = 0;
                     int MethodUnloadVerboseEvents = 0;
                     source.Clr.MethodLoadVerbose += (eventData) => MethodLoadVerboseEvents += 1;
                     source.Clr.MethodUnloadVerbose += (eventData) => MethodUnloadVerboseEvents += 1;
 
-                    int MethodJittingStartedEvents = 0;            
+                    int MethodJittingStartedEvents = 0;
                     source.Clr.MethodJittingStarted += (eventData) => MethodJittingStartedEvents += 1;
 
                     return () => {
                         Logger.logger.Log("Event counts validation");
                         Logger.logger.Log("MethodLoadVerboseEvents: " + MethodLoadVerboseEvents);
-                        Logger.logger.Log("MethodUnloadVerboseEvents: " + MethodUnloadVerboseEvents);                        
+                        Logger.logger.Log("MethodUnloadVerboseEvents: " + MethodUnloadVerboseEvents);
                         //MethodUnloadVerboseEvents not stable, ignore the verification
                         bool MethodVerboseResult = MethodLoadVerboseEvents >= 1 && MethodUnloadVerboseEvents >= 0;
                         Logger.logger.Log("MethodVerboseResult check: " + MethodVerboseResult);

@@ -13,14 +13,14 @@ using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
 using Microsoft.Tools.Common;
 
-namespace Microsoft.Diagnostics.Tools.Trace 
+namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class ReportCommandHandler 
+    internal static class ReportCommandHandler
     {
         private static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process"};
 
-        //Create an extension function to help 
-        public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
+        //Create an extension function to help
+        public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree)
         {
             var ret = new List<CallTreeNodeBase>(callTree.ByID);
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
@@ -36,9 +36,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         private delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
-        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose) 
-        {          
-            try 
+        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose)
+        {
+            try
             {
                 string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(traceFile);
                 int count = 0;
@@ -136,7 +136,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
                 };
-        }         
+        }
 
         private static Option InclusiveOption() =>
             new Option(

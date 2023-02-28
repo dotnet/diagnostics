@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override Version Version
             {
-                get 
+                get
                 {
                     try
                     {
@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            public override PdbInfo Pdb 
+            public override PdbInfo Pdb
             {
                 get
                 {

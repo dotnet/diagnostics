@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public bool IsEmpty => _providerCounters.Count == 0;
 
         public IEnumerable<string> Providers => _providerCounters.Keys;
-        
+
         public bool IncludesAllCounters(string providerName)
         {
             return _providerCounters.TryGetValue(providerName, out List<string> enabledCounters) && enabledCounters.Count == 0;
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public bool Contains(string providerName, string counterName)
         {
-            return _providerCounters.TryGetValue(providerName, out List<string> counters) && 
+            return _providerCounters.TryGetValue(providerName, out List<string> counters) &&
                 (counters.Count == 0 || counters.Contains(counterName));
         }
     }

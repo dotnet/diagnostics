@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option ConvertFormatOption() =>
             new Option(
                 alias: "--format",
-                description: $"Sets the output format for the trace file conversion.") 
+                description: $"Sets the output format for the trace file conversion.")
             {
                 Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
             };

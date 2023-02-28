@@ -163,9 +163,9 @@ namespace SOS.Hosting
                 {
                     if (_dbiModulePath != null)
                     {
-                        modulePath = _dbiModulePath; 
+                        modulePath = _dbiModulePath;
                     }
-                    else 
+                    else
                     {
                         modulePath = DownloadModule(DbiName, timeStamp, sizeOfImage);
                     }
@@ -188,7 +188,7 @@ namespace SOS.Hosting
                 {
                     TestGetPEInfo(modulePath, timeStamp, sizeOfImage);
                 }
-                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath); 
+                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath);
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideLibrary2 SUCCEEDED {modulePath}");
                 return HResult.S_OK;
             }
@@ -224,9 +224,9 @@ namespace SOS.Hosting
                 {
                     if (_dbiModulePath != null)
                     {
-                        modulePath = _dbiModulePath; 
+                        modulePath = _dbiModulePath;
                     }
-                    else 
+                    else
                     {
                         modulePath = DownloadModule(DbiName, timeStamp, sizeOfImage);
                     }
@@ -244,7 +244,7 @@ namespace SOS.Hosting
                     }
                 }
                 TestGetPEInfo(modulePath, timeStamp, sizeOfImage);
-                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath); 
+                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath);
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary SUCCEEDED {modulePath}");
                 return HResult.S_OK;
             }
@@ -453,9 +453,9 @@ namespace SOS.Hosting
             }
         }
 
-        private string DacName 
+        private string DacName
         {
-            get 
+            get
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -478,7 +478,7 @@ namespace SOS.Hosting
 
         private ISymbolService SymbolService
         {
-            get 
+            get
             {
                 if (_symbolService is null)
                 {

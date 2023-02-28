@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             var filteredTypes = GetReportItem(memoryGraph)
                 .OrderByDescending(t => t.SizeBytes)
                 .ThenByDescending(t => t.Count);
-            
+
             foreach (var filteredType in filteredTypes)
             {
                 WriteFixedWidth(filteredType.SizeBytes);
@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                 {
                     Console.Out.Write($"{"",8}  ");
                 }
-                    
+
                 Console.Out.Write(filteredType.TypeName ?? "<UNKNOWN>");
                 var dllName = GetDllName(filteredType.ModuleName ?? "");
                 if (!dllName.IsEmpty)
@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                 Console.Out.WriteLine();
             }
         }
-        
+
         private struct ReportItem
         {
             public int? Count { get; set; }
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             public string TypeName { get; set; }
             public string ModuleName { get; set; }
         }
-        
+
         private static IEnumerable<ReportItem> GetReportItem(MemoryGraph memoryGraph)
         {
             var histogramByType = memoryGraph.GetHistogramByType();

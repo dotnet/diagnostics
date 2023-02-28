@@ -18,7 +18,7 @@ namespace SOS.Hosting
 {
     public static class SymbolServiceExtensions
     {
-        // HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) 
+        // HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)
         private const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace SOS.Hosting
             this ISymbolService symbolService,
             string symbolPath)
         {
-            // Translate dbgeng's default .sympath to what the public version actually does. Normally "srv*" 
+            // Translate dbgeng's default .sympath to what the public version actually does. Normally "srv*"
             // means no caching and the server path depends on whether dbgeng is internal or public.
             if (symbolPath.ToLowerInvariant() == "srv*")
             {
@@ -136,7 +136,7 @@ namespace SOS.Hosting
                             hr = E_INSUFFICIENT_BUFFER;
                         }
                     }
-                    else 
+                    else
                     {
                         Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} download FAILED");
                         hr = HResult.E_FAIL;

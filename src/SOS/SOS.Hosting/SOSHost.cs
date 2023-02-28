@@ -105,7 +105,7 @@ namespace SOS.Hosting
         /// <param name="command">just the command name</param>
         /// <param name="arguments">the command arguments and options</param>
         public void ExecuteCommand(string command, string arguments)
-        { 
+        {
             if (_disposed) {
                 throw new ObjectDisposedException("SOSHost instance disposed");
             }
@@ -379,11 +379,11 @@ namespace SOS.Hosting
             Write(imageNameSize);
             Write(moduleNameSize);
             Write(loadedImageNameSize);
- 
+
             IModule module;
-            try 
-            { 
-                if (index != uint.MaxValue) 
+            try
+            {
+                if (index != uint.MaxValue)
                 {
                     module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
@@ -459,9 +459,9 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             IModule module;
-            try 
-            { 
-                if (index != uint.MaxValue) 
+            try
+            {
+                if (index != uint.MaxValue)
                 {
                     module = ModuleService.GetModuleFromIndex(unchecked((int)index));
                 }
@@ -657,7 +657,7 @@ namespace SOS.Hosting
             out uint id)
         {
             IThread thread = ContextService.GetCurrentThread();
-            if (thread is not null) { 
+            if (thread is not null) {
                 return GetThreadIdBySystemId(self, thread.ThreadId, out id);
             }
             id = 0;
@@ -685,7 +685,7 @@ namespace SOS.Hosting
         {
             IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
-            { 
+            {
                 sysId = thread.ThreadId;
                 return HResult.S_OK;
             }
@@ -749,7 +749,7 @@ namespace SOS.Hosting
         {
             IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
-            { 
+            {
                 try
                 {
                     ulong teb = thread.GetThreadTeb();
@@ -805,7 +805,7 @@ namespace SOS.Hosting
         {
             int hr = GetRegister((int)register, out ulong offset);
 
-            // SOS expects the DEBUG_VALUE field to be set based on the 
+            // SOS expects the DEBUG_VALUE field to be set based on the
             // processor architecture instead of the register size.
             switch (MemoryService.PointerSize)
             {
@@ -843,12 +843,12 @@ namespace SOS.Hosting
         }
 
         internal int GetRegister(
-            int index, 
+            int index,
             out ulong value)
         {
             IThread thread = ContextService.GetCurrentThread();
             if (thread is not null)
-            { 
+            {
                 if (thread.TryGetRegisterValue(index, out value))
                 {
                     return HResult.S_OK;

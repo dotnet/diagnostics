@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                        string nugetPackageCacheDirPath,
                                        Dictionary<string,string> nugetFeeds,
                                        string logPath) :
-            base(logPath, "Build Debuggee") 
+            base(logPath, "Build Debuggee")
         {
             DotNetToolPath = dotnetToolPath;
             DebuggeeTemplateSolutionDirPath = templateSolutionDirPath;

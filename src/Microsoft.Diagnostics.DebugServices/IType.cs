@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.DebugServices
         string Name { get; }
 
         /// <summary>
-        /// The module of the type 
+        /// The module of the type
         /// </summary>
         IModule Module { get; }
 

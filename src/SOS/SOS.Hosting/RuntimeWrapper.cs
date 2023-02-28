@@ -195,7 +195,7 @@ namespace SOS.Hosting
         private void SetRuntimeDirectory(
             IntPtr self,
             string runtimeModuleDirectory)
-        { 
+        {
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
@@ -216,7 +216,7 @@ namespace SOS.Hosting
             if (ppClrDataProcess == null) {
                 return HResult.E_INVALIDARG;
             }
-            if (_clrDataProcess == IntPtr.Zero) 
+            if (_clrDataProcess == IntPtr.Zero)
             {
                 try
                 {
@@ -392,7 +392,7 @@ namespace SOS.Hosting
                 }
 
                 // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
-                // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share 
+                // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share
                 // the same PAL where dbgshim has it's own.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {

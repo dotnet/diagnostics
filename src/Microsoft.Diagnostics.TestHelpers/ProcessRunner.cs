@@ -21,10 +21,10 @@ namespace Microsoft.Diagnostics.TestHelpers
     ///   b) Use the various WithXXX methods to modify the configuration of the process to launch
     ///   c) await RunAsync() to start the process and wait for it to terminate. Configuration
     ///      changes are no longer possible
-    ///   d) While waiting for RunAsync(), optionally call Kill() one or more times. This will expedite 
+    ///   d) While waiting for RunAsync(), optionally call Kill() one or more times. This will expedite
     ///      the termination of the process but there is no guarantee the process is terminated by
     ///      the time Kill() returns.
-    ///      
+    ///
     ///   Although the entire API of this type has been designed to be thread-safe, its typical that
     ///   only calls to Kill() and property getters invoked within the logging callbacks will be called
     ///   asynchronously.
@@ -75,19 +75,19 @@ namespace Microsoft.Diagnostics.TestHelpers
                 _killReason = null;
                 _waitForProcessStartTaskSource = new TaskCompletionSource<Process>();
                 Task<Process> startTask = _waitForProcessStartTaskSource.Task;
-                
+
                 // unfortunately we can't use the default Process stream reading because it only returns full lines and we have scenarios
                 // that need to receive the output before the newline character is written
                 _readStdOutTask = startTask.ContinueWith(t =>
                 {
                     ReadStreamToLoggers(_p.StandardOutput, ProcessStream.StandardOut, _cancelSource.Token);
-                }, 
+                },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _readStdErrTask = startTask.ContinueWith(t =>
                 {
                     ReadStreamToLoggers(_p.StandardError, ProcessStream.StandardError, _cancelSource.Token);
-                }, 
+                },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _timeoutProcessTask = startTask.ContinueWith(t =>
@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _waitForExitTask = InternalWaitForExit(startTask, _readStdOutTask, _readStdErrTask);
-                
+
                 if (replayCommand == null)
                 {
                     _replayCommand = ExePath + " " + Arguments;
@@ -108,7 +108,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
         }
-        
+
         public string ReplayCommand
         {
             get { lock (_lock) { return _replayCommand; } }

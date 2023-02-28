@@ -250,7 +250,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        private string ToHex<T>(T value) where T : struct 
+        private string ToHex<T>(T value) where T : struct
         {
             int digits = Marshal.SizeOf(typeof(T)) * 2;
             return string.Format($"0x{{0:X{digits}}}", value);

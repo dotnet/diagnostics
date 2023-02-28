@@ -5,8 +5,8 @@ using Address = System.UInt64;
 public class DotNetHeapInfo : IFastSerializable
 {
     /// <summary>
-    /// If we could not properly walk an object, this is incremented. 
-    /// Hopefully this is zero.  
+    /// If we could not properly walk an object, this is incremented.
+    /// Hopefully this is zero.
     /// </summary>
     public int CorruptedObject { get; internal set; }
     /// <summary>
@@ -15,7 +15,7 @@ public class DotNetHeapInfo : IFastSerializable
     public long UndumpedSegementRegion { get; internal set; }
 
     /// <summary>
-    /// This is the sum of all space in the GC segments.    
+    /// This is the sum of all space in the GC segments.
     /// </summary>
     public long SizeOfAllSegments { get; internal set; }
     /// <summary>
@@ -24,11 +24,11 @@ public class DotNetHeapInfo : IFastSerializable
     public List<GCHeapDumpSegment> Segments { get; internal set; }
     /// <summary>
     /// Given an object, determine what GC generation it is in.  Gen 3 is the large object heap
-    /// returns -1 if the object is not in any GC segment. 
+    /// returns -1 if the object is not in any GC segment.
     /// </summary>
     public int GenerationFor(ulong obj)
     {
-        // Find the segment 
+        // Find the segment
         if ((m_lastSegment == null) || !(m_lastSegment.Start <= obj && obj < m_lastSegment.End))
         {
             if (Segments == null)

@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // Setup the logging from the options in the config file
                 outputHelper = ConfigureLogging(config, output, testName);
 
-                // Restore and build the debuggee. The debuggee name is lower cased because the 
+                // Restore and build the debuggee. The debuggee name is lower cased because the
                 // source directory name has been lowercased by the build system.
                 DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName.ToLowerInvariant(), outputHelper);
 

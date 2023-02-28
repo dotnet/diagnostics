@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public static class TargetExtensions
     {
         /// <summary>
-        /// Returns the decorated platform specific module name. "coreclr" becomes "coreclr.dll" 
+        /// Returns the decorated platform specific module name. "coreclr" becomes "coreclr.dll"
         /// for Windows targets, "libcoreclr.so" for Linux targets, etc.
         /// </summary>
         /// <param name="target">target instance</param>

@@ -14,9 +14,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /**
      * ==ADVERTISE PROTOCOL==
      * Before standard IPC Protocol communication can occur on a client-mode connection
-     * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION 
+     * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION
      * IS STANDARD DIAGNOSTICS IPC PROTOCOL COMMUNICATION.
-     * 
+     *
      * The flow for Advertise is a one-way burst of 34 bytes consisting of
      * 8 bytes  - "ADVR_V1\0" (ASCII chars + null byte)
      * 16 bytes - CLR Instance Cookie (little-endian)

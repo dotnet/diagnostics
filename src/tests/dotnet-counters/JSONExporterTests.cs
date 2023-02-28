@@ -114,7 +114,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ValidJSONFormatTest()
         {
-            // Test if the produced JSON is a valid format. 
+            // Test if the produced JSON is a valid format.
             // Regression test for https://github.com/dotnet/diagnostics/issues/1020
 
             string fileName = "validJSONFormatTest.json";
@@ -132,7 +132,7 @@ namespace DotnetCounters.UnitTests
             {
                 string json = r.ReadToEnd();
                 // first } from end of the last event payload
-                // next ] from closing "Events" field 
+                // next ] from closing "Events" field
                 // last } from closing the whole JSON
                 Assert.EndsWith("0 }]}", json);
             }

@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum DiagnosticsMessageType : uint
     {
         /// <summary>
-        /// Initiates core dump generation 
+        /// Initiates core dump generation
         /// </summary>
         GenerateCoreDump = 1,
         /// <summary>
@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public IpcHeader Header { get; private set; } = default;
 
         public byte[] Serialize()
-        { 
+        {
             byte[] serializedData = null;
             // Verify things will fit in the size capacity
             Header.Size = checked((ushort)(IpcHeader.HeaderSizeInBytes + Payload.Length));

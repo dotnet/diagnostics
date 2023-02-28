@@ -11,7 +11,7 @@ using Address = System.UInt64;
 
 /// <summary>
 /// Represents a .GCDump file.  You can open it for reading with the construtor
-/// and you can write one with WriteMemoryGraph 
+/// and you can write one with WriteMemoryGraph
 /// </summary>
 public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 {
@@ -26,9 +26,9 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     /// <summary>
     /// Writes the memory graph 'graph' as a .gcump file to 'outputFileName'
     /// 'toolName' is the name of the tool generating the data.  It is persisted in the GCDump file
-    /// and can be used by the viewer to customize the view.  
-    /// 
-    /// TODO can't set the rest of the meta-data associated with the graph this way.  
+    /// and can be used by the viewer to customize the view.
+    ///
+    /// TODO can't set the rest of the meta-data associated with the graph this way.
     /// </summary>
     public static void WriteMemoryGraph(MemoryGraph graph, string outputFileName, string toolName = null)
     {
@@ -38,21 +38,21 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     }
 
     /// <summary>
-    /// The 
+    /// The
     /// </summary>
     public MemoryGraph MemoryGraph { get { return m_graph; } internal set { m_graph = value; } }
 
     /// <summary>
-    /// Information about COM objects that is not contained in the MemoryGraph.  
+    /// Information about COM objects that is not contained in the MemoryGraph.
     /// </summary>
     public InteropInfo InteropInfo { get { return m_interop; } internal set { m_interop = value; } }
     /// <summary>
-    /// TODO FIX NOW REMOVE DO NOT USE  Use MemoryGraph.Is64Bit instead.    
+    /// TODO FIX NOW REMOVE DO NOT USE  Use MemoryGraph.Is64Bit instead.
     /// Was this dump taken from a 64 bit process
     /// </summary>
     public bool Is64Bit { get { return MemoryGraph.Is64Bit; } }
 
-    // sampling support.  
+    // sampling support.
     /// <summary>
     /// If we have sampled, sampleCount * ThisMultiplier = originalCount.   If sampling not done then == 1
     /// </summary>
@@ -62,12 +62,12 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     /// </summary>
     public float AverageSizeMultiplier { get; internal set; }
     /// <summary>
-    /// This can be null.  If non-null it indicates that only a sample of the GC graph was persisted in 
-    /// the MemoryGraph filed.  To get an approximation of the original heap, each type's count should be 
+    /// This can be null.  If non-null it indicates that only a sample of the GC graph was persisted in
+    /// the MemoryGraph filed.  To get an approximation of the original heap, each type's count should be
     /// scaled CountMultipliersByType[T] to get the unsampled count of the original heap.
-    /// 
-    /// We can't use a uniform number for all types because we want to see all large objects, and we 
-    /// want to include paths to root for all objects, which means we can only approximate a uniform scaling.  
+    ///
+    /// We can't use a uniform number for all types because we want to see all large objects, and we
+    /// want to include paths to root for all objects, which means we can only approximate a uniform scaling.
     /// </summary>
     public float[] CountMultipliersByType { get; internal set; }
 
@@ -75,7 +75,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     public JSHeapInfo JSHeapInfo { get; internal set; }
 
     /// <summary>
-    /// This is the log file that was generated at the time of collection 
+    /// This is the log file that was generated at the time of collection
     /// </summary>
     public string CollectionLog { get; internal set; }
     public DateTime TimeCollected { get; internal set; }
@@ -86,7 +86,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     public long TotalProcessWorkingSet { get; internal set; }
 
     /// <summary>
-    /// Returns a string that represents the tool that created this GCDump file.  May be null if not known/supported.  
+    /// Returns a string that represents the tool that created this GCDump file.  May be null if not known/supported.
     /// </summary>
     public string CreationTool { get; set; }
 
@@ -99,7 +99,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     /// <summary>
     /// returns a list of ProcessInfos that indicate which processes
     /// have use a runtime .NET or JavaScript that we can potentially dump
-    /// 
+    ///
     /// Note that for 64 bit systems this will ONLY return processes that
     /// have the same bitness as the current process (for PerfView it is 32 bit)
     /// </summary>
@@ -107,7 +107,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     {
         var ret = new Dictionary<int, ProcessInfo>();
 
-        // Do the 64 bit processes first, then do us   
+        // Do the 64 bit processes first, then do us
         if (System.Environment.Is64BitOperatingSystem && !System.Environment.Is64BitProcess)
         {
             GetProcessesWithGCHeapsFromHeapDump(ret);
@@ -124,7 +124,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
                 }
 
                 info.ID = process.Id;
-                if (info.ID == 0 || info.ID == 4)       // these are special and cause failures otherwise 
+                if (info.ID == 0 || info.ID == 4)       // these are special and cause failures otherwise
                 {
                     continue;
                 }
@@ -170,7 +170,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
             }
             if (info.UsesJavaScript || info.UsesDotNet)
             {
-                // Merge with previous values.  
+                // Merge with previous values.
                 ProcessInfo prev;
                 if (ret.TryGetValue(info.ID, out prev))
                 {
@@ -186,7 +186,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     #region private
 
     /// <summary>
-    /// Writes the data to 'outputFileName'   
+    /// Writes the data to 'outputFileName'
     /// </summary>
     private void Write(string outputFileName)
     {
@@ -258,8 +258,8 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     void IFastSerializable.ToStream(Serializer serializer)
     {
         serializer.Write(m_graph);
-        serializer.Write(m_graph.Is64Bit);  // This is redundant but graph did not used to hold this value 
-        // we write the bit here to preserve compatibility. 
+        serializer.Write(m_graph.Is64Bit);  // This is redundant but graph did not used to hold this value
+        // we write the bit here to preserve compatibility.
         serializer.Write(AverageCountMultiplier);
         serializer.Write(AverageSizeMultiplier);
 
@@ -288,15 +288,15 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         }
 
         // All fields after version 8 should go here and should be in
-        // the version order (thus always add at the end).  Also use the 
-        // WriteTagged variation to write. 
+        // the version order (thus always add at the end).  Also use the
+        // WriteTagged variation to write.
         serializer.WriteTagged(m_interop);
         serializer.WriteTagged(CreationTool);
     }
 
     void IFastSerializable.FromStream(Deserializer deserializer)
     {
-        // This is the old crufy way of reading things in.  We can abandon this eventually 
+        // This is the old crufy way of reading things in.  We can abandon this eventually
         if (deserializer.VersionBeingRead < 8)
         {
             PreVersion8FromStream(deserializer);
@@ -308,7 +308,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         }
 
         deserializer.Read(out m_graph);
-        deserializer.ReadBool();                    // Used to be Is64Bit but that is now on m_graph and we want to keep compatibility. 
+        deserializer.ReadBool();                    // Used to be Is64Bit but that is now on m_graph and we want to keep compatibility.
 
         AverageCountMultiplier = deserializer.ReadFloat();
         AverageSizeMultiplier = deserializer.ReadFloat();
@@ -338,7 +338,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         }
 
         // Things after version 8 go here. Always add the the end, and it should always work
-        // and use the tagged variation.  
+        // and use the tagged variation.
         deserializer.TryReadTagged<InteropInfo>(ref m_interop);
         string creationTool = null;
         deserializer.TryReadTagged(ref creationTool);
@@ -346,7 +346,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     }
 
     /// <summary>
-    /// Deals with legacy formats.  We should be able to get rid of eventually.  
+    /// Deals with legacy formats.  We should be able to get rid of eventually.
     /// </summary>
     private void PreVersion8FromStream(Deserializer deserializer)
     {
@@ -354,8 +354,8 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 
         deserializer.Read(out m_graph);
         DotNetHeapInfo.SizeOfAllSegments = deserializer.ReadInt64();
-        deserializer.ReadInt64(); // Size of dumped objects 
-        deserializer.ReadInt64(); // Number of dumped objects 
+        deserializer.ReadInt64(); // Size of dumped objects
+        deserializer.ReadInt64(); // Number of dumped objects
         deserializer.ReadBool();  // All objects dumped
 
         if (deserializer.VersionBeingRead >= 5)
@@ -389,7 +389,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     {
         // As long as we are on a tagged plan, we don't really have to increment this because
         // the tagged values we put in the stream do this for us, but it does not hurt and
-        // acts as good documentation so we do increment it when we change things.   
+        // acts as good documentation so we do increment it when we change things.
         get { return 10; }
     }
 
@@ -690,7 +690,7 @@ public class InteropInfo : IFastSerializable
 }
 
 /// <summary>
-/// Reads the format as an XML file.   It it is a very simple format  Here is an example. 
+/// Reads the format as an XML file.   It it is a very simple format  Here is an example.
 /// <graph>
 ///   <rootIndex>3</rootIndex>
 ///   <nodeTypes>
@@ -706,7 +706,7 @@ public class InteropInfo : IFastSerializable
 ///     <node Index="4" TypeIndex="4" >2</node>
 ///   </nodes>
 /// </graph>
-/// 
+///
 /// </summary>
 internal static class XmlGcHeapDump
 {
@@ -729,7 +729,7 @@ internal static class XmlGcHeapDump
 
         var elementName = reader.Name;
         var inputDepth = reader.Depth;
-        reader.Read();      // Advance to children 
+        reader.Read();      // Advance to children
 
         GCHeapDump ret = new GCHeapDump((MemoryGraph)null);
         while (inputDepth < reader.Depth)
@@ -797,7 +797,7 @@ internal static class XmlGcHeapDump
         var nodeCount = reader.GetAttribute("NodeCount");
         if (nodeCount != null)
         {
-            expectedSize = int.Parse(nodeCount) + 1;        // 1 for undefined 
+            expectedSize = int.Parse(nodeCount) + 1;        // 1 for undefined
         }
 
         MemoryGraph graph = new MemoryGraph(10);
@@ -807,7 +807,7 @@ internal static class XmlGcHeapDump
         Debug.Assert((int)graph.NodeIndexLimit == 1);
 
         var inputDepth = reader.Depth;
-        reader.Read();      // Advance to children 
+        reader.Read();      // Advance to children
         while (inputDepth < reader.Depth)
         {
             if (reader.NodeType == XmlNodeType.Element)
@@ -888,9 +888,9 @@ internal static class XmlGcHeapDump
             writer.WriteLine("</CountMultipliersByType>");
         }
 
-        // TODO this is not complete.  See the ToStream for more.    Does not include interop etc. 
+        // TODO this is not complete.  See the ToStream for more.    Does not include interop etc.
 
-        // Write the memory graph, which is the main event.  
+        // Write the memory graph, which is the main event.
         gcDump.MemoryGraph.WriteXml(writer);
         writer.WriteLine("</GCHeapDump>");
     }
@@ -900,7 +900,7 @@ internal static class XmlGcHeapDump
     {
         Debug.Assert(reader.NodeType == XmlNodeType.Element);
         var inputDepth = reader.Depth;
-        reader.Read();      // Advance to children 
+        reader.Read();      // Advance to children
         while (inputDepth < reader.Depth)
         {
             if (reader.NodeType == XmlNodeType.Element)
@@ -931,7 +931,7 @@ internal static class XmlGcHeapDump
     {
         Debug.Assert(reader.NodeType == XmlNodeType.Element);
         var inputDepth = reader.Depth;
-        reader.Read();      // Advance to children 
+        reader.Read();      // Advance to children
         while (inputDepth < reader.Depth)
         {
             if (reader.NodeType == XmlNodeType.Element)
@@ -985,7 +985,7 @@ internal static class XmlGcHeapDump
     {
         Debug.Assert(reader.NodeType == XmlNodeType.Element);
         var inputDepth = reader.Depth;
-        reader.Read();      // Advance to children 
+        reader.Read();      // Advance to children
 
         var children = new GrowableArray<NodeIndex>(1000);
         var typeStorage = graph.AllocTypeNodeStorage();
@@ -1011,7 +1011,7 @@ internal static class XmlGcHeapDump
                                 throw new ApplicationException("Node element does not have a TypeIndex attribute.");
                             }
 
-                            // TODO FIX NOW very inefficient.   Use ReadValueChunk and FastStream to make more efficient.  
+                            // TODO FIX NOW very inefficient.   Use ReadValueChunk and FastStream to make more efficient.
                             children.Clear();
                             var body = reader.ReadElementContentAsString();
                             foreach (var num in Regex.Split(body, @"\s+"))

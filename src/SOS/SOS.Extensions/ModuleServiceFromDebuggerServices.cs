@@ -97,7 +97,7 @@ namespace SOS.Extensions
             }
 
             public override void Dispose()
-            { 
+            {
                 _serviceContainer.RemoveService(typeof(IModuleSymbols));
                 base.Dispose();
             }

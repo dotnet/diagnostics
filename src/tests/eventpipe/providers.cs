@@ -34,7 +34,7 @@ namespace EventPipe.UnitTests.ProviderValidation
         [Fact]
         public async void UserDefinedEventSource_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -49,7 +49,7 @@ namespace EventPipe.UnitTests.ProviderValidation
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
 
-                Action eventGeneratingAction = () => 
+                Action eventGeneratingAction = () =>
                 {
                     for (int i = 0; i < 100_000; i++)
                     {

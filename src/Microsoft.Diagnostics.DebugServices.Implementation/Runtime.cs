@@ -128,15 +128,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
                 try
                 {
-                    // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader 
+                    // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
                     // returns 0.0.0.0 for the runtime module that the DAC is matched against.
                     return _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                 }
                 catch (Exception ex) when
-                   (ex is DllNotFoundException || 
-                    ex is FileNotFoundException || 
-                    ex is InvalidOperationException || 
-                    ex is InvalidDataException || 
+                   (ex is DllNotFoundException ||
+                    ex is FileNotFoundException ||
+                    ex is InvalidOperationException ||
+                    ex is InvalidDataException ||
                     ex is ClrDiagnosticsException)
                 {
                     Trace.TraceError("CreateRuntime FAILED: {0}", ex.ToString());

@@ -15,7 +15,7 @@ public class DumpGenerationFixture : IDisposable
 
     private HashSet<string> _paths;
 
-    public DumpGenerationFixture() 
+    public DumpGenerationFixture()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -53,7 +53,7 @@ public class DumpGenerationFixture : IDisposable
             {
             }
         }
-    }  
+    }
 
     public void Dispose()
     {

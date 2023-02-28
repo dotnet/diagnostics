@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
-    public sealed class HostWrapper : COMCallableIUnknown 
+    public sealed class HostWrapper : COMCallableIUnknown
     {
         private static readonly Guid IID_IHost = new Guid("E0CD8534-A88B-40D7-91BA-1B4C925761E9");
 

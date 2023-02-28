@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
-    /// Provides module info 
+    /// Provides module info
     /// </summary>
     public interface IModuleService
     {

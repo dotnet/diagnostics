@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         value = (obj.Type, 0);
                     }
-                    
+
                     value.Count++;
                     typeCounts[description] = value;
                 }

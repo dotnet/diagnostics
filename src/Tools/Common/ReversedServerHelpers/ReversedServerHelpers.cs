@@ -126,7 +126,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     _childProc.Kill();
                 }
-                // if process exited while we were trying to kill it, it can throw IOE 
+                // if process exited while we were trying to kill it, it can throw IOE
                 catch (InvalidOperationException) { }
                 _stdOutTask.Wait();
                 _stdErrTask.Wait();
@@ -138,7 +138,7 @@ namespace Microsoft.Internal.Common.Utils
     {
         public DiagnosticsClient Client;
         public IpcEndpointInfo EndpointInfo;
-        
+
         private ReversedDiagnosticsServer _server;
         private readonly string _port;
 
@@ -213,7 +213,7 @@ namespace Microsoft.Internal.Common.Utils
 
             if (ProcessLauncher.Launcher.HasChildProc)
             {
-                // Create and start the reversed server            
+                // Create and start the reversed server
                 string diagnosticTransportName = GetTransportName(_toolName);
                 ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
                 server.Start();

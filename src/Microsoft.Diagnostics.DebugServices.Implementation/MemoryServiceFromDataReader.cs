@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Memory service constructor
         /// </summary>
         /// <param name="dataReader">CLRMD data reader</param>
-        public MemoryServiceFromDataReader(IDataReader dataReader) 
+        public MemoryServiceFromDataReader(IDataReader dataReader)
         {
             _dataReader = dataReader;
         }

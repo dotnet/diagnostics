@@ -435,7 +435,7 @@ namespace SOS.Extensions
         }
 
         #endregion
-        
+
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

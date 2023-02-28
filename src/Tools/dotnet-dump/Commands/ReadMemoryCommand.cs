@@ -34,8 +34,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         }
 
         // ****************************************************************************************
-        // The following arguments are static so they are remembered for the "d" command. This 
-        // allows a command like "db <address>" to be followed by "d" and the next block is dumped 
+        // The following arguments are static so they are remembered for the "d" command. This
+        // allows a command like "db <address>" to be followed by "d" and the next block is dumped
         // in the remembered format.
 
         [Option(Name = "--count", Aliases = new string[] { "-c" }, Help = "Number of elements to dump.")]

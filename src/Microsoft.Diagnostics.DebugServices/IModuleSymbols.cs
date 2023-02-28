@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// loaded or unloaded.
         /// </summary>
         Unknown,
-        
+
         /// <summary>
         /// The debugger has successfully loaded symbols for this module.
         /// </summary>

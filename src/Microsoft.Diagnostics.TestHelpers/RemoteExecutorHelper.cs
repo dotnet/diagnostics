@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
             finally
-            { 
+            {
                 if (remoteInvokeHandle.Process != null)
                 {
                     try
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: killing process {remoteInvokeHandle.Process.Id}");
                         remoteInvokeHandle.Process.Kill(entireProcessTree: true);
                     }
-                    catch 
+                    catch
                     {
                     }
                     remoteInvokeHandle.Process.Dispose();

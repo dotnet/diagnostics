@@ -22,7 +22,7 @@ namespace Graphs
         {
             m_addressToNodeIndex = new Dictionary<ulong, NodeIndex>(expectedSize);
             }
-                                                              
+
             m_nodeAddresses = new SegmentedList<ulong>(SegmentSize, expectedSize);
         }
 
@@ -42,8 +42,8 @@ namespace Graphs
 
         /// <summary>
         /// Indicates whether the memory addresses are 64 bit or not.   Note that this is not set
-        /// as part of normal graph processing, it needs to be set by the caller.   MemoryGraph is only 
-        /// acting as storage.  
+        /// as part of normal graph processing, it needs to be set by the caller.   MemoryGraph is only
+        /// acting as storage.
         /// </summary>
         public bool Is64Bit { get; set; }
         public ulong GetAddress(NodeIndex nodeIndex)
@@ -76,7 +76,7 @@ namespace Graphs
             return base.SizeOfGraphDescription() + 8 * m_nodeAddresses.Count;
         }
         /// <summary>
-        /// Returns the number of distinct references in the graph so far (the size of the interning table).  
+        /// Returns the number of distinct references in the graph so far (the size of the interning table).
         /// </summary>
         public int DistinctRefCount { get { return m_addressToNodeIndex.Count; } }
 
@@ -93,7 +93,7 @@ namespace Graphs
 
         public override void AllowReading()
         {
-            m_addressToNodeIndex = null;            // We are done with this, abandon it.  
+            m_addressToNodeIndex = null;            // We are done with this, abandon it.
             base.AllowReading();
         }
 
@@ -119,9 +119,9 @@ namespace Graphs
         }
 
         /// <summary>
-        /// ClrProfiler identifes nodes  using the physical address in Memory.  'Graph' needs it to be an NodeIndex.   
-        /// THis table maps the ID that CLRProfiler uses (an address), to the NodeIndex we have assigned to it.  
-        /// It is only needed while the file is being read in.  
+        /// ClrProfiler identifes nodes  using the physical address in Memory.  'Graph' needs it to be an NodeIndex.
+        /// THis table maps the ID that CLRProfiler uses (an address), to the NodeIndex we have assigned to it.
+        /// It is only needed while the file is being read in.
         /// </summary>
         protected IDictionary<ulong, NodeIndex> m_addressToNodeIndex;    // This field is only used during construction
 
@@ -130,7 +130,7 @@ namespace Graphs
         void IFastSerializable.ToStream(Serializer serializer)
         {
             base.ToStream(serializer);
-            // Write out the Memory addresses of each object 
+            // Write out the Memory addresses of each object
             if (m_isVeryLargeGraph)
             {
             serializer.Write(m_nodeAddresses.Count);
@@ -139,7 +139,7 @@ namespace Graphs
             {
                 serializer.Write((int)m_nodeAddresses.Count);
             }
-            
+
             for (int i = 0; i < m_nodeAddresses.Count; i++)
             {
                 serializer.Write((long)m_nodeAddresses[i]);
@@ -151,7 +151,7 @@ namespace Graphs
         void IFastSerializable.FromStream(Deserializer deserializer)
         {
             base.FromStream(deserializer);
-            // Read in the Memory addresses of each object 
+            // Read in the Memory addresses of each object
             long addressCount = m_isVeryLargeGraph ? deserializer.ReadInt64() : deserializer.ReadInt();
             m_nodeAddresses = new SegmentedList<ulong>(SegmentSize, addressCount);
 
@@ -230,7 +230,7 @@ namespace Graphs
         /// <summary>
         /// Looks for a child with the type 'childTypeName' and returns it.  If it is not
         /// present, it will be created.  Note it will ONLY find MutableNode children
-        /// (not children added with AddChild(NodeIndex).  
+        /// (not children added with AddChild(NodeIndex).
         /// </summary>
         public MemoryNodeBuilder FindOrCreateChild(string childTypeName, string childModuleName = null)
         {
@@ -257,7 +257,7 @@ namespace Graphs
         }
 
         /// <summary>
-        /// This is optional phase, if you don't do it explicitly, it gets done at Build time. 
+        /// This is optional phase, if you don't do it explicitly, it gets done at Build time.
         /// </summary>
         public void AllocateTypeIndexes()
         {
@@ -311,7 +311,7 @@ namespace Graphs
     }
 }
 
-#if false 
+#if false
 namespace Graphs.Samples
 {
     class Sample

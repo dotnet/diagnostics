@@ -133,7 +133,7 @@ namespace SOS.Extensions
 
                         "Free" => MemoryRegionUsage.Free,
                         "Image" => MemoryRegionUsage.Image,
-                        
+
                         "PEB" => MemoryRegionUsage.Peb,
                         "PEB32" => MemoryRegionUsage.Peb,
                         "PEB64" => MemoryRegionUsage.Peb,

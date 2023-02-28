@@ -17,8 +17,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             var workItems = new Dictionary<string, WorkInfo>();
             int workItemCount = 0;
             var tasks = new Dictionary<string, WorkInfo>();
-            int taskCount = 0; 
-            
+            int taskCount = 0;
+
             try
             {
                 WriteLine("global work item queue________________________________");

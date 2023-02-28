@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
-    
+
         public override string ToString()
         {
             var sb = new StringBuilder();

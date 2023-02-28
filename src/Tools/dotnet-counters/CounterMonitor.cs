@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             lock (this)
             {
-                // If we are paused, ignore the event. 
+                // If we are paused, ignore the event.
                 // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
                 _renderer.ToggleStatus(_pauseCmdSet);
 
@@ -184,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
             MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
-            
+
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
@@ -440,12 +440,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
             // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
             // before dotnet-counters and got rid of a pipe that once existed.
-            // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've 
+            // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've
             // been thrown in StartMonitor directly)
             catch (PlatformNotSupportedException)
             {
             }
-            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it.
             catch (ServerNotAvailableException)
             {
             }

@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 commandLine = string.Concat(Arguments.Select((arg) => arg + " ")).Trim();
                 commandName = Arguments[0];
             }
-            else 
+            else
             {
                 commandLine = commandName = "help";
             }

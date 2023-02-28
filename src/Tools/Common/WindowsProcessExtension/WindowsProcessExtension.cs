@@ -16,7 +16,7 @@ namespace Microsoft.Internal.Common.Utils
         static public string GetCommandLine(Process process)
         {
             IntPtr processHandle;
-            try 
+            try
             {
                 processHandle = process.Handle;
             }
@@ -72,7 +72,7 @@ namespace Microsoft.Internal.Common.Utils
                     commandLineBuffer = unicodeString.Buffer;
                 }
 
-                else 
+                else
                 {
                     //System is 64 bit and the process is 32 bit
 

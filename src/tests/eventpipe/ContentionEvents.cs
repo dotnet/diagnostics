@@ -24,7 +24,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                 obj.a = 3;
                 Thread.Sleep(100);
             }
-        } 
+        }
     }
     public class ContentionEventsTests
     {
@@ -38,7 +38,7 @@ namespace EventPipe.UnitTests.ContentionValidation
         [Fact]
         public async void Contention_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -47,11 +47,11 @@ namespace EventPipe.UnitTests.ContentionValidation
 
                 var providers = new List<EventPipeProvider>()
                 {
-                    //ContentionKeyword (0x4000): 0b100_0000_0000_0000                
+                    //ContentionKeyword (0x4000): 0b100_0000_0000_0000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b100_0000_0000_0000)
                 };
 
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     for (int i = 0; i < 50; i++)
                     {
@@ -70,7 +70,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                     }
                 };
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int ContentionStartEvents = 0;
                     source.Clr.ContentionStart += (eventData) => ContentionStartEvents += 1;

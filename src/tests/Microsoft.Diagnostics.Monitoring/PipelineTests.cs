@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
             public int ExecutedCleanup { get; private set; } = 0;
             public TimeSpan Delay { get; }
 
-            public DelayPipeline() : this(Timeout.InfiniteTimeSpan) 
+            public DelayPipeline() : this(Timeout.InfiniteTimeSpan)
             {
             }
 

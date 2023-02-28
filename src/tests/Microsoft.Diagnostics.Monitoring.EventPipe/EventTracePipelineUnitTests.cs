@@ -18,7 +18,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     eventStream = s;
 
                     using var eventSource = new EventPipeEventSource(s);
-                    
+
                     // Dispose event source when cancelled.
                     using var _ = token.Register(() => eventSource.Dispose());
 
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
 
             //Validate that the stream is only valid for the lifetime of the callback in the trace pipeline.
-            Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));   
+            Assert.Throws<ObjectDisposedException>(() => eventStream.Read(new byte[4], 0, 4));
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]

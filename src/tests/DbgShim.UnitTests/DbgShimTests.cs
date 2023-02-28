@@ -22,7 +22,7 @@ using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics
 {
@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("IsRegisterForRuntimeStartup3 not supported");
             }
-            await RemoteInvoke(config, nameof(Launch3), static async (string configXml) => 
+            await RemoteInvoke(config, nameof(Launch3), static async (string configXml) =>
             {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: true);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 3);
@@ -108,12 +108,12 @@ namespace Microsoft.Diagnostics
         }
 
         /// <summary>
-        /// Test RegisterForRuntimeStartup for attach 
+        /// Test RegisterForRuntimeStartup for attach
         /// </summary>
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Attach1(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(Attach1), static async (string configXml) => 
+            await RemoteInvoke(config, nameof(Attach1), static async (string configXml) =>
             {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 1);
@@ -122,12 +122,12 @@ namespace Microsoft.Diagnostics
         }
 
         /// <summary>
-        /// Test RegisterForRuntimeStartupEx for attach 
+        /// Test RegisterForRuntimeStartupEx for attach
         /// </summary>
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task Attach2(TestConfiguration config)
         {
-            await RemoteInvoke(config, nameof(Attach2), static async (string configXml) => 
+            await RemoteInvoke(config, nameof(Attach2), static async (string configXml) =>
             {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 2);
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("IsRegisterForRuntimeStartup3 not supported");
             }
-            await RemoteInvoke(config, nameof(Attach3), static async (string configXml) => 
+            await RemoteInvoke(config, nameof(Attach3), static async (string configXml) =>
             {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
                 TestRegisterForRuntimeStartup(debuggeeInfo, 3);
@@ -352,7 +352,7 @@ namespace Microsoft.Diagnostics
                 Assert.True(await debuggeeInfo.WaitForDebuggee());
             }
             Trace.TraceInformation("CreateProcessForLaunch pid {0} DONE", processId);
-            return debuggeeInfo; 
+            return debuggeeInfo;
         }
 
         private static void TestRegisterForRuntimeStartup(DebuggeeInfo debuggeeInfo, int api)
@@ -404,7 +404,7 @@ namespace Microsoft.Diagnostics
                     throw new ArgumentException(nameof(api));
             }
 
-            if (debuggeeInfo.Launch) 
+            if (debuggeeInfo.Launch)
             {
                 AssertResult(debuggeeInfo.ResumeDebuggee());
             }
@@ -414,7 +414,7 @@ namespace Microsoft.Diagnostics
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} waiting for callback", debuggeeInfo.ProcessId);
             Assert.True(wait.WaitOne());
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} after callback wait", debuggeeInfo.ProcessId);
-            
+
             AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
             Assert.Null(callbackException);
 

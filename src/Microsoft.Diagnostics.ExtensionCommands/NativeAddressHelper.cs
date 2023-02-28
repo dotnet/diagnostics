@@ -13,16 +13,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     public sealed class NativeAddressHelper
     {
         [ServiceImport]
-        public ITarget Target { get; set; } 
+        public ITarget Target { get; set; }
 
         [ServiceImport]
-        public IMemoryService MemoryService { get; set; } 
+        public IMemoryService MemoryService { get; set; }
 
         [ServiceImport]
-        public IThreadService ThreadService { get; set; } 
+        public IThreadService ThreadService { get; set; }
 
         [ServiceImport]
-        public IRuntimeService RuntimeService { get; set; } 
+        public IRuntimeService RuntimeService { get; set; }
 
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// large chunk of memory and commit the beginning of it as it allocates more and more memory...the RESERVE
         /// region was actually "caused" by the Heap space before it).  Sometimes this will simply be wrong when
         /// a MEM_COMMIT region is next to an unrelated MEM_RESERVE region.
-        /// 
+        ///
         /// This is a heuristic, so use it accordingly.</param>
         /// <exception cref="InvalidOperationException">If !address fails we will throw InvalidOperationException.  This is usually
         /// because symbols for ntdll couldn't be found.</exception>
@@ -314,7 +314,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// memory and commit the beginning of it as it allocates more and more memory...the RESERVE region
         /// was actually "caused" by the Heap space before it).  Sometimes this will simply be wrong when
         /// a MEM_COMMIT region is next to an unrelated MEM_RESERVE region.
-        /// 
+        ///
         /// This is a heuristic, so use it accordingly.
         /// </summary>
         internal static void CollapseReserveRegions(DescribedRegion[] ranges)

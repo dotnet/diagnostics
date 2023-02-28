@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
     internal static class ReportCommandHandler
     {
         private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat);
-        
+
         public static Command ReportCommand() =>
             new Command(
                 name: "report",
@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Error.WriteLine("<gcdump_filename> or -p|--process-id is required");
                 return Task.FromResult(-1);
             }
-            
+
             if (gcdump_filename != null && processId.HasValue)
             {
                 Console.Error.WriteLine("Specify only one of -f|--file or -p|--process-id.");
@@ -110,10 +110,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Description = "The file to read gcdump from.",
                 Arity = new ArgumentArity(0, 1)
             }.ExistingOnly();
-        
+
         private static Option<int> ProcessIdOption() =>
             new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the gcdump from.");
-        
+
         private static Option<ReportType> ReportTypeOption() =>
             new Option<ReportType>(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")
             {
@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             DumpFile,
             DiagServer
         }
-        
+
         private enum ReportType
         {
             HeapStat

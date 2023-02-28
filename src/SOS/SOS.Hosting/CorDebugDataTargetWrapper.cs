@@ -91,7 +91,7 @@ namespace SOS.Hosting
                     default:
                         return HResult.E_FAIL;
                 }
-            } 
+            }
             else if (_target.OperatingSystem == OSPlatform.Linux || _target.OperatingSystem == OSPlatform.OSX)
             {
                 switch (_target.Architecture)

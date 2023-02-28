@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         /// <summary>
         /// The default symbol cache path:
-        /// 
+        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
@@ -917,7 +917,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             try
             {
-                // TODO: We might want to cache this provider globally (across stack traces), 
+                // TODO: We might want to cache this provider globally (across stack traces),
                 // since decompressing embedded PDB takes some time.
                 provider = peReader.ReadEmbeddedPortablePdbDebugDirectoryData(embeddedPdbEntry);
                 result = new SymbolFile(provider, provider.GetMetadataReader());
@@ -943,9 +943,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-            
+
             sb.AppendLine("Current symbol store settings:");
-            
+
             ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
             {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)

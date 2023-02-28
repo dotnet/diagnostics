@@ -70,7 +70,7 @@ public class SOSRunner : IDisposable
         private bool _testLive = true;
         private bool _testDump = true;
         private bool _testCrashReport = true;
-        private DumpGenerator _dumpGenerator = DumpGenerator.CreateDump; 
+        private DumpGenerator _dumpGenerator = DumpGenerator.CreateDump;
         private DumpType _dumpType = DumpType.Heap;
         private string _debuggeeDumpOutputRootDir;
         private string _debuggeeDumpInputRootDir;
@@ -86,14 +86,14 @@ public class SOSRunner : IDisposable
             set { _testLive = value; }
         }
 
-        public bool TestDump 
+        public bool TestDump
         {
-            get 
-            { 
-                return _testDump && 
+            get
+            {
+                return _testDump &&
                     // Only single file dumps on Windows
-                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) && 
-                    // Generate and test dumps if on OSX or Alpine only if the runtime is 6.0 or greater 
+                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) &&
+                    // Generate and test dumps if on OSX or Alpine only if the runtime is 6.0 or greater
                     (!(OS.Kind == OSKind.OSX || OS.IsAlpine) || TestConfiguration.RuntimeFrameworkVersionMajor > 5);
             }
             set { _testDump = value; }
@@ -111,14 +111,14 @@ public class SOSRunner : IDisposable
 
         public DumpGenerator DumpGenerator
         {
-            get 
+            get
             {
                 DumpGenerator dumpGeneration = _dumpGenerator;
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
-                    if (!TestConfiguration.CreateDumpExists || 
-                        TestConfiguration.PublishSingleFile || 
-                        TestConfiguration.GenerateDumpWithLLDB() || 
+                    if (!TestConfiguration.CreateDumpExists ||
+                        TestConfiguration.PublishSingleFile ||
+                        TestConfiguration.GenerateDumpWithLLDB() ||
                         TestConfiguration.GenerateDumpWithGDB())
                     {
                         dumpGeneration = DumpGenerator.NativeDebugger;

@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         ITarget target = services.GetService<ITarget>();
                         if (!handler.IsValidPlatform(target))
-                        { 
+                        {
                             if (target != null)
                             {
                                 context.Console.Error.WriteLine($"Command '{command.Name}' not supported on this target");
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public bool DisplayHelp(string commandName, IServiceProvider services)
         {
             Command command = null;
-            if (!string.IsNullOrEmpty(commandName)) 
+            if (!string.IsNullOrEmpty(commandName))
             {
                 command = _rootBuilder.Command.Children.OfType<Command>().FirstOrDefault((cmd) => commandName == cmd.Name || cmd.Aliases.Any((alias) => commandName == alias));
                 if (command == null)
@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            else 
+            else
             {
                 ITarget target = services.GetService<ITarget>();
 
@@ -278,9 +278,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public CommandHandler(
                 CommandAttribute commandAttribute,
-                IEnumerable<(PropertyInfo, Argument)> arguments, 
-                IEnumerable<(PropertyInfo, Option)> properties, 
-                Type type, 
+                IEnumerable<(PropertyInfo, Argument)> arguments,
+                IEnumerable<(PropertyInfo, Option)> properties,
+                Type type,
                 Func<IServiceProvider, object> factory)
             {
                 _commandAttribute = commandAttribute;
@@ -359,7 +359,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (_methodInfoHelp == null) {
                     return false;
                 }
-                // The InvocationContext is null so the options and arguments in the 
+                // The InvocationContext is null so the options and arguments in the
                 // command instance created are not set. The context for the command
                 // requesting help (either the help command or some other command using
                 // --help) won't work for the command instance that implements it's own
@@ -439,7 +439,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (context != null)
                     {
                         ArgumentResult argumentResult = context.ParseResult.FindResultFor(argument.Argument);
-                        if (argumentResult != null) 
+                        if (argumentResult != null)
                         {
                             value = argumentResult.GetValueOrDefault();
                             if (array != null && value is IEnumerable<string> entries) {
@@ -454,7 +454,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Local help builder that allows commands to provide more detailed help 
+        /// Local help builder that allows commands to provide more detailed help
         /// text via the "InvokeHelp" function.
         /// </summary>
         private class LocalHelpBuilder : IHelpBuilder
@@ -489,8 +489,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and 
-        /// pipes through the System.CommandLine parsing allowing per command invocation data (service 
+        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and
+        /// pipes through the System.CommandLine parsing allowing per command invocation data (service
         /// provider and raw command line) to be passed through.
         /// </summary>
         private class LocalConsole : IConsole

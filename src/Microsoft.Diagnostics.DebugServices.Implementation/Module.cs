@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         public virtual void Dispose()
-        { 
+        {
             _serviceContainer.RemoveService(typeof(IModule));
             _serviceContainer.RemoveService(typeof(IExportSymbols));
             _serviceContainer.DisposeServices();
@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 PEFile image = Services.GetService<PEFile>();
                 if (image is not null)
-                { 
+                {
                     if (image.TryGetExportSymbol(name, out ulong offset))
                     {
                         address = ImageBase + offset;
@@ -248,7 +248,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceError($"GetVersion: exception {ex.Message}");
                 }
             }
-            else 
+            else
             {
                 // If we can't get the version from the PE, search for version string embedded in the module data
                 version = Utilities.ParseVersionString(GetVersionString());

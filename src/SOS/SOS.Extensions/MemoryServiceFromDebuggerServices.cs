@@ -22,7 +22,7 @@ namespace SOS.Extensions
         /// </summary>
         /// <param name="target">target instance</param>
         /// <param name="debuggerServices">native debugger services</param>
-        internal MemoryServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices) 
+        internal MemoryServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices)
         {
             Debug.Assert(target != null);
             Debug.Assert(debuggerServices != null);

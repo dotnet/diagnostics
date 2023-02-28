@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _symbolService = symbolService;
             _onChangeEvent = symbolService.OnChangeEvent.Register(() => {
                 _elfFile?.Dispose();
-                _elfFile = null; 
+                _elfFile = null;
             });
         }
 

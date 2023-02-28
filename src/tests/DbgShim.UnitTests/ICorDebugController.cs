@@ -9,7 +9,7 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace Microsoft.Diagnostics
-{    
+{
     public unsafe class ICorDebugController : CallableCOMWrapper
     {
         private static readonly Guid IID_ICorDebugController = new Guid("3D6F5F62-7538-11D3-8D5B-00104B35E7EF");

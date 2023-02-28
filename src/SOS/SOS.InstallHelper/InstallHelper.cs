@@ -131,7 +131,7 @@ namespace SOS
                     }
                 });
 
-                // Configure lldb 
+                // Configure lldb
                 if (LLDBInitFile != null)
                 {
                     Configure();

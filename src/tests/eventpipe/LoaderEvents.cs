@@ -34,7 +34,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         [Fact]
         public async void AssemblyLoad_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() =>
             {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
                 {
@@ -49,7 +49,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 };
 
                 string assemblyPath=null;
-                Action _eventGeneratingAction = () => 
+                Action _eventGeneratingAction = () =>
                 {
                     GetAssemblyPath();
                     try
@@ -79,7 +79,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 }
 
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) =>
                 {
                     int LoaderAssemblyLoadEvents = 0;
                     int LoaderAssemblyUnloadEvents = 0;
@@ -105,7 +105,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                         //Unload method just marks as unloadable, not unload immediately, so we check the unload events >=1 to make the tests stable
                         bool LoaderModuleResult = LoaderModuleLoadEvents >= 100 && LoaderModuleUnloadEvents >= 1;
                         Logger.logger.Log("LoaderModuleResult check: " + LoaderModuleResult);
-                        
+
                         return LoaderAssemblyResult && LoaderModuleResult ? 100 : -1;
                     };
                 };

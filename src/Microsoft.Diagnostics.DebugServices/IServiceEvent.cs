@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices
         IDisposable Register(Action callback);
 
         /// <summary>
-        /// Register for the event callback. Puts the new callback at the end of the list. Automatically 
+        /// Register for the event callback. Puts the new callback at the end of the list. Automatically
         /// removed from the event list when fired.
         /// </summary>
         /// <param name="callback">callback delegate</param>
@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.DebugServices
         IDisposable Register(Action<T> callback);
 
         /// <summary>
-        /// Register for the event callback. Puts the new callback at the end of the list. Automatically 
+        /// Register for the event callback. Puts the new callback at the end of the list. Automatically
         /// removed from the event list when fired.
         /// </summary>
         /// <param name="callback">callback delegate</param>

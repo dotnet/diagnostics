@@ -46,9 +46,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             string nugetPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
             if (nugetPackages == null)
             {
-                // If not already set, the arcade SDK scripts/build system sets NUGET_PACKAGES 
-                // to the UserProfile or HOME nuget cache directories if building locally (for 
-                // speed) or to the repo root/.packages in CI builds (to isolate global machine 
+                // If not already set, the arcade SDK scripts/build system sets NUGET_PACKAGES
+                // to the UserProfile or HOME nuget cache directories if building locally (for
+                // speed) or to the repo root/.packages in CI builds (to isolate global machine
                 // dependences).
                 //
                 // This emulates that logic so the VS Test Explorer can still run the tests for
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
             // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
-            // in a config file. This is just setting the default. The other values can 
+            // in a config file. This is just setting the default. The other values can
             // also // be overridden but it is not recommended.
             Dictionary<string, string> initialConfig = new Dictionary<string, string>
             {
@@ -133,12 +133,12 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private Dictionary<string, string>[] ParseConfigSetting(Dictionary<string, string>[] templates, XElement node)
         {
-            // As long as the templates are added at the end of the list, the "current" 
+            // As long as the templates are added at the end of the list, the "current"
             // config for this section is the last one in the array.
             Dictionary<string, string> currentTemplate = templates.Last();
 
             switch (node.Name.LocalName)
-            { 
+            {
                 case "Options":
                     if (EvaluateConditional(currentTemplate, node))
                     {
@@ -255,8 +255,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // Check if equals and not equals
                 bool isEquals = conditionText.Contains("==");
                 bool isDifferent = conditionText.Contains("!=");
-                
-                if (isEquals == isDifferent) 
+
+                if (isEquals == isDifferent)
                 {
                     throw new InvalidDataException($"Unknown condition type in {conditionText}. See TestRunConfiguration.EvaluateConditional for supported values.");
                 }
@@ -281,7 +281,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 return false;
             }
 
-            if ((functionKeyworkIndex != 0 
+            if ((functionKeyworkIndex != 0
                     && functionKeyworkIndex == 1 && expression[0] != '!')
                 || functionKeyworkIndex > 1
                 || !expression.EndsWith(')'))
@@ -380,11 +380,11 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         private const string DebugTypeKey = "DebugType";
         private const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
-        
+
         public static string BaseDir { get; set; } = Path.GetFullPath(".");
 
         private static readonly Regex versionRegex = new Regex(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
-        
+
         private ReadOnlyDictionary<string, string> _settings;
         private readonly string _configStringView;
         private readonly string _truncatedRuntimeFrameworkVersion;
@@ -400,7 +400,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             _settings = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(initialSettings));
             _truncatedRuntimeFrameworkVersion = GetTruncatedRuntimeFrameworkVersion();
-            _configStringView = GetStringViewWithVersion(RuntimeFrameworkVersion); 
+            _configStringView = GetStringViewWithVersion(RuntimeFrameworkVersion);
         }
 
         public string Serialize()
@@ -553,7 +553,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// The test runner script directory 
+        /// The test runner script directory
         /// </summary>
         public string ScriptRootDir
         {
@@ -678,8 +678,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// Optional runtime identifier (RID) like "linux-x64" or "win-x86". If set, causes the debuggee to 
-        /// be built a as "standalone" dotnet cli project where the runtime is copied to the debuggee build 
+        /// Optional runtime identifier (RID) like "linux-x64" or "win-x86". If set, causes the debuggee to
+        /// be built a as "standalone" dotnet cli project where the runtime is copied to the debuggee build
         /// root.
         /// </summary>
         public string BuildProjectRuntime
@@ -696,10 +696,10 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// The version of the Microsoft.NETCore.App package to reference when running the debuggee (i.e. 
+        /// The version of the Microsoft.NETCore.App package to reference when running the debuggee (i.e.
         /// using the dotnet cli --fx-version option).
         /// </summary>
-        public string RuntimeFrameworkVersion 
+        public string RuntimeFrameworkVersion
         {
             get { return GetValue("RuntimeFrameworkVersion"); }
         }

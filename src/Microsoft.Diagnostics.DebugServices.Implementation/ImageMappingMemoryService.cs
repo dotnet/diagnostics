@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         /// <summary>
         /// The PE, ELF and MacOS image mapping memory service. For the dotnet-dump linux dump reader and
-        /// dbgeng the native module service providers managed and modules, but under lldb only native 
+        /// dbgeng the native module service providers managed and modules, but under lldb only native
         /// modules are provided. The "managed" flag is for those later cases.
         /// </summary>
         /// <param name="container">service container</param>
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _onChangeEvent = symbolService?.OnChangeEvent.Register(Flush);
         }
 
-        public void Dispose() 
+        public void Dispose()
         {
             Flush();
             _onChangeEvent?.Dispose();
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 disposable.Dispose();
             }
-        } 
+        }
 
         protected void Flush() => _memoryCache.FlushCache();
 
@@ -109,8 +109,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
-        /// Read memory from a PE module for the memory cache. Finds locally or downloads a module 
-        /// and "maps" it into the address space. This function can return more than requested which 
+        /// Read memory from a PE module for the memory cache. Finds locally or downloads a module
+        /// and "maps" it into the address space. This function can return more than requested which
         /// means the block should not be cached.
         /// </summary>
         /// <param name="address">memory address</param>
@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             // Not reading anything in the PE's header
                             if (rva > reader.PEHeaders.PEHeader.SizeOfHeaders)
                             {
-                                // This property can cause recursion because this PE being mapped here is read to determine the layout 
+                                // This property can cause recursion because this PE being mapped here is read to determine the layout
                                 if (!module.IsFileLayout.GetValueOrDefault(true))
                                 {
                                     // If the PE image that we are mapping into has the "loaded" layout convert the rva to a flat/file based one.
@@ -294,7 +294,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
                                         break;
-                                    
+
                                     case BaseRelocationType.ImageRelBasedDir64:
                                         if ((offset + sizeof(ulong)) <= data.Length)
                                         {
@@ -304,7 +304,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
                                         break;
-                                    
+
                                     default:
                                         Debug.Fail($"ApplyRelocations: invalid relocation type {type}");
                                         break;

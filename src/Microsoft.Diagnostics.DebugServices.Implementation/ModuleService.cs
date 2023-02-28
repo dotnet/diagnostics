@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
         private Dictionary<ulong, IModule> _modules;
-        private IModule[] _sortedByBaseAddress; 
+        private IModule[] _sortedByBaseAddress;
 
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (module.ImageBase < address) {
                     min = mid + 1;
                 }
-                else { 
+                else {
                     max = mid - 1;
                 }
             }
@@ -165,7 +165,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     yield return module;
                 }
-            }    
+            }
         }
 
         #endregion
@@ -450,11 +450,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-        } 
+        }
 
         internal protected IMemoryService MemoryService => _memoryService ??= Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Services.GetService<ISymbolService>(); 
+        internal protected ISymbolService SymbolService => _symbolService ??= Services.GetService<ISymbolService>();
 
         /// <summary>
         /// Search memory helper class

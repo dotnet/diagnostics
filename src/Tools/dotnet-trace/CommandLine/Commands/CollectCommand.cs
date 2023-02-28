@@ -382,7 +382,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.CursorVisible = true;
                     }
                 }
-            
+
                 if (ProcessLauncher.Launcher.HasChildProc)
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
@@ -432,7 +432,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Command CollectCommand() =>
             new Command(
                 name: "collect",
-                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.") 
+                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
@@ -502,8 +502,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
-        
-        private static Option CLREventsOption() => 
+
+        private static Option CLREventsOption() =>
             new Option(
                 alias: "--clrevents",
                 description: @"List of CLR runtime events to emit.")
@@ -511,7 +511,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Argument = new Argument<string>(name: "clrevents", getDefaultValue: () => string.Empty)
             };
 
-        private static Option CLREventLevelOption() => 
+        private static Option CLREventLevelOption() =>
             new Option(
                 alias: "--clreventlevel",
                 description: @"Verbosity of CLR events to be emitted.")

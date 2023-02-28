@@ -85,9 +85,9 @@ namespace SOS.Extensions
                     // lldb doesn't map managed modules into the address space
                     memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: true);
 
-                    // This is a special memory service that maps the managed assemblies' metadata into the address 
+                    // This is a special memory service that maps the managed assemblies' metadata into the address
                     // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
-                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping 
+                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping
                     // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
                     memoryService = new MetadataMappingMemoryService(clone.Build(), memoryService);
                 }

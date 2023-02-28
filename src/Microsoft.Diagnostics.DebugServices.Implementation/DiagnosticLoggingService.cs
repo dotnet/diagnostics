@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public void Enable(string filePath)
         {
             if (filePath is not null)
-            { 
+            {
                 FileStream stream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 CloseLogging();
                 _writer = new StreamWriter(stream) {
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         #endregion
 
         /// <summary>
-        /// Initializes the diagnostic logging service.  Reads the DOTNET_ENABLED_SOS_LOGGING 
+        /// Initializes the diagnostic logging service.  Reads the DOTNET_ENABLED_SOS_LOGGING
         /// environment variable to log to console or file.
         /// </summary>
         /// <param name="logfile"></param>
@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private void CloseLogging()
         {
             if (_writer is not null)
-            { 
+            {
                 _fileLoggingService?.RemoveStream(_writer.BaseStream);
                 _writer.Flush();
                 _writer.Close();

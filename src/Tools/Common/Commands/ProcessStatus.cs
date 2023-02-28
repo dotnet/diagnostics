@@ -61,7 +61,7 @@ namespace Microsoft.Internal.Common.Commands
                     sb.Append(text);
                     sb.Append(' ', width - text.Length);
                 }
-                
+
             }
             sb.Append(" ");
         }
@@ -73,7 +73,7 @@ namespace Microsoft.Internal.Common.Commands
             public string FileName;
             public string CmdLineArgs;
         }
-        
+
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis, their statuses and the command line arguments that are passed to them.
         /// </summary>
@@ -151,7 +151,7 @@ namespace Microsoft.Internal.Common.Commands
                         };
                         printInfo.Add(commandInfo);
                     }
-                    catch (Exception ex) 
+                    catch (Exception ex)
                     {
                         if (ex is Win32Exception || ex is InvalidOperationException)
                         {

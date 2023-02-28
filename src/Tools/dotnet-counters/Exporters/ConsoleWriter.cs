@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
 
-        public ConsoleWriter(bool useAnsi) 
+        public ConsoleWriter(bool useAnsi)
         {
             this._useAnsi = useAnsi;
         }
@@ -93,25 +93,25 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             AssignRowsAndInitializeDisplay();
         }
 
-        private void SetCursorPosition(int col, int row) 
+        private void SetCursorPosition(int col, int row)
         {
-            if (this._useAnsi) 
+            if (this._useAnsi)
             {
                 Console.Write($"\u001b[{row + 1 - _topRow};{col + 1}H");
             }
-            else 
+            else
             {
                 Console.SetCursorPosition(col, row);
             }
         }
 
-        private void Clear() 
+        private void Clear()
         {
-            if (this._useAnsi) 
+            if (this._useAnsi)
             {
                 Console.Write($"\u001b[H\u001b[J");
             }
-            else 
+            else
             {
                 Console.Clear();
             }
@@ -128,11 +128,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         public void AssignRowsAndInitializeDisplay()
         {
             Clear();
-            
+
             _consoleWidth = Console.WindowWidth;
-            _consoleHeight = Console.WindowHeight;     
+            _consoleHeight = Console.WindowHeight;
             _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0); // Truncate the name to prevent line wrapping as long as the console width is >= CounterValueLength + Indent + 1 characters
-  
+
 
             int row = Console.CursorTop;
             _topRow = row;
@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
-                    
+
                     string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     counter.Row = row++;
                     if (counter.RenderValueInline)
@@ -321,13 +321,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,
             //     3 decimal digits or spaces.
             //
-            // For example:              
-            //   1,421,893.21    
+            // For example:
+            //   1,421,893.21
             //           0.123
             //          -0.123
             //  4.9012e+25
-            //    -675,430.9    
-            // -12,675,430.9  
+            //    -675,430.9
+            // -12,675,430.9
             //           7
 
 

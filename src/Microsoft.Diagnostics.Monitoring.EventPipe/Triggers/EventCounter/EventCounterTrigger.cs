@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         // use the same event provider as the source of counter events.
         private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>> _eventMapCache =
             new ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>>(StringComparer.OrdinalIgnoreCase);
-        
+
         // Only care for the EventCounters events from any of the specified providers, thus
         // create a static readonly instance that is shared among all event maps.
         private static readonly IReadOnlyCollection<string> _eventProviderEvents =
@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
 
             _filter = new CounterFilter(settings.CounterIntervalSeconds);
             _filter.AddFilter(settings.ProviderName, new string[] { settings.CounterName });
-            
+
             _impl = new EventCounterTriggerImpl(settings);
 
             _providerName = settings.ProviderName;

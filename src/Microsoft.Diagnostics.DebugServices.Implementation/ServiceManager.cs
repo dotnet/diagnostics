@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
     /// The service manager registers any ServiceExportAttribute on types and methods and sets properties,
-    /// fields and methods marked  with the ServiceImportAttribute that match the provided services. Tracks 
+    /// fields and methods marked  with the ServiceImportAttribute that match the provided services. Tracks
     /// any unresolved service requests and injects them when the service is registered.
     /// </summary>
     public class ServiceManager : IServiceManager

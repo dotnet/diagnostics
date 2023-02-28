@@ -29,14 +29,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             return $"{Name}:0x{Keywords:X16}:{(uint)EventLevel}{(Arguments == null ? "" : $":{GetArgumentString()}")}";
         }
-        
+
         public override bool Equals(object obj)
         {
             if (obj == null || GetType() != obj.GetType())
             {
                 return false;
             }
-            
+
             return this == (EventPipeProvider)obj;
         }
 
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static bool operator !=(EventPipeProvider left, EventPipeProvider right)
         {
-            return !(left == right);    
+            return !(left == right);
         }
 
         internal string GetArgumentString()

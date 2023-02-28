@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _symbolService = symbolService;
             _onChangeEvent = symbolService.OnChangeEvent.Register(() => {
                 _machOFile?.Dispose();
-                _machOFile = null; 
+                _machOFile = null;
             });
         }
 

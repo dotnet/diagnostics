@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     File.Delete(tempPath);
                 }
-                
+
             }
             catch (IOException ex)
             {
@@ -212,7 +212,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private async Task<TestStepState> AcquireStepStateLock(ITestOutputHelper output)
         {
             TestStepState initialStepState = new TestStepState();
-            
+
             bool stepStateFileExists = false;
             while (true)
             {
@@ -344,7 +344,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static string GetReuseStepStateReason(TestStepState openedStepState)
         {
             //This heuristic may need to change, in some cases it is probably too eager to
-            //reuse past results when we wanted to retest something. 
+            //reuse past results when we wanted to retest something.
 
             if (openedStepState.RunState == TestStepRunState.Complete)
             {
@@ -377,7 +377,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private static bool IsOpenedStateChangeable(TestStepState openedStepState)
         {
-            return (openedStepState.RunState == TestStepRunState.InProgress && 
+            return (openedStepState.RunState == TestStepRunState.InProgress &&
                     IsPreviousMachineSame(openedStepState) &&
                     IsPreviousProcessRunning(openedStepState));
         }

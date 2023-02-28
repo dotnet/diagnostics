@@ -472,7 +472,7 @@ namespace SOS.Hosting
             [In] IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In] uint imageTimestamp,
-            [In] uint imageSize, 
+            [In] uint imageSize,
             [In] [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
             [In] uint mdRva,
             [In] uint flags,

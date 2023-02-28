@@ -84,7 +84,7 @@ namespace Microsoft.Diagnostics.DebugServices
         string GetSymbolFileName();
 
         /// <summary>
-        /// Returns the version information for the modules. 
+        /// Returns the version information for the modules.
         /// </summary>
         Version GetVersionData();
 

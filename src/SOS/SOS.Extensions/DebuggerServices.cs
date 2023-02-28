@@ -134,8 +134,8 @@ namespace SOS
         {
             imageName = null;
 
-            // GetModuleNames under lldb doesn't support querying just the 
-            // path length (imageNameBufferPtr = null) so use a fix size 
+            // GetModuleNames under lldb doesn't support querying just the
+            // path length (imageNameBufferPtr = null) so use a fix size
             // image name buffer.
             byte[] imageNameBuffer = new byte[1024];
             fixed (byte* imageNameBufferPtr = imageNameBuffer)
@@ -356,7 +356,7 @@ namespace SOS
                 return VTable.GetOffsetBySymbol(Self, moduleIndex, symbolPtr, out address);
             }
         }
-        
+
         public HResult GetTypeId(int moduleIndex, string typeName, out ulong typeId)
         {
             if (string.IsNullOrEmpty(typeName))
@@ -415,7 +415,7 @@ namespace SOS
 
         public HResult AddModuleSymbol(string symbolFileName)
         {
-            if (symbolFileName == null) 
+            if (symbolFileName == null)
             {
                 throw new ArgumentNullException(nameof(symbolFileName));
             }

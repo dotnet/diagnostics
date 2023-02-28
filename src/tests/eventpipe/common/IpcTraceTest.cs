@@ -118,7 +118,7 @@ namespace EventPipe.UnitTests.Common
         private List<EventPipeProvider> _testProviders;
 
         /// <summary>
-        /// This represents the current EventPipeSession 
+        /// This represents the current EventPipeSession
         /// </summary>
         private EventPipeSession _eventPipeSession;
 
@@ -294,7 +294,7 @@ namespace EventPipe.UnitTests.Common
                 return task;
             });
 
-            var stopTask = Task.Run(() => 
+            var stopTask = Task.Run(() =>
             {
                 Logger.logger.Log("Sending StopTracing command...");
                 lock (threadSync) // eventpipeSession
@@ -350,7 +350,7 @@ namespace EventPipe.UnitTests.Common
         }
 
         // Ensure that we have a clean environment for running the test.
-        // Specifically check that we don't have more than one match for 
+        // Specifically check that we don't have more than one match for
         // Diagnostic IPC sockets in the TempPath.  These can be left behind
         // by bugs, catastrophic test failures, etc. from previous testing.
         // The tmp directory is only cleared on reboot, so it is possible to
@@ -366,7 +366,7 @@ namespace EventPipe.UnitTests.Common
                 IEnumerable<FileInfo> ipcPorts = Directory.GetFiles(Path.GetTempPath())
                     .Select(namedPipe => new FileInfo(namedPipe))
                     .Where(input => Regex.IsMatch(input.Name, $"^dotnet-diagnostic-{Environment.ProcessId}-(\\d+)-socket$"));
-                
+
                 if (ipcPorts.Count() > 1)
                 {
                     Logger.logger.Log($"Found {ipcPorts.Count()} OS transports for pid {Environment.ProcessId}:");

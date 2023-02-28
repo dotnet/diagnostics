@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 MaxTimeSeriesOption(),
                 DurationOption()
             };
-        
+
         private static Command CollectCommand() =>
             new Command(
                 name: "collect",
@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option ExportFileNameOption() =>
             new Option(
                 aliases: new[] { "-o", "--output" },
-                description: "The output file name.") 
+                description: "The output file name.")
             {
                 Argument = new Argument<string>(name: "output", getDefaultValue: () => "counter")
             };
@@ -161,7 +161,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option RuntimeVersionOption() =>
             new Option(
                 aliases: new[] { "-r", "--runtime-version" },
-                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0") 
+                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0")
             {
                 Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "6.0")
             };

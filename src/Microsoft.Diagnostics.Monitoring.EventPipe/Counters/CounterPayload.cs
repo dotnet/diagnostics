@@ -121,7 +121,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal class ErrorPayload : CounterPayload
     {
-        public ErrorPayload(string errorMessage) : this(errorMessage, DateTime.UtcNow) 
+        public ErrorPayload(string errorMessage) : this(errorMessage, DateTime.UtcNow)
         {
         }
 

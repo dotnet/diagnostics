@@ -20,7 +20,7 @@ namespace EventPipeTracee
         {
             int pid = Environment.ProcessId;
             string pipeServerName = args.Length > 0 ? args[0] : null;
-            if (pipeServerName == null) 
+            if (pipeServerName == null)
             {
                 Console.Error.WriteLine($"{pid} EventPipeTracee: no pipe name");
                 Console.Error.Flush();

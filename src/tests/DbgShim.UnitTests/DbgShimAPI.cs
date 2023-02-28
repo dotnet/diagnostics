@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics
             {
                 throw new ArgumentException($"Dbgshim path not set or the dbgshim at '{dbgshimPath}' does not exists");
             }
-            _dbgshimModuleHandle = DataTarget.PlatformFunctions.LoadLibrary(dbgshimPath); 
+            _dbgshimModuleHandle = DataTarget.PlatformFunctions.LoadLibrary(dbgshimPath);
             _createProcessForLaunch = GetDelegateFunction<CreateProcessForLaunchDelegate>("CreateProcessForLaunch");
             _resumeProcess = GetDelegateFunction<ResumeProcessDelegate>("ResumeProcess");
             _closeResumeHandle = GetDelegateFunction<CloseResumeHandleDelegate>("CloseResumeHandle");
@@ -275,7 +275,7 @@ namespace Microsoft.Diagnostics
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
         private delegate int CloseResumeHandleDelegate(
             IntPtr handle);
-            
+
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int RegisterForRuntimeStartupDelegate(
             uint processId,

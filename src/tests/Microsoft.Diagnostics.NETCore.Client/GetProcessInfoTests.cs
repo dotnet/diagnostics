@@ -15,7 +15,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ProcessInfo processInfo = await GetProcessInfoWithEntrypointAsync(clientShim);
                 ValidateProcessInfo(runner.Pid, processInfo);
 
-                // This is only true if targetFramework for the tracee app is greater than 
+                // This is only true if targetFramework for the tracee app is greater than
                 Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
 
                 if (suspend)

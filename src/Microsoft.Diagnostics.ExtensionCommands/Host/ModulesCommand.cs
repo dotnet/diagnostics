@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     DisplayModule(module);
                 }
-                else 
+                else
                 {
                     WriteLineError($"Address 0x{Address:X16} not found");
                 }
