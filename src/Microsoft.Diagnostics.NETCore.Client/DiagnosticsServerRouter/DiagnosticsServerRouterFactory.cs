@@ -1536,7 +1536,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     _logger?.LogTrace("Start reading bytes from back end.");
 
-                    int bytesRead = await _backendStream.ReadAsync(buffer, token).ConfigureAwait(false);
+                    int bytesRead = await _backendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
                     _logger?.LogTrace($"Read {bytesRead} bytes from back end.");
 
@@ -1579,7 +1579,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     _logger?.LogTrace("Start reading bytes from front end.");
 
-                    int bytesRead = await _frontendStream.ReadAsync(buffer, token).ConfigureAwait(false);
+                    int bytesRead = await _frontendStream.ReadAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
                     _logger?.LogTrace($"Read {bytesRead} bytes from front end.");
 

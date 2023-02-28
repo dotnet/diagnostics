@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int totalRead = 0;
             do
             {
-                int read = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), token).ConfigureAwait(false);
+                int read = await stream.ReadAsync(buffer, totalRead, buffer.Length - totalRead, token).ConfigureAwait(false);
                 if (0 == read)
                 {
                     throw new EndOfStreamException();
