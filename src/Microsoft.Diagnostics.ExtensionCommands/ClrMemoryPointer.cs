@@ -1,7 +1,7 @@
-﻿using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.DacInterface;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.DacInterface;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {

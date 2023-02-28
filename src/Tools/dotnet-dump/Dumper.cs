@@ -2,14 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {

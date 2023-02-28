@@ -2,12 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.SymbolStore.SymbolStores;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests

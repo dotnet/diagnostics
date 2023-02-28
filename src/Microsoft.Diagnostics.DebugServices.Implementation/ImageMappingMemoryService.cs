@@ -2,13 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using Microsoft.FileFormats;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {

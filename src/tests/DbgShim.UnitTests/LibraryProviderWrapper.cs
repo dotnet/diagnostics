@@ -2,6 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
@@ -12,13 +19,6 @@ using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using Xunit;
 
 namespace SOS.Hosting

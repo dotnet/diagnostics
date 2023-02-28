@@ -2,16 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers;
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
 

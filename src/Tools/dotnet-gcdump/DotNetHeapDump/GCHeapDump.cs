@@ -1,6 +1,3 @@
-using FastSerialization;
-using Graphs;
-using Microsoft.Diagnostics.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,8 +5,10 @@ using System.IO;
 using System.Security;
 using System.Text.RegularExpressions;
 using System.Xml;
+using FastSerialization;
+using Graphs;
+using Microsoft.Diagnostics.Utilities;
 using Address = System.UInt64;
-
 
 /// <summary>
 /// Represents a .GCDump file.  You can open it for reading with the construtor

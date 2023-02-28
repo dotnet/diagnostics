@@ -3,12 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
+using Xunit;
+using Xunit.Abstractions;
 
 // Use this test as an example of how to write tests for EventPipe in
 // the dotnet/diagnostics repo

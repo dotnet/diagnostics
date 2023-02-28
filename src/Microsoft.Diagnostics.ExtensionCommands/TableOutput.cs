@@ -1,7 +1,7 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {

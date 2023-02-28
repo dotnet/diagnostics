@@ -1,10 +1,10 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {

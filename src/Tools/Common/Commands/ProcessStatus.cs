@@ -2,23 +2,23 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Tools.Common;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Binding;
 using System.CommandLine.Invocation;
 using System.CommandLine.IO;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using Process = System.Diagnostics.Process;
-using System.IO;
-using System.ComponentModel;
 using System.Threading.Tasks;
-using System.CommandLine.Binding;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
+using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands
 {        

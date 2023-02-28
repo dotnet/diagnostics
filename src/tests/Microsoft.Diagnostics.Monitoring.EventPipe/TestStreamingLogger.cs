@@ -1,11 +1,11 @@
-﻿using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {

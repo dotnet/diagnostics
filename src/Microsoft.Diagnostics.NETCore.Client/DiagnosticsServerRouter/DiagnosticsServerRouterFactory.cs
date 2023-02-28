@@ -2,17 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Net.Sockets;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {

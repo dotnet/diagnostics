@@ -1,4 +1,3 @@
-using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -6,12 +5,13 @@ using System.CommandLine.Binding;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Tracing.Etlx;
-using Microsoft.Diagnostics.Symbols;
-using Microsoft.Diagnostics.Tracing.Stacks;
-using Microsoft.Diagnostics.Tracing;
 using Diagnostics.Tracing.StackSources;
+using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tools.Trace.CommandLine;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.Stacks;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace 
 {

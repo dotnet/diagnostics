@@ -3,14 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using Xunit.Abstractions;
-using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Threading;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.ContentionValidation
 {

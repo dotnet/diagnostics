@@ -1,9 +1,9 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands

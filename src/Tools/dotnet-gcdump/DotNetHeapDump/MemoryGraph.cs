@@ -1,6 +1,6 @@
-using FastSerialization;
 using System.Collections.Generic;
 using System.Diagnostics;
+using FastSerialization;
 using Address = System.UInt64;
 
 // Copy of version in Microsoft/PerfView

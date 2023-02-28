@@ -1,11 +1,11 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System;
-using System.Buffers;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {

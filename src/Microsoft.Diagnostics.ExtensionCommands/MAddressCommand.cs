@@ -1,7 +1,7 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands

@@ -1,10 +1,10 @@
-﻿using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Win32;
 using Xunit;
 
 public class DumpGenerationFixture : IDisposable

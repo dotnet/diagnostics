@@ -1,5 +1,5 @@
-using FastSerialization;
 using System.Collections.Generic;
+using FastSerialization;
 using Address = System.UInt64;
 
 public class DotNetHeapInfo : IFastSerializable

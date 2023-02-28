@@ -1,13 +1,13 @@
-﻿using Microsoft.Diagnostics.Runtime;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Extensions;
 using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {

@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
 using Microsoft.SymbolStore.KeyGenerators;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices
 {

@@ -1,13 +1,13 @@
-using FastSerialization;    // For IStreamReader
-using Graphs;
-using Microsoft.Diagnostics.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Security;
+using FastSerialization;    // For IStreamReader
+using Graphs;
+using Microsoft.Diagnostics.Utilities;
 using Address = System.UInt64;
 
 // Copy of version in Microsoft/PerfView

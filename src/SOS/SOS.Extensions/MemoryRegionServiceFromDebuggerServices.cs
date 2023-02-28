@@ -1,10 +1,10 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using SOS.Hosting.DbgEng.Interop;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {

@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.TestHelpers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Diagnostics.CommonTestRunner;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;

@@ -1,5 +1,4 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using System;
+﻿using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {

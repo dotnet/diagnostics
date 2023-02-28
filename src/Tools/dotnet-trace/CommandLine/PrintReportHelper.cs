@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.Diagnostics.Tracing.Stacks;
 using System.Text.RegularExpressions;
+using Microsoft.Diagnostics.Tracing.Stacks;
 
 namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 {

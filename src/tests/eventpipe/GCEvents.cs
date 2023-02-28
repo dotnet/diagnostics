@@ -3,15 +3,15 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
-using System.Reflection;
-using System.Runtime.InteropServices;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.GCEventsValidation
 {

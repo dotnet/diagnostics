@@ -1,7 +1,7 @@
-﻿using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {

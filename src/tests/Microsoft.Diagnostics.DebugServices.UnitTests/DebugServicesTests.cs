@@ -1,12 +1,12 @@
-﻿using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.TestHelpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;

@@ -3,17 +3,17 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.Diagnostics.Tracing;
-using System.Runtime.InteropServices;
-using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 
 namespace EventPipe.UnitTests.Common
 {

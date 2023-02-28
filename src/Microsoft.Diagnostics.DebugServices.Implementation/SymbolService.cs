@@ -2,14 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using Microsoft.SymbolStore.SymbolStores;
-using SOS;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,6 +13,14 @@ using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
+using SOS;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {

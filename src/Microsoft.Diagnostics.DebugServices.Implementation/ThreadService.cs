@@ -2,12 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation

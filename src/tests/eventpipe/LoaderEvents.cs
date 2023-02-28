@@ -3,16 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using System.IO;
-using System.Runtime.Loader;
-using System.Reflection;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.IO;
+using System.Reflection;
+using System.Runtime.Loader;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.LoaderEventsValidation
 {
