@@ -77,5 +77,3 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
     }
 }
-
-
