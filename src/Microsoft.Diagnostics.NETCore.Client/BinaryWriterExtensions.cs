@@ -11,8 +11,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static void WriteString(this BinaryWriter @this, string value)
         {
-            if (@this == null)
-                throw new ArgumentNullException(nameof(@this));
+            ArgumentNullException.ThrowIfNull(@this);
 
             @this.Write(value != null ? (value.Length + 1) : 0);
             if (value != null)

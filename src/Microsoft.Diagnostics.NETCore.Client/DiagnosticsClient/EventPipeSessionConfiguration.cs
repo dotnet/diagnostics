@@ -21,8 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"Buffer size cannot be zero.");
             if (format != EventPipeSerializationFormat.NetPerf && format != EventPipeSerializationFormat.NetTrace)
                 throw new ArgumentException("Unrecognized format");
-            if (providers == null)
-                throw new ArgumentNullException(nameof(providers));
+            ArgumentNullException.ThrowIfNull(providers);
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
