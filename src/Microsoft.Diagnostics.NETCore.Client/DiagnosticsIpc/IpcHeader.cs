@@ -21,8 +21,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         // the number of bytes for the DiagnosticsIpc::IpcHeader type in native code
-        public static readonly ushort HeaderSizeInBytes = 20;
-        private static readonly ushort MagicSizeInBytes = 14;
+        public const ushort HeaderSizeInBytes = 20;
+        private const ushort MagicSizeInBytes = 14;
 
         public byte[] Magic = DotnetIpcV1; // byte[14] in native code
         public ushort Size = HeaderSizeInBytes;

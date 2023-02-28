@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class ProcessInfo
     {
-        private static readonly int GuidSizeInBytes = 16;
+        private const int GuidSizeInBytes = 16;
 
         /// <summary>
         /// Parses a ProcessInfo payload.

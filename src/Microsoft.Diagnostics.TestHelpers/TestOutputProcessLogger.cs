@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 {
     public class TestOutputProcessLogger : IProcessLogger
     {
-        private static readonly string _timeFormat = "mm\\:ss\\.fff";
+        private const string _timeFormat = "mm\\:ss\\.fff";
         private readonly ITestOutputHelper _output;
         private readonly StringBuilder[] _lineBuffers;
 
