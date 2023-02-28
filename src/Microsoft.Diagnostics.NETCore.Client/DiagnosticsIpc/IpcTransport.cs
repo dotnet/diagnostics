@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
 
-    internal class IpcEndpointHelper
+    internal static class IpcEndpointHelper
     {
         public static Stream Connect(IpcEndpointConfig config, TimeSpan timeout)
         {

@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// Class used to run different flavours of Diagnostics Server routers.
     /// </summary>
-    internal class DiagnosticsServerRouterRunner
+    internal static class DiagnosticsServerRouterRunner
     {
         internal interface Callbacks
         {

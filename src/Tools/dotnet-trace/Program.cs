@@ -11,7 +11,7 @@ using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    class Program
+    static class Program
     {
         public static Task<int> Main(string[] args)
         {

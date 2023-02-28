@@ -9,7 +9,7 @@ using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
-    class Program
+    static class Program
     {
         public static Task<int> Main(string[] args)
         {

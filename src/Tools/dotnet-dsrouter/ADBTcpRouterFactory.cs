@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    internal class ADBCommandExec
+    internal static class ADBCommandExec
     {
         public static bool AdbAddPortForward(int port, ILogger logger)
         {

@@ -708,7 +708,7 @@ public class InteropInfo : IFastSerializable
 /// </graph>
 /// 
 /// </summary>
-internal class XmlGcHeapDump
+internal static class XmlGcHeapDump
 {
     public static GCHeapDump ReadGCHeapDumpFromXml(string fileName)
     {

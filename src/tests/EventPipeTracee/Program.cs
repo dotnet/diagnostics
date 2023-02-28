@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EventPipeTracee
 {
-    class Program
+    static class Program
     {
         private const string AppLoggerCategoryName = "AppLoggerCategory";
 
