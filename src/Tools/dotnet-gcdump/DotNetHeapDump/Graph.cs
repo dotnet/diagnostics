@@ -1975,7 +1975,7 @@ public class SpanningTree
 /// TODO FIX NOW put in its own file.
 /// A priority queue, specialized to be a bit more efficient than a generic version would be.
 /// </summary>
-internal class PriorityQueue
+internal sealed class PriorityQueue
 {
     public PriorityQueue(int initialSize = 32)
     {
@@ -2600,7 +2600,7 @@ public class GraphSampler
         Debug.Assert(sampleTotal == m_newGraph.NodeCount);
     }
 
-    private class SampleStats
+    private sealed class SampleStats
     {
         public int TotalCount;          // The number of objects of this type in the original graph
         public int SampleCount;         // The number of objects of this type we have currently added to the new graph

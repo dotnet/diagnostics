@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex}");
                 return -1;
             }
             finally

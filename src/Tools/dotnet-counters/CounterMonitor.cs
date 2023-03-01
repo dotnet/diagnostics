@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        private void MeterInstrumentEventObserved(string meterName, string instrumentName, DateTime timestamp)
+        private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
         {
             if (!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
             {
@@ -137,12 +137,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
-            string instrumentName = (string)obj.PayloadValue(3);
+            // string instrumentName = (string)obj.PayloadValue(3);
             if (sessionId != _metricsEventSourceSessionId)
             {
                 return;
             }
-            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
         }
 
         private void HandleCounterRate(TraceEvent obj)
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return;
             }
-            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
 
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return;
             }
-            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
 
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
@@ -211,7 +211,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 return;
             }
-            MeterInstrumentEventObserved(meterName, instrumentName, obj.TimeStamp);
+            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
             KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
             foreach ((double key, double val) in quantiles)
             {
@@ -258,7 +258,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Error reported from target process:" + Environment.NewLine +
                 error
                 );
-            _shouldExit.TrySetResult(ReturnCode.TracingError);
+            _shouldExit.TrySetResult((int)ReturnCode.TracingError);
         }
 
         private void HandleObservableInstrumentCallbackError(TraceEvent obj)
@@ -287,7 +287,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _renderer.SetErrorText(
                 "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool?" + Environment.NewLine +
                 "Concurrent sessions are not supported.");
-            _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
+            _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
         }
 
         private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
@@ -430,7 +430,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (EndOfStreamException ex)
             {
                 // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
-                Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                Debug.WriteLine($"[ERROR] {ex}");
             }
             // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
             catch (TimeoutException)
@@ -475,9 +475,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
-                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
@@ -486,7 +486,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
                     try
                     {
@@ -515,14 +515,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         catch (Exception) { } // Swallow all exceptions for now.
 
                         console.Out.WriteLine($"Complete");
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return ReturnCode.ArgumentError;
+                return (int)ReturnCode.ArgumentError;
             }
         }
         public async Task<int> Collect(
@@ -551,17 +551,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
 
-                ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
+                ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 {
                     if (holder == null)
                     {
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
 
                     try
@@ -580,7 +580,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         if (_output.Length == 0)
                         {
                             _console.Error.WriteLine("Output cannot be an empty string");
-                            return ReturnCode.ArgumentError;
+                            return (int)ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
                         {
@@ -604,7 +604,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         else
                         {
                             _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                            return ReturnCode.ArgumentError;
+                            return (int)ReturnCode.ArgumentError;
                         }
                         _resumeRuntime = resumeRuntime;
                         int ret = await Start().ConfigureAwait(false);
@@ -617,14 +617,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                             _session.Stop();
                         }
                         catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
-                        return ReturnCode.Ok;
+                        return (int)ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return ReturnCode.ArgumentError;
+                return (int)ReturnCode.ArgumentError;
             }
         }
 
@@ -679,7 +679,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
         // parses a comma separated list of providers
-        internal CounterSet ParseProviderList(string providerListText)
+        internal static CounterSet ParseProviderList(string providerListText)
         {
             CounterSet set = new CounterSet();
             ParseProviderList(providerListText, set);
@@ -687,7 +687,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         }
 
         // parses a comma separated list of providers
-        internal void ParseProviderList(string providerListText, CounterSet counters)
+        internal static void ParseProviderList(string providerListText, CounterSet counters)
         {
             bool inParen = false;
             int startIdx = -1;
@@ -760,7 +760,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 string counterNames = tokens[1];
                 if (!counterNames.EndsWith(']'))
                 {
-                    if (counterNames.IndexOf(']') == -1)
+                    if (!counterNames.Contains(']'))
                     {
                         throw new FormatException("Expected to find closing ']' in counter_provider");
                     }
@@ -842,15 +842,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (DiagnosticsClientException ex)
                 {
-                    Console.WriteLine($"Failed to start the counter session: {ex.ToString()}");
+                    Console.WriteLine($"Failed to start the counter session: {ex}");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[ERROR] {ex.ToString()}");
+                    Debug.WriteLine($"[ERROR] {ex}");
                 }
                 finally
                 {
-                    _shouldExit.TrySetResult(ReturnCode.Ok);
+                    _shouldExit.TrySetResult((int)ReturnCode.Ok);
                 }
             });
 

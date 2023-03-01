@@ -99,14 +99,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static EventLevel GetEventLevel(string token)
         {
-            if (Int32.TryParse(token, out int level) && level >= 0)
+            if (int.TryParse(token, out int level) && level >= 0)
             {
                 return level > (int)EventLevel.Verbose ? EventLevel.Verbose : (EventLevel)level;
             }
 
             else
             {
-                switch (token.ToLower())
+                switch (token.ToLowerInvariant())
                 {
                     case "critical":
                         return EventLevel.Critical;

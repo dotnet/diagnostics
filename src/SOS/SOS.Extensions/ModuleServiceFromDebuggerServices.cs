@@ -15,9 +15,9 @@ namespace SOS.Extensions
     /// <summary>
     /// Module service implementation for the native debugger services
     /// </summary>
-    internal class ModuleServiceFromDebuggerServices : ModuleService
+    internal sealed class ModuleServiceFromDebuggerServices : ModuleService
     {
-        private class FieldFromDebuggerServices : IField
+        private sealed class FieldFromDebuggerServices : IField
         {
             public FieldFromDebuggerServices(IType type, string fieldName, uint offset)
             {
@@ -32,7 +32,7 @@ namespace SOS.Extensions
             public uint Offset { get; }
         }
 
-        private class TypeFromDebuggerServices : IType
+        private sealed class TypeFromDebuggerServices : IType
         {
             private ModuleServiceFromDebuggerServices _moduleService;
             private ulong _typeId;
@@ -64,7 +64,7 @@ namespace SOS.Extensions
             }
         }
 
-        private class ModuleFromDebuggerServices : Module, IModuleSymbols
+        private sealed class ModuleFromDebuggerServices : Module, IModuleSymbols
         {
             // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
@@ -271,12 +271,12 @@ namespace SOS.Extensions
         {
             var modules = new Dictionary<ulong, IModule>();
 
-            HResult hr = _debuggerServices.GetNumberModules(out uint loadedModules, out uint unloadedModules);
+            HResult hr = _debuggerServices.GetNumberModules(out uint loadedModules, out uint _);
             if (hr.IsOK)
             {
                 for (int moduleIndex = 0; moduleIndex < loadedModules; moduleIndex++)
                 {
-                    hr = _debuggerServices.GetModuleInfo(moduleIndex, out ulong imageBase, out ulong imageSize, out uint timestamp, out uint checksum);
+                    hr = _debuggerServices.GetModuleInfo(moduleIndex, out ulong imageBase, out ulong imageSize, out uint timestamp, out uint _);
                     if (hr.IsOK)
                     {
                         hr = _debuggerServices.GetModuleName(moduleIndex, out string imageName);

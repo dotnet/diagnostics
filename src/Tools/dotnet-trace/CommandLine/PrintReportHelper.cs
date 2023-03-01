@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                     {
                         inclusiveMeasure = Math.Round(node.InclusiveMetricPercent, 2).ToString() + "%";
                         exclusiveMeasure = Math.Round(node.ExclusiveMetricPercent, 2).ToString() + "%";
-                        number = (i + 1).ToString() + "." + number.Substring(maxDigit - numSpace + 2);
+                        number = string.Concat((i + 1).ToString(), ".", number.AsSpan(maxDigit - numSpace + 2));
                     }
 
                     string uniformIMeasure = MakeFixedWidth(inclusiveMeasure, measureColumnWidth).PadLeft(measureColumnWidth + 4);

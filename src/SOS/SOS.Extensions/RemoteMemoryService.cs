@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS
 {
-    internal unsafe class RemoteMemoryService : CallableCOMWrapper, IRemoteMemoryService
+    internal sealed unsafe class RemoteMemoryService : CallableCOMWrapper, IRemoteMemoryService
     {
         private static Guid IID_IRemoteMemoryService = new Guid("CD6A0F22-8BCF-4297-9366-F440C2D1C781");
 

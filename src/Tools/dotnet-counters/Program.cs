@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 {
     public enum CountersExportFormat { csv, json };
 
-    internal class Program
+    internal static class Program
     {
         private delegate Task<int> CollectDelegate(
             CancellationToken ct,

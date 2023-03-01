@@ -667,8 +667,7 @@ namespace SOS.Hosting.DbgEng.Interop
         );
 
         [PreserveSig]
-        new int SetScopeFromStoredEvent(
-        );
+        new int SetScopeFromStoredEvent();
 
         [PreserveSig]
         new int OutputSymbolByOffset(

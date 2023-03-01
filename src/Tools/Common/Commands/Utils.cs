@@ -126,7 +126,7 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
-    internal class LineRewriter
+    internal sealed class LineRewriter
     {
         public int LineToClear { get; set; }
 
@@ -161,12 +161,12 @@ namespace Microsoft.Internal.Common.Utils
         private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
     }
 
-    internal static class ReturnCode
+    internal enum ReturnCode
     {
-        public static int Ok;
-        public static int SessionCreationError = 1;
-        public static int TracingError = 2;
-        public static int ArgumentError = 3;
-        public static int UnknownError = 4;
+        Ok,
+        SessionCreationError,
+        TracingError,
+        ArgumentError,
+        UnknownError
     }
 }

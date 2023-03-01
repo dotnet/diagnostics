@@ -7,7 +7,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
-    internal class ConsoleServiceFromDebuggerServices : IConsoleService
+    internal sealed class ConsoleServiceFromDebuggerServices : IConsoleService
     {
         private readonly DebuggerServices _debuggerServices;
         private bool? _supportsDml;

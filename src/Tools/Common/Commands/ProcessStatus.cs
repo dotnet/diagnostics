@@ -41,11 +41,11 @@ namespace Microsoft.Internal.Common.Commands
             {
                 if (truncateFront)
                 {
-                    sb.Append(text.Substring(textLength - width, width));
+                    sb.Append(text.AsSpan(textLength - width, width));
                 }
                 else
                 {
-                    sb.Append(text.Substring(0, width));
+                    sb.Append(text.AsSpan(0, width));
                 }
             }
             else
@@ -165,7 +165,7 @@ namespace Microsoft.Internal.Common.Commands
                         }
                         else
                         {
-                            Debug.WriteLine($"[PrintProcessStatus] {ex.ToString()}");
+                            Debug.WriteLine($"[PrintProcessStatus] {ex}");
                         }
                     }
                 }

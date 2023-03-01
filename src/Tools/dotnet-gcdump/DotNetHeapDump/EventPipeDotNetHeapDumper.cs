@@ -56,8 +56,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         if (!fDone)
                         {
                             fDone = true;
-                            Task.Run(() => typeFlushSession.EndSession())
-                                .ContinueWith(_ => typeFlushSession.Source.StopProcessing());
+                            Task.Run(
+                                () => {
+                                    typeFlushSession.EndSession();
+                                    typeFlushSession.Source.StopProcessing();
+                                });
                         }
                     };
 
@@ -207,7 +210,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
             catch (Exception e)
             {
-                log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e.ToString()}");
+                log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e}");
             }
 
             log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, dumpComplete);
@@ -216,7 +219,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         }
     }
 
-    internal class EventPipeSessionController : IDisposable
+    internal sealed class EventPipeSessionController : IDisposable
     {
         private List<EventPipeProvider> _providers;
         private DiagnosticsClient _client;
@@ -244,7 +247,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         #region IDisposable Support
         private bool disposedValue; // To detect redundant calls
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

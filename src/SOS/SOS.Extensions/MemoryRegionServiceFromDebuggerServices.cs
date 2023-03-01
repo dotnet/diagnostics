@@ -10,7 +10,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
-    internal class MemoryRegionServiceFromDebuggerServices : IMemoryRegionService
+    internal sealed class MemoryRegionServiceFromDebuggerServices : IMemoryRegionService
     {
         private readonly IDebugClient5 _client;
         private readonly IDebugControl5 _control;
@@ -198,7 +198,7 @@ namespace SOS.Extensions
             return (hr, sb.ToString());
         }
 
-        private class AddressMemoryRange : IMemoryRegion
+        private sealed class AddressMemoryRange : IMemoryRegion
         {
             public ulong Start { get; internal set; }
 

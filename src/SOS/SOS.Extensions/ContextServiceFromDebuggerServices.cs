@@ -11,7 +11,7 @@ namespace SOS.Extensions
     /// <summary>
     /// Provides the context services on native debuggers
     /// </summary>
-    internal class ContextServiceFromDebuggerServices : ContextService
+    internal sealed class ContextServiceFromDebuggerServices : ContextService
     {
         private readonly DebuggerServices _debuggerServices;
 

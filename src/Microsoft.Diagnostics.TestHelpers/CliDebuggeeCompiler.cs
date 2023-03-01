@@ -14,9 +14,9 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         /// <summary>
         /// Creates a new CliDebuggeeCompiler. This compiler acquires the CLI tools and uses them to build and optionally link debuggees via dotnet publish.
-		/// <param name="config">
-		///   LinkerPackageVersion   If set, this version of the linker package will be used to link the debuggee during publish.
-		/// </param>
+        /// <param name="config">
+        ///   LinkerPackageVersion   If set, this version of the linker package will be used to link the debuggee during publish.
+        /// </param>
         /// </summary>
         public CliDebuggeeCompiler(TestConfiguration config, string debuggeeName) : base(config, debuggeeName) { }
 

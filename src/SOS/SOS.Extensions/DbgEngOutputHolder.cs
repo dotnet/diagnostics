@@ -12,7 +12,7 @@ namespace SOS.Extensions
     /// A helper class to capture output of DbgEng commands that will restore the previous output callbacks
     /// when disposed.
     /// </summary>
-    internal class DbgEngOutputHolder : IDebugOutputCallbacksWide, IDisposable
+    internal sealed class DbgEngOutputHolder : IDebugOutputCallbacksWide, IDisposable
     {
         private readonly IDebugClient5 _client;
         private readonly IDebugOutputCallbacksWide _previous;

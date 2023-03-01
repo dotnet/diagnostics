@@ -13,7 +13,7 @@ namespace SOS.Extensions
     /// <summary>
     /// Provides thread and register info and values
     /// </summary>
-    internal class ThreadServiceFromDebuggerServices : ThreadService
+    internal sealed class ThreadServiceFromDebuggerServices : ThreadService
     {
         private readonly DebuggerServices _debuggerServices;
 

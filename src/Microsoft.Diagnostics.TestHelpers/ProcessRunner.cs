@@ -282,7 +282,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 p = _p;
             }
             // this is safe to call on multiple threads, it only launches the process once
-            bool started = p.Start();
+            _ = p.Start();
 
             IProcessLogger[] loggers = null;
             lock (_lock)

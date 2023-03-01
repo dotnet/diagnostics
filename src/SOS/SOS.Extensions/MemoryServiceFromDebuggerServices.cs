@@ -12,7 +12,7 @@ namespace SOS.Extensions
     /// <summary>
     /// Memory service implementation using the native debugger services
     /// </summary>
-    internal class MemoryServiceFromDebuggerServices : IMemoryService
+    internal sealed class MemoryServiceFromDebuggerServices : IMemoryService
     {
         private readonly DebuggerServices _debuggerServices;
 

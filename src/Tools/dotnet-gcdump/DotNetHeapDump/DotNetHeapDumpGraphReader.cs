@@ -919,7 +919,7 @@ public class DotNetHeapDumpGraphReader
     /// <summary>
     /// Remembers addition information about RCWs.
     /// </summary>
-    private class RCWInfo
+    private sealed class RCWInfo
     {
         public RCWInfo(GCBulkRCWValues data) { IUnknown = data.IUnknown; }
         public ulong IUnknown;

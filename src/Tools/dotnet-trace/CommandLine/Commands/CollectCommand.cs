@@ -241,7 +241,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                         catch (DiagnosticsClientException e)
                         {
-                            Console.Error.WriteLine($"Unable to start a tracing session: {e.ToString()}");
+                            Console.Error.WriteLine($"Unable to start a tracing session: {e}");
                             return ReturnCode.SessionCreationError;
                         }
                         catch (UnauthorizedAccessException e)
@@ -275,14 +275,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             ConsoleWriteLine($"Output File    : {fs.Name}");
                             if (shouldStopAfterDuration)
                             {
-                                ConsoleWriteLine($"Trace Duration : {duration.ToString(@"dd\:hh\:mm\:ss")}");
+                                ConsoleWriteLine($"Trace Duration : {duration:dd\\:hh\\:mm\\:ss}");
                             }
 
                             ConsoleWriteLine("\n\n");
 
                             var fileInfo = new FileInfo(output.FullName);
                             Task copyTask = session.EventStream.CopyToAsync(fs);
-                            Task shouldExitTask = copyTask.ContinueWith((task) => shouldExit.Set());
+                            Task shouldExitTask = copyTask.ContinueWith(
+                                (task) => shouldExit.Set(),
+                                CancellationToken.None,
+                                TaskContinuationOptions.None,
+                                TaskScheduler.Default);
 
                             if (printStatusOverTime)
                             {
@@ -295,7 +299,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 {
                                     rewriter?.RewriteConsoleLine();
                                     fileInfo.Refresh();
-                                    ConsoleWriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                 }
 
@@ -367,7 +371,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex}");
                 collectionStopped = true;
                 ret = ReturnCode.TracingError;
             }
