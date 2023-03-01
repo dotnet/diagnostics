@@ -15,7 +15,7 @@ using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    public class DiagnosticsServerRouterLauncher : DiagnosticsServerRouterRunner.Callbacks
+    public class DiagnosticsServerRouterLauncher : DiagnosticsServerRouterRunner.ICallbacks
     {
         public CancellationToken CommandToken { get; set; }
         public bool SuspendProcess { get; set; }
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
 
             // The basic run loop: configure logging and the launcher, then create the router and run it until it exits or the user interrupts
-            public async Task<int> CommonRunLoop(Func<ILogger, DiagnosticsServerRouterRunner.Callbacks, CancellationTokenSource, Task<int>> createRouterTask, CancellationToken token)
+            public async Task<int> CommonRunLoop(Func<ILogger, DiagnosticsServerRouterRunner.ICallbacks, CancellationTokenSource, Task<int>> createRouterTask, CancellationToken token)
             {
                 using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
                 using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
