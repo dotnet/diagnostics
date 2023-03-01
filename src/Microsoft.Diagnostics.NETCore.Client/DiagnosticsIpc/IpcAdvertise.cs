@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Array.Copy(BitConverter.GetBytes(future), 0, buffer, index, sizeof(short));
             index += sizeof(short);
 
-            await stream.WriteAsync(buffer, 0, index).ConfigureAwait(false);
+            await stream.WriteAsync(buffer, 0, index, token).ConfigureAwait(false);
         }
 
         public override string ToString()
