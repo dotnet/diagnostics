@@ -3,6 +3,7 @@
   <Import Project="$(RepoRoot)/eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
 
   <PropertyGroup>
+    <EnableAnalyzers>false</EnableAnalyzers>
     <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>

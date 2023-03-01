@@ -10,7 +10,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting.DbgEng
 {
-    internal unsafe class DebugClient : COMCallableIUnknown
+    internal sealed unsafe class DebugClient : COMCallableIUnknown
     {
         internal readonly IntPtr IDebugClient;
 

@@ -185,7 +185,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected void ResetEnpointInfo()
         {
-            NetServerEndpointInfo = new IpcEndpointInfo();
+            NetServerEndpointInfo = default(IpcEndpointInfo);
         }
 
         protected NetServerRouterFactory(int runtimeTimeoutMs, ILogger logger)
@@ -197,7 +197,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 RuntimeTimeoutMs = runtimeTimeoutMs;
             }
 
-            _netServerEndpointInfo = new IpcEndpointInfo();
+            _netServerEndpointInfo = default(IpcEndpointInfo);
 
         }
 

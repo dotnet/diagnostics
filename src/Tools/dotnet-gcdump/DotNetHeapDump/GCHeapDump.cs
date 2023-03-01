@@ -116,7 +116,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
             GetProcessesWithGCHeapsFromHeapDump(ret);
         }
 
-        var info = new ProcessInfo();
+        var info = default(ProcessInfo);
         foreach (Process process in Process.GetProcesses())
         {
             try

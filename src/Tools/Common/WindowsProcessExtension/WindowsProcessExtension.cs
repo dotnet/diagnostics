@@ -64,7 +64,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     //System and Process are both the same bitness.
 
-                    ProcessNativeMethods.UNICODE_STRING unicodeString = new ProcessNativeMethods.UNICODE_STRING();
+                    ProcessNativeMethods.UNICODE_STRING unicodeString = default(ProcessNativeMethods.UNICODE_STRING);
                     if (!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr + unicodeStringOffset, ref unicodeString, new IntPtr(Marshal.SizeOf(unicodeString)), IntPtr.Zero))
                     {
                         return "[cannot determine command line arguments]";
@@ -79,7 +79,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     //System is 64 bit and the process is 32 bit
 
-                    ProcessNativeMethods.UNICODE_STRING_32 unicodeString32 = new ProcessNativeMethods.UNICODE_STRING_32();
+                    ProcessNativeMethods.UNICODE_STRING_32 unicodeString32 = default(ProcessNativeMethods.UNICODE_STRING_32);
 
                     if (!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr + unicodeStringOffset, ref unicodeString32, new IntPtr(Marshal.SizeOf(unicodeString32)), IntPtr.Zero))
                     {
@@ -128,7 +128,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private static IntPtr GetPebNative(IntPtr hProcess)
         {
-            var pbi = new ProcessNativeMethods.ProcessInformation();
+            var pbi = default(ProcessNativeMethods.ProcessInformation);
             int pbiSize = Marshal.SizeOf(pbi);
             int res_len;
             ProcessNativeMethods.NtQueryInformationProcess(

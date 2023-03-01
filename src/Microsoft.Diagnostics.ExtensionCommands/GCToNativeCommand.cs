@@ -297,8 +297,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static (int Regions, ulong Bytes) GetSizes(Dictionary<ulong, KnownClrMemoryPointer> knownMemory, Dictionary<ulong, int> sizeHints)
         {
             IOrderedEnumerable<KnownClrMemoryPointer> ordered = from item in knownMemory.Values
-                          orderby item.Pointer ascending, item.Size descending
-                          select item;
+                                                                orderby item.Pointer ascending, item.Size descending
+                                                                select item;
 
             int totalRegions = 0;
             ulong totalBytes = 0;

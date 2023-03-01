@@ -9,7 +9,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting.DbgEng
 {
-    internal unsafe class DebugSymbols
+    internal sealed unsafe class DebugSymbols
     {
         internal DebugSymbols(DebugClient client, SOSHost soshost)
         {

@@ -190,7 +190,7 @@ namespace Graphs
         public virtual NodeTypeIndex CreateType(string name, string moduleName = null, int size = -1)
         {
             var ret = (NodeTypeIndex)m_types.Count;
-            TypeInfo typeInfo = new TypeInfo();
+            TypeInfo typeInfo = default(TypeInfo);
             typeInfo.Name = name;
             typeInfo.ModuleName = moduleName;
             typeInfo.Size = size;
@@ -309,7 +309,7 @@ namespace Graphs
             // make sure the m_types and m_deferedTypes arrays are in sync.
             while (m_deferedTypes.Count < m_types.Count)
             {
-                m_deferedTypes.Add(new DeferedTypeInfo());
+                m_deferedTypes.Add(default(DeferedTypeInfo));
             }
 
             var ret = (NodeTypeIndex)m_types.Count;
@@ -480,7 +480,7 @@ namespace Graphs
             // in the m_nodes table, so we make a fake one and then remove it.
             m_undefinedObjDef = m_writer.GetLabel();
             m_nodes.Add(m_undefinedObjDef);
-            SetNode(0, CreateType("UNDEFINED"), 0, new GrowableArray<NodeIndex>());
+            SetNode(0, CreateType("UNDEFINED"), 0, default(GrowableArray<NodeIndex>));
             Debug.Assert(m_nodes[0] == m_undefinedObjDef);
             m_nodes.Count = 0;
         }
@@ -547,7 +547,7 @@ namespace Graphs
                 // which is a problem if we want to add new fields.  We could have had a worker object but another way of doing
                 // it is create a deferred (lazy region).   The key is that ALL readers know how to skip this region, which allows
                 // you to add new fields 'at the end' of the region (just like for sealed objects).
-                DeferedRegion expansion = new DeferedRegion();
+                DeferedRegion expansion = default(DeferedRegion);
                 expansion.Write(serializer, delegate () {
                     // I don't need to use Tagged types for my 'first' version of this new region
                     serializer.Write(m_deferedTypes.Count);
@@ -571,7 +571,7 @@ namespace Graphs
             RootIndex = (NodeIndex)deserializer.ReadInt();
 
             // Read in the Types
-            TypeInfo info = new TypeInfo();
+            TypeInfo info = default(TypeInfo);
             int typeCount = deserializer.ReadInt();
             m_types = new GrowableArray<TypeInfo>(typeCount);
             for (int i = 0; i < typeCount; i++)
@@ -617,7 +617,7 @@ namespace Graphs
                 // which is a problem if we want to add new fields.  We could have had a worker object but another way of doing
                 // it is create a deferred (lazy region).   The key is that ALL readers know how to skip this region, which allows
                 // you to add new fields 'at the end' of the region (just like for sealed objects).
-                DeferedRegion expansion = new DeferedRegion();
+                DeferedRegion expansion = default(DeferedRegion);
                 expansion.Read(deserializer, delegate () {
                     // I don't need to use Tagged types for my 'first' version of this new region
                     int count = deserializer.ReadInt();

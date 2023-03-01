@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -35,9 +36,13 @@ namespace Microsoft.Diagnostics.TestHelpers
                 Task stdErrorTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardError, output);
                 Task outputTasks = Task.WhenAll(stdErrorTask, stdOutputTask);
 
-                Task processExit = Task.Factory.StartNew(() => remoteInvokeHandle.Process.WaitForExit(), TaskCreationOptions.LongRunning);
+                Task processExit = Task.Factory.StartNew(
+                    remoteInvokeHandle.Process.WaitForExit,
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default);
                 Task timeoutTask = Task.Delay(timeout);
-                Task completedTask = await Task.WhenAny(outputTasks, processExit, timeoutTask);
+                Task completedTask = await Task.WhenAny(outputTasks, processExit, timeoutTask).ConfigureAwait(false);
                 if (completedTask == timeoutTask)
                 {
                     if (!string.IsNullOrEmpty(dumpPath))
@@ -46,7 +51,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         DiagnosticsClient client = new(remoteInvokeHandle.Process.Id);
                         try
                         {
-                            await client.WriteDumpAsync(DumpType.WithHeap, dumpPath, WriteDumpFlags.None, CancellationToken.None);
+                            await client.WriteDumpAsync(DumpType.WithHeap, dumpPath, WriteDumpFlags.None, CancellationToken.None).ConfigureAwait(false);
                         }
                         catch (Exception ex) when (ex is ArgumentException or UnsupportedCommandException or ServerErrorException)
                         {
@@ -88,17 +93,17 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             Task stdOutputTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardOutput, output);
             Task stdErrorTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardError, output);
-            await Task.WhenAll(stdErrorTask, stdOutputTask);
+            await Task.WhenAll(stdErrorTask, stdOutputTask).ConfigureAwait(false);
         }
 
-        private static Task WriteStreamToOutput(StreamReader reader, ITestOutputHelper output)
+        private static Task<Task> WriteStreamToOutput(StreamReader reader, ITestOutputHelper output)
         {
-            return Task.Factory.StartNew(creationOptions: TaskCreationOptions.LongRunning, function: async () => {
+            return Task.Factory.StartNew(async () => {
                 try
                 {
                     while (!reader.EndOfStream)
                     {
-                        string line = await reader.ReadLineAsync();
+                        string line = await reader.ReadLineAsync().ConfigureAwait(false);
                         output.WriteLine(line);
                     }
                 }
@@ -106,7 +111,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     output.WriteLine("Failed to collect remote process's output");
                 }
-            });
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
     }
 }

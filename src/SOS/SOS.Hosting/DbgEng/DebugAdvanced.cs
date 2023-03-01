@@ -8,7 +8,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting.DbgEng
 {
-    internal unsafe class DebugAdvanced
+    internal sealed unsafe class DebugAdvanced
     {
         internal DebugAdvanced(DebugClient client, SOSHost soshost)
         {

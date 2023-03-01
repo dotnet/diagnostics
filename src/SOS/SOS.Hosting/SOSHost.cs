@@ -114,6 +114,7 @@ namespace SOS.Hosting
 
         #region Reverse PInvoke Implementations
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]
         internal int GetInterrupt(
             IntPtr self)
         {
@@ -832,7 +833,7 @@ namespace SOS.Hosting
                     break;
 
                 default:
-                    value = new DEBUG_VALUE();
+                    value = default(DEBUG_VALUE);
                     hr = HResult.E_FAIL;
                     break;
             }

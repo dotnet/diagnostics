@@ -651,7 +651,7 @@ public class DotNetHeapDumpGraphReader
         }
 
         // var typeStorage = m_graph.AllocTypeNodeStorage();
-        GCBulkNodeUnsafeNodes nodeStorage = new GCBulkNodeUnsafeNodes();
+        GCBulkNodeUnsafeNodes nodeStorage = default(GCBulkNodeUnsafeNodes);
 
         // Process all the node and edge nodes we have collected.
         bool doCompletionCheck = true;

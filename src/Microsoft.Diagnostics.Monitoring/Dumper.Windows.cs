@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 // Open the file for writing
                 using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {
-                    var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
+                    var exceptionInfo = default(NativeMethods.MINIDUMP_EXCEPTION_INFORMATION);
 
                     NativeMethods.MINIDUMP_TYPE dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
                     switch (type)

@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SOS.Hosting</AssemblyName>
-    <NoWarn>;1591;1701</NoWarn>
+    <NoWarn>$(NoWarn);1591;1701;IDE0060</NoWarn>
     <Description>SOS Hosting support</Description>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsShipping>true</IsShipping>
