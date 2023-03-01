@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
     {
         public static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(InstallCommand())
                 .AddCommand(UninstallCommand())
                 .UseDefaults()

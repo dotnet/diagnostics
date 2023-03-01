@@ -193,12 +193,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void WaitForConnection(TimeSpan timeout)
         {
-            using var _ = Connect(timeout);
+            using Stream _ = Connect(timeout);
         }
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+            using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         public override bool Equals(object obj)
@@ -252,12 +252,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void WaitForConnection(TimeSpan timeout)
         {
-            using var _ = Connect(timeout);
+            using Stream _ = Connect(timeout);
         }
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+            using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         private string GetDefaultAddress()

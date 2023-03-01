@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             var modulesElement = new XElement("Modules");
             Target.Add(modulesElement);
 
-            var moduleService = services.GetService<IModuleService>();
+            IModuleService moduleService = services.GetService<IModuleService>();
             string runtimeModuleName = target.GetPlatformModuleName("coreclr");
             foreach (IModule module in moduleService.EnumerateModules())
             {
@@ -50,8 +50,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             var threadsElement = new XElement("Threads");
             Target.Add(threadsElement);
 
-            var threadService = services.GetService<IThreadService>();
-            var registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
+            IThreadService threadService = services.GetService<IThreadService>();
+            int[] registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
             foreach (IThread thread in threadService.EnumerateThreads())
             {
                 var threadElement = new XElement("Thread");
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             var runtimesElement = new XElement("Runtimes");
             Target.Add(runtimesElement);
 
-            var runtimeService = services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = services.GetService<IRuntimeService>();
             foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
             {
                 var runtimeElement = new XElement("Runtime");

@@ -65,7 +65,7 @@ namespace Graphs
         }
         public override NodeIndex CreateNode()
         {
-            var ret = base.CreateNode();
+            NodeIndex ret = base.CreateNode();
             m_nodeAddresses.Add(0);
             Debug.Assert(m_nodeAddresses.Count == m_nodes.Count);
             return ret;
@@ -237,7 +237,7 @@ namespace Graphs
         /// </summary>
         public MemoryNodeBuilder FindOrCreateChild(string childTypeName, string childModuleName = null)
         {
-            foreach (var child in m_mutableChildren)
+            foreach (MemoryNodeBuilder child in m_mutableChildren)
             {
                 if (child.TypeName == childTypeName)
                 {
@@ -278,9 +278,9 @@ namespace Graphs
             {
                 Debug.Assert(m_unmutableChildren.Count >= m_mutableChildren.Count);
                 m_graph.SetNode(Index, m_typeIndex, Size, m_unmutableChildren);
-                var mutableChildren = m_mutableChildren;
+                List<MemoryNodeBuilder> mutableChildren = m_mutableChildren;
                 m_mutableChildren = null;           // Signals that I have been built
-                foreach (var child in mutableChildren)
+                foreach (MemoryNodeBuilder child in mutableChildren)
                 {
                     child.Build();
                 }
@@ -299,7 +299,7 @@ namespace Graphs
                     m_typeIndex = m_graph.CreateType(TypeName, ModuleName);
                     types.Add(TypeName, m_typeIndex);
                 }
-                foreach (var child in m_mutableChildren)
+                foreach (MemoryNodeBuilder child in m_mutableChildren)
                 {
                     child.AllocateTypeIndexes(types);
                 }

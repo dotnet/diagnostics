@@ -33,19 +33,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             PayloadGenerator generator = new();
 
-            var s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
+            SimulatedTraceEvent s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
 
             // These should not trigger anything because they are not included
-            var s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(30), "/notIncluded");
-            var s3 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notIncluded");
-            var s4 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notIncluded");
+            SimulatedTraceEvent s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(30), "/notIncluded");
+            SimulatedTraceEvent s3 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notIncluded");
+            SimulatedTraceEvent s4 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notIncluded");
 
-            var s5 = PayloadGenerator.CreateEvent(s2.Timestamp);
+            SimulatedTraceEvent s5 = PayloadGenerator.CreateEvent(s2.Timestamp);
 
             //Pushes the first event out of sliding window
-            var s6 = PayloadGenerator.CreateEvent(s2.Timestamp + TimeSpan.FromSeconds(40));
+            SimulatedTraceEvent s6 = PayloadGenerator.CreateEvent(s2.Timestamp + TimeSpan.FromSeconds(40));
 
-            var s7 = PayloadGenerator.CreateEvent(s6.Timestamp + TimeSpan.FromSeconds(0.5));
+            SimulatedTraceEvent s7 = PayloadGenerator.CreateEvent(s6.Timestamp + TimeSpan.FromSeconds(0.5));
 
             ValidateTriggers(trigger, s1, s2, s3, s4, s5, s6, s7);
         }
@@ -66,14 +66,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             PayloadGenerator generator = new();
 
             // These should not trigger anything because they are excluded
-            var s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
-            var s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
-            var s3 = PayloadGenerator.CreateEvent(s2.Timestamp);
-            var s4 = PayloadGenerator.CreateEvent(s2.Timestamp);
+            SimulatedTraceEvent s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
+            SimulatedTraceEvent s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent s3 = PayloadGenerator.CreateEvent(s2.Timestamp);
+            SimulatedTraceEvent s4 = PayloadGenerator.CreateEvent(s2.Timestamp);
 
-            var s5 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notExcluded");
-            var s6 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notExcluded");
-            var s7 = PayloadGenerator.CreateEvent(s6.Timestamp + TimeSpan.FromSeconds(10), "/notExcluded");
+            SimulatedTraceEvent s5 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notExcluded");
+            SimulatedTraceEvent s6 = PayloadGenerator.CreateEvent(s2.Timestamp, "/notExcluded");
+            SimulatedTraceEvent s7 = PayloadGenerator.CreateEvent(s6.Timestamp + TimeSpan.FromSeconds(10), "/notExcluded");
 
             ValidateTriggers(trigger, s1, s2, s3, s4, s5, s6, s7);
         }
@@ -93,25 +93,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             PayloadGenerator generator = new();
 
-            var s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
-            var e1 = PayloadGenerator.CreateEvent(s1, TimeSpan.FromSeconds(3.1).Ticks);
+            SimulatedTraceEvent s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
+            SimulatedTraceEvent e1 = PayloadGenerator.CreateEvent(s1, TimeSpan.FromSeconds(3.1).Ticks);
 
-            var s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
-            var e2 = PayloadGenerator.CreateEvent(s2, TimeSpan.FromSeconds(10).Ticks);
+            SimulatedTraceEvent s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e2 = PayloadGenerator.CreateEvent(s2, TimeSpan.FromSeconds(10).Ticks);
 
             //does not exceed duration
-            var s3 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
-            var e3 = PayloadGenerator.CreateEvent(s3, TimeSpan.FromSeconds(1).Ticks);
+            SimulatedTraceEvent s3 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e3 = PayloadGenerator.CreateEvent(s3, TimeSpan.FromSeconds(1).Ticks);
 
             //pushes the sliding window past all prevoius events
-            var s4 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromMinutes(5));
-            var e4 = PayloadGenerator.CreateEvent(s4, TimeSpan.FromSeconds(15).Ticks);
+            SimulatedTraceEvent s4 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromMinutes(5));
+            SimulatedTraceEvent e4 = PayloadGenerator.CreateEvent(s4, TimeSpan.FromSeconds(15).Ticks);
 
-            var s5 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
-            var e5 = PayloadGenerator.CreateEvent(s5, TimeSpan.FromSeconds(10).Ticks);
+            SimulatedTraceEvent s5 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e5 = PayloadGenerator.CreateEvent(s5, TimeSpan.FromSeconds(10).Ticks);
 
-            var s6 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
-            var e6 = PayloadGenerator.CreateEvent(s6, TimeSpan.FromSeconds(20).Ticks);
+            SimulatedTraceEvent s6 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e6 = PayloadGenerator.CreateEvent(s6, TimeSpan.FromSeconds(20).Ticks);
 
             //Reflects actual ordering
             ValidateTriggers(trigger, s1, s2, s3, e3, e1, e2, s4, s5, s6, e5, e4, e6);
@@ -132,16 +132,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             PayloadGenerator generator = new();
 
-            var s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
-            var e1 = PayloadGenerator.CreateEvent(s1, TimeSpan.FromMinutes(1).Ticks);
+            SimulatedTraceEvent s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
+            SimulatedTraceEvent e1 = PayloadGenerator.CreateEvent(s1, TimeSpan.FromMinutes(1).Ticks);
 
-            var s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
-            var e2 = PayloadGenerator.CreateEvent(s2, TimeSpan.FromMinutes(2).Ticks);
+            SimulatedTraceEvent s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e2 = PayloadGenerator.CreateEvent(s2, TimeSpan.FromMinutes(2).Ticks);
 
-            var s3 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(2));
-            var e3 = PayloadGenerator.CreateEvent(s3, TimeSpan.FromMinutes(3).Ticks);
+            SimulatedTraceEvent s3 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(2));
+            SimulatedTraceEvent e3 = PayloadGenerator.CreateEvent(s3, TimeSpan.FromMinutes(3).Ticks);
 
-            var h1 = PayloadGenerator.CreateCounterEvent(s1.Timestamp + TimeSpan.FromSeconds(15));
+            SimulatedTraceEvent h1 = PayloadGenerator.CreateCounterEvent(s1.Timestamp + TimeSpan.FromSeconds(15));
 
             ValidateTriggers(trigger, triggerIndex: 3, s1, s2, s3, h1, e1, e2, e3);
         }
@@ -161,29 +161,29 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             PayloadGenerator generator = new();
 
-            var s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
-            var e1 = PayloadGenerator.CreateEvent(s1, TimeSpan.FromSeconds(3.1).Ticks, statusCode: 404);
+            SimulatedTraceEvent s1 = PayloadGenerator.CreateEvent(DateTime.UtcNow);
+            SimulatedTraceEvent e1 = PayloadGenerator.CreateEvent(s1, TimeSpan.FromSeconds(3.1).Ticks, statusCode: 404);
 
-            var s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
-            var e2 = PayloadGenerator.CreateEvent(s2, TimeSpan.FromSeconds(10).Ticks, statusCode: 420);
+            SimulatedTraceEvent s2 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e2 = PayloadGenerator.CreateEvent(s2, TimeSpan.FromSeconds(10).Ticks, statusCode: 420);
 
             //does not meet status code
-            var s3 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
-            var e3 = PayloadGenerator.CreateEvent(s3, TimeSpan.FromSeconds(1).Ticks);
+            SimulatedTraceEvent s3 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e3 = PayloadGenerator.CreateEvent(s3, TimeSpan.FromSeconds(1).Ticks);
 
             //pushes the sliding window past all prevoius events
-            var s4 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromMinutes(5));
-            var e4 = PayloadGenerator.CreateEvent(s4, TimeSpan.FromSeconds(15).Ticks, statusCode: 520);
+            SimulatedTraceEvent s4 = PayloadGenerator.CreateEvent(s1.Timestamp + TimeSpan.FromMinutes(5));
+            SimulatedTraceEvent e4 = PayloadGenerator.CreateEvent(s4, TimeSpan.FromSeconds(15).Ticks, statusCode: 520);
 
-            var s5 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
-            var e5 = PayloadGenerator.CreateEvent(s5, TimeSpan.FromSeconds(10).Ticks, statusCode: 521);
+            SimulatedTraceEvent s5 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e5 = PayloadGenerator.CreateEvent(s5, TimeSpan.FromSeconds(10).Ticks, statusCode: 521);
 
             //does not meet status code
-            var s6 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
-            var e6 = PayloadGenerator.CreateEvent(s5, TimeSpan.FromSeconds(10).Ticks);
+            SimulatedTraceEvent s6 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e6 = PayloadGenerator.CreateEvent(s5, TimeSpan.FromSeconds(10).Ticks);
 
-            var s7 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
-            var e7 = PayloadGenerator.CreateEvent(s7, TimeSpan.FromSeconds(20).Ticks, statusCode: 404);
+            SimulatedTraceEvent s7 = PayloadGenerator.CreateEvent(s4.Timestamp + TimeSpan.FromSeconds(1));
+            SimulatedTraceEvent e7 = PayloadGenerator.CreateEvent(s7, TimeSpan.FromSeconds(20).Ticks, statusCode: 404);
 
             //Reflects actual ordering
             ValidateTriggers(trigger, s1, s2, s3, e3, e1, e2, s4, s5, s6, s7, e5, e4, e6, e7);

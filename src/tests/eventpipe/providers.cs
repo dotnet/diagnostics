@@ -58,7 +58,7 @@ namespace EventPipe.UnitTests.ProviderValidation
                         MyEventSource.Log.MyEvent();
                     }
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, providers, 1024, null);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(expectedEventCounts, eventGeneratingAction, providers, 1024, null);
                 Assert.Equal(100, ret);
             }, output);
         }

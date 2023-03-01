@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
     {
         public static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(CollectCommandHandler.CollectCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that gcdumps can be collected from."))
                 .AddCommand(ReportCommandHandler.ReportCommand())

@@ -81,7 +81,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 
         protected override async Task OnRun(CancellationToken token)
         {
-            using var _ = token.Register(() => _completionSource.TrySetCanceled(token));
+            using CancellationTokenRegistration _ = token.Register(() => _completionSource.TrySetCanceled(token));
 
             await _completionSource.Task.ConfigureAwait(false);
         }

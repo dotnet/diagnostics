@@ -311,7 +311,7 @@ namespace SOS.Hosting
             {
                 return IntPtr.Zero;
             }
-            var createInstance = SOSHost.GetDelegateFunction<CLRDataCreateInstanceDelegate>(dacHandle, "CLRDataCreateInstance");
+            CLRDataCreateInstanceDelegate createInstance = SOSHost.GetDelegateFunction<CLRDataCreateInstanceDelegate>(dacHandle, "CLRDataCreateInstance");
             if (createInstance == null)
             {
                 Trace.TraceError("Failed to obtain DAC CLRDataCreateInstance");
@@ -369,7 +369,7 @@ namespace SOS.Hosting
             int hresult = 0;
             try
             {
-                var openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
+                OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
                 {
                     hresult = openVirtualProcessImpl2(
@@ -401,7 +401,7 @@ namespace SOS.Hosting
                 // the same PAL where dbgshim has it's own.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    var loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
+                    LoadLibraryWDelegate loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
                     if (loadLibraryFunction == null)
                     {
                         Trace.TraceError($"Can not find the DAC LoadLibraryW export");
@@ -415,7 +415,7 @@ namespace SOS.Hosting
                     }
                 }
 
-                var openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
+                OpenVirtualProcessImplDelegate openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
                 if (openVirtualProcessImpl != null)
                 {
                     hresult = openVirtualProcessImpl(
@@ -436,7 +436,7 @@ namespace SOS.Hosting
                     return corDebugProcess;
                 }
 
-                var openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
+                OpenVirtualProcessDelegate openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
                 if (openVirtualProcess != null)
                 {
                     hresult = openVirtualProcess(
@@ -486,7 +486,7 @@ namespace SOS.Hosting
                 Debug.Assert(_dacHandle != IntPtr.Zero);
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
+                    DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
                     dllmain?.Invoke(_dacHandle, 1, IntPtr.Zero);
                 }
             }

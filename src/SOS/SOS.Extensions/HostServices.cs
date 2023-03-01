@@ -95,7 +95,7 @@ namespace SOS.Extensions
             {
                 return HResult.E_FAIL;
             }
-            var initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
+            InitializeCallbackDelegate initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
             if (initialializeCallback == null)
             {
                 return HResult.E_FAIL;

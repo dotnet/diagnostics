@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             // Create/initialize dbgeng controller
             _controller ??= new DbgEngController(DbgEngPath, DumpFile, SOSPath);
 
-            var contextService = Host.Services.GetService<IContextService>();
+            IContextService contextService = Host.Services.GetService<IContextService>();
             return contextService.GetCurrentTarget();
         }
 
@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     Trace.TraceInformation(text);
                 });
                 IntPtr dbgengLibrary = DataTarget.PlatformFunctions.LoadLibrary(dbgengPath);
-                var debugCreate = SOSHost.GetDelegateFunction<DebugCreateDelegate>(dbgengLibrary, "DebugCreate");
+                DebugCreateDelegate debugCreate = SOSHost.GetDelegateFunction<DebugCreateDelegate>(dbgengLibrary, "DebugCreate");
                 if (debugCreate == null)
                 {
                     throw new DiagnosticsException($"DebugCreate export not found");

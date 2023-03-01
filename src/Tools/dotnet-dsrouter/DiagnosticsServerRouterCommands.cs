@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             // runners can override if necessary
             public virtual ILoggerFactory ConfigureLogging()
             {
-                var factory = LoggerFactory.Create(builder => {
+                ILoggerFactory factory = LoggerFactory.Create(builder => {
                     builder.SetMinimumLevel(LogLevel);
                     builder.AddSimpleConsole(configure => {
                         configure.IncludeScopes = true;
@@ -103,9 +103,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 ConfigureLauncher(token);
 
-                var logger = loggerFactory.CreateLogger("dotnet-dsrouter");
+                ILogger logger = loggerFactory.CreateLogger("dotnet-dsrouter");
 
-                var routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
+                Task<int> routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
 
                 while (!linkedCancelToken.IsCancellationRequested)
                 {
@@ -143,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             public override ILoggerFactory ConfigureLogging()
             {
-                var factory = LoggerFactory.Create(builder => {
+                ILoggerFactory factory = LoggerFactory.Create(builder => {
                     builder.SetMinimumLevel(LogLevel);
                     builder.AddConsole();
                 });
@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
 
-                var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
+                Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
                 return routerTask;
             }, token);
         }
@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     ipcServer = GetDefaultIpcServerPath(logger);
                 }
 
-                var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
+                Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
                 return routerTask;
             }, token);
         }
@@ -221,7 +221,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                     ipcServer = GetDefaultIpcServerPath(logger);
                 }
 
-                var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
+                Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
                 return routerTask;
             }, token);
         }
@@ -245,7 +245,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
-                var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
+                Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
                 return routerTask;
             }, token);
         }
@@ -283,7 +283,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         ipcServer = GetDefaultIpcServerPath(logger);
                     }
 
-                    var routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
+                    Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
                     return routerTask;
                 }, token);
             }
@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                     NetServerRouterFactory.CreateInstanceDelegate webSocketServerRouterFactory = WebSocketServerRouterFactory.CreateDefaultInstance;
 
-                    var routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
+                    Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
                     return routerTask;
                 }, token);
             }
@@ -336,7 +336,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             int processId = Process.GetCurrentProcess().Id;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
+                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
                 if (File.Exists(path))
                 {
                     logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set COMPlus_EnableDiagnostics=0 and re-run.");
@@ -357,7 +357,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 #endif
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
 
-                var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
+                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
                 if (Directory.GetFiles(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket").Length != 0)
                 {
                     logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set COMPlus_EnableDiagnostics=0 and re-run.");
@@ -422,7 +422,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 message.Append("testing environments.");
                 message.AppendLine();
 
-                var currentColor = Console.ForegroundColor;
+                ConsoleColor currentColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine(message.ToString());
                 Console.ForegroundColor = currentColor;

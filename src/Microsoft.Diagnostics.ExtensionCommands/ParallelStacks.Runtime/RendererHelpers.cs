@@ -17,10 +17,10 @@ namespace ParallelStacks.Runtime
         private const int Padding = 5;
         private static void RenderStack(ParallelStack stack, IRenderer visitor, int increment = 0)
         {
-            var alignment = new string(' ', Padding * increment);
+            string alignment = new string(' ', Padding * increment);
             if (stack.Stacks.Count == 0)
             {
-                var lastFrame = stack.Frame;
+                StackFrame lastFrame = stack.Frame;
                 visitor.Write($"{Environment.NewLine}{alignment}");
                 visitor.WriteFrameSeparator($" ~~~~ {FormatThreadIdList(visitor, stack.ThreadIds)}");
                 visitor.WriteCount($"{Environment.NewLine}{alignment}{stack.ThreadIds.Count,Padding} ");
@@ -29,21 +29,21 @@ namespace ParallelStacks.Runtime
                 return;
             }
 
-            foreach (var nextStackFrame in stack.Stacks.OrderBy(s => s.ThreadIds.Count))
+            foreach (ParallelStack nextStackFrame in stack.Stacks.OrderBy(s => s.ThreadIds.Count))
             {
                 RenderStack(nextStackFrame, visitor,
                     (nextStackFrame.ThreadIds.Count == stack.ThreadIds.Count) ? increment : increment + 1);
             }
 
-            var currentFrame = stack.Frame;
+            StackFrame currentFrame = stack.Frame;
             visitor.WriteCount($"{Environment.NewLine}{alignment}{stack.ThreadIds.Count,Padding} ");
             RenderFrame(currentFrame, visitor);
         }
 
         private static string FormatThreadIdList(IRenderer visitor, List<uint> threadIds)
         {
-            var count = threadIds.Count;
-            var limit = visitor.DisplayThreadIDsCountLimit;
+            int count = threadIds.Count;
+            int limit = visitor.DisplayThreadIDsCountLimit;
             limit = Math.Min(count, limit);
             if (limit < 0)
             {
@@ -51,7 +51,7 @@ namespace ParallelStacks.Runtime
             }
             else
             {
-                var result = string.Join(",", threadIds.GetRange(0, limit).Select(tid => visitor.FormatTheadId(tid)));
+                string result = string.Join(",", threadIds.GetRange(0, limit).Select(tid => visitor.FormatTheadId(tid)));
                 if (count > limit)
                 {
                     result += "...";
@@ -65,7 +65,7 @@ namespace ParallelStacks.Runtime
         {
             if (!string.IsNullOrEmpty(frame.TypeName))
             {
-                var namespaces = frame.TypeName.Split('.');
+                string[] namespaces = frame.TypeName.Split('.');
                 for (int i = 0; i < namespaces.Length - 1; i++)
                 {
                     visitor.WriteNamespace(namespaces[i]);
@@ -78,12 +78,12 @@ namespace ParallelStacks.Runtime
             visitor.WriteMethod(frame.MethodName);
             visitor.WriteSeparator("(");
 
-            var parameters = frame.Signature;
+            List<string> parameters = frame.Signature;
             for (int current = 0; current < parameters.Count; current++)
             {
-                var parameter = parameters[current];
+                string parameter = parameters[current];
                 // handle byref case
-                var pos = parameter.LastIndexOf(" ByRef");
+                int pos = parameter.LastIndexOf(" ByRef", StringComparison.InvariantCulture);
                 if (pos != -1)
                 {
                     visitor.WriteType(parameter.Substring(0, pos));

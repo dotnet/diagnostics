@@ -91,12 +91,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine("Walking GC heap to find pointers...");
             Dictionary<ClrSegment, List<GCObjectToRange>> segmentLists = new();
 
-            var items = Runtime.Heap.Segments
+            IEnumerable<(ClrSegment Segment, ulong Address, ulong Pointer, DescribedRegion MemoryRange)> items = Runtime.Heap.Segments
                             .SelectMany(Segment => AddressHelper
                                                     .EnumerateRegionPointers(Segment.ObjectRange.Start, Segment.ObjectRange.End, ranges)
                                                     .Select(regionPointer => (Segment, regionPointer.Address, regionPointer.Pointer, regionPointer.MemoryRange)));
 
-            foreach (var item in items)
+            foreach ((ClrSegment Segment, ulong Address, ulong Pointer, DescribedRegion MemoryRange) item in items)
             {
                 if (!segmentLists.TryGetValue(item.Segment, out List<GCObjectToRange> list))
                 {
@@ -203,7 +203,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         };
 
                         allOut.WriteRowWithSpacing('-', "Pointer", "Size", "Object", "Type");
-                        foreach (var entry in allPointers)
+                        foreach ((ulong Pointer, ulong Size, ulong Object, string Type) entry in allPointers)
                         {
                             if (entry.Size == 0)
                             {
@@ -296,7 +296,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private static (int Regions, ulong Bytes) GetSizes(Dictionary<ulong, KnownClrMemoryPointer> knownMemory, Dictionary<ulong, int> sizeHints)
         {
-            var ordered = from item in knownMemory.Values
+            IOrderedEnumerable<KnownClrMemoryPointer> ordered = from item in knownMemory.Values
                           orderby item.Pointer ascending, item.Size descending
                           select item;
 
@@ -304,7 +304,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong totalBytes = 0;
             ulong prevEnd = 0;
 
-            foreach (var item in ordered)
+            foreach (KnownClrMemoryPointer item in ordered)
             {
                 ulong size = GetSize(sizeHints, item);
 
@@ -394,7 +394,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return k.Size;
         }
 
-        private class GCObjectToRange
+        private sealed class GCObjectToRange
         {
             public ulong GCPointer { get; }
             public ulong TargetSegmentPointer { get; }

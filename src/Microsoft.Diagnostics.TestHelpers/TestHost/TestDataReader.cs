@@ -336,7 +336,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             this ImmutableArray<ImmutableDictionary<string, TestDataReader.Value>> items, string propety, T propertyValue)
             where T : IComparable
         {
-            foreach (var item in items)
+            foreach (ImmutableDictionary<string, TestDataReader.Value> item in items)
             {
                 TestDataReader.Value value = item[propety];
                 if (propertyValue.CompareTo(value.GetValue<T>()) == 0)

@@ -79,14 +79,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await runner.Start(testProcessTimeout: 60_000);
             DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
             runner.WriteLine($"Trying to start an EventPipe session");
-            using (var session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
+            using (EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("System.Runtime", EventLevel.Informational, 0, new Dictionary<string, string>() {
                     { "EventCounterIntervalSec", "1" }
                 })
             }))
             {
-                var evntCnt = 0;
+                int evntCnt = 0;
 
                 Task streamTask = Task.Run(() => {
                     var source = new EventPipeEventSource(session.EventStream);

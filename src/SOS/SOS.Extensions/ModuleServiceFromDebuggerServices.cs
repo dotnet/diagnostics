@@ -250,7 +250,7 @@ namespace SOS.Extensions
                 DEBUG_MODULE_PARAMETERS[] moduleParams = new DEBUG_MODULE_PARAMETERS[1];
                 HResult hr = symbols.GetModuleParameters(1, new ulong[] { imageBase }, 0, moduleParams);
 
-                var symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
+                DEBUG_SYMTYPE symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
                 return symType;
             }
         }

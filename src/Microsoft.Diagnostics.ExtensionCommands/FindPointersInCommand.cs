@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             DescribedRegion[] allRegions = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
 
             WriteLine("Scanning for pinned objects...");
-            var ctx = CreateMemoryWalkContext();
+            MemoryWalkContext ctx = CreateMemoryWalkContext();
 
             foreach (string type in memTypes)
             {
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (DescribedRegion mem in matchingRanges.OrderBy(r => r.Start))
                 {
-                    var pointersFound = AddressHelper.EnumerateRegionPointers(mem.Start, mem.End, allRegions).Select(r => (r.Pointer, r.MemoryRange));
+                    IEnumerable<(ulong Pointer, DescribedRegion MemoryRange)> pointersFound = AddressHelper.EnumerateRegionPointers(mem.Start, mem.End, allRegions).Select(r => (r.Pointer, r.MemoryRange));
                     RegionPointers result = ProcessOneRegion(pinnedOnly, pointersFound, ctx);
 
                     WriteMemoryHeaderLine(mem);
@@ -157,7 +157,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                var gcResult = from obj in result.PinnedPointers
+                IEnumerable<(string Key, int, int, IEnumerable<ulong>)> gcResult = from obj in result.PinnedPointers
                                let name = obj.Type?.Name ?? "<unknown_object_types>"
                                group obj.Address by name into g
                                let Count = g.Count()
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void WriteUnresolvablePointerTable(RegionPointers result, bool forceTruncate)
         {
-            var unresolvedQuery = from item in result.UnresolvablePointers
+            IEnumerable<(string Key, int, int, IEnumerable<ulong>)> unresolvedQuery = from item in result.UnresolvablePointers
                                   let Name = item.Key.Image ?? item.Key.Name
                                   group item.Value by Name into g
                                   let All = g.SelectMany(r => r).ToArray()
@@ -202,7 +202,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void WriteResolvablePointerTable(MemoryWalkContext ctx, RegionPointers result, bool forceTruncate)
         {
-            var resolvedQuery = from ptr in result.ResolvablePointers.SelectMany(r => r.Value)
+            IEnumerable<(string, int, int, IEnumerable<ulong>)> resolvedQuery = from ptr in result.ResolvablePointers.SelectMany(r => r.Value)
                                 let r = ctx.ResolveSymbol(ModuleService, ptr)
                                 let name = r.Symbol ?? "<unknown_function>"
                                 group (ptr, r.Offset) by name into g
@@ -222,7 +222,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintPointerTable(string nameColumn, string truncatedName, bool forceTruncate, IEnumerable<(string Name, int Count, int Unique, IEnumerable<ulong> Pointers)> query)
         {
-            var resolved = query.ToArray();
+            (string Name, int Count, int Unique, IEnumerable<ulong> Pointers)[] resolved = query.ToArray();
             if (resolved.Length == 0)
             {
                 return;
@@ -241,8 +241,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             table.Divider = "   ";
             table.WriteRowWithSpacing('-', nameColumn, "Unique", "Count", "RndPtr");
 
-            var items = truncate ? resolved.Take(multi) : resolved;
-            foreach (var (Name, Count, Unique, Pointers) in items)
+            IEnumerable<(string Name, int Count, int Unique, IEnumerable<ulong> Pointers)> items = truncate ? resolved.Take(multi) : resolved;
+            foreach ((string Name, int Count, int Unique, IEnumerable<ulong> Pointers) in items)
             {
                 table.WriteRow(Name, Unique, Count, Pointers.FindMostCommonPointer());
             }
@@ -262,7 +262,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 typeName = typeName.Substring(0, typeName.Length - 1);
             }
 
-            int vtableIdx = typeName.IndexOf(VtableConst);
+            int vtableIdx = typeName.IndexOf(VtableConst, StringComparison.InvariantCulture);
             if (vtableIdx > 0)
             {
                 typeName = typeName.Replace(VtableConst, "") + "::vtable";
@@ -333,7 +333,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             HashSet<ulong> seen = new();
             List<ClrObject> pinned = new();
 
-            foreach (var root in Runtime.Heap.EnumerateRoots().Where(r => r.IsPinned))
+            foreach (IClrRoot root in Runtime.Heap.EnumerateRoots().Where(r => r.IsPinned))
             {
                 if (root.Object.IsValid && !root.Object.IsFree)
                 {
@@ -382,7 +382,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             internal void AddRegionPointer(DescribedRegion range, ulong pointer, bool hasSymbols)
             {
-                var pointerMap = hasSymbols ? ResolvablePointers : UnresolvablePointers;
+                Dictionary<DescribedRegion, List<ulong>> pointerMap = hasSymbols ? ResolvablePointers : UnresolvablePointers;
 
                 if (!pointerMap.TryGetValue(range, out List<ulong> pointers))
                 {
@@ -402,7 +402,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             private static void AddTo(Dictionary<DescribedRegion, List<ulong>> sourceDict, Dictionary<DescribedRegion, List<ulong>> destDict)
             {
-                foreach (var item in sourceDict)
+                foreach (KeyValuePair<DescribedRegion, List<ulong>> item in sourceDict)
                 {
                     if (destDict.TryGetValue(item.Key, out List<ulong> values))
                     {

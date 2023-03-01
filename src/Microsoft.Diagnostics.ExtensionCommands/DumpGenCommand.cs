@@ -26,19 +26,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
-            var generation = ParseGenerationArgument(Generation);
+            GCGeneration generation = ParseGenerationArgument(Generation);
             if (generation != GCGeneration.NotSet)
             {
                 var dumpGen = new DumpGen(Helper, generation);
 
                 if (string.IsNullOrEmpty(MethodTableAddress))
                 {
-                    var dumpGenResult = dumpGen.GetStats(FilterByTypeName);
+                    IEnumerable<DumpGenStats> dumpGenResult = dumpGen.GetStats(FilterByTypeName);
                     WriteStatistics(dumpGenResult);
                 }
-                else if (TryParseAddress(MethodTableAddress, out var address))
+                else if (TryParseAddress(MethodTableAddress, out ulong address))
                 {
-                    var objects = dumpGen.GetInstances(address);
+                    IEnumerable<ClrObject> objects = dumpGen.GetInstances(address);
                     WriteInstances(objects);
                 }
                 else
@@ -51,9 +51,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void WriteInstances(IEnumerable<ClrObject> objects)
         {
-            var objectsCount = 0UL;
+            ulong objectsCount = 0UL;
             WriteLine(Helper.Is64Bits() ? methodTableHeader64bits : methodTableHeader32bits);
-            foreach (var obj in objects)
+            foreach (ClrObject obj in objects)
             {
                 objectsCount++;
                 if (Helper.Is64Bits())
@@ -70,10 +70,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void WriteStatistics(IEnumerable<DumpGenStats> dumpGenResult)
         {
-            var objectsCount = 0UL;
+            ulong objectsCount = 0UL;
             WriteLine("Statistics:");
             WriteLine(Helper.Is64Bits() ? statsHeader64bits : statsHeader32bits);
-            foreach (var typeStats in dumpGenResult)
+            foreach (DumpGenStats typeStats in dumpGenResult)
             {
                 objectsCount += typeStats.NumberOfOccurences;
                 if (Helper.Is64Bits())
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteLine("Generation argument is missing");
                 return GCGeneration.NotSet;
             }
-            var lowerString = generation.ToLowerInvariant();
+            string lowerString = generation.ToLowerInvariant();
             switch (lowerString)
             {
                 case "gen0":

@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 // Optionally wait on caller before allowing the pipeline to stop.
                 if (null != waitTaskSource)
                 {
-                    using var _ = token.Register(() => {
+                    using CancellationTokenRegistration _ = token.Register(() => {
                         testRunner.WriteLine("Did not receive completion signal before cancellation.");
                         waitTaskSource.TrySetCanceled(token);
                     });

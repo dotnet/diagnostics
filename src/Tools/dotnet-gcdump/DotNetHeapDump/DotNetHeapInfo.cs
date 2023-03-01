@@ -46,7 +46,7 @@ public class DotNetHeapInfo : IFastSerializable
                     return -1;
                 }
 
-                var segment = Segments[i];
+                GCHeapDumpSegment segment = Segments[i];
                 if (segment.Start <= obj && obj < segment.End)
                 {
                     m_lastSegment = segment;
@@ -90,7 +90,7 @@ public class DotNetHeapInfo : IFastSerializable
         if (Segments != null)
         {
             serializer.Write(Segments.Count);
-            foreach (var segment in Segments)
+            foreach (GCHeapDumpSegment segment in Segments)
             {
                 serializer.Write(segment);
             }
@@ -103,7 +103,7 @@ public class DotNetHeapInfo : IFastSerializable
     void IFastSerializable.FromStream(Deserializer deserializer)
     {
         SizeOfAllSegments = deserializer.ReadInt64();
-        var count = deserializer.ReadInt();
+        int count = deserializer.ReadInt();
         Segments = new List<GCHeapDumpSegment>(count);
         for (int i = 0; i < count; i++)
         {

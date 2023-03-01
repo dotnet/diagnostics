@@ -172,7 +172,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 sb.AppendLine($"Dump path: {_dumpPath}");
             }
-            var runtimeService = Services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = Services.GetService<IRuntimeService>();
             if (runtimeService != null)
             {
                 sb.AppendLine(runtimeService.ToString());

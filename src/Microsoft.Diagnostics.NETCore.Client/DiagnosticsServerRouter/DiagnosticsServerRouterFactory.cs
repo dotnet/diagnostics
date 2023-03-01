@@ -785,10 +785,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using CancellationTokenSource cancelRouter = CancellationTokenSource.CreateLinkedTokenSource(token);
 
                 // Get new tcp server endpoint.
-                using var netServerStreamTask = _netServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
+                using Task<Stream> netServerStreamTask = _netServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token);
 
                 // Get new ipc server endpoint.
-                using var ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
+                using Task<Stream> ipcServerStreamTask = _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token);
 
                 await Task.WhenAny(ipcServerStreamTask, netServerStreamTask).ConfigureAwait(false);
 
@@ -803,7 +803,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     // We have a valid ipc stream and a pending tcp accept. Wait for completion
                     // or disconnect of ipc stream.
-                    using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
+                    using Task checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
 
                     // Wait for at least completion of one task.
                     await Task.WhenAny(netServerStreamTask, checkIpcStreamTask).ConfigureAwait(false);
@@ -840,7 +840,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     // We have a valid tcp stream and a pending ipc accept. Wait for completion
                     // or disconnect of tcp stream.
-                    using var checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
+                    using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
 
                     // Wait for at least completion of one task.
                     await Task.WhenAny(ipcServerStreamTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -979,11 +979,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ipcServerStream = await _ipcServerRouterFactory.AcceptIpcStreamAsync(cancelRouter.Token).ConfigureAwait(false);
 
                 // Get new client endpoint.
-                using var tcpClientStreamTask = _tcpClientRouterFactory.ConnectTcpStreamAsync(cancelRouter.Token);
+                using Task<Stream> tcpClientStreamTask = _tcpClientRouterFactory.ConnectTcpStreamAsync(cancelRouter.Token);
 
                 // We have a valid ipc stream and a pending tcp stream. Wait for completion
                 // or disconnect of ipc stream.
-                using var checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
+                using Task checkIpcStreamTask = IsStreamConnectedAsync(ipcServerStream, cancelRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(tcpClientStreamTask, checkIpcStreamTask).ConfigureAwait(false);
@@ -1110,11 +1110,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 tcpServerStream = await _tcpServerRouterFactory.AcceptNetStreamAsync(cancelRouter.Token).ConfigureAwait(false);
 
                 // Get new client endpoint.
-                using var ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
+                using Task<Stream> ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
 
                 // We have a valid tcp stream and a pending ipc stream. Wait for completion
                 // or disconnect of tcp stream.
-                using var checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
+                using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpServerStream, cancelRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -1252,11 +1252,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 tcpClientStream = await _tcpClientRouterFactory.ConnectTcpStreamAsync(cancelRouter.Token, true).ConfigureAwait(false);
 
                 // Get new ipc client endpoint.
-                using var ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
+                using Task<Stream> ipcClientStreamTask = _ipcClientRouterFactory.ConnectIpcStreamAsync(cancelRouter.Token);
 
                 // We have a valid tcp stream and a pending ipc stream. Wait for completion
                 // or disconnect of tcp stream.
-                using var checkTcpStreamTask = IsStreamConnectedAsync(tcpClientStream, cancelRouter.Token);
+                using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpClientStream, cancelRouter.Token);
 
                 // Wait for at least completion of one task.
                 await Task.WhenAny(ipcClientStreamTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -1333,10 +1333,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using CancellationTokenSource cancelReadConnect = CancellationTokenSource.CreateLinkedTokenSource(token);
 
             byte[] buffer = new byte[1024];
-            using var readTask = ipcClientStream.ReadAsync(buffer, 0, buffer.Length, cancelReadConnect.Token);
+            using Task<int> readTask = ipcClientStream.ReadAsync(buffer, 0, buffer.Length, cancelReadConnect.Token);
 
             // Check tcp client connection while waiting on ipc client.
-            using var checkTcpStreamTask = IsStreamConnectedAsync(tcpClientStream, cancelReadConnect.Token);
+            using Task checkTcpStreamTask = IsStreamConnectedAsync(tcpClientStream, cancelReadConnect.Token);
 
             // Wait for completion of at least one task.
             await Task.WhenAny(readTask, checkTcpStreamTask).ConfigureAwait(false);
@@ -1364,7 +1364,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw;
             }
 
-            var bytesRead = readTask.Result;
+            int bytesRead = readTask.Result;
             if (bytesRead == 0)
             {
                 _logger?.LogDebug("ReverseDiagnosticServer disconnected ipc connection.");
@@ -1388,7 +1388,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _logger?.LogDebug($"Requesting runtime process information.");
 
                 // Get new tcp client endpoint.
-                using var tcpClientStream = await _tcpClientRouterFactory.ConnectTcpStreamAsync(token, true).ConfigureAwait(false);
+                using Stream tcpClientStream = await _tcpClientRouterFactory.ConnectTcpStreamAsync(token, true).ConfigureAwait(false);
 
                 // Request process info.
                 IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);

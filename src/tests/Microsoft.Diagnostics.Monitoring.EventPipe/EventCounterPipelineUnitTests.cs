@@ -88,7 +88,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterEventPipeline(TestConfiguration config)
         {
-            var expectedCounters = new[] { "cpu-usage", "working-set" };
+            string[] expectedCounters = new[] { "cpu-usage", "working-set" };
             string expectedProvider = "System.Runtime";
 
             IDictionary<string, IEnumerable<string>> expectedMap = new Dictionary<string, IEnumerable<string>>();
@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
             {
                 var client = new DiagnosticsClient(testRunner.Pid);
 
@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(logger.Metrics.Any());
 
-            var actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
+            IOrderedEnumerable<string> actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
 
             Assert.Equal(expectedCounters, actualMetrics);
             Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));

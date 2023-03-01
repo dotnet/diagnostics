@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             var visitor = new MonoColorConsoleRenderer(Console, limit: threadIDsCountLimit);
             WriteLine("");
-            foreach (var stack in ps.Stacks)
+            foreach (ParallelStack stack in ps.Stacks)
             {
                 Write("________________________________________________");
                 stack.Render(visitor);

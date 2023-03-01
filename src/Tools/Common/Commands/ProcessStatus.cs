@@ -101,16 +101,16 @@ namespace Microsoft.Internal.Common.Commands
                     tableText.Append("No supported .NET processes were found");
                     return;
                 }
-                var processIDs = rows.Select(i => i.ProcessId.ToString().Length);
-                var processNames = rows.Select(i => i.ProcessName.Length);
-                var fileNames = rows.Select(i => i.FileName.Length);
-                var commandLineArgs = rows.Select(i => i.CmdLineArgs.Length);
+                IEnumerable<int> processIDs = rows.Select(i => i.ProcessId.ToString().Length);
+                IEnumerable<int> processNames = rows.Select(i => i.ProcessName.Length);
+                IEnumerable<int> fileNames = rows.Select(i => i.FileName.Length);
+                IEnumerable<int> commandLineArgs = rows.Select(i => i.CmdLineArgs.Length);
                 int iDLength = GetColumnWidth(processIDs);
                 int nameLength = GetColumnWidth(processNames);
                 int fileLength = GetColumnWidth(fileNames);
                 int cmdLength = GetColumnWidth(commandLineArgs);
 
-                foreach (var info in rows)
+                foreach (ProcessDetails info in rows)
                 {
                     MakeFixedWidth(info.ProcessId.ToString(), iDLength, tableText, true, true);
                     MakeFixedWidth(info.ProcessName, nameLength, tableText, false, true);
@@ -122,15 +122,15 @@ namespace Microsoft.Internal.Common.Commands
             try
             {
                 StringBuilder sb = new StringBuilder();
-                var processes = DiagnosticsClient.GetPublishedProcesses()
+                IOrderedEnumerable<Process> processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
                     .OrderBy(process => process.ProcessName)
                     .ThenBy(process => process.Id);
 
-                var currentPid = Process.GetCurrentProcess().Id;
+                int currentPid = Process.GetCurrentProcess().Id;
                 List<ProcessDetails> printInfo = new ();
-                foreach (var process in processes)
+                foreach (Process process in processes)
                 {
                     if (process.Id == currentPid)
                     {

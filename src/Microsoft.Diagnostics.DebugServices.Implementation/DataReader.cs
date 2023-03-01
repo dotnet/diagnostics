@@ -188,7 +188,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ulong GetExportSymbolAddress(string symbol)
             {
-                var exportSymbols = _module.Services.GetService<IExportSymbols>();
+                IExportSymbols exportSymbols = _module.Services.GetService<IExportSymbols>();
                 if (exportSymbols is not null)
                 {
                     if (exportSymbols.TryGetSymbolAddress(symbol, out ulong offset))

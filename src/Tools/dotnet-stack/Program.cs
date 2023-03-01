@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
     {
         public static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(ReportCommandHandler.ReportCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that stack traces can be collected from."))
                 .AddCommand(SymbolicateHandler.SymbolicateCommand())

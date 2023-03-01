@@ -855,7 +855,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            var shouldStopAfterDuration = _duration != default(TimeSpan);
+            bool shouldStopAfterDuration = _duration != default(TimeSpan);
             Stopwatch durationStopwatch = null;
 
             if (shouldStopAfterDuration)

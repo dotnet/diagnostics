@@ -73,11 +73,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return null;
             }
 
-            var clrevents = clreventslist.Split("+");
+            string[] clrevents = clreventslist.Split("+");
             long clrEventsKeywordsMask = 0;
-            for (var i = 0; i < clrevents.Length; i++)
+            for (int i = 0; i < clrevents.Length; i++)
             {
-                if (CLREventKeywords.TryGetValue(clrevents[i], out var keyword))
+                if (CLREventKeywords.TryGetValue(clrevents[i], out long keyword))
                 {
                     clrEventsKeywordsMask |= keyword;
                 }
@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 throw new ArgumentNullException(nameof(provider));
             }
 
-            var tokens = provider.Split(new[] { ':' }, 4, StringSplitOptions.None); // Keep empty tokens;
+            string[] tokens = provider.Split(new[] { ':' }, 4, StringSplitOptions.None); // Keep empty tokens;
 
             // Provider name
             string providerName = tokens.Length > 0 ? tokens[0] : null;
@@ -159,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Event counters
             string filterData = tokens.Length > 3 ? tokens[3] : null;
-            var argument = string.IsNullOrWhiteSpace(filterData) ? null : ParseArgumentString(filterData);
+            Dictionary<string, string> argument = string.IsNullOrWhiteSpace(filterData) ? null : ParseArgumentString(filterData);
             return new EventPipeProvider(providerName, eventLevel, keywords, argument);
         }
 
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int curIdx = 0;
             bool inQuote = false;
             argument = Regex.Unescape(argument);
-            foreach (var c in argument)
+            foreach (char c in argument)
             {
                 if (inQuote)
                 {

@@ -20,7 +20,7 @@ namespace SOS.Hosting
         public void Dispose()
         {
             Trace.TraceInformation("ServiceWrapper.Dispose");
-            foreach (var wrapper in _wrappers.Values)
+            foreach (COMCallableIUnknown wrapper in _wrappers.Values)
             {
                 wrapper.ReleaseWithCheck();
             }

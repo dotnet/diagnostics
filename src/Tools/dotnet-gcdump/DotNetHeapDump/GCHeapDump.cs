@@ -117,7 +117,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         }
 
         var info = new ProcessInfo();
-        foreach (var process in Process.GetProcesses())
+        foreach (Process process in Process.GetProcesses())
         {
             try
             {
@@ -141,7 +141,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
                         continue;
                     }
 
-                    var fileName = module.FileName;
+                    string fileName = module.FileName;
                     if (fileName.EndsWith("clr.dll", StringComparison.OrdinalIgnoreCase))
                     {
                         info.UsesDotNet = true;
@@ -331,7 +331,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         deserializer.Read(out count);
         if (count != 0)
         {
-            var a = new float[count];
+            float[] a = new float[count];
             for (int i = 0; i < a.Length; i++)
             {
                 a[i] = deserializer.ReadFloat();
@@ -374,7 +374,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
             if (deserializer.VersionBeingRead >= 6)
             {
                 // Skip the segments
-                var count = deserializer.ReadInt();
+                int count = deserializer.ReadInt();
                 for (int i = 0; i < count; i++)
                 {
                     deserializer.ReadObject();
@@ -729,8 +729,8 @@ internal static class XmlGcHeapDump
             throw new InvalidOperationException("Must advance to GCHeapDump element (e.g. call ReadToDescendant)");
         }
 
-        var elementName = reader.Name;
-        var inputDepth = reader.Depth;
+        string elementName = reader.Name;
+        int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
 
         GCHeapDump ret = new GCHeapDump((MemoryGraph)null);
@@ -795,7 +795,7 @@ internal static class XmlGcHeapDump
             throw new InvalidOperationException("Must advance to MemoryGraph element (e.g. call ReadToDescendant)");
         }
 
-        var nodeCount = reader.GetAttribute("NodeCount");
+        string nodeCount = reader.GetAttribute("NodeCount");
         if (nodeCount != null)
         {
             int expectedSize = int.Parse(nodeCount) + 1;
@@ -803,11 +803,11 @@ internal static class XmlGcHeapDump
 
         MemoryGraph graph = new MemoryGraph(10);
         Debug.Assert((int)graph.NodeTypeIndexLimit == 1);
-        var firstNode = graph.CreateNode();                             // Use one up
+        NodeIndex firstNode = graph.CreateNode();                             // Use one up
         Debug.Assert(firstNode == 0);
         Debug.Assert((int)graph.NodeIndexLimit == 1);
 
-        var inputDepth = reader.Depth;
+        int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
         while (inputDepth < reader.Depth)
         {
@@ -900,7 +900,7 @@ internal static class XmlGcHeapDump
     private static void ReadCountMultipliersByTypeFromXml(XmlReader reader, List<float> countMultipliers)
     {
         Debug.Assert(reader.NodeType == XmlNodeType.Element);
-        var inputDepth = reader.Depth;
+        int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
         while (inputDepth < reader.Depth)
         {
@@ -931,7 +931,7 @@ internal static class XmlGcHeapDump
     private static void ReadNodeTypesFromXml(XmlReader reader, MemoryGraph graph)
     {
         Debug.Assert(reader.NodeType == XmlNodeType.Element);
-        var inputDepth = reader.Depth;
+        int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
         while (inputDepth < reader.Depth)
         {
@@ -985,11 +985,11 @@ internal static class XmlGcHeapDump
     private static void ReadNodesFromXml(XmlReader reader, MemoryGraph graph)
     {
         Debug.Assert(reader.NodeType == XmlNodeType.Element);
-        var inputDepth = reader.Depth;
+        int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
 
         var children = new GrowableArray<NodeIndex>(1000);
-        var typeStorage = graph.AllocTypeNodeStorage();
+        NodeType typeStorage = graph.AllocTypeNodeStorage();
         while (inputDepth < reader.Depth)
         {
             if (reader.NodeType == XmlNodeType.Element)
@@ -1014,8 +1014,8 @@ internal static class XmlGcHeapDump
 
                             // TODO FIX NOW very inefficient.   Use ReadValueChunk and FastStream to make more efficient.
                             children.Clear();
-                            var body = reader.ReadElementContentAsString();
-                            foreach (var num in Regex.Split(body, @"\s+"))
+                            string body = reader.ReadElementContentAsString();
+                            foreach (string num in Regex.Split(body, @"\s+"))
                             {
                                 if (num.Length > 0)
                                 {
@@ -1061,7 +1061,7 @@ internal static class XmlGcHeapDump
     private static int FetchInt(XmlReader reader, string attributeName, int defaultValue = 0)
     {
         int ret = defaultValue;
-        var attrValue = reader.GetAttribute(attributeName);
+        string attrValue = reader.GetAttribute(attributeName);
         if (attrValue != null)
         {
             int.TryParse(attrValue, out ret);
@@ -1073,7 +1073,7 @@ internal static class XmlGcHeapDump
     private static float FetchFloat(XmlReader reader, string attributeName, float defaultValue = 0)
     {
         float ret = defaultValue;
-        var attrValue = reader.GetAttribute(attributeName);
+        string attrValue = reader.GetAttribute(attributeName);
         if (attrValue != null)
         {
             float.TryParse(attrValue, out ret);

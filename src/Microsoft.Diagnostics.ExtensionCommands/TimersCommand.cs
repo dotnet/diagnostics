@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 var stats = new Dictionary<string, TimerStat>(64);
                 int totalCount = 0;
-                foreach (var timer in Helper.EnumerateTimers().OrderBy(t => t.Period))
+                foreach (TimerInfo timer in Helper.EnumerateTimers().OrderBy(t => t.Period))
                 {
                     totalCount++;
 
@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         ));
                     }
 
-                    if (!stats.TryGetValue(key, out var stat))
+                    if (!stats.TryGetValue(key, out TimerStat stat))
                     {
                         stat = new TimerStat()
                         {
@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 // create a summary
                 WriteLine($"{Environment.NewLine}   {totalCount.ToString()} timers{Environment.NewLine}-----------------------------------------------");
-                foreach (var stat in stats.OrderBy(kvp => kvp.Value.Count))
+                foreach (KeyValuePair<string, TimerStat> stat in stats.OrderBy(kvp => kvp.Value.Count))
                 {
                     WriteLine($"{stat.Value.Count.ToString(),4} | {stat.Value.Line}");
                 }
@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     }
 
 
-    internal class TimerStat
+    internal sealed class TimerStat
     {
         public string Line { get; set; }
         public int Count { get; set; }

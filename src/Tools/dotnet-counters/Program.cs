@@ -217,15 +217,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0");
                 return 0;
             }
-            var profiles = KnownData.GetAllProviders(runtimeVersion);
-            var maxNameLength = profiles.Max(p => p.Name.Length);
+            IReadOnlyList<CounterProvider> profiles = KnownData.GetAllProviders(runtimeVersion);
+            int maxNameLength = profiles.Max(p => p.Name.Length);
             Console.WriteLine($"Showing well-known counters for .NET (Core) version {runtimeVersion} only. Specific processes may support additional counters.");
-            foreach (var profile in profiles)
+            foreach (CounterProvider profile in profiles)
             {
-                var counters = profile.GetAllCounters();
-                var maxCounterNameLength = counters.Max(c => c.Name.Length);
+                IReadOnlyList<CounterProfile> counters = profile.GetAllCounters();
+                int maxCounterNameLength = counters.Max(c => c.Name.Length);
                 Console.WriteLine($"{profile.Name.PadRight(maxNameLength)}");
-                foreach (var counter in profile.Counters.Values)
+                foreach (CounterProfile counter in profile.Counters.Values)
                 {
                     Console.WriteLine($"    {counter.Name.PadRight(maxCounterNameLength)} \t\t {counter.Description}");
                 }
@@ -236,7 +236,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())

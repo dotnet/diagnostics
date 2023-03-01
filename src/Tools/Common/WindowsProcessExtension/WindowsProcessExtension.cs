@@ -110,7 +110,7 @@ namespace Microsoft.Internal.Common.Utils
         private static bool ReadIntPtr(IntPtr hProcess, IntPtr ptr, out IntPtr readPtr)
         {
             var dataSize = new IntPtr(IntPtr.Size);
-            var res_len = IntPtr.Zero;
+            IntPtr res_len = IntPtr.Zero;
             if (!ProcessNativeMethods.ReadProcessMemory(
                 hProcess,
                 ptr,
@@ -155,7 +155,7 @@ namespace Microsoft.Internal.Common.Utils
         {
             if (System.Environment.Is64BitProcess)
             {
-                var ptr = IntPtr.Zero;
+                IntPtr ptr = IntPtr.Zero;
                 int res_len = 0;
                 int pbiSize = IntPtr.Size;
                 ProcessNativeMethods.NtQueryInformationProcess(

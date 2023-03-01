@@ -464,7 +464,7 @@ public class SOSRunner : IDisposable
             outputHelper.WriteLine("SOSRunner processing {0}", information.TestName);
             outputHelper.WriteLine("{");
 
-            var variables = GenerateVariables(information, debuggeeConfig, action);
+            Dictionary<string, string> variables = GenerateVariables(information, debuggeeConfig, action);
             var scriptLogger = new ScriptLogger(outputHelper.IndentedOutput);
 
             // Make sure the dump file exists

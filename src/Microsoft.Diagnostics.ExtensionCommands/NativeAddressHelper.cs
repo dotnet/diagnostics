@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             bool printedTruncatedWarning = false;
 
-            var addressResult = from region in MemoryRegionService.EnumerateRegions()
+            IEnumerable<DescribedRegion> addressResult = from region in MemoryRegionService.EnumerateRegions()
                                 where region.State != MemoryRegionState.MEM_FREE
                                 select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
 
@@ -78,7 +78,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         foreach (ClrMemoryPointer mem in ClrMemoryPointer.EnumerateClrMemoryAddresses(clrRuntime))
                         {
-                            var found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
+                            DescribedRegion[] found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
 
                             if (found.Length == 0 && mem.Kind != ClrMemoryKind.GCHeapReserve)
                             {
@@ -220,7 +220,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            var ranges = rangeList.OrderBy(r => r.Start).ToArray();
+            DescribedRegion[] ranges = rangeList.OrderBy(r => r.Start).ToArray();
 
             if (tagReserveMemoryHeuristically)
             {
@@ -405,7 +405,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        internal class DescribedRegion : IMemoryRegion
+        internal sealed class DescribedRegion : IMemoryRegion
         {
             public DescribedRegion()
             {

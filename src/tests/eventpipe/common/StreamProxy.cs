@@ -46,7 +46,7 @@ namespace EventPipe.UnitTests.Common
             }
 
             byte[] localBuffer = ArrayPool<byte>.Shared.Rent(count);
-            var readCount = ProxiedStream.Read(localBuffer, 0, count);
+            int readCount = ProxiedStream.Read(localBuffer, 0, count);
             if (readCount == 0)
             {
                 return readCount;
@@ -100,10 +100,10 @@ namespace EventPipe.UnitTests.Common
 
         public void DumpStreamToDisk()
         {
-            var streamDumpDir = System.Environment.GetEnvironmentVariable("_PIPELINE_STREAMDUMPDIR") ?? Path.GetTempPath();
+            string streamDumpDir = System.Environment.GetEnvironmentVariable("_PIPELINE_STREAMDUMPDIR") ?? Path.GetTempPath();
             Logger.logger.Log($"\t streamDumpDir = {streamDumpDir}");
-            var filePath = Path.Combine(streamDumpDir, Path.GetRandomFileName() + ".nettrace");
-            using (var streamDumpFile = File.Create(filePath))
+            string filePath = Path.Combine(streamDumpDir, Path.GetRandomFileName() + ".nettrace");
+            using (FileStream streamDumpFile = File.Create(filePath))
             {
                 Logger.logger.Log($"\t Writing stream for PID {System.Diagnostics.Process.GetCurrentProcess().Id} to {filePath}");
                 StreamProxy.InternalStream.Seek(0, SeekOrigin.Begin);

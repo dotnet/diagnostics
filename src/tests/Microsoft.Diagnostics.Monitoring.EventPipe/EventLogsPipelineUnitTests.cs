@@ -230,7 +230,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             var outputStream = new MemoryStream();
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
             {
                 using var loggerFactory = new LoggerFactory(new[] { new TestStreamingLoggerProvider(outputStream) });
                 var client = new DiagnosticsClient(testRunner.Pid);
@@ -332,7 +332,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
             Assert.NotNull(values);
-            foreach (var expectedValue in expectedValues)
+            foreach ((string key, object value) expectedValue in expectedValues)
             {
                 Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
                 //TODO For now this will always be a string

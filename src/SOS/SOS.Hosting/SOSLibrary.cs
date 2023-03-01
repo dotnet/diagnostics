@@ -112,7 +112,7 @@ namespace SOS.Hosting
                     }
                 }
                 Debug.Assert(_sosLibrary != IntPtr.Zero);
-                var initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
+                SOSInitializeDelegate initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
                 if (initializeFunc == null)
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
@@ -134,7 +134,7 @@ namespace SOS.Hosting
             Trace.TraceInformation("SOSHost: Uninitialize");
             if (_sosLibrary != IntPtr.Zero)
             {
-                var uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
+                SOSUninitializeDelegate uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
                 uninitializeFunc?.Invoke();
 
                 Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.FreeLibrary(_sosLibrary);
@@ -153,7 +153,7 @@ namespace SOS.Hosting
         {
             Debug.Assert(_sosLibrary != IntPtr.Zero);
 
-            var commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
+            SOSCommandDelegate commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
             if (commandFunc == null)
             {
                 throw new DiagnosticsException($"SOS command not found: {command}");

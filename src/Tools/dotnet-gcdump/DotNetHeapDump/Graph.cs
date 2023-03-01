@@ -281,8 +281,8 @@ namespace Graphs
             int sizeOfTypeInfo = 8;
             for (int i = 0; i < m_types.Count; i++)
             {
-                var typeName = m_types[i].Name;
-                var typeNameLen = 0;
+                string typeName = m_types[i].Name;
+                int typeNameLen = 0;
                 if (typeName != null)
                 {
                     typeNameLen = typeName.Length * 2;
@@ -337,16 +337,16 @@ namespace Graphs
         // Utility (could be implemented using public APIs).
         public void BreadthFirstVisit(Action<Node> visitor)
         {
-            var nodeStorage = AllocNodeStorage();
-            var visited = new bool[(int)NodeIndexLimit];
+            Node nodeStorage = AllocNodeStorage();
+            bool[] visited = new bool[(int)NodeIndexLimit];
             var work = new Queue<NodeIndex>();
             work.Enqueue(RootIndex);
             while (work.Count > 0)
             {
-                var nodeIndex = work.Dequeue();
-                var node = GetNode(nodeIndex, nodeStorage);
+                NodeIndex nodeIndex = work.Dequeue();
+                Node node = GetNode(nodeIndex, nodeStorage);
                 visitor(node);
-                for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+                for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
                 {
                     if (!visited[(int)childIndex])
                     {
@@ -365,11 +365,11 @@ namespace Graphs
                 ret[i] = new SizeAndCount((NodeTypeIndex)i);
             }
 
-            var nodeStorage = AllocNodeStorage();
+            Node nodeStorage = AllocNodeStorage();
             for (NodeIndex idx = 0; idx < NodeIndexLimit; idx++)
             {
-                var node = GetNode(idx, nodeStorage);
-                var sizeAndCount = ret[(int)node.TypeIndex];
+                Node node = GetNode(idx, nodeStorage);
+                SizeAndCount sizeAndCount = ret[(int)node.TypeIndex];
                 sizeAndCount.Count++;
                 sizeAndCount.Size += node.Size;
             }
@@ -380,7 +380,7 @@ namespace Graphs
 #if DEBUG
             int totalCount = 0;
             long totalSize = 0;
-            foreach (var sizeAndCount in ret)
+            foreach (SizeAndCount sizeAndCount in ret)
             {
                 totalCount += sizeAndCount.Count;
                 totalSize += sizeAndCount.Size;
@@ -399,11 +399,11 @@ namespace Graphs
         }
         public string HistogramByTypeXml(long minSize = 0)
         {
-            var sizeAndCounts = GetHistogramByType();
+            SizeAndCount[] sizeAndCounts = GetHistogramByType();
             StringWriter sw = new StringWriter();
             sw.WriteLine("<HistogramByType Size=\"{0}\" Count=\"{1}\">", TotalSize, (int)NodeIndexLimit);
-            var typeStorage = AllocTypeNodeStorage();
-            foreach (var sizeAndCount in sizeAndCounts)
+            NodeType typeStorage = AllocTypeNodeStorage();
+            foreach (SizeAndCount sizeAndCount in sizeAndCounts)
             {
                 if (sizeAndCount.Size <= minSize)
                 {
@@ -682,7 +682,7 @@ namespace Graphs
         {
             get {
                 m_graph.m_reader.Goto(m_graph.m_nodes[(int)m_index]);
-                var typeAndSize = ReadCompressedInt(m_graph.m_reader);
+                int typeAndSize = ReadCompressedInt(m_graph.m_reader);
                 if ((typeAndSize & 1) != 0)     // low bit indicates if Size is encoded explicitly
                 {
                     return ReadCompressedInt(m_graph.m_reader);
@@ -802,7 +802,7 @@ namespace Graphs
             writer.Write("{0}<Node Index=\"{1}\" TypeIndex=\"{2}\" Size=\"{3}\" Type=\"{4}\" NumChildren=\"{5}\"{6}",
                 prefix, (int)Index, TypeIndex, Size, SecurityElement.Escape(GetType(typeStorage).Name),
                 ChildCount, additinalAttribs);
-            var childIndex = GetFirstChildIndex();
+            NodeIndex childIndex = GetFirstChildIndex();
             if (childIndex != NodeIndex.Invalid)
             {
                 writer.WriteLine(">");
@@ -937,10 +937,10 @@ namespace Graphs
         public string Name
         {
             get {
-                var ret = m_graph.m_types[(int)m_index].Name;
+                string ret = m_graph.m_types[(int)m_index].Name;
                 if (ret == null && (int)m_index < m_graph.m_deferedTypes.Count)
                 {
-                    var info = m_graph.m_deferedTypes[(int)m_index];
+                    Graph.DeferedTypeInfo info = m_graph.m_deferedTypes[(int)m_index];
                     if (m_graph.ResolveTypeName != null)
                     {
                         ret = m_graph.ResolveTypeName(info.TypeID, info.Module);
@@ -962,7 +962,7 @@ namespace Graphs
         public string FullName
         {
             get {
-                var moduleName = ModuleName;
+                string moduleName = ModuleName;
                 if (moduleName == null)
                 {
                     return Name;
@@ -992,10 +992,10 @@ namespace Graphs
         public string ModuleName
         {
             get {
-                var ret = m_graph.m_types[(int)m_index].ModuleName;
+                string ret = m_graph.m_types[(int)m_index].ModuleName;
                 if (ret == null && (int)m_index < m_graph.m_deferedTypes.Count)
                 {
-                    var module = m_graph.m_deferedTypes[(int)m_index].Module;
+                    Module module = m_graph.m_deferedTypes[(int)m_index].Module;
                     if (module != null)
                     {
                         ret = module.Path;
@@ -1004,7 +1004,7 @@ namespace Graphs
                 return ret;
             }
             set {
-                var typeInfo = m_graph.m_types[(int)m_index];
+                Graph.TypeInfo typeInfo = m_graph.m_types[(int)m_index];
                 typeInfo.ModuleName = value;
                 m_graph.m_types[(int)m_index] = typeInfo;
             }
@@ -1145,10 +1145,10 @@ namespace Graphs
         {
             var sw = new StringWriter();
             sw.WriteLine("<NodeList>");
-            var node = graph.AllocNodeStorage();
-            var type1 = graph.AllocTypeNodeStorage();
+            Node node = graph.AllocNodeStorage();
+            NodeType type1 = graph.AllocTypeNodeStorage();
 
-            foreach (var nodeIndex in nodes)
+            foreach (NodeIndex nodeIndex in nodes)
             {
                 node = graph.GetNode(nodeIndex, node);
                 node.WriteXml(sw, prefix: "  ", typeStorage: type1);
@@ -1174,19 +1174,19 @@ namespace Graphs
                 graph.NodeIndexLimit, graph.NodeTypeIndexLimit, graph.TotalSize, graph.SizeOfGraphDescription());
             writer.WriteLine(" <RootIndex>{0}</RootIndex>", graph.RootIndex);
             writer.WriteLine(" <NodeTypes Count=\"{0}\">", graph.NodeTypeIndexLimit);
-            var typeStorage = graph.AllocTypeNodeStorage();
+            NodeType typeStorage = graph.AllocTypeNodeStorage();
             for (NodeTypeIndex typeIndex = 0; typeIndex < graph.NodeTypeIndexLimit; typeIndex++)
             {
-                var type = graph.GetType(typeIndex, typeStorage);
+                NodeType type = graph.GetType(typeIndex, typeStorage);
                 type.WriteXml(writer, "  ");
             }
             writer.WriteLine(" </NodeTypes>");
 
             writer.WriteLine(" <Nodes Count=\"{0}\">", graph.NodeIndexLimit);
-            var nodeStorage = graph.AllocNodeStorage();
+            Node nodeStorage = graph.AllocNodeStorage();
             for (NodeIndex nodeIndex = 0; nodeIndex < graph.NodeIndexLimit; nodeIndex++)
             {
-                var node = graph.GetNode(nodeIndex, nodeStorage);
+                Node node = graph.GetNode(nodeIndex, nodeStorage);
                 node.WriteXml(writer, prefix: "  ");
             }
             writer.WriteLine(" </Nodes>");
@@ -1260,7 +1260,7 @@ namespace Graphs
                 writer.Write("  <Node Address=\"{0:x}\" Size=\"{1}\" Type=\"{2}\"> ", graph.GetAddress(nodeIdx), node.Size, SecurityElement.Escape(name));
                 bool isRoot = graph.GetAddress(node.Index) == 0;
                 int childCnt = 0;
-                for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+                for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
                 {
                     if (isRoot)
                     {
@@ -1289,9 +1289,9 @@ namespace Graphs
 
         public static List<NodeIndex> NodeChildren(this Graph graph, NodeIndex nodeIndex)
         {
-            var node = graph.GetNode(nodeIndex, graph.AllocNodeStorage());
+            Node node = graph.GetNode(nodeIndex, graph.AllocNodeStorage());
             var ret = new List<NodeIndex>();
-            for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+            for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
             {
                 ret.Add(childIndex);
             }
@@ -1301,7 +1301,7 @@ namespace Graphs
         public static List<NodeIndex> NodesOfType(this Graph graph, string regExpression)
         {
             var typeSet = new Dictionary<NodeTypeIndex, NodeTypeIndex>();
-            var type = graph.AllocTypeNodeStorage();
+            NodeType type = graph.AllocTypeNodeStorage();
             for (NodeTypeIndex typeId = 0; typeId < graph.NodeTypeIndexLimit; typeId = typeId + 1)
             {
                 type = graph.GetType(typeId, type);
@@ -1312,7 +1312,7 @@ namespace Graphs
             }
 
             var ret = new List<NodeIndex>();
-            var node = graph.AllocNodeStorage();
+            Node node = graph.AllocNodeStorage();
             for (NodeIndex nodeId = 0; nodeId < graph.NodeIndexLimit; nodeId = nodeId + 1)
             {
                 node = graph.GetNode(nodeId, node);
@@ -1347,11 +1347,11 @@ public class RefGraph
         // We guess that we need about 1.5X as many slots as there are nodes.   This seems a concervative estimate.
         m_links = new GrowableArray<RefElem>((int)graph.NodeIndexLimit * 3 / 2);
 
-        var nodeStorage = graph.AllocNodeStorage();
+        Node nodeStorage = graph.AllocNodeStorage();
         for (NodeIndex nodeIndex = 0; nodeIndex < graph.NodeIndexLimit; nodeIndex++)
         {
-            var node = graph.GetNode(nodeIndex, nodeStorage);
-            for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+            Node node = graph.GetNode(nodeIndex, nodeStorage);
+            for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
             {
                 AddRefsTo(childIndex, nodeIndex);
             }
@@ -1395,32 +1395,32 @@ public class RefGraph
     private void CheckConsitancy(Graph graph)
     {
         // This double check is pretty expensive for large graphs (nodes that have large fan-in or fan-out).
-        var nodeStorage = graph.AllocNodeStorage();
-        var refStorage = AllocNodeStorage();
+        Node nodeStorage = graph.AllocNodeStorage();
+        RefNode refStorage = AllocNodeStorage();
         for (NodeIndex nodeIdx = 0; nodeIdx < graph.NodeIndexLimit; nodeIdx++)
         {
             // If Node -> Ref then the RefGraph has a pointer from Ref -> Node
-            var node = graph.GetNode(nodeIdx, nodeStorage);
-            for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+            Node node = graph.GetNode(nodeIdx, nodeStorage);
+            for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
             {
-                var refsForChild = GetNode(childIndex, refStorage);
+                RefNode refsForChild = GetNode(childIndex, refStorage);
                 if (!refsForChild.Contains(nodeIdx))
                 {
-                    var nodeStr = node.ToString();
-                    var refStr = refsForChild.ToString();
+                    string nodeStr = node.ToString();
+                    string refStr = refsForChild.ToString();
                     Debug.Assert(false);
                 }
             }
 
             // If the refs graph has a pointer from Ref -> Node then the original graph has a arc from Node ->Ref
-            var refNode = GetNode(nodeIdx, refStorage);
-            for (var childIndex = refNode.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = refNode.GetNextChildIndex())
+            RefNode refNode = GetNode(nodeIdx, refStorage);
+            for (NodeIndex childIndex = refNode.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = refNode.GetNextChildIndex())
             {
-                var nodeForChild = graph.GetNode(childIndex, nodeStorage);
+                Node nodeForChild = graph.GetNode(childIndex, nodeStorage);
                 if (!nodeForChild.Contains(nodeIdx))
                 {
-                    var nodeStr = nodeForChild.ToString();
-                    var refStr = refNode.ToString();
+                    string nodeStr = nodeForChild.ToString();
+                    string refStr = refNode.ToString();
                     Debug.Assert(false);
                 }
             }
@@ -1447,7 +1447,7 @@ public class RefGraph
         }
         else // refsToList < 0          more than one element.
         {
-            var listIndex = -(int)refsToList - 1;
+            int listIndex = -(int)refsToList - 1;
             m_refsForNodes[(int)refTarget] = (NodeListIndex)(-AddLink(refSource, listIndex) - 1);
         }
     }
@@ -1458,7 +1458,7 @@ public class RefGraph
     /// </summary>
     private int AddLink(NodeIndex refIdx, int nextIdx = -1)
     {
-        var ret = m_links.Count;
+        int ret = m_links.Count;
         m_links.Add(new RefElem(refIdx, nextIdx));
         return ret;
     }
@@ -1507,7 +1507,7 @@ public class RefNode
     /// </summary>
     public NodeIndex GetFirstChildIndex()
     {
-        var refsToList = m_graph.m_refsForNodes[(int)m_index];
+        RefGraph.NodeListIndex refsToList = m_graph.m_refsForNodes[(int)m_index];
 
         if (refsToList == RefGraph.NodeListIndex.Empty)
         {
@@ -1521,8 +1521,8 @@ public class RefNode
         }
         else // refsToList < 0          more than one element.
         {
-            var listIndex = -(int)refsToList - 1;
-            var refElem = m_graph.m_links[listIndex];
+            int listIndex = -(int)refsToList - 1;
+            RefGraph.RefElem refElem = m_graph.m_links[listIndex];
             m_cur = refElem.NextIdx;
             return refElem.RefIdx;
         }
@@ -1537,7 +1537,7 @@ public class RefNode
             return NodeIndex.Invalid;
         }
 
-        var refElem = m_graph.m_links[m_cur];
+        RefGraph.RefElem refElem = m_graph.m_links[m_cur];
         m_cur = refElem.NextIdx;
         return refElem.RefIdx;
     }
@@ -1548,7 +1548,7 @@ public class RefNode
     public int ChildCount
     {
         get {
-            var ret = 0;
+            int ret = 0;
             for (NodeIndex childIndex = GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = GetNextChildIndex())
             {
                 ret++;
@@ -1589,7 +1589,7 @@ public class RefNode
 
 
         writer.Write("{0}<Node Index=\"{1}\" NumChildren=\"{2}\"", prefix, (int)Index, ChildCount);
-        var childIndex = GetFirstChildIndex();
+        NodeIndex childIndex = GetFirstChildIndex();
         if (childIndex != NodeIndex.Invalid)
         {
             writer.WriteLine(">");
@@ -1720,7 +1720,7 @@ public class SpanningTree
 
         float[] nodePriorities = new float[m_parent.Length];
         bool scanedForOrphans = false;
-        var epsilon = 1E-7F;            // Something that is big enough not to bet lost in roundoff error.
+        float epsilon = 1E-7F;            // Something that is big enough not to bet lost in roundoff error.
         float order = 0;
         for (int i = 0; ; i++)
         {
@@ -1746,17 +1746,17 @@ public class SpanningTree
             nodeIndex = nodesToVisit.Dequeue(out nodePriority);
 
             // Insert any children that have not already been visited (had a parent assigned) into the work queue).
-            var node = m_graph.GetNode(nodeIndex, m_nodeStorage);
-            var parentPriority = nodePriorities[(int)node.Index];
-            for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+            Node node = m_graph.GetNode(nodeIndex, m_nodeStorage);
+            float parentPriority = nodePriorities[(int)node.Index];
+            for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
             {
                 if (m_parent[(int)childIndex] == NodeIndex.Invalid)
                 {
                     m_parent[(int)childIndex] = nodeIndex;
 
                     // the priority of the child is determined by its type and 1/10 by its parent.
-                    var child = m_graph.GetNode(childIndex, m_childStorage);
-                    var childPriority = m_typePriorities[(int)child.TypeIndex] + parentPriority / 10;
+                    Node child = m_graph.GetNode(childIndex, m_childStorage);
+                    float childPriority = m_typePriorities[(int)child.TypeIndex] + parentPriority / 10;
                     nodePriorities[(int)childIndex] = childPriority;
 
                     // Subtract a small increasing value to keep the queue in order if the priorities are the same.
@@ -1794,7 +1794,7 @@ public class SpanningTree
         for (int i = 0; i < (int)m_graph.NodeIndexLimit; i++)
         {
             var nodeIndex = (NodeIndex)i;
-            var parent = m_parent[(int)nodeIndex];
+            NodeIndex parent = m_parent[(int)nodeIndex];
             if (parent <= NodeIndex.Invalid)
             {
                 if (parent == NodeIndex.Invalid)
@@ -1802,8 +1802,8 @@ public class SpanningTree
                     // Thr root index has no parent but is reachable from the root.
                     if (nodeIndex != m_graph.RootIndex)
                     {
-                        var node = m_graph.GetNode(nodeIndex, m_nodeStorage);
-                        var priority = m_typePriorities[(int)node.TypeIndex];
+                        Node node = m_graph.GetNode(nodeIndex, m_nodeStorage);
+                        float priority = m_typePriorities[(int)node.TypeIndex];
                         nodesToVisit.Enqueue(nodeIndex, priority);
                         m_parent[(int)nodeIndex] = m_graph.NodeIndexLimit;               // This is the 'not reachable' parent.
                     }
@@ -1842,8 +1842,8 @@ public class SpanningTree
         m_parent[(int)nodeIndex] = orphanVisitingMarker;        // We are now visitING
 
         // Mark all nodes as being visited.
-        var node = m_graph.GetNode(nodeIndex, AllocNodeStorage());
-        for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+        Node node = m_graph.GetNode(nodeIndex, AllocNodeStorage());
+        for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
         {
             // Has this child not been seen at all?  If so mark it.
             // Skip it if we are visiting (it would form a cycle) or visited (or not an orphan)
@@ -1874,7 +1874,7 @@ public class SpanningTree
     /// <returns></returns>
     private Node AllocNodeStorage()
     {
-        var ret = m_cachedNodeStorage;                // See if we have a free node.
+        Node ret = m_cachedNodeStorage;                // See if we have a free node.
         if (ret == null)
         {
             ret = m_graph.AllocNodeStorage();
@@ -1919,7 +1919,7 @@ public class SpanningTree
         float[] priorityArray = new float[priorityPatArray.Length];
         for (int i = 0; i < priorityPatArray.Length; i++)
         {
-            var m = Regex.Match(priorityPatArray[i], @"(.*)->(-?\d+.?\d*)");
+            Match m = Regex.Match(priorityPatArray[i], @"(.*)->(-?\d+.?\d*)");
             if (!m.Success)
             {
                 if (string.IsNullOrWhiteSpace(priorityPatArray[i]))
@@ -1930,7 +1930,7 @@ public class SpanningTree
                 throw new ApplicationException("Priority pattern " + priorityPatArray[i] + " is not of the form Pat->Num.");
             }
 
-            var dotNetRegEx = ToDotNetRegEx(m.Groups[1].Value.Trim());
+            string dotNetRegEx = ToDotNetRegEx(m.Groups[1].Value.Trim());
             priorityRegExArray[i] = new Regex(dotNetRegEx, RegexOptions.IgnoreCase);
             priorityArray[i] = float.Parse(m.Groups[2].Value);
         }
@@ -1939,18 +1939,18 @@ public class SpanningTree
         NodeType typeStorage = m_graph.AllocTypeNodeStorage();
         for (NodeTypeIndex typeIdx = 0; typeIdx < m_graph.NodeTypeIndexLimit; typeIdx++)
         {
-            var type = m_graph.GetType(typeIdx, typeStorage);
+            NodeType type = m_graph.GetType(typeIdx, typeStorage);
 
-            var fullName = type.FullName;
+            string fullName = type.FullName;
             for (int regExIdx = 0; regExIdx < priorityRegExArray.Length; regExIdx++)
             {
-                var priorityRegEx = priorityRegExArray[regExIdx];
+                Regex priorityRegEx = priorityRegExArray[regExIdx];
                 if (priorityRegEx == null)
                 {
                     continue;
                 }
 
-                var m = priorityRegEx.Match(fullName);
+                Match m = priorityRegEx.Match(fullName);
                 if (m.Success)
                 {
                     m_typePriorities[(int)typeIdx] = priorityArray[regExIdx];
@@ -1988,7 +1988,7 @@ internal class PriorityQueue
     public int Count { get { return m_count; } }
     public void Enqueue(NodeIndex item, float priority)
     {
-        var idx = m_count;
+        int idx = m_count;
         if (idx >= m_heap.Length)
         {
             var newArray = new DataItem[m_heap.Length * 3 / 2 + 8];
@@ -2000,14 +2000,14 @@ internal class PriorityQueue
         m_count = idx + 1;
         for (; ; )
         {
-            var parent = idx / 2;
+            int parent = idx / 2;
             if (m_heap[parent].priority >= m_heap[idx].priority)
             {
                 break;
             }
 
             // swap parent and idx
-            var temp = m_heap[idx];
+            DataItem temp = m_heap[idx];
             m_heap[idx] = m_heap[parent];
             m_heap[parent] = temp;
 
@@ -2024,15 +2024,15 @@ internal class PriorityQueue
     {
         Debug.Assert(Count > 0);
 
-        var ret = m_heap[0].value;
+        NodeIndex ret = m_heap[0].value;
         priority = m_heap[0].priority;
         --m_count;
         m_heap[0] = m_heap[m_count];
-        var idx = 0;
+        int idx = 0;
         for (; ; )
         {
-            var childIdx = idx * 2;
-            var largestIdx = idx;
+            int childIdx = idx * 2;
+            int largestIdx = idx;
             if (childIdx < Count && m_heap[childIdx].priority > m_heap[largestIdx].priority)
             {
                 largestIdx = childIdx;
@@ -2050,7 +2050,7 @@ internal class PriorityQueue
             }
 
             // swap idx and smallestIdx
-            var temp = m_heap[idx];
+            DataItem temp = m_heap[idx];
             m_heap[idx] = m_heap[largestIdx];
             m_heap[largestIdx] = temp;
 
@@ -2080,7 +2080,7 @@ internal class PriorityQueue
             Debug.Assert(items[0].value == m_heap[0].value);
         }
 
-        foreach (var item in items)
+        foreach (DataItem item in items)
         {
             sb.Append('{').Append((int)item.value).Append(", ").Append(item.priority.ToString("f1")).Append('}').AppendLine();
         }
@@ -2101,7 +2101,7 @@ internal class PriorityQueue
     {
         for (int idx = 1; idx < Count; idx++)
         {
-            var parentIdx = idx / 2;
+            int parentIdx = idx / 2;
             Debug.Assert(m_heap[parentIdx].priority >= m_heap[idx].priority);
         }
     }
@@ -2186,11 +2186,11 @@ public class GraphSampler
         int[] numSkipped = new int[m_statsByType.Length];       // The number of times we have skipped a potential node.
         for (NodeIndex nodeIdx = 0; nodeIdx < (NodeIndex)m_newIndex.Length; nodeIdx++)
         {
-            var newIndex = m_newIndex[(int)nodeIdx];
+            NodeIndex newIndex = m_newIndex[(int)nodeIdx];
             if (newIndex == PotentialNode)
             {
-                var node = m_graph.GetNode(nodeIdx, m_nodeStorage);
-                var stats = m_statsByType[(int)node.TypeIndex];
+                Node node = m_graph.GetNode(nodeIdx, m_nodeStorage);
+                SampleStats stats = m_statsByType[(int)node.TypeIndex];
                 int quota = (int)((stats.TotalCount / m_filteringRatio) + .5);
                 int needed = quota - stats.SampleCount;
                 if (needed > 0)
@@ -2198,7 +2198,7 @@ public class GraphSampler
                     // If we have not computed the frequency of sampling do it now.
                     if (stats.SkipFreq == 0)
                     {
-                        var available = stats.PotentialCount - stats.SampleCount;
+                        int available = stats.PotentialCount - stats.SampleCount;
                         Debug.Assert(0 <= available);
                         Debug.Assert(needed <= available);
                         stats.SkipFreq = Math.Max(available / needed, 1);
@@ -2231,22 +2231,22 @@ public class GraphSampler
         for (NodeIndex nodeIdx = 0; nodeIdx < (NodeIndex)m_newIndex.Length; nodeIdx++)
         {
             // Add all sampled nodes to the new graph.
-            var newIndex = m_newIndex[(int)nodeIdx];
+            NodeIndex newIndex = m_newIndex[(int)nodeIdx];
             if (IsSampledNode(newIndex))
             {
-                var node = m_graph.GetNode(nodeIdx, m_nodeStorage);
+                Node node = m_graph.GetNode(nodeIdx, m_nodeStorage);
                 // Get the children that are part of the sample (ignore ones that are filter)
                 children.Clear();
-                for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+                for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
                 {
-                    var newChildIndex = m_newIndex[(int)childIndex];
+                    NodeIndex newChildIndex = m_newIndex[(int)childIndex];
                     if (0 <= newChildIndex)                 // the child is not filtered out.
                     {
                         children.Add(newChildIndex);
                     }
                 }
                 // define the node
-                var newTypeIndex = GetNewTypeIndex(node.TypeIndex);
+                NodeTypeIndex newTypeIndex = GetNewTypeIndex(node.TypeIndex);
                 m_newGraph.SetNode(newIndex, newTypeIndex, node.Size, children);
                 m_newGraph.SetAddress(newIndex, m_graph.GetAddress(nodeIdx));
             }
@@ -2263,14 +2263,14 @@ public class GraphSampler
         // At this point we are done.  The rest is just to report the result to the user.
 
         // Sort the m_statsByType
-        var sortedTypes = new int[m_statsByType.Length];
+        int[] sortedTypes = new int[m_statsByType.Length];
         for (int i = 0; i < sortedTypes.Length; i++)
         {
             sortedTypes[i] = i;
         }
 
         Array.Sort(sortedTypes, delegate (int x, int y) {
-            var ret = m_statsByType[y].TotalMetric.CompareTo(m_statsByType[x].TotalMetric);
+            int ret = m_statsByType[y].TotalMetric.CompareTo(m_statsByType[x].TotalMetric);
             return ret;
         });
 
@@ -2282,7 +2282,7 @@ public class GraphSampler
         {
             int typeIdx = sortedTypes[i];
             NodeType type = m_graph.GetType((NodeTypeIndex)typeIdx, m_nodeTypeStorage);
-            var stats = m_statsByType[typeIdx];
+            SampleStats stats = m_statsByType[typeIdx];
 
             m_log.WriteLine("{0,12:n6} {1,11:n6}  {2,9:f2} | {3,10:n0} {4,9:n0}  {5,9:f2} | {6,8:f0} | {7}",
                 stats.TotalMetric / 1000000.0, stats.SampleMetric / 1000000.0, (stats.SampleMetric == 0 ? 0.0 : (double)stats.TotalMetric / stats.SampleMetric),
@@ -2307,10 +2307,10 @@ public class GraphSampler
     public float[] CountScalingByType
     {
         get {
-            var ret = new float[m_newGraph.NodeTypeCount];
+            float[] ret = new float[m_newGraph.NodeTypeCount];
             for (int i = 0; i < m_statsByType.Length; i++)
             {
-                var newTypeIndex = MapTypeIndex((NodeTypeIndex)i);
+                NodeTypeIndex newTypeIndex = MapTypeIndex((NodeTypeIndex)i);
                 if (newTypeIndex != NodeTypeIndex.Invalid)
                 {
                     float scale = 1;
@@ -2357,7 +2357,7 @@ public class GraphSampler
     /// </summary>
     private void VisitNode(NodeIndex nodeIdx, bool mustAdd, bool dontAddAncestors)
     {
-        var newNodeIdx = m_newIndex[(int)nodeIdx];
+        NodeIndex newNodeIdx = m_newIndex[(int)nodeIdx];
         // If this node has been selected already, there is nothing to do.
         if (IsSampledNode(newNodeIdx))
         {
@@ -2371,8 +2371,8 @@ public class GraphSampler
 
         Debug.Assert(newNodeIdx == NodeIndex.Invalid || newNodeIdx == PotentialNode || (newNodeIdx == RejectedNode && mustAdd));
 
-        var node = m_graph.GetNode(nodeIdx, m_nodeStorage);
-        var stats = m_statsByType[(int)node.TypeIndex];
+        Node node = m_graph.GetNode(nodeIdx, m_nodeStorage);
+        SampleStats stats = m_statsByType[(int)node.TypeIndex];
 
         // If we have never seen this node before, add to our total count.
         if (newNodeIdx == NodeIndex.Invalid)
@@ -2414,17 +2414,17 @@ public class GraphSampler
             m_newIndex[(int)nodeIdx] = m_newGraph.CreateNode();
 
             // Add all direct children as potential nodes (Potential nodes I can add without adding any other node)
-            for (var childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
+            for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
             {
-                var newChildIndex = m_newIndex[(int)childIndex];
+                NodeIndex newChildIndex = m_newIndex[(int)childIndex];
                 // Already a sampled or potential node.  Nothing to do.
                 if (IsSampledNode(newChildIndex) || newChildIndex == PotentialNode)
                 {
                     continue;
                 }
 
-                var childNode = m_graph.GetNode(childIndex, m_childNodeStorage);
-                var childStats = m_statsByType[(int)childNode.TypeIndex];
+                Node childNode = m_graph.GetNode(childIndex, m_childNodeStorage);
+                SampleStats childStats = m_statsByType[(int)childNode.TypeIndex];
 
                 if (newChildIndex == NodeIndex.Invalid)
                 {
@@ -2479,10 +2479,10 @@ public class GraphSampler
     /// <returns></returns>
     private NodeTypeIndex GetNewTypeIndex(NodeTypeIndex oldTypeIndex)
     {
-        var ret = m_newTypeIndexes[(int)oldTypeIndex];
+        NodeTypeIndex ret = m_newTypeIndexes[(int)oldTypeIndex];
         if (ret == NodeTypeIndex.Invalid)
         {
-            var oldType = m_graph.GetType(oldTypeIndex, m_nodeTypeStorage);
+            NodeType oldType = m_graph.GetType(oldTypeIndex, m_nodeTypeStorage);
             ret = m_newGraph.CreateType(oldType.Name, oldType.ModuleName, oldType.Size);
             m_newTypeIndexes[(int)oldTypeIndex] = ret;
         }
@@ -2502,14 +2502,14 @@ public class GraphSampler
         int total = 0;
         long totalSize = 0;
         int sampleTotal = 0;
-        var typeStorage = m_graph.AllocTypeNodeStorage();
+        NodeType typeStorage = m_graph.AllocTypeNodeStorage();
         for (NodeIndex nodeIdx = 0; nodeIdx < (NodeIndex)m_newIndex.Length; nodeIdx++)
         {
-            var node = m_graph.GetNode(nodeIdx, m_nodeStorage);
-            var stats = statsCheckByType[(int)node.TypeIndex];
-            var type = node.GetType(typeStorage);
-            var typeName = type.Name;
-            var newNodeIdx = m_newIndex[(int)nodeIdx];
+            Node node = m_graph.GetNode(nodeIdx, m_nodeStorage);
+            SampleStats stats = statsCheckByType[(int)node.TypeIndex];
+            NodeType type = node.GetType(typeStorage);
+            string typeName = type.Name;
+            NodeIndex newNodeIdx = m_newIndex[(int)nodeIdx];
 
             if (newNodeIdx == NodeIndex.Invalid)
             {
@@ -2554,10 +2554,10 @@ public class GraphSampler
 
         for (NodeTypeIndex typeIdx = 0; typeIdx < m_graph.NodeTypeIndexLimit; typeIdx++)
         {
-            var type = m_graph.GetType(typeIdx, typeStorage);
-            var typeName = type.Name;
-            var statsCheck = statsCheckByType[(int)typeIdx];
-            var stats = m_statsByType[(int)typeIdx];
+            NodeType type = m_graph.GetType(typeIdx, typeStorage);
+            string typeName = type.Name;
+            SampleStats statsCheck = statsCheckByType[(int)typeIdx];
+            SampleStats stats = m_statsByType[(int)typeIdx];
 
             Debug.Assert(stats.TotalMetric == statsCheck.TotalMetric);
             Debug.Assert(stats.TotalCount == statsCheck.TotalCount);
@@ -2579,8 +2579,8 @@ public class GraphSampler
                 // Make sure that scalings that we finally output were created correctly
                 if (stats.SampleMetric > 0)
                 {
-                    var newTypeIdx = MapTypeIndex(typeIdx);
-                    var estimatedTotalMetric = scalings[(int)newTypeIdx] * stats.SampleMetric;
+                    NodeTypeIndex newTypeIdx = MapTypeIndex(typeIdx);
+                    float estimatedTotalMetric = scalings[(int)newTypeIdx] * stats.SampleMetric;
                     Debug.Assert(Math.Abs(estimatedTotalMetric - stats.TotalMetric) / stats.TotalMetric < .01);
                 }
             }

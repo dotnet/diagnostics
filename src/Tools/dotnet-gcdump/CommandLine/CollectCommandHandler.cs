@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
                 var dumpTask = Task.Run(() => {
-                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
+                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                         return true;
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return false;
                 });
 
-                var fDumpSuccess = await dumpTask;
+                bool fDumpSuccess = await dumpTask;
 
                 if (fDumpSuccess)
                 {
@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             out MemoryGraph memoryGraph)
         {
             var heapInfo = new DotNetHeapInfo();
-            var log = verbose ? Console.Out : TextWriter.Null;
+            TextWriter log = verbose ? Console.Out : TextWriter.Null;
 
             memoryGraph = new MemoryGraph(50_000);
 

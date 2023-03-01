@@ -24,14 +24,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            if (!TryParseAddress(Address, out var address))
+            if (!TryParseAddress(Address, out ulong address))
             {
                 WriteLine("Hexadecimal address expected...");
                 return;
             }
 
-            var heap = Runtime.Heap;
-            var type = heap.GetObjectType(address);
+            ClrHeap heap = Runtime.Heap;
+            ClrType type = heap.GetObjectType(address);
             if (type?.Name is null)
             {
                 WriteLine($"{Address:x16} is not referencing an object...");
@@ -47,8 +47,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine($"{type.Name}");
             try
             {
-                var count = 0;
-                foreach (var item in Helper.EnumerateConcurrentDictionary(address))
+                int count = 0;
+                foreach (System.Collections.Generic.KeyValuePair<string, string> item in Helper.EnumerateConcurrentDictionary(address))
                 {
                     count++;
                     WriteLine($"    -----");

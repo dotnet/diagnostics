@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 extraArgs += " --runtime " + RuntimeIdentifier;
             }
-            foreach (var prop in BuildProperties)
+            foreach (KeyValuePair<string, string> prop in BuildProperties)
             {
                 extraArgs += $" /p:{prop.Key}={prop.Value}";
             }
@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 publishArgs += " --runtime " + RuntimeIdentifier;
                 publishArgs += " --self-contained true";
             }
-            foreach (var prop in BuildProperties)
+            foreach (KeyValuePair<string, string> prop in BuildProperties)
             {
                 publishArgs += $" /p:{prop.Key}={prop.Value}";
             }
@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private void ConvertCsprojTemplate(string csprojTemplatePath, string csprojOutPath)
         {
             var xdoc = XDocument.Load(csprojTemplatePath);
-            var ns = xdoc.Root.GetDefaultNamespace();
+            XNamespace ns = xdoc.Root.GetDefaultNamespace();
             if (LinkerPackageVersion != null)
             {
                 AddLinkerPackageReference(xdoc, ns, LinkerPackageVersion);

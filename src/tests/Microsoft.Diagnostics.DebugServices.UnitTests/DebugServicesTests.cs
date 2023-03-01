@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             ITarget target = host.Target;
             Assert.NotNull(target);
 
-            var contextService = target.Services.GetService<IContextService>();
+            IContextService contextService = target.Services.GetService<IContextService>();
             Assert.NotNull(contextService);
             Assert.NotNull(contextService.GetCurrentTarget());
 
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ModuleTests(TestHost host)
         {
-            var moduleService = host.Target.Services.GetService<IModuleService>();
+            IModuleService moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> moduleData in host.TestData.Modules)
@@ -216,7 +216,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ThreadTests(TestHost host)
         {
-            var threadService = host.Target.Services.GetService<IThreadService>();
+            IThreadService threadService = host.Target.Services.GetService<IThreadService>();
             Assert.NotNull(threadService);
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> threadData in host.TestData.Threads)
@@ -264,10 +264,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 throw new SkipTestException("Not supported on Alpine Linux");
             }
-            var runtimeService = host.Target.Services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = host.Target.Services.GetService<IRuntimeService>();
             Assert.NotNull(runtimeService);
 
-            var contextService = host.Target.Services.GetService<IContextService>();
+            IContextService contextService = host.Target.Services.GetService<IContextService>();
             Assert.NotNull(contextService);
             Assert.NotNull(contextService.GetCurrentRuntime());
 

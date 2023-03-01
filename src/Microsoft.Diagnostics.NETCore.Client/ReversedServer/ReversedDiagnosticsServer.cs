@@ -265,7 +265,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // use a thread-safe version of GetOrAdd; use equality comparison on the result to determine if
                     // the new collection was added to the dictionary or if an existing one was returned.
                     var newStreamCollection = new HandleableCollection<Stream>();
-                    var streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
+                    HandleableCollection<Stream> streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
 
                     try
                     {

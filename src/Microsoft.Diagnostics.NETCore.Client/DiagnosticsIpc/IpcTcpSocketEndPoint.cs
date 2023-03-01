@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
                 else if (!IPAddress.TryParse(host, out ipAddress))
                 {
-                    var hostEntry = Dns.GetHostEntry(host);
+                    IPHostEntry hostEntry = Dns.GetHostEntry(host);
                     if (hostEntry.AddressList.Length > 0)
                     {
                         ipAddress = hostEntry.AddressList[0];

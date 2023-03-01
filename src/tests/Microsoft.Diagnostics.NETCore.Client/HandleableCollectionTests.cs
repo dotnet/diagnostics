@@ -480,7 +480,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 lock (_handlerBeginSources)
                 {
-                    foreach (var source in _handlerBeginSources)
+                    foreach (TaskCompletionSource<object> source in _handlerBeginSources)
                     {
                         source.TrySetResult(null);
                     }
@@ -492,8 +492,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 TaskCompletionSource<object> handlerBeginSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 using var timeoutCancellation = new CancellationTokenSource();
-                var token = timeoutCancellation.Token;
-                using var _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
+                CancellationToken token = timeoutCancellation.Token;
+                using CancellationTokenRegistration _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
 
                 lock (_handlerBeginSources)
                 {

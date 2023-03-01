@@ -80,7 +80,7 @@ namespace EventPipe.UnitTests.ContentionValidation
                         return ContentionStartEvents > 0 && ContentionStopEvents > 0 ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

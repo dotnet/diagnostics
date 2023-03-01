@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
                 System.Collections.IList arguments = (System.Collections.IList)traceEvent.PayloadValue(2);
 
-                foreach (var argument in arguments)
+                foreach (object argument in arguments)
                 {
                     if (argument is IEnumerable<KeyValuePair<string, object>> argumentsEnumerable)
                     {

@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private bool DoesPayloadMatch(TraceEvent obj)
         {
-            foreach (var (fieldIndex, expectedValue) in _payloadFilterIndexCache)
+            foreach ((int fieldIndex, string expectedValue) in _payloadFilterIndexCache)
             {
                 string fieldValue = Convert.ToString(obj.PayloadValue(fieldIndex), CultureInfo.InvariantCulture) ?? string.Empty;
                 if (!string.Equals(fieldValue, expectedValue, StringComparison.Ordinal))

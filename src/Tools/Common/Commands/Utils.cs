@@ -18,8 +18,8 @@ namespace Microsoft.Internal.Common.Utils
         public static int FindProcessIdWithName(string name)
         {
             var publishedProcessesPids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-            var processesWithMatchingName = Process.GetProcessesByName(name);
-            var commonId = -1;
+            Process[] processesWithMatchingName = Process.GetProcessesByName(name);
+            int commonId = -1;
 
             for (int i = 0; i < processesWithMatchingName.Length; i++)
             {
@@ -137,7 +137,7 @@ namespace Microsoft.Internal.Common.Utils
         //  [{LineToClear};0H => move cursor to column 0 of row `LineToClear`
         public void RewriteConsoleLine()
         {
-            var useConsoleFallback = true;
+            bool useConsoleFallback = true;
             if (!Console.IsInputRedirected)
             {
                 // in case of console input redirection, the control ANSI codes would appear

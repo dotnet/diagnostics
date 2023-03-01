@@ -46,9 +46,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             var stack = new Stack<Guid>();
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) => {
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
-                var argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
 
                 // TODO: Store this information by logger factory id
                 var item = new LogActivityItem
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 if (stack.Count > 0)
                 {
                     Guid parentId = stack.Peek();
-                    if (logActivities.TryGetValue(parentId, out var parentItem))
+                    if (logActivities.TryGetValue(parentId, out LogActivityItem parentItem))
                     {
                         item.Parent = parentItem;
                     }
@@ -71,8 +71,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             });
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
 
                 //If we begin collection in the middle of a request, we can receive a stop without having a start.
                 if (stack.Count > 0)
@@ -85,12 +85,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, ExceptionJson, ArgumentsJson
                 var logLevel = (LogLevel)traceEvent.PayloadByName("Level");
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
-                var eventId = (int)traceEvent.PayloadByName("EventId");
-                var eventName = (string)traceEvent.PayloadByName("EventName");
-                var exceptionJson = (string)traceEvent.PayloadByName("ExceptionJson");
-                var argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                int eventId = (int)traceEvent.PayloadByName("EventId");
+                string eventName = (string)traceEvent.PayloadByName("EventName");
+                string exceptionJson = (string)traceEvent.PayloadByName("ExceptionJson");
+                string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
 
                 // There's a bug that causes some of the columns to get mixed up
                 if (eventName.StartsWith("{"))
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 ILogger logger = _factory.CreateLogger(categoryName);
                 var scopes = new List<IDisposable>();
 
-                if (logActivities.TryGetValue(traceEvent.ActivityID, out var logActivityItem))
+                if (logActivities.TryGetValue(traceEvent.ActivityID, out LogActivityItem logActivityItem))
                 {
                     // REVIEW: Does order matter here? We're combining everything anyways.
                     while (logActivityItem != null)
@@ -125,14 +125,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     if (exceptionJson != "{}")
                     {
-                        var exceptionMessage = JsonSerializer.Deserialize<JsonElement>(exceptionJson);
+                        JsonElement exceptionMessage = JsonSerializer.Deserialize<JsonElement>(exceptionJson);
                         exception = new LoggerException(exceptionMessage);
                     }
 
-                    var message = JsonSerializer.Deserialize<JsonElement>(argsJson);
-                    if (message.TryGetProperty("{OriginalFormat}", out var formatElement))
+                    JsonElement message = JsonSerializer.Deserialize<JsonElement>(argsJson);
+                    if (message.TryGetProperty("{OriginalFormat}", out JsonElement formatElement))
                     {
-                        var formatString = formatElement.GetString();
+                        string formatString = formatElement.GetString();
                         var formatter = new LogValuesFormatter(formatString);
                         object[] args = new object[formatter.ValueNames.Count];
                         for (int i = 0; i < args.Length; i++)
@@ -164,11 +164,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "FormattedMessage", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, FormattedMessage
                 var logLevel = (LogLevel)traceEvent.PayloadByName("Level");
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
-                var eventId = (int)traceEvent.PayloadByName("EventId");
-                var eventName = (string)traceEvent.PayloadByName("EventName");
-                var formattedMessage = (string)traceEvent.PayloadByName("FormattedMessage");
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                int eventId = (int)traceEvent.PayloadByName("EventId");
+                string eventName = (string)traceEvent.PayloadByName("EventName");
+                string formattedMessage = (string)traceEvent.PayloadByName("FormattedMessage");
 
                 if (string.IsNullOrEmpty(formattedMessage))
                 {

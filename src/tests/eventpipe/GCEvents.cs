@@ -111,7 +111,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     };
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
@@ -161,7 +161,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                         return GCFinalizersEndEvents >= 50 && GCFinalizersStartEvents >= 50 ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }
@@ -237,7 +237,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     };
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, GCProviders, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

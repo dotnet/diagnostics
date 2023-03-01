@@ -427,7 +427,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
             var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
-            var completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
+            Task completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
 
             if (completedTask != streamsTask)
             {

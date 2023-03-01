@@ -39,13 +39,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             SOSDac sos = runtime.DacLibrary.SOSDacInterface;
             foreach (JitManagerInfo jitMgr in sos.GetJitManagers())
             {
-                foreach (var handle in runtime.EnumerateHandles())
+                foreach (ClrHandle handle in runtime.EnumerateHandles())
                 {
                     yield return new ClrMemoryPointer(handle.Address, ClrMemoryKind.HandleTable);
                 }
 
                 List<ClrMemoryPointer> heaps = new();
-                foreach (var mem in sos.GetCodeHeapList(jitMgr.Address))
+                foreach (JitCodeHeapInfo mem in sos.GetCodeHeapList(jitMgr.Address))
                 {
                     if (mem.Type == CodeHeapType.Loader)
                     {
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 heaps.Clear();
 
-                foreach (var seg in runtime.Heap.Segments)
+                foreach (ClrSegment seg in runtime.Heap.Segments)
                 {
                     if (seg.CommittedMemory.Length > 0)
                     {
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     AddAppDomainHeaps(runtime, sos, runtime.SharedDomain.Address, heaps);
                 }
 
-                foreach (var heap in heaps)
+                foreach (ClrMemoryPointer heap in heaps)
                 {
                     if (seen.Add(heap.Address))
                     {
@@ -107,7 +107,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     heaps.Clear();
                     AddAppDomainHeaps(runtime, sos, address, heaps);
 
-                    foreach (var heap in heaps)
+                    foreach (ClrMemoryPointer heap in heaps)
                     {
                         if (seen.Add(heap.Address))
                         {

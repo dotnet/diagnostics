@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 return Task.FromResult(-1);
             }
 
-            var source = ReportSource.Unknown;
+            ReportSource source = ReportSource.Unknown;
 
             //
             // Determine report source
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Task<int> ReportFromProcess(int processId, CancellationToken ct)
         {
             if (!CollectCommandHandler
-                .TryCollectMemoryGraph(ct, processId, CollectCommandHandler.DefaultTimeout, false, out var mg))
+                .TryCollectMemoryGraph(ct, processId, CollectCommandHandler.DefaultTimeout, false, out Graphs.MemoryGraph mg))
             {
                 Console.Error.WriteLine("An error occured while collecting gcdump.");
                 return Task.FromResult(-1);
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             try
             {
-                using var fs = File.OpenRead(file.FullName);
+                using FileStream fs = File.OpenRead(file.FullName);
                 var dump = new GCHeapDump(fs, file.Name);
                 dump.MemoryGraph.WriteToStdOut();
                 return Task.FromResult(0);

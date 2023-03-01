@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         public async Task TestTraceStopAsync(TestConfiguration config)
         {
             Stream eventStream = null;
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "TraceStopTest", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TraceStopTest", _output))
             {
                 var client = new DiagnosticsClient(testRunner.Pid);
                 var settings = new EventTracePipelineSettings()
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     using var eventSource = new EventPipeEventSource(s);
 
                     // Dispose event source when cancelled.
-                    using var _ = token.Register(() => eventSource.Dispose());
+                    using CancellationTokenRegistration _ = token.Register(() => eventSource.Dispose());
 
                     eventSource.Dynamic.All += (TraceEvent obj) => {
                         if (string.Equals(obj.ProviderName, MonitoringSourceConfiguration.SampleProfilerProviderName, StringComparison.OrdinalIgnoreCase))
@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Stream eventStream = null;
             using var cancellationTokenSource = new CancellationTokenSource();
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "TestEventStreamCleanup", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TestEventStreamCleanup", _output))
             {
                 var client = new DiagnosticsClient(testRunner.Pid);
                 var settings = new EventTracePipelineSettings()

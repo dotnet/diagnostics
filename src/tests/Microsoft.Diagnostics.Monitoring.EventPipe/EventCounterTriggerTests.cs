@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// </summary>
         private static void ValidateFieldValidation(EventCounterTriggerSettings settings, string expectedMessage, string[] expectedMemberNames)
         {
-            var exception = Assert.Throws<ValidationException>(() => new EventCounterTrigger(settings));
+            ValidationException exception = Assert.Throws<ValidationException>(() => new EventCounterTrigger(settings));
 
             Assert.NotNull(exception.ValidationResult);
 
@@ -337,7 +337,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 CounterIntervalSeconds = 1
             };
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "TriggerRemoteTest SpinWait10", _output, testProcessTimeout: 2 * 60 * 1000))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TriggerRemoteTest SpinWait10", _output, testProcessTimeout: 2 * 60 * 1000))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 

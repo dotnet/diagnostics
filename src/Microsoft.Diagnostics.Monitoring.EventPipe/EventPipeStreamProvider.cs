@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _currentTask = Task.Run(async () => {
                 using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 linkedSource.CancelAfter(duration);
-                using var _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
+                using CancellationTokenRegistration _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
 
                 // Use TaskCompletionSource instead of Task.Delay with cancellation to avoid
                 // using exceptions for normal termination of event stream.

@@ -307,17 +307,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             static IEnumerable<int> GetAllPublishedProcesses(string[] files)
             {
-                foreach (var port in files)
+                foreach (string port in files)
                 {
-                    var fileName = new FileInfo(port).Name;
-                    var match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
+                    string fileName = new FileInfo(port).Name;
+                    Match match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
                     if (!match.Success)
                     {
                         continue;
                     }
 
-                    var group = match.Groups[1].Value;
-                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out var processId))
+                    string group = match.Groups[1].Value;
+                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out int processId))
                     {
                         continue;
                     }

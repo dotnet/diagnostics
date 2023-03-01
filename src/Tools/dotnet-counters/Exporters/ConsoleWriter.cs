@@ -374,7 +374,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 if (_initialized)
                 {
-                    var row = _maxRow;
+                    int row = _maxRow;
 
                     if (row > -1)
                     {

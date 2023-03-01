@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     runner[i] = await TestRunner.Create(config, _output, "Tracee");
                     await runner[i].Start();
@@ -68,19 +68,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     _output.WriteLine($"[{DateTime.Now}] Saw published process {p}");
                 }
 
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     Assert.Contains(publishedProcesses, p => p == pids[i]);
                 }
 
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     runner[i].WakeupTracee();
                 }
             }
             finally
             {
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     await runner[i].DisposeAsync();
                 }

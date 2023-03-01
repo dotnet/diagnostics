@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                var runtimes = _runtimeService.EnumerateRuntimes();
+                System.Collections.Generic.IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();
                 if (runtimes.Any())
                 {
                     foreach (IRuntime runtime in runtimes)
@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Debug.Assert(module.ImageBase != 0);
 
-            var metadata = ImmutableArray<byte>.Empty;
+            ImmutableArray<byte> metadata = ImmutableArray<byte>.Empty;
             bool isVirtual = module.Layout != ModuleLayout.Flat;
             try
             {

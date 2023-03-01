@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 Dictionary<string, string> enabledBy = new Dictionary<string, string>();
 
-                var providerCollection = Extensions.ToProviders(providers);
+                List<EventPipeProvider> providerCollection = Extensions.ToProviders(providers);
                 foreach (EventPipeProvider providerCollectionProvider in providerCollection)
                 {
                     enabledBy[providerCollectionProvider.Name] = "--providers ";
@@ -123,7 +123,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length != 0)
                 {
-                    var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                    Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
                         .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
                     if (selectedProfile == null)
                     {
@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     else
                     {
-                        var clrProvider = Extensions.ToCLREventPipeProvider(clrevents, clreventlevel);
+                        EventPipeProvider clrProvider = Extensions.ToCLREventPipeProvider(clrevents, clreventlevel);
                         providerCollection.Add(clrProvider);
                         enabledBy[Extensions.CLREventProviderName] = "--clrevents";
                     }
@@ -216,8 +216,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         output = new FileInfo($"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
                     }
 
-                    var shouldStopAfterDuration = duration != default(TimeSpan);
-                    var rundownRequested = false;
+                    bool shouldStopAfterDuration = duration != default(TimeSpan);
+                    bool rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
 
 
@@ -398,7 +398,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ConsoleWriteLine("");
             ConsoleWriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
                 string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
-            foreach (var provider in providers)
+            foreach (EventPipeProvider provider in providers)
             {
                 ConsoleWriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
             }

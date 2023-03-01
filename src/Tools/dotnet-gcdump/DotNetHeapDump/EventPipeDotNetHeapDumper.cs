@@ -184,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
                 catch (AggregateException ae) // no need to throw if we're just cancelling the tasks
                 {
-                    foreach (var e in ae.Flatten().InnerExceptions)
+                    foreach (Exception e in ae.Flatten().InnerExceptions)
                     {
                         if (e is not TaskCanceledException)
                         {

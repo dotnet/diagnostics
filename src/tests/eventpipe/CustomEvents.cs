@@ -52,7 +52,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
                     new EventPipeProvider("MyEventSource", EventLevel.Informational)
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, null);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, null);
                 Assert.Equal(100, ret);
             }, output);
         }

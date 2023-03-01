@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // access the Task state field if the flag is not given as a parameter
             if (!Value.HasValue)
             {
-                if (!TryParseAddress(Address, out var address))
+                if (!TryParseAddress(Address, out ulong address))
                 {
                     WriteLine("Numeric value expected: either a task address or -v <state value>..." + Environment.NewLine);
                     return;

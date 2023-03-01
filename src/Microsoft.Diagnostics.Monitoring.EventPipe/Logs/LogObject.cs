@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public LogObject(JsonElement element, string formattedMessage = null)
         {
-            foreach (var item in element.EnumerateObject())
+            foreach (JsonProperty item in element.EnumerateObject())
             {
                 switch (item.Value.ValueKind)
                 {
