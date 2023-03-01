@@ -47,11 +47,11 @@ namespace ParallelStacks.Runtime
             limit = Math.Min(count, limit);
             if (limit < 0)
             {
-                return string.Join(",", threadIds.Select(tid => visitor.FormatTheadId(tid)));
+                return string.Join(",", threadIds.Select(visitor.FormatTheadId));
             }
             else
             {
-                string result = string.Join(",", threadIds.GetRange(0, limit).Select(tid => visitor.FormatTheadId(tid)));
+                string result = string.Join(",", threadIds.GetRange(0, limit).Select(visitor.FormatTheadId));
                 if (count > limit)
                 {
                     result += "...";
