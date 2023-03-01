@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     FramePointerIndex = index;
                 }
                 FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
-                var registerInfo = new RegisterInfo(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLower());
+                var registerInfo = new RegisterInfo(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLowerInvariant());
                 registers.Add(registerInfo);
                 index++;
             }
@@ -151,28 +151,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Return the register index for the register name
         /// </summary>
         /// <param name="name">register name</param>
-        /// <param name="index">returns register index or -1</param>
+        /// <param name="registerIndex">returns register index or -1</param>
         /// <returns>true if name found</returns>
-        public bool TryGetRegisterIndexByName(string name, out int index)
+        public bool TryGetRegisterIndexByName(string name, out int registerIndex)
         {
             if (_lookupByName.TryGetValue(name, out RegisterInfo info))
             {
-                index = info.RegisterIndex;
+                registerIndex = info.RegisterIndex;
                 return true;
             }
-            index = int.MaxValue;
+            registerIndex = int.MaxValue;
             return false;
         }
 
         /// <summary>
         /// Returns the register info (name, offset, size, etc).
         /// </summary>
-        /// <param name="index">register index</param>
+        /// <param name="registerIndex">register index</param>
         /// <param name="info">RegisterInfo</param>
         /// <returns>true if index found</returns>
-        public bool TryGetRegisterInfo(int index, out RegisterInfo info)
+        public bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info)
         {
-            return _lookupByIndex.TryGetValue(index, out info);
+            return _lookupByIndex.TryGetValue(registerIndex, out info);
         }
 
         /// <summary>

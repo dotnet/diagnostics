@@ -465,7 +465,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Search memory helper class
         /// </summary>
-        internal class ReadVirtualCache
+        internal sealed class ReadVirtualCache
         {
             private const int CACHE_SIZE = 4096;
 

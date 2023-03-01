@@ -235,7 +235,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Special context service parent forwarding wrapper
         /// </summary>
-        private class ContextServiceProvider : IServiceProvider
+        private sealed class ContextServiceProvider : IServiceProvider
         {
             private readonly ContextService _contextService;
 

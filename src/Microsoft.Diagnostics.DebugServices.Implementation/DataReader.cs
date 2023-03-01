@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
-        private class DataReaderModule : ModuleInfo
+        private sealed class DataReaderModule : ModuleInfo
         {
             private readonly IModule _module;
 

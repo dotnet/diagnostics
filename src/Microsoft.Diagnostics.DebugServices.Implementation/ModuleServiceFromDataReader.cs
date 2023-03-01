@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ModuleServiceFromDataReader : ModuleService
     {
-        private class ModuleFromDataReader : Module
+        private sealed class ModuleFromDataReader : Module
         {
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;

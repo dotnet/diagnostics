@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return new ForwardEnumerable<T>(this);
         }
 
-        private class ForwardEnumerable<T> : IEnumerable<T>
+        private sealed class ForwardEnumerable<T> : IEnumerable<T>
             where T : LinkedListNode
         {
             private readonly LinkedListNode _list;

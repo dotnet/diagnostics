@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ServiceEvent : IServiceEvent
     {
-        private class EventNode : LinkedListNode, IDisposable
+        private sealed class EventNode : LinkedListNode, IDisposable
         {
             private readonly Action _callback;
 

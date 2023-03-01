@@ -202,7 +202,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return metadata;
         }
 
-        private class MetadataRegion : IComparable<MetadataRegion>
+        private sealed class MetadataRegion : IComparable<MetadataRegion>
         {
             private readonly MetadataMappingMemoryService _memoryService;
             private readonly ClrModule _module;
