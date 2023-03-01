@@ -1,6 +1,5 @@
 <Project>
   <PropertyGroup>
-    <!-- <CodeAnalysisRuleset>$(MSBuildThisFileDirectory)CodeAnalysis.ruleset</CodeAnalysisRuleset> -->
     <EnableAnalyzers>true</EnableAnalyzers>
   </PropertyGroup>
   <ItemGroup>

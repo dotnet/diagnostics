@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             bool cancelOnEnter = true;
             bool cancelOnCtrlC = true;
             bool printStatusOverTime = true;
-            int ret = ReturnCode.Ok;
+            int ret = (int)ReturnCode.Ok;
             IsQuiet = showchildio;
 
             try
@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (showchildio)
                     {
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
-                        return ReturnCode.ArgumentError;
+                        return (int)ReturnCode.ArgumentError;
                     }
                     if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
                     {
@@ -99,12 +99,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     else
                     {
-                        return ReturnCode.ArgumentError;
+                        return (int)ReturnCode.ArgumentError;
                     }
                 }
                 else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
                 {
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -128,7 +128,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (selectedProfile == null)
                     {
                         Console.Error.WriteLine($"Invalid profile name: {profile}");
-                        return ReturnCode.ArgumentError;
+                        return (int)ReturnCode.ArgumentError;
                     }
 
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
@@ -154,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (providerCollection.Count <= 0)
                 {
                     Console.Error.WriteLine("No providers were specified to start a trace.");
-                    return ReturnCode.ArgumentError;
+                    return (int)ReturnCode.ArgumentError;
                 }
 
                 PrintProviders(providerCollection, enabledBy);
@@ -171,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
-                        return await Task.FromResult(ReturnCode.Ok).ConfigureAwait(false);
+                        return (int)await Task.FromResult(ReturnCode.Ok).ConfigureAwait(false);
                     }
                     diagnosticsClient = holder.Client;
                     if (ProcessLauncher.Launcher.HasChildProc)
@@ -242,18 +242,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         catch (DiagnosticsClientException e)
                         {
                             Console.Error.WriteLine($"Unable to start a tracing session: {e}");
-                            return ReturnCode.SessionCreationError;
+                            return (int)ReturnCode.SessionCreationError;
                         }
                         catch (UnauthorizedAccessException e)
                         {
                             Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
-                            return ReturnCode.SessionCreationError;
+                            return (int)ReturnCode.SessionCreationError;
                         }
 
                         if (session == null)
                         {
                             Console.Error.WriteLine("Unable to create session.");
-                            return ReturnCode.SessionCreationError;
+                            return (int)ReturnCode.SessionCreationError;
                         }
 
                         if (shouldStopAfterDuration)
@@ -367,13 +367,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
                 collectionStopped = true;
-                ret = ReturnCode.TracingError;
+                ret = (int)ReturnCode.TracingError;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex}");
                 collectionStopped = true;
-                ret = ReturnCode.TracingError;
+                ret = (int)ReturnCode.TracingError;
             }
             finally
             {
@@ -389,7 +389,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     if (!collectionStopped || ct.IsCancellationRequested)
                     {
-                        ret = ReturnCode.TracingError;
+                        ret = (int)ReturnCode.TracingError;
                     }
                 }
                 ProcessLauncher.Launcher.Cleanup();

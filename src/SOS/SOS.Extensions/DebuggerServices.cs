@@ -14,7 +14,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS
 {
-    internal unsafe class DebuggerServices : CallableCOMWrapper
+    internal sealed unsafe class DebuggerServices : CallableCOMWrapper
     {
         internal enum OperatingSystem
         {

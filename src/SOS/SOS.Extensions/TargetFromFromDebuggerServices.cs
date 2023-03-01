@@ -15,7 +15,7 @@ namespace SOS.Extensions
     /// <summary>
     /// ITarget implementation for the ClrMD IDataReader
     /// </summary>
-    internal class TargetFromDebuggerServices : Target
+    internal sealed class TargetFromDebuggerServices : Target
     {
         /// <summary>
         /// Build a target instance from IDataReader

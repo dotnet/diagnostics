@@ -5,7 +5,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Extensions
 {
-    internal class ThreadUnwindServiceFromDebuggerServices : IThreadUnwindService
+    internal sealed class ThreadUnwindServiceFromDebuggerServices : IThreadUnwindService
     {
         private readonly DebuggerServices _debuggerServices;
 

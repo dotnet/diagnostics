@@ -19,7 +19,7 @@ namespace DotnetCounters.UnitTests
         public void GenerateCounterListTestSingleProvider()
         {
             CounterMonitor monitor = new CounterMonitor();
-            CounterSet counters = monitor.ParseProviderList("MySource");
+            CounterSet counters = CounterMonitor.ParseProviderList("MySource");
             Assert.Single(counters.Providers);
             Assert.Equal("MySource", counters.Providers.First());
             Assert.True(counters.IncludesAllCounters("MySource"));
@@ -29,7 +29,7 @@ namespace DotnetCounters.UnitTests
         public void GenerateCounterListTestSingleProviderWithFilter()
         {
             CounterMonitor monitor = new CounterMonitor();
-            CounterSet counters = monitor.ParseProviderList("MySource[counter1,counter2,counter3]");
+            CounterSet counters = CounterMonitor.ParseProviderList("MySource[counter1,counter2,counter3]");
             Assert.Single(counters.Providers);
             Assert.Equal("MySource", counters.Providers.First());
             Assert.False(counters.IncludesAllCounters("MySource"));
@@ -40,7 +40,7 @@ namespace DotnetCounters.UnitTests
         public void GenerateCounterListTestManyProviders()
         {
             CounterMonitor monitor = new CounterMonitor();
-            CounterSet counters = monitor.ParseProviderList("MySource1,MySource2,System.Runtime");
+            CounterSet counters = CounterMonitor.ParseProviderList("MySource1,MySource2,System.Runtime");
             Assert.Equal(3, counters.Providers.Count());
             Assert.Equal("MySource1", counters.Providers.ElementAt(0));
             Assert.Equal("MySource2", counters.Providers.ElementAt(1));
@@ -51,7 +51,7 @@ namespace DotnetCounters.UnitTests
         public void GenerateCounterListTestManyProvidersWithFilter()
         {
             CounterMonitor monitor = new CounterMonitor();
-            CounterSet counters = monitor.ParseProviderList("MySource1[mycounter1,mycounter2], MySource2[mycounter1], System.Runtime[cpu-usage,working-set]");
+            CounterSet counters = CounterMonitor.ParseProviderList("MySource1[mycounter1,mycounter2], MySource2[mycounter1], System.Runtime[cpu-usage,working-set]");
             Assert.Equal(3, counters.Providers.Count());
 
             Assert.Equal("MySource1", counters.Providers.ElementAt(0));
