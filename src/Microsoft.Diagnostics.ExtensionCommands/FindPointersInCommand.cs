@@ -358,7 +358,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return new MemoryWalkContext(pinned);
         }
 
-        private class RegionPointers
+        private sealed class RegionPointers
         {
             public Dictionary<DescribedRegion, List<ulong>> ResolvablePointers { get; } = new();
             public Dictionary<DescribedRegion, List<ulong>> UnresolvablePointers { get; } = new();
@@ -416,7 +416,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private class MemoryWalkContext
+        private sealed class MemoryWalkContext
         {
             private readonly Dictionary<ulong, (string, int)> _resolved = new();
             private readonly ClrObject[] _pinned;

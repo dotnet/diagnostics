@@ -409,7 +409,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private class KnownClrMemoryPointer
+        private sealed class KnownClrMemoryPointer
         {
             private const string NativeHeapMemoryBlock = "System.Reflection.Internal.NativeHeapMemoryBlock";
             private const string MetadataReader = "System.Reflection.Metadata.MetadataReader";
