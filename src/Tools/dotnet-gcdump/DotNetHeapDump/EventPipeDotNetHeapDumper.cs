@@ -186,7 +186,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 {
                     foreach (var e in ae.Flatten().InnerExceptions)
                     {
-                        if (!(e is TaskCanceledException))
+                        if (e is not TaskCanceledException)
                         {
                             throw;
                         }

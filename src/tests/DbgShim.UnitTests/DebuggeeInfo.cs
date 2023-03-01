@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics
             {
                 _process = Process.GetProcessById(processId);
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
             {
                 Trace.TraceError($"DebuggeeInfo.SetProcessId({processId}): {ex}");
             }
@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics
                 await _pipeServer.WaitForConnectionAsync(source.Token);
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: after wait {ProcessId}");
             }
-            catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
+            catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
             {
                 Trace.TraceError($"DebuggeeInfo.WaitForDebuggee: canceled {ex}");
                 return false;
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics
                     _process.Kill();
                     _process = null;
                 }
-                catch (Exception ex) when (ex is NotSupportedException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is NotSupportedException or InvalidOperationException)
                 {
                     Trace.TraceError(ex.ToString());
                 }

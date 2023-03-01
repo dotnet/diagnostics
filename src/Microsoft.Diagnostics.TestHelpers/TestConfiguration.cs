@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     nugetPackagesRoot = Environment.GetEnvironmentVariable("UserProfile");
                 }
-                else if (OS.Kind == OSKind.Linux || OS.Kind == OSKind.OSX)
+                else if (OS.Kind is OSKind.Linux or OSKind.OSX)
                 {
                     nugetPackagesRoot = Environment.GetEnvironmentVariable("HOME");
                 }
@@ -452,7 +452,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             string debuggeeBuildProcess = DebuggeeBuildProcess;
             if (!string.IsNullOrEmpty(debuggeeBuildProcess))
             {
-                sb.Append(".");
+                sb.Append('.');
                 sb.Append(debuggeeBuildProcess);
             }
             if (PublishSingleFile)
@@ -461,7 +461,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             if (!string.IsNullOrEmpty(version))
             {
-                sb.Append(".");
+                sb.Append('.');
                 sb.Append(version);
             }
             return sb.ToString();
@@ -941,7 +941,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     string ostype = File.ReadAllText("/etc/os-release");
                     IsAlpine = ostype.Contains("ID=alpine");
                 }
-                catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException)
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException)
                 {
                 }
             }

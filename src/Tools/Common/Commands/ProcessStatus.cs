@@ -32,7 +32,7 @@ namespace Microsoft.Internal.Common.Commands
         private static void MakeFixedWidth(string text, int width, StringBuilder sb, bool leftPad = false, bool truncateFront = false)
         {
             int textLength = text.Length;
-            sb.Append(" ");
+            sb.Append(' ');
             if (textLength == width)
             {
                 sb.Append(text);
@@ -62,7 +62,7 @@ namespace Microsoft.Internal.Common.Commands
                 }
 
             }
-            sb.Append(" ");
+            sb.Append(' ');
         }
 
         private struct ProcessDetails
@@ -116,7 +116,7 @@ namespace Microsoft.Internal.Common.Commands
                     MakeFixedWidth(info.ProcessName, nameLength, tableText, false, true);
                     MakeFixedWidth(info.FileName, fileLength, tableText, false, true);
                     MakeFixedWidth(info.CmdLineArgs, cmdLength, tableText, false, true);
-                    tableText.Append("\n");
+                    tableText.Append('\n');
                 }
             }
             try
@@ -152,7 +152,7 @@ namespace Microsoft.Internal.Common.Commands
                     }
                     catch (Exception ex)
                     {
-                        if (ex is Win32Exception || ex is InvalidOperationException)
+                        if (ex is Win32Exception or InvalidOperationException)
                         {
                             var commandInfo = new ProcessDetails()
                             {
@@ -207,7 +207,7 @@ namespace Microsoft.Internal.Common.Commands
                         return commandLine;
                     }
                 }
-                catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
                 {
                     return "[Elevated process - cannot determine command line arguments]";
                 }

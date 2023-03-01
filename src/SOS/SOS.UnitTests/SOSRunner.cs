@@ -288,7 +288,7 @@ public class SOSRunner : IDisposable
                     if (!string.IsNullOrWhiteSpace(config.HostArgs))
                     {
                         arguments.Append(config.HostArgs);
-                        arguments.Append(" ");
+                        arguments.Append(' ');
                     }
                     arguments.Append(debuggeeConfig.BinaryExePath);
                 }
@@ -299,14 +299,14 @@ public class SOSRunner : IDisposable
                     int runnerId = Process.GetCurrentProcess().Id;
                     pipeName = $"SOSRunner.{runnerId}.{information.DebuggeeName}";
                     pipeServer = new NamedPipeServerStream(pipeName);
-                    arguments.Append(" ");
+                    arguments.Append(' ');
                     arguments.Append(pipeName);
                 }
 
                 // Add any additional test specific arguments after the pipe name (if one).
                 if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
                 {
-                    arguments.Append(" ");
+                    arguments.Append(' ');
                     arguments.Append(information.DebuggeeArguments);
                 }
 
@@ -468,7 +468,7 @@ public class SOSRunner : IDisposable
             var scriptLogger = new ScriptLogger(outputHelper.IndentedOutput);
 
             // Make sure the dump file exists
-            if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
+            if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
             {
                 if (!variables.TryGetValue("%DUMP_NAME%", out string dumpName) || !File.Exists(dumpName))
                 {
@@ -481,17 +481,17 @@ public class SOSRunner : IDisposable
             if (!string.IsNullOrWhiteSpace(config.HostExe))
             {
                 debuggeeCommandLine.Append(config.HostExe);
-                debuggeeCommandLine.Append(" ");
+                debuggeeCommandLine.Append(' ');
                 if (!string.IsNullOrWhiteSpace(config.HostArgs))
                 {
                     debuggeeCommandLine.Append(config.HostArgs);
-                    debuggeeCommandLine.Append(" ");
+                    debuggeeCommandLine.Append(' ');
                 }
             }
             debuggeeCommandLine.Append(debuggeeConfig.BinaryExePath);
             if (!string.IsNullOrWhiteSpace(information.DebuggeeArguments))
             {
-                debuggeeCommandLine.Append(" ");
+                debuggeeCommandLine.Append(' ');
                 debuggeeCommandLine.Append(information.DebuggeeArguments);
             }
 
@@ -617,7 +617,7 @@ public class SOSRunner : IDisposable
                     break;
 
                 case NativeDebugger.Gdb:
-                    if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
+                    if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
                     {
                         throw new ArgumentException("GDB not meant for loading core dumps");
                     }
@@ -684,7 +684,7 @@ public class SOSRunner : IDisposable
             processRunner.WithEnvironmentVariable("COMPlus_EnableWriteXorExecute", "0");
 
             DumpType? dumpType = null;
-            if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
+            if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
             {
                 dumpType = information.DumpType;
             }
@@ -1142,7 +1142,7 @@ public class SOSRunner : IDisposable
         {
             var sb = new StringBuilder();
             sb.Append(information.TestName);
-            sb.Append(".");
+            sb.Append('.');
             sb.Append(information.DumpType.ToString());
             if (information.TestConfiguration.PublishSingleFile)
             {
@@ -1150,7 +1150,7 @@ public class SOSRunner : IDisposable
             }
             if (information.DumpNameSuffix != null)
             {
-                sb.Append(".");
+                sb.Append('.');
                 sb.Append(information.DumpNameSuffix);
             }
             sb.Append(".dmp");
@@ -1412,7 +1412,7 @@ public class SOSRunner : IDisposable
         if (_config.PublishSingleFile)
         {
             defines.Add("SINGLE_FILE_APP");
-            if (OS.Kind == OSKind.Linux || OS.Kind == OSKind.OSX)
+            if (OS.Kind is OSKind.Linux or OSKind.OSX)
             {
                 defines.Add("UNIX_SINGLE_FILE_APP");
             }

@@ -233,7 +233,7 @@ namespace SOS.Hosting
             {
                 Marshal.Copy(registerContext, 0, context, contextSize);
             }
-            catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is ArgumentNullException)
+            catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
             {
                 Trace.TraceError($"DataTargetWrapper.GetThreadContext Marshal.Copy FAILED {ex}");
                 return HResult.E_INVALIDARG;

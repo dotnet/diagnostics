@@ -608,7 +608,7 @@ namespace SOS.Hosting
             {
                 Marshal.Copy(registerContext, 0, context, (int)contextSize);
             }
-            catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is ArgumentNullException)
+            catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
             {
                 return HResult.E_INVALIDARG;
             }

@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     return reader;
                 }
-                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
+                catch (Exception ex) when (ex is BadImageFormatException or IOException)
                 {
                     Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
                 }
@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     return elfFile;
                 }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+                catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
                 {
                     Trace.TraceError($"OpenFile: {filePath} exception {ex.Message}");
                 }
@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     return machoModule;
                 }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+                catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
                 {
                     Trace.TraceError($"OpenMachOFile: {filePath} exception {ex.Message}");
                 }
@@ -230,7 +230,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     return File.OpenRead(path);
                 }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is NotSupportedException || ex is IOException)
+                catch (Exception ex) when (ex is UnauthorizedAccessException or NotSupportedException or IOException)
                 {
                     Trace.TraceError($"TryOpenFile: {ex.Message}");
                 }

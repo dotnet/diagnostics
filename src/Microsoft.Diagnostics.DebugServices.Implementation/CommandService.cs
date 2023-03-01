@@ -77,11 +77,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         catch (Exception ex)
                         {
-                            if (ex is NullReferenceException ||
-                                ex is ArgumentException ||
-                                ex is ArgumentNullException ||
-                                ex is ArgumentOutOfRangeException ||
-                                ex is NotImplementedException)
+                            if (ex is NullReferenceException or
+                                ArgumentException or
+                                ArgumentNullException or
+                                ArgumentOutOfRangeException or
+                                NotImplementedException)
                             {
                                 context.Console.Error.WriteLine(ex.ToString());
                             }
@@ -268,7 +268,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The normal command handler.
         /// </summary>
-        private class CommandHandler : ICommandHandler
+        private sealed class CommandHandler : ICommandHandler
         {
             private readonly CommandAttribute _commandAttribute;
             private readonly IEnumerable<(PropertyInfo Property, Argument Argument)> _arguments;
@@ -466,7 +466,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Local help builder that allows commands to provide more detailed help
         /// text via the "InvokeHelp" function.
         /// </summary>
-        private class LocalHelpBuilder : IHelpBuilder
+        private sealed class LocalHelpBuilder : IHelpBuilder
         {
             private readonly CommandService _commandService;
             private readonly LocalConsole _console;
@@ -503,7 +503,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// pipes through the System.CommandLine parsing allowing per command invocation data (service
         /// provider and raw command line) to be passed through.
         /// </summary>
-        private class LocalConsole : IConsole
+        private sealed class LocalConsole : IConsole
         {
             private IConsoleService _console;
 
@@ -536,7 +536,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             bool IStandardIn.IsInputRedirected { get { return false; } }
 
-            private class StandardStreamWriter : IStandardStreamWriter
+            private sealed class StandardStreamWriter : IStandardStreamWriter
             {
                 private readonly Action<string> _write;
 

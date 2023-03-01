@@ -204,7 +204,7 @@ namespace SOS.Extensions
                 // from DbgEng won't force a symbol load, it will only tell us if it's already
                 // been loaded or not.
                 DEBUG_SYMTYPE symType = GetSymType(symbols, ImageBase);
-                if (symType != DEBUG_SYMTYPE.NONE && symType != DEBUG_SYMTYPE.DEFERRED)
+                if (symType is not DEBUG_SYMTYPE.NONE and not DEBUG_SYMTYPE.DEFERRED)
                 {
                     return DebugToSymbolStatus(symType);
                 }

@@ -433,12 +433,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             public static bool ContainsKnownClrMemoryPointers(ClrObject obj)
             {
                 string typeName = obj.Type?.Name;
-                return typeName == NativeHeapMemoryBlock
-                    || typeName == MetadataReader
-                    || typeName == NativeHeapMemoryBlockDisposableData
-                    || typeName == ExternalMemoryBlockProvider
-                    || typeName == ExternalMemoryBlock
-                    || typeName == RuntimeParameterInfo
+                return typeName is NativeHeapMemoryBlock
+                    or MetadataReader
+                    or NativeHeapMemoryBlockDisposableData
+                    or ExternalMemoryBlockProvider
+                    or ExternalMemoryBlock
+                    or RuntimeParameterInfo
                     ;
             }
 

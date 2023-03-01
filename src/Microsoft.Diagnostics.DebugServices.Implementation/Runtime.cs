@@ -133,11 +133,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                 }
                 catch (Exception ex) when
-                   (ex is DllNotFoundException ||
-                    ex is FileNotFoundException ||
-                    ex is InvalidOperationException ||
-                    ex is InvalidDataException ||
-                    ex is ClrDiagnosticsException)
+                   (ex is DllNotFoundException or
+                    FileNotFoundException or
+                    InvalidOperationException or
+                    InvalidDataException or
+                    ClrDiagnosticsException)
                 {
                     Trace.TraceError("CreateRuntime FAILED: {0}", ex.ToString());
                 }

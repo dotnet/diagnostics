@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"Exception displaying module segments: {ex}");
             }

@@ -78,7 +78,7 @@ public class DumpGenerationFixture : IDisposable
                     auxiliaryKey.DeleteValue(runtimePath);
                 }
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is IOException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
             {
             }
         }

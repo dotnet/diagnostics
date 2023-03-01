@@ -127,7 +127,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
                 }
 
                 info.ID = process.Id;
-                if (info.ID == 0 || info.ID == 4)       // these are special and cause failures otherwise
+                if (info.ID is 0 or 4)       // these are special and cause failures otherwise
                 {
                     continue;
                 }

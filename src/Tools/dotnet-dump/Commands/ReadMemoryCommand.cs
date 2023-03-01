@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     for (int column = 0; column < width; column++)
                     {
                         int offset = column * length;
-                        sb.Append(" ");
+                        sb.Append(' ');
 
                         if (offset < count)
                         {
@@ -260,7 +260,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 return value;
             }
 
-            if (value < 0x20 || value > 0x7E)
+            if (value is < (char)0x20 or > (char)0x7E)
             {
                 value = '.';
             }

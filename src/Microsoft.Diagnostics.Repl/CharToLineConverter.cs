@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     Flush();
                 }
-                else if (c == '\t' || (c >= (char)0x20 && c <= (char)127))
+                else if (c is '\t' or >= ((char)0x20) and <= ((char)127))
                 {
                     m_text.Append(c);
                 }
@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     Flush();
                 }
-                else if (c == '\t' || (c >= (char)0x20 && c <= (char)127))
+                else if (c is '\t' or >= ((char)0x20) and <= ((char)127))
                 {
                     m_text.Append(c);
                 }

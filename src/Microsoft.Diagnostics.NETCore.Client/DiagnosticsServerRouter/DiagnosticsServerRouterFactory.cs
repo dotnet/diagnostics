@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             bool connected = true;
 
-            if (stream is NamedPipeServerStream || stream is NamedPipeClientStream)
+            if (stream is NamedPipeServerStream or NamedPipeClientStream)
             {
                 PipeStream pipeStream = stream as PipeStream;
 

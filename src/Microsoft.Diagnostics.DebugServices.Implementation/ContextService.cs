@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // First check if there is a .NET Core runtime loaded
                     foreach (IRuntime runtime in runtimes)
                     {
-                        if (runtime.RuntimeType == RuntimeType.NetCore || runtime.RuntimeType == RuntimeType.SingleFile)
+                        if (runtime.RuntimeType is RuntimeType.NetCore or RuntimeType.SingleFile)
                         {
                             _currentRuntime = runtime;
                             break;

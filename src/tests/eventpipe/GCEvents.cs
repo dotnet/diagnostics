@@ -104,7 +104,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                         Logger.logger.Log("GCSuspendEEStartStopResult check: " + GCSuspendEEStartStopResult);
 
                         Logger.logger.Log("GCHeapStatsEvents: " + GCHeapStatsEvents);
-                        bool GCHeapStatsEventsResult = GCHeapStatsEvents >= 50 && GCHeapStatsEvents >= 50;
+                        bool GCHeapStatsEventsResult = GCHeapStatsEvents is >= 50 and >= 50;
                         Logger.logger.Log("GCHeapStatsEventsResult check: " + GCHeapStatsEventsResult);
 
                         return GCStartStopResult && GCRestartEEStartStopResult && GCSuspendEEStartStopResult && GCHeapStatsEventsResult ? 100 : -1;

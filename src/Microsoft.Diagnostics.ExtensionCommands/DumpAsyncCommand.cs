@@ -947,7 +947,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     case ClrElementType.Char:
                         char c = obj.ReadField<char>(fieldName);
-                        return c >= 32 && c < 127 ? $"'{c}'" : $"'\\u{(int)c:X4}'";
+                        return c is >= (char)32 and < (char)127 ? $"'{c}'" : $"'\\u{(int)c:X4}'";
 
                     case ClrElementType.Int8:
                         return obj.ReadField<sbyte>(fieldName);
@@ -1145,7 +1145,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     sb ??= new StringBuilder();
                     if (sb.Length != 0)
                     {
-                        sb.Append("|");
+                        sb.Append('|');
                     }
 
                     sb.Append(s);

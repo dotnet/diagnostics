@@ -87,7 +87,7 @@ namespace SOS.Extensions
             {
                 extensionLibrary = DataTarget.PlatformFunctions.LoadLibrary(extensionPath);
             }
-            catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+            catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
             {
                 Trace.TraceError($"LoadLibrary({extensionPath}) FAILED {ex}");
             }

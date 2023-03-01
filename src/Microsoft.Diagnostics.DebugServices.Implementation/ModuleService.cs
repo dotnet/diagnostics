@@ -42,8 +42,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
 
-        internal protected readonly IServiceProvider Services;
-        internal protected readonly ITarget Target;
+        protected internal readonly IServiceProvider Services;
+        protected internal readonly ITarget Target;
 
         public ModuleService(IServiceProvider services)
         {
@@ -274,7 +274,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return peFile;
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"GetPEInfo: {address:X16} isVirtual {isVirtual} exception {ex.Message}");
             }
@@ -312,7 +312,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
             {
                 Trace.TraceError($"GetBuildId: {address:X16} exception {ex.Message}");
             }
@@ -374,7 +374,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
             {
                 Trace.TraceError($"GetVersionString: {module} exception {ex.Message}");
             }
@@ -458,9 +458,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        internal protected IMemoryService MemoryService => _memoryService ??= Services.GetService<IMemoryService>();
+        protected internal IMemoryService MemoryService => _memoryService ??= Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Services.GetService<ISymbolService>();
+        protected internal ISymbolService SymbolService => _symbolService ??= Services.GetService<ISymbolService>();
 
         /// <summary>
         /// Search memory helper class

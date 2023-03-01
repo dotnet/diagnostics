@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         {
                             await client.WriteDumpAsync(DumpType.WithHeap, dumpPath, WriteDumpFlags.None, CancellationToken.None);
                         }
-                        catch (Exception ex) when (ex is ArgumentException || ex is UnsupportedCommandException || ex is ServerErrorException)
+                        catch (Exception ex) when (ex is ArgumentException or UnsupportedCommandException or ServerErrorException)
                         {
                             output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: writing dump FAILED {ex}");
                         }

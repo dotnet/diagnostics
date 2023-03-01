@@ -99,7 +99,7 @@ namespace SOS.Hosting
                 {
                     _sosLibrary = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.LoadLibrary(sosPath);
                 }
-                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
                     // This is a workaround for the Microsoft SDK docker images. Can fail when LoadLibrary uses libdl.so to load the SOS module.
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

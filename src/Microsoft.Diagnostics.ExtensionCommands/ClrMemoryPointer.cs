@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static ulong GetSize(nint size)
         {
             // Some sanity checks on size in case we get bad data in the future.
-            if (size <= 0 || size > int.MaxValue)
+            if (size is <= 0 or > int.MaxValue)
             {
                 return 0;
             }

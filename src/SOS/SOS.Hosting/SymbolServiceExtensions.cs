@@ -150,10 +150,10 @@ namespace SOS.Hosting
                 }
             }
             catch (Exception ex) when
-                (ex is UnauthorizedAccessException ||
-                 ex is BadImageFormatException ||
-                 ex is InvalidVirtualAddressException ||
-                 ex is IOException)
+                (ex is UnauthorizedAccessException or
+                 BadImageFormatException or
+                 InvalidVirtualAddressException or
+                 IOException)
             {
                 Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} ERROR {ex.Message}");
                 hr = HResult.E_FAIL;

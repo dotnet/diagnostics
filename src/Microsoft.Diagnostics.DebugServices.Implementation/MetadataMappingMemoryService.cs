@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceError($"GetMetaData: {module.ImageBase:X16} not valid PE");
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"GetMetaData: loaded {module.ImageBase:X16} exception {ex.Message}");
             }

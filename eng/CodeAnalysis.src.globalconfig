@@ -1501,10 +1501,10 @@ dotnet_diagnostic.IDE0043.severity = warning
 dotnet_diagnostic.IDE0044.severity = suggestion
 
 # IDE0045: Use conditional expression for assignment
-dotnet_diagnostic.IDE0045.severity = suggestion
+dotnet_diagnostic.IDE0045.severity = silent
 
 # IDE0046: Use conditional expression for return
-dotnet_diagnostic.IDE0046.severity = suggestion
+dotnet_diagnostic.IDE0046.severity = silent
 
 # IDE0047: Remove unnecessary parentheses
 dotnet_diagnostic.IDE0047.severity = silent

@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return new Enumerator(_list);
             }
 
-            private class Enumerator : IEnumerator<T>
+            private sealed class Enumerator : IEnumerator<T>
             {
                 private readonly LinkedListNode _tail;
                 private LinkedListNode _current;

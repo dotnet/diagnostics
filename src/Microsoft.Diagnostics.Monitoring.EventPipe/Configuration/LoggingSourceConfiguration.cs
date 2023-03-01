@@ -65,12 +65,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     {
                         if (filterSpecsBuilder.Length > 0)
                         {
-                            filterSpecsBuilder.Append(";");
+                            filterSpecsBuilder.Append(';');
                         }
                         filterSpecsBuilder.Append(filterSpec.Key);
                         if (filterSpec.Value.HasValue)
                         {
-                            filterSpecsBuilder.Append(":");
+                            filterSpecsBuilder.Append(':');
                             filterSpecsBuilder.Append(filterSpec.Value.Value.ToString("G"));
                         }
                     }

@@ -603,7 +603,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     return Console.WindowWidth;
                 }
-                catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is IOException)
+                catch (Exception ex) when (ex is ArgumentOutOfRangeException or IOException)
                 {
                     return int.MaxValue;
                 }

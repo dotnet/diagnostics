@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     writer.Write(text);
                 }
-                catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                 {
                 }
             }
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     writer.Write(text);
                 }
-                catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                 {
                 }
             }
@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     writer.Write(text);
                 }
-                catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                 {
                 }
             }
@@ -152,7 +152,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // TODO: unwrap the DML?
                     writer.Write(text);
                 }
-                catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                 {
                 }
             }

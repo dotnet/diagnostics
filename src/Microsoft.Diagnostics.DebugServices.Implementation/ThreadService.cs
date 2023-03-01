@@ -22,8 +22,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly Dictionary<int, RegisterInfo> _lookupByIndex;
         private Dictionary<uint, IThread> _threads;
 
-        internal protected readonly IServiceProvider Services;
-        internal protected readonly ITarget Target;
+        protected internal readonly IServiceProvider Services;
+        protected internal readonly ITarget Target;
 
         public ThreadService(IServiceProvider services)
         {
@@ -226,7 +226,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>context array</returns>
         internal byte[] GetThreadContext(Thread thread)
         {
-            var threadContext = new byte[_contextSize];
+            byte[] threadContext = new byte[_contextSize];
             if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext))
             {
                 throw new DiagnosticsException();

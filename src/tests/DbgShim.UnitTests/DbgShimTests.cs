@@ -313,15 +313,15 @@ namespace Microsoft.Diagnostics
             if (!string.IsNullOrWhiteSpace(config.HostExe))
             {
                 commandLine.Append(config.HostExe);
-                commandLine.Append(" ");
+                commandLine.Append(' ');
                 if (!string.IsNullOrWhiteSpace(config.HostArgs))
                 {
                     commandLine.Append(config.HostArgs);
-                    commandLine.Append(" ");
+                    commandLine.Append(' ');
                 }
             }
             commandLine.Append(debuggeeConfig.BinaryExePath);
-            commandLine.Append(" ");
+            commandLine.Append(' ');
             commandLine.Append(debuggeeInfo.PipeName);
 
             Trace.TraceInformation("CreateProcessForLaunch {0} {1} {2}", launch, commandLine.ToString(), debuggeeInfo.PipeName);

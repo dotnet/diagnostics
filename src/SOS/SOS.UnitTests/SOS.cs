@@ -36,7 +36,7 @@ public class SOS
 
     private static void SkipIfArm(TestConfiguration config)
     {
-        if (config.TargetArchitecture == "arm" || config.TargetArchitecture == "arm64")
+        if (config.TargetArchitecture is "arm" or "arm64")
         {
             throw new SkipTestException("SOS does not support ARM architectures");
         }
@@ -419,7 +419,7 @@ public class SOS
             // Get test python script path
             string scriptDir = Path.Combine(repoRootDir, "src", "SOS", "lldbplugin.tests");
             arguments.Append(Path.Combine(scriptDir, "test_libsosplugin.py"));
-            arguments.Append(" ");
+            arguments.Append(' ');
 
             // Get lldb path
             arguments.AppendFormat("--lldb {0} ", Environment.GetEnvironmentVariable("LLDB_PATH") ?? throw new ArgumentException("LLDB_PATH environment variable not set"));
@@ -427,11 +427,11 @@ public class SOS
             // Add dotnet host program and arguments
             arguments.Append("--host \"");
             arguments.Append(config.HostExe);
-            arguments.Append(" ");
+            arguments.Append(' ');
             if (!string.IsNullOrWhiteSpace(config.HostArgs))
             {
                 arguments.Append(config.HostArgs);
-                arguments.Append(" ");
+                arguments.Append(' ');
             }
             arguments.Append("\" ");
 

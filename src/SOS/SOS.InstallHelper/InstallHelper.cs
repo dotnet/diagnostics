@@ -298,7 +298,7 @@ namespace SOS
                     // Sleep to allow any temporary error condition to clear up
                     System.Threading.Thread.Sleep(1000);
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is UnauthorizedAccessException || ex is SecurityException)
+                catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException or SecurityException)
                 {
                     if (errorMessage == null)
                     {
@@ -344,7 +344,7 @@ namespace SOS
                         os = "linux-musl";
                     }
                 }
-                catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException)
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException)
                 {
                 }
             }

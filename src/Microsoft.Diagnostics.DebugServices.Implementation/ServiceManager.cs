@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         string[] extensionFiles = Directory.GetFiles(searchPath, "*.dll");
                         extensionPaths.AddRange(extensionFiles);
                     }
-                    catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+                    catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or System.Security.SecurityException)
                     {
                         Trace.TraceError(ex.ToString());
                     }
@@ -221,7 +221,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 assembly = Assembly.LoadFrom(extensionPath);
             }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is BadImageFormatException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException or ArgumentException or BadImageFormatException or System.Security.SecurityException)
             {
                 Trace.TraceError(ex.ToString());
             }
@@ -247,7 +247,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 RegisterExportedServices(assembly);
                 _notifyExtensionLoad.Fire(assembly);
             }
-            catch (Exception ex) when (ex is DiagnosticsException || ex is NotSupportedException || ex is FileNotFoundException)
+            catch (Exception ex) when (ex is DiagnosticsException or NotSupportedException or FileNotFoundException)
             {
                 Trace.TraceError(ex.ToString());
             }

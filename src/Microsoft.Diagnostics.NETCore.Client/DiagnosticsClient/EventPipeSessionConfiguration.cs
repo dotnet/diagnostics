@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentException($"Buffer size cannot be zero.");
             }
 
-            if (format != EventPipeSerializationFormat.NetPerf && format != EventPipeSerializationFormat.NetTrace)
+            if (format is not EventPipeSerializationFormat.NetPerf and not EventPipeSerializationFormat.NetTrace)
             {
                 throw new ArgumentException("Unrecognized format");
             }

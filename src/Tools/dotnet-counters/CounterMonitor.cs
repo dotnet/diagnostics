@@ -788,7 +788,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 if (metrics.Length != 0)
                 {
-                    metrics.Append(",");
+                    metrics.Append(',');
                 }
                 if (_counterList.IncludesAllCounters(provider))
                 {

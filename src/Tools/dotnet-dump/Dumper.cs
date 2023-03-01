@@ -137,16 +137,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
             }
             catch (Exception ex) when
-                (ex is FileNotFoundException ||
-                 ex is ArgumentException ||
-                 ex is DirectoryNotFoundException ||
-                 ex is UnauthorizedAccessException ||
-                 ex is PlatformNotSupportedException ||
-                 ex is UnsupportedCommandException ||
-                 ex is InvalidDataException ||
-                 ex is InvalidOperationException ||
-                 ex is NotSupportedException ||
-                 ex is DiagnosticsClientException)
+                (ex is FileNotFoundException or
+                 ArgumentException or
+                 DirectoryNotFoundException or
+                 UnauthorizedAccessException or
+                 PlatformNotSupportedException or
+                 UnsupportedCommandException or
+                 InvalidDataException or
+                 InvalidOperationException or
+                 NotSupportedException or
+                 DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
                 return -1;

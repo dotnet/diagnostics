@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         {
             StatusCodeRange[] statusCodeRanges = (StatusCodeRange[])statusCodes;
 
-            Func<int, bool> validateStatusCode = (int statusCode) => statusCode >= 100 && statusCode < 600;
+            Func<int, bool> validateStatusCode = (int statusCode) => statusCode is >= 100 and < 600;
 
             foreach (StatusCodeRange statusCodeRange in statusCodeRanges)
             {

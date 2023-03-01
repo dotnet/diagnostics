@@ -349,7 +349,7 @@ namespace SOS.Hosting
                 {
                     _dbiHandle = DataTarget.PlatformFunctions.LoadLibrary(dbiFilePath);
                 }
-                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
                     Trace.TraceError($"LoadLibrary({dbiFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
@@ -478,7 +478,7 @@ namespace SOS.Hosting
                 {
                     _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
                 }
-                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
                     Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
                     return IntPtr.Zero;

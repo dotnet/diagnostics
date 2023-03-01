@@ -2082,7 +2082,7 @@ internal class PriorityQueue
 
         foreach (var item in items)
         {
-            sb.Append("{").Append((int)item.value).Append(", ").Append(item.priority.ToString("f1")).Append("}").AppendLine();
+            sb.Append('{').Append((int)item.value).Append(", ").Append(item.priority.ToString("f1")).Append('}').AppendLine();
         }
 
         sb.AppendLine("</PriorityQueue>");
@@ -2324,7 +2324,7 @@ public class GraphSampler
             }
             for (int i = 1; i < ret.Length; i++)
             {
-                Debug.Assert(0 < ret[i] && ret[i] <= float.MaxValue);
+                Debug.Assert(ret[i] is > 0 and <= float.MaxValue);
             }
 
             return ret;

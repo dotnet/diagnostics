@@ -427,7 +427,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             Trace.WriteLine($"Downloaded symbol file {key.FullPathName}");
                         }
                     }
-                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+                    catch (Exception ex) when (ex is UnauthorizedAccessException or DirectoryNotFoundException)
                     {
                         Trace.TraceError("{0}: {1}", file.FileName, ex.Message);
                         downloadFilePath = null;
@@ -469,10 +469,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
             catch (Exception ex) when
-                (ex is UnauthorizedAccessException ||
-                 ex is BadImageFormatException ||
-                 ex is InvalidVirtualAddressException ||
-                 ex is IOException)
+                (ex is UnauthorizedAccessException or
+                 BadImageFormatException or
+                 InvalidVirtualAddressException or
+                 IOException)
             {
                 Trace.TraceError($"GetMetaData: {ex.Message}");
             }
@@ -491,14 +491,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(string assemblyPath, bool isFileLayout, Stream peStream)
         {
-            if (assemblyPath == null && peStream == null)
+            if (assemblyPath is null)
             {
                 throw new ArgumentNullException(nameof(assemblyPath));
             }
 
-            if (peStream is not null && !peStream.CanSeek)
+            if (peStream is null)
             {
-                throw new ArgumentException(nameof(peStream));
+                throw new ArgumentNullException(nameof(peStream));
+            }
+
+            if (!peStream.CanSeek)
+            {
+                throw new ArgumentException("Stream is not seakable", nameof(peStream));
             }
 
             PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
@@ -523,7 +528,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
                     if (codeViewEntry.DataSize != 0)
                     {
-                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
+                        SymbolFile result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
                         if (result != null)
                         {
                             return result;
@@ -537,7 +542,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 // nop
             }
@@ -562,7 +567,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             if (!pdbStream.CanSeek)
             {
-                throw new ArgumentException(nameof(pdbStream));
+                throw new ArgumentException("Stream is not seakable", nameof(pdbStream));
             }
 
             byte[] buffer = new byte[sizeof(uint)];
@@ -589,7 +594,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
                 result = new SymbolFile(provider, provider.GetMetadataReader());
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 return null;
             }
@@ -615,7 +620,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string DownloadPE(IModule module, KeyTypeFlags flags)
         {
             SymbolStoreKey fileKey = null;
-            string fileName = null;
+            SymbolStoreKey tempFileKey = null;
+            string fileName;
             if ((flags & KeyTypeFlags.IdentityKey) != 0)
             {
                 if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
@@ -633,10 +639,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else if ((flags & KeyTypeFlags.SymbolKey) != 0)
             {
                 IEnumerable<PdbFileInfo> pdbInfos = module.GetPdbFileInfos();
-                if (!pdbInfos.Any())
-                {
-                    return null;
-                }
                 foreach (PdbFileInfo pdbInfo in pdbInfos)
                 {
                     if (pdbInfo.IsPortable)
@@ -644,27 +646,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         fileKey = PortablePDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid);
                         if (fileKey is not null)
                         {
-                            fileName = pdbInfo.Path;
                             break;
                         }
+                        tempFileKey ??= PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
                     }
                 }
-                if (fileKey is null)
+
+                fileKey ??= tempFileKey;
+                if (fileKey is not null)
                 {
-                    foreach (PdbFileInfo pdbInfo in pdbInfos)
-                    {
-                        if (!pdbInfo.IsPortable)
-                        {
-                            fileKey = PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
-                            if (fileKey is not null)
-                            {
-                                fileName = pdbInfo.Path;
-                                break;
-                            }
-                        }
-                    }
+                    fileName = fileKey.FullPathName;
                 }
-                if (fileKey is null)
+                else
                 {
                     Trace.TraceWarning($"DownLoadPE: no key generated for module PDB {module.FileName} ");
                     return null;
@@ -892,7 +885,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     result = new SymbolFile(provider, reader);
                 }
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 return null;
             }
@@ -919,7 +912,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 provider = peReader.ReadEmbeddedPortablePdbDebugDirectoryData(embeddedPdbEntry);
                 result = new SymbolFile(provider, provider.GetMetadataReader());
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 return null;
             }
@@ -950,7 +943,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else
                 {
-                    sb.AppendLine($"-> {symbolStore.ToString()}");
+                    sb.AppendLine($"-> {symbolStore}");
                 }
             });
             return sb.ToString();
@@ -968,7 +961,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 return _symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
+            catch (Exception ex) when (ex is UnauthorizedAccessException or BadImageFormatException or IOException)
             {
                 Trace.TraceError("Exception: {0}", ex.ToString());
             }

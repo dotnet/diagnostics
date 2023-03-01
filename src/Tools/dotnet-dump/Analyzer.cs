@@ -63,11 +63,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 _consoleService.AddCommandHistory(history);
             }
             catch (Exception ex) when
-                (ex is IOException ||
-                 ex is ArgumentNullException ||
-                 ex is UnauthorizedAccessException ||
-                 ex is NotSupportedException ||
-                 ex is SecurityException)
+                (ex is IOException or
+                 ArgumentNullException or
+                 UnauthorizedAccessException or
+                 NotSupportedException or
+                 SecurityException)
             {
             }
 
@@ -157,14 +157,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
             }
             catch (Exception ex) when
-                (ex is ClrDiagnosticsException ||
-                 ex is FileNotFoundException ||
-                 ex is DirectoryNotFoundException ||
-                 ex is UnauthorizedAccessException ||
-                 ex is PlatformNotSupportedException ||
-                 ex is InvalidDataException ||
-                 ex is InvalidOperationException ||
-                 ex is NotSupportedException)
+                (ex is ClrDiagnosticsException or
+                 FileNotFoundException or
+                 DirectoryNotFoundException or
+                 UnauthorizedAccessException or
+                 PlatformNotSupportedException or
+                 InvalidDataException or
+                 InvalidOperationException or
+                 NotSupportedException)
             {
                 _fileLoggingConsoleService.WriteError($"{ex.Message}");
                 return Task.FromResult(1);
@@ -185,10 +185,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         File.WriteAllLines(historyFileName, _consoleService.GetCommandHistory());
                     }
                     catch (Exception ex) when
-                        (ex is IOException ||
-                         ex is UnauthorizedAccessException ||
-                         ex is NotSupportedException ||
-                         ex is SecurityException)
+                        (ex is IOException or
+                         UnauthorizedAccessException or
+                         NotSupportedException or
+                         SecurityException)
                     {
                     }
                 }

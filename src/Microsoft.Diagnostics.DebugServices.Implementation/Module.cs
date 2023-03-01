@@ -161,11 +161,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                     }
                     catch (Exception ex) when
-                       (ex is InvalidVirtualAddressException ||
-                        ex is ArgumentOutOfRangeException ||
-                        ex is IndexOutOfRangeException ||
-                        ex is OverflowException ||
-                        ex is BadInputFormatException)
+                       (ex is InvalidVirtualAddressException or
+                        ArgumentOutOfRangeException or
+                        IndexOutOfRangeException or
+                        OverflowException or
+                        BadInputFormatException)
                     {
                         Trace.TraceWarning("ELF .gnu_debuglink section in {0}: {1}", this, ex.Message);
                     }
@@ -238,7 +238,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         version = fileInfo.ToVersion();
                     }
                 }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+                catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
                 {
                     Trace.TraceError($"GetVersion: exception {ex.Message}");
                 }

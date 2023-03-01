@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                     }
                                 }
                             }
-                            catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
+                            catch (Exception ex) when (ex is BadImageFormatException or InvalidOperationException or IOException)
                             {
                                 Trace.TraceError($"ReadMemoryFromModule: exception: address {address:X16} {ex.Message} {module.FileName}");
                             }
@@ -209,7 +209,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         data = Array.Empty<byte>();
                                     }
                                 }
-                                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
+                                catch (Exception ex) when (ex is BadInputFormatException or InvalidVirtualAddressException)
                                 {
                                     Trace.TraceError($"ReadMemoryFromModule: ELF or MachO file exception: address {address:X16} {ex.Message} {module.FileName}");
                                 }

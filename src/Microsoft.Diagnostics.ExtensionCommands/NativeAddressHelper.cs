@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                             foreach (DescribedRegion region in found)
                             {
-                                if (mem.Kind == ClrMemoryKind.GCHeapReserve || mem.Kind == ClrMemoryKind.GCHeapSegment)
+                                if (mem.Kind is ClrMemoryKind.GCHeapReserve or ClrMemoryKind.GCHeapSegment)
                                 {
                                     // GC heap segments are special.  We only know a small chunk of memory on the actual allocated
                                     // region.  We want to mark the whole region as GC/GCReserve and not try to divide up chunks for these.
@@ -250,8 +250,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // Only warn when the region kind meaningfully changes.  Many regions are reported as
                 // HighFrequencyHeap originally but are classified into more specific regions, so we
                 // don't warn for those.
-                if (region.ClrMemoryKind != ClrMemoryKind.None
-                    && region.ClrMemoryKind != ClrMemoryKind.HighFrequencyHeap)
+                if (region.ClrMemoryKind is not ClrMemoryKind.None
+                    and not ClrMemoryKind.HighFrequencyHeap)
                 {
                     Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + mem.Size:x}] {mem.Kind}.");
                 }

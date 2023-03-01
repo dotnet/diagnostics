@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Instance.Enable(logfile == "1" ? null : logfile);
                 }
             }
-            catch (Exception ex) when (ex is IOException || ex is NotSupportedException || ex is SecurityException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or NotSupportedException or SecurityException or UnauthorizedAccessException)
             {
             }
         }
@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         _diagnosticLoggingService._writer.Write(message);
                         return;
                     }
-                    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                    catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                     {
                     }
                 }
@@ -155,7 +155,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         _diagnosticLoggingService._writer.WriteLine(message);
                         return;
                     }
-                    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                    catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                     {
                     }
                 }

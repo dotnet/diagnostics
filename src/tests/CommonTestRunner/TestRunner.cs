@@ -249,7 +249,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                     await _pipeServer.WaitForConnectionAsync(source.Token);
                     WriteLine("WaitForTracee: DONE");
                 }
-                catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
+                catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
                 {
                     WriteLine($"WaitForTracee: canceled {ex}");
                 }
@@ -265,7 +265,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 {
                     _pipeServer.WriteByte(42);
                 }
-                catch (Exception ex) when (ex is IOException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is IOException or InvalidOperationException)
                 {
                     Trace.TraceError($"WakeupTracee {Pid} failed {ex}");
                 }
@@ -283,7 +283,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                     int signal = _pipeServer.ReadByte();
                     WriteLine($"WaitForSignal DONE {signal}");
                 }
-                catch (Exception ex) when (ex is IOException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is IOException or InvalidOperationException)
                 {
                     WriteLine($"WaitForSignal failed {ex}");
                 }

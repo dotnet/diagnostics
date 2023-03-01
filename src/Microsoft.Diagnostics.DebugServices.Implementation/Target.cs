@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     Directory.Delete(_tempDirectory);
                 }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                 }
                 _tempDirectory = null;

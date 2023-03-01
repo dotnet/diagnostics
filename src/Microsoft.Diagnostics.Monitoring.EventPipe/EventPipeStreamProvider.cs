@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 throw new InvalidOperationException("End of stream", e);
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException("Failed to start the event pipe session", ex);
             }

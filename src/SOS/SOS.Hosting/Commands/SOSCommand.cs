@@ -84,7 +84,7 @@ namespace SOS.Hosting
                 string arguments = string.Concat(Arguments.Skip(1).Select((arg) => arg + " ")).Trim();
                 SOSHost.ExecuteCommand(Arguments[0], arguments);
             }
-            catch (Exception ex) when (ex is FileNotFoundException || ex is EntryPointNotFoundException || ex is InvalidOperationException)
+            catch (Exception ex) when (ex is FileNotFoundException or EntryPointNotFoundException or InvalidOperationException)
             {
                 WriteLineError(ex.Message);
             }
