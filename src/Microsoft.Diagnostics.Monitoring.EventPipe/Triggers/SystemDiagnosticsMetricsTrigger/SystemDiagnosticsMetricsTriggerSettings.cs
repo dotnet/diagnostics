@@ -6,7 +6,6 @@ using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics
 {
@@ -17,10 +16,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         IValidatableObject
     {
         /// <summary>
-        /// The name of the event provider from which counters/gauges/histograms/etc. will be monitored.
+        /// The name of the meter from which counters/gauges/histograms/etc. will be monitored.
         /// </summary>
         [Required]
-        public string ProviderName { get; set; }
+        public string MeterName { get; set; }
 
         /// <summary>
         /// The name of the instrument from the event provider to monitor.

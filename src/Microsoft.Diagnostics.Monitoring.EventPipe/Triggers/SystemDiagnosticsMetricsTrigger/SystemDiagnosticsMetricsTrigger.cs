@@ -40,11 +40,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             Validate(settings);
 
             _filter = new CounterFilter(settings.CounterIntervalSeconds);
-            _filter.AddFilter(settings.ProviderName, new string[] { settings.InstrumentName });
+            _filter.AddFilter(settings.MeterName, new string[] { settings.InstrumentName });
 
             _impl = new SystemDiagnosticsMetricsTriggerImpl(settings);
 
-            _providerName = settings.ProviderName;
+            _providerName = settings.MeterName;
 
             _sessionId = settings.SessionId;
         }
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         {
             Validate(settings);
 
-            var config = new MetricSourceConfiguration(settings.CounterIntervalSeconds, MetricSourceConfiguration.CreateProviders(new string[] { settings.ProviderName }, MetricType.Meter), settings.MaxHistograms, settings.MaxTimeSeries);
+            var config = new MetricSourceConfiguration(settings.CounterIntervalSeconds, MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter), settings.MaxHistograms, settings.MaxTimeSeries);
             settings.SessionId = config.SessionId;
 
             return config;

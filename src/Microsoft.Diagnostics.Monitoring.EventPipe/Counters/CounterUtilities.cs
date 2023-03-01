@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return metadataDict;
         }
 
-        public static string CreatePercentile(double quantile) => $"{(int)(100 * quantile)}";
+        public static int CreatePercentile(double quantile) => (int)(100 * quantile);
 
         public static string AppendPercentile(string tags, double quantile) => AppendPercentile(tags, FormattableString.Invariant($"Percentile={CreatePercentile(quantile)}"));
 

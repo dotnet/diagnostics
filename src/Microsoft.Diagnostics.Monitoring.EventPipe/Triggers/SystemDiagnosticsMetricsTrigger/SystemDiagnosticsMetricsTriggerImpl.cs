@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
     {
         private readonly long _intervalTicks;
         private readonly Func<double, bool> _valueFilterDefault;
-        private readonly Func<Dictionary<string, double>, bool> _valueFilterHistogram;
+        private readonly Func<Dictionary<int, double>, bool> _valueFilterHistogram;
         private readonly long _windowTicks;
 
         private long? _latestTicks;
@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
                 _valueFilterHistogram = histogramValues =>
                 {
-                    if (!histogramValues.TryGetValue(settings.HistogramPercentile.Value.ToString(), out var value) || !evalFunc(value))
+                    if (!histogramValues.TryGetValue(settings.HistogramPercentile.Value, out var value) || !evalFunc(value))
                     {
                         return false;
                     }
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             }
         }
 
-        private Dictionary<string, double> CreatePayloadDict(PercentilePayload percentilePayload)
+        private Dictionary<int, double> CreatePayloadDict(PercentilePayload percentilePayload)
         {
             return percentilePayload.Quantiles.ToDictionary(keySelector: p => CounterUtilities.CreatePercentile(p.Percentage), elementSelector: p => p.Value);
         }
