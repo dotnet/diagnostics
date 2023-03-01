@@ -14,7 +14,7 @@ using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    internal class Program
+    internal sealed class Program
     {
         private delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
 
@@ -182,8 +182,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private static int Main(string[] args)
         {
-            StringBuilder message = new StringBuilder();
-
             ConsoleColor currentColor = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("WARNING: dotnet-dsrouter is a development tool not intended for production environments." + Environment.NewLine);

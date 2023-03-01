@@ -16,7 +16,7 @@ namespace Microsoft.Internal.Common.Utils
     // ProcessLauncher is a child-process launcher for "diagnostics tools at startup" scenarios
     // It launches the target process at startup and passes its processId to the corresponding Command handler.
     // </summary>
-    internal class ProcessLauncher
+    internal sealed class ProcessLauncher
     {
         private Process _childProc;
         private Task _stdOutTask = Task.CompletedTask;
@@ -132,7 +132,7 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
-    internal class DiagnosticsClientHolder : IDisposable
+    internal sealed class DiagnosticsClientHolder : IDisposable
     {
         public DiagnosticsClient Client;
         public IpcEndpointInfo EndpointInfo;
@@ -176,7 +176,7 @@ namespace Microsoft.Internal.Common.Utils
     // <summary>
     // This class acts a helper class for building a DiagnosticsClient instance
     // </summary>
-    internal class DiagnosticsClientBuilder
+    internal sealed class DiagnosticsClientBuilder
     {
         private string _toolName;
         private int _timeoutInSec;

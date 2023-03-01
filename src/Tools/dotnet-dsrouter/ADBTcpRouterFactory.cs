@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         }
     }
 
-    internal class ADBTcpServerRouterFactory : TcpServerRouterFactory
+    internal sealed class ADBTcpServerRouterFactory : TcpServerRouterFactory
     {
         private readonly int _port;
         private bool _ownsPortReverse;
@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         }
     }
 
-    internal class ADBTcpClientRouterFactory : TcpClientRouterFactory
+    internal sealed class ADBTcpClientRouterFactory : TcpClientRouterFactory
     {
         private readonly int _port;
         private bool _ownsPortForward;

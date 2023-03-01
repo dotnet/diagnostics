@@ -86,7 +86,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         #endregion
     }
 
-    internal class USBMuxStream : Stream
+#pragma warning disable CA1844 // Provide memory-based overrides of async methods when subclassing 'Stream'
+    internal sealed class USBMuxStream : Stream
+#pragma warning restore CA1844 // Provide memory-based overrides of async methods when subclassing 'Stream'
     {
         private int _handle = -1;
 
@@ -238,7 +240,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 {
                     Write(buffer, offset, count);
                 }
-            });
+            }, cancellationToken);
         }
 
         public override void Close()
@@ -257,7 +259,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         }
     }
 
-    internal class USBMuxTcpClientRouterFactory : TcpClientRouterFactory
+    internal sealed class USBMuxTcpClientRouterFactory : TcpClientRouterFactory
     {
         private readonly int _port;
         private IntPtr _device = IntPtr.Zero;
@@ -300,7 +302,6 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private async Task<Stream> ConnectTcpStreamAsyncInternal(CancellationToken token, bool retry)
         {
             int handle = -1;
-            ushort networkPort = (ushort)IPAddress.HostToNetworkOrder(unchecked((short)_port));
 
             _logger?.LogDebug($"Connecting new tcp endpoint over usbmux \"{_tcpClientAddress}\".");
 

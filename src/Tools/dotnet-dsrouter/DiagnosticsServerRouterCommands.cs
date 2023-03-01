@@ -81,11 +81,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             protected static LogLevel ParseLogLevel(string verbose)
             {
                 LogLevel logLevel = LogLevel.Information;
-                if (string.Compare(verbose, "debug", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
                 {
                     logLevel = LogLevel.Debug;
                 }
-                else if (string.Compare(verbose, "trace", StringComparison.OrdinalIgnoreCase) == 0)
+                else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
                 {
                     logLevel = LogLevel.Trace;
                 }
@@ -109,7 +109,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 while (!linkedCancelToken.IsCancellationRequested)
                 {
-                    await Task.WhenAny(routerTask, Task.Delay(250)).ConfigureAwait(false);
+                    await Task.WhenAny(routerTask, Task.Delay(
+                        250,
+                        linkedCancelToken.Token)).ConfigureAwait(false);
                     if (routerTask.IsCompleted)
                     {
                         break;
@@ -129,7 +131,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        private class IpcClientTcpServerRunner : SpecificRunnerBase
+        private sealed class IpcClientTcpServerRunner : SpecificRunnerBase
         {
             public IpcClientTcpServerRunner(string verbose) : base(verbose) { }
 
@@ -165,7 +167,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token).ConfigureAwait(false);
         }
 
-        private class IpcServerTcpServerRunner : SpecificRunnerBase
+        private sealed class IpcServerTcpServerRunner : SpecificRunnerBase
         {
             public IpcServerTcpServerRunner(string verbose) : base(verbose) { }
 
@@ -197,7 +199,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token).ConfigureAwait(false);
         }
 
-        private class IpcServerTcpClientRunner : SpecificRunnerBase
+        private sealed class IpcServerTcpClientRunner : SpecificRunnerBase
         {
             public IpcServerTcpClientRunner(string verbose) : base(verbose) { }
 
@@ -226,7 +228,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token).ConfigureAwait(false);
         }
 
-        private class IpcClientTcpClientRunner : SpecificRunnerBase
+        private sealed class IpcClientTcpClientRunner : SpecificRunnerBase
         {
             public IpcClientTcpClientRunner(string verbose) : base(verbose) { }
 
@@ -250,7 +252,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }, token).ConfigureAwait(false);
         }
 
-        private class IpcServerWebSocketServerRunner : SpecificRunnerBase
+        private sealed class IpcServerWebSocketServerRunner : SpecificRunnerBase
         {
             public IpcServerWebSocketServerRunner(string verbose) : base(verbose) { }
 
@@ -289,11 +291,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
             finally
             {
-                await server.StopServer(token);
+                await server.StopServer(token).ConfigureAwait(false);
             }
         }
 
-        private class IpcClientWebSocketServerRunner : SpecificRunnerBase
+        private sealed class IpcClientWebSocketServerRunner : SpecificRunnerBase
         {
             public IpcClientWebSocketServerRunner(string verbose) : base(verbose) { }
 
@@ -327,7 +329,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
             finally
             {
-                await server.StopServer(token);
+                await server.StopServer(token).ConfigureAwait(false);
             }
         }
 
@@ -376,11 +378,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = TcpClientRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(forwardPort, "android", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpClientRouterFactory = ADBTcpClientRouterFactory.CreateADBInstance;
                 }
-                else if (string.Compare(forwardPort, "ios", StringComparison.OrdinalIgnoreCase) == 0)
+                else if (string.Equals(forwardPort, "ios", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpClientRouterFactory = USBMuxTcpClientRouterFactory.CreateUSBMuxInstance;
                 }
@@ -397,7 +399,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = TcpServerRouterFactory.CreateDefaultInstance;
             if (!string.IsNullOrEmpty(forwardPort))
             {
-                if (string.Compare(forwardPort, "android", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Equals(forwardPort, "android", StringComparison.OrdinalIgnoreCase))
                 {
                     tcpServerRouterFactory = ADBTcpServerRouterFactory.CreateADBInstance;
                 }

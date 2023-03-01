@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,18 +22,18 @@ namespace SymbolTestApp
             Foo1(42, dllPath);
         }
 
-        static int Foo1(int x, string dllPath)
+        private static int Foo1(int x, string dllPath)
         {
             return Foo2(x, dllPath);
         }
 
-        static int Foo2(int x, string dllPath)
+        private static int Foo2(int x, string dllPath)
         {
             Foo4(dllPath);
             return x;
         }
 
-        static void Foo4(string dllPath)
+        private static void Foo4(string dllPath)
         {
 #if FULL_CLR
             byte[] dll = File.ReadAllBytes(Path.Combine(dllPath, @"SymbolTestDll.dll"));

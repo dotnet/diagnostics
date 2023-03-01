@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -13,9 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Net.WebSockets;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.WebSocketServer;
 
@@ -23,14 +23,14 @@ namespace Microsoft.Diagnostics.WebSocketServer;
 // socket connections on a given path and hands them off to a handler callback.
 // The code here configures a new generic host (IHost) with a lifetime that is controlled by
 // the user of this class.
-internal class EmbeddedWebSocketServer
+internal sealed class EmbeddedWebSocketServer
 {
-    public record Options
+    public sealed record Options
     {
         public string Scheme { get; set; } = "http";
-        public string Host { get; set; } = default;
+        public string Host { get; set; }
         public string Path { get; set; } = default!;
-        public string Port { get; set; } = default;
+        public string Port { get; set; }
         public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
         public void Assign(Options other)
@@ -106,7 +106,7 @@ internal class EmbeddedWebSocketServer
 
     public async Task StartWebServer(CancellationToken ct = default)
     {
-        await _host.StartAsync(ct);
+        await _host.StartAsync(ct).ConfigureAwait(false);
         var logger = _host.Services.GetRequiredService<ILogger<EmbeddedWebSocketServer>>();
         var ipAddressSecure = _host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses
         .Where(a => a.StartsWith("http:"))
@@ -119,7 +119,7 @@ internal class EmbeddedWebSocketServer
 
     public async Task StopWebServer(CancellationToken ct = default)
     {
-        await _host.StopAsync(ct);
+        await _host.StopAsync(ct).ConfigureAwait(false);
     }
 
     private static bool NeedsClose(WebSocketState state)
@@ -140,12 +140,19 @@ internal class EmbeddedWebSocketServer
             context.Response.StatusCode = 400;
             return;
         }
-        var socket = await context.WebSockets.AcceptWebSocketAsync();
+        var socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
         if (connectionHandler != null)
-            await connectionHandler(context, socket, context.RequestAborted);
+        {
+            await connectionHandler(context, socket, context.RequestAborted).ConfigureAwait(false);
+        }
         else
-            await Task.Delay(250);
+        {
+            await Task.Delay(250).ConfigureAwait(false);
+        }
+
         if (NeedsClose(socket.State))
-            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+        {
+            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).ConfigureAwait(false);
+        }
     }
 }
