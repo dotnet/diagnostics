@@ -69,7 +69,7 @@ namespace Microsoft.Internal.Common.Utils
         private static async Task ReadAndIgnoreAllStreamAsync(StreamReader streamToIgnore, CancellationToken cancelToken)
         {
             Memory<char> memory = new char[4096];
-            while (await streamToIgnore.ReadAsync(memory, cancelToken) != 0)
+            while (await streamToIgnore.ReadAsync(memory, cancelToken).ConfigureAwait(false) != 0)
             {
             }
         }
@@ -168,7 +168,7 @@ namespace Microsoft.Internal.Common.Utils
             ProcessLauncher.Launcher.Cleanup();
             if (_server != null)
             {
-                await _server.DisposeAsync();
+                await _server.DisposeAsync().ConfigureAwait(false);
             }
         }
     }
@@ -250,13 +250,13 @@ namespace Microsoft.Internal.Common.Utils
 
                 try
                 {
-                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct);
+                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct).ConfigureAwait(false);
                     return new DiagnosticsClientHolder(new DiagnosticsClient(endpointInfo.Endpoint), endpointInfo, fullPort, server);
                 }
                 catch (TaskCanceledException)
                 {
                     //clean up the server
-                    await server.DisposeAsync();
+                    await server.DisposeAsync().ConfigureAwait(false);
                     if (!ct.IsCancellationRequested)
                     {
                         throw;

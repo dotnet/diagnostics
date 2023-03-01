@@ -170,7 +170,7 @@ public class DotNetHeapDumpGraphReader
                 return;
             }
 
-            if (string.Compare(data.ProcessName, processNameOrId, StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(data.ProcessName, processNameOrId, StringComparison.OrdinalIgnoreCase))
             {
                 m_log.WriteLine("Found process id {0} for process Name {1}", processNameOrId, data.ProcessName);
                 m_processId = data.ProcessID;

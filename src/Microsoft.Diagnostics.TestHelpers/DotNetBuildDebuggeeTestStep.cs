@@ -149,8 +149,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         protected override async Task DoWork(ITestOutputHelper output)
         {
             PrepareProjectSolution(output);
-            await Restore(output);
-            await Build(output);
+            await Restore(output).ConfigureAwait(false);
+            await Build(output).ConfigureAwait(false);
             CopyNativeDependencies(output);
         }
 
@@ -194,9 +194,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                 args += extraArgs;
             }
             output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
-            ProcessRunner runner = new ProcessRunner(DotNetToolPath, args).
-                WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
-                WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
+            ProcessRunner runner = new ProcessRunner(DotNetToolPath, args)
+                .WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0")
+                .WithEnvironmentVariable("DOTNET_ROOT", Path.GetDirectoryName(DotNetToolPath)).
                 WithEnvironmentVariable("DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER", "true").
                 WithEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR", Path.GetDirectoryName(DotNetToolPath)).
                 WithEnvironmentVariable("DOTNET_INSTALL_DIR", Path.GetDirectoryName(DotNetToolPath)).
@@ -216,10 +216,10 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
 
             //workaround for https://github.com/dotnet/cli/issues/3868
-            await _dotnetRestoreLock.WaitAsync();
+            await _dotnetRestoreLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                await runner.Run();
+                await runner.Run().ConfigureAwait(false);
             }
             finally
             {
@@ -231,7 +231,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected virtual async Task Restore(ITestOutputHelper output)
         {
-            await Restore(null, output);
+            await Restore(null, output).ConfigureAwait(false);
         }
 
         protected async Task Build(string dotnetArgs, ITestOutputHelper output)
@@ -269,7 +269,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 runner = runner.WithEnvironmentVariable("NUGET_PACKAGES", NuGetPackageCacheDirPath);
             }
 
-            await runner.Run();
+            await runner.Run().ConfigureAwait(false);
 
             if (DebuggeeBinaryExePath != null)
             {
@@ -283,7 +283,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected virtual async Task Build(ITestOutputHelper output)
         {
-            await Build("build", output);
+            await Build("build", output).ConfigureAwait(false);
         }
 
         private void CopyNativeDependencies(ITestOutputHelper output)
@@ -329,7 +329,6 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 return;
             }
-            string nugetConfigPath = Path.Combine(DebuggeeSolutionDirPath, "NuGet.config");
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             sb.AppendLine("<configuration>");

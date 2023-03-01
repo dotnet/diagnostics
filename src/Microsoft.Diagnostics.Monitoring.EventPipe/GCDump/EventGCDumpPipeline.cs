@@ -87,21 +87,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // event source some time to produce the events, but if it doesn't start producing them within
             // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
             Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
-            Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask);
+            Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask).ConfigureAwait(false);
 
             token.ThrowIfCancellationRequested();
 
             // If started receiving GC events, wait for the GC Stop event.
             if (completedTask == gcDataTask)
             {
-                await gcStopTask;
+                await gcStopTask.ConfigureAwait(false);
             }
 
             // Stop receiving events; if haven't received events yet, this will force flushing of events.
-            await stopSessionAsync();
+            await stopSessionAsync().ConfigureAwait(false);
 
             // Wait for all received events to be processed.
-            await sourceCompletedTaskSource.Task;
+            await sourceCompletedTaskSource.Task.ConfigureAwait(false);
 
             // Check that GC data and stop events were received. This is done by checking that the
             // associated tasks have ran to completion. If one of them has not reached the completion state, then

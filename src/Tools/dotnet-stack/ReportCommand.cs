@@ -82,17 +82,17 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
                 {
                     Task copyTask = session.EventStream.CopyToAsync(fs);
-                    await Task.Delay(duration);
+                    await Task.Delay(duration).ConfigureAwait(false);
                     session.Stop();
 
                     // check if rundown is taking more than 5 seconds and add comment to report
                     Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask);
+                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
                     if (completedTask == timeoutTask)
                     {
                         console.Out.WriteLine($"# Sufficiently large applications can cause this command to take non-trivial amounts of time");
                     }
-                    await copyTask;
+                    await copyTask.ConfigureAwait(false);
                 }
 
                 // using the generated trace file, symbolicate and compute stacks.
@@ -110,8 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                     var samplesForThread = new Dictionary<int, List<StackSourceSample>>();
 
-                    stackSource.ForEach((sample) =>
-                    {
+                    stackSource.ForEach((sample) => {
                         StackSourceCallStackIndex stackIndex = sample.StackIndex;
                         while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
                         {

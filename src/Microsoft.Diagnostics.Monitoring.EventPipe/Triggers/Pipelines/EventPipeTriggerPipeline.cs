@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
             {
                 await _pipeline.StopAsync(token).ConfigureAwait(false);
             }
-            await base.OnStop(token);
+            await base.OnStop(token).ConfigureAwait(false);
         }
 
         protected override async Task OnCleanup()
@@ -88,7 +88,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
                 disposableTrigger.Dispose();
             }
 
-            await base.OnCleanup();
+            await base.OnCleanup().ConfigureAwait(false);
         }
     }
 }

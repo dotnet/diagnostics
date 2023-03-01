@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 default:
                     throw new Exception("Invalid DebuggeeBuildProcess configuration value. Expected 'prebuilt', actual \'" + config.DebuggeeBuildProcess + "\'");
             }
-            return await compiler.Execute(output);
+            return await compiler.Execute(output).ConfigureAwait(false);
         }
     }
 

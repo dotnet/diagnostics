@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
                 // Restore and build the debuggee. The debuggee name is lower cased because the
                 // source directory name has been lowercased by the build system.
-                DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName.ToLowerInvariant(), outputHelper);
+                DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName.ToLowerInvariant(), outputHelper).ConfigureAwait(false);
 
                 outputHelper.WriteLine("Starting {0}", testName);
                 outputHelper.WriteLine("{");
@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 processRunner.Start();
 
                 // Wait for the debuggee to finish before getting the debuggee output
-                int exitCode = await processRunner.WaitForExit();
+                int exitCode = await processRunner.WaitForExit().ConfigureAwait(false);
 
                 string debuggeeStandardOutput = testLogger.GetStandardOutput();
                 string debuggeeStandardError = testLogger.GetStandardError();

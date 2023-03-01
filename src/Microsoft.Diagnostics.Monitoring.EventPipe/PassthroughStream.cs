@@ -63,10 +63,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            int bytesRead = await _sourceStream.ReadAsync(buffer, cancellationToken);
+            int bytesRead = await _sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
             if (bytesRead != 0)
             {
-                await _destinationStream.WriteAsync(buffer[..bytesRead], cancellationToken);
+                await _destinationStream.WriteAsync(buffer[..bytesRead], cancellationToken).ConfigureAwait(false);
             }
 
             return bytesRead;
@@ -94,9 +94,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override async ValueTask DisposeAsync()
         {
-            await _sourceStream.DisposeAsync();
-            await _destinationStream.DisposeAsync();
-            await base.DisposeAsync();
+            await _sourceStream.DisposeAsync().ConfigureAwait(false);
+            await _destinationStream.DisposeAsync().ConfigureAwait(false);
+            await base.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

@@ -68,6 +68,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => _baseStream.CopyToAsync(destination, bufferSize, cancellationToken);
 
-        public override async ValueTask DisposeAsync() => await base.DisposeAsync();
+        public override async ValueTask DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
     }
 }

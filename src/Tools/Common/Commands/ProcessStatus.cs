@@ -129,7 +129,7 @@ namespace Microsoft.Internal.Common.Commands
                     .ThenBy(process => process.Id);
 
                 int currentPid = Process.GetCurrentProcess().Id;
-                List<ProcessDetails> printInfo = new ();
+                List<ProcessDetails> printInfo = new();
                 foreach (Process process in processes)
                 {
                     if (process.Id == currentPid)

@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 await _stopProcessingSource.Task.ConfigureAwait(false);
 
                 await StopSessionAsync(session).ConfigureAwait(false);
-            });
+            }, cancellationToken);
 
             return session.EventStream;
         }

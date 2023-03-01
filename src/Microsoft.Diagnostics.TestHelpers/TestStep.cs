@@ -44,20 +44,20 @@ namespace Microsoft.Diagnostics.TestHelpers
         public async Task Execute(ITestOutputHelper output)
         {
             // if this step is in progress on another thread, wait for it
-            TestStepState stepState = await AcquireStepStateLock(output);
+            TestStepState stepState = await AcquireStepStateLock(output).ConfigureAwait(false);
 
             //if this thread wins the race we do the work on this thread, otherwise
             //we log the winner's saved output
             if (stepState.RunState != TestStepRunState.InProgress)
             {
                 LogHeader(stepState, true, output);
-                LogPreviousResults(stepState, output);
+                LogPreviousResults(output);
                 LogFooter(stepState, output);
                 ThrowExceptionIfFaulted(stepState);
             }
             else
             {
-                await UncachedExecute(stepState, output);
+                await UncachedExecute(stepState, output).ConfigureAwait(false);
             }
         }
 
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     LogHeader(stepState, false, output);
                     MultiplexTestOutputHelper mux = new MultiplexTestOutputHelper(new IndentedTestOutputHelper(output), stepLog);
-                    await DoWork(mux);
+                    await DoWork(mux).ConfigureAwait(false);
                     stepState = stepState.Complete();
                 }
                 catch (Exception e)
@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 finally
                 {
                     LogFooter(stepState, output);
-                    await WriteFinalStepState(stepState, output);
+                    await WriteFinalStepState(stepState, output).ConfigureAwait(false);
                     ThrowExceptionIfFaulted(stepState);
                 }
             }
@@ -168,8 +168,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 stepStateStream.Seek(0, SeekOrigin.End);
                 StreamWriter writer = new StreamWriter(stepStateStream);
-                await writer.WriteAsync(Environment.NewLine + stepState.SerializeFinalState());
-                await writer.FlushAsync();
+                await writer.WriteAsync(Environment.NewLine + stepState.SerializeFinalState()).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
             }
         }
 
@@ -248,7 +248,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 //
                 // If we wait for too long in either case we will eventually timeout.
                 ThrowExceptionForIncompleteWorkIfNeeded(initialStepState, openedStepState, stepStateFileExists, output);
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
             }
         }
 
@@ -261,7 +261,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                  !IsOpenedStateChangeable(openedStepState);
             if (timeout || notFinishable)
             {
-                TestStepState currentState = openedStepState != null ? openedStepState : initialStepState;
+                TestStepState currentState = openedStepState ?? initialStepState;
                 LogHeader(currentState, true, output);
                 StringBuilder errorMessage = new StringBuilder();
                 if (timeout)
@@ -282,7 +282,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     // these error cases should have a valid previous log we can restore
                     Debug.Assert(currentState == openedStepState);
-                    LogPreviousResults(currentState, output);
+                    LogPreviousResults(output);
 
                     errorMessage.AppendLine("This step was not marked complete in: " + Environment.NewLine +
                                             _stateFilePath);
@@ -379,7 +379,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     IsPreviousProcessRunning(openedStepState));
         }
 
-        private void LogPreviousResults(TestStepState cachedTaskState, ITestOutputHelper output)
+        private void LogPreviousResults(ITestOutputHelper output)
         {
             ITestOutputHelper indentedOutput = new IndentedTestOutputHelper(output);
             try
@@ -413,7 +413,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             Faulted
         }
 
-        private class TestStepState
+        private sealed class TestStepState
         {
             public TestStepState()
             {

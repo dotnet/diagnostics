@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         }
 
         private static Command CollectCommand() =>
-            new Command( name: "collect", description: "Capture dumps from a process")
+            new Command(name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
                 CommandHandler.Create<IConsole, int, string, bool, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),

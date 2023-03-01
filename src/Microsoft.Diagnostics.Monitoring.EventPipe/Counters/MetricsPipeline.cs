@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
-            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token));
+            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token)).ConfigureAwait(false);
 
             eventSource.Dynamic.All += traceEvent => {
                 try
@@ -75,9 +75,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 handler => eventSource.Completed -= handler,
                 token);
 
-            await sourceCompletedTaskSource.Task;
+            await sourceCompletedTaskSource.Task.ConfigureAwait(false);
 
-            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStopped(token));
+            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStopped(token)).ConfigureAwait(false);
         }
 
         private async Task ExecuteCounterLoggerActionAsync(Func<ICountersLogger, Task> action)
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 try
                 {
-                    await action(logger);
+                    await action(logger).ConfigureAwait(false);
                 }
                 catch (ObjectDisposedException)
                 {

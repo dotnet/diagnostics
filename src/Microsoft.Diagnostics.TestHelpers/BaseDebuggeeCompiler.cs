@@ -64,9 +64,9 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             if (_acquireTask.AnyWorkToDo)
             {
-                await _acquireTask.Execute(output);
+                await _acquireTask.Execute(output).ConfigureAwait(false);
             }
-            await _buildDebuggeeTask.Execute(output);
+            await _buildDebuggeeTask.Execute(output).ConfigureAwait(false);
             return new DebuggeeConfiguration(_buildDebuggeeTask.DebuggeeProjectDirPath,
                                              _buildDebuggeeTask.DebuggeeBinaryDirPath,
                                              _buildDebuggeeTask.DebuggeeBinaryExePath ?? _buildDebuggeeTask.DebuggeeBinaryDllPath);

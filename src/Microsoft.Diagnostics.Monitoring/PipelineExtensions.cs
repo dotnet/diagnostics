@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring
         {
             using CancellationTokenSource cts = new CancellationTokenSource();
             cts.CancelAfter(timeout);
-            await pipeline.StopAsync(cts.Token);
+            await pipeline.StopAsync(cts.Token).ConfigureAwait(false);
         }
     }
 }

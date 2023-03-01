@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return false;
                 });
 
-                bool fDumpSuccess = await dumpTask;
+                bool fDumpSuccess = await dumpTask.ConfigureAwait(false);
 
                 if (fDumpSuccess)
                 {

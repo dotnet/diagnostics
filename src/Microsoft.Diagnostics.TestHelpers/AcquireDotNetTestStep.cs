@@ -103,18 +103,18 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             if (RemoteDotNetPath != null)
             {
-                await DownloadFile(RemoteDotNetPath, LocalDotNetZipPath, output);
+                await DownloadFile(RemoteDotNetPath, LocalDotNetZipPath, output).ConfigureAwait(false);
             }
             if (LocalDotNetZipPath != null)
             {
                 if (LocalDotNetZipPath.EndsWith(".zip"))
                 {
-                    await Unzip(LocalDotNetZipPath, LocalDotNetZipExpandDirPath, output);
+                    await Unzip(LocalDotNetZipPath, LocalDotNetZipExpandDirPath, output).ConfigureAwait(false);
                 }
                 else if (LocalDotNetZipPath.EndsWith(".tar.gz"))
                 {
-                    await UnGZip(LocalDotNetZipPath, LocalDotNetTarPath, output);
-                    await Untar(LocalDotNetTarPath, LocalDotNetZipExpandDirPath, output);
+                    await UnGZip(LocalDotNetZipPath, LocalDotNetTarPath, output).ConfigureAwait(false);
+                    await Untar(LocalDotNetTarPath, LocalDotNetZipExpandDirPath, output).ConfigureAwait(false);
                 }
                 else
                 {
@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             output.WriteLine("Downloading: " + remotePath + " -> " + localPath);
             using HttpClient client = new();
-            using HttpResponseMessage response = await client.GetAsync(remotePath);
+            using HttpResponseMessage response = await client.GetAsync(remotePath).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             using Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             Directory.CreateDirectory(Path.GetDirectoryName(localPath));
@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             // TODO: restore the CopyToAsync code after System.Net.Http.dll is
             // updated to a newer version. The current old version has a bug
             // where the copy never finished.
-            await stream.CopyToAsync(localZipStream);
+            await stream.CopyToAsync(localZipStream).ConfigureAwait(false);
             output.WriteLine("Downloading finished");
         }
 
@@ -154,7 +154,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     using (FileStream targetFileStream = File.OpenWrite(expandedFilePath))
                     {
-                        await expandedStream.CopyToAsync(targetFileStream);
+                        await expandedStream.CopyToAsync(targetFileStream).ConfigureAwait(false);
                     }
                 }
             }
@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     {
                         using (FileStream extractedFileStream = File.OpenWrite(extractedFilePath))
                         {
-                            await zipFileStream.CopyToAsync(extractedFileStream);
+                            await zipFileStream.CopyToAsync(extractedFileStream).ConfigureAwait(false);
                         }
                     }
                 }
@@ -202,7 +202,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                    WithWorkingDirectory(expandedDirPath).
                    WithLog(output).
                    WithExpectedExitCode(0).
-                   Run();
+                   Run().ConfigureAwait(false);
         }
 
     }

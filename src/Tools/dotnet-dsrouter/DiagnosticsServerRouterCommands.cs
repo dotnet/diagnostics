@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
                 return routerTask;
-            }, token);
+            }, token).ConfigureAwait(false);
         }
 
         private class IpcServerTcpServerRunner : SpecificRunnerBase
@@ -194,7 +194,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, tcpServer, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpServerRouterFactory, logger, launcherCallbacks);
                 return routerTask;
-            }, token);
+            }, token).ConfigureAwait(false);
         }
 
         private class IpcServerTcpClientRunner : SpecificRunnerBase
@@ -223,7 +223,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpClientRouter(linkedCancelToken.Token, ipcServer, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
                 return routerTask;
-            }, token);
+            }, token).ConfigureAwait(false);
         }
 
         private class IpcClientTcpClientRunner : SpecificRunnerBase
@@ -247,7 +247,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpClientRouter(linkedCancelToken.Token, ipcClient, tcpClient, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, tcpClientRouterFactory, logger, launcherCallbacks);
                 return routerTask;
-            }, token);
+            }, token).ConfigureAwait(false);
         }
 
         private class IpcServerWebSocketServerRunner : SpecificRunnerBase
@@ -285,7 +285,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                     Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcServerTcpServerRouter(linkedCancelToken.Token, ipcServer, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
                     return routerTask;
-                }, token);
+                }, token).ConfigureAwait(false);
             }
             finally
             {
@@ -323,7 +323,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                     Task<int> routerTask = DiagnosticsServerRouterRunner.runIpcClientTcpServerRouter(linkedCancelToken.Token, ipcClient, webSocket, runtimeTimeout == Timeout.Infinite ? runtimeTimeout : runtimeTimeout * 1000, webSocketServerRouterFactory, logger, launcherCallbacks);
                     return routerTask;
-                }, token);
+                }, token).ConfigureAwait(false);
             }
             finally
             {

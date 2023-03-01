@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Console.Out.WriteLine($"\t{profile.Name,-16} - {profile.Description}");
                 }
 
-                await Task.FromResult(0);
+                await Task.FromResult(0).ConfigureAwait(false);
                 return 0;
             }
             catch (Exception ex)

@@ -548,7 +548,7 @@ namespace Graphs
                 // it is create a deferred (lazy region).   The key is that ALL readers know how to skip this region, which allows
                 // you to add new fields 'at the end' of the region (just like for sealed objects).
                 DeferedRegion expansion = default(DeferedRegion);
-                expansion.Write(serializer, delegate () {
+                expansion.Write(serializer, delegate {
                     // I don't need to use Tagged types for my 'first' version of this new region
                     serializer.Write(m_deferedTypes.Count);
                     for (int i = 0; i < m_deferedTypes.Count; i++)
@@ -618,7 +618,7 @@ namespace Graphs
                 // it is create a deferred (lazy region).   The key is that ALL readers know how to skip this region, which allows
                 // you to add new fields 'at the end' of the region (just like for sealed objects).
                 DeferedRegion expansion = default(DeferedRegion);
-                expansion.Read(deserializer, delegate () {
+                expansion.Read(deserializer, delegate {
                     // I don't need to use Tagged types for my 'first' version of this new region
                     int count = deserializer.ReadInt();
                     for (int i = 0; i < count; i++)
@@ -1302,7 +1302,7 @@ namespace Graphs
         {
             var typeSet = new Dictionary<NodeTypeIndex, NodeTypeIndex>();
             NodeType type = graph.AllocTypeNodeStorage();
-            for (NodeTypeIndex typeId = 0; typeId < graph.NodeTypeIndexLimit; typeId = typeId + 1)
+            for (NodeTypeIndex typeId = 0; typeId < graph.NodeTypeIndexLimit; typeId++)
             {
                 type = graph.GetType(typeId, type);
                 if (Regex.IsMatch(type.Name, regExpression))
@@ -1313,7 +1313,7 @@ namespace Graphs
 
             var ret = new List<NodeIndex>();
             Node node = graph.AllocNodeStorage();
-            for (NodeIndex nodeId = 0; nodeId < graph.NodeIndexLimit; nodeId = nodeId + 1)
+            for (NodeIndex nodeId = 0; nodeId < graph.NodeIndexLimit; nodeId++)
             {
                 node = graph.GetNode(nodeId, node);
                 if (typeSet.ContainsKey(node.TypeIndex))
@@ -1406,8 +1406,6 @@ public class RefGraph
                 RefNode refsForChild = GetNode(childIndex, refStorage);
                 if (!refsForChild.Contains(nodeIdx))
                 {
-                    string nodeStr = node.ToString();
-                    string refStr = refsForChild.ToString();
                     Debug.Assert(false);
                 }
             }
@@ -1419,8 +1417,6 @@ public class RefGraph
                 Node nodeForChild = graph.GetNode(childIndex, nodeStorage);
                 if (!nodeForChild.Contains(nodeIdx))
                 {
-                    string nodeStr = nodeForChild.ToString();
-                    string refStr = refNode.ToString();
                     Debug.Assert(false);
                 }
             }
@@ -2554,8 +2550,6 @@ public class GraphSampler
 
         for (NodeTypeIndex typeIdx = 0; typeIdx < m_graph.NodeTypeIndexLimit; typeIdx++)
         {
-            NodeType type = m_graph.GetType(typeIdx, typeStorage);
-            string typeName = type.Name;
             SampleStats statsCheck = statsCheckByType[(int)typeIdx];
             SampleStats stats = m_statsByType[(int)typeIdx];
 

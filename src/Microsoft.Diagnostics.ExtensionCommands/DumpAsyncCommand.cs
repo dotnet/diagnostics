@@ -292,8 +292,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         // field with any non-zero bytes, it must be the one in use.  This can have false negatives,
                         // as it's perfectly valid for an awaiter to be all zero bytes, but it's better than nothing.
 
-                        if ((top.AwaitState == 0) ||
-                            stateMachine.Type.Fields.Count(f => f.Name is null || f.Name.StartsWith("<>u__", StringComparison.Ordinal) == true) == 1) // if the name is null, we have to assume it's an awaiter
+                        // if the name is null, we have to assume it's an awaiter
+
+                        Func<ClrInstanceField, bool> hasOneAwaiterField = static f => {
+                            return f.Name is null
+                                || f.Name.StartsWith("<>u__", StringComparison.Ordinal);
+                        };
+
+                        if ((top.AwaitState == 0)
+                            || stateMachine.Type.Fields.Count(hasOneAwaiterField) == 1)
                         {
                             if (stateMachine.Type.GetFieldByName("<>u__1") is ClrInstanceField field &&
                                 TrySynthesizeAwaiterFrame(field))

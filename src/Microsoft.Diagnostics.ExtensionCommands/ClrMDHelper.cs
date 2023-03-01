@@ -333,7 +333,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ClrModule mscorlib = GetMscorlib();
             return IsNetCore() ?
-                EnumerateGlobalThreadPoolItemsInNetCore(mscorlib) :
+                EnumerateGlobalThreadPoolItemsInNetCore() :
                 EnumerateGlobalThreadPoolItemsInNetFramework(mscorlib);
         }
 
@@ -341,11 +341,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ClrModule mscorlib = GetMscorlib();
             return IsNetCore() ?
-                EnumerateLocalThreadPoolItemsInNetCore(mscorlib) :
+                EnumerateLocalThreadPoolItemsInNetCore() :
                 EnumerateLocalThreadPoolItemsInNetFramework(mscorlib);
         }
 
-        private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetCore(ClrModule corelib)
+        private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetCore()
         {
             // Look at the code to enumerate ThreadPool items from ThreadPool.cs
             // in https://github.com/dotnet/runtime/blob/ee9dc4984ce172697d94471a6be57d61116e34b6/src/libraries/System.Private.CoreLib/src/System/Threading/ThreadPool.cs#L1184
@@ -575,7 +575,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             };
         }
 
-        private IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItemsInNetCore(ClrModule corelib)
+        private IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItemsInNetCore()
         {
             // in .NET Core, each thread has a dedicated WorkStealingQueue stored in WorkStealingQueueList._queues (a WorkStealingQueue[])
             //
@@ -893,13 +893,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // Each Slot<T> is a value type that contains the real T in its Item field
             bool itemIsValueType = true;
             ClrType itemType = null;
-            ClrType cqType = _heap.GetObjectType(address);
             ClrObject cq = _heap.GetObject(address);
             ClrObject currentSegment = cq.ReadObjectField("_head");
             while (!currentSegment.IsNull && currentSegment.IsValid)
             {
-                ClrObject s = currentSegment.ReadObjectField("_slots");
-
                 ClrArray slots = currentSegment.ReadObjectField("_slots").AsArray();
                 if (itemType == null)
                 {
@@ -1266,7 +1263,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new InvalidOperationException("Impossible to find core library");
             }
 
-            return (coreLib.Name.ToLower().Contains("corelib"));
+            return (coreLib.Name.ToLowerInvariant().Contains("corelib"));
         }
 
         public bool Is64Bits()

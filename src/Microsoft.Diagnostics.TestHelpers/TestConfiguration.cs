@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         //  '<string>' == '<string>'
         //  '<string>' != '<string>'
         // strings support variable embedding with $(<var_name>). e.g Exists('$(PropsFile)')
-        private bool EvaluateConditional(Dictionary<string, string> config, XElement node)
+        private static bool EvaluateConditional(Dictionary<string, string> config, XElement node)
         {
             void ValidateAndResolveParameters(string funcName, int expectedParamCount, List<string> paramList)
             {
@@ -347,7 +347,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     if (i != rawNodeValue.Length)
                     {
-                        resolvedValue.Append(rawNodeValue.Substring(i));
+                        resolvedValue.Append(rawNodeValue.AsSpan(i));
                     }
                     break;
                 }
@@ -357,7 +357,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     Assert.NotEqual(-1, propEndIndex);
                     if (propStartIndex != i)
                     {
-                        resolvedValue.Append(rawNodeValue.Substring(i, propStartIndex - i));
+                        resolvedValue.Append(rawNodeValue.AsSpan(i, propStartIndex - i));
                     }
                     // Now resolve the property name from the config dictionary
                     string propertyName = rawNodeValue.Substring(propStartIndex + 2, propEndIndex - propStartIndex - 2);

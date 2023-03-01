@@ -164,14 +164,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
                 var shouldExit = new ManualResetEvent(false);
                 ct.Register(() => shouldExit.Set());
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true).ConfigureAwait(false))
                 {
                     string processMainModuleFileName = $"Process{processId}";
 
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
-                        return await Task.FromResult(ReturnCode.Ok);
+                        return await Task.FromResult(ReturnCode.Ok).ConfigureAwait(false);
                     }
                     diagnosticsClient = holder.Client;
                     if (ProcessLauncher.Launcher.HasChildProc)
@@ -390,7 +390,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 ProcessLauncher.Launcher.Cleanup();
             }
-            return await Task.FromResult(ret);
+            return await Task.FromResult(ret).ConfigureAwait(false);
         }
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)

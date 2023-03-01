@@ -24,7 +24,7 @@ namespace Xunit.Extensions
                                                         CancellationTokenSource cancellationTokenSource)
         {
             var skipMessageBus = new SkippableFactMessageBus(messageBus);
-            RunSummary result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource);
+            RunSummary result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource).ConfigureAwait(false);
             if (skipMessageBus.DynamicallySkippedTestCount > 0)
             {
                 result.Failed -= skipMessageBus.DynamicallySkippedTestCount;

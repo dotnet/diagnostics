@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the Gauge callback function throws an exception.
-                payload = new CounterEndedPayload(meterName, instrumentName, null, obj.TimeStamp);
+                payload = new CounterEndedPayload(meterName, instrumentName, obj.TimeStamp);
             }
         }
 
@@ -184,7 +184,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the ObservableCounter callback function throws an exception.
-                payload = new CounterEndedPayload(meterName, instrumentName, null, traceEvent.TimeStamp);
+                payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
             }
         }
 
@@ -333,7 +333,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             int interval = 0;
             if (series.StartsWith(comparison, StringComparison.OrdinalIgnoreCase))
             {
-                int.TryParse(series.Substring(comparison.Length), out interval);
+                int.TryParse(series.AsSpan(comparison.Length), out interval);
             }
             return interval;
         }

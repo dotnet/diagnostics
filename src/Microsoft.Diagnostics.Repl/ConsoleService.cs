@@ -236,10 +236,7 @@ namespace Microsoft.Diagnostics.Repl
         {
             if (!m_shutdown && m_interactiveConsole)
             {
-                if (m_interruptExecutingCommand != null)
-                {
-                    m_interruptExecutingCommand.Cancel();
-                }
+                m_interruptExecutingCommand?.Cancel();
                 e.Cancel = true;
             }
         }

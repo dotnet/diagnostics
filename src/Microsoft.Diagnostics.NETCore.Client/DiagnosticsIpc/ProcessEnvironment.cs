@@ -51,7 +51,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             var env = new Dictionary<string, string>();
             int cursor = 0;
-            uint nElements = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(envBlock, cursor, 4));
             cursor += sizeof(uint);
             while (cursor < envBlock.Length)
             {

@@ -480,7 +480,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
                     bool useAnsi = vTerm.IsEnabled;
@@ -502,7 +502,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _diagnosticsClient = holder.Client;
                         _resumeRuntime = resumeRuntime;
                         _duration = duration;
-                        int ret = await Start();
+                        int ret = await Start().ConfigureAwait(false);
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
                     }
@@ -557,7 +557,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ct.Register(() => _shouldExit.TrySetResult(ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
-                using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false))
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 {
                     if (holder == null)
                     {
@@ -607,7 +607,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                             return ReturnCode.ArgumentError;
                         }
                         _resumeRuntime = resumeRuntime;
-                        int ret = await Start();
+                        int ret = await Start().ConfigureAwait(false);
                         return ret;
                     }
                     catch (OperationCanceledException)

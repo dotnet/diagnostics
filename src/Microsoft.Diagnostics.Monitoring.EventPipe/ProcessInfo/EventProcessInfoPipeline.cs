@@ -47,16 +47,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 token);
 
             // Wait for any trace event to be processed
-            await anyEventTaskSource.Task;
+            await anyEventTaskSource.Task.ConfigureAwait(false);
 
             // Stop the event pipe session
-            await stopSessionAsync();
+            await stopSessionAsync().ConfigureAwait(false);
 
             // Wait for the ProcessInfo event to be processed
-            await processInfoTaskSource.Task;
+            await processInfoTaskSource.Task.ConfigureAwait(false);
 
             // Notify of command line information
-            await _onCommandLine(commandLine, token);
+            await _onCommandLine(commandLine, token).ConfigureAwait(false);
         }
     }
 }

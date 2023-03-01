@@ -92,14 +92,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
                 }
-                return await Task.FromResult(0);
+                return await Task.FromResult(0).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
             }
 
-            return await Task.FromResult(0);
+            return await Task.FromResult(0).ConfigureAwait(false);
         }
 
         public static Command ReportCommand() =>

@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 try
                 {
                     linkedSource.Token.ThrowIfCancellationRequested();
-                    await OnRun(linkedSource.Token);
+                    await OnRun(linkedSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 finally
                 {
-                    await Cleanup();
+                    await Cleanup().ConfigureAwait(false);
                 }
             }
         }
@@ -145,11 +145,11 @@ namespace Microsoft.Diagnostics.Monitoring
                 try
                 {
                     linkedSource.Token.ThrowIfCancellationRequested();
-                    await OnStop(linkedSource.Token);
+                    await OnStop(linkedSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
-                    await Cleanup();
+                    await Cleanup().ConfigureAwait(false);
                     //Give precedence to the parameter token rather than the linked token
                     token.ThrowIfCancellationRequested();
                     throw;
@@ -186,9 +186,9 @@ namespace Microsoft.Diagnostics.Monitoring
             _disposeSource.Cancel();
 
             //It's necessary to fully acquire the task, await it, and then move on to the next task.
-            await SafeExecuteTask(() => _runTask);
-            await SafeExecuteTask(() => _stopTask);
-            await SafeExecuteTask(() => _cleanupTask);
+            await SafeExecuteTask(() => _runTask).ConfigureAwait(false);
+            await SafeExecuteTask(() => _stopTask).ConfigureAwait(false);
+            await SafeExecuteTask(() => _cleanupTask).ConfigureAwait(false);
 
             _disposeSource.Dispose();
         }
@@ -205,7 +205,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 try
                 {
-                    await task;
+                    await task.ConfigureAwait(false);
                 }
                 catch
                 {

@@ -183,7 +183,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _eventSource?.Dispose();
             if (!_leaveEventStreamOpen)
             {
-                await _eventStream.DisposeAsync();
+                await _eventStream.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

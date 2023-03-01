@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     MicrosoftExtensionsLoggingProviderName,
                     _level,
                     _keywords,
-                    arguments: new Dictionary<string,string>
+                    arguments: new Dictionary<string, string>
                         {
                             { "FilterSpecs", _filterSpecs }
                         }

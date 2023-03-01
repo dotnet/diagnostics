@@ -62,10 +62,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 // create a summary
-                WriteLine($"{Environment.NewLine}   {totalCount.ToString()} timers{Environment.NewLine}-----------------------------------------------");
+                WriteLine($"{Environment.NewLine}   {totalCount} timers{Environment.NewLine}-----------------------------------------------");
                 foreach (KeyValuePair<string, TimerStat> stat in stats.OrderBy(kvp => kvp.Value.Count))
                 {
-                    WriteLine($"{stat.Value.Count.ToString(),4} | {stat.Value.Line}");
+                    WriteLine($"{stat.Value.Count,4} | {stat.Value.Line}");
                 }
             }
             catch (Exception x)

@@ -87,8 +87,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _timeoutProcessTask = startTask.ContinueWith(t => {
-                    Task.Delay(_timeout, _cancelSource.Token).ContinueWith(t2 => Kill(KillReason.TimedOut), TaskContinuationOptions.NotOnCanceled);
+                _timeoutProcessTask = startTask.ContinueWith(async t => {
+                    await Task.Delay(_timeout, _cancelSource.Token).ConfigureAwait(false);
+                    Kill(KillReason.TimedOut);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
@@ -411,23 +412,26 @@ namespace Microsoft.Diagnostics.TestHelpers
         private async Task<int> InternalWaitForExit(Task<Process> startProcessTask, Task stdOutTask, Task stdErrTask)
         {
             DebugTrace("starting InternalWaitForExit");
-            Process p = await startProcessTask;
+            Process p = await startProcessTask.ConfigureAwait(false);
             DebugTrace("InternalWaitForExit {0} '{1}'", p.Id, _replayCommand);
 
-            Task processExit = Task.Factory.StartNew(() => {
-                DebugTrace("starting Process.WaitForExit {0}", p.Id);
-                p.WaitForExit();
-                DebugTrace("ending Process.WaitForExit {0}", p.Id);
-            },
-            TaskCreationOptions.LongRunning);
+            Task processExit = Task.Factory.StartNew(
+                () => {
+                    DebugTrace("starting Process.WaitForExit {0}", p.Id);
+                    p.WaitForExit();
+                    DebugTrace("ending Process.WaitForExit {0}", p.Id);
+                },
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
 
             DebugTrace("awaiting process {0} exit", p.Id);
-            await processExit;
+            await processExit.ConfigureAwait(false);
             DebugTrace("process {0} completed with exit code {1}", p.Id, p.ExitCode);
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
             var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
-            Task completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
+            Task completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15))).ConfigureAwait(false);
 
             if (completedTask != streamsTask)
             {
@@ -468,7 +472,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        private class ConsoleTestOutputHelper : ITestOutputHelper
+        private sealed class ConsoleTestOutputHelper : ITestOutputHelper
         {
             private readonly ITestOutputHelper _output;
 
@@ -480,20 +484,14 @@ namespace Microsoft.Diagnostics.TestHelpers
             public void WriteLine(string message)
             {
                 Console.WriteLine(message);
-                if (_output != null)
-                {
-                    _output.WriteLine(message);
-                }
+                _output?.WriteLine(message);
 
             }
 
             public void WriteLine(string format, params object[] args)
             {
                 Console.WriteLine(format, args);
-                if (_output != null)
-                {
-                    _output.WriteLine(format, args);
-                }
+                _output?.WriteLine(format, args);
             }
         }
     }

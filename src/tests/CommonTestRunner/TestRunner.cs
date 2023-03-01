@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
             Debug.Assert(testExeName != null);
 
             // Restore and build the debuggee.
-            DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, testExeName, outputHelper);
+            DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, testExeName, outputHelper).ConfigureAwait(false);
 
             // Get the full debuggee launch command line (includes the host if required)
             string exePath = debuggeeConfig.BinaryExePath;
@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
 
             if (waitForTracee)
             {
-                await WaitForTracee();
+                await WaitForTracee().ConfigureAwait(false);
             }
             else
             {
@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                             }
                             Task.Delay(100);
                         }
-                    });
+                    }).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException)
                 {
@@ -230,7 +230,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
         {
             WriteLine("WaitForExitAsync");
             Task timeoutTask = Task.Delay(timeout);
-            Task result = await Task.WhenAny(_runner.WaitForExit(), timeoutTask);
+            Task result = await Task.WhenAny(_runner.WaitForExit(), timeoutTask).ConfigureAwait(false);
             if (result == timeoutTask)
             {
                 throw new TaskCanceledException($"WaitForExitAsync timed out {Pid}");
@@ -246,7 +246,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 try
                 {
                     var source = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-                    await _pipeServer.WaitForConnectionAsync(source.Token);
+                    await _pipeServer.WaitForConnectionAsync(source.Token).ConfigureAwait(false);
                     WriteLine("WaitForTracee: DONE");
                 }
                 catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
@@ -296,7 +296,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
             WakeupTracee();
             try
             {
-                await WaitForExit(TimeSpan.FromSeconds(10));
+                await WaitForExit(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
             }
             catch (TaskCanceledException)
             {

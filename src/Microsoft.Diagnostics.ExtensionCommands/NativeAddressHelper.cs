@@ -60,8 +60,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             bool printedTruncatedWarning = false;
 
             IEnumerable<DescribedRegion> addressResult = from region in MemoryRegionService.EnumerateRegions()
-                                where region.State != MemoryRegionState.MEM_FREE
-                                select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
+                                                         where region.State != MemoryRegionState.MEM_FREE
+                                                         select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
 
             if (!includeReserveMemory)
             {

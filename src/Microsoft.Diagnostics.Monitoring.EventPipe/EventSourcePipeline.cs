@@ -47,20 +47,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             if (_processor.IsValueCreated)
             {
-                await _processor.Value.DisposeAsync();
+                await _processor.Value.DisposeAsync().ConfigureAwait(false);
             }
-            await base.OnCleanup();
+            await base.OnCleanup().ConfigureAwait(false);
         }
 
         protected override async Task OnStop(CancellationToken token)
         {
             if (_processor.IsValueCreated)
             {
-                Task stoppingTask = _processor.Value.StopProcessing(token);
+                Task stoppingTask = _processor.Value.StopProcessing();
 
                 var taskCompletionSource = new TaskCompletionSource<bool>();
                 using IDisposable registration = token.Register(() => taskCompletionSource.SetCanceled());
-                await Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap();
+                await Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap().ConfigureAwait(false);
             }
         }
 
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // started task. Logically, the run task will not successfully complete before the session
             // started task. Thus, the combined task completes either when the session started task is
             // completed OR the run task has cancelled/failed.
-            await Task.WhenAny(_processor.Value.SessionStarted, runTask).Unwrap();
+            await Task.WhenAny(_processor.Value.SessionStarted, runTask).Unwrap().ConfigureAwait(false);
 
             return runTask;
         }

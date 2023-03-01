@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 new EventPipeProvider(DiagnosticSourceEventSource,
                         keywords: DiagnosticSourceEventSourceEvents | DiagnosticSourceEventSourceMessages,
                         eventLevel: EventLevel.Verbose,
-                        arguments: new Dictionary<string,string>
+                        arguments: new Dictionary<string, string>
                         {
                             { "FilterAndPayloadSpecs", DiagnosticFilterString }
                         })

@@ -321,10 +321,7 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.FlushTarget");
-            if (_target != null)
-            {
-                _target.Flush();
-            }
+            _target?.Flush();
         }
 
         private void DestroyTarget(

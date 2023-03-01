@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 extraArgs += $" /p:{prop.Key}={prop.Value}";
             }
-            await Restore(extraArgs, output);
+            await Restore(extraArgs, output).ConfigureAwait(false);
         }
 
         protected override async Task Build(ITestOutputHelper output)
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 publishArgs += $" /p:{prop.Key}={prop.Value}";
             }
-            await Build(publishArgs, output);
+            await Build(publishArgs, output).ConfigureAwait(false);
         }
 
         protected override void ExpandProjectTemplate(string filePath, string destDirPath, ITestOutputHelper output)

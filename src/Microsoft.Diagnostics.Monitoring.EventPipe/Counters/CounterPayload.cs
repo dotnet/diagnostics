@@ -35,7 +35,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
 
         // Copied from dotnet-counters
-        public CounterPayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, DateTime timestamp, string type, EventType eventType)
+        public CounterPayload(string providerName,
+                              string name,
+                              string metadata,
+                              double value,
+                              DateTime timestamp,
+                              string type,
+                              EventType eventType)
         {
             Provider = providerName;
             Name = name;
@@ -72,7 +78,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal class GaugePayload : CounterPayload
     {
         public GaugePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Metric", EventType.Gauge)
+            base(providerName, name, metadata, value, timestamp, "Metric", EventType.Gauge)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
@@ -82,8 +88,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal class CounterEndedPayload : CounterPayload
     {
-        public CounterEndedPayload(string providerName, string name, string displayName, DateTime timestamp)
-            : base(providerName, name, displayName, string.Empty, null, 0.0, timestamp, "Metric", EventType.CounterEnded)
+        public CounterEndedPayload(string providerName, string name, DateTime timestamp)
+            : base(providerName, name, null, 0.0, timestamp, "Metric", EventType.CounterEnded)
         {
 
         }
@@ -92,7 +98,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal class RatePayload : CounterPayload
     {
         public RatePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, double intervalSecs, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, metadata, value, timestamp, "Rate", EventType.Rate)
+            base(providerName, name, metadata, value, timestamp, "Rate", EventType.Rate)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
@@ -105,7 +111,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     internal class PercentilePayload : CounterPayload
     {
         public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
-            base(providerName, name, displayName, displayUnits, metadata, 0.0, timestamp, "Metric", EventType.Histogram)
+            base(providerName, name, metadata, 0.0, timestamp, "Metric", EventType.Histogram)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
@@ -125,7 +131,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
 
         public ErrorPayload(string errorMessage, DateTime timestamp) :
-            base(string.Empty, string.Empty, string.Empty, string.Empty, null, 0.0, timestamp, "Metric", EventType.Error)
+            base(string.Empty, string.Empty, null, 0.0, timestamp, "Metric", EventType.Error)
         {
             ErrorMessage = errorMessage;
         }

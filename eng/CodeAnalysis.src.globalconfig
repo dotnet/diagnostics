@@ -16,7 +16,7 @@ dotnet_diagnostic.BCL0011.severity = warning
 dotnet_diagnostic.BCL0012.severity = warning
 
 # BCL0015: Invalid P/Invoke call
-dotnet_diagnostic.BCL0015.severity = true
+dotnet_diagnostic.BCL0015.severity = none
 
 # BCL0020: Invalid SR.Format call
 dotnet_diagnostic.BCL0020.severity = warning
@@ -472,7 +472,7 @@ dotnet_diagnostic.CA1857.severity = warning
 dotnet_diagnostic.CA1858.severity = warning
 
 # CA1859: Use concrete types when possible for improved performance
-dotnet_diagnostic.CA1859.severity = warning
+dotnet_diagnostic.CA1859.severity = suggestion
 
 # CA1860: Prefer Length/Count/IsEmpty property check over Any()
 dotnet_diagnostic.CA1860.severity = warning
@@ -1643,7 +1643,8 @@ dotnet_diagnostic.IDE0170.severity = warning
 dotnet_diagnostic.IDE0180.severity = suggestion
 
 # IDE0200: Remove unnecessary lambda expression
-dotnet_diagnostic.IDE0200.severity = warning
+# Disable until we validate that it doesn't allocate per instance.
+dotnet_diagnostic.IDE0200.severity = none
 
 # IDE0210: Use top-level statements
 dotnet_diagnostic.IDE0210.severity = none

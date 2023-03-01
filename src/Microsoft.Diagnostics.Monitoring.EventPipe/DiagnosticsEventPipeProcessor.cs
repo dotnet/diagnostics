@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
             IDisposable registration = token.Register(() => TryCancelCompletionSources(token));
-            await await Task.Factory.StartNew(async () => {
+            await (await Task.Factory.StartNew(async () => {
                 EventPipeEventSource source = null;
                 EventPipeStreamProvider streamProvider = null;
                 Task handleEventsTask = Task.CompletedTask;
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     // Allows the event handling routines to stop processing before the duration expires.
                     Func<Task> stopFunc = () => Task.Run(() => { streamProvider.StopProcessing(); });
 
-                    Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token);
+                    Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token).ConfigureAwait(false);
 
                     if (!_sessionStarted.TrySetResult(true))
                     {
@@ -101,7 +101,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     eventSource?.Dispose();
                     if (streamProvider != null)
                     {
-                        await streamProvider.DisposeAsync();
+                        await streamProvider.DisposeAsync().ConfigureAwait(false);
                     }
                 }
 
@@ -109,14 +109,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // The EventPipeEventSource will only raise the Completed event when it is disposed. So if this task
                 // is waiting for the Completed event to be raised, it will never complete until after EventPipeEventSource
                 // is diposed.
-                await handleEventsTask;
+                await handleEventsTask.ConfigureAwait(false);
 
-            }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default).ConfigureAwait(false)).ConfigureAwait(false);
         }
 
-        public async Task StopProcessing(CancellationToken token)
+        public async Task StopProcessing()
         {
-            await _initialized.Task;
+            await _initialized.Task.ConfigureAwait(false);
 
             EventPipeEventSource session = null;
             Func<Task> stopFunc = null;
@@ -125,14 +125,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 session = _eventSource;
                 stopFunc = _stopFunc;
             }
-            if (session != null)
-            {
-                //TODO This API is not sufficient to stop data flow.
-                session.StopProcessing();
-            }
+
+            //TODO This API is not sufficient to stop data flow.
+            session?.StopProcessing();
+
             if (stopFunc != null)
             {
-                await stopFunc();
+                await stopFunc().ConfigureAwait(false);
             }
         }
 
@@ -150,7 +149,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _initialized.TrySetCanceled();
             try
             {
-                await _initialized.Task;
+                await _initialized.Task.ConfigureAwait(false);
             }
             catch
             {

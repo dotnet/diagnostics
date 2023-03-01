@@ -211,13 +211,13 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 
     private GCHeapDump(Deserializer deserializer)
     {
-        deserializer.RegisterFactory(typeof(MemoryGraph), delegate () { return new MemoryGraph(1); });
-        deserializer.RegisterFactory(typeof(Module), delegate () { return new Module(0); });
-        deserializer.RegisterFactory(typeof(InteropInfo), delegate () { return new InteropInfo(); });
-        deserializer.RegisterFactory(typeof(GCHeapDump), delegate () { return this; });
-        deserializer.RegisterFactory(typeof(GCHeapDumpSegment), delegate () { return new GCHeapDumpSegment(); });
-        deserializer.RegisterFactory(typeof(JSHeapInfo), delegate () { return new JSHeapInfo(); });
-        deserializer.RegisterFactory(typeof(DotNetHeapInfo), delegate () { return new DotNetHeapInfo(); });
+        deserializer.RegisterFactory(typeof(MemoryGraph), delegate { return new MemoryGraph(1); });
+        deserializer.RegisterFactory(typeof(Module), delegate { return new Module(0); });
+        deserializer.RegisterFactory(typeof(InteropInfo), delegate { return new InteropInfo(); });
+        deserializer.RegisterFactory(typeof(GCHeapDump), delegate { return this; });
+        deserializer.RegisterFactory(typeof(GCHeapDumpSegment), delegate { return new GCHeapDumpSegment(); });
+        deserializer.RegisterFactory(typeof(JSHeapInfo), delegate { return new JSHeapInfo(); });
+        deserializer.RegisterFactory(typeof(DotNetHeapInfo), delegate { return new DotNetHeapInfo(); });
 
         try
         {
@@ -793,12 +793,6 @@ internal static class XmlGcHeapDump
         if (reader.NodeType != XmlNodeType.Element)
         {
             throw new InvalidOperationException("Must advance to MemoryGraph element (e.g. call ReadToDescendant)");
-        }
-
-        string nodeCount = reader.GetAttribute("NodeCount");
-        if (nodeCount != null)
-        {
-            int expectedSize = int.Parse(nodeCount) + 1;
         }
 
         MemoryGraph graph = new MemoryGraph(10);

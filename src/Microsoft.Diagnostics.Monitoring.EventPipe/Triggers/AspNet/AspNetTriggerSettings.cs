@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         public static ValidationResult ValidatePath(string[] paths, string[] members)
         {
             //While not an error, using *** or more causes confusing and unexpected matching.
-            if (paths?.Any(p => p.IndexOf("***", StringComparison.Ordinal) >= 0) == true)
+            if (paths?.Any(p => p.Contains("***")) == true)
             {
                 return new ValidationResult("Only * or **/ wildcard chararcters are allowed.", members);
             }
