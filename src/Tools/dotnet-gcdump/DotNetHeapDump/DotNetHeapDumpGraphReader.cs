@@ -123,10 +123,10 @@ public class DotNetHeapDumpGraphReader
 
             m_log.WriteLine("Found Module {0} ID 0x{1:x}", data.ModuleILFileName, (ulong)data.ModuleID);
         };
-        source.Clr.AddCallbackForEvents<ModuleLoadUnloadTraceData>(moduleCallback); // Get module events for clr provider
+        source.Clr.AddCallbackForEvents(moduleCallback); // Get module events for clr provider
         // TODO should not be needed if we use CAPTURE_STATE when collecting.
         var clrRundown = new ClrRundownTraceEventParser(source);
-        clrRundown.AddCallbackForEvents<ModuleLoadUnloadTraceData>(moduleCallback); // and its rundown provider.
+        clrRundown.AddCallbackForEvents(moduleCallback); // and its rundown provider.
 
         DbgIDRSDSTraceData lastDbgData = null;
         var symbolParser = new SymbolTraceEventParser(source);

@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <param name="output">starting output helper</param>
         /// <param name="testName">test case name</param>
         /// <returns>new output helper</returns>
-        public static TestRunner.OutputHelper ConfigureLogging(TestConfiguration config, ITestOutputHelper output, string testName)
+        public static OutputHelper ConfigureLogging(TestConfiguration config, ITestOutputHelper output, string testName)
         {
             FileTestOutputHelper fileLogger = null;
             ConsoleTestOutputHelper consoleLogger = null;
@@ -146,7 +146,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 consoleLogger = new ConsoleTestOutputHelper();
             }
-            return new TestRunner.OutputHelper(output, fileLogger, consoleLogger);
+            return new OutputHelper(output, fileLogger, consoleLogger);
         }
 
         public class OutputHelper : ITestOutputHelper, IDisposable

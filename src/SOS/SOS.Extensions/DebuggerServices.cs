@@ -51,7 +51,7 @@ namespace SOS
             }
         }
 
-        public HResult GetOperatingSystem(out DebuggerServices.OperatingSystem operatingSystem)
+        public HResult GetOperatingSystem(out OperatingSystem operatingSystem)
         {
             return VTable.GetOperatingSystem(Self, out operatingSystem);
         }
@@ -426,7 +426,7 @@ namespace SOS
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DebuggerServices.OperatingSystem, int> GetOperatingSystem;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out OperatingSystem, int> GetOperatingSystem;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, int> GetDebuggeeType;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, int> GetExecutingProcessorType;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, int> AddCommand;

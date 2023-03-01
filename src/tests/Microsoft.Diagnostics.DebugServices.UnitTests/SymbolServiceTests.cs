@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public static string FormatSymbolStores(this SymbolService symbolService)
         {
             StringBuilder sb = new StringBuilder();
-            symbolService.ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
+            symbolService.ForEachSymbolStore<SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
             return sb.ToString().Replace(Environment.NewLine, " ").TrimEnd();
         }
     }

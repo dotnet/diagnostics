@@ -1172,13 +1172,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     break;
                 case "System.IntPtr":
                     {
-                        var val = items.GetValue<System.IntPtr>(index);
+                        var val = items.GetValue<IntPtr>(index);
                         content = (val == IntPtr.Zero) ? "null" : $"0x{val.ToInt64():x16}";
                     }
                     break;
                 case "System.UIntPtr":
                     {
-                        var val = items.GetValue<System.UIntPtr>(index);
+                        var val = items.GetValue<UIntPtr>(index);
                         content = (val == UIntPtr.Zero) ? "null" : $"0x{val.ToUInt64():x16}";
                     }
                     break;
@@ -1234,13 +1234,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     break;
                 case "System.IntPtr":
                     {
-                        var val = item.ReadField<System.IntPtr>(fieldName);
+                        var val = item.ReadField<IntPtr>(fieldName);
                         content = (val == IntPtr.Zero) ? "null" : $"0x{val.ToInt64():x}";
                     }
                     break;
                 case "System.UIntPtr":
                     {
-                        var val = item.ReadField<System.UIntPtr>(fieldName);
+                        var val = item.ReadField<UIntPtr>(fieldName);
                         content = (val == UIntPtr.Zero) ? "null" : $"0x{val.ToUInt64():x}";
                     }
                     break;

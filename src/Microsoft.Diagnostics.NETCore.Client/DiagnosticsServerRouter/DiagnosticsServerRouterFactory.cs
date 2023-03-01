@@ -723,7 +723,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private NetServerRouterFactory _netServerRouterFactory;
         private IpcServerRouterFactory _ipcServerRouterFactory;
 
-        public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
+        public IpcServerTcpServerRouterFactory(string ipcServer, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate factory, ILogger logger)
         {
             _logger = logger;
             _netServerRouterFactory = factory(tcpServer, runtimeTimeoutMs, logger);

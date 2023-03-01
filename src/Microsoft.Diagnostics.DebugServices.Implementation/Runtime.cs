@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             containerFactory.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
             _serviceContainer = containerFactory.Build();
             _serviceContainer.AddService<IRuntime>(this);
-            _serviceContainer.AddService<ClrInfo>(clrInfo);
+            _serviceContainer.AddService(clrInfo);
 
             _onFlushEvent = Target.OnFlushEvent.Register(Flush);
 

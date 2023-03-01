@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 throw new ArgumentException();
             }
             IEnumerable<string> uniformName = Enumerable.Range(0, length / n).Select(i => str.Substring(i * n, n));
-            List<string> strList = uniformName.ToList<string>();
+            List<string> strList = uniformName.ToList();
             int remainder = (length / n) * n;
             strList.Add(str.Substring(remainder, length - remainder));
             return strList;

@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
-        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore;
+        private SymbolStore.SymbolStores.SymbolStore _symbolStore;
 
         public SymbolService(IHost host)
         {
@@ -279,7 +279,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else
             {
-                Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+                SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
                 if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
                     // Create http symbol server store
@@ -312,7 +312,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 throw new ArgumentNullException(nameof(symbolCachePath));
             }
 
-            Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+            SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolCachePath = Path.GetFullPath(symbolCachePath);
 
             // Check only the first symbol store for duplication. The same cache directory can be
@@ -334,7 +334,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 throw new ArgumentNullException(nameof(symbolDirectoryPath));
             }
 
-            Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+            SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolDirectoryPath = Path.GetFullPath(symbolDirectoryPath);
 
             if (!IsDuplicateSymbolStore<DirectorySymbolStore>(store, (directorySymbolStore) => IsPathEqual(symbolDirectoryPath, directorySymbolStore.Directory)))
@@ -943,7 +943,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             sb.AppendLine("Current symbol store settings:");
 
-            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => {
+            ForEachSymbolStore<SymbolStore.SymbolStores.SymbolStore>((symbolStore) => {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
                     sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
@@ -979,7 +979,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Sets a new store store head.
         /// </summary>
         /// <param name="store">symbol store (server, cache, directory, etc.)</param>
-        private void SetSymbolStore(Microsoft.SymbolStore.SymbolStores.SymbolStore store)
+        private void SetSymbolStore(SymbolStore.SymbolStores.SymbolStore store)
         {
             if (store != _symbolStore)
             {
@@ -988,8 +988,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private static bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
-            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+        private static bool IsDuplicateSymbolStore<T>(SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
+            where T : SymbolStore.SymbolStores.SymbolStore
         {
             while (symbolStore != null)
             {
@@ -1012,9 +1012,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <typeparam name="T">type of symbol store or SymbolStore for all</typeparam>
         /// <param name="callback">called for each store found</param>
         public void ForEachSymbolStore<T>(Action<T> callback)
-            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+            where T : SymbolStore.SymbolStores.SymbolStore
         {
-            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
+            SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
             while (symbolStore != null)
             {
                 if (symbolStore is T store)

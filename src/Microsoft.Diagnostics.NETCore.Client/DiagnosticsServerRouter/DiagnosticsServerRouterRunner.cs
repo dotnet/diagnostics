@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             void OnRouterStopped();
         }
 
-        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, ICallbacks callbacks)
+        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, ICallbacks callbacks)
         {
             return await runRouter(token, new IpcClientTcpServerRouterFactory(ipcClient, tcpServer, runtimeTimeoutMs, tcpServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }

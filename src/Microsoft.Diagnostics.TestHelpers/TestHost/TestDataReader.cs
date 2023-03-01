@@ -202,9 +202,9 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         /// <param name="values">test data for the item</param>
         /// <param name="instance">object to compare</param>
-        public void CompareMembers(ImmutableDictionary<string, TestDataReader.Value> values, object instance)
+        public void CompareMembers(ImmutableDictionary<string, Value> values, object instance)
         {
-            foreach (KeyValuePair<string, TestDataReader.Value> testData in values)
+            foreach (KeyValuePair<string, Value> testData in values)
             {
                 string testDataKey = testData.Key;
                 if (Version <= Version100 && testDataKey == "VersionData")

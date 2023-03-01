@@ -212,7 +212,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     private GCHeapDump(Deserializer deserializer)
     {
         deserializer.RegisterFactory(typeof(MemoryGraph), delegate () { return new MemoryGraph(1); });
-        deserializer.RegisterFactory(typeof(Graphs.Module), delegate () { return new Graphs.Module(0); });
+        deserializer.RegisterFactory(typeof(Module), delegate () { return new Module(0); });
         deserializer.RegisterFactory(typeof(InteropInfo), delegate () { return new InteropInfo(); });
         deserializer.RegisterFactory(typeof(GCHeapDump), delegate () { return this; });
         deserializer.RegisterFactory(typeof(GCHeapDumpSegment), delegate () { return new GCHeapDumpSegment(); });
@@ -342,7 +342,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 
         // Things after version 8 go here. Always add the the end, and it should always work
         // and use the tagged variation.
-        deserializer.TryReadTagged<InteropInfo>(ref m_interop);
+        deserializer.TryReadTagged(ref m_interop);
         string creationTool = null;
         deserializer.TryReadTagged(ref creationTool);
         CreationTool = creationTool;

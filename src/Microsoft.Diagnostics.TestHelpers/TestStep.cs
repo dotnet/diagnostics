@@ -580,7 +580,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     }
                     XElement runStateElement = finalTaskStateElement.Element("RunState");
                     TestStepRunState runState;
-                    if (runStateElement == null || !Enum.TryParse<TestStepRunState>(runStateElement.Value, out runState))
+                    if (runStateElement == null || !Enum.TryParse(runStateElement.Value, out runState))
                     {
                         return;
                     }

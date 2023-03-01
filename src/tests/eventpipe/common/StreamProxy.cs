@@ -80,7 +80,7 @@ namespace EventPipe.UnitTests.Common
         public override void Write(byte[] buffer, int offset, int count)
         {
             // This stream is only for "reading" from. No need for this method.
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         protected bool disposed;
