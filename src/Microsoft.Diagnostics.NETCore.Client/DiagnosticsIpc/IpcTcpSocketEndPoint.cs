@@ -70,8 +70,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.RelativeOrAbsolute, out Uri uri))
                 {
-                    if (string.Compare(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase) != 0 &&
-                        string.Compare(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase) != 0)
+                    if (!string.Equals(uri.Scheme, Uri.UriSchemeNetTcp, StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(uri.Scheme, "tcp", StringComparison.OrdinalIgnoreCase))
                     {
                         throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
                     }

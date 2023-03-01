@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         public IDictionary<string, string> NugetFeeds { get; private set; }
         public abstract string ProjectTemplateFileName { get; }
 
-        async protected override Task DoWork(ITestOutputHelper output)
+        protected async override Task DoWork(ITestOutputHelper output)
         {
             PrepareProjectSolution(output);
             await Restore(output);

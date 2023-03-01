@@ -28,9 +28,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private const string Path6 = "/Privacy/Sub/Path/test.html";
         private const string Path7 = "/About/style.css";
 
-        private readonly static IReadOnlyList<string> Paths = new[] { Path1, Path2, Path3, Path4, Path5, Path6, Path7 };
+        private static readonly IReadOnlyList<string> Paths = new[] { Path1, Path2, Path3, Path4, Path5, Path6, Path7 };
 
-        private readonly static Dictionary<string, IReadOnlyList<string>> Patterns = new()
+        private static readonly Dictionary<string, IReadOnlyList<string>> Patterns = new()
         {
             { "**/*", Paths },
             { "**/*.j", Array.Empty<string>() },

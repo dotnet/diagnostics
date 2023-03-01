@@ -629,7 +629,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        static private void ValidateNonNegative(int value, string argName)
+        private static void ValidateNonNegative(int value, string argName)
         {
             if (value < 0)
             {

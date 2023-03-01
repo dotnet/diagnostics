@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.NETCore.Client;
 
 internal sealed class IpcWebSocketServerTransport : IpcServerTransport
 {
-    public IpcWebSocketServerTransport(string address, int maxAllowedConnections, IIpcServerTransportCallbackInternal transportCallback = null)
+    public IpcWebSocketServerTransport(IIpcServerTransportCallbackInternal transportCallback = null)
         : base(transportCallback)
     {
     }

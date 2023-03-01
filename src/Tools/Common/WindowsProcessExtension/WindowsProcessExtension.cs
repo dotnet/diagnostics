@@ -13,7 +13,7 @@ namespace Microsoft.Internal.Common.Utils
         //https://github.com/projectkudu/kudu/blob/787c893a9336beb498252bb2f90a06a95763f9e9/Kudu.Core/Infrastructure/ProcessExtensions.cs
         //The error handling was modified to return a string instead of throw.
 
-        static public string GetCommandLine(Process process)
+        public static string GetCommandLine(Process process)
         {
             IntPtr processHandle;
             try
@@ -175,7 +175,7 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
-        static private int GetProcessBitness(IntPtr hProcess)
+        private static int GetProcessBitness(IntPtr hProcess)
         {
             if (System.Environment.Is64BitOperatingSystem)
             {

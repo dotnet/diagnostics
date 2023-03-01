@@ -100,7 +100,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool AnyWorkToDo { get { return RemoteDotNetPath != null || LocalDotNetZipPath != null; } }
 
-        async protected override Task DoWork(ITestOutputHelper output)
+        protected async override Task DoWork(ITestOutputHelper output)
         {
             if (RemoteDotNetPath != null)
             {

@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public string FriendlyName { get; private set; }
 
-        async public Task Execute(ITestOutputHelper output)
+        public async Task Execute(ITestOutputHelper output)
         {
             // if this step is in progress on another thread, wait for it
             TestStepState stepState = await AcquireStepStateLock(output);
@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async private Task WriteFinalStepState(TestStepState stepState, ITestOutputHelper output)
+        private async Task WriteFinalStepState(TestStepState stepState, ITestOutputHelper output)
         {
             const int NumberOfRetries = 5;
             FileStream stepStateStream = null;

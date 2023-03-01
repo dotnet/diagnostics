@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _buildDebuggeeTask = ConfigureDotNetBuildDebuggeeTask(config, _acquireTask.LocalDotNetPath, config.CliVersion, debuggeeName);
         }
 
-        async public Task<DebuggeeConfiguration> Execute(ITestOutputHelper output)
+        public async Task<DebuggeeConfiguration> Execute(ITestOutputHelper output)
         {
             if (_acquireTask.AnyWorkToDo)
             {

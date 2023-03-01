@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public static class DebuggeeCompiler
     {
-        async public static Task<DebuggeeConfiguration> Execute(TestConfiguration config, string debuggeeName, ITestOutputHelper output)
+        public static async Task<DebuggeeConfiguration> Execute(TestConfiguration config, string debuggeeName, ITestOutputHelper output)
         {
             IDebuggeeCompiler compiler;
             switch (config.DebuggeeBuildProcess)

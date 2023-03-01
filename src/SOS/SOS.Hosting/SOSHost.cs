@@ -890,7 +890,7 @@ namespace SOS.Hosting
 
         private string GetFileName(string fileName) => Target.OperatingSystem == OSPlatform.Windows ? Path.GetFileNameWithoutExtension(fileName) : Path.GetFileName(fileName);
 
-        internal unsafe static void Write(uint* pointer, uint value = 0)
+        internal static unsafe void Write(uint* pointer, uint value = 0)
         {
             if (pointer != null)
             {
@@ -898,7 +898,7 @@ namespace SOS.Hosting
             }
         }
 
-        internal unsafe static void Write(ulong* pointer, ulong value = 0)
+        internal static unsafe void Write(ulong* pointer, ulong value = 0)
         {
             if (pointer != null)
             {

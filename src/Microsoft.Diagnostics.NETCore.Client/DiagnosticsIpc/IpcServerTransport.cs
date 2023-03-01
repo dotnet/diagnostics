@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (kind == ReversedDiagnosticsServer.Kind.WebSocket)
             {
-                return new IpcWebSocketServerTransport(address, maxConnections, transportCallback);
+                return new IpcWebSocketServerTransport(transportCallback);
             }
             else if (kind == ReversedDiagnosticsServer.Kind.Ipc || !IpcTcpSocketEndPoint.IsTcpIpEndPoint(address))
             {
