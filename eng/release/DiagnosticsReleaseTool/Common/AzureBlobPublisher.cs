@@ -1,15 +1,17 @@
-using Azure;
-using Azure.Storage;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Azure.Storage.Sas;
-using Microsoft.Extensions.Logging;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Buffers;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
+using Microsoft.Extensions.Logging;
 
 namespace ReleaseTool.Core
 {
@@ -32,25 +34,22 @@ namespace ReleaseTool.Core
 
         private Uri AccountBlobUri
         {
-            get
-            {
+            get {
                 return new Uri(FormattableString.Invariant($"https://{_accountName}.blob.core.windows.net"));
             }
         }
 
         private StorageSharedKeyCredential AccountCredential
         {
-            get
-            {
+            get {
                 StorageSharedKeyCredential credential = new StorageSharedKeyCredential(_accountName, _accountKey);
                 return credential;
             }
         }
 
-        private BlobClientOptions BlobOptions
+        private static BlobClientOptions BlobOptions
         {
-            get
-            {
+            get {
                 // The Azure SDK client has it's own built in retry logic
                 // We want to allow more and longer retries because this
                 // is a publishing operation that happens once and can be
@@ -212,7 +211,7 @@ namespace ReleaseTool.Core
             return _client;
         }
 
-        private async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, BlobDownloadStreamingResult destBlobDownloadStream, CancellationToken ct)
+        private static async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, BlobDownloadStreamingResult destBlobDownloadStream, CancellationToken ct)
         {
             if (srcStream.Length != destBlobDownloadStream.Details.ContentLength)
             {

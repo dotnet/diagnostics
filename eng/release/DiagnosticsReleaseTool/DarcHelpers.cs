@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +10,7 @@ using ReleaseTool.Core;
 
 namespace DiagnosticsReleaseTool.Util
 {
-    internal class DarcHelpers
+    internal sealed class DarcHelpers
     {
         private readonly DirectoryInfo _dropPath;
 
@@ -47,10 +50,9 @@ namespace DiagnosticsReleaseTool.Util
 
                 // This iteration is necessary due to the public/private nature repos.
                 var repoBuilds = buildList.EnumerateArray()
-                                          .Where(build => 
-                                          {
-                                            var buildUri = new Uri(build.GetProperty("repo").GetString());
-                                            return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
+                                          .Where(build => {
+                                              var buildUri = new Uri(build.GetProperty("repo").GetString());
+                                              return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
                                           });
 
                 if (repoBuilds.Count() != 1)

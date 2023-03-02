@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -7,8 +10,8 @@ namespace DiagnosticsReleaseTool.Util
 {
     public static class DiagnosticsRepoHelpers
     {
-        public static readonly string[] ProductNames = new []{ "diagnostics", "dotnet-diagnostics" };
-        public static readonly string[] RepositoryUrls = new [] { "https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics" };
+        public static readonly string[] ProductNames = new[] { "diagnostics", "dotnet-diagnostics" };
+        public static readonly string[] RepositoryUrls = new[] { "https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics" };
         public static string BundleToolsPathInDrop => System.IO.Path.Combine("diagnostics", "bundledtools");
         public const string BundledToolsPrefix = "diagnostic-tools-";
         public const string BundledToolsCategory = "ToolBundleAssets";

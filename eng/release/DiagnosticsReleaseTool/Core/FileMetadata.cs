@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 
 namespace ReleaseTool.Core
@@ -25,7 +28,7 @@ namespace ReleaseTool.Core
         // TODO: Add a metadata bag for Key,Value pairs.
 
         public FileMetadata(FileClass fileClass, string assetCategory, string sha512)
-            : this(fileClass, assetCategory, shouldPublishToCdn: false, rid: "any", sha512: sha512) {}
+            : this(fileClass, assetCategory, shouldPublishToCdn: false, rid: "any", sha512: sha512) { }
 
         public FileMetadata(FileClass fileClass, string assetCategory, bool shouldPublishToCdn, string rid, string sha512)
         {
