@@ -3,10 +3,10 @@
 
 using System;
 using System.IO;
-using Xunit;
+using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
-using Microsoft.Diagnostics.Tools.Counters;
+using Xunit;
 
 #pragma warning disable CA1507 // Use nameof to express symbol names
 

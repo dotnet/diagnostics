@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using DiagnosticsReleaseTool.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using DiagnosticsReleaseTool.Util;
 using ReleaseTool.Core;
 
 namespace DiagnosticsReleaseTool.Impl

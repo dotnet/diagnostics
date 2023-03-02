@@ -3,9 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {

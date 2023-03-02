@@ -52,31 +52,26 @@ internal sealed class EmbeddedWebSocketServer
     public static EmbeddedWebSocketServer CreateWebServer(Options options, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
     {
         var builder = new HostBuilder()
-            .ConfigureLogging(logging =>
-            {
+            .ConfigureLogging(logging => {
                 /* FIXME: use a delegating provider that sends the output to the dotnet-dsrouter LoggerFactory */
                 logging.AddConsole().AddFilter(null, options.LogLevel);
             })
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddCors(o => o.AddPolicy("AnyCors", builder =>
-                    {
-                        builder.AllowAnyOrigin()
-                            .AllowAnyMethod()
-                            .AllowAnyHeader()
-                            .WithExposedHeaders("*");
-                    }));
+            .ConfigureServices((ctx, services) => {
+                services.AddCors(o => o.AddPolicy("AnyCors", builder => {
+                    builder.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .WithExposedHeaders("*");
+                }));
                 services.AddRouting();
                 services.Configure<Options>(localOptions => localOptions.Assign(options));
             })
-            .ConfigureWebHostDefaults(webHostBuilder =>
-            {
+            .ConfigureWebHostDefaults(webHostBuilder => {
                 webHostBuilder.UseKestrel();
                 webHostBuilder.Configure((/*context, */app) => ConfigureApplication(/*context,*/ app, connectionHandler));
                 webHostBuilder.UseUrls(MakeUrls(options.Scheme, options.Host, options.Port));
             })
-            .UseConsoleLifetime(options =>
-            {
+            .UseConsoleLifetime(options => {
                 options.SuppressStatusMessages = true;
             });
 
@@ -87,8 +82,7 @@ internal sealed class EmbeddedWebSocketServer
 
     private static void ConfigureApplication(/*WebHostBuilderContext context,*/ IApplicationBuilder app, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
     {
-        app.Use((context, next) =>
-        {
+        app.Use((context, next) => {
             context.Response.Headers.Add("Cross-Origin-Embedder-Policy", "require-corp");
             context.Response.Headers.Add("Cross-Origin-Opener-Policy", "same-origin");
             return next();
@@ -97,8 +91,7 @@ internal sealed class EmbeddedWebSocketServer
         app.UseCors("AnyCors");
 
         app.UseWebSockets();
-        app.UseRouter(router =>
-        {
+        app.UseRouter(router => {
             var options = router.ServiceProvider.GetRequiredService<IOptions<Options>>().Value;
             router.MapGet(options.Path, (context) => OnWebSocketGet(context, connectionHandler));
         });

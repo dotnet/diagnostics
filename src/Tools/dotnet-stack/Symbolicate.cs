@@ -32,7 +32,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="searchDir">Path of multiple directories with assembly and pdb where the exception occurred</param>
         /// <param name="output">Output directly to a file</param>
         /// <param name="stdout">Output directly to a console</param>
-        /// <returns></returns>
         private static void Symbolicate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout)
         {
             try

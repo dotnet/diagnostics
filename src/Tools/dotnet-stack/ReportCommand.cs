@@ -4,19 +4,19 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.IO;
 using System.CommandLine.Binding;
+using System.CommandLine.IO;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {

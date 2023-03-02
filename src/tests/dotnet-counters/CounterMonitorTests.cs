@@ -3,10 +3,9 @@
 
 using System.Collections.Generic;
 using System.Linq;
-
-using Xunit;
 using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Counters;
+using Xunit;
 
 namespace DotnetCounters.UnitTests
 {

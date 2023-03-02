@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Text;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Tools.Common;
 using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
