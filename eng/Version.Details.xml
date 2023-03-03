@@ -35,13 +35,13 @@
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
       <Sha>a11fec5fad546a315b4565af534f9efccec010b9</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-preview.3.23152.1">
+    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-preview.3.23153.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>e7926d6bb96976d9fc7aa1ac0a4e7a40f965b688</Sha>
+      <Sha>9fe0fc8b03ebbdb05377a6cd9fe7ca0d3a703450</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.3.23152.1">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.3.23153.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>e7926d6bb96976d9fc7aa1ac0a4e7a40f965b688</Sha>
+      <Sha>9fe0fc8b03ebbdb05377a6cd9fe7ca0d3a703450</Sha>
     </Dependency>
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23151.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
