@@ -78,10 +78,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private ulong PrintAppDomains(TableOutput output, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
         {
+            Console.WriteLine("Loader Heap:");
+            WriteDivider();
+
             ulong totalBytes = 0;
 
-            totalBytes += PrintAppDomain(output, clrRuntime.SystemDomain, "System Domain", loaderAllocatorsSeen);
-            totalBytes += PrintAppDomain(output, clrRuntime.SharedDomain, "Shared Domain", loaderAllocatorsSeen);
+            totalBytes += PrintAppDomain(output, clrRuntime.SystemDomain, "System Domain:", loaderAllocatorsSeen);
+            totalBytes += PrintAppDomain(output, clrRuntime.SharedDomain, "Shared Domain:", loaderAllocatorsSeen);
 
             for (int i = 0; i < clrRuntime.AppDomains.Length; i++)
             {
@@ -112,8 +115,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (!loaderAllocatorsSeen.Add(appDomain.LoaderAllocator))
                     return 0;
             }
-
-            //
 
             var heapsByKind = from heap in appDomain.EnumerateLoaderAllocatorHeaps()
                               where loaderAllocatorsSeen.Add(heap.Address)
@@ -176,7 +177,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteSizeAndWasted(text, heapSize, heapWasted);
                 text.Append('.');
 
-                output.WriteRow(kind, text);
+                output.WriteRow($"{kind}:", text);
 
                 totalSize += heapSize;
                 totalWasted += heapWasted;
@@ -187,6 +188,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (totalSize > 0)
             {
                 WriteSizeAndWasted(text, totalSize, totalWasted);
+                text.Append('.');
                 output.WriteRow("Total size:", text);
             }
             else
@@ -379,12 +381,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             TableOutput gcOutput = new(Console, pointerFormat, pointerFormat, pointerFormat, pointerFormat, sizeFormat, sizeFormat);
 
+            WriteDivider('=');
             Console.WriteLine($"Number of GC Heaps: {heap.SubHeaps.Length}");
+            WriteDivider();
 
             foreach (var gc_heap in heap.SubHeaps)
             {
                 if (heap.IsServer)
-                    Console.WriteLine($"HEAP {gc_heap.Index} ({gc_heap.Address:x})");
+                    Console.WriteLine($"Heap {gc_heap.Index} ({gc_heap.Address:x16})");
 
                 if (!gc_heap.HasRegions)
                 {
@@ -489,7 +493,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return zeroValue;
         }
 
-        private void WriteDivider(int width = 120) => WriteLine(new string('-', width));
+        private void WriteDivider(char c = '-', int width = 40) => WriteLine(new string(c, width));
 
         private void WriteDivider(string header, int width = 120)
         {

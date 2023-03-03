@@ -93,12 +93,12 @@ VERIFY:\s+System Domain:\s+<HEXVAL>\s+
 VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
-VERIFY:\s+Jit code heap:\s+
-VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes\.\s+
-VERIFY:\s+Total LoaderHeap size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
+VERIFY:\s+JIT Manager:\s+<HEXVAL>
+VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes.*
+VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
 VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\(<DECVAL>\)\s+0x<HEXVAL>\(<DECVAL>\)\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+
 VERIFY:\s+Large object heap.*
 
 # Continue to the next DebugBreak
