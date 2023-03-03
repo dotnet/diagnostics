@@ -707,16 +707,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (!TryGetSegmentMemoryRange(segment, generation, out var start, out var end))
                     continue;
 
-                var currentObjectAddress = start;
-                ClrObject currentObject;
-                do
-                {
-                    currentObject = _heap.GetObject(currentObjectAddress);
-                    if (currentObject.Type != null)
-                        yield return currentObject;
-
-                    currentObjectAddress = segment.GetNextObjectAddress(currentObject);
-                } while (currentObjectAddress > 0 && currentObjectAddress < end);
+                foreach (ClrObject obj in _heap.EnumerateObjects(new MemoryRange(start, end)))
+                    if (obj.IsValid)
+                        yield return obj;
             }
         }
 
@@ -735,21 +728,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     end = segment.Generation1.End;
                     return start != end;
                 case GCGeneration.Generation2:
-                    if (!(segment.IsLargeObjectSegment || segment.IsPinnedObjectSegment))
+                    if (segment.Kind != GCSegmentKind.Large && segment.Kind != GCSegmentKind.Large && segment.Kind != GCSegmentKind.Frozen)
                     {
                         start = segment.Generation2.Start;
                         end = segment.Generation2.End;
                     }
                     return start != end;
                 case GCGeneration.LargeObjectHeap:
-                    if (segment.IsLargeObjectSegment)
+                    if (segment.Kind == GCSegmentKind.Large)
                     {
                         start = segment.Start;
                         end = segment.End;
                     }
                     return start != end;
                 case GCGeneration.PinnedObjectHeap:
-                    if (segment.IsPinnedObjectSegment)
+                    if (segment.Kind == GCSegmentKind.Frozen)
                     {
                         start = segment.Start;
                         end = segment.End;

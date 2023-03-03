@@ -305,7 +305,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         pinned.Add(root.Object);
             }
 
-            foreach (ClrSegment seg in Runtime.Heap.Segments.Where(s => s.IsPinnedObjectSegment || s.IsLargeObjectSegment))
+            foreach (ClrSegment seg in Runtime.Heap.Segments.Where(s => s.IsPinned))
             {
                 foreach (ClrObject obj in seg.EnumerateObjects().Where(o => seen.Add(o)))
                 {

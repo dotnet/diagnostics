@@ -368,115 +368,125 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ulong PrintGCHeap(ClrRuntime clrRuntime)
         {
             Console.WriteLine();
+            ClrHeap heap = clrRuntime.Heap;
 
-            int heapCount = clrRuntime.Heap.Segments.Max(seg => seg.LogicalHeap) + 1;
-            int heapColSize = heapCount == 1 ? 0 : 8;
+            int pointerWidth = 16;
+            string pointerToStringFormat = "x16";
+            var pointerFormat = (pointerWidth, pointerToStringFormat);
 
-            TableOutput segmentTable = new(Console, (heapColSize, ""), (9, ""), (14, "x12"), (14, "x12"), (14, "x12"), (14, "x12"), (24, ""), (24, ""), (24, ""));
-            TableOutput ephemeralSegmentTable = new(Console, (heapColSize, ""), (-9, ""), (14, "x12"), (14, "x12"), (-24, "x12"));
+            int sizeWidth = Math.Max(15, heap.Segments.Max(seg => FormatMemorySize(seg.CommittedMemory.Length).Length));
+            var sizeFormat = (sizeWidth, "");
 
-            var segmentByHeap = from seg in clrRuntime.Heap.Segments
-                                group seg by seg.LogicalHeap into g
-                                let Segments = g.OrderBy(GetSegmentOrder).ThenBy(seg => seg.CommittedMemory.Start)
-                                let TotalCommitted = (ulong)g.Sum(seg => (long)seg.CommittedMemory.Length)
-                                let TotalAllocated = (ulong)g.Sum(seg => (long)seg.ObjectRange.Length)
-                                let TotalReserved = (ulong)g.Sum(seg => (long)seg.ReservedMemory.Length)
-                                select new
-                                {
-                                    Heap = g.Key,
-                                    Segments,
-                                    TotalCommitted,
-                                    TotalAllocated,
-                                    TotalReserved
-                                };
+            TableOutput gcOutput = new(Console, pointerFormat, pointerFormat, pointerFormat, pointerFormat, sizeFormat, sizeFormat);
 
-            int heapTotal = 0;
-            ulong totalAllocated = 0;
-            ulong totalCommitted = 0;
-            ulong totalReserved = 0;
-            foreach (var heapSegments in segmentByHeap)
+            Console.WriteLine($"Number of GC Heaps: {rt.Heap.SubHeaps.Length}");
+
+            foreach (var gc_heap in heap.SubHeaps)
             {
-                if (heapCount > 1)
-                    segmentTable.WriteRowWithSpacing('-', "[ Heap ]", "[ Kind ]", "[ Begin ]", "[ Allocated ]", "[ Committed ]", "[ Reserved ]", "[ Allocated Size ]", "[ Committed Size ]", "[ Reserved Size ]");
-                else
-                    segmentTable.WriteRowWithSpacing('-', "", " Kind ", " Begin ", " Allocated ", " Committed ", " Reserved ", " Allocated Size ", " Committed Size ", " Reserved Size ");
+                if (heap.IsServer)
+                    Console.WriteLine($"HEAP {gc_heap.Index} ({gc_heap.Address:x})");
 
-                foreach (ClrSegment segment in heapSegments.Segments)
+                if (!gc_heap.HasRegions)
                 {
-                    segmentTable.WriteRow(
-                        heapCount > 1 ? segment.LogicalHeap.ToString() : "",
-                        GetSegmentKind(segment),
-                        segment.ObjectRange.Start,
-                        segment.ObjectRange.End,
-                        segment.CommittedMemory.End,
-                        segment.ReservedMemory.End,
-                        FormatMemorySize(segment.ObjectRange.Length),
-                        FormatMemorySize(segment.CommittedMemory.Length),
-                        FormatMemorySize(segment.ReservedMemory.Length)
-                        );
+                    for (int i = 0; i <= 2 && i < gc_heap.GenerationTable.Length; i++)
+                        Console.WriteLine($"generation {i} starts at {gc_heap.GenerationTable[i].AllocationStart:x}");
 
-                    if (segment.IsEphemeralSegment)
+                    Console.Write("ephemeral segment allocation context: ");
+                    if (gc_heap.AllocationContext.Length > 0)
+                        Console.WriteLine($"(0x{gc_heap.AllocationContext.Start:x}, 0x{gc_heap.AllocationContext.End})");
+                    else
+                        Console.WriteLine("none");
+                }
+
+                // Print gen 0-2
+                Console.WriteLine("Small object heap");
+                WriteSegmentHeader(gcOutput);
+
+                bool[] needToPrintGen = new bool[] { gc_heap.HasRegions, gc_heap.HasRegions, gc_heap.HasRegions };
+                IEnumerable<ClrSegment> ephemeralSegments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Ephemeral || (seg.Kind >= GCSegmentKind.Generation0 && seg.Kind <= GCSegmentKind.Generation2));
+                IEnumerable<ClrSegment> segments = ephemeralSegments.OrderBy(seg => seg.Kind).ThenBy(seg => seg.Start);
+                foreach (ClrSegment segment in segments)
+                {
+                    int genIndex = segment.Kind - GCSegmentKind.Generation0;
+                    if (genIndex >= 0 && genIndex < needToPrintGen.Length && needToPrintGen[genIndex])
                     {
-                        ephemeralSegmentTable.WriteRow("", "-> gen0", segment.Generation0.Start, segment.Generation0.End, "  " + FormatMemorySize(segment.Generation0.Length));
-                        ephemeralSegmentTable.WriteRow("", "-> gen1", segment.Generation1.Start, segment.Generation1.End, "  " + FormatMemorySize(segment.Generation1.Length));
-                        ephemeralSegmentTable.WriteRow("", "-> gen2", segment.Generation2.Start, segment.Generation2.End, "  " + FormatMemorySize(segment.Generation2.Length));
+                        Console.WriteLine($"generation {genIndex}:");
+                        needToPrintGen[genIndex] = false;
                     }
+
+                    WriteSegment(gcOutput, segment);
                 }
 
-                if (heapCount > 1)
+                // print frozen object heap
+                segments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Frozen).OrderBy(seg => seg.Start);
+                if (segments.Any())
                 {
-                    string footer = $" [ HEAP {heapSegments.Heap} ] ---- [ ALLOCATED: {FormatMemorySize(heapSegments.TotalAllocated)} ] ---- [ COMMITTED: {FormatMemorySize(heapSegments.TotalCommitted)} ] ---- [ RESERVED: {FormatMemorySize(heapSegments.TotalReserved)} ] ";
-                    Console.WriteLine(footer.PadLeft(segmentTable.TotalWidth / 2 + footer.Length / 2, '-').PadRight(segmentTable.TotalWidth, '-'));
-                    Console.WriteLine();
+                    Console.WriteLine("Frozen object heap");
+                    WriteSegmentHeader(gcOutput);
+
+                    foreach (ClrSegment segment in segments)
+                        WriteSegment(gcOutput, segment);
                 }
 
-                heapTotal++;
-                totalAllocated += heapSegments.TotalAllocated;
-                totalCommitted += heapSegments.TotalCommitted;
-                totalReserved += heapSegments.TotalReserved;
+                // print large object heap
+                if (gc_heap.HasRegions || gc_heap.GenerationTable.Length <= 3)
+                    Console.WriteLine("Large object heap");
+                else
+                    Console.WriteLine($"Large object heap starts at {gc_heap.GenerationTable[3].AllocationStart:x}");
+
+                segments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Large).OrderBy(seg => seg.Start);
+                WriteSegmentHeader(gcOutput);
+
+                foreach (ClrSegment segment in segments)
+                    WriteSegment(gcOutput, segment);
+
+                // print pinned object heap
+                segments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Pinned).OrderBy(seg => seg.Start);
+                if (segments.Any())
+                {
+                    if (gc_heap.HasRegions || gc_heap.GenerationTable.Length <= 3)
+                        Console.WriteLine("Pinned object heap");
+                    else
+                        Console.WriteLine($"Pinned object heap starts at {gc_heap.GenerationTable[4].AllocationStart:x}");
+
+                    WriteSegmentHeader(gcOutput);
+
+                    foreach (ClrSegment segment in segments)
+                        WriteSegment(gcOutput, segment);
+                }
+
+                Console.WriteLine($"Total Allocated Size:              Size: {FormatMemorySize((ulong)gc_heap.Segments.Sum(r => (long)r.ObjectRange.Length))} bytes.");
+                Console.WriteLine($"Total Committed Size:              Size: {FormatMemorySize((ulong)gc_heap.Segments.Sum(r => (long)r.CommittedMemory.Length))} bytes.");
+
+                Console.WriteLine("------------------------------");
             }
 
-            int hexWidth = Math.Max(totalCommitted.ToString("x").Length, totalReserved.ToString("x").Length) + 2;
+            ulong totalAllocated = (ulong)heap.SubHeaps.SelectMany(gc_heap => gc_heap.Segments).Sum(r => (long)r.ObjectRange.Length);
+            ulong totalCommitted = (ulong)heap.SubHeaps.SelectMany(gc_heap => gc_heap.Segments).Sum(r => (long)r.CommittedMemory.Length);
 
-            TableOutput totalTable = new(Console, (16, ""), (64, "")) { AlignLeft = true };
-
-            totalTable.WriteRow("Total GC Heaps:", heapTotal);
-            totalTable.WriteRow("Total Allocated:", FormatMemorySize(totalAllocated, "0"));
-            totalTable.WriteRow("Total Committed:", FormatMemorySize(totalCommitted, "0"));
-            totalTable.WriteRow("Total Reserved: ", FormatMemorySize(totalReserved, "0"));
+            Console.WriteLine($"GC Allocated Heap Size:    Size: {FormatMemorySize(totalAllocated)} bytes.");
+            Console.WriteLine($"GC Committed Heap Size:    Size: {FormatMemorySize(totalCommitted)} bytes.");
 
             return totalCommitted;
+        }
+
+        static void WriteSegmentHeader(TableOutput gcOutput)
+        {
+            gcOutput.WriteRow("segment", "begin", "allocated", "committed", "allocated size", "committed size");
+        }
+
+        static void WriteSegment(TableOutput gcOutput, ClrSegment segment)
+        {
+            gcOutput.WriteRow(segment.Address,
+                segment.ObjectRange.Start, segment.ObjectRange.End, segment.CommittedMemory.End,
+                FormatMemorySize(segment.ObjectRange.Length), FormatMemorySize(segment.CommittedMemory.Length));
         }
 
         static string FormatMemorySize(ulong length, string zeroValue = "")
         {
             if (length > 0)
-                return $"0x{length:x} ({length.ConvertToHumanReadable()})";
+                return $"0x{length:x} ({length})";
             return zeroValue;
-        }
-
-        string GetSegmentKind(ClrSegment segment)
-        {
-            if (segment.IsEphemeralSegment)
-                return "ephemeral";
-            if (segment.IsLargeObjectSegment)
-                return "large";
-            if (segment.IsPinnedObjectSegment)
-                return "pinned";
-            return "gen2";
-        }
-
-        int GetSegmentOrder(ClrSegment seg)
-        {
-            if (seg.IsEphemeralSegment)
-                return 3;
-
-            if (seg.IsLargeObjectSegment)
-                return 0;
-            if (seg.IsPinnedObjectSegment)
-                return 1;
-
-            return 2;
         }
 
         private void WriteDivider(int width = 120) => WriteLine(new string('-', width));
