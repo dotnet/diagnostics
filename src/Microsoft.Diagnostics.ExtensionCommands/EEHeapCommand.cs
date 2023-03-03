@@ -379,7 +379,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             TableOutput gcOutput = new(Console, pointerFormat, pointerFormat, pointerFormat, pointerFormat, sizeFormat, sizeFormat);
 
-            Console.WriteLine($"Number of GC Heaps: {rt.Heap.SubHeaps.Length}");
+            Console.WriteLine($"Number of GC Heaps: {heap.SubHeaps.Length}");
 
             foreach (var gc_heap in heap.SubHeaps)
             {
