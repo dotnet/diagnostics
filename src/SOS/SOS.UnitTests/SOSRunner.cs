@@ -318,7 +318,7 @@ public class SOSRunner : IDisposable
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
                     WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                     WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
-                    WithEnvironmentVariable("DOTNET_DbgEnableElfDumpOnMacOS", "1").
+                    WithRuntimeConfiguration("DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
 
@@ -326,16 +326,16 @@ public class SOSRunner : IDisposable
                 {
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
                     processRunner.
-                        WithEnvironmentVariable("DOTNET_DbgEnableMiniDump", "1").
-                        WithEnvironmentVariable("DOTNET_DbgMiniDumpName", dumpName);
+                        WithRuntimeConfiguration("DbgEnableMiniDump", "1").
+                        WithRuntimeConfiguration("DbgMiniDumpName", dumpName);
 
                     if (information.DumpDiagnostics)
                     {
-                        processRunner.WithEnvironmentVariable("DOTNET_CreateDumpDiagnostics", "1");
+                        processRunner.WithRuntimeConfiguration("CreateDumpDiagnostics", "1");
                     }
                     if (information.TestCrashReport)
                     {
-                        processRunner.WithEnvironmentVariable("DOTNET_EnableCrashReport", "1");
+                        processRunner.WithRuntimeConfiguration("EnableCrashReport", "1");
                     }
                     // Windows createdump's triage MiniDumpWriteDump flags for .NET 5.0 are broken
                     // Disable testing triage dumps on 6.0 until the DAC signing issue is resolved - issue https://github.com/dotnet/diagnostics/issues/2542
@@ -348,13 +348,13 @@ public class SOSRunner : IDisposable
                     switch (dumpType)
                     {
                         case DumpType.Heap:
-                            processRunner.WithEnvironmentVariable("DOTNET_DbgMiniDumpType", "2");
+                            processRunner.WithRuntimeConfiguration("DbgMiniDumpType", "2");
                             break;
                         case DumpType.Triage:
-                            processRunner.WithEnvironmentVariable("DOTNET_DbgMiniDumpType", "3");
+                            processRunner.WithRuntimeConfiguration("DbgMiniDumpType", "3");
                             break;
                         case DumpType.Full:
-                            processRunner.WithEnvironmentVariable("DOTNET_DbgMiniDumpType", "4");
+                            processRunner.WithRuntimeConfiguration("DbgMiniDumpType", "4");
                             break;
                     }
                 }
@@ -684,7 +684,7 @@ public class SOSRunner : IDisposable
 
             // Disable W^E so that the bpmd command and the tests pass
             // Issue: https://github.com/dotnet/diagnostics/issues/3126
-            processRunner.WithEnvironmentVariable("DOTNET_EnableWriteXorExecute", "0");
+            processRunner.WithRuntimeConfiguration("EnableWriteXorExecute", "0");
 
             DumpType? dumpType = null;
             if (action == DebuggerAction.LoadDump || action == DebuggerAction.LoadDumpWithDotNetDump)
