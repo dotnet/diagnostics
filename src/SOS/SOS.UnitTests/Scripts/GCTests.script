@@ -94,7 +94,7 @@ VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+JIT Manager:\s+<HEXVAL>
-VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes.*
+VERIFY:\s+(LoaderCodeHeap|HostCodeHeap):\s+<HEXVAL>.*bytes.*
 VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
 VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
