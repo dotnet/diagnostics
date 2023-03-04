@@ -742,7 +742,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     return start != end;
                 case GCGeneration.PinnedObjectHeap:
-                    if (segment.Kind == GCSegmentKind.Frozen)
+                    if (segment.Kind == GCSegmentKind.Pinned || segment.Kind == GCSegmentKind.Frozen)
                     {
                         start = segment.Start;
                         end = segment.End;
