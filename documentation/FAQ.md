@@ -31,7 +31,7 @@ Frequently Asked Questions
 
     If that doesn't work, try using the `setclrpath <directory>` command with a directory that contains the matching version of the DAC module. This is useful for private runtimes or debug builds that haven't been published to our symbol servers.
 
-    If this is a dump, the problem could also be that the dump is missing some memory required by SOS. Try generating a "full" dump (the default with `dotnet-dump collect` without a `--type` option) or add setting the crash dump generation (createdump) environment variable `COMPlus_DbgMiniDumpType=4`. For more details on crash dump generation see [here](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dumps#collecting-dumps-on-crash).
+    If this is a dump, the problem could also be that the dump is missing some memory required by SOS. Try generating a "full" dump (the default with `dotnet-dump collect` without a `--type` option) or add setting the crash dump generation (createdump) environment variable `DOTNET_DbgMiniDumpType=4`. For more details on crash dump generation see [here](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dumps#collecting-dumps-on-crash).
 
 * If you receive this error message executing a SOS command:
     ```
