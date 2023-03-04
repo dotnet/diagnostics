@@ -38,7 +38,7 @@ namespace SOS.Extensions
                     // find the !address header
                     string[] split = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     if (split.Length > 0)
-                        foundHeader = split[0] == "BaseAddress" && split.Last() == "Usage";
+                        foundHeader = (split[0] == "BaseAddress" || split[0] == "BaseAddr") && split.Last() == "Usage";
                 }
                 else if (!skipped)
                 {

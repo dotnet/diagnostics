@@ -1771,20 +1771,8 @@ void isRetAddr(DWORD_PTR retAddr, DWORD_PTR* whereCalled);
 DWORD_PTR GetValueFromExpression (___in __in_z const char *const str);
 void LoadRuntimeSymbols();
 
-enum ModuleHeapType
-{
-    ModuleHeapType_ThunkHeap,
-    ModuleHeapType_LookupTableHeap
-};
-
-HRESULT PrintDomainHeapInfo(const char *name, CLRDATA_ADDRESS adPtr, DWORD_PTR *size, DWORD_PTR *wasted = 0);
-DWORD_PTR PrintModuleHeapInfo(DWORD_PTR *moduleList, int count, ModuleHeapType type, DWORD_PTR *wasted = 0);
-void PrintHeapSize(DWORD_PTR total, DWORD_PTR wasted);
-void DomainInfo(DacpAppDomainData *pDomain);
-void AssemblyInfo(DacpAssemblyData *pAssembly);
-DWORD_PTR LoaderHeapInfo(CLRDATA_ADDRESS pLoaderHeapAddr, DWORD_PTR *wasted = 0);
-DWORD_PTR JitHeapInfo();
-DWORD_PTR VSDHeapInfo(CLRDATA_ADDRESS appDomain, DWORD_PTR *wasted = 0);
+void DomainInfo(DacpAppDomainData* pDomain);
+void AssemblyInfo(DacpAssemblyData* pAssembly);
 
 size_t GetNumComponents(TADDR obj);
 
