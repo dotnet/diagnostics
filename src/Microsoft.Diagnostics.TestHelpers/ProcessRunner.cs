@@ -1,10 +1,13 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
@@ -312,54 +315,56 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             IProcessLogger[] loggers = Loggers;
 
-            // for the best efficiency we want to read in chunks, but if the underlying stream isn't
-            // going to timeout partial reads then we have to fall back to reading one character at a time
-            int readChunkSize = 1;
-            if (reader.BaseStream.CanTimeout)
-            {
-                readChunkSize = 1000;
-            }
+            const int BufferSize = 2048;
+            using IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent(BufferSize);
 
-            char[] buffer = new char[readChunkSize];
-            bool lastCharWasCarriageReturn = false;
             do
             {
-                int lastStartLine = 0;
-                int charsRead = reader.ReadBlock(buffer, 0, readChunkSize);
+                Span<char> buffer = MemoryMarshal.Cast<byte, char>(memOwner.Memory.Span.Slice(0, BufferSize));
+                int charsRead = reader.Read(buffer);
+
+                buffer = buffer[0..charsRead];
 
                 // this lock keeps the standard out/error streams from being intermixed
-                lock (loggers)
+                lock (Loggers)
                 {
-                    for (int i = 0; i < charsRead; i++)
+                    while (!buffer.IsEmpty)
                     {
-                        // eat the \n after a \r, if any
-                        bool isNewLine = buffer[i] == '\n';
-                        bool isCarriageReturn = buffer[i] == '\r';
-                        if (lastCharWasCarriageReturn && isNewLine)
+                        string line;
+                        int index = buffer.IndexOf('\n');
+                        // If no newline, just write the buffer sans the trailing \r.
+                        if (index == -1)
                         {
-                            lastStartLine++;
-                            lastCharWasCarriageReturn = false;
-                            continue;
-                        }
-                        lastCharWasCarriageReturn = isCarriageReturn;
-                        if (isCarriageReturn || isNewLine)
-                        {
-                            string line = new string(buffer, lastStartLine, i - lastStartLine);
-                            lastStartLine = i + 1;
+                            buffer = buffer[^1] == '\r'
+                                ? buffer[0..^1]
+                                : buffer;
+                            line = new string(buffer);
                             foreach (IProcessLogger logger in loggers)
                             {
-                                logger.WriteLine(this, line, stream);
+                                logger.Write(this, line, stream);
                             }
+                            break;
                         }
-                    }
 
-                    // flush any fractional line
-                    if (charsRead > lastStartLine)
-                    {
-                        string line = new string(buffer, lastStartLine, charsRead - lastStartLine);
+                        // If we start with a new line, flush the current line.
+                        if (index == 0)
+                        {
+                            line = string.Empty;
+                        }
+                        else
+                        {
+                            // Otherwise find the \n and emit the partial buffer.
+                            Span<char> charSeq = buffer[index - 1] == '\r'
+                                ? buffer[0..(index - 1)]
+                                : buffer[0..index];
+                            line = new string(charSeq);
+                        }
+
+                        buffer = buffer.Slice(index + 1);
+
                         foreach (IProcessLogger logger in loggers)
                         {
-                            logger.Write(this, line, stream);
+                            logger.WriteLine(this, line, stream);
                         }
                     }
                 }
