@@ -445,10 +445,10 @@ public class SOS
                 WithExpectedExitCode(0).
                 WithWorkingDirectory(scriptDir).
                 // Turn on stress logging so the dumplog and histinit commands pass
-                WithEnvironmentVariable("COMPlus_LogFacility", "0xffffffbf").
-                WithEnvironmentVariable("COMPlus_LogLevel", "6").
-                WithEnvironmentVariable("COMPlus_StressLog", "1").
-                WithEnvironmentVariable("COMPlus_StressLogSize", "65536");
+                WithEnvironmentVariable("DOTNET_LogFacility", "0xffffffbf").
+                WithEnvironmentVariable("DOTNET_LogLevel", "6").
+                WithEnvironmentVariable("DOTNET_StressLog", "1").
+                WithEnvironmentVariable("DOTNET_StressLogSize", "65536");
 
             // Start the process runner
             processRunner.Start();

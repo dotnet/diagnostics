@@ -337,7 +337,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
                 if (File.Exists(path))
                 {
-                    logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set COMPlus_EnableDiagnostics=0 and re-run.");
+                    logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
 
                     path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}");
                     logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
@@ -358,7 +358,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 var path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
                 if (Directory.GetFiles(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket").Length != 0)
                 {
-                    logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set COMPlus_EnableDiagnostics=0 and re-run.");
+                    logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
 
                     path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
                     logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
