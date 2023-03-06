@@ -4,6 +4,7 @@
 
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -689,11 +690,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // For older runtimes, the array entry is the Node object
                     node = bucketsArray.GetObjectValue(i);
                 }
-                IAddressableTypedEntity keyField, valueField;
+                IClrValue keyField, valueField;
                 if (!node.IsNull && node.IsValid)
                 {
-                    keyField = node.GetFieldFrom(keyFieldName);
-                    valueField = node.GetFieldFrom(valueFieldName);
+                    keyField = GetFieldFrom(node, keyFieldName);
+                    valueField = GetFieldFrom(node, valueFieldName);
 
                     if (keyField == null || valueField == null)
                     {
@@ -711,6 +712,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     node = node.ReadObjectField(nextFieldName);
                 }
             }
+        }
+
+        public static IClrValue GetFieldFrom(IClrValue entity, string fieldName)
+        {
+            IClrType entityType = entity?.Type ?? throw new ArgumentNullException(nameof(entity), "No associated type");
+            IClrInstanceField field = entityType.GetFieldByName(fieldName) ?? throw new ArgumentException($"Type '{entityType}' does not contain a field named '{fieldName}'");
+            return field.IsObjectReference ? entity.ReadObjectField(fieldName) : entity.ReadValueTypeField(fieldName);
         }
 
         public IEnumerable<ClrObject> EnumerateObjectsInGeneration(GCGeneration generation)
@@ -979,35 +987,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             const string defaultContent = "?";
 
-            var field = obj.GetFieldFrom(propertyName);
+            var field = GetFieldFrom(obj, propertyName);
+            if (field.Type is ClrType fieldType)
+            {
+                if (fieldType.IsString)
+                {
+                    return $"\"{new ClrObject(field.Address, fieldType).AsString()}\"";
+                }
+                else if (fieldType.IsArray)
+                {
+                    return $"dumparray {field.Address:x16}";
+                }
+                else if (fieldType.IsObjectReference)
+                {
+                    return $"dumpobj {field.Address:x16}";
+                }
+                else if (IsSimpleType(fieldType.Name) && TryGetSimpleValue(obj, fieldType, propertyName, out var simpleValuecontent))
+                {
+                    return simpleValuecontent;
+                }
+                else if (fieldType.IsValueType)
+                {
+                    return $"dumpvc {fieldType.MethodTable:x16} {field.Address:x16}";
+                }
+            }
+            else
+            {
+                if (field is ClrObject objectField && objectField.IsNull)
+                    return "null";
 
-            if (field.Type == null && field is ClrObject objectField && objectField.IsNull)
-            {
-                return "null";
-            }
-            if (field.Type == null)
-            {
                 return defaultContent;
-            }
-            if (field.Type.IsString)
-            {
-                return $"\"{new ClrObject(field.Address, field.Type).AsString()}\"";
-            }
-            else if (field.Type.IsArray)
-            {
-                return $"dumparray {field.Address:x16}";
-            }
-            else if (field.Type.IsObjectReference)
-            {
-                return $"dumpobj {field.Address:x16}";
-            }
-            else if (IsSimpleType(field.Type.Name) && TryGetSimpleValue(obj, field.Type, propertyName, out var simpleValuecontent))
-            {
-                return simpleValuecontent;
-            }
-            else if (field.Type.IsValueType)
-            {
-                return $"dumpvc {field.Type.MethodTable:x16} {field.Address:x16}";
             }
             return defaultContent;
         }
@@ -1073,7 +1082,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return true;
         }
 
-        private static bool TryGetSimpleValue(IAddressableTypedEntity item, ClrType type, string fieldName, out string content)
+        private static bool TryGetSimpleValue(IClrValue item, ClrType type, string fieldName, out string content)
         {
             content = null;
             var typeName = type.Name;
