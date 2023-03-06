@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -837,7 +837,7 @@ public class SOSRunner : IDisposable
                 }
                 try
                 {
-                    _scriptLogger.WriteLine(_processRunner, "<END_COMMAND_ERROR>", ProcessStream.StandardOut);
+                    _scriptLogger.FlushCurrentOutputAsError(_processRunner);
                     await RunSosCommand("SOSStatus");
                 }
                 catch (Exception ex)
@@ -1522,14 +1522,14 @@ public class SOSRunner : IDisposable
             Task<CommandResult> currentTask = null;
             lock (this)
             {
-                if (_taskQueue.Count == 0)
+                if (_taskQueue.Count == 0 || HasProcessExited)
                 {
                     return false;
                 }
                 currentTask = _taskQueue[0];
                 _taskQueue.RemoveAt(0);
             }
-            return (await currentTask).CommandOutput != null;
+            return (await currentTask.ConfigureAwait(false)).CommandOutput != null;
         }
 
         public Task<CommandResult> WaitForCommandOutput()
@@ -1586,6 +1586,15 @@ public class SOSRunner : IDisposable
                     }
                 }
             }
+        }
+
+        public void FlushCurrentOutputAsError(ProcessRunner runner)
+        {
+            // TODO: Clean this up... It's acting as stdout from within
+            // the runner, and it can act after the process exits and after
+            // all output has been drained from the output streams. This output
+            // would never get logged.
+            WriteLine(runner, s_endCommandError, ProcessStream.StandardOut);
         }
 
         public override void ProcessExited(ProcessRunner runner)
