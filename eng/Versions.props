@@ -45,7 +45,7 @@
     <SystemReflectionMetadataVersion>5.0.0</SystemReflectionMetadataVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>3.0.0-beta.23153.5</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>3.0.0-beta.23155.1</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <!-- Use pinned version to avoid picking up latest (which doesn't support netcoreapp3.1) during source-build -->
