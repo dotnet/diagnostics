@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -415,23 +415,24 @@ namespace Microsoft.Diagnostics.TestHelpers
             Process p = await startProcessTask.ConfigureAwait(false);
             DebugTrace("InternalWaitForExit {0} '{1}'", p.Id, _replayCommand);
 
-            Task processExit = Task.Factory.StartNew(
-                () => {
-                    DebugTrace("starting Process.WaitForExit {0}", p.Id);
-                    p.WaitForExit();
-                    DebugTrace("ending Process.WaitForExit {0}", p.Id);
-                },
-                CancellationToken.None,
-                TaskCreationOptions.LongRunning,
-                TaskScheduler.Default);
-
             DebugTrace("awaiting process {0} exit", p.Id);
-            await processExit.ConfigureAwait(false);
+            await p.WaitForExitAsync().ConfigureAwait(false);
             DebugTrace("process {0} completed with exit code {1}", p.Id, p.ExitCode);
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
+
             var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
-            Task completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15))).ConfigureAwait(false);
+
+            streamsTask = streamsTask.ContinueWith(
+                t => DebugTrace(t.Exception),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
+
+            Task completedTask = await Task.WhenAny(
+                    streamsTask,
+                    Task.Delay(TimeSpan.FromSeconds(15)))
+                .ConfigureAwait(false);
 
             if (completedTask != streamsTask)
             {
