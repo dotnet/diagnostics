@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         private readonly CounterFilter _filter;
         private readonly SystemDiagnosticsMetricsTriggerImpl _impl;
-        private readonly string _providerName;
+        private readonly string _meterName;
         private string _sessionId;
 
         public SystemDiagnosticsMetricsTrigger(SystemDiagnosticsMetricsTriggerSettings settings)
@@ -44,14 +44,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
             _impl = new SystemDiagnosticsMetricsTriggerImpl(settings);
 
-            _providerName = settings.MeterName;
+            _meterName = settings.MeterName;
 
             _sessionId = settings.SessionId;
         }
 
         public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap()
         {
-            return _eventMapCache.GetOrAdd(_providerName, CreateEventMapForProvider);
+            return _eventMapCache.GetOrAdd(_meterName, CreateEventMapForProvider);
         }
 
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             return false;
         }
 
-        public static MetricSourceConfiguration CreateConfiguration(ref SystemDiagnosticsMetricsTriggerSettings settings)
+        public static MetricSourceConfiguration CreateConfiguration(SystemDiagnosticsMetricsTriggerSettings settings)
         {
             Validate(settings);
 

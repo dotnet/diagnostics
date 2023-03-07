@@ -65,14 +65,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             else
             {
                 bool passesValueFilter = (payload is PercentilePayload percentilePayload) ?
-                    _valueFilterHistogram(CreatePayloadDict(percentilePayload)) :
+                    _valueFilterHistogram(CreatePayloadDictionary(percentilePayload)) :
                     _valueFilterDefault(payload.Value);
 
                 return SharedTriggerImplHelper.HasSatisfiedCondition(ref _latestTicks, ref _targetTicks, _windowTicks, _intervalTicks, payload, passesValueFilter);
             }
         }
 
-        private Dictionary<int, double> CreatePayloadDict(PercentilePayload percentilePayload)
+        private Dictionary<int, double> CreatePayloadDictionary(PercentilePayload percentilePayload)
         {
             return percentilePayload.Quantiles.ToDictionary(keySelector: p => CounterUtilities.CreatePercentile(p.Percentage), elementSelector: p => p.Value);
         }
