@@ -429,7 +429,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
 
             streamsTask = streamsTask.ContinueWith(
-                t => DebugTrace(t.Exception),
+                t => DebugTrace(t.Exception.ToString()),
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
                 TaskScheduler.Default);
