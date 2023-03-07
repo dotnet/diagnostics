@@ -77,10 +77,10 @@ SOSCOMMAND:runtimes
 SOSCOMMAND:ClrStack -all
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestDll\.TestClass\.Foo7\(System\.String\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ (33)\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo6\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 21\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo5\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 16\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.ThrowException\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 10\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestDll\.TestClass\.Foo7\(System\.String\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ (36)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo6\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 24\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo5\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 19\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.ThrowException\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 13\]\s*
 
 SOSCOMMAND:clrthreads
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
