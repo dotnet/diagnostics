@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option ConvertFormatOption() =>
             new Option(
                 alias: "--format",
-                description: $"Sets the output format for the trace file conversion.") 
+                description: $"Sets the output format for the trace file conversion. Chromium can be used on https://ui.perfetto.dev/ or in chrome://tracing/. SpeedScope can be used on https://www.speedscope.app/. CollapsedStacks is a text format for https://github.com/brendangregg/FlameGraph.") 
             {
                 Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
             };
