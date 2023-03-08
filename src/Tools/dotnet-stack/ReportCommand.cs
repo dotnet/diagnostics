@@ -164,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             return 0;
         }
 
-        private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, MutableTraceEventStackSource stackSource)
+        private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
         {
             console.Out.WriteLine($"Thread (0x{threadId:X}):");
             StackSourceCallStackIndex stackIndex = stackSourceSample.StackIndex;
