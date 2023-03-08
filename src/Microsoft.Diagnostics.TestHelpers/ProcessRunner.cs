@@ -358,7 +358,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         }
                         else
                         {
-                            // Otherwise find the \n and emit the partial buffer.
+                            // Otherwise found the \n. Trim the \r and emit the partial buffer.
                             Span<char> charSeq = buffer[index - 1] == '\r'
                                 ? buffer[0..(index - 1)]
                                 : buffer[0..index];

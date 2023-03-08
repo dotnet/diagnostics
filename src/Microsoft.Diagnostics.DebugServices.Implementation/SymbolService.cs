@@ -650,6 +650,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             break;
                         }
+                    }
+                    else
+                    {
                         tempFileKey ??= PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
                     }
                 }

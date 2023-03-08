@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
@@ -48,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             try
             {
                 int count = 0;
-                foreach (System.Collections.Generic.KeyValuePair<string, string> item in Helper.EnumerateConcurrentDictionary(address))
+                foreach (KeyValuePair<string, string> item in Helper.EnumerateConcurrentDictionary(address))
                 {
                     count++;
                     WriteLine($"    -----");
