@@ -38,14 +38,14 @@ namespace EventPipe.UnitTests.GCEventsValidation
         public async void GCCollect_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var GCProviders = new List<EventPipeProvider>()
+                List<EventPipeProvider> GCProviders = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //GCKeyword (0x1): 0b1
@@ -60,7 +60,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
                         }
 
-                        TestClass testClass = new TestClass();
+                        TestClass testClass = new();
                         testClass = null;
                         GC.Collect();
                     }
@@ -120,14 +120,14 @@ namespace EventPipe.UnitTests.GCEventsValidation
         public async void GCWaitForPendingFinalizers_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var GCProviders = new List<EventPipeProvider>()
+                List<EventPipeProvider> GCProviders = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //GCKeyword (0x1): 0b1
@@ -142,7 +142,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                             Logger.logger.Log($"Called GC.Collect() {i} times...");
                         }
 
-                        TestClass testClass = new TestClass();
+                        TestClass testClass = new();
                         testClass = null;
                         GC.Collect();
                         GC.WaitForPendingFinalizers();
@@ -170,14 +170,14 @@ namespace EventPipe.UnitTests.GCEventsValidation
         public async void GCCollect_ProducesVerboseEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var GCProviders = new List<EventPipeProvider>()
+                List<EventPipeProvider> GCProviders = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //GCKeyword (0x1): 0b1
@@ -185,7 +185,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
                 };
 
                 Action _eventGeneratingAction = () => {
-                    List<string> testList = new List<string>();
+                    List<string> testList = new();
                     for (int i = 0; i < 100_000_000; i++)
                     {
                         // This test was failing (no GCFreeSegment callbacks) on x86 until this GC Collects happened.

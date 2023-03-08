@@ -138,9 +138,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>The item on which the handler completes.</returns>
         public T Handle(Handler handler, TimeSpan timeout)
         {
-            using var cancellation = new CancellationTokenSource(timeout);
+            using CancellationTokenSource cancellation = new(timeout);
 
-            var completionSource = new TaskCompletionSource<T>();
+            TaskCompletionSource<T> completionSource = new();
             using CancellationTokenRegistration _ = cancellation.Token.Register(
                 () => completionSource.TrySetException(new TimeoutException()));
 
@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>A task that completes with the item on which the handler completes.</returns>
         public async Task<T> HandleAsync(Handler handler, CancellationToken token)
         {
-            var completionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<T> completionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             using CancellationTokenRegistration _ = token.Register(() => completionSource.TrySetCanceled(token));
 
             RunOrQueueHandler(handler, completionSource);

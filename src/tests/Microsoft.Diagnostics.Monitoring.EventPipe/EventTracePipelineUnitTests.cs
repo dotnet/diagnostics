@@ -38,19 +38,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Stream eventStream = null;
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TraceStopTest", _output))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
-                var settings = new EventTracePipelineSettings()
+                DiagnosticsClient client = new(testRunner.Pid);
+                EventTracePipelineSettings settings = new()
                 {
                     Duration = Timeout.InfiniteTimeSpan,
                     Configuration = new CpuProfileConfiguration()
                 };
 
-                var foundProviderSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                TaskCompletionSource<object> foundProviderSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                await using var pipeline = new EventTracePipeline(client, settings, async (s, token) => {
+                await using EventTracePipeline pipeline = new(client, settings, async (s, token) => {
                     eventStream = s;
 
-                    using var eventSource = new EventPipeEventSource(s);
+                    using EventPipeEventSource eventSource = new(s);
 
                     // Dispose event source when cancelled.
                     using CancellationTokenRegistration _ = token.Register(() => eventSource.Dispose());
@@ -84,17 +84,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             }
 
             Stream eventStream = null;
-            using var cancellationTokenSource = new CancellationTokenSource();
+            using CancellationTokenSource cancellationTokenSource = new();
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TestEventStreamCleanup", _output))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
-                var settings = new EventTracePipelineSettings()
+                DiagnosticsClient client = new(testRunner.Pid);
+                EventTracePipelineSettings settings = new()
                 {
                     Duration = Timeout.InfiniteTimeSpan,
                     Configuration = new CpuProfileConfiguration()
                 };
 
-                await using var pipeline = new EventTracePipeline(client, settings, (s, token) => {
+                await using EventTracePipeline pipeline = new(client, settings, (s, token) => {
                     eventStream = s; //Clients should not do this.
                     cancellationTokenSource.Cancel();
                     token.ThrowIfCancellationRequested();

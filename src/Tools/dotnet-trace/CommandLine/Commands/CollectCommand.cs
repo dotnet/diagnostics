@@ -113,7 +113,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     profile = "cpu-sampling";
                 }
 
-                Dictionary<string, string> enabledBy = new Dictionary<string, string>();
+                Dictionary<string, string> enabledBy = new();
 
                 List<EventPipeProvider> providerCollection = Extensions.ToProviders(providers);
                 foreach (EventPipeProvider providerCollectionProvider in providerCollection)
@@ -161,8 +161,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 DiagnosticsClient diagnosticsClient;
                 Process process = null;
-                DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-trace", 10);
-                var shouldExit = new ManualResetEvent(false);
+                DiagnosticsClientBuilder builder = new("dotnet-trace", 10);
+                ManualResetEvent shouldExit = new(false);
                 ct.Register(() => shouldExit.Set());
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: showchildio, printLaunchCommand: true).ConfigureAwait(false))
                 {
@@ -212,7 +212,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (string.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
                     {
                         DateTime now = DateTime.Now;
-                        var processMainModuleFileInfo = new FileInfo(processMainModuleFileName);
+                        FileInfo processMainModuleFileInfo = new(processMainModuleFileName);
                         output = new FileInfo($"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
                     }
 
@@ -263,13 +263,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             durationTimer.AutoReset = false;
                         }
 
-                        var stopwatch = new Stopwatch();
+                        Stopwatch stopwatch = new();
                         durationTimer?.Start();
                         stopwatch.Start();
 
                         LineRewriter rewriter = null;
 
-                        using (var fs = new FileStream(output.FullName, FileMode.Create, FileAccess.Write))
+                        using (FileStream fs = new(output.FullName, FileMode.Create, FileAccess.Write))
                         {
                             ConsoleWriteLine($"Process        : {processMainModuleFileName}");
                             ConsoleWriteLine($"Output File    : {fs.Name}");
@@ -280,7 +280,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             ConsoleWriteLine("\n\n");
 
-                            var fileInfo = new FileInfo(output.FullName);
+                            FileInfo fileInfo = new(output.FullName);
                             Task copyTask = session.EventStream.CopyToAsync(fs);
                             Task shouldExitTask = copyTask.ContinueWith(
                                 (task) => shouldExit.Set(),

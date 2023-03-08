@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     throw new PlatformNotSupportedException($"Unsupported architecture: {Target.Architecture}");
             }
 
-            var registers = new List<RegisterInfo>();
+            List<RegisterInfo> registers = new();
             int index = 0;
 
             FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     FramePointerIndex = index;
                 }
                 FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
-                var registerInfo = new RegisterInfo(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLowerInvariant());
+                RegisterInfo registerInfo = new(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLowerInvariant());
                 registers.Add(registerInfo);
                 index++;
             }

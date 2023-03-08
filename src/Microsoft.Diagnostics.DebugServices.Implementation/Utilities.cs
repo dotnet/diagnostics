@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    var reader = new PEReader(stream);
+                    PEReader reader = new(stream);
                     if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
                         Trace.TraceWarning($"OpenPEReader: PEReader invalid headers");
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (module.Target.OperatingSystem == OSPlatform.Linux)
             {
                 Stream stream = memoryService.CreateMemoryStream();
-                var elfFile = new ELFFile(new StreamAddressSpace(stream), module.ImageBase, true);
+                ELFFile elfFile = new(new StreamAddressSpace(stream), module.ImageBase, true);
                 if (elfFile.IsValid())
                 {
                     return elfFile;
@@ -208,7 +208,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (module.Target.OperatingSystem == OSPlatform.OSX)
             {
                 Stream stream = memoryService.CreateMemoryStream();
-                var elfFile = new MachOFile(new StreamAddressSpace(stream), module.ImageBase, true);
+                MachOFile elfFile = new(new StreamAddressSpace(stream), module.ImageBase, true);
                 if (elfFile.IsValid())
                 {
                     return elfFile;

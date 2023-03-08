@@ -51,8 +51,8 @@ namespace Microsoft.Diagnostics.CommonTestRunner
             string exePath = debuggeeConfig.BinaryExePath;
             string pipeName = null;
 
-            var arguments = new StringBuilder();
-            var managedArguments = new StringBuilder();
+            StringBuilder arguments = new();
+            StringBuilder managedArguments = new();
             if (!string.IsNullOrWhiteSpace(config.HostExe))
             {
                 exePath = config.HostExe;
@@ -171,7 +171,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 // Block until we see the IPC channel created, or until timeout specified.
                 try
                 {
-                    var source = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                    CancellationTokenSource source = new(TimeSpan.FromSeconds(15));
                     await Task.Run(cancellationToken: source.Token, action: () => {
                         while (true)
                         {
@@ -245,7 +245,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 WriteLine("WaitForTracee");
                 try
                 {
-                    var source = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+                    CancellationTokenSource source = new(TimeSpan.FromMinutes(2));
                     await _pipeServer.WaitForConnectionAsync(source.Token).ConfigureAwait(false);
                     WriteLine("WaitForTracee: DONE");
                 }

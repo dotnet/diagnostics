@@ -169,7 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 return null;
             }
-            var argumentDict = new Dictionary<string, string>();
+            Dictionary<string, string> argumentDict = new();
 
             int keyStart = 0;
             int keyEnd = 0;

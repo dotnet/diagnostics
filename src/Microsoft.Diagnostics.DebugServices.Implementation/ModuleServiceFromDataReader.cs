@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
             int moduleIndex = 0;
 
             ModuleInfo[] moduleInfos = _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase).ToArray();
@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             imageSize = startNext - start;
                         }
                     }
-                    var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo, imageSize);
+                    ModuleFromDataReader module = new(this, moduleIndex, moduleInfo, imageSize);
                     try
                     {
                         modules.Add(moduleInfo.ImageBase, module);

@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            var providers = new List<EventPipeProvider>()
+            List<EventPipeProvider> providers = new()
             {
                 // Diagnostic source events
                 new EventPipeProvider(DiagnosticSourceEventSource,

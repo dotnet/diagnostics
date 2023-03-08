@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static async Task RemoteInvoke(ITestOutputHelper output, Action testCase)
         {
-            var options = new RemoteInvokeOptions()
+            RemoteInvokeOptions options = new()
             {
                 StartInfo = new ProcessStartInfo() { RedirectStandardOutput = true, RedirectStandardError = true }
             };

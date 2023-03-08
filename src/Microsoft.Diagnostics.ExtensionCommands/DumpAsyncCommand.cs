@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // Enumerate all of the "frames", and create a mapping from a rendering of that
                 // frame to its associated type and how many times that frame occurs.
-                var typeCounts = new Dictionary<string, (ClrType Type, int Count)>();
+                Dictionary<string, (ClrType Type, int Count)> typeCounts = new();
                 foreach (KeyValuePair<ClrObject, AsyncObject> pair in objects)
                 {
                     ClrObject obj = pair.Key;
@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             void RenderCoalescedStacks()
             {
                 // Find all stacks to include.
-                var startingList = new List<ClrObject>();
+                List<ClrObject> startingList = new();
                 foreach (KeyValuePair<ClrObject, AsyncObject> entry in objects)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 void RenderLevel(List<ClrObject> frames, int depth)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
-                    List<ClrObject> nextLevel = new List<ClrObject>();
+                    List<ClrObject> nextLevel = new();
 
                     // Grouping function.  We want to treat all objects that render the same as the same entity.
                     // For async state machines, we include the await state, both because we want it to render
@@ -257,7 +257,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Render each stack of frames.</summary>
             void RenderStacks()
             {
-                var stack = new Stack<(AsyncObject AsyncObject, int Depth)>();
+                Stack<(AsyncObject AsyncObject, int Depth)> stack = new();
 
                 // Find every top-level object (ones that nothing else has as a continuation) and output
                 // a stack starting from each.
@@ -437,7 +437,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 bool sawShouldInclude = false;
                 bool sawStateMachine = IncludeTasks;
 
-                var stack = new Stack<AsyncObject>();
+                Stack<AsyncObject> stack = new();
                 stack.Push(obj);
                 while (stack.Count > 0)
                 {
@@ -555,7 +555,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Finds all of the relevant async-related objects on the heap.</summary>
             Dictionary<ClrObject, AsyncObject> CollectObjects()
             {
-                var found = new Dictionary<ClrObject, AsyncObject>();
+                Dictionary<ClrObject, AsyncObject> found = new();
 
                 // Enumerate the heap, looking for all relevant objects.
                 foreach (ClrObject obj in heap.EnumerateObjects())

@@ -1402,7 +1402,7 @@ dotnet_diagnostic.IDE0005.severity = suggestion
 dotnet_diagnostic.IDE0007.severity = silent
 
 # IDE0008: Use explicit type
-dotnet_diagnostic.IDE0008.severity = warning
+dotnet_diagnostic.IDE0008.severity = error
 
 # IDE0009: Add this or Me qualification
 dotnet_diagnostic.IDE0009.severity = silent

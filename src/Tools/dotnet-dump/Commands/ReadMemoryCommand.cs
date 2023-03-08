@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             if (AsciiString || UnicodeString)
             {
-                var sb = new StringBuilder();
+                StringBuilder sb = new();
                 while (true)
                 {
                     char ch = ReadChar(_lastAddress, UnicodeString, true);
@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                 count *= length;
                 ulong address = _lastAddress;
-                var sb = new StringBuilder();
+                StringBuilder sb = new();
 
                 while (count > 0)
                 {

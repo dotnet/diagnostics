@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 SessionId = Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
-                    new EventPipeProvider(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
+                    new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
                         new Dictionary<string, string>()
                         {
                             { "SessionId", SessionId },

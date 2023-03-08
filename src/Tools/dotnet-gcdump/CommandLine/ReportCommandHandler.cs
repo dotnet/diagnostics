@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             try
             {
                 using FileStream fs = File.OpenRead(file.FullName);
-                var dump = new GCHeapDump(fs, file.Name);
+                GCHeapDump dump = new(fs, file.Name);
                 dump.MemoryGraph.WriteToStdOut();
                 return Task.FromResult(0);
             }

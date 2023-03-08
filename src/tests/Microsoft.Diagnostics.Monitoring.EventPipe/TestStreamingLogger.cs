@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             Stream outputStream = _outputStream;
 
-            using (var jsonWriter = new Utf8JsonWriter(outputStream, new JsonWriterOptions { Indented = false }))
+            using (Utf8JsonWriter jsonWriter = new(outputStream, new JsonWriterOptions { Indented = false }))
             {
                 jsonWriter.WriteStartObject();
                 jsonWriter.WriteString("LogLevel", logLevel.ToString());

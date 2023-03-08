@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     try
                     {
                         Stream stream = ModuleService.MemoryService.CreateMemoryStream();
-                        var elfFile = new ELFFile(new StreamAddressSpace(stream), ImageBase, true);
+                        ELFFile elfFile = new(new StreamAddressSpace(stream), ImageBase, true);
                         if (elfFile.IsValid())
                         {
                             ELFSection section = elfFile.FindSectionByName(".gnu_debuglink");

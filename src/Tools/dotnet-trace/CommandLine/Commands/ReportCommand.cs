@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         //Create an extension function to help
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree)
         {
-            var ret = new List<CallTreeNodeBase>(callTree.ByID);
+            List<CallTreeNodeBase> ret = new(callTree.ByID);
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
             return ret;
         }
@@ -46,24 +46,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(traceFile);
                 int count = 0;
                 int index = 0;
-                List<CallTreeNodeBase> nodesToReport = new List<CallTreeNodeBase>();
-                using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (var eventLog = new TraceLog(tempEtlxFilename))
+                List<CallTreeNodeBase> nodesToReport = new();
+                using (SymbolReader symbolReader = new(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                using (TraceLog eventLog = new(tempEtlxFilename))
                 {
-                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    MutableTraceEventStackSource stackSource = new(eventLog)
                     {
                         OnlyManagedCodeStacks = true
                     };
 
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
 
                     computer.GenerateThreadTimeStacks(stackSource);
 
-                    FilterParams filterParams = new FilterParams()
+                    FilterParams filterParams = new()
                     {
                         FoldRegExs = "CPU_TIME;UNMANAGED_CODE_TIME;{Thread (}",
                     };
-                    FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
+                    FilterStackSource filterStack = new(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
                     CallTree callTree = new(ScalingPolicyKind.ScaleToData);
                     callTree.StackSource = filterStack;
 

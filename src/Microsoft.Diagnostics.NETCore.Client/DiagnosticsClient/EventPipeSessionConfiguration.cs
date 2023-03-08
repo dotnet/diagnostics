@@ -49,8 +49,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public byte[] SerializeV2()
         {
             byte[] serializedData = null;
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 writer.Write(CircularBufferSizeInMB);
                 writer.Write((uint)Format);

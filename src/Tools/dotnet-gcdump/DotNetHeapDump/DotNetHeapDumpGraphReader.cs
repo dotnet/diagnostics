@@ -36,7 +36,7 @@ public class DotNetHeapDumpGraphReader
     public MemoryGraph Read(string etlFilePath, string processNameOrId = null, double startTimeRelativeMSec = 0)
     {
         m_etlFilePath = etlFilePath;
-        var ret = new MemoryGraph(10000);
+        MemoryGraph ret = new(10000);
         Append(ret, etlFilePath, processNameOrId, startTimeRelativeMSec);
         ret.AllowReading();
         return ret;
@@ -44,14 +44,14 @@ public class DotNetHeapDumpGraphReader
 
     public MemoryGraph Read(TraceEventDispatcher source, string processNameOrId = null, double startTimeRelativeMSec = 0)
     {
-        var ret = new MemoryGraph(10000);
+        MemoryGraph ret = new(10000);
         Append(ret, source, processNameOrId, startTimeRelativeMSec);
         ret.AllowReading();
         return ret;
     }
     public void Append(MemoryGraph memoryGraph, string etlName, string processNameOrId = null, double startTimeRelativeMSec = 0)
     {
-        using (var source = TraceEventDispatcher.GetDispatcherFromFileName(etlName))
+        using (TraceEventDispatcher source = TraceEventDispatcher.GetDispatcherFromFileName(etlName))
         {
             Append(memoryGraph, source, processNameOrId, startTimeRelativeMSec);
         }
@@ -125,11 +125,11 @@ public class DotNetHeapDumpGraphReader
         };
         source.Clr.AddCallbackForEvents(moduleCallback); // Get module events for clr provider
         // TODO should not be needed if we use CAPTURE_STATE when collecting.
-        var clrRundown = new ClrRundownTraceEventParser(source);
+        ClrRundownTraceEventParser clrRundown = new(source);
         clrRundown.AddCallbackForEvents(moduleCallback); // and its rundown provider.
 
         DbgIDRSDSTraceData lastDbgData = null;
-        var symbolParser = new SymbolTraceEventParser(source);
+        SymbolTraceEventParser symbolParser = new(source);
         symbolParser.ImageIDDbgID_RSDS += delegate (DbgIDRSDSTraceData data) {
             if (data.ProcessID != m_processId)
             {
@@ -150,7 +150,7 @@ public class DotNetHeapDumpGraphReader
                 return;
             }
 
-            Module module = new Module(data.ImageBase);
+            Module module = new(data.ImageBase);
             module.Path = data.FileName;
             module.Size = data.ImageSize;
             module.BuildTime = data.BuildTime;
@@ -454,7 +454,7 @@ public class DotNetHeapDumpGraphReader
 
             m_dotNetHeapInfo.Segments ??= new List<GCHeapDumpSegment>();
 
-            GCHeapDumpSegment segment = new GCHeapDumpSegment();
+            GCHeapDumpSegment segment = new();
             segment.Start = start;
             segment.End = end;
 
@@ -584,7 +584,7 @@ public class DotNetHeapDumpGraphReader
         while (m_ccwBlocks.Count > 0)
         {
             GCBulkRootCCWTraceData data = m_ccwBlocks.Dequeue();
-            GrowableArray<NodeIndex> ccwChildren = new GrowableArray<NodeIndex>(1);
+            GrowableArray<NodeIndex> ccwChildren = new(1);
             for (int i = 0; i < data.Count; i++)
             {
                 unsafe
@@ -739,7 +739,7 @@ public class DotNetHeapDumpGraphReader
             m_log.WriteLine("No PDB information for {0} in ETL file, looking for it directly", module.Path);
             if (File.Exists(module.Path))
             {
-                using (var modulePEFile = new PEFile.PEFile(module.Path))
+                using (PEFile.PEFile modulePEFile = new(module.Path))
                 {
                     if (!modulePEFile.GetPdbSignature(out module.PdbName, out module.PdbGuid, out module.PdbAge))
                     {

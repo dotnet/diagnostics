@@ -17,7 +17,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void GenerateCounterListTestSingleProvider()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             CounterSet counters = CounterMonitor.ParseProviderList("MySource");
             Assert.Single(counters.Providers);
             Assert.Equal("MySource", counters.Providers.First());
@@ -27,7 +27,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void GenerateCounterListTestSingleProviderWithFilter()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             CounterSet counters = CounterMonitor.ParseProviderList("MySource[counter1,counter2,counter3]");
             Assert.Single(counters.Providers);
             Assert.Equal("MySource", counters.Providers.First());
@@ -38,7 +38,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void GenerateCounterListTestManyProviders()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             CounterSet counters = CounterMonitor.ParseProviderList("MySource1,MySource2,System.Runtime");
             Assert.Equal(3, counters.Providers.Count());
             Assert.Equal("MySource1", counters.Providers.ElementAt(0));
@@ -49,7 +49,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void GenerateCounterListTestManyProvidersWithFilter()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             CounterSet counters = CounterMonitor.ParseProviderList("MySource1[mycounter1,mycounter2], MySource2[mycounter1], System.Runtime[cpu-usage,working-set]");
             Assert.Equal(3, counters.Providers.Count());
 
@@ -69,8 +69,8 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void GenerateCounterListWithOptionAndArgumentsTest()
         {
-            CounterMonitor monitor = new CounterMonitor();
-            List<string> commandLineProviderArgs = new List<string>() { "System.Runtime", "MyEventSource" };
+            CounterMonitor monitor = new();
+            List<string> commandLineProviderArgs = new() { "System.Runtime", "MyEventSource" };
             string countersOptionText = "MyEventSource1,MyEventSource2";
             CounterSet counters = monitor.ConfigureCounters(countersOptionText, commandLineProviderArgs);
             Assert.Contains("MyEventSource", counters.Providers);
@@ -82,8 +82,8 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void GenerateCounterListWithOptionAndArgumentsTestWithDupEntries()
         {
-            CounterMonitor monitor = new CounterMonitor();
-            List<string> commandLineProviderArgs = new List<string>() { "System.Runtime", "MyEventSource" };
+            CounterMonitor monitor = new();
+            List<string> commandLineProviderArgs = new() { "System.Runtime", "MyEventSource" };
             string countersOptionText = "System.Runtime,MyEventSource";
             CounterSet counters = monitor.ConfigureCounters(countersOptionText, commandLineProviderArgs);
             Assert.Equal(2, counters.Providers.Count());
@@ -94,7 +94,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ParseErrorUnbalancedBracketsInCountersArg()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             string countersOptionText = "System.Runtime[cpu-usage,MyEventSource";
             CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Expected to find closing ']' in counter_provider", e.Message);
@@ -103,9 +103,9 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ParseErrorUnbalancedBracketsInCounterList()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             string countersOptionText = "System.Runtime,MyEventSource";
-            List<string> commandLineProviderArgs = new List<string>() { "System.Runtime[cpu-usage", "MyEventSource" };
+            List<string> commandLineProviderArgs = new() { "System.Runtime[cpu-usage", "MyEventSource" };
             CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, commandLineProviderArgs));
             Assert.Equal("Error parsing counter_list: Expected to find closing ']' in counter_provider", e.Message);
         }
@@ -113,7 +113,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ParseErrorTrailingTextInCountersArg()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             string countersOptionText = "System.Runtime[cpu-usage]hello,MyEventSource";
             CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Unexpected characters after closing ']' in counter_provider", e.Message);
@@ -122,7 +122,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ParseErrorEmptyProvider()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             string countersOptionText = ",MyEventSource";
             CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Expected non-empty counter_provider", e.Message);
@@ -131,7 +131,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ParseErrorMultipleCounterLists()
         {
-            CounterMonitor monitor = new CounterMonitor();
+            CounterMonitor monitor = new();
             string countersOptionText = "System.Runtime[cpu-usage][working-set],MyEventSource";
             CommandLineErrorException e = Assert.Throws<CommandLineErrorException>(() => monitor.ConfigureCounters(countersOptionText, null));
             Assert.Equal("Error parsing --counters argument: Expected at most one '[' in counter_provider", e.Message);

@@ -34,13 +34,13 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         public async void AssemblyLoad_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     //LoaderKeyword (0x8): 0b1000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b1000)
@@ -58,7 +58,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                                 Logger.logger.Log($"Load/Unload Assembly {i} times...");
                             }
 
-                            AssemblyLoad assemblyLoad = new AssemblyLoad();
+                            AssemblyLoad assemblyLoad = new();
                             assemblyLoad.LoadFromAssemblyPath(assemblyPath + "\\Microsoft.Diagnostics.Runtime.dll");
                             assemblyLoad.Unload();
                         }

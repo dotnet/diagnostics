@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             // this could be written more efficiently but I expect it to be quite rare and not performance sensitive
             // so I didn't feel justified writing a complex routine or adding a few 100KB for a dependency on a
             // better performing JSON library
-            StringBuilder sb = new StringBuilder(input.Length + 10);
+            StringBuilder sb = new(input.Length + 10);
             foreach (char c in input)
             {
                 switch (c)

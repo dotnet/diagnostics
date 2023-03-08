@@ -306,7 +306,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private static IList<Quantile> ParseQuantiles(string quantileList)
         {
             string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            var quantiles = new List<Quantile>();
+            List<Quantile> quantiles = new();
             foreach (string quantile in quantileParts)
             {
                 string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);

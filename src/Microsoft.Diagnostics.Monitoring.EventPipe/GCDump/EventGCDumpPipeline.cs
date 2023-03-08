@@ -51,22 +51,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             };
 
             // Register event handlers on the event source and represent their completion as tasks
-            using var gcStartTaskSource = new EventTaskSource<Action<GCStartTraceData>>(
+            using EventTaskSource<Action<GCStartTraceData>> gcStartTaskSource = new(
                 taskComplete => data => gcStartHandler(data, taskComplete),
                 handler => eventSource.Clr.GCStart += handler,
                 handler => eventSource.Clr.GCStart -= handler,
                 token);
-            using var gcBulkNodeTaskSource = new EventTaskSource<Action<GCBulkNodeTraceData>>(
+            using EventTaskSource<Action<GCBulkNodeTraceData>> gcBulkNodeTaskSource = new(
                 taskComplete => data => gcBulkNodeHandler(data, taskComplete),
                 handler => eventSource.Clr.GCBulkNode += handler,
                 handler => eventSource.Clr.GCBulkNode -= handler,
                 token);
-            using var gcStopTaskSource = new EventTaskSource<Action<GCEndTraceData>>(
+            using EventTaskSource<Action<GCEndTraceData>> gcStopTaskSource = new(
                 taskComplete => data => gcEndHandler(data, taskComplete),
                 handler => eventSource.Clr.GCStop += handler,
                 handler => eventSource.Clr.GCStop -= handler,
                 token);
-            using var sourceCompletedTaskSource = new EventTaskSource<Action>(
+            using EventTaskSource<Action> sourceCompletedTaskSource = new(
                 taskComplete => taskComplete,
                 handler => eventSource.Completed += handler,
                 handler => eventSource.Completed -= handler,
@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             Task gcDataTask = Task.WhenAny(gcStartTaskSource.Task, gcBulkNodeTaskSource.Task);
             Task gcStopTask = gcStopTaskSource.Task;
 
-            DotNetHeapDumpGraphReader dumper = new DotNetHeapDumpGraphReader(TextWriter.Null)
+            DotNetHeapDumpGraphReader dumper = new(TextWriter.Null)
             {
                 DotNetHeapInfo = new DotNetHeapInfo()
             };

@@ -293,7 +293,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
         {
             string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            List<KeyValuePair<double, double>> quantiles = new List<KeyValuePair<double, double>>();
+            List<KeyValuePair<double, double>> quantiles = new();
             foreach (string quantile in quantileParts)
             {
                 string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
@@ -479,7 +479,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
-                DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
+                DiagnosticsClientBuilder builder = new("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
@@ -556,7 +556,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
-                DiagnosticsClientBuilder builder = new DiagnosticsClientBuilder("dotnet-counters", 10);
+                DiagnosticsClientBuilder builder = new("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 {
                     if (holder == null)
@@ -638,7 +638,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         internal CounterSet ConfigureCounters(string commaSeparatedProviderListText, List<string> providerList)
         {
-            CounterSet counters = new CounterSet();
+            CounterSet counters = new();
             try
             {
                 if (commaSeparatedProviderListText != null)
@@ -681,7 +681,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         // parses a comma separated list of providers
         internal static CounterSet ParseProviderList(string providerListText)
         {
-            CounterSet set = new CounterSet();
+            CounterSet set = new();
             ParseProviderList(providerListText, set);
             return set;
         }
@@ -783,7 +783,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             //System.Diagnostics.Metrics EventSource supports the new Meter/Instrument APIs
             const long TimeSeriesValues = 0x2;
-            StringBuilder metrics = new StringBuilder();
+            StringBuilder metrics = new();
             foreach (string provider in _counterList.Providers)
             {
                 if (metrics.Length != 0)
@@ -801,7 +801,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
             }
             EventPipeProvider metricsEventSourceProvider =
-                new EventPipeProvider("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
+                new("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
                     new Dictionary<string, string>()
                     {
                         { "SessionId", _metricsEventSourceSessionId },
@@ -820,7 +820,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             EventPipeProvider[] providers = GetEventPipeProviders();
             _renderer.Initialize();
 
-            Task monitorTask = new Task(() => {
+            Task monitorTask = new(() => {
                 try
                 {
                     _session = _diagnosticsClient.StartEventPipeSession(providers, false, 10);
@@ -835,7 +835,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                             // Noop if the command is unknown since the target process is most likely a 3.1 app.
                         }
                     }
-                    var source = new EventPipeEventSource(_session.EventStream);
+                    EventPipeEventSource source = new(_session.EventStream);
                     source.Dynamic.All += DynamicAllMonitor;
                     _renderer.EventPipeSourceConnected();
                     source.Process();

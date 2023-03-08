@@ -23,7 +23,7 @@ namespace Tracee
             Console.Out.Flush();
             try
             {
-                using var pipeStream = new NamedPipeClientStream(pipeServerName);
+                using NamedPipeClientStream pipeStream = new(pipeServerName);
 
                 Console.WriteLine("{0} Tracee: connecting to pipe", pid);
                 Console.Out.Flush();

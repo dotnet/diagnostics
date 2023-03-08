@@ -180,8 +180,8 @@ namespace EventPipe.UnitTests.Common
             // CollectTracing returns before EventPipe::Enable has returned, so the
             // the sources we want to listen for may not have been enabled yet.
             // We'll use this sentinel EventSource to check if Enable has finished
-            ManualResetEvent sentinelEventReceived = new ManualResetEvent(false);
-            var sentinelTask = new Task(() => {
+            ManualResetEvent sentinelEventReceived = new(false);
+            Task sentinelTask = new(() => {
                 Logger.logger.Log("Started sending sentinel events...");
                 while (!sentinelEventReceived.WaitOne(50))
                 {
@@ -194,8 +194,8 @@ namespace EventPipe.UnitTests.Common
             int processId = Process.GetCurrentProcess().Id;
             object threadSync = new(); // for locking eventpipeSession access
             Func<int> optionalTraceValidationCallback = null;
-            DiagnosticsClient client = new DiagnosticsClient(processId);
-            var readerTask = new Task(() => {
+            DiagnosticsClient client = new(processId);
+            Task readerTask = new(() => {
                 Logger.logger.Log("Connecting to EventPipe...");
                 try
                 {
@@ -208,9 +208,9 @@ namespace EventPipe.UnitTests.Common
                     throw new ApplicationException("Failed to connect to EventPipe");
                 }
 
-                using var eventPipeStream = new StreamProxy(_eventPipeSession.EventStream);
+                using StreamProxy eventPipeStream = new(_eventPipeSession.EventStream);
                 Logger.logger.Log("Creating EventPipeEventSource...");
-                using EventPipeEventSource source = new EventPipeEventSource(eventPipeStream);
+                using EventPipeEventSource source = new(eventPipeStream);
                 Logger.logger.Log("EventPipeEventSource created");
 
                 source.Dynamic.All += (eventData) => {
@@ -275,7 +275,7 @@ namespace EventPipe.UnitTests.Common
             Logger.logger.Log("Stopping event generating action");
 
             // Should throw if the reader task throws any exceptions
-            var tokenSource = new CancellationTokenSource();
+            CancellationTokenSource tokenSource = new();
             CancellationToken ct = tokenSource.Token;
             readerTask.ContinueWith((task) => {
                 // if our reader task died earlier, we need to break the infinite wait below.
@@ -289,7 +289,7 @@ namespace EventPipe.UnitTests.Common
                 return task;
             });
 
-            var stopTask = Task.Run(() => {
+            Task stopTask = Task.Run(() => {
                 Logger.logger.Log("Sending StopTracing command...");
                 lock (threadSync) // eventpipeSession
                 {
@@ -411,7 +411,7 @@ namespace EventPipe.UnitTests.Common
             Func<EventPipeEventSource, Func<int>> optionalTraceValidator = null)
         {
             Logger.logger.Log("==TEST STARTING==");
-            var test = new IpcTraceTest(expectedEventCounts, eventGeneratingAction, providers, circularBufferMB, optionalTraceValidator);
+            IpcTraceTest test = new(expectedEventCounts, eventGeneratingAction, providers, circularBufferMB, optionalTraceValidator);
             int ret = test.Validate();
             if (ret == 100)
             {

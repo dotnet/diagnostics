@@ -269,7 +269,7 @@ namespace SOS.Extensions
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
 
             HResult hr = _debuggerServices.GetNumberModules(out uint loadedModules, out uint _);
             if (hr.IsOK)
@@ -284,7 +284,7 @@ namespace SOS.Extensions
                         {
                             Trace.TraceError("GetModuleName({0}) {1:X16} FAILED {2:X8}", moduleIndex, imageBase, hr);
                         }
-                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, unchecked((uint)imageSize), timestamp);
+                        ModuleFromDebuggerServices module = new(this, moduleIndex, imageName, imageBase, imageSize, unchecked((uint)imageSize), timestamp);
                         if (!modules.TryGetValue(imageBase, out IModule original))
                         {
                             modules.Add(imageBase, module);

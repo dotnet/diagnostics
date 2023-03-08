@@ -344,7 +344,7 @@ namespace Microsoft.Diagnostics
         private static void TestRegisterForRuntimeStartup(DebuggeeInfo debuggeeInfo, int api)
         {
             TestConfiguration config = debuggeeInfo.TestConfiguration;
-            AutoResetEvent wait = new AutoResetEvent(false);
+            AutoResetEvent wait = new(false);
             (IntPtr, GCHandle) unregister = (IntPtr.Zero, default);
             string applicationGroupId = null;
             HResult result = HResult.S_OK;

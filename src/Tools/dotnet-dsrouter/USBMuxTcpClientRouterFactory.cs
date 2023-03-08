@@ -305,8 +305,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             _logger?.LogDebug($"Connecting new tcp endpoint over usbmux \"{_tcpClientAddress}\".");
 
-            using var connectTimeoutTokenSource = new CancellationTokenSource();
-            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+            using CancellationTokenSource connectTimeoutTokenSource = new();
+            using CancellationTokenSource connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             connectTimeoutTokenSource.CancelAfter(TcpClientTimeoutMs);
 

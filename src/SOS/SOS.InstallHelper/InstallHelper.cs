@@ -207,7 +207,7 @@ namespace SOS
             bool existing = false;
 
             // Remove the start/end marker from an existing .lldbinit file
-            var lines = new List<string>();
+            List<string> lines = new();
             if (File.Exists(LLDBInitFile))
             {
                 existing = true;

@@ -27,13 +27,13 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
         public async void ThreadPool_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     //ThreadingKeyword (0x10000): 0b10000_0000_0000_0000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b10000_0000_0000_0000)

@@ -112,13 +112,13 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void ConvertCsprojTemplate(string csprojTemplatePath, string csprojOutPath)
         {
-            var xdoc = XDocument.Load(csprojTemplatePath);
+            XDocument xdoc = XDocument.Load(csprojTemplatePath);
             XNamespace ns = xdoc.Root.GetDefaultNamespace();
             if (LinkerPackageVersion != null)
             {
                 AddLinkerPackageReference(xdoc, ns, LinkerPackageVersion);
             }
-            using (var fs = new FileStream(csprojOutPath, FileMode.Create))
+            using (FileStream fs = new(csprojOutPath, FileMode.Create))
             {
                 xdoc.Save(fs);
             }

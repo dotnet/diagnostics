@@ -25,7 +25,7 @@ namespace EventPipeTracee
                 Console.Error.Flush();
                 return -1;
             }
-            using var pipeStream = new NamedPipeClientStream(pipeServerName);
+            using NamedPipeClientStream pipeStream = new(pipeServerName);
             bool spinWait10 = args.Length > 2 && "SpinWait10".Equals(args[2], StringComparison.Ordinal);
             string loggerCategory = args[1];
 
@@ -39,7 +39,7 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
             Console.Out.Flush();
 
-            ServiceCollection serviceCollection = new ServiceCollection();
+            ServiceCollection serviceCollection = new();
             serviceCollection.AddLogging(builder => {
                 builder.AddEventSourceLogger();
                 // Set application defined levels

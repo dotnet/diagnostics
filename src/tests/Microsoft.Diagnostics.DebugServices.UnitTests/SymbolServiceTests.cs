@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void SymbolPathTests()
         {
-            var symbolService = new SymbolService(this);
+            SymbolService symbolService = new(this);
             Assert.False(symbolService.ParseSymbolPath("srv"));
             Assert.False(symbolService.ParseSymbolPath("cache"));
             Assert.False(symbolService.ParseSymbolPath("symsrv"));
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     {
         public static string FormatSymbolStores(this SymbolService symbolService)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             symbolService.ForEachSymbolStore<SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
             return sb.ToString().Replace(Environment.NewLine, " ").TrimEnd();
         }

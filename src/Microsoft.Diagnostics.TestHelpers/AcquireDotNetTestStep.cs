@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             output.WriteLine("Unziping: " + gzipPath + " -> " + expandedFilePath);
             using (FileStream gzipStream = File.OpenRead(gzipPath))
             {
-                using (GZipStream expandedStream = new GZipStream(gzipStream, CompressionMode.Decompress))
+                using (GZipStream expandedStream = new(gzipStream, CompressionMode.Decompress))
                 {
                     using (FileStream targetFileStream = File.OpenWrite(expandedFilePath))
                     {
@@ -165,7 +165,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             output.WriteLine("Unziping: " + zipPath + " -> " + expandedDirPath);
             using (FileStream zipStream = File.OpenRead(zipPath))
             {
-                ZipArchive zip = new ZipArchive(zipStream);
+                ZipArchive zip = new(zipStream);
                 foreach (ZipArchiveEntry entry in zip.Entries)
                 {
                     string extractedFilePath = Path.Combine(expandedDirPath, entry.FullName);

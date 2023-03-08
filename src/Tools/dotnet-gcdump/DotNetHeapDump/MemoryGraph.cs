@@ -31,12 +31,12 @@ namespace Graphs
 
         public void WriteAsBinaryFile(string outputFileName)
         {
-            Serializer serializer = new Serializer(outputFileName, this);
+            Serializer serializer = new(outputFileName, this);
             serializer.Close();
         }
         public static MemoryGraph ReadFromBinaryFile(string inputFileName)
         {
-            Deserializer deserializer = new Deserializer(inputFileName);
+            Deserializer deserializer = new(inputFileName);
             deserializer.TypeResolver = typeName => System.Type.GetType(typeName);  // resolve types in this assembly (and mscorlib)
             deserializer.RegisterFactory(typeof(MemoryGraph), delegate { return new MemoryGraph(1); });
             deserializer.RegisterFactory(typeof(Module), delegate { return new Module(0); });
@@ -245,7 +245,7 @@ namespace Graphs
                 }
             }
 
-            var ret = new MemoryNodeBuilder(m_graph, childTypeName, childModuleName);
+            MemoryNodeBuilder ret = new(m_graph, childTypeName, childModuleName);
             AddChild(ret);
             return ret;
         }

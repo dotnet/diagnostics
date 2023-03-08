@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             output.WriteLine("Creating Solution Source Directory");
             output.WriteLine("{");
-            IndentedTestOutputHelper indentedOutput = new IndentedTestOutputHelper(output);
+            IndentedTestOutputHelper indentedOutput = new(output);
             CopySourceDirectory(DebuggeeTemplateSolutionDirPath, DebuggeeSolutionDirPath, indentedOutput);
             CopySourceDirectory(DebuggeeMsbuildAuxRoot, DebuggeeSolutionDirPath, indentedOutput);
             CreateNuGetConfig(indentedOutput);
@@ -329,7 +329,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 return;
             }
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
             sb.AppendLine("<configuration>");
             if (NugetFeeds != null && NugetFeeds.Count > 0)

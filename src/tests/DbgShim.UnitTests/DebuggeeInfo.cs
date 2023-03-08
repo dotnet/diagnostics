@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics
             }
             try
             {
-                var source = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: waiting {ProcessId}");
                 await _pipeServer.WaitForConnectionAsync(source.Token);
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: after wait {ProcessId}");

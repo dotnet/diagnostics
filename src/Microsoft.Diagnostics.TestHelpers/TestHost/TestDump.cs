@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
 
-            var contextService = new ContextService(this);
+            ContextService contextService = new(this);
             _serviceContainer.AddService<IContextService>(contextService);
 
             _symbolService = new SymbolService(this);

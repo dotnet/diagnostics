@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             if (_runtimes is not null)
             {
                 IRuntime currentRuntime = _services.GetService<IContextService>()?.GetCurrentRuntime();

@@ -13,8 +13,8 @@ namespace ParallelStacks.Runtime
     {
         public static ParallelStack Build(ClrRuntime runtime)
         {
-            var ps = new ParallelStack();
-            var stackFrames = new List<ClrStackFrame>(64);
+            ParallelStack ps = new();
+            List<ClrStackFrame> stackFrames = new(64);
             foreach (ClrThread thread in runtime.Threads)
             {
                 stackFrames.Clear();

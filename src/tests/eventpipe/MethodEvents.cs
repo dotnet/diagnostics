@@ -36,14 +36,14 @@ namespace EventPipe.UnitTests.MethodEventsValidation
         public async void MethodVerbose_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     //registering Dynamic_All and Clr event callbacks will override each other, disable the check for the provider and check the events counts in the callback
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                     //MethodVerboseKeyword (0x10): 0b10000
@@ -58,7 +58,7 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                             Logger.logger.Log($"M_verbose occured {i} times...");
                         }
 
-                        using (M_verbose verbose = new M_verbose())
+                        using (M_verbose verbose = new())
                         {
                             M_verbose.IsZero('f');
                             verbose.Dispose();

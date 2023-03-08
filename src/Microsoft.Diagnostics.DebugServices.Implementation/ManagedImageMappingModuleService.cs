@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
             int moduleIndex = 0;
 
             IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();

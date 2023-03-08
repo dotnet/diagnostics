@@ -22,7 +22,7 @@ namespace Xunit.Extensions
 
         public bool QueueMessage(IMessageSinkMessage message)
         {
-            var testFailed = message as ITestFailed;
+            ITestFailed testFailed = message as ITestFailed;
             if (testFailed != null)
             {
                 string exceptionType = testFailed.ExceptionTypes.FirstOrDefault();

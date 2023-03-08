@@ -23,7 +23,7 @@ namespace Xunit.Extensions
                                                         ExceptionAggregator aggregator,
                                                         CancellationTokenSource cancellationTokenSource)
         {
-            var skipMessageBus = new SkippableFactMessageBus(messageBus);
+            SkippableFactMessageBus skipMessageBus = new(messageBus);
             RunSummary result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource).ConfigureAwait(false);
             if (skipMessageBus.DynamicallySkippedTestCount > 0)
             {

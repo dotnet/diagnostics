@@ -24,7 +24,7 @@ namespace Xunit.Extensions
                                                         CancellationTokenSource cancellationTokenSource)
         {
             // Duplicated code from SkippableFactTestCase. I'm sure we could find a way to de-dup with some thought.
-            var skipMessageBus = new SkippableFactMessageBus(messageBus);
+            SkippableFactMessageBus skipMessageBus = new(messageBus);
             RunSummary result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource).ConfigureAwait(false);
             if (skipMessageBus.DynamicallySkippedTestCount > 0)
             {

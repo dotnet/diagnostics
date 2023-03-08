@@ -164,13 +164,13 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private static ImmutableDictionary<string, Value> Build(XElement node)
         {
-            var members = new Dictionary<string, Value>();
+            Dictionary<string, Value> members = new();
             foreach (XElement dataNode in node.Elements())
             {
                 string name = dataNode.Name.LocalName;
                 if (dataNode.HasElements)
                 {
-                    var items = new List<ImmutableDictionary<string, Value>>();
+                    List<ImmutableDictionary<string, Value>> items = new();
                     foreach (XElement subValue in dataNode.Elements())
                     {
                         if (subValue.HasElements)

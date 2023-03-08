@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else
                 {
-                    var client = new DiagnosticsClient(processId);
+                    DiagnosticsClient client = new(processId);
 
                     DumpType dumpType = DumpType.Normal;
                     switch (type)

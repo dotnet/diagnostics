@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
 
-                FileInfo outputFileInfo = new FileInfo(output);
+                FileInfo outputFileInfo = new(output);
 
                 if (outputFileInfo.Exists)
                 {
@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
-                var dumpTask = Task.Run(() => {
+                Task<bool> dumpTask = Task.Run(() => {
                     if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, int timeout, bool verbose,
             out MemoryGraph memoryGraph)
         {
-            var heapInfo = new DotNetHeapInfo();
+            DotNetHeapInfo heapInfo = new();
             TextWriter log = verbose ? Console.Out : TextWriter.Null;
 
             memoryGraph = new MemoryGraph(50_000);

@@ -213,7 +213,7 @@ namespace Microsoft.Internal.Common.Utils
             {
                 // Create and start the reversed server
                 string diagnosticTransportName = GetTransportName(_toolName);
-                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(diagnosticTransportName);
+                ReversedDiagnosticsServer server = new(diagnosticTransportName);
                 server.Start();
 
                 // Start the child proc
@@ -243,7 +243,7 @@ namespace Microsoft.Internal.Common.Utils
             else if (portConfig != null && portConfig.IsListenConfig)
             {
                 string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portConfig.Address : Path.GetFullPath(portConfig.Address);
-                ReversedDiagnosticsServer server = new ReversedDiagnosticsServer(fullPort);
+                ReversedDiagnosticsServer server = new(fullPort);
                 server.Start();
                 Console.WriteLine($"Waiting for connection on {fullPort}");
                 Console.WriteLine($"Start an application with the following environment variable: DOTNET_DiagnosticPorts={fullPort}");

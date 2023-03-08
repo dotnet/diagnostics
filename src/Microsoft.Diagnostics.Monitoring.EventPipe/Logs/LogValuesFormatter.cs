@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             OriginalFormat = format;
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             int scanIndex = 0;
             int endIndex = format.Length;
 
@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public IEnumerable<KeyValuePair<string, object>> GetValues(object[] values)
         {
-            var valueArray = new KeyValuePair<string, object>[values.Length + 1];
+            KeyValuePair<string, object>[] valueArray = new KeyValuePair<string, object>[values.Length + 1];
             for (int index = 0; index != _valueNames.Count; ++index)
             {
                 valueArray[index] = new KeyValuePair<string, object>(_valueNames[index], values[index]);
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             // if the value implements IEnumerable, build a comma separated string.
-            var enumerable = value as IEnumerable;
+            IEnumerable enumerable = value as IEnumerable;
             if (enumerable != null)
             {
                 return string.Join(", ", enumerable.Cast<object>().Select(o => o ?? NullValue));

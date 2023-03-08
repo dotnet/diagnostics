@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] cookieBuffer = new byte[16];
             Array.Copy(buffer, index, cookieBuffer, 0, 16);
-            Guid cookie = new Guid(cookieBuffer);
+            Guid cookie = new(cookieBuffer);
             index += 16;
 
             ulong pid = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(buffer, index, 8));

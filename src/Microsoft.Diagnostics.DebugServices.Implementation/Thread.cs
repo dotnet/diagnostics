@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    Span<byte> threadContext = new Span<byte>(GetThreadContext(), info.RegisterOffset, info.RegisterSize);
+                    Span<byte> threadContext = new(GetThreadContext(), info.RegisterOffset, info.RegisterSize);
                     switch (info.RegisterSize)
                     {
                         case 1:

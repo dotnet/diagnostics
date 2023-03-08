@@ -226,7 +226,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private TimerInfo GetTimerInfo(ClrObject currentTimerQueueTimer)
         {
-            var ti = new TimerInfo()
+            TimerInfo ti = new()
             {
                 TimerQueueTimerAddress = currentTimerQueueTimer.Address
             };
@@ -411,7 +411,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // create a raw information
-            ThreadPoolItem tpi = new ThreadPoolItem()
+            ThreadPoolItem tpi = new()
             {
                 Type = ThreadRoot.Raw,
                 Address = item.Address,
@@ -423,7 +423,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private ThreadPoolItem GetTask(ClrObject task)
         {
-            ThreadPoolItem tpi = new ThreadPoolItem()
+            ThreadPoolItem tpi = new()
             {
                 Address = task.Address,
                 Type = ThreadRoot.Task
@@ -461,7 +461,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private ThreadPoolItem GetQueueUserWorkItemCallback(ClrObject element)
         {
-            ThreadPoolItem tpi = new ThreadPoolItem()
+            ThreadPoolItem tpi = new()
             {
                 Address = (ulong)element,
                 Type = ThreadRoot.WorkItem

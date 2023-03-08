@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("gc-collect", "Microsoft-Windows-DotNETRuntime")]
         public void DuplicateProvider_CorrectlyOverrides(string profileName, string providerToParse)
         {
-            Dictionary<string, string> enabledBy = new Dictionary<string, string>();
+            Dictionary<string, string> enabledBy = new();
 
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);
 

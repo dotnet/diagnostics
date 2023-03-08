@@ -61,8 +61,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             Command reportCommand = ReportCommandHandler.ReportCommand();
 
-            var console = new TestConsole();
-            var parser = new Parser(reportCommand);
+            TestConsole console = new();
+            Parser parser = new(reportCommand);
 
             await using TestRunner runner = await TestRunner.Create(config, _output, "StackTracee", usePipe: false);
             await runner.Start();

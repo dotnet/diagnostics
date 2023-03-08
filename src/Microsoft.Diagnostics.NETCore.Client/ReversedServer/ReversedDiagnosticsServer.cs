@@ -241,8 +241,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     // Cancel parsing of advertise data after timeout period to
                     // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
-                    using var parseCancellationSource = new CancellationTokenSource();
-                    using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, parseCancellationSource.Token);
+                    using CancellationTokenSource parseCancellationSource = new();
+                    using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, parseCancellationSource.Token);
                     try
                     {
                         parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
@@ -264,7 +264,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // does not execute the factory under a lock thus it is not thread-safe. Create the collection and
                     // use a thread-safe version of GetOrAdd; use equality comparison on the result to determine if
                     // the new collection was added to the dictionary or if an existing one was returned.
-                    var newStreamCollection = new HandleableCollection<Stream>();
+                    HandleableCollection<Stream> newStreamCollection = new();
                     HandleableCollection<Stream> streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
 
                     try
@@ -274,7 +274,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                         if (newStreamCollection == streamCollection)
                         {
-                            ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
+                            ServerIpcEndpoint endpoint = new(this, runtimeCookie);
                             _endpointInfos.Add(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
                         }
                         else

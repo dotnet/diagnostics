@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             // The basic run loop: configure logging and the launcher, then create the router and run it until it exits or the user interrupts
             public async Task<int> CommonRunLoop(Func<ILogger, DiagnosticsServerRouterRunner.ICallbacks, CancellationTokenSource, Task<int>> createRouterTask, CancellationToken token)
             {
-                using CancellationTokenSource cancelRouterTask = new CancellationTokenSource();
+                using CancellationTokenSource cancelRouterTask = new();
                 using CancellationTokenSource linkedCancelToken = CancellationTokenSource.CreateLinkedTokenSource(token, cancelRouterTask.Token);
 
                 using ILoggerFactory loggerFactory = ConfigureLogging();
@@ -157,7 +157,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             checkLoopbackOnly(tcpServer);
 
-            var runner = new IpcClientTcpServerRunner(verbose);
+            IpcClientTcpServerRunner runner = new(verbose);
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
@@ -184,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             checkLoopbackOnly(tcpServer);
 
-            var runner = new IpcServerTcpServerRunner(verbose);
+            IpcServerTcpServerRunner runner = new(verbose);
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
@@ -214,7 +214,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
-            var runner = new IpcServerTcpClientRunner(verbose);
+            IpcServerTcpClientRunner runner = new(verbose);
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
@@ -243,7 +243,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
-            var runner = new IpcClientTcpClientRunner(verbose);
+            IpcClientTcpClientRunner runner = new(verbose);
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
@@ -267,7 +267,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocket, int runtimeTimeout, string verbose)
         {
-            var runner = new IpcServerWebSocketServerRunner(verbose);
+            IpcServerWebSocketServerRunner runner = new(verbose);
 
             WebSocketServer.WebSocketServerImpl server = new(runner.LogLevel);
 
@@ -310,7 +310,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcClientWebSocketServerRouter(CancellationToken token, string ipcClient, string webSocket, int runtimeTimeout, string verbose)
         {
-            var runner = new IpcClientWebSocketServerRunner(verbose);
+            IpcClientWebSocketServerRunner runner = new(verbose);
 
             WebSocketServer.WebSocketServerImpl server = new(runner.LogLevel);
 
@@ -415,7 +415,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             if (!string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
             {
-                StringBuilder message = new StringBuilder();
+                StringBuilder message = new();
 
                 message.Append("WARNING: Binding tcp server endpoint to anything except loopback interface ");
                 message.Append("(localhost, 127.0.0.1 or [::1]) is NOT recommended. Any connections towards ");

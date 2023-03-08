@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+                DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
 
                 // While suspended, the runtime will not provide entrypoint information.
                 ProcessInfo processInfoBeforeResume = null;

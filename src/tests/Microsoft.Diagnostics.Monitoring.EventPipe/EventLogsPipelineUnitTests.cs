@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryInformationMessage(reader);
             ValidateLoggerRemoteCategoryWarningMessage(reader);
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryWarningMessage(reader);
@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryInformationMessage(reader);
             ValidateLoggerRemoteCategoryWarningMessage(reader);
@@ -157,7 +157,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
@@ -186,7 +186,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryWarningMessage(reader);
@@ -218,7 +218,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
@@ -228,19 +228,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)
         {
-            var outputStream = new MemoryStream();
+            MemoryStream outputStream = new();
 
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
             {
-                using var loggerFactory = new LoggerFactory(new[] { new TestStreamingLoggerProvider(outputStream) });
-                var client = new DiagnosticsClient(testRunner.Pid);
+                using LoggerFactory loggerFactory = new(new[] { new TestStreamingLoggerProvider(outputStream) });
+                DiagnosticsClient client = new(testRunner.Pid);
 
-                var logSettings = new EventLogsPipelineSettings { Duration = Timeout.InfiniteTimeSpan };
+                EventLogsPipelineSettings logSettings = new() { Duration = Timeout.InfiniteTimeSpan };
                 if (null != settingsCallback)
                 {
                     settingsCallback(logSettings);
                 }
-                await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
+                await using EventLogsPipeline pipeline = new(client, logSettings, loggerFactory);
 
                 await PipelineTestUtilities.ExecutePipelineWithTracee(pipeline, testRunner);
             }

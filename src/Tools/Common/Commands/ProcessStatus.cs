@@ -121,7 +121,7 @@ namespace Microsoft.Internal.Common.Commands
             }
             try
             {
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new();
                 IOrderedEnumerable<Process> processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
@@ -141,7 +141,7 @@ namespace Microsoft.Internal.Common.Commands
                         string cmdLineArgs = GetArgs(process);
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
-                        var commandInfo = new ProcessDetails()
+                        ProcessDetails commandInfo = new()
                         {
                             ProcessId = process.Id,
                             ProcessName = process.ProcessName,
@@ -154,7 +154,7 @@ namespace Microsoft.Internal.Common.Commands
                     {
                         if (ex is Win32Exception or InvalidOperationException)
                         {
-                            var commandInfo = new ProcessDetails()
+                            ProcessDetails commandInfo = new()
                             {
                                 ProcessId = process.Id,
                                 ProcessName = process.ProcessName,

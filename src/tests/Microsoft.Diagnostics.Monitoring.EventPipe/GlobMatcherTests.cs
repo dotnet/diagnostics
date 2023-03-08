@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             foreach (KeyValuePair<string, IReadOnlyList<string>> keyValuePair in Patterns)
             {
-                var matcher = new GlobMatcher(new[] { keyValuePair.Key }, null);
+                GlobMatcher matcher = new(new[] { keyValuePair.Key }, null);
 
                 foreach (string value in keyValuePair.Value)
                 {
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public void TestMultiplePatterns()
         {
-            var matcher = new GlobMatcher(new[] { "**/*" }, new[] { "**/*.js", "**/*.css" });
+            GlobMatcher matcher = new(new[] { "**/*" }, new[] { "**/*.js", "**/*.css" });
 
             Assert.True(matcher.Match(Path1));
             Assert.True(matcher.Match(Path2));

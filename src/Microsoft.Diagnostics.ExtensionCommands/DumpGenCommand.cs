@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             GCGeneration generation = ParseGenerationArgument(Generation);
             if (generation != GCGeneration.NotSet)
             {
-                var dumpGen = new DumpGen(Helper, generation);
+                DumpGen dumpGen = new(Helper, generation);
 
                 if (string.IsNullOrEmpty(MethodTableAddress))
                 {

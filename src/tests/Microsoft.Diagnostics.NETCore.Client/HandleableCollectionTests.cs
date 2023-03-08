@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionThrowsWhenDisposedTest()
         {
-            var collection = new HandleableCollection<int>();
+            HandleableCollection<int> collection = new();
 
             AddRangeAndVerifyItems(collection, endInclusive: 9);
 
@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return 20 == item;
             };
 
-            using var cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPositiveVerificationTimeout);
 
             Task handleTask = Task.Run(() => collection.Handle(handler, DefaultPositiveVerificationTimeout));
             Task handleAsyncTask = collection.HandleAsync(handler, cancellation.Token);
@@ -100,10 +100,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static async Task HandleableCollectionDefaultHandlerTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             AddRangeAndVerifyItems(collection, endInclusive: 14);
 
@@ -141,10 +141,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static async Task HandleableCollectionComplexHandlerTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             const int expectedItem = 7;
             AddRangeAndVerifyItems(collection, endInclusive: expectedItem);
@@ -184,10 +184,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static async Task HandleableCollectionHandleBeforeAddTestCore(bool useAsync)
         {
-            using var collection = new TestHandleableCollection<int>();
+            using TestHandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             // Register to be notified when handler is beginning to be processed
             Task handlerBeginTask = collection.WaitForHandlerBeginAsync(DefaultPositiveVerificationTimeout);
@@ -249,10 +249,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static async Task HandleableCollectionHandleNoRemovalTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
@@ -278,7 +278,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionClearItemsTest()
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
@@ -294,7 +294,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return false;
             };
 
-            using var cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPositiveVerificationTimeout);
             Task handleAsyncTask = Task.Run(() => collection.HandleAsync(handler, cancellation.Token));
 
             // Task.Delay intentionally shorter than default timeout to check that HandleAsync
@@ -347,10 +347,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static async Task HandleableCollectionHandlerThrowsTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
@@ -433,7 +433,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _collection.HandleAsync(cancellation.Token));
@@ -462,7 +462,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     return await _collection.HandleAsync(handler, cancellation.Token);
                 }
                 else
@@ -490,8 +490,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             public async Task WaitForHandlerBeginAsync(TimeSpan timeout)
             {
-                TaskCompletionSource<object> handlerBeginSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                using var timeoutCancellation = new CancellationTokenSource();
+                TaskCompletionSource<object> handlerBeginSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                using CancellationTokenSource timeoutCancellation = new();
                 CancellationToken token = timeoutCancellation.Token;
                 using CancellationTokenRegistration _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
 

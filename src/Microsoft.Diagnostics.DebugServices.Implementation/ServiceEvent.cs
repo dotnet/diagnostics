@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 #pragma warning restore CA1859
         {
             // Insert at the end of the list
-            var node = new EventNode(oneshot, callback);
+            EventNode node = new(oneshot, callback);
             _events.InsertBefore(node);
             return node;
         }
@@ -121,7 +121,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 #pragma warning restore CA1859
         {
             // Insert at the end of the list
-            var node = new EventNode(oneshot, callback);
+            EventNode node = new(oneshot, callback);
             _events.InsertBefore(node);
             return node;
         }

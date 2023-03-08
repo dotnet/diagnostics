@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             };
 
             AspNetRequestCountTriggerFactory factory = new();
-            var trigger = (AspNetRequestCountTrigger)factory.Create(settings);
+            AspNetRequestCountTrigger trigger = (AspNetRequestCountTrigger)factory.Create(settings);
 
             PayloadGenerator generator = new();
 
@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             };
 
             AspNetRequestCountTriggerFactory factory = new();
-            var trigger = (AspNetRequestCountTrigger)factory.Create(settings);
+            AspNetRequestCountTrigger trigger = (AspNetRequestCountTrigger)factory.Create(settings);
 
             PayloadGenerator generator = new();
 
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             };
 
             AspNetRequestDurationTriggerFactory factory = new();
-            var trigger = (AspNetRequestDurationTrigger)factory.Create(settings);
+            AspNetRequestDurationTrigger trigger = (AspNetRequestDurationTrigger)factory.Create(settings);
 
             PayloadGenerator generator = new();
 
@@ -128,7 +128,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             };
 
             AspNetRequestDurationTriggerFactory factory = new();
-            var trigger = (AspNetRequestDurationTrigger)factory.Create(settings);
+            AspNetRequestDurationTrigger trigger = (AspNetRequestDurationTrigger)factory.Create(settings);
 
             PayloadGenerator generator = new();
 
@@ -157,7 +157,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             };
 
             AspNetRequestStatusTriggerFactory factory = new();
-            var trigger = (AspNetRequestStatusTrigger)factory.Create(settings);
+            AspNetRequestStatusTrigger trigger = (AspNetRequestStatusTrigger)factory.Create(settings);
 
             PayloadGenerator generator = new();
 

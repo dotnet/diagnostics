@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         //is treated as invalid and excluded from the payload.
         public static IDictionary<string, string> GetMetadata(string metadataPayload, char kvSeparator = ':')
         {
-            var metadataDict = new Dictionary<string, string>();
+            Dictionary<string, string> metadataDict = new();
 
             ReadOnlySpan<char> metadata = metadataPayload;
 

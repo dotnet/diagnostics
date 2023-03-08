@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Parse the command line and invoke the command
             ParseResult parseResult = Parser.Parse(commandLine);
 
-            var context = new InvocationContext(parseResult, new LocalConsole(services));
+            InvocationContext context = new(parseResult, new LocalConsole(services));
             if (parseResult.Errors.Count > 0)
             {
                 context.InvocationResult = new ParseErrorResult();
@@ -130,7 +130,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 ITarget target = services.GetService<ITarget>();
 
                 // Create temporary builder adding only the commands that are valid for the target
-                var builder = new CommandLineBuilder(new Command(_rootBuilder.Command.Name));
+                CommandLineBuilder builder = new(new Command(_rootBuilder.Command.Name));
                 foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
                 {
                     if (cmd.Handler is CommandHandler handler)
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         break;
                     }
-                    var commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
+                    CommandAttribute[] commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
                     foreach (CommandAttribute commandAttribute in commandAttributes)
                     {
                         if ((commandAttribute.Flags & CommandFlags.Manual) == 0 || factory != null)
@@ -200,9 +200,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
         {
-            var command = new Command(commandAttribute.Name, commandAttribute.Help);
-            var properties = new List<(PropertyInfo, Option)>();
-            var arguments = new List<(PropertyInfo, Argument)>();
+            Command command = new(commandAttribute.Name, commandAttribute.Help);
+            List<(PropertyInfo, Option)> properties = new();
+            List<(PropertyInfo, Argument)> arguments = new();
 
             foreach (string alias in commandAttribute.Aliases)
             {
@@ -211,12 +211,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
             {
-                var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
+                ArgumentAttribute argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
                 if (argumentAttribute != null)
                 {
                     IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                    var argument = new Argument
+                    Argument argument = new()
                     {
                         Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
                         Description = argumentAttribute.Help,
@@ -228,10 +228,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else
                 {
-                    var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
+                    OptionAttribute optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
                     if (optionAttribute != null)
                     {
-                        var option = new Option(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help)
+                        Option option = new(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help)
                         {
                             Argument = new Argument { ArgumentType = property.PropertyType }
                         };
@@ -246,7 +246,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            var handler = new CommandHandler(commandAttribute, arguments, properties, type, factory);
+            CommandHandler handler = new(commandAttribute, arguments, properties, type, factory);
             _commandHandlers.Add(command.Name, handler);
             command.Handler = handler;
             _rootBuilder.AddCommand(command);
@@ -492,7 +492,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 if (useHelpBuilder)
                 {
-                    var helpBuilder = new HelpBuilder(_console, maxWidth: _console.ConsoleService.WindowWidth);
+                    HelpBuilder helpBuilder = new(_console, maxWidth: _console.ConsoleService.WindowWidth);
                     helpBuilder.Write(command);
                 }
             }

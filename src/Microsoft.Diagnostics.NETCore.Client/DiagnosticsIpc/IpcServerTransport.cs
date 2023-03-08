@@ -121,7 +121,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             VerifyNotDisposed();
 
-            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
+            using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
             try
             {
                 // Connect client to named pipe server stream.
@@ -152,7 +152,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private NamedPipeServerStream CreateNewNamedPipeServer(string pipeName, int maxInstances)
         {
-            var stream = new NamedPipeServerStream(pipeName, PipeDirection.InOut, maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 16 * 1024, 16 * 1024);
+            NamedPipeServerStream stream = new(pipeName, PipeDirection.InOut, maxInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 16 * 1024, 16 * 1024);
             OnCreateNewServer(null);
             return stream;
         }
@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             VerifyNotDisposed();
 
-            using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
+            using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _cancellation.Token);
             try
             {
                 // Accept next client socket.
@@ -244,7 +244,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal override IpcSocket CreateNewSocketServer()
         {
-            var socket = new IpcSocket(SocketType.Stream, ProtocolType.Tcp);
+            IpcSocket socket = new(SocketType.Stream, ProtocolType.Tcp);
             if (_endPoint.DualMode)
             {
                 socket.DualMode = _endPoint.DualMode;
@@ -278,7 +278,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal override IpcSocket CreateNewSocketServer()
         {
-            var socket = new IpcUnixDomainSocket();
+            IpcUnixDomainSocket socket = new();
             socket.Bind(_endPoint);
             socket.Listen(_backlog);
             socket.LingerState.Enabled = false;

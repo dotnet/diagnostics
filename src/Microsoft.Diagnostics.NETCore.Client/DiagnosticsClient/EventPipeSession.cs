@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static IpcMessage CreateStartMessage(IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
-            var config = new EventPipeSessionConfiguration(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
+            EventPipeSessionConfiguration config = new(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
             return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
         }
 
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 long sessionId = BinaryPrimitives.ReadInt64LittleEndian(new ReadOnlySpan<byte>(response.Value.Message.Payload, 0, 8));
 
-                var session = new EventPipeSession(endpoint, response.Value, sessionId);
+                EventPipeSession session = new(endpoint, response.Value, sessionId);
                 response = null;
                 return session;
             }

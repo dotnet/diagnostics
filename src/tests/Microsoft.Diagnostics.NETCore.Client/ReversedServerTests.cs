@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
             // Intentionally did not start server
 
-            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPositiveVerificationTimeout);
 
             // All API surface (except for Start) should throw InvalidOperationException
             Assert.Throws<InvalidOperationException>(
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
             server.Start();
 
-            using CancellationTokenSource cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPositiveVerificationTimeout);
             Task acceptTask = server.AcceptAsync(cancellation.Token);
 
             // Validate server surface throws after disposal
@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
             server.Start();
 
-            using var cancellationSource = new CancellationTokenSource(DefaultNegativeVerificationTimeout);
+            using CancellationTokenSource cancellationSource = new(DefaultNegativeVerificationTimeout);
 
             _outputHelper.WriteLine("Waiting for connection from server.");
             Task acceptTask = server.AcceptAsync(cancellationSource.Token);
@@ -175,7 +175,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
 
-            var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
+            ReversedDiagnosticsServerApiShim shim = new(server, useAsync);
 
             server.Start();
 
@@ -320,7 +320,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 throw new SkipTestException("Not supported on < .NET 5.0");
             }
-            var transportCallback = new IpcServerTransportCallback();
+            IpcServerTransportCallback transportCallback = new();
             int transportVersion = 0;
 
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
@@ -361,7 +361,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static async Task<IpcEndpointInfo> AcceptEndpointInfo(ReversedDiagnosticsServer server, bool useAsync)
         {
-            var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
+            ReversedDiagnosticsServerApiShim shim = new(server, useAsync);
 
             return await shim.Accept(DefaultPositiveVerificationTimeout);
         }
@@ -376,7 +376,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static async Task VerifyWaitForConnection(IpcEndpointInfo info, bool useAsync, bool expectTimeout = false)
         {
-            var shim = new IpcEndpointApiShim(info.Endpoint, useAsync);
+            IpcEndpointApiShim shim = new(info.Endpoint, useAsync);
 
             TimeSpan timeout = expectTimeout ? DefaultNegativeVerificationTimeout : DefaultPositiveVerificationTimeout;
             await shim.WaitForConnection(timeout, expectTimeout);
@@ -389,7 +389,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _outputHelper.WriteLine("Verifying there are no more connections.");
 
-            var shim = new ReversedDiagnosticsServerApiShim(server, useAsync);
+            ReversedDiagnosticsServerApiShim shim = new(server, useAsync);
 
             await shim.Accept(DefaultNegativeVerificationTimeout, expectTimeout: true);
 
@@ -414,7 +414,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private async Task ResumeRuntime(IpcEndpointInfo info, bool useAsync)
         {
-            var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(info.Endpoint), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(info.Endpoint), useAsync);
 
             _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Resuming runtime instance.");
             try
@@ -436,10 +436,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await ReversedServerTests.VerifyWaitForConnection(info, useAsync);
 
-            var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(info.Endpoint), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(info.Endpoint), useAsync);
 
             _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Creating session #1.");
-            var providers = new List<EventPipeProvider>();
+            List<EventPipeProvider> providers = new();
             providers.Add(new EventPipeProvider(
                 "System.Runtime",
                 EventLevel.Informational,
@@ -467,14 +467,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Creating event source.");
 
                 // This blocks for a while due to this bug: https://github.com/microsoft/perfview/issues/1172
-                using var eventSource = new EventPipeEventSource(session.EventStream);
+                using EventPipeEventSource eventSource = new(session.EventStream);
 
                 _outputHelper.WriteLine($"{info.RuntimeInstanceCookie}: Session #{sessionNumber} - Setup event handlers.");
 
                 // Create task completion source that is completed when any events are provided; cancel it if cancellation is requested
-                var receivedEventsSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                TaskCompletionSource<object> receivedEventsSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                using var cancellation = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                using CancellationTokenSource cancellation = new(TimeSpan.FromMinutes(1));
                 using CancellationTokenRegistration _ = cancellation.Token.Register(() => {
                     if (receivedEventsSource.TrySetCanceled())
                     {
@@ -526,7 +526,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _server.AcceptAsync(cancellation.Token));
@@ -555,7 +555,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _server.ConnectAsync(runtimeInstanceCookie, cancellation.Token));
@@ -584,7 +584,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _server.WaitForConnectionAsync(runtimeInstanceCookie, cancellation.Token));
@@ -623,7 +623,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _endpoint.ConnectAsync(cancellation.Token));
@@ -652,7 +652,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _endpoint.WaitForConnectionAsync(cancellation.Token));
@@ -745,7 +745,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     _semaphore.Release();
                 }
 
-                using var cancellation = new CancellationTokenSource(StableTransportVersionTimeout);
+                using CancellationTokenSource cancellation = new(StableTransportVersionTimeout);
 
                 CancellationToken token = cancellation.Token;
                 using CancellationTokenRegistration _ = token.Register(() => _transportVersionSource.TrySetCanceled(token));

@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IEnumerable<DumpGenStats> GetStats(string typeNameFilter)
         {
-            var types = new Dictionary<ClrType, DumpGenStats>();
+            Dictionary<ClrType, DumpGenStats> types = new();
 
             foreach (ClrObject obj in _helper.EnumerateObjectsInGeneration(_generation)
                 .Where(obj => typeNameFilter == null || IsTypeNameMatching(obj.Type.Name, typeNameFilter)))

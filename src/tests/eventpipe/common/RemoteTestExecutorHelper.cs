@@ -13,7 +13,7 @@ namespace EventPipe.UnitTests.Common
     {
         public static async Task RunTestCaseAsync(Action testCase, ITestOutputHelper output)
         {
-            var options = new RemoteInvokeOptions()
+            RemoteInvokeOptions options = new()
             {
                 StartInfo = new ProcessStartInfo() { RedirectStandardOutput = true, RedirectStandardError = true }
             };

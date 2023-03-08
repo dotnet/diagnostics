@@ -13,9 +13,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         public override void ExtensionInvoke()
         {
-            var workItems = new Dictionary<string, WorkInfo>();
+            Dictionary<string, WorkInfo> workItems = new();
             int workItemCount = 0;
-            var tasks = new Dictionary<string, WorkInfo>();
+            Dictionary<string, WorkInfo> tasks = new();
             int taskCount = 0;
 
             try

@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
 
                 // Open the file for writing
-                using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+                using (FileStream stream = new(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {
                     NativeMethods.MINIDUMP_TYPE dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
                     switch (type)

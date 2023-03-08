@@ -39,12 +39,12 @@ namespace EventPipe.UnitTests.ContentionValidation
         public async void Contention_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     //ContentionKeyword (0x4000): 0b100_0000_0000_0000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b100_0000_0000_0000)
@@ -58,9 +58,9 @@ namespace EventPipe.UnitTests.ContentionValidation
                             Logger.logger.Log($"Thread lock occured {i} times...");
                         }
 
-                        var myobject = new TestClass();
-                        Thread thread1 = new Thread(new ThreadStart(() => TestClass.DoSomething(myobject)));
-                        Thread thread2 = new Thread(new ThreadStart(() => TestClass.DoSomething(myobject)));
+                        TestClass myobject = new();
+                        Thread thread1 = new(new ThreadStart(() => TestClass.DoSomething(myobject)));
+                        Thread thread2 = new(new ThreadStart(() => TestClass.DoSomething(myobject)));
                         thread1.Start();
                         thread2.Start();
                         thread1.Join();

@@ -460,7 +460,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 if (peStream != null)
                 {
-                    using var peReader = new PEReader(peStream, PEStreamOptions.Default);
+                    using PEReader peReader = new(peStream, PEStreamOptions.Default);
                     if (peReader.HasMetadata)
                     {
                         PEMemoryBlock metadataInfo = peReader.GetMetadata();
@@ -520,7 +520,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             try
             {
-                using (var peReader = new PEReader(peStream, options))
+                using (PEReader peReader = new(peStream, options))
                 {
                     ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
 
@@ -674,8 +674,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using Stream stream = Utilities.TryOpenFile(fileName);
                 if (stream is not null)
                 {
-                    var peFile = new PEFile(new StreamAddressSpace(stream), false);
-                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, fileName);
+                    PEFile peFile = new(new StreamAddressSpace(stream), false);
+                    PEFileKeyGenerator generator = new(Tracer.Instance, peFile, fileName);
                     foreach (SymbolStoreKey key in generator.GetKeys(flags))
                     {
                         if (fileKey.Equals(key))
@@ -732,7 +732,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using ELFFile elfFile = Utilities.OpenELFFile(fileName);
                 if (elfFile is not null)
                 {
-                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, fileName);
+                    ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileName);
                     foreach (SymbolStoreKey key in generator.GetKeys(flags))
                     {
                         if (fileKey.Equals(key))
@@ -788,7 +788,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using MachOFile machOFile = Utilities.OpenMachOFile(fileName);
                 if (machOFile is not null)
                 {
-                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, fileName);
+                    MachOFileKeyGenerator generator = new(Tracer.Instance, machOFile, fileName);
                     IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
                     foreach (SymbolStoreKey key in keys)
                     {
@@ -932,7 +932,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
             sb.AppendLine("Current symbol store settings:");
 

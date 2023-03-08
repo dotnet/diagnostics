@@ -161,7 +161,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             string process = ProcessId.HasValue ? string.Format("{0} (0x{0:X})", ProcessId.Value) : "<none>";
             sb.AppendLine($"Target OS: {OperatingSystem} Architecture: {Architecture} ProcessId: {process}");
             if (_tempDirectory != null)

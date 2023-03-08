@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public ProcessRunner(string exePath, string arguments, string replayCommand = null)
         {
-            ProcessStartInfo psi = new ProcessStartInfo();
+            ProcessStartInfo psi = new();
             psi.FileName = exePath;
             psi.Arguments = arguments;
             psi.UseShellExecute = false;
@@ -426,7 +426,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
 
-            var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
+            Task streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
 
             streamsTask = streamsTask.ContinueWith(
                 t => DebugTrace(t.Exception.ToString()),

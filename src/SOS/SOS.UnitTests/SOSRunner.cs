@@ -283,7 +283,7 @@ public class SOSRunner : IDisposable
 
                 // Get the full debuggee launch command line (includes the host if required)
                 string exePath = debuggeeConfig.BinaryExePath;
-                var arguments = new StringBuilder();
+                StringBuilder arguments = new();
 
                 if (!string.IsNullOrWhiteSpace(config.HostExe))
                 {
@@ -375,7 +375,7 @@ public class SOSRunner : IDisposable
                         if (pipeServer != null)
                         {
                             dotnetDumpOutputHelper.WriteLine("Waiting for connection on pipe {0}", pipeName);
-                            var source = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                            CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
 
                             // Wait for debuggee to connect/write to pipe or if the process exits on some other failure/abnormally
                             await Task.WhenAny(pipeServer.WaitForConnectionAsync(source.Token), processRunner.WaitForExit());
@@ -387,7 +387,7 @@ public class SOSRunner : IDisposable
                         {
                             dumpType = DumpType.Full;
                         }
-                        var dotnetDumpArguments = new StringBuilder();
+                        StringBuilder dotnetDumpArguments = new();
                         dotnetDumpArguments.Append(config.DotNetDumpPath());
                         dotnetDumpArguments.AppendFormat($" collect --process-id {processRunner.ProcessId} --output {dumpName} --type {dumpType}");
                         if (information.DumpDiagnostics)
@@ -468,7 +468,7 @@ public class SOSRunner : IDisposable
             outputHelper.WriteLine("{");
 
             Dictionary<string, string> variables = GenerateVariables(information, debuggeeConfig, action);
-            var scriptLogger = new ScriptLogger(outputHelper.IndentedOutput);
+            ScriptLogger scriptLogger = new(outputHelper.IndentedOutput);
 
             // Make sure the dump file exists
             if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
@@ -480,7 +480,7 @@ public class SOSRunner : IDisposable
             }
 
             // Get the full debuggee launch command line (includes the host if required)
-            var debuggeeCommandLine = new StringBuilder();
+            StringBuilder debuggeeCommandLine = new();
             if (!string.IsNullOrWhiteSpace(config.HostExe))
             {
                 debuggeeCommandLine.Append(config.HostExe);
@@ -506,8 +506,8 @@ public class SOSRunner : IDisposable
             }
 
             // Get the debugger arguments and commands to run initially
-            List<string> initialCommands = new List<string>();
-            var arguments = new StringBuilder();
+            List<string> initialCommands = new();
+            StringBuilder arguments = new();
 
             switch (debugger)
             {
@@ -576,7 +576,7 @@ public class SOSRunner : IDisposable
                     }
                     else
                     {
-                        var sb = new StringBuilder();
+                        StringBuilder sb = new();
                         if (!string.IsNullOrWhiteSpace(config.HostArgs))
                         {
                             string[] args = ReplaceVariables(variables, config.HostArgs).Trim().Split(' ');
@@ -736,7 +736,7 @@ public class SOSRunner : IDisposable
             HashSet<string> enabledDefines = GetEnabledDefines();
             LogProcessingReproInfo(scriptFile, enabledDefines);
             string[] scriptLines = File.ReadAllLines(scriptFile);
-            Dictionary<string, bool> activeDefines = new Dictionary<string, bool>();
+            Dictionary<string, bool> activeDefines = new();
             bool isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
             int i = 0;
             try
@@ -863,7 +863,7 @@ public class SOSRunner : IDisposable
         string setHostRuntime = _config.SetHostRuntime();
         string setSymbolServer = _config.SetSymbolServer();
         string sosPath = _config.SOSPath();
-        List<string> commands = new List<string>();
+        List<string> commands = new();
         bool isHostRuntimeNone = false;
 
         if (!string.IsNullOrEmpty(setHostRuntime))
@@ -1143,7 +1143,7 @@ public class SOSRunner : IDisposable
         string dumpRoot = action == DebuggerAction.GenerateDump ? information.DebuggeeDumpOutputRootDir : information.DebuggeeDumpInputRootDir;
         if (!string.IsNullOrEmpty(dumpRoot))
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append(information.TestName);
             sb.Append('.');
             sb.Append(information.DumpType.ToString());
@@ -1340,7 +1340,7 @@ public class SOSRunner : IDisposable
 
     private HashSet<string> GetEnabledDefines()
     {
-        HashSet<string> defines = new HashSet<string>
+        HashSet<string> defines = new()
         {
             DebuggerToString,
             OS.Kind.ToString().ToUpperInvariant(),
@@ -1438,7 +1438,7 @@ public class SOSRunner : IDisposable
 
     private static Dictionary<string, string> GenerateVariables(TestInformation information, DebuggeeConfiguration debuggeeConfig, DebuggerAction action)
     {
-        var vars = new Dictionary<string, string>();
+        Dictionary<string, string> vars = new();
         string debuggeeExe = debuggeeConfig.BinaryExePath;
         string dumpFileName = GenerateDumpFileName(information, debuggeeExe, action);
 

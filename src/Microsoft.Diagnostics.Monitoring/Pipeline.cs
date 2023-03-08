@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task RunAsyncCore(CancellationToken token)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
+            using (CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
             {
                 try
                 {
@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task StopAsyncCore(CancellationToken token)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
+            using (CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
             {
                 try
                 {

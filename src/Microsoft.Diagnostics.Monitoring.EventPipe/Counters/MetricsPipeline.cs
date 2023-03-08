@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            var config = new MetricSourceConfiguration(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
+            MetricSourceConfiguration config = new(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
             {
                 Provider = counterGroup.ProviderName,
                 IntervalSeconds = counterGroup.IntervalSeconds,
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             };
 
-            using var sourceCompletedTaskSource = new EventTaskSource<Action>(
+            using EventTaskSource<Action> sourceCompletedTaskSource = new(
                 taskComplete => taskComplete,
                 handler => eventSource.Completed += handler,
                 handler => eventSource.Completed -= handler,

@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TestRunner testRunner,
             TaskCompletionSource<object> waitTaskSource = null)
         {
-            using var cancellation = new CancellationTokenSource(DefaultPipelineRunTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPipelineRunTimeout);
 
             await ExecutePipelineWithTracee(
                 pipeline,
@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> waitTaskSource = null)
             where T : EventSourcePipelineSettings
         {
-            using var cancellation = new CancellationTokenSource(DefaultPipelineRunTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPipelineRunTimeout);
 
             await ExecutePipelineWithTracee(
                 pipeline,

@@ -317,7 +317,7 @@ namespace SOS.Hosting
                 Trace.TraceError("Failed to obtain DAC CLRDataCreateInstance");
                 return IntPtr.Zero;
             }
-            var dataTarget = new DataTargetWrapper(_services, _runtime);
+            DataTargetWrapper dataTarget = new(_services, _runtime);
             try
             {
                 int hr = createInstance(IID_IXCLRDataProcess, dataTarget.IDataTarget, out IntPtr unk);
@@ -356,7 +356,7 @@ namespace SOS.Hosting
                 }
                 Debug.Assert(_dbiHandle != IntPtr.Zero);
             }
-            ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion
+            ClrDebuggingVersion maxDebuggerSupportedVersion = new()
             {
                 StructVersion = 0,
                 Major = 4,
@@ -364,7 +364,7 @@ namespace SOS.Hosting
                 Build = 0,
                 Revision = 0,
             };
-            var dataTarget = new CorDebugDataTargetWrapper(_services, _runtime);
+            CorDebugDataTargetWrapper dataTarget = new(_services, _runtime);
             ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
             int hresult = 0;
             try

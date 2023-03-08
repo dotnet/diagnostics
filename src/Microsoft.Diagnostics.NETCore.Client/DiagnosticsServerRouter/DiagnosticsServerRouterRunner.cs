@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                var value = new IpcTcpSocketEndPoint(address);
+                IpcTcpSocketEndPoint value = new(address);
                 isLooback = IPAddress.IsLoopback(value.EndPoint.Address);
             }
             catch { }
@@ -57,8 +57,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static async Task<int> runRouter(CancellationToken token, DiagnosticsServerRouterFactory routerFactory, ICallbacks callbacks)
         {
-            List<Task> runningTasks = new List<Task>();
-            List<Router> runningRouters = new List<Router>();
+            List<Task> runningTasks = new();
+            List<Router> runningRouters = new();
 
             try
             {

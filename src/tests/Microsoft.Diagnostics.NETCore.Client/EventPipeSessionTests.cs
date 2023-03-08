@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start(testProcessTimeout: 60_000);
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
             // Don't dispose of the session here because it unnecessarily hangs the test for 30 secs
             EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start(testProcessTimeout: 60_000);
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
             runner.WriteLine($"Trying to start an EventPipe session");
             using (EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 int evntCnt = 0;
 
                 Task streamTask = Task.Run(() => {
-                    var source = new EventPipeEventSource(session.EventStream);
+                    EventPipeEventSource source = new(session.EventStream);
                     source.Dynamic.All += (TraceEvent obj) => {
                         runner.WriteLine("Got an event");
                         evntCnt += 1;
@@ -132,10 +132,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static async Task EventPipeSessionUnavailableTestCore(TestConfiguration config, bool useAsync)
         {
-            List<int> pids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            List<int> pids = new(DiagnosticsClient.GetPublishedProcesses());
             int arbitraryPid = 1;
 
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(arbitraryPid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(arbitraryPid), useAsync);
 
             await Assert.ThrowsAsync<ServerNotAvailableException>(() => clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start(testProcessTimeout: 60_000);
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
             // Don't dispose of the session here because it unnecessarily hangs the test for 30 secs
             EventPipeSession session = await clientShim.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational));
             Assert.True(session.EventStream != null);

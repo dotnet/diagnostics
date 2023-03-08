@@ -97,8 +97,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Header.Size = checked((ushort)(IpcHeader.HeaderSizeInBytes + Payload.Length));
             byte[] headerBytes = Header.Serialize();
 
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 writer.Write(headerBytes);
                 writer.Write(Payload);
@@ -111,8 +111,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static IpcMessage Parse(Stream stream)
         {
-            IpcMessage message = new IpcMessage();
-            using (var reader = new BinaryReader(stream, Encoding.UTF8, true))
+            IpcMessage message = new();
+            using (BinaryReader reader = new(stream, Encoding.UTF8, true))
             {
                 message.Header = IpcHeader.Parse(reader);
                 message.Payload = reader.ReadBytes(message.Header.Size - IpcHeader.HeaderSizeInBytes);
@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static async Task<IpcMessage> ParseAsync(Stream stream, CancellationToken cancellationToken)
         {
-            IpcMessage message = new IpcMessage();
+            IpcMessage message = new();
             message.Header = await IpcHeader.ParseAsync(stream, cancellationToken).ConfigureAwait(false);
             message.Payload = await stream.ReadBytesAsync(message.Header.Size - IpcHeader.HeaderSizeInBytes, cancellationToken).ConfigureAwait(false);
             return message;

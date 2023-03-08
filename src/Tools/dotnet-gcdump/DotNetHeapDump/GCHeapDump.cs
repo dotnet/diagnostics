@@ -35,7 +35,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     /// </summary>
     public static void WriteMemoryGraph(MemoryGraph graph, string outputFileName, string toolName = null)
     {
-        var dumper = new GCHeapDump(graph);
+        GCHeapDump dumper = new(graph);
         dumper.CreationTool = toolName;
         dumper.Write(outputFileName);
     }
@@ -108,7 +108,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     /// </summary>
     public static Dictionary<int, ProcessInfo> GetProcessesWithGCHeaps()
     {
-        var ret = new Dictionary<int, ProcessInfo>();
+        Dictionary<int, ProcessInfo> ret = new();
 
         // Do the 64 bit processes first, then do us
         if (System.Environment.Is64BitOperatingSystem && !System.Environment.Is64BitProcess)
@@ -116,7 +116,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
             GetProcessesWithGCHeapsFromHeapDump(ret);
         }
 
-        var info = default(ProcessInfo);
+        ProcessInfo info = default(ProcessInfo);
         foreach (Process process in Process.GetProcesses())
         {
             try
@@ -194,7 +194,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     private void Write(string outputFileName)
     {
         Debug.Assert(MemoryGraph != null);
-        var serializer = new Serializer(new IOStreamStreamWriter(outputFileName, config: new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }), this);
+        Serializer serializer = new(new IOStreamStreamWriter(outputFileName, config: new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }), this);
         serializer.Close();
     }
 
@@ -221,7 +221,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 
         try
         {
-            var entryObj = (GCHeapDump)deserializer.GetEntryObject();
+            GCHeapDump entryObj = (GCHeapDump)deserializer.GetEntryObject();
             Debug.Assert(entryObj == this);
         }
         catch (Exception e)
@@ -640,7 +640,7 @@ public class InteropInfo : IFastSerializable
 
         for (int i = 0; i < m_countRCWs; i++)
         {
-            RCWInfo infoRCW = new RCWInfo();
+            RCWInfo infoRCW = new();
             infoRCW.node = (NodeIndex)deserializer.ReadInt();
             infoRCW.refCount = deserializer.ReadInt();
             infoRCW.addrIUnknown = (ulong)deserializer.ReadInt64();
@@ -654,7 +654,7 @@ public class InteropInfo : IFastSerializable
 
         for (int i = 0; i < m_countCCWs; i++)
         {
-            CCWInfo infoCCW = new CCWInfo();
+            CCWInfo infoCCW = new();
             infoCCW.node = (NodeIndex)deserializer.ReadInt();
             infoCCW.refCount = deserializer.ReadInt();
             infoCCW.addrIUnknown = (ulong)deserializer.ReadInt64();
@@ -666,7 +666,7 @@ public class InteropInfo : IFastSerializable
 
         for (int i = 0; i < m_countInterfaces; i++)
         {
-            ComInterfaceInfo infoInterface = new ComInterfaceInfo();
+            ComInterfaceInfo infoInterface = new();
             infoInterface.fRCW = ((deserializer.ReadByte() == 1) ? true : false);
             infoInterface.owner = deserializer.ReadInt();
             infoInterface.typeID = (NodeTypeIndex)deserializer.ReadInt();
@@ -678,7 +678,7 @@ public class InteropInfo : IFastSerializable
 
         for (int i = 0; i < m_countModules; i++)
         {
-            InteropModuleInfo infoModule = new InteropModuleInfo();
+            InteropModuleInfo infoModule = new();
             infoModule.baseAddress = (ulong)deserializer.ReadInt64();
             infoModule.fileSize = (uint)deserializer.ReadInt();
             infoModule.timeStamp = (uint)deserializer.ReadInt();
@@ -714,7 +714,7 @@ internal static class XmlGcHeapDump
 {
     public static GCHeapDump ReadGCHeapDumpFromXml(string fileName)
     {
-        XmlReaderSettings settings = new XmlReaderSettings() { IgnoreWhitespace = true, IgnoreComments = true };
+        XmlReaderSettings settings = new() { IgnoreWhitespace = true, IgnoreComments = true };
         using (XmlReader reader = XmlReader.Create(fileName, settings))
         {
             reader.ReadToDescendant("GCHeapDump");
@@ -733,7 +733,7 @@ internal static class XmlGcHeapDump
         int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
 
-        GCHeapDump ret = new GCHeapDump((MemoryGraph)null);
+        GCHeapDump ret = new((MemoryGraph)null);
         while (inputDepth < reader.Depth)
         {
             if (reader.NodeType == XmlNodeType.Element)
@@ -759,7 +759,7 @@ internal static class XmlGcHeapDump
                         ret.ProcessID = reader.ReadElementContentAsInt();
                         break;
                     case "CountMultipliersByType":
-                        var multipliers = new List<float>();
+                        List<float> multipliers = new();
                         ReadCountMultipliersByTypeFromXml(reader, multipliers);
                         ret.CountMultipliersByType = multipliers.ToArray();
                         break;
@@ -795,7 +795,7 @@ internal static class XmlGcHeapDump
             throw new InvalidOperationException("Must advance to MemoryGraph element (e.g. call ReadToDescendant)");
         }
 
-        MemoryGraph graph = new MemoryGraph(10);
+        MemoryGraph graph = new(10);
         Debug.Assert((int)graph.NodeTypeIndexLimit == 1);
         NodeIndex firstNode = graph.CreateNode();                             // Use one up
         Debug.Assert(firstNode == 0);
@@ -982,7 +982,7 @@ internal static class XmlGcHeapDump
         int inputDepth = reader.Depth;
         reader.Read();      // Advance to children
 
-        var children = new GrowableArray<NodeIndex>(1000);
+        GrowableArray<NodeIndex> children = new(1000);
         NodeType typeStorage = graph.AllocTypeNodeStorage();
         while (inputDepth < reader.Depth)
         {

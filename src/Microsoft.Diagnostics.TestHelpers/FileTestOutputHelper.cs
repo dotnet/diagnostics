@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         public FileTestOutputHelper(string logFilePath, FileMode fileMode = FileMode.Create)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(logFilePath));
-            FileStream fs = new FileStream(logFilePath, fileMode);
+            FileStream fs = new(logFilePath, fileMode);
             _logWriter = new StreamWriter(fs);
             _logWriter.AutoFlush = true;
             _lock = new object();

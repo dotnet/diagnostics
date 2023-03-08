@@ -274,7 +274,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             {
                                 break;
                             }
-                            var type = (BaseRelocationType)(entry >> 12);       // type is 4 upper bits
+                            BaseRelocationType type = (BaseRelocationType)(entry >> 12);       // type is 4 upper bits
                             int relocVA = virtualAddress + (entry & 0xfff);     // offset is 12 lower bits
 
                             // Is this relocation in the data?

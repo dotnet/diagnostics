@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             DateTime start = DateTime.UtcNow;
 
-            SlidingWindow window = new SlidingWindow(TimeSpan.FromSeconds(30));
+            SlidingWindow window = new(TimeSpan.FromSeconds(30));
 
             window.AddDataPoint(start);
             Assert.Equal(1, window.Count);

@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start();
 
-            List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            List<int> publishedProcesses = new(DiagnosticsClient.GetPublishedProcesses());
             foreach (int p in publishedProcesses)
             {
                 runner.WriteLine($"Saw published process {p}");
@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     pids[i] = runner[i].Pid;
                 }
 
-                List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+                List<int> publishedProcesses = new(DiagnosticsClient.GetPublishedProcesses());
                 foreach (int p in publishedProcesses)
                 {
                     _output.WriteLine($"[{DateTime.Now}] Saw published process {p}");
@@ -93,8 +93,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start();
 
-            var client = new DiagnosticsClient(runner.Pid);
-            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+            DiagnosticsClient client = new(runner.Pid);
+            using CancellationTokenSource timeoutSource = new(TimeSpan.FromMilliseconds(250));
             try
             {
                 await client.WaitForConnectionAsync(timeoutSource.Token);

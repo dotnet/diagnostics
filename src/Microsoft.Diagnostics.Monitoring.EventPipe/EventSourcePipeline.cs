@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 Task stoppingTask = _processor.Value.StopProcessing();
 
-                var taskCompletionSource = new TaskCompletionSource<bool>();
+                TaskCompletionSource<bool> taskCompletionSource = new();
                 using IDisposable registration = token.Register(() => taskCompletionSource.SetCanceled());
                 await Task.WhenAny(stoppingTask, taskCompletionSource.Task).Unwrap().ConfigureAwait(false);
             }

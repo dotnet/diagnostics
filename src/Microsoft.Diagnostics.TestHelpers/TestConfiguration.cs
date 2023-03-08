@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static TestRunConfiguration ParseDefaultConfigFile()
         {
             string configFilePath = Path.Combine(TestConfiguration.BaseDir, "Debugger.Tests.Config.txt");
-            TestRunConfiguration testRunConfig = new TestRunConfiguration();
+            TestRunConfiguration testRunConfig = new();
             testRunConfig.ParseConfigFile(configFilePath);
             return testRunConfig;
         }
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
             // in a config file. This is just setting the default. The other values can
             // also // be overridden but it is not recommended.
-            Dictionary<string, string> initialConfig = new Dictionary<string, string>
+            Dictionary<string, string> initialConfig = new()
             {
                 ["Timestamp"] = GetTimeStampText(),
                 ["TempPath"] = Path.GetTempPath(),
@@ -141,7 +141,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 case "Options":
                     if (EvaluateConditional(currentTemplate, node))
                     {
-                        List<Dictionary<string, string>> newTemplates = new List<Dictionary<string, string>>();
+                        List<Dictionary<string, string>> newTemplates = new();
                         foreach (XElement optionNode in node.Elements("Option"))
                         {
                             if (EvaluateConditional(currentTemplate, optionNode))
@@ -293,7 +293,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             bool isWithinString = false;
             bool expectDelimiter = false;
             int curParsingIndex = functionKeyworkIndex + targetFunctionName.Length + 1;
-            StringBuilder resolvedValue = new StringBuilder();
+            StringBuilder resolvedValue = new();
 
             // Account for the trailing parenthesis.
             while (curParsingIndex + 1 < expression.Length)
@@ -339,7 +339,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private static string ResolveProperties(Dictionary<string, string> config, string rawNodeValue)
         {
-            StringBuilder resolvedValue = new StringBuilder();
+            StringBuilder resolvedValue = new();
             for (int i = 0; i < rawNodeValue.Length;)
             {
                 int propStartIndex = rawNodeValue.IndexOf("$(", i);
@@ -447,7 +447,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private string GetStringViewWithVersion(string version)
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.Append(TestProduct ?? "");
             string debuggeeBuildProcess = DebuggeeBuildProcess;
             if (!string.IsNullOrEmpty(debuggeeBuildProcess))
@@ -500,7 +500,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             Debug.Assert(!string.IsNullOrWhiteSpace(pdbType));
 
-            var currentSettings = new Dictionary<string, string>(_settings)
+            Dictionary<string, string> currentSettings = new(_settings)
             {
 
                 // Set or replace if the pdb debug type

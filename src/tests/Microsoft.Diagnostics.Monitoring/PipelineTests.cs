@@ -21,8 +21,8 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
         [Fact]
         public async Task TestStartStopCancelDispose()
         {
-            var timePipeline = new DelayPipeline();
-            var cancellationTokenSource = new CancellationTokenSource();
+            DelayPipeline timePipeline = new();
+            CancellationTokenSource cancellationTokenSource = new();
             CancellationToken token = cancellationTokenSource.Token;
 
             await Assert.ThrowsAsync<PipelineException>(() => timePipeline.StopAsync());
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
             Task secondStartCall = timePipeline.RunAsync(token);
             Assert.Equal(startTask, secondStartCall);
 
-            var stopSource = new CancellationTokenSource();
+            CancellationTokenSource stopSource = new();
             Task stopTask = timePipeline.StopAsync(stopSource.Token);
             Task secondStopCall = timePipeline.StopAsync(stopSource.Token);
             Assert.Equal(stopTask, secondStopCall);
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
         [Fact]
         public async Task TestStart()
         {
-            var timePipeline = new DelayPipeline(TimeSpan.Zero);
+            DelayPipeline timePipeline = new(TimeSpan.Zero);
             await timePipeline.RunAsync(CancellationToken.None);
 
             Assert.Equal(1, timePipeline.ExecutedCleanup);

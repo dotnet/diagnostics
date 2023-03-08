@@ -372,7 +372,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// </summary>
         private void SimulateDataVerifyTrigger(EventCounterTriggerSettings settings, CpuData[] cpuData)
         {
-            Random random = new Random();
+            Random random = new();
             int seed = random.Next();
             _output.WriteLine("Simulation seed: {0}", seed);
             SimulateDataVerifyTrigger(settings, cpuData, seed);

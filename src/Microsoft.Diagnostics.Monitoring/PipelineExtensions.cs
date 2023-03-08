@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Monitoring
     {
         public static async Task StopAsync(this Pipeline pipeline, TimeSpan timeout)
         {
-            using CancellationTokenSource cts = new CancellationTokenSource();
+            using CancellationTokenSource cts = new();
             cts.CancelAfter(timeout);
             await pipeline.StopAsync(cts.Token).ConfigureAwait(false);
         }

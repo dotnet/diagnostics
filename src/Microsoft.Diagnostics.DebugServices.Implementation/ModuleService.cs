@@ -297,7 +297,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
+                    ELFFile elfFile = new(new StreamAddressSpace(stream), address, true);
                     if (elfFile.IsValid())
                     {
                         buildId = elfFile.BuildID;
@@ -305,7 +305,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
+                    MachOFile machOFile = new(new StreamAddressSpace(stream), address, true);
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
@@ -406,7 +406,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         address += (ulong)s_versionLength;
                         size -= s_versionLength;
 
-                        var sb = new StringBuilder();
+                        StringBuilder sb = new();
                         byte[] ch = new byte[1];
                         while (true)
                         {

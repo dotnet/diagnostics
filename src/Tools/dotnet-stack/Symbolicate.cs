@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                List<string> searchPaths = new List<string>
+                List<string> searchPaths = new()
                 {
                     Directory.GetCurrentDirectory()
                 };
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                List<string> files = new List<string>();
+                List<string> files = new();
                 foreach (string assemDir in paths)
                 {
                     if (Directory.Exists(assemDir))
@@ -130,8 +130,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                using StreamWriter fileStreamWriter = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
-                using StreamReader fileStreamReader = new StreamReader(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
+                using StreamWriter fileStreamWriter = new(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
+                using StreamReader fileStreamReader = new(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
                 while (!fileStreamReader.EndOfStream)
                 {
                     string ret = TrySymbolicateLine(fileStreamReader.ReadLine());
@@ -169,7 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 return line;
             }
 
-            StackTraceInfo stInfo = new StackTraceInfo()
+            StackTraceInfo stInfo = new()
             {
                 Type = match.Groups["type"].Value,
                 Method = match.Groups["method"].Value,
@@ -225,7 +225,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     if (filePath.Contains(".dll"))
                     {
-                        using PEReader peReader = new PEReader(stream);
+                        using PEReader peReader = new(stream);
                         if (!peReader.TryOpenAssociatedPortablePdb(filePath, streamProvider, out provider, out string pdbPath))
                         {
                             return reader;

@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static ProcessInfo ParseCommon(byte[] payload, ref int index)
         {
-            ProcessInfo processInfo = new ProcessInfo();
+            ProcessInfo processInfo = new();
 
             processInfo.ProcessId = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(payload, index, 8));
             index += sizeof(ulong);

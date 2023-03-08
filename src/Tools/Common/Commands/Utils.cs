@@ -17,7 +17,7 @@ namespace Microsoft.Internal.Common.Utils
         // with the given name, then this returns -1
         public static int FindProcessIdWithName(string name)
         {
-            var publishedProcessesPids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            List<int> publishedProcessesPids = new(DiagnosticsClient.GetPublishedProcesses());
             Process[] processesWithMatchingName = Process.GetProcessesByName(name);
             int commonId = -1;
 

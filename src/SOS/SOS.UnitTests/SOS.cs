@@ -359,7 +359,7 @@ public class SOS : ICollectionFixture<DumpGenerationFixture>
             // to using native implementations of the host/target/runtime.
             if (currentConfig.DebugType == "full")
             {
-                var settings = new Dictionary<string, string>(currentConfig.AllSettings)
+                Dictionary<string, string> settings = new(currentConfig.AllSettings)
                 {
                     ["SetHostRuntime"] = "-none"
                 };
@@ -478,7 +478,7 @@ public class SOS : ICollectionFixture<DumpGenerationFixture>
             outputHelper.WriteLine("{");
 
             string program;
-            var arguments = new StringBuilder();
+            StringBuilder arguments = new();
             if (OS.Kind == OSKind.OSX)
             {
                 program = "xcrun";

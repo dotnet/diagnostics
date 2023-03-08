@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public ContextService(IHost host)
         {
             _host = host;
-            var parent = new ContextServiceProvider(this);
+            ContextServiceProvider parent = new(this);
             _serviceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Context, parent);
 
             // Clear the current context when a target is flushed or destroyed

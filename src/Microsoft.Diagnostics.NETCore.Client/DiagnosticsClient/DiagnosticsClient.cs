@@ -387,8 +387,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static byte[] SerializePayload<T>(T arg)
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 SerializePayloadArgument(arg, writer);
 
@@ -399,8 +399,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static byte[] SerializePayload<T1, T2>(T1 arg1, T2 arg2)
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 SerializePayloadArgument(arg1, writer);
                 SerializePayloadArgument(arg2, writer);
@@ -412,8 +412,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static byte[] SerializePayload<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3)
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 SerializePayloadArgument(arg1, writer);
                 SerializePayloadArgument(arg2, writer);
@@ -426,8 +426,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static byte[] SerializePayload<T1, T2, T3, T4>(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 SerializePayloadArgument(arg1, writer);
                 SerializePayloadArgument(arg2, writer);

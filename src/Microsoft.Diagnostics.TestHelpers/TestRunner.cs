@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     arguments = Environment.ExpandEnvironmentVariables(string.Format("{0} {1} {2}", config.HostArgs, debuggeeConfig.BinaryExePath, debuggeeConfig.BinaryDirPath));
                 }
 
-                TestLogger testLogger = new TestLogger(outputHelper.IndentedOutput);
+                TestLogger testLogger = new(outputHelper.IndentedOutput);
                 ProcessRunner processRunner = new ProcessRunner(exePath, arguments).
                     WithLog(testLogger).
                     WithTimeout(TimeSpan.FromMinutes(5));

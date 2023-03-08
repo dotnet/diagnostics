@@ -78,7 +78,7 @@ public class WebSocketServerImpl : IWebSocketServer
     {
         // we have to "keep the middleware alive" until we're done with the websocket.
         // make a TCS that will be signaled when the stream is disposed.
-        var streamDisposedTCS = new TaskCompletionSource(cancellationToken);
+        TaskCompletionSource streamDisposedTCS = new(cancellationToken);
         await _acceptQueue.Enqueue(new Conn(context, webSocket, streamDisposedTCS), cancellationToken).ConfigureAwait(false);
         await streamDisposedTCS.Task.ConfigureAwait(false);
     }

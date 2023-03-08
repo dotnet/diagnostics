@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
-            var ps = ParallelStacks.Runtime.ParallelStack.Build(Runtime);
+            ParallelStack ps = ParallelStacks.Runtime.ParallelStack.Build(Runtime);
             if (ps == null)
             {
                 return;
@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             int threadIDsCountLimit = AllThreads ? -1 : 4;  // by default, show at most 4 thread ID per group
 
-            var visitor = new MonoColorConsoleRenderer(Console, limit: threadIDsCountLimit);
+            MonoColorConsoleRenderer visitor = new(Console, limit: threadIDsCountLimit);
             WriteLine("");
             foreach (ParallelStack stack in ps.Stacks)
             {

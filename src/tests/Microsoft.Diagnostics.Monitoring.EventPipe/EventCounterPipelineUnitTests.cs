@@ -94,15 +94,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             IDictionary<string, IEnumerable<string>> expectedMap = new Dictionary<string, IEnumerable<string>>();
             expectedMap.Add(expectedProvider, expectedCounters);
 
-            var foundExpectedCountersSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
+            TestMetricsLogger logger = new(expectedMap, foundExpectedCountersSource);
 
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
+                DiagnosticsClient client = new(testRunner.Pid);
 
-                await using MetricsPipeline pipeline = new MetricsPipeline(client, new MetricsPipelineSettings
+                await using MetricsPipeline pipeline = new(client, new MetricsPipelineSettings
                 {
                     Duration = Timeout.InfiniteTimeSpan,
                     CounterGroups = new[]

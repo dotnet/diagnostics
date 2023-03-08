@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 throw new DiagnosticsException("Test data file parameter needed");
             }
-            var testDataWriter = new TestDataWriter();
+            TestDataWriter testDataWriter = new();
             testDataWriter.Build(Services);
             testDataWriter.Write(FileName);
             WriteLine($"Test data written to {FileName} successfully");

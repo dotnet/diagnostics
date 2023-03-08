@@ -35,34 +35,34 @@ namespace Microsoft.Diagnostics.TestHelpers
             Debug.Assert(target is not null);
             AddMembers(Target, typeof(ITarget), target, nameof(ITarget.Id), nameof(ITarget.GetTempDirectory));
 
-            var modulesElement = new XElement("Modules");
+            XElement modulesElement = new("Modules");
             Target.Add(modulesElement);
 
             IModuleService moduleService = services.GetService<IModuleService>();
             string runtimeModuleName = target.GetPlatformModuleName("coreclr");
             foreach (IModule module in moduleService.EnumerateModules())
             {
-                var moduleElement = new XElement("Module");
+                XElement moduleElement = new("Module");
                 modulesElement.Add(moduleElement);
                 AddModuleMembers(moduleElement, module, runtimeModuleName);
             }
 
-            var threadsElement = new XElement("Threads");
+            XElement threadsElement = new("Threads");
             Target.Add(threadsElement);
 
             IThreadService threadService = services.GetService<IThreadService>();
             int[] registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
             foreach (IThread thread in threadService.EnumerateThreads())
             {
-                var threadElement = new XElement("Thread");
+                XElement threadElement = new("Thread");
                 threadsElement.Add(threadElement);
                 AddMembers(threadElement, typeof(IThread), thread, nameof(IThread.ThreadIndex), nameof(IThread.GetThreadContext));
 
-                var registersElement = new XElement("Registers");
+                XElement registersElement = new("Registers");
                 threadElement.Add(registersElement);
                 foreach (int registerIndex in registerIndexes)
                 {
-                    var registerElement = new XElement("Register");
+                    XElement registerElement = new("Register");
                     registersElement.Add(registerElement);
 
                     if (threadService.TryGetRegisterInfo(registerIndex, out RegisterInfo info))
@@ -76,17 +76,17 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
 
-            var runtimesElement = new XElement("Runtimes");
+            XElement runtimesElement = new("Runtimes");
             Target.Add(runtimesElement);
 
             IRuntimeService runtimeService = services.GetService<IRuntimeService>();
             foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
             {
-                var runtimeElement = new XElement("Runtime");
+                XElement runtimeElement = new("Runtime");
                 runtimesElement.Add(runtimeElement);
                 AddMembers(runtimeElement, typeof(IRuntime), runtime, nameof(IRuntime.GetDacFilePath), nameof(IRuntime.GetDbiFilePath));
 
-                var runtimeModuleElement = new XElement("RuntimeModule");
+                XElement runtimeModuleElement = new("RuntimeModule");
                 runtimeElement.Add(runtimeModuleElement);
                 AddModuleMembers(runtimeModuleElement, runtime.RuntimeModule, symbolModuleName: null);
             }
@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                             exportSymbolsElement = new XElement("ExportSymbols");
                             element.Add(exportSymbolsElement);
                         }
-                        var symbolElement = new XElement("Symbol");
+                        XElement symbolElement = new("Symbol");
                         exportSymbolsElement.Add(symbolElement);
                         return symbolElement;
                     }
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                             symbolsElement = new XElement("Symbols");
                             element.Add(symbolsElement);
                         }
-                        var symbolElement = new XElement("Symbol");
+                        XElement symbolElement = new("Symbol");
                         symbolsElement.Add(symbolElement);
                         return symbolElement;
                     }

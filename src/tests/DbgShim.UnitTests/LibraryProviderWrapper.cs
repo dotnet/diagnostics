@@ -274,7 +274,7 @@ namespace SOS.Hosting
                 string modulePath = null;
                 if (buildIdBytes != null && buildIdSize > 0)
                 {
-                    Span<byte> span = new Span<byte>(buildIdBytes, buildIdSize);
+                    Span<byte> span = new(buildIdBytes, buildIdSize);
                     buildId = span.ToArray();
                 }
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideUnixLibrary {fileName} {runtimeModulePath} {indexType} {string.Concat(buildId.Select((b) => b.ToString("x2")))}");
@@ -382,7 +382,7 @@ namespace SOS.Hosting
                     using Stream stream = Utilities.TryOpenFile(filePath);
                     if (stream is not null)
                     {
-                        var peFile = new PEFile(new StreamAddressSpace(stream), false);
+                        PEFile peFile = new(new StreamAddressSpace(stream), false);
                         if (peFile.IsValid())
                         {
                             Assert.Equal(peFile.Timestamp, timeStamp);

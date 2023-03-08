@@ -33,7 +33,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
         public async void CustomEventProducesEventsWithNoKeywords()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "MyEventSource", -1 },
                 };
@@ -47,7 +47,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
                     }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("MyEventSource", EventLevel.Informational)
                 };

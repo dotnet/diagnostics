@@ -67,8 +67,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 }
 
 
-                var client = new DiagnosticsClient(processId);
-                var providers = new List<EventPipeProvider>()
+                DiagnosticsClient client = new(processId);
+                List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
@@ -97,18 +97,18 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                 // using the generated trace file, symbolicate and compute stacks.
                 tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
-                using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (var eventLog = new TraceLog(tempEtlxFilename))
+                using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                using (TraceLog eventLog = new(tempEtlxFilename))
                 {
-                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    MutableTraceEventStackSource stackSource = new(eventLog)
                     {
                         OnlyManagedCodeStacks = true
                     };
 
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
                     computer.GenerateThreadTimeStacks(stackSource);
 
-                    var samplesForThread = new Dictionary<int, List<StackSourceSample>>();
+                    Dictionary<int, List<StackSourceSample>> samplesForThread = new();
 
                     stackSource.ForEach((sample) => {
                         StackSourceCallStackIndex stackIndex = sample.StackIndex;

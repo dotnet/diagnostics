@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void TestAddAndFire()
         {
-            var event1 = new ServiceEvent();
+            ServiceEvent event1 = new();
 
             int callback1Fired = 0;
             int callback2Fired = 0;
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void TestRemoveInCallback()
         {
-            var event1 = new ServiceEvent();
+            ServiceEvent event1 = new();
 
             int callback1Fired = 0;
             int callback2Fired = 0;

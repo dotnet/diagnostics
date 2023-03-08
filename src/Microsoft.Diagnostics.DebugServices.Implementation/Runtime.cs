@@ -293,7 +293,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             string config = s_runtimeTypeNames[(int)RuntimeType];
             string index = _clrInfo.BuildId.IsDefaultOrEmpty ? $"{_clrInfo.IndexTimeStamp:X8} {_clrInfo.IndexFileSize:X8}" : _clrInfo.BuildId.ToHex();
             sb.AppendLine($"#{Id} {config} runtime {_clrInfo} at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8} index {index}");

@@ -109,7 +109,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private static bool ReadIntPtr(IntPtr hProcess, IntPtr ptr, out IntPtr readPtr)
         {
-            var dataSize = new IntPtr(IntPtr.Size);
+            IntPtr dataSize = new(IntPtr.Size);
             IntPtr res_len = IntPtr.Zero;
             if (!ProcessNativeMethods.ReadProcessMemory(
                 hProcess,
@@ -128,7 +128,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private static IntPtr GetPebNative(IntPtr hProcess)
         {
-            var pbi = default(ProcessNativeMethods.ProcessInformation);
+            ProcessNativeMethods.ProcessInformation pbi = default(ProcessNativeMethods.ProcessInformation);
             int pbiSize = Marshal.SizeOf(pbi);
             int res_len;
             ProcessNativeMethods.NtQueryInformationProcess(

@@ -107,10 +107,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             _serviceContainer.AddService<ICommandService>(_commandService);
 
-            var symbolService = new SymbolService(this);
+            SymbolService symbolService = new(this);
             _serviceContainer.AddService<ISymbolService>(symbolService);
 
-            var contextService = new ContextService(this);
+            ContextService contextService = new(this);
             _serviceContainer.AddService<IContextService>(contextService);
 
             try
@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     targetPlatform = OSPlatform.OSX;
                 }
-                var target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
+                TargetFromDataReader target = new(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
                 contextService.SetCurrentTarget(target);
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory

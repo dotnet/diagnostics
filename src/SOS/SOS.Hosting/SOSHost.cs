@@ -60,12 +60,12 @@ namespace SOS.Hosting
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var debugClient = new DebugClient(this);
+                DebugClient debugClient = new(this);
                 _interface = debugClient.IDebugClient;
             }
             else
             {
-                var lldbServices = new LLDBServices(this);
+                LLDBServices lldbServices = new(this);
                 _interface = lldbServices.ILLDBServices;
             }
         }

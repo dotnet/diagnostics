@@ -36,8 +36,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public byte[] Serialize()
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 writer.Write(Magic);
                 Debug.Assert(Magic.Length == MagicSizeInBytes);
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static IpcHeader Parse(BinaryReader reader)
         {
-            IpcHeader header = new IpcHeader
+            IpcHeader header = new()
             {
                 Magic = reader.ReadBytes(14),
                 Size = reader.ReadUInt16(),
@@ -67,8 +67,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static async Task<IpcHeader> ParseAsync(Stream stream, CancellationToken cancellationToken)
         {
             byte[] buffer = await stream.ReadBytesAsync(HeaderSizeInBytes, cancellationToken).ConfigureAwait(false);
-            using MemoryStream bufferStream = new MemoryStream(buffer);
-            using BinaryReader bufferReader = new BinaryReader(bufferStream);
+            using MemoryStream bufferStream = new(buffer);
+            using BinaryReader bufferReader = new(bufferStream);
             IpcHeader header = Parse(bufferReader);
             Debug.Assert(bufferStream.Position == bufferStream.Length);
             return header;

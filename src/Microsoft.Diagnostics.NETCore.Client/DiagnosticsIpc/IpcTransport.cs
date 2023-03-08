@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
             {
-                var namedPipe = new NamedPipeClientStream(
+                NamedPipeClientStream namedPipe = new(
                     ".",
                     config.Address,
                     PipeDirection.InOut,
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
             {
-                var socket = new IpcUnixDomainSocket();
+                IpcUnixDomainSocket socket = new();
                 socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
             {
-                var namedPipe = new NamedPipeClientStream(
+                NamedPipeClientStream namedPipe = new(
                     ".",
                     config.Address,
                     PipeDirection.InOut,
@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
             {
-                var socket = new IpcUnixDomainSocket();
+                IpcUnixDomainSocket socket = new();
                 await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
@@ -264,7 +264,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             try
             {
-                var process = Process.GetProcessById(_pid);
+                Process process = Process.GetProcessById(_pid);
             }
             catch (ArgumentException)
             {

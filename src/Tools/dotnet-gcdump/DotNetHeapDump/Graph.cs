@@ -189,7 +189,7 @@ namespace Graphs
         /// </summary>
         public virtual NodeTypeIndex CreateType(string name, string moduleName = null, int size = -1)
         {
-            var ret = (NodeTypeIndex)m_types.Count;
+            NodeTypeIndex ret = (NodeTypeIndex)m_types.Count;
             TypeInfo typeInfo = default(TypeInfo);
             typeInfo.Name = name;
             typeInfo.ModuleName = moduleName;
@@ -206,7 +206,7 @@ namespace Graphs
         /// <returns></returns>
         public virtual NodeIndex CreateNode()
         {
-            var ret = (NodeIndex)m_nodes.Count;
+            NodeIndex ret = (NodeIndex)m_nodes.Count;
             m_nodes.Add(m_undefinedObjDef);
             return ret;
         }
@@ -312,7 +312,7 @@ namespace Graphs
                 m_deferedTypes.Add(default(DeferedTypeInfo));
             }
 
-            var ret = (NodeTypeIndex)m_types.Count;
+            NodeTypeIndex ret = (NodeTypeIndex)m_types.Count;
             // We still use the m_types array for the size.
             m_types.Add(new TypeInfo() { Size = size });
 
@@ -339,7 +339,7 @@ namespace Graphs
         {
             Node nodeStorage = AllocNodeStorage();
             bool[] visited = new bool[(int)NodeIndexLimit];
-            var work = new Queue<NodeIndex>();
+            Queue<NodeIndex> work = new();
             work.Enqueue(RootIndex);
             while (work.Count > 0)
             {
@@ -359,7 +359,7 @@ namespace Graphs
 
         public SizeAndCount[] GetHistogramByType()
         {
-            var ret = new SizeAndCount[(int)NodeTypeIndexLimit];
+            SizeAndCount[] ret = new SizeAndCount[(int)NodeTypeIndexLimit];
             for (int i = 0; i < ret.Length; i++)
             {
                 ret[i] = new SizeAndCount((NodeTypeIndex)i);
@@ -400,7 +400,7 @@ namespace Graphs
         public string HistogramByTypeXml(long minSize = 0)
         {
             SizeAndCount[] sizeAndCounts = GetHistogramByType();
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new();
             sw.WriteLine("<HistogramByType Size=\"{0}\" Count=\"{1}\">", TotalSize, (int)NodeIndexLimit);
             NodeType typeStorage = AllocTypeNodeStorage();
             foreach (SizeAndCount sizeAndCount in sizeAndCounts)
@@ -594,7 +594,7 @@ namespace Graphs
             // Read in the Blob stream.
             // TODO be lazy about reading in the blobs.
             int blobCount = deserializer.ReadInt();
-            SegmentedMemoryStreamWriter writer = new SegmentedMemoryStreamWriter(blobCount,
+            SegmentedMemoryStreamWriter writer = new(blobCount,
                 m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
 
             while (8 <= blobCount)
@@ -733,7 +733,7 @@ namespace Graphs
 
             m_graph.m_reader.Goto(m_current);
 
-            var ret = (NodeIndex)(ReadCompressedInt(m_graph.m_reader) + (int)m_index);
+            NodeIndex ret = (NodeIndex)(ReadCompressedInt(m_graph.m_reader) + (int)m_index);
             Debug.Assert((uint)ret < (uint)m_graph.NodeIndexLimit);
 
             m_current = m_graph.m_reader.Current;
@@ -760,7 +760,7 @@ namespace Graphs
         {
             get {
                 m_graph.m_reader.Goto(m_graph.m_nodes[(int)m_index]);
-                var ret = (NodeTypeIndex)(ReadCompressedInt(m_graph.m_reader) >> 1);
+                NodeTypeIndex ret = (NodeTypeIndex)(ReadCompressedInt(m_graph.m_reader) >> 1);
                 return ret;
             }
         }
@@ -784,7 +784,7 @@ namespace Graphs
 
         public override string ToString()
         {
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new();
             WriteXml(sw, includeChildren: false);
             return sw.ToString();
         }
@@ -1014,7 +1014,7 @@ namespace Graphs
 
         public override string ToString()
         {
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new();
             WriteXml(sw);
             return sw.ToString();
         }
@@ -1129,7 +1129,7 @@ namespace Graphs
         /// <returns></returns>
         public static string PrintGraph(this Graph graph)
         {
-            StringWriter sw = new StringWriter();
+            StringWriter sw = new();
             graph.WriteXml(sw);
             return sw.ToString();
         }
@@ -1143,7 +1143,7 @@ namespace Graphs
         }
         public static string PrintNodes(this Graph graph, List<NodeIndex> nodes)
         {
-            var sw = new StringWriter();
+            StringWriter sw = new();
             sw.WriteLine("<NodeList>");
             Node node = graph.AllocNodeStorage();
             NodeType type1 = graph.AllocTypeNodeStorage();
@@ -1249,7 +1249,7 @@ namespace Graphs
                 graph.SizeOfGraphDescription());
             writer.WriteLine(" <Nodes Count=\"{0}\">", graph.NodeIndexLimit);
 
-            SortedDictionary<ulong, bool> roots = new SortedDictionary<ulong, bool>();
+            SortedDictionary<ulong, bool> roots = new();
             foreach (NodeIndex nodeIdx in sortedNodes)
             {
                 // if (!reachable[(int)nodeIdx]) continue;
@@ -1290,7 +1290,7 @@ namespace Graphs
         public static List<NodeIndex> NodeChildren(this Graph graph, NodeIndex nodeIndex)
         {
             Node node = graph.GetNode(nodeIndex, graph.AllocNodeStorage());
-            var ret = new List<NodeIndex>();
+            List<NodeIndex> ret = new();
             for (NodeIndex childIndex = node.GetFirstChildIndex(); childIndex != NodeIndex.Invalid; childIndex = node.GetNextChildIndex())
             {
                 ret.Add(childIndex);
@@ -1300,7 +1300,7 @@ namespace Graphs
         }
         public static List<NodeIndex> NodesOfType(this Graph graph, string regExpression)
         {
-            var typeSet = new Dictionary<NodeTypeIndex, NodeTypeIndex>();
+            Dictionary<NodeTypeIndex, NodeTypeIndex> typeSet = new();
             NodeType type = graph.AllocTypeNodeStorage();
             for (NodeTypeIndex typeId = 0; typeId < graph.NodeTypeIndexLimit; typeId++)
             {
@@ -1311,7 +1311,7 @@ namespace Graphs
                 }
             }
 
-            var ret = new List<NodeIndex>();
+            List<NodeIndex> ret = new();
             Node node = graph.AllocNodeStorage();
             for (NodeIndex nodeId = 0; nodeId < graph.NodeIndexLimit; nodeId++)
             {
@@ -1438,7 +1438,7 @@ public class RefGraph
         }
         else if (refsToList > 0)        // One element list
         {
-            var existingChild = (NodeIndex)(refsToList - 1);
+            NodeIndex existingChild = (NodeIndex)(refsToList - 1);
             m_refsForNodes[(int)refTarget] = (NodeListIndex)(-AddLink(refSource, AddLink(existingChild)) - 1);
         }
         else // refsToList < 0          more than one element.
@@ -1575,7 +1575,7 @@ public class RefNode
 
     public override string ToString()
     {
-        StringWriter sw = new StringWriter();
+        StringWriter sw = new();
         WriteXml(sw);
         return sw.ToString();
     }
@@ -1705,7 +1705,7 @@ public class SpanningTree
         Debug.Assert(m_typePriorities != null);
 
         // Initialize the breadth-first work queue.
-        var nodesToVisit = new PriorityQueue(1024);
+        PriorityQueue nodesToVisit = new(1024);
         nodesToVisit.Enqueue(m_graph.RootIndex, 0.0F);
 
         // reset the visited information.
@@ -1789,7 +1789,7 @@ public class SpanningTree
         // orphans.  Also reset orphanVisitedMarker back to NodeIndex.Invalid.
         for (int i = 0; i < (int)m_graph.NodeIndexLimit; i++)
         {
-            var nodeIndex = (NodeIndex)i;
+            NodeIndex nodeIndex = (NodeIndex)i;
             NodeIndex parent = m_parent[(int)nodeIndex];
             if (parent <= NodeIndex.Invalid)
             {
@@ -1987,7 +1987,7 @@ internal sealed class PriorityQueue
         int idx = m_count;
         if (idx >= m_heap.Length)
         {
-            var newArray = new DataItem[m_heap.Length * 3 / 2 + 8];
+            DataItem[] newArray = new DataItem[m_heap.Length * 3 / 2 + 8];
             Array.Copy(m_heap, newArray, m_heap.Length);
             m_heap = newArray;
         }
@@ -2060,11 +2060,11 @@ internal sealed class PriorityQueue
 #if DEBUG
     public override string ToString()
     {
-        var sb = new StringBuilder();
+        StringBuilder sb = new();
         sb.AppendLine("<PriorityQueue Count=\"").Append(m_count).Append("\">").AppendLine();
 
         // Sort the items in descending order
-        var items = new List<DataItem>(m_count);
+        List<DataItem> items = new(m_count);
         for (int i = 0; i < m_count; i++)
         {
             items.Add(m_heap[i]);
@@ -2223,7 +2223,7 @@ public class GraphSampler
             m_newTypeIndexes[i] = NodeTypeIndex.Invalid;
         }
 
-        GrowableArray<NodeIndex> children = new GrowableArray<NodeIndex>(100);
+        GrowableArray<NodeIndex> children = new(100);
         for (NodeIndex nodeIdx = 0; nodeIdx < (NodeIndex)m_newIndex.Length; nodeIdx++)
         {
             // Add all sampled nodes to the new graph.
@@ -2489,7 +2489,7 @@ public class GraphSampler
     [Conditional("DEBUG")]
     private void ValidateStats(bool allNodesVisited, bool completed = false)
     {
-        var statsCheckByType = new SampleStats[m_statsByType.Length];
+        SampleStats[] statsCheckByType = new SampleStats[m_statsByType.Length];
         for (int i = 0; i < statsCheckByType.Length; i++)
         {
             statsCheckByType[i] = new SampleStats();

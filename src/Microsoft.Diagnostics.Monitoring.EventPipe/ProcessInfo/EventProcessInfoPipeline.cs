@@ -33,14 +33,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             };
 
             // Completed when the ProcessInfo event of the Microsoft-DotNETCore-EventPipe event provider is handled
-            using var processInfoTaskSource = new EventTaskSource<Action<TraceEvent>>(
+            using EventTaskSource<Action<TraceEvent>> processInfoTaskSource = new(
                 taskComplete => traceEvent => processInfoHandler(traceEvent, taskComplete),
                 handler => eventSource.Dynamic.AddCallbackForProviderEvent(MonitoringSourceConfiguration.EventPipeProviderName, "ProcessInfo", handler),
                 handler => eventSource.Dynamic.RemoveCallback(handler),
                 token);
 
             // Completed when any trace event is handled
-            using var anyEventTaskSource = new EventTaskSource<Action<TraceEvent>>(
+            using EventTaskSource<Action<TraceEvent>> anyEventTaskSource = new(
                 taskComplete => traceEvent => taskComplete(),
                 handler => eventSource.Dynamic.All += handler,
                 handler => eventSource.Dynamic.All -= handler,

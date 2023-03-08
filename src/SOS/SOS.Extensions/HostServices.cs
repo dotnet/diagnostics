@@ -189,8 +189,8 @@ namespace SOS.Extensions
             HResult hr;
             try
             {
-                var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
-                var fileLoggingConsoleService = new FileLoggingConsoleService(consoleService);
+                ConsoleServiceFromDebuggerServices consoleService = new(DebuggerServices);
+                FileLoggingConsoleService fileLoggingConsoleService = new(consoleService);
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
 
                 // Don't register everything in the SOSHost assembly; just the wrappers
@@ -228,7 +228,7 @@ namespace SOS.Extensions
                 _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
                 _serviceContainer.AddService<IContextService>(_contextService);
 
-                var threadUnwindService = new ThreadUnwindServiceFromDebuggerServices(DebuggerServices);
+                ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
                 _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
                 // Add each extension command to the native debugger
@@ -254,7 +254,7 @@ namespace SOS.Extensions
             }
             try
             {
-                var remoteMemoryService = new RemoteMemoryService(iunk);
+                RemoteMemoryService remoteMemoryService = new(iunk);
                 // This service needs another reference since it is implemented as part of IDebuggerServices and gets
                 // disposed in Uninitialize() below by the DisposeServices call.
                 remoteMemoryService.AddRef();
@@ -288,7 +288,7 @@ namespace SOS.Extensions
             }
             try
             {
-                var target = new TargetFromDebuggerServices(DebuggerServices, this, _targetIdFactory++);
+                TargetFromDebuggerServices target = new(DebuggerServices, this, _targetIdFactory++);
                 _contextService.SetCurrentTarget(target);
                 _target = target;
             }

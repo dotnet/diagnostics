@@ -225,8 +225,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (Endpoint == null)
             {
-                using var acceptTimeoutTokenSource = new CancellationTokenSource();
-                using var acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
+                using CancellationTokenSource acceptTimeoutTokenSource = new();
+                using CancellationTokenSource acceptTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, acceptTimeoutTokenSource.Token);
 
                 try
                 {
@@ -250,8 +250,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            using var connectTimeoutTokenSource = new CancellationTokenSource();
-            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+            using CancellationTokenSource connectTimeoutTokenSource = new();
+            using CancellationTokenSource connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             try
             {
@@ -451,9 +451,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _logger?.LogDebug($"Connecting new tcp endpoint \"{_tcpClientAddress}\".");
 
-            IpcTcpSocketEndPoint clientTcpEndPoint = new IpcTcpSocketEndPoint(_tcpClientAddress);
-            using var connectTimeoutTokenSource = new CancellationTokenSource();
-            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+            IpcTcpSocketEndPoint clientTcpEndPoint = new(_tcpClientAddress);
+            using CancellationTokenSource connectTimeoutTokenSource = new();
+            using CancellationTokenSource connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             connectTimeoutTokenSource.CancelAfter(TcpClientTimeoutMs);
 
@@ -575,8 +575,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _logger?.LogDebug($"Waiting for new ipc connection at endpoint \"{_ipcServerPath}\".");
 
 
-            using var connectTimeoutTokenSource = new CancellationTokenSource();
-            using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+            using CancellationTokenSource connectTimeoutTokenSource = new();
+            using CancellationTokenSource connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
             try
             {
@@ -636,7 +636,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var namedPipe = new NamedPipeClientStream(
+                NamedPipeClientStream namedPipe = new(
                     ".",
                     _ipcClientPath,
                     PipeDirection.InOut,
@@ -665,8 +665,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 IpcUnixDomainSocket unixDomainSocket;
 
-                using var connectTimeoutTokenSource = new CancellationTokenSource();
-                using var connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
+                using CancellationTokenSource connectTimeoutTokenSource = new();
+                using CancellationTokenSource connectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, connectTimeoutTokenSource.Token);
 
                 connectTimeoutTokenSource.CancelAfter(IpcClientTimeoutMs);
 
@@ -1391,15 +1391,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using Stream tcpClientStream = await _tcpClientRouterFactory.ConnectTcpStreamAsync(token, true).ConfigureAwait(false);
 
                 // Request process info.
-                IpcMessage message = new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
+                IpcMessage message = new(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo);
 
                 byte[] buffer = message.Serialize();
                 await tcpClientStream.WriteAsync(buffer, 0, buffer.Length, token).ConfigureAwait(false);
 
-                var response = IpcMessage.Parse(tcpClientStream);
+                IpcMessage response = IpcMessage.Parse(tcpClientStream);
                 if ((DiagnosticsServerResponseId)response.Header.CommandId == DiagnosticsServerResponseId.OK)
                 {
-                    var info = ProcessInfo.ParseV1(response.Payload);
+                    ProcessInfo info = ProcessInfo.ParseV1(response.Payload);
 
                     _runtimeProcessId = info.ProcessId;
                     _runtimeInstanceId = info.RuntimeInstanceCookie;
@@ -1473,7 +1473,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             _cancelRouterTokenSource.Cancel();
 
-            List<Task> runningTasks = new List<Task>();
+            List<Task> runningTasks = new();
 
             if (_backendReadFrontendWriteTask != null)
             {

@@ -179,7 +179,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         protected static Dictionary<string, string> GetNugetFeeds(TestConfiguration config)
         {
-            Dictionary<string, string> nugetFeeds = new Dictionary<string, string>();
+            Dictionary<string, string> nugetFeeds = new();
             if (!string.IsNullOrWhiteSpace(config.NuGetPackageFeeds))
             {
                 string[] feeds = config.NuGetPackageFeeds.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);

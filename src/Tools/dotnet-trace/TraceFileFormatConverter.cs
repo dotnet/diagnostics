@@ -67,15 +67,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError = false)
         {
             string etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError });
-            using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-            using (var eventLog = new TraceLog(etlxFilePath))
+            using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+            using (TraceLog eventLog = new(etlxFilePath))
             {
-                var stackSource = new MutableTraceEventStackSource(eventLog)
+                MutableTraceEventStackSource stackSource = new(eventLog)
                 {
                     OnlyManagedCodeStacks = true // EventPipe currently only has managed code stacks.
                 };
 
-                var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader)
+                SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader)
                 {
                     IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
                 };

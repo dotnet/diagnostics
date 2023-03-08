@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             DebuggeeConfiguration debuggeeConfig = DebuggeeCompiler.Execute(config, "ExitCodeTracee", OutputHelper).GetAwaiter().GetResult();
 
-            var dotnetTraceArguments = new StringBuilder();
+            StringBuilder dotnetTraceArguments = new();
             dotnetTraceArguments.Append(config.DotNetTracePath());
             dotnetTraceArguments.Append(' ');
             dotnetTraceArguments.Append(dotnetTraceCommand);
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             dotnetTraceArguments.Append(' ');
             dotnetTraceArguments.Append(traceeArguments);
 
-            ProcessStartInfo startInfo = new ProcessStartInfo(config.DotNetTraceHost(), dotnetTraceArguments.ToString());
+            ProcessStartInfo startInfo = new(config.DotNetTraceHost(), dotnetTraceArguments.ToString());
 
             OutputHelper.WriteLine($"Launching: {startInfo.FileName} {startInfo.Arguments}");
             startInfo.RedirectStandardInput = true;

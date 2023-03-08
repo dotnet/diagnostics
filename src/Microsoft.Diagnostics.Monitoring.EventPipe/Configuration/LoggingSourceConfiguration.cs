@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return string.Empty;
             }
 
-            StringBuilder filterSpecsBuilder = new StringBuilder();
+            StringBuilder filterSpecsBuilder = new();
 
             if (useAppFilters)
             {

@@ -34,14 +34,14 @@ namespace EventPipe.UnitTests.ProviderValidation
         public async void UserDefinedEventSource_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
-                Dictionary<string, ExpectedEventCount> expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+                Dictionary<string, ExpectedEventCount> expectedEventCounts = new()
                 {
                     { "MyEventSource", new ExpectedEventCount(100_000, 0.30f) },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 },
                     { "Microsoft-DotNETCore-SampleProfiler", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("MyEventSource", EventLevel.Verbose, -1),
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)

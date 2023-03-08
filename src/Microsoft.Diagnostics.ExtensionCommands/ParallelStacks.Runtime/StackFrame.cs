@@ -82,7 +82,7 @@ namespace ParallelStacks
                 return string.Empty;
             }
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // need to make the difference between generic and non generic parameters
             //      *.Int32                                         --> Int32
@@ -148,7 +148,7 @@ namespace ParallelStacks
         {
             // System.Collections.Generic.IList`1<System.Collections.Generic.IEnumerable`1<System.String>>
             // System.Collections.Generic.IDictionary`2<Int32,System.String>
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // look for ` to get the name and the count of generic parameters
             int pos = typeName.IndexOf('`', start, end - start);
@@ -191,7 +191,7 @@ namespace ParallelStacks
         public static IEnumerable<string> BuildSignature(string fullName)
         {
             // {namespace.}type.method[[]](..., ..., ...)
-            var parameters = new List<string>();
+            List<string> parameters = new();
             int pos = fullName.LastIndexOf('(');
             if (pos == -1)
             {
@@ -231,7 +231,7 @@ namespace ParallelStacks
                 return null;
             }
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // handle ByRef case
             bool isByRef = false;

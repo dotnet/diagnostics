@@ -20,7 +20,7 @@ namespace DotnetCounters.UnitTests
         public void IncrementingCounterTest()
         {
             string fileName = "IncrementingCounterTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -62,7 +62,7 @@ namespace DotnetCounters.UnitTests
         public void CounterTest()
         {
             string fileName = "CounterTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -105,7 +105,7 @@ namespace DotnetCounters.UnitTests
         public void DifferentDisplayRateTest()
         {
             string fileName = "displayRateTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -147,7 +147,7 @@ namespace DotnetCounters.UnitTests
         public void DisplayUnitsTest()
         {
             string fileName = "displayUnitsTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -189,7 +189,7 @@ namespace DotnetCounters.UnitTests
         public void TagsTest()
         {
             string fileName = "tagsTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -231,7 +231,7 @@ namespace DotnetCounters.UnitTests
         public void PercentilesTest()
         {
             string fileName = "percentilesTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)

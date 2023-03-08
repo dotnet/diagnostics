@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
         {
-            var profileProviders = new List<EventPipeProvider>();
+            List<EventPipeProvider> profileProviders = new();
             // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
             // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
             // via --providers options.

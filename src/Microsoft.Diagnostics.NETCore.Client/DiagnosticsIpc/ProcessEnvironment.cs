@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private ProcessEnvironmentHelper() { }
         public static ProcessEnvironmentHelper Parse(byte[] payload)
         {
-            ProcessEnvironmentHelper helper = new ProcessEnvironmentHelper();
+            ProcessEnvironmentHelper helper = new();
 
             helper.ExpectedSizeInBytes = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(payload, 0, 4));
             helper.Future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(payload, 4, 2));
@@ -27,14 +27,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public Dictionary<string, string> ReadEnvironment(Stream continuation)
         {
-            using var memoryStream = new MemoryStream();
+            using MemoryStream memoryStream = new();
             continuation.CopyTo(memoryStream, CopyBufferSize);
             return ReadEnvironmentCore(memoryStream);
         }
 
         public async Task<Dictionary<string, string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
         {
-            using var memoryStream = new MemoryStream();
+            using MemoryStream memoryStream = new();
             await continuation.CopyToAsync(memoryStream, CopyBufferSize, token).ConfigureAwait(false);
             return ReadEnvironmentCore(memoryStream);
         }
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ApplicationException($"ProcessEnvironment continuation length did not match expected length. Expected: {ExpectedSizeInBytes} bytes, Received: {envBlock.Length} bytes");
             }
 
-            var env = new Dictionary<string, string>();
+            Dictionary<string, string> env = new();
             int cursor = 0;
             cursor += sizeof(uint);
             while (cursor < envBlock.Length)

@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             try
             {
-                var stats = new Dictionary<string, TimerStat>(64);
+                Dictionary<string, TimerStat> stats = new(64);
                 int totalCount = 0;
                 foreach (TimerInfo timer in Helper.EnumerateTimers().OrderBy(t => t.Period))
                 {

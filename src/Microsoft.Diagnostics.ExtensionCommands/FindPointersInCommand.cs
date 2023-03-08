@@ -172,7 +172,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (result.NonPinnedGCPointers.Count > 0)
                 {
-                    var v = new (string, int, int, IEnumerable<ulong>)[] { ("[Pointers to non-pinned objects]", result.NonPinnedGCPointers.Count, new HashSet<ulong>(result.NonPinnedGCPointers).Count, result.NonPinnedGCPointers) };
+                    (string, int, int, IEnumerable<ulong>)[] v = new (string, int, int, IEnumerable<ulong>)[] { ("[Pointers to non-pinned objects]", result.NonPinnedGCPointers.Count, new HashSet<ulong>(result.NonPinnedGCPointers).Count, result.NonPinnedGCPointers) };
                     gcResult = v.Concat(gcResult);
                 }
 

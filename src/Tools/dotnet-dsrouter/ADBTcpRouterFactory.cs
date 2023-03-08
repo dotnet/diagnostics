@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             logger?.LogDebug($"Executing {adbTool} {command}.");
 
-            var process = new Process();
+            Process process = new();
             process.StartInfo.FileName = adbTool;
             process.StartInfo.Arguments = command;
 

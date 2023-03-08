@@ -21,7 +21,7 @@ namespace DotnetCounters.UnitTests
         public void IncrementingCounterTest()
         {
             string fileName = "IncrementingCounterTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -31,7 +31,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
@@ -52,7 +52,7 @@ namespace DotnetCounters.UnitTests
         public void CounterTest()
         {
             string fileName = "CounterTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -62,7 +62,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
@@ -83,7 +83,7 @@ namespace DotnetCounters.UnitTests
         public void DisplayUnitsTest()
         {
             string fileName = "displayUnitsTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
@@ -93,7 +93,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
@@ -117,7 +117,7 @@ namespace DotnetCounters.UnitTests
             // Regression test for https://github.com/dotnet/diagnostics/issues/1020
 
             string fileName = "validJSONFormatTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
@@ -127,7 +127,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 // first } from end of the last event payload
@@ -141,7 +141,7 @@ namespace DotnetCounters.UnitTests
         public void TagsTest()
         {
             string fileName = "TagsTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -151,7 +151,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
@@ -173,7 +173,7 @@ namespace DotnetCounters.UnitTests
         public void EscapingTest()
         {
             string fileName = "EscapingTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -183,7 +183,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
@@ -205,7 +205,7 @@ namespace DotnetCounters.UnitTests
         public void PercentilesTest()
         {
             string fileName = "PercentilesTest.json";
-            JSONExporter exporter = new JSONExporter(fileName, "myProcess.exe");
+            JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -215,7 +215,7 @@ namespace DotnetCounters.UnitTests
             exporter.Stop();
 
             Assert.True(File.Exists(fileName));
-            using (StreamReader r = new StreamReader(fileName))
+            using (StreamReader r = new(fileName))
             {
                 string json = r.ReadToEnd();
                 JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);

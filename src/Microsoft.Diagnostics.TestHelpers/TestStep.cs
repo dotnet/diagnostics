@@ -69,12 +69,12 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private async Task UncachedExecute(TestStepState stepState, ITestOutputHelper output)
         {
-            using (FileTestOutputHelper stepLog = new FileTestOutputHelper(_logFilePath))
+            using (FileTestOutputHelper stepLog = new(_logFilePath))
             {
                 try
                 {
                     LogHeader(stepState, false, output);
-                    MultiplexTestOutputHelper mux = new MultiplexTestOutputHelper(new IndentedTestOutputHelper(output), stepLog);
+                    MultiplexTestOutputHelper mux = new(new IndentedTestOutputHelper(output), stepLog);
                     await DoWork(mux).ConfigureAwait(false);
                     stepState = stepState.Complete();
                 }
@@ -167,7 +167,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             using (stepStateStream)
             {
                 stepStateStream.Seek(0, SeekOrigin.End);
-                StreamWriter writer = new StreamWriter(stepStateStream);
+                StreamWriter writer = new(stepStateStream);
                 await writer.WriteAsync(Environment.NewLine + stepState.SerializeFinalState()).ConfigureAwait(false);
                 await writer.FlushAsync().ConfigureAwait(false);
             }
@@ -210,7 +210,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private async Task<TestStepState> AcquireStepStateLock(ITestOutputHelper output)
         {
-            TestStepState initialStepState = new TestStepState();
+            TestStepState initialStepState = new();
             while (true)
             {
                 TestStepState openedStepState = null;
@@ -263,7 +263,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 TestStepState currentState = openedStepState ?? initialStepState;
                 LogHeader(currentState, true, output);
-                StringBuilder errorMessage = new StringBuilder();
+                StringBuilder errorMessage = new();
                 if (timeout)
                 {
                     errorMessage.Append("Timeout after " + _timeout + ". ");
@@ -472,7 +472,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             public string SerializeInitialState()
             {
-                XElement initState = new XElement("InitialStepState",
+                XElement initState = new("InitialStepState",
                     new XElement("Machine", Machine),
                     new XElement("ProcessID", "0x" + ProcessID.ToString("x")),
                     new XElement("ProcessName", ProcessName),
@@ -483,7 +483,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             public string SerializeFinalState()
             {
-                XElement finalState = new XElement("FinalStepState",
+                XElement finalState = new("FinalStepState",
                     new XElement("RunState", RunState)
                     );
                 if (CompleteTime != null)
