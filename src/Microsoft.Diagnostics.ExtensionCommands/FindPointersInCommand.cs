@@ -286,7 +286,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach ((ulong Pointer, DescribedRegion Range) found in pointersFound)
             {
-                if (found.Range.ClrMemoryKind == ClrMemoryKind.GCHeapSegment)
+                if (found.Range.ClrMemoryKind == ClrMemoryKind.GCHeap)
                 {
                     if (pinnedOnly)
                     {
@@ -344,7 +344,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            foreach (ClrSegment seg in Runtime.Heap.Segments.Where(s => s.IsPinnedObjectSegment || s.IsLargeObjectSegment))
+            foreach (ClrSegment seg in Runtime.Heap.Segments.Where(s => s.IsPinned))
             {
                 foreach (ClrObject obj in seg.EnumerateObjects().Where(o => seen.Add(o)))
                 {

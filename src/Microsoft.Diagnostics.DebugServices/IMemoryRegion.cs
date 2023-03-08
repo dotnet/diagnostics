@@ -19,6 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices
         MEM_RESERVE = 0x2000
     }
 
+    [Flags]
     public enum MemoryRegionProtection
     {
         PAGE_UNKNOWN = 0,

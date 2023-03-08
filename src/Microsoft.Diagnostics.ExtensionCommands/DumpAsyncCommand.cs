@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -278,7 +279,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // If the top-level frame is an async method that's paused at an await, it must be waiting on
                     // something.  Try to synthesize a frame to represent that thing, just to provide a little more information.
                     if (top.IsStateMachine && top.AwaitState >= 0 && !IsCompleted(top.TaskStateFlags) &&
-                        top.StateMachine is IAddressableTypedEntity stateMachine &&
+                        top.StateMachine is IClrValue stateMachine &&
                         stateMachine.Type is not null)
                     {
                         // Short of parsing the method's IL, we don't have a perfect way to know which awaiter field
@@ -351,7 +352,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             {
                                 if (field.IsObjectReference)
                                 {
-                                    ClrObject awaiter = stateMachine.ReadObjectField(name);
+                                    IClrValue awaiter = stateMachine.ReadObjectField(name);
                                     if (awaiter.Type is not null)
                                     {
                                         Write("<< Awaiting: ");
@@ -365,7 +366,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 }
                                 else if (field.IsValueType)
                                 {
-                                    ClrValueType awaiter = stateMachine.ReadValueTypeField(name);
+                                    IClrValue awaiter = stateMachine.ReadValueTypeField(name);
                                     if (awaiter.Type is not null)
                                     {
                                         Write("<< Awaiting: ");
@@ -463,7 +464,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // <summary>Outputs a line of information for each instance field on the object.</summary>
-            void RenderFields(IAddressableTypedEntity? obj, int depth)
+            void RenderFields(IClrValue? obj, int depth)
             {
                 if (obj?.Type is not null)
                 {
@@ -918,7 +919,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Tries to get the compiler-generated state machine instance from a state machine box.</summary>
-        private static bool TryGetStateMachine(ClrObject obj, out IAddressableTypedEntity? stateMachine)
+        private static bool TryGetStateMachine(ClrObject obj, out IClrValue? stateMachine)
         {
             // AsyncStateMachineBox<T> has a StateMachine field storing the compiler-generated instance.
             if (obj.Type?.GetFieldByName("StateMachine") is ClrInstanceField field)
@@ -943,7 +944,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Extract from the specified field of the specified object something that can be ToString'd.</summary>
-        private static object GetDisplay(IAddressableTypedEntity obj, ClrInstanceField field)
+        private static object GetDisplay(IClrValue obj, ClrInstanceField field)
         {
             if (field.Name is string fieldName)
             {
@@ -996,7 +997,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         return obj.ReadField<ulong>(fieldName).ToString(IntPtr.Size == 8 ? "x16" : "x8");
 
                     case ClrElementType.SZArray:
-                        ClrObject arrayObj = obj.ReadObjectField(fieldName);
+                        IClrValue arrayObj = obj.ReadObjectField(fieldName);
                         if (!arrayObj.IsNull)
                         {
                             ClrArray arrayObjAsArray = arrayObj.AsArray();
@@ -1010,7 +1011,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     case ClrElementType.Array:
                     case ClrElementType.Object:
                     case ClrElementType.Class:
-                        ClrObject classObj = obj.ReadObjectField(fieldName);
+                        IClrValue classObj = obj.ReadObjectField(fieldName);
                         return classObj.IsNull ? "null" : classObj.Address.ToString(IntPtr.Size == 8 ? "x16" : "x8");
 
                     case ClrElementType.Var:
@@ -1088,7 +1089,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Tries to read the specified value from the field of an entity.</summary>
-        private static bool TryRead<T>(IAddressableTypedEntity entity, string fieldName, out T result) where T : unmanaged
+        private static bool TryRead<T>(IClrValue entity, string fieldName, out T result) where T : unmanaged
         {
             if (entity.Type?.GetFieldByName(fieldName) is not null)
             {
@@ -1228,7 +1229,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             /// <summary>true if <see cref="Object"/> is an AsyncStateMachineBox.</summary>
             public bool IsStateMachine;
             /// <summary>A compiler-generated state machine extracted from the object, if one exists.</summary>
-            public IAddressableTypedEntity? StateMachine;
+            public IClrValue? StateMachine;
             /// <summary>The state of the state machine, if the object contains a state machine.</summary>
             public int AwaitState;
             /// <summary>The <see cref="Object"/>'s Task state flags, if it's a task.</summary>

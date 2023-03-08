@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -793,11 +794,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // For older runtimes, the array entry is the Node object
                     node = bucketsArray.GetObjectValue(i);
                 }
-                IAddressableTypedEntity keyField, valueField;
+                IClrValue keyField, valueField;
                 if (!node.IsNull && node.IsValid)
                 {
-                    keyField = node.GetFieldFrom(keyFieldName);
-                    valueField = node.GetFieldFrom(valueFieldName);
+                    keyField = GetFieldFrom(node, keyFieldName);
+                    valueField = GetFieldFrom(node, valueFieldName);
 
                     if (keyField == null || valueField == null)
                     {
@@ -817,6 +818,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        public static IClrValue GetFieldFrom(IClrValue entity, string fieldName)
+        {
+            IClrType entityType = entity?.Type ?? throw new ArgumentNullException(nameof(entity), "No associated type");
+            IClrInstanceField field = entityType.GetFieldByName(fieldName) ?? throw new ArgumentException($"Type '{entityType}' does not contain a field named '{fieldName}'");
+            return field.IsObjectReference ? entity.ReadObjectField(fieldName) : entity.ReadValueTypeField(fieldName);
+        }
+
         public IEnumerable<ClrObject> EnumerateObjectsInGeneration(GCGeneration generation)
         {
             foreach (ClrSegment segment in _heap.Segments)
@@ -826,18 +834,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     continue;
                 }
 
-                ulong currentObjectAddress = start;
-                ClrObject currentObject;
-                do
-                {
-                    currentObject = _heap.GetObject(currentObjectAddress);
-                    if (currentObject.Type != null)
-                    {
-                        yield return currentObject;
-                    }
-
-                    currentObjectAddress = segment.GetNextObjectAddress(currentObject);
-                } while (currentObjectAddress > 0 && currentObjectAddress < end);
+                foreach (ClrObject obj in _heap.EnumerateObjects(new MemoryRange(start, end)))
+                    if (obj.IsValid)
+                        yield return obj;
             }
         }
 
@@ -856,21 +855,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     end = segment.Generation1.End;
                     return start != end;
                 case GCGeneration.Generation2:
-                    if (!(segment.IsLargeObjectSegment || segment.IsPinnedObjectSegment))
+                    if (segment.Kind != GCSegmentKind.Large && segment.Kind != GCSegmentKind.Large && segment.Kind != GCSegmentKind.Frozen)
                     {
                         start = segment.Generation2.Start;
                         end = segment.Generation2.End;
                     }
                     return start != end;
                 case GCGeneration.LargeObjectHeap:
-                    if (segment.IsLargeObjectSegment)
+                    if (segment.Kind == GCSegmentKind.Large)
                     {
                         start = segment.Start;
                         end = segment.End;
                     }
                     return start != end;
                 case GCGeneration.PinnedObjectHeap:
-                    if (segment.IsPinnedObjectSegment)
+                    if (segment.Kind == GCSegmentKind.Pinned || segment.Kind == GCSegmentKind.Frozen)
                     {
                         start = segment.Start;
                         end = segment.End;
@@ -1093,38 +1092,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             const string defaultContent = "?";
 
-            IAddressableTypedEntity field = obj.GetFieldFrom(propertyName);
+            IAddressableTypedEntity field = GetFieldFrom(obj, propertyName);
+            if (field.Type is ClrType fieldType)
+            {
+                if (fieldType.IsString)
+                {
+                    return $"\"{new ClrObject(field.Address, fieldType).AsString()}\"";
+                }
+                else if (fieldType.IsArray)
+                {
+                    return $"dumparray {field.Address:x16}";
+                }
+                else if (fieldType.IsObjectReference)
+                {
+                    return $"dumpobj {field.Address:x16}";
+                }
+                else if (IsSimpleType(fieldType.Name) && TryGetSimpleValue(obj, fieldType, propertyName, out var simpleValuecontent))
+                {
+                    return simpleValuecontent;
+                }
+                else if (fieldType.IsValueType)
+                {
+                    return $"dumpvc {fieldType.MethodTable:x16} {field.Address:x16}";
+                }
+            }
+            else
+            {
+                if (field is ClrObject objectField && objectField.IsNull)
+                    return "null";
 
-            if (field.Type == null && field is ClrObject objectField && objectField.IsNull)
-            {
-                return "null";
-            }
-            if (field.Type == null)
-            {
                 return defaultContent;
-            }
-            if (field.Type.IsString)
-            {
-                return $"\"{new ClrObject(field.Address, field.Type).AsString()}\"";
-            }
-            else if (field.Type.IsArray)
-            {
-                return $"dumparray {field.Address:x16}";
-            }
-            else if (field.Type.IsObjectReference)
-            {
-                return $"dumpobj {field.Address:x16}";
-            }
-            else if (IsSimpleType(field.Type.Name) && TryGetSimpleValue(obj, field.Type, propertyName, out string simpleValuecontent))
-            {
-                return simpleValuecontent;
-            }
-            else if (field.Type.IsValueType)
-            {
-                return $"dumpvc {field.Type.MethodTable:x16} {field.Address:x16}";
             }
             return defaultContent;
         }
+
         private static bool HasSimpleValue(ClrArray items, int index, ClrValueType item, out string content)
         {
             content = null;
@@ -1187,7 +1188,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return true;
         }
 
-        private static bool TryGetSimpleValue(IAddressableTypedEntity item, ClrType type, string fieldName, out string content)
+        private static bool TryGetSimpleValue(IClrValue item, ClrType type, string fieldName, out string content)
         {
             content = null;
             string typeName = type.Name;

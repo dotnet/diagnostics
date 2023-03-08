@@ -15,6 +15,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool AlignLeft { get; set; }
 
         public IConsoleService Console { get; }
+        public int TotalWidth => 1 * (_formats.Length - 1) + _formats.Sum(c => Math.Abs(c.width));
 
         private readonly (int width, string format)[] _formats;
 
@@ -134,6 +135,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return null;
             }
 
+            if (obj is Enum)
+                return obj.ToString();
+
             return obj switch
             {
                 nint ni => ni.ToString(format),
@@ -141,6 +145,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 long l => l.ToString(format),
                 uint ui => ui.ToString(format),
                 int i => i.ToString(format),
+                StringBuilder sb => sb.ToString(),
                 string s => s,
                 _ => throw new NotImplementedException(obj.GetType().ToString()),
             };
