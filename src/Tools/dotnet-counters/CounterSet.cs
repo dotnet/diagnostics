@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         // a mapping from provider to a list of counters that should be enabled
         // an empty List means all counters are enabled
-        private Dictionary<string, List<string>> _providerCounters;
+        private readonly Dictionary<string, List<string>> _providerCounters;
 
         public CounterSet()
         {

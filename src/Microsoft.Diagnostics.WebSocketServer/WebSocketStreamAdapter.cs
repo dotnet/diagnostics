@@ -62,13 +62,13 @@ internal sealed class WebSocketStreamAdapter : Stream, IWebSocketStreamAdapter
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, count), cancellationToken).ConfigureAwait(false);
+        WebSocketReceiveResult result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, count), cancellationToken).ConfigureAwait(false);
         return result.Count;
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
-        var result = await _webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+        ValueWebSocketReceiveResult result = await _webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
         return result.Count;
     }
 

@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 ref Guid interfaceId,
                 [MarshalAs(UnmanagedType.IUnknown)] out object iinterface);
 
-            private static readonly Guid _iidClient = new Guid("e3acb9d7-7ec2-4f0c-a0da-e81e0cbbe628");
+            private static readonly Guid _iidClient = new("e3acb9d7-7ec2-4f0c-a0da-e81e0cbbe628");
             private readonly CharToLineConverter _converter;
 
             internal readonly IDebugClient Client;

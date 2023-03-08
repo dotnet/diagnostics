@@ -683,7 +683,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             private static readonly TimeSpan StableTransportVersionTimeout = TimeSpan.FromSeconds(30);
 
             private readonly Timer _transportVersionTimer;
-            private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
+            private readonly SemaphoreSlim _semaphore = new(1);
 
             private int _transportVersion;
             private TaskCompletionSource<int> _transportVersionSource;

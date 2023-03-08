@@ -31,8 +31,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private sealed class TestMetricsLogger : ICountersLogger
         {
-            private readonly List<string> _expectedCounters = new List<string>();
-            private Dictionary<string, ICounterPayload> _metrics = new Dictionary<string, ICounterPayload>();
+            private readonly List<string> _expectedCounters = new();
+            private Dictionary<string, ICounterPayload> _metrics = new();
             private readonly TaskCompletionSource<object> _foundExpectedCountersSource;
 
             public TestMetricsLogger(IDictionary<string, IEnumerable<string>> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource)

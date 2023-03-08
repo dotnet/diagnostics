@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat);
 
         public static Command ReportCommand() =>
-            new Command(
+            new(
                 name: "report",
                 description: "Generate report into stdout from a previously generated gcdump or from a running process.")
             {
@@ -115,10 +115,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }.ExistingOnly();
 
         private static Option<int> ProcessIdOption() =>
-            new Option<int>(new[] { "-p", "--process-id" }, "The process id to collect the gcdump from.");
+            new(new[] { "-p", "--process-id" }, "The process id to collect the gcdump from.");
 
         private static Option<ReportType> ReportTypeOption() =>
-            new Option<ReportType>(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")
+            new(new[] { "-t", "--report-type" }, "The type of report to generate. Available options: heapstat (default)")
             {
                 Argument = new Argument<ReportType>(() => ReportType.HeapStat)
             };

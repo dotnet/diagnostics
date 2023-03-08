@@ -53,8 +53,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public double LastValue { get; set; }
         }
 
-        private readonly object _lock = new object();
-        private readonly Dictionary<string, ObservedProvider> _providers = new Dictionary<string, ObservedProvider>(); // Tracks observed providers and counters.
+        private readonly object _lock = new();
+        private readonly Dictionary<string, ObservedProvider> _providers = new(); // Tracks observed providers and counters.
         private const int Indent = 4; // Counter name indent size.
         private const int CounterValueLength = 15;
 
@@ -66,14 +66,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private string _errorText;
 
         private int _maxRow = -1;
-        private bool _useAnsi;
+        private readonly bool _useAnsi;
 
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
 
         public ConsoleWriter(bool useAnsi)
         {
-            this._useAnsi = useAnsi;
+            _useAnsi = useAnsi;
         }
 
         public void Initialize()
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private void SetCursorPosition(int col, int row)
         {
-            if (this._useAnsi)
+            if (_useAnsi)
             {
                 Console.Write($"\u001b[{row + 1 - _topRow};{col + 1}H");
             }
@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private void Clear()
         {
-            if (this._useAnsi)
+            if (_useAnsi)
             {
                 Console.Write($"\u001b[H\u001b[J");
             }

@@ -23,8 +23,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         private static readonly Handler DefaultHandler = (T item, out bool removeItem) => { removeItem = true; return true; };
 
-        private readonly List<T> _items = new List<T>();
-        private readonly List<Tuple<TaskCompletionSource<T>, Handler>> _handlers = new List<Tuple<TaskCompletionSource<T>, Handler>>();
+        private readonly List<T> _items = new();
+        private readonly List<Tuple<TaskCompletionSource<T>, Handler>> _handlers = new();
 
         private bool _disposed;
 

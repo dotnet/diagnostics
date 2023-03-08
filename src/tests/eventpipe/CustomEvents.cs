@@ -13,7 +13,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
 {
     public class MyEventSource : EventSource
     {
-        public static MyEventSource Log = new MyEventSource();
+        public static MyEventSource Log = new();
 
         public void Event1() { WriteEvent(1); }
         public void Event2(string fileName) { WriteEvent(2, fileName); }

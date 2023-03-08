@@ -109,7 +109,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <summary>
         /// Version 1.0.0 constant
         /// </summary>
-        public static readonly Version Version100 = new Version("1.0.0");
+        public static readonly Version Version100 = new("1.0.0");
 
         /// <summary>
         /// Test data file version

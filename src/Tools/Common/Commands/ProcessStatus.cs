@@ -22,7 +22,7 @@ namespace Microsoft.Internal.Common.Commands
     public class ProcessStatusCommandHandler
     {
         public static Command ProcessStatusCommand(string description) =>
-            new Command(name: "ps", description)
+            new(name: "ps", description)
             {
                 HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler()
             };

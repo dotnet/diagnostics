@@ -35,8 +35,8 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     internal abstract class Pipeline : IAsyncDisposable
     {
-        private readonly CancellationTokenSource _disposeSource = new CancellationTokenSource();
-        private object _lock = new object();
+        private readonly CancellationTokenSource _disposeSource = new();
+        private readonly object _lock = new();
         private bool _isCleanedUp;
         private Task _runTask;
         private Task _stopTask;

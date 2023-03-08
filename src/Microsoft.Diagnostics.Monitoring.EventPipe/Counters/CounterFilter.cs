@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private int _defaultIntervalMilliseconds;
 
         public static CounterFilter AllCounters(float defaultIntervalSeconds)
-            => new CounterFilter(defaultIntervalSeconds);
+            => new(defaultIntervalSeconds);
 
         public CounterFilter(float defaultIntervalSeconds)
         {

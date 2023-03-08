@@ -40,7 +40,7 @@ namespace SOS.Hosting
             [MarshalAs(UnmanagedType.LPStr)] string moduleFileName,
             [MarshalAs(UnmanagedType.LPStr)] string symbolFileName);
 
-        public static readonly Guid IID_ISymbolService = new Guid("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1");
+        public static readonly Guid IID_ISymbolService = new("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1");
 
         private readonly ISymbolService _symbolService;
         private readonly IMemoryService _memoryService;

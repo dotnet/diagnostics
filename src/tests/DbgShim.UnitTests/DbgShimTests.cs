@@ -500,7 +500,7 @@ namespace Microsoft.Diagnostics
             Trace.TraceInformation("TestCreateDebuggingInterface pid {0} DONE", debuggeeInfo.ProcessId);
         }
 
-        private static readonly Guid IID_ICorDebugProcess = new Guid("3D6F5F64-7538-11D3-8D5B-00104B35E7EF");
+        private static readonly Guid IID_ICorDebugProcess = new("3D6F5F64-7538-11D3-8D5B-00104B35E7EF");
 
         private static void TestICorDebug(DebuggeeInfo debuggeeInfo, ICorDebug corDebug)
         {

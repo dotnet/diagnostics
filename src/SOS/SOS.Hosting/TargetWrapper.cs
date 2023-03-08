@@ -21,7 +21,7 @@ namespace SOS.Hosting
             OSX = 3,
         }
 
-        public static readonly Guid IID_ITarget = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
+        public static readonly Guid IID_ITarget = new("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
         public ServiceWrapper ServiceWrapper { get; } = new ServiceWrapper();
 

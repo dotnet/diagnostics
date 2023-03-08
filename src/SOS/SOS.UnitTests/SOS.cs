@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,24 +19,14 @@ using Xunit.Extensions;
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
 #pragma warning disable CA1825
 
-[Collection("Windows Dump Generation")]
-public class SOS
+public static class SOSTestHelpers
 {
-    public SOS(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
     public static IEnumerable<object[]> GetConfigurations(string key, string value)
     {
         return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).Select(c => new[] { c });
     }
 
-    public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
-
-    private static void SkipIfArm(TestConfiguration config)
+    internal static void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture is "arm" or "arm64")
         {
@@ -42,9 +34,12 @@ public class SOS
         }
     }
 
-    private async Task RunTest(string scriptName, SOSRunner.TestInformation information)
+    internal static async Task RunTest(
+        string scriptName,
+        SOSRunner.TestInformation information,
+        ITestOutputHelper output)
     {
-        information.OutputHelper = Output;
+        information.OutputHelper = output;
 
         if (information.TestLive)
         {
@@ -96,7 +91,47 @@ public class SOS
         }
     }
 
-    private static void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
+    internal static async Task RunTest(
+        TestConfiguration config,
+        string debuggeeName,
+        string scriptName,
+        ITestOutputHelper output,
+        string testName = null,
+        bool testLive = true,
+        bool testDump = true,
+        bool testTriage = false)
+    {
+        await RunTest(scriptName,
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestName = testName,
+                TestLive = testLive,
+                TestDump = testDump,
+                DebuggeeName = debuggeeName,
+                DumpType = SOSRunner.DumpType.Heap
+            },
+            output);
+
+        // All single-file dumps are currently forced to "full" so skip triage
+        // Issue: https://github.com/dotnet/diagnostics/issues/2515
+        if (testTriage && !config.PublishSingleFile)
+        {
+            await RunTest(scriptName,
+                new SOSRunner.TestInformation
+                {
+                    TestConfiguration = config,
+                    TestName = testName,
+                    TestLive = false,
+                    TestDump = testDump,
+                    DebuggeeName = debuggeeName,
+                    DumpType = SOSRunner.DumpType.Triage
+                },
+                output);
+        }
+    }
+
+    internal static void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
     {
         string crashReportPath = dumpName + ".crashreport.json";
         TestRunner.OutputHelper outputHelper = TestRunner.ConfigureLogging(information.TestConfiguration, information.OutputHelper, information.TestName + ".CrashReportTest");
@@ -145,48 +180,44 @@ public class SOS
             outputHelper.Dispose();
         }
     }
+}
 
-    private async Task RunTest(TestConfiguration config, string debuggeeName, string scriptName, string testName = null, bool testLive = true, bool testDump = true, bool testTriage = false)
+[Collection("Windows Dump Generation")]
+public class SOS : ICollectionFixture<DumpGenerationFixture>
+{
+    public SOS(ITestOutputHelper output)
     {
-        await RunTest(scriptName, new SOSRunner.TestInformation
-        {
-            TestConfiguration = config,
-            TestName = testName,
-            TestLive = testLive,
-            TestDump = testDump,
-            DebuggeeName = debuggeeName,
-            DumpType = SOSRunner.DumpType.Heap
-        });
-
-        // All single-file dumps are currently forced to "full" so skip triage
-        // Issue: https://github.com/dotnet/diagnostics/issues/2515
-        if (testTriage && !config.PublishSingleFile)
-        {
-            await RunTest(scriptName, new SOSRunner.TestInformation
-            {
-                TestConfiguration = config,
-                TestName = testName,
-                TestLive = false,
-                TestDump = testDump,
-                DebuggeeName = debuggeeName,
-                DumpType = SOSRunner.DumpType.Triage
-            });
-        }
+        Output = output;
     }
+
+    private ITestOutputHelper Output { get; set; }
+
+    public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
-        await RunTest(config, "DivZero", "DivZero.script", testTriage: true);
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "DivZero",
+            scriptName: "DivZero.script",
+            Output,
+            testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task GCTests(TestConfiguration config)
     {
-        SkipIfArm(config);
+        SOSTestHelpers.SkipIfArm(config);
 
         // Live only
-        await RunTest(config, "GCWhere", "GCTests.script", testName: "SOS.GCTests", testDump: false);
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "GCWhere",
+            scriptName: "GCTests.script",
+            Output,
+            testName: "SOS.GCTests",
+            testDump: false);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
@@ -196,77 +227,110 @@ public class SOS
         {
             throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
         }
-        await RunTest(config, "GCPOH", "GCPOH.script", testName: "SOS.GCPOHTests", testDump: false);
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "GCPOH",
+            scriptName: "GCPOH.script",
+            Output,
+            testName: "SOS.GCPOHTests",
+            testDump: false);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Overflow(TestConfiguration config)
     {
-        await RunTest("Overflow.script", new SOSRunner.TestInformation
-        {
-            TestConfiguration = config,
-            DebuggeeName = "Overflow",
-            // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
-            DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
-            // Single file dumps don't capture the overflow exception info so disable testing against a dump
-            // Issue: https://github.com/dotnet/diagnostics/issues/2515
-            TestDump = !config.PublishSingleFile,
-            // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
-            DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
-        });
+        await SOSTestHelpers.RunTest(
+            scriptName: "Overflow.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                DebuggeeName = "Overflow",
+                // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
+                DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
+                // Single file dumps don't capture the overflow exception info so disable testing against a dump
+                // Issue: https://github.com/dotnet/diagnostics/issues/2515
+                TestDump = !config.PublishSingleFile,
+                // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
+                DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
+            },
+            Output);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Reflection(TestConfiguration config)
     {
-        await RunTest(config, "ReflectionTest", "Reflection.script", testTriage: true);
+        await SOSTestHelpers.RunTest(config, debuggeeName: "ReflectionTest", scriptName: "Reflection.script", Output, testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task SimpleThrow(TestConfiguration config)
     {
-        await RunTest(config, "SimpleThrow", "SimpleThrow.script", testTriage: true);
+        await SOSTestHelpers.RunTest(config, debuggeeName: "SimpleThrow", scriptName: "SimpleThrow.script", Output, testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LineNums(TestConfiguration config)
     {
-        await RunTest(config, "LineNums", "LineNums.script", testTriage: true);
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "LineNums",
+            scriptName: "LineNums.script",
+            Output,
+            testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task NestedExceptionTest(TestConfiguration config)
     {
-        await RunTest(config, "NestedExceptionTest", "NestedExceptionTest.script", testTriage: true);
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "NestedExceptionTest",
+            scriptName: "NestedExceptionTest.script",
+            Output,
+            testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task TaskNestedException(TestConfiguration config)
     {
-        await RunTest(config, "TaskNestedException", "TaskNestedException.script", testTriage: true);
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "TaskNestedException",
+            scriptName: "TaskNestedException.script",
+            Output,
+            testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTests(TestConfiguration config)
     {
-        await RunTest(config, "NestedExceptionTest", "StackTests.script", testName: "SOS.StackTests");
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "NestedExceptionTest",
+            scriptName: "StackTests.script",
+            Output,
+            testName: "SOS.StackTests");
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task OtherCommands(TestConfiguration config)
     {
         // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-        await RunTest("OtherCommands.script", new SOSRunner.TestInformation
-        {
-            TestConfiguration = config,
-            TestName = "SOS.OtherCommands",
-            DebuggeeName = "SymbolTestApp",
-            // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
-            DebuggeeArguments = config.PublishSingleFile ? Path.Combine("%DEBUG_ROOT%", "..") : "%DEBUG_ROOT%"
-        });
+        await SOSTestHelpers.RunTest(
+            scriptName: "OtherCommands.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestName = "SOS.OtherCommands",
+                DebuggeeName = "SymbolTestApp",
+                // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
+                DebuggeeArguments = config.PublishSingleFile ? Path.Combine("%DEBUG_ROOT%", "..") : "%DEBUG_ROOT%"
+            },
+            Output);
     }
 
-    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.StackAndOtherTests")]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
@@ -277,16 +341,19 @@ public class SOS
             string debuggeeDumpInputRootDir = Path.Combine(currentConfig.DebuggeeDumpInputRootDir(), currentConfig.DebugType);
 
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-            await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation
-            {
-                TestConfiguration = currentConfig,
-                TestName = "SOS.StackAndOtherTests",
-                DebuggeeName = "SymbolTestApp",
-                DebuggeeArguments = debuggeeArguments,
-                DumpNameSuffix = currentConfig.DebugType,
-                DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
-                DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
-            });
+            await SOSTestHelpers.RunTest(
+                scriptName: "StackAndOtherTests.script",
+                new SOSRunner.TestInformation
+                {
+                    TestConfiguration = currentConfig,
+                    TestName = "SOS.StackAndOtherTests",
+                    DebuggeeName = "SymbolTestApp",
+                    DebuggeeArguments = debuggeeArguments,
+                    DumpNameSuffix = currentConfig.DebugType,
+                    DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
+                    DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
+                },
+                Output);
 
             // This tests using regular Windows PDBs with no managed hosting. SOS should fallback
             // to using native implementations of the host/target/runtime.
@@ -296,34 +363,37 @@ public class SOS
                 {
                     ["SetHostRuntime"] = "-none"
                 };
-                await RunTest("StackAndOtherTests.script", new SOSRunner.TestInformation
-                {
-                    TestConfiguration = new TestConfiguration(settings),
-                    TestName = "SOS.StackAndOtherTests",
-                    DebuggeeName = "SymbolTestApp",
-                    DebuggeeArguments = debuggeeArguments,
-                    DumpNameSuffix = currentConfig.DebugType,
-                    DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
-                    DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
-                });
+                await SOSTestHelpers.RunTest(
+                    scriptName: "StackAndOtherTests.script", new SOSRunner.TestInformation
+                    {
+                        TestConfiguration = new TestConfiguration(settings),
+                        TestName = "SOS.StackAndOtherTests",
+                        DebuggeeName = "SymbolTestApp",
+                        DebuggeeArguments = debuggeeArguments,
+                        DumpNameSuffix = currentConfig.DebugType,
+                        DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
+                        DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
+                    },
+                    Output);
             }
         }
     }
 
-    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.WebApp3")]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.WebApp3", MemberType = typeof(SOSTestHelpers))]
     public async Task WebApp3(TestConfiguration config)
     {
-        await RunTest("WebApp.script", new SOSRunner.TestInformation
+        await SOSTestHelpers.RunTest("WebApp.script", new SOSRunner.TestInformation
         {
             TestConfiguration = config,
             TestLive = false,
             DebuggeeName = "WebApp3",
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
-        });
+        },
+                Output);
     }
 
-    [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "SOS.DualRuntimes")]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.DualRuntimes", MemberType = typeof(SOSTestHelpers))]
     public async Task DualRuntimes(TestConfiguration config)
     {
         if (config.PublishSingleFile)
@@ -336,57 +406,67 @@ public class SOS
         {
             throw new SkipTestException("DesktopTestParameters config value does not exists");
         }
-        await RunTest("DualRuntimes.script", new SOSRunner.TestInformation
-        {
-            TestConfiguration = config,
-            TestLive = false,
-            TestName = "SOS.DualRuntimes",
-            DebuggeeName = "WebApp3",
-            DebuggeeArguments = desktopTestParameters,
-            UsePipeSync = true,
-            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
-        });
+        await SOSTestHelpers.RunTest(
+            scriptName: "DualRuntimes.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestLive = false,
+                TestName = "SOS.DualRuntimes",
+                DebuggeeName = "WebApp3",
+                DebuggeeArguments = desktopTestParameters,
+                UsePipeSync = true,
+                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
+            },
+            Output);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
-        await RunTest("ConcurrentDictionaries.script", new SOSRunner.TestInformation
-        {
-            TestConfiguration = config,
-            TestLive = false,
-            DebuggeeName = "DotnetDumpCommands",
-            DebuggeeArguments = "dcd",
-            DumpNameSuffix = "dcd",
-            UsePipeSync = true,
-            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-        });
+        await SOSTestHelpers.RunTest(
+            scriptName: "ConcurrentDictionaries.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestLive = false,
+                DebuggeeName = "DotnetDumpCommands",
+                DebuggeeArguments = "dcd",
+                DumpNameSuffix = "dcd",
+                UsePipeSync = true,
+                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+            },
+            Output);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DumpGen(TestConfiguration config)
     {
-        await RunTest("DumpGen.script", new SOSRunner.TestInformation
-        {
-            TestConfiguration = config,
-            TestLive = false,
-            DebuggeeName = "DotnetDumpCommands",
-            DebuggeeArguments = "dumpgen",
-            DumpNameSuffix = "dumpgen",
-            UsePipeSync = true,
-            DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-        });
+        await SOSTestHelpers.RunTest(
+            scriptName: "DumpGen.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestLive = false,
+                DebuggeeName = "DotnetDumpCommands",
+                DebuggeeArguments = "dumpgen",
+                DumpNameSuffix = "dumpgen",
+                UsePipeSync = true,
+                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+            },
+            Output);
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
-        SkipIfArm(config);
+        SOSTestHelpers.SkipIfArm(config);
 
         if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || OS.IsAlpine)
         {
             throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
         }
+
         string testName = "SOS." + nameof(LLDBPluginTests);
         TestRunner.OutputHelper outputHelper = null;
         try

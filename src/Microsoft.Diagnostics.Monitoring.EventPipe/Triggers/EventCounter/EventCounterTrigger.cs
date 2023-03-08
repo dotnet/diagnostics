@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         // This allows caching of the event map between multiple instances of the trigger that
         // use the same event provider as the source of counter events.
         private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>> _eventMapCache =
-            new ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>>(StringComparer.OrdinalIgnoreCase);
+            new(StringComparer.OrdinalIgnoreCase);
 
         // Only care for the EventCounters events from any of the specified providers, thus
         // create a static readonly instance that is shared among all event maps.

@@ -43,9 +43,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public override int GetHashCode()
         {
             int hash = 0;
-            hash ^= this.Name.GetHashCode();
-            hash ^= this.Keywords.GetHashCode();
-            hash ^= this.EventLevel.GetHashCode();
+            hash ^= Name.GetHashCode();
+            hash ^= Keywords.GetHashCode();
+            hash ^= EventLevel.GetHashCode();
             hash ^= GetArgumentString().GetHashCode();
             return hash;
         }

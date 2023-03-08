@@ -13,11 +13,11 @@ namespace SOS.Hosting
 {
     internal sealed unsafe class DataTargetWrapper : COMCallableIUnknown
     {
-        private static readonly Guid IID_ICLRDataTarget = new Guid("3E11CCEE-D08B-43e5-AF01-32717A64DA03");
-        private static readonly Guid IID_ICLRDataTarget2 = new Guid("6d05fae3-189c-4630-a6dc-1c251e1c01ab");
-        private static readonly Guid IID_ICLRDataTarget4 = new Guid("E799DC06-E099-4713-BDD9-906D3CC02CF2");
-        private static readonly Guid IID_ICLRMetadataLocator = new Guid("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
-        private static readonly Guid IID_ICLRRuntimeLocator = new Guid("b760bf44-9377-4597-8be7-58083bdc5146");
+        private static readonly Guid IID_ICLRDataTarget = new("3E11CCEE-D08B-43e5-AF01-32717A64DA03");
+        private static readonly Guid IID_ICLRDataTarget2 = new("6d05fae3-189c-4630-a6dc-1c251e1c01ab");
+        private static readonly Guid IID_ICLRDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
+        private static readonly Guid IID_ICLRMetadataLocator = new("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
+        private static readonly Guid IID_ICLRRuntimeLocator = new("b760bf44-9377-4597-8be7-58083bdc5146");
 
         // For ClrMD's magic hand shake
         private const ulong MagicCallbackConstant = 0x43;

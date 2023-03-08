@@ -432,7 +432,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         public static Command CollectCommand() =>
-            new Command(
+            new(
                 name: "collect",
                 description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.")
             {
@@ -457,7 +457,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static uint DefaultCircularBufferSizeInMB() => 256;
 
         private static Option CircularBufferOption() =>
-            new Option(
+            new(
                 alias: "--buffersize",
                 description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
             {
@@ -467,7 +467,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static string DefaultTraceName => "default";
 
         private static Option OutputPathOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
                 description: $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.")
             {
@@ -475,7 +475,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option ProvidersOption() =>
-            new Option(
+            new(
                 alias: "--providers",
                 description: @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
                              @"where Provider is in the form: 'KnownProviderName[:[Flags][:[Level][:[KeyValueArgs]]]]', and KeyValueArgs is in the form: " +
@@ -490,7 +490,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option ProfileOption() =>
-            new Option(
+            new(
                 alias: "--profile",
                 description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.")
             {
@@ -498,7 +498,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option DurationOption() =>
-            new Option(
+            new(
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
             {
@@ -506,7 +506,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option CLREventsOption() =>
-            new Option(
+            new(
                 alias: "--clrevents",
                 description: @"List of CLR runtime events to emit.")
             {
@@ -514,21 +514,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option CLREventLevelOption() =>
-            new Option(
+            new(
                 alias: "--clreventlevel",
                 description: @"Verbosity of CLR events to be emitted.")
             {
                 Argument = new Argument<string>(name: "clreventlevel", getDefaultValue: () => string.Empty)
             };
         private static Option DiagnosticPortOption() =>
-            new Option(
+            new(
                 alias: "--diagnostic-port",
                 description: @"The path to a diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
             };
         private static Option ShowChildIOOption() =>
-            new Option(
+            new(
                 alias: "--show-child-io",
                 description: @"Shows the input and output streams of a launched child process in the current console.")
             {
@@ -536,7 +536,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option ResumeRuntimeOption() =>
-            new Option(
+            new(
                 alias: "--resume-runtime",
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {

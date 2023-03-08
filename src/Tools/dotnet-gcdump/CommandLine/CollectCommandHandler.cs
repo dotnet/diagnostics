@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         }
 
         public static Command CollectCommand() =>
-            new Command(
+            new(
                 name: "collect",
                 description: "Collects a diagnostic trace from a currently running process")
             {
@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect the gcdump from.")
             {
@@ -146,7 +146,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to collect the gcdump from.")
             {
@@ -154,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option OutputPathOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
                 description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
             {
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option VerboseOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-v", "--verbose" },
                 description: "Output the log while collecting the gcdump.")
             {
@@ -171,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         public static int DefaultTimeout = 30;
         private static Option TimeoutOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-t", "--timeout" },
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
             {

@@ -24,7 +24,7 @@ namespace SOS
             OSX = 3,
         };
 
-        private static Guid IID_IDebuggerServices = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
+        private static Guid IID_IDebuggerServices = new("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
         private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 

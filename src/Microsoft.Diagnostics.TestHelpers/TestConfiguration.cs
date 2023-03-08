@@ -26,7 +26,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { return _instance.Value; }
         }
 
-        private static Lazy<TestRunConfiguration> _instance = new Lazy<TestRunConfiguration>(() => ParseDefaultConfigFile());
+        private static readonly Lazy<TestRunConfiguration> _instance = new(() => ParseDefaultConfigFile());
 
         private static TestRunConfiguration ParseDefaultConfigFile()
         {
@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             return testRunConfig;
         }
 
-        private DateTime _timestamp = DateTime.Now;
+        private readonly DateTime _timestamp = DateTime.Now;
 
         public IEnumerable<TestConfiguration> Configurations { get; private set; }
 
@@ -384,9 +384,9 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static string BaseDir { get; set; } = Path.GetFullPath(".");
 
-        private static readonly Regex versionRegex = new Regex(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
+        private static readonly Regex versionRegex = new(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
 
-        private ReadOnlyDictionary<string, string> _settings;
+        private readonly ReadOnlyDictionary<string, string> _settings;
         private readonly string _configStringView;
         private readonly string _truncatedRuntimeFrameworkVersion;
 
@@ -469,7 +469,8 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public string LogSuffix
         {
-            get {
+            get
+            {
                 string version = RuntimeFrameworkVersion;
 
                 // The log name can't contain wild cards, which are used in some testing scenarios.
@@ -711,7 +712,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <exception cref="SkipTestException">the RuntimeFrameworkVersion property doesn't exist</exception>
         public int RuntimeFrameworkVersionMajor
         {
-            get {
+            get
+            {
                 string version = RuntimeFrameworkVersion;
                 if (version != null)
                 {
@@ -805,7 +807,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public string DotNetRoot
         {
-            get {
+            get
+            {
                 string dotnetRoot = GetValue("DotNetRoot");
                 return MakeCanonicalPath(dotnetRoot);
             }
@@ -818,7 +821,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public bool CreateDumpExists
         {
-            get {
+            get
+            {
                 return OS.Kind == OSKind.Linux && IsNETCore && RuntimeFrameworkVersionMajor >= 2 ||
                        OS.Kind == OSKind.OSX && IsNETCore && RuntimeFrameworkVersionMajor >= 5 ||
                        OS.Kind == OSKind.Windows && IsNETCore && RuntimeFrameworkVersionMajor >= 5;
@@ -934,7 +938,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // Default to Unknown
                 Kind = OSKind.Unknown;
             }
-            if (OS.Kind == OSKind.Linux)
+            if (Kind == OSKind.Linux)
             {
                 try
                 {

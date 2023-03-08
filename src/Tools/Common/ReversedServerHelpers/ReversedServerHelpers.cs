@@ -21,7 +21,7 @@ namespace Microsoft.Internal.Common.Utils
         private Process _childProc;
         private Task _stdOutTask = Task.CompletedTask;
         private Task _stdErrTask = Task.CompletedTask;
-        internal static ProcessLauncher Launcher = new ProcessLauncher();
+        internal static ProcessLauncher Launcher = new();
         private bool _processStarted;
 
         public void PrepareChildProcess(string[] args)

@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public static readonly Func<object, Exception, string> Callback = (state, exception) => ((LogObject)state).ToString();
 
         private readonly string _formattedMessage;
-        private List<KeyValuePair<string, object>> _items = new List<KeyValuePair<string, object>>();
+        private List<KeyValuePair<string, object>> _items = new();
 
         public LogObject(JsonElement element, string formattedMessage = null)
         {

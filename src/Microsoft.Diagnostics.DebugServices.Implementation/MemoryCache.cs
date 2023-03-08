@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <summary>
             /// Empty cluster
             /// </summary>
-            internal static Cluster Empty = new Cluster(Array.Empty<byte>());
+            internal static Cluster Empty = new(Array.Empty<byte>());
 
             /// <summary>
             /// The cached data.

@@ -87,7 +87,8 @@ public class SOSRunner : IDisposable
 
         public bool TestDump
         {
-            get {
+            get
+            {
                 return _testDump &&
                     // Only single file dumps on Windows
                     (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) &&
@@ -109,7 +110,8 @@ public class SOSRunner : IDisposable
 
         public DumpGenerator DumpGenerator
         {
-            get {
+            get
+            {
                 DumpGenerator dumpGeneration = _dumpGenerator;
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
@@ -128,7 +130,8 @@ public class SOSRunner : IDisposable
 
         public DumpType DumpType
         {
-            get {
+            get
+            {
                 // Currently neither cdb or dotnet-dump collect generates valid dumps on Windows for an single file app
                 // Issue: https://github.com/dotnet/diagnostics/issues/2515
                 return TestConfiguration.PublishSingleFile ? SOSRunner.DumpType.Full : _dumpType;

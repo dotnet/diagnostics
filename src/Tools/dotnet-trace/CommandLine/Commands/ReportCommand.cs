@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class ReportCommandHandler
     {
-        private static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process" };
+        private static List<string> unwantedMethodNames = new() { "ROOT", "Process" };
 
         //Create an extension function to help
         public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree)
@@ -103,7 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         public static Command ReportCommand() =>
-            new Command(
+            new(
                 name: "report",
                 description: "Generates a report into stdout from a previously generated trace.")
                 {
@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 };
 
         private static Argument<string> FileNameArgument() =>
-            new Argument<string>("trace_filename")
+            new("trace_filename")
             {
                 Name = "tracefile",
                 Description = "The file path for the trace being analyzed.",
@@ -142,7 +142,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         private static Option InclusiveOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--inclusive" },
                 description: $"Output the top N methods based on inclusive time. If not specified, exclusive time is used by default.")
             {
@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         private static Option VerboseOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-v", "--verbose" },
                 description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
             {

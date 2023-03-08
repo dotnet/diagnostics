@@ -15,7 +15,7 @@ namespace EventPipe.UnitTests.Common
     public class StreamProxy : Stream
     {
         private Stream ProxiedStream { get; }
-        private static MemoryStream InternalStream => new MemoryStream();
+        private static MemoryStream InternalStream => new();
         public override bool CanRead => ProxiedStream.CanRead;
 
         public override bool CanSeek => ProxiedStream.CanSeek;

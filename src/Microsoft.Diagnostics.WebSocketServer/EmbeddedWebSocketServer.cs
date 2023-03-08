@@ -51,7 +51,7 @@ internal sealed class EmbeddedWebSocketServer
     private static string[] MakeUrls(string scheme, string host, string port) => new string[] { $"{scheme}://{host}:{port}" };
     public static EmbeddedWebSocketServer CreateWebServer(Options options, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
     {
-        var builder = new HostBuilder()
+        IHostBuilder builder = new HostBuilder()
             .ConfigureLogging(logging => {
                 /* FIXME: use a delegating provider that sends the output to the dotnet-dsrouter LoggerFactory */
                 logging.AddConsole().AddFilter(null, options.LogLevel);
@@ -75,7 +75,7 @@ internal sealed class EmbeddedWebSocketServer
                 options.SuppressStatusMessages = true;
             });
 
-        var host = builder.Build();
+        IHost host = builder.Build();
 
         return new EmbeddedWebSocketServer(host);
     }
@@ -92,7 +92,7 @@ internal sealed class EmbeddedWebSocketServer
 
         app.UseWebSockets();
         app.UseRouter(router => {
-            var options = router.ServiceProvider.GetRequiredService<IOptions<Options>>().Value;
+            Options options = router.ServiceProvider.GetRequiredService<IOptions<Options>>().Value;
             router.MapGet(options.Path, (context) => OnWebSocketGet(context, connectionHandler));
         });
     }
@@ -100,8 +100,8 @@ internal sealed class EmbeddedWebSocketServer
     public async Task StartWebServer(CancellationToken ct = default)
     {
         await _host.StartAsync(ct).ConfigureAwait(false);
-        var logger = _host.Services.GetRequiredService<ILogger<EmbeddedWebSocketServer>>();
-        var ipAddressSecure = _host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses
+        ILogger<EmbeddedWebSocketServer> logger = _host.Services.GetRequiredService<ILogger<EmbeddedWebSocketServer>>();
+        string ipAddressSecure = _host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses
         .Where(a => a.StartsWith("http:"))
         .Select(a => new Uri(a))
         .Select(uri => $"{uri.Host}:{uri.Port}")
@@ -133,7 +133,7 @@ internal sealed class EmbeddedWebSocketServer
             context.Response.StatusCode = 400;
             return;
         }
-        var socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
+        WebSocket socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
         if (connectionHandler != null)
         {
             await connectionHandler(context, socket, context.RequestAborted).ConfigureAwait(false);

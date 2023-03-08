@@ -9,7 +9,7 @@ namespace Microsoft.Diagnostics.Repl
     public sealed class CharToLineConverter
     {
         private readonly Action<string> m_callback;
-        private readonly StringBuilder m_text = new StringBuilder();
+        private readonly StringBuilder m_text = new();
 
         public CharToLineConverter(Action<string> callback)
         {

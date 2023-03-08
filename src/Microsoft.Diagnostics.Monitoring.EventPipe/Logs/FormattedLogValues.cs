@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         internal const int MaxCachedFormatters = 1024;
         private const string NullFormat = "[null]";
         private static int _count;
-        private static ConcurrentDictionary<string, LogValuesFormatter> _formatters = new ConcurrentDictionary<string, LogValuesFormatter>();
+        private static ConcurrentDictionary<string, LogValuesFormatter> _formatters = new();
         private readonly LogValuesFormatter _formatter;
         private readonly object[] _values;
         private readonly string _originalMessage;

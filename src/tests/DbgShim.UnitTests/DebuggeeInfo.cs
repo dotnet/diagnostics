@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics
         public int ProcessId { get; private set; }
         public IntPtr ResumeHandle { get; set; }
 
-        private readonly AutoResetEvent _createProcessEvent = new AutoResetEvent(false);
+        private readonly AutoResetEvent _createProcessEvent = new(false);
         private readonly NamedPipeServerStream _pipeServer;
         private HResult _createProcessResult = HResult.E_FAIL;
         private Process _process;

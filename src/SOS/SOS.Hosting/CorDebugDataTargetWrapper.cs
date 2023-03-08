@@ -11,10 +11,10 @@ namespace SOS.Hosting
 {
     public sealed unsafe class CorDebugDataTargetWrapper : COMCallableIUnknown
     {
-        private static readonly Guid IID_ICorDebugDataTarget = new Guid("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
-        private static readonly Guid IID_ICorDebugDataTarget4 = new Guid("E799DC06-E099-4713-BDD9-906D3CC02CF2");
-        private static readonly Guid IID_ICorDebugMutableDataTarget = new Guid("A1B8A756-3CB6-4CCB-979F-3DF999673A59");
-        private static readonly Guid IID_ICorDebugMetaDataLocator = new Guid("7cef8ba9-2ef7-42bf-973f-4171474f87d9");
+        private static readonly Guid IID_ICorDebugDataTarget = new("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
+        private static readonly Guid IID_ICorDebugDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
+        private static readonly Guid IID_ICorDebugMutableDataTarget = new("A1B8A756-3CB6-4CCB-979F-3DF999673A59");
+        private static readonly Guid IID_ICorDebugMetaDataLocator = new("7cef8ba9-2ef7-42bf-973f-4171474f87d9");
 
         private readonly ITarget _target;
         private readonly ISymbolService _symbolService;

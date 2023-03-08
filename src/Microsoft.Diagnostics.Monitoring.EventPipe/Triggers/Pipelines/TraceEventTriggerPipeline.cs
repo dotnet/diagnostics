@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 
         // Completion source to help coordinate running and stopping the pipeline.
         private readonly TaskCompletionSource<object> _completionSource =
-            new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // The source of the trace events to monitor.
         private readonly TraceEventSource _eventSource;

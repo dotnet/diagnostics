@@ -23,7 +23,7 @@ public class WebSocketServerImpl : IWebSocketServer
     // Used to coordinate between the webserver accepting incoming websocket connections and the diagnostic server waiting for a stream to be available.
     // This could be a deeper queue if we wanted to somehow allow multiple browser tabs to connect to the same dsrouter, but it's unclear what to do with them
     // since on the other end we have a single IpcStream with a single diagnostic client.
-    private readonly Queue<Conn> _acceptQueue = new Queue<Conn>();
+    private readonly Queue<Conn> _acceptQueue = new();
     private readonly LogLevel _logLevel;
 
     public WebSocketServerImpl(LogLevel logLevel)

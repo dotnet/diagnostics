@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         private const string ActivityDuration = "activityduration";
         private const string Activity1Start = "Activity1/Start";
         private const string Activity1Stop = "Activity1/Stop";
-        private static readonly Guid MicrosoftAspNetCoreHostingGuid = new Guid("{adb401e1-5296-51f8-c125-5fda75826144}");
+        private static readonly Guid MicrosoftAspNetCoreHostingGuid = new("{adb401e1-5296-51f8-c125-5fda75826144}");
         private static readonly Dictionary<string, IReadOnlyCollection<string>> _providerMap = new()
             {
                 { MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },

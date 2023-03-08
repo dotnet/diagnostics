@@ -31,9 +31,9 @@ namespace SOS.Hosting
             Runtime = 2,
         };
 
-        public static readonly Guid IID_ICLRDebuggingLibraryProvider = new Guid("3151C08D-4D09-4f9b-8838-2880BF18FE51");
-        public static readonly Guid IID_ICLRDebuggingLibraryProvider2 = new Guid("E04E2FF1-DCFD-45D5-BCD1-16FFF2FAF7BA");
-        public static readonly Guid IID_ICLRDebuggingLibraryProvider3 = new Guid("DE3AAB18-46A0-48B4-BF0D-2C336E69EA1B");
+        public static readonly Guid IID_ICLRDebuggingLibraryProvider = new("3151C08D-4D09-4f9b-8838-2880BF18FE51");
+        public static readonly Guid IID_ICLRDebuggingLibraryProvider2 = new("E04E2FF1-DCFD-45D5-BCD1-16FFF2FAF7BA");
+        public static readonly Guid IID_ICLRDebuggingLibraryProvider3 = new("DE3AAB18-46A0-48B4-BF0D-2C336E69EA1B");
 
         public IntPtr ILibraryProvider { get; }
 

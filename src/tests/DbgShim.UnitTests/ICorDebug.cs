@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics
 {
     public unsafe class ICorDebug : CallableCOMWrapper
     {
-        private static readonly Guid IID_ICorDebug = new Guid("3d6f5f61-7538-11d3-8d5b-00104b35e7ef");
+        private static readonly Guid IID_ICorDebug = new("3d6f5f61-7538-11d3-8d5b-00104b35e7ef");
 
         private ref readonly ICorDebugVTable VTable => ref Unsafe.AsRef<ICorDebugVTable>(_vtable);
 

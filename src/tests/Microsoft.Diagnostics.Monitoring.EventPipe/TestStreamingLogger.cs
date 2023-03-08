@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
     internal sealed class ScopeState : IEnumerable<IReadOnlyList<KeyValuePair<string, object>>>
     {
-        private readonly Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes = new Stack<IReadOnlyList<KeyValuePair<string, object>>>();
+        private readonly Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes = new();
 
         private sealed class ScopeEntry : IDisposable
         {
@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
     internal sealed class TestStreamingLogger : ILogger
     {
-        private readonly ScopeState _scopes = new ScopeState();
+        private readonly ScopeState _scopes = new();
         private readonly Stream _outputStream;
         private readonly string _categoryName;
         private readonly LogLevel _logLevel;

@@ -474,7 +474,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private class TestHandleableCollection<T> : HandleableCollection<T>
         {
-            private readonly List<TaskCompletionSource<object>> _handlerBeginSources = new List<TaskCompletionSource<object>>();
+            private readonly List<TaskCompletionSource<object>> _handlerBeginSources = new();
 
             protected override void OnHandlerBegin()
             {

@@ -467,7 +467,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (obj?.Type is not null)
                 {
-                    string depthTab = new string(' ', depth * TabWidth);
+                    string depthTab = new(' ', depth * TabWidth);
 
                     WriteHeaderLine($"{depthTab}{"Address",16} {"MT",16} {"Type",-32} {"Value",16} Name");
                     foreach (ClrInstanceField field in obj.Type.Fields)
@@ -1061,7 +1061,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         /// <summary>Creates an indenting string.</summary>
         /// <param name="count">The number of tabs.</param>
-        private static string Tabs(int count) => new string(' ', count * TabWidth);
+        private static string Tabs(int count) => new(' ', count * TabWidth);
 
         /// <summary>Shortens a string to a maximum length by eliding part of the string with ...</summary>
         private static string? Truncate(string? value, int maxLength)

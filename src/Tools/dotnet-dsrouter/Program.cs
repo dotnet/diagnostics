@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private delegate Task<int> DiagnosticsServerIpcClientWebSocketServerRouterDelegate(CancellationToken ct, string ipcClient, string webSocket, int runtimeTimeoutS, string verbose);
 
         private static Command IpcClientTcpServerRouterCommand() =>
-            new Command(
+            new(
                 name: "client-server",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP client. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Command IpcServerTcpServerRouterCommand() =>
-            new Command(
+            new(
                 name: "server-server",
                 description: "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP client. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Command IpcServerTcpClientRouterCommand() =>
-            new Command(
+            new(
                 name: "server-client",
                 description: "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP server. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Command IpcServerWebSocketServerRouterCommand() =>
-        new Command(
+        new(
             name: "server-websocket",
             description: "Starts a .NET application Diagnostic Server routing local IPC client <--> remote WebSocket client. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
@@ -80,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         };
 
         private static Command IpcClientWebSocketServerRouterCommand() =>
-        new Command(
+        new(
             name: "client-websocket",
             description: "Starts a .NET application Diagnostic Server routing local IPC server <--> remote WebSocket client. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         };
 
         private static Command IpcClientTcpClientRouterCommand() =>
-            new Command(
+            new(
                 name: "client-client",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP server. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option IpcClientAddressOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--ipc-client", "-ipcc" },
                 description: "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
                                 "Router connects diagnostic tool ipc server when establishing a " +
@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option IpcServerAddressOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--ipc-server", "-ipcs" },
                 description: "The diagnostics server ipc address to route. Router accepts ipc connections from diagnostic tools " +
                                 "establishing a new route between runtime and diagnostic tool. If not specified " +
@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option TcpClientAddressOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--tcp-client", "-tcpc" },
                 description: "The runtime TCP/IP address using format [host]:[port]. " +
                                 "Router can can connect 127.0.0.1, [::1], ipv4 address, ipv6 address, hostname addresses." +
@@ -136,7 +136,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option TcpServerAddressOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--tcp-server", "-tcps" },
                 description: "The router TCP/IP address using format [host]:[port]. " +
                                 "Router can bind one (127.0.0.1, [::1], 0.0.0.0, [::], ipv4 address, ipv6 address, hostname) " +
@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option WebSocketURLAddressOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--web-socket", "-ws" },
                 description: "The router WebSocket address using format ws://[host]:[port]/[path] or wss://[host]:[port]/[path]. " +
                                 "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url")
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option RuntimeTimeoutOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--runtime-timeout", "-rt" },
                 description: "Automatically shutdown router if no runtime connects to it before specified timeout (seconds)." +
                                 "If not specified, router won't trigger an automatic shutdown.")
@@ -165,7 +165,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option VerboseOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--verbose", "-v" },
                 description: "Enable verbose logging (debug|trace)")
             {
@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             };
 
         private static Option ForwardPortOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--forward-port", "-fp" },
                 description: "Enable port forwarding, values Android|iOS for TcpClient and only Android for TcpServer. Make sure to set ANDROID_SDK_ROOT before using this option on Android.")
             {

@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static EventLevel defaultEventLevel = EventLevel.Verbose;
         // Keep this in sync with runtime repo's clretwall.man
-        private static Dictionary<string, long> CLREventKeywords = new Dictionary<string, long>(StringComparer.InvariantCultureIgnoreCase)
+        private static Dictionary<string, long> CLREventKeywords = new(StringComparer.InvariantCultureIgnoreCase)
         {
             { "gc", 0x1 },
             { "gchandle", 0x2 },

@@ -28,9 +28,9 @@ namespace SOS.Hosting
             Unknown = 4
         }
 
-        public static Guid IID_IXCLRDataProcess = new Guid("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
-        public static Guid IID_ICorDebugProcess = new Guid("3d6f5f64-7538-11d3-8d5b-00104b35e7ef");
-        private static readonly Guid IID_IRuntime = new Guid("A5F152B9-BA78-4512-9228-5091A4CB7E35");
+        public static Guid IID_IXCLRDataProcess = new("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
+        public static Guid IID_ICorDebugProcess = new("3d6f5f64-7538-11d3-8d5b-00104b35e7ef");
+        private static readonly Guid IID_IRuntime = new("A5F152B9-BA78-4512-9228-5091A4CB7E35");
 
         #region DAC and DBI function delegates
 

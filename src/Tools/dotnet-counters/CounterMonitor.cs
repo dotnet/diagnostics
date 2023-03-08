@@ -33,11 +33,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private ICounterRenderer _renderer;
         private string _output;
         private bool _pauseCmdSet;
-        private TaskCompletionSource<int> _shouldExit;
+        private readonly TaskCompletionSource<int> _shouldExit;
         private bool _resumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
-        private string _metricsEventSourceSessionId;
+        private readonly string _metricsEventSourceSessionId;
         private int _maxTimeSeries;
         private int _maxHistograms;
         private TimeSpan _duration;
@@ -47,8 +47,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             public DateTime FirstReceiveTimestamp;
             public bool InstrumentEventObserved;
         }
-        private Dictionary<string, ProviderEventState> _providerEventStates = new Dictionary<string, ProviderEventState>();
-        private Queue<CounterPayload> _bufferedEvents = new Queue<CounterPayload>();
+        private readonly Dictionary<string, ProviderEventState> _providerEventStates = new();
+        private readonly Queue<CounterPayload> _bufferedEvents = new();
 
         public CounterMonitor()
         {

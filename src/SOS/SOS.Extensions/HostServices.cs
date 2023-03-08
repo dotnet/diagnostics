@@ -22,7 +22,7 @@ namespace SOS.Extensions
     /// </summary>
     public sealed unsafe class HostServices : COMCallableIUnknown, IHost
     {
-        private static readonly Guid IID_IHostServices = new Guid("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
+        private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
         /// <summary>
         /// This is the prototype of the native callback function.

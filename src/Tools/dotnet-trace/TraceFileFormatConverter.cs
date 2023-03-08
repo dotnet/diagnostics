@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
     internal static class TraceFileFormatConverter
     {
-        private static IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
+        private static readonly IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
             { TraceFileFormat.NetTrace,     "nettrace" },
             { TraceFileFormat.Speedscope,   "speedscope.json" },
             { TraceFileFormat.Chromium,     "chromium.json" }

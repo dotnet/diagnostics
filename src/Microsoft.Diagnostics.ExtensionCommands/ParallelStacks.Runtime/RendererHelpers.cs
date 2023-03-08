@@ -17,7 +17,7 @@ namespace ParallelStacks.Runtime
         private const int Padding = 5;
         private static void RenderStack(ParallelStack stack, IRenderer visitor, int increment = 0)
         {
-            string alignment = new string(' ', Padding * increment);
+            string alignment = new(' ', Padding * increment);
             if (stack.Stacks.Count == 0)
             {
                 StackFrame lastFrame = stack.Frame;

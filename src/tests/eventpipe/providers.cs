@@ -17,7 +17,7 @@ namespace EventPipe.UnitTests.ProviderValidation
     public sealed class MyEventSource : EventSource
     {
         private MyEventSource() { }
-        public static MyEventSource Log = new MyEventSource();
+        public static MyEventSource Log = new();
         public void MyEvent() { WriteEvent(1, "MyEvent"); }
     }
 

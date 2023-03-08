@@ -18,7 +18,7 @@ namespace EventPipe.UnitTests.Common
 {
     public class Logger
     {
-        public static Logger logger = new Logger();
+        public static Logger logger = new();
         private TextWriter _log;
         private Stopwatch _sw;
         public Logger(TextWriter log = null)
@@ -89,7 +89,7 @@ namespace EventPipe.UnitTests.Common
     public sealed class SentinelEventSource : EventSource
     {
         private SentinelEventSource() { }
-        public static SentinelEventSource Log = new SentinelEventSource();
+        public static SentinelEventSource Log = new();
         public void SentinelEvent() { WriteEvent(1, "SentinelEvent"); }
     }
 
@@ -102,7 +102,7 @@ namespace EventPipe.UnitTests.Common
         // A count of -1 indicates that you are only testing for the presence of the provider
         // and don't care about the number of events sent
         private Dictionary<string, ExpectedEventCount> _expectedEventCounts;
-        private Dictionary<string, int> _actualEventCounts = new Dictionary<string, int>();
+        private Dictionary<string, int> _actualEventCounts = new();
         private int _droppedEvents;
 
         // A function to be called with the EventPipeEventSource _before_
@@ -124,7 +124,7 @@ namespace EventPipe.UnitTests.Common
         /// <summary>
         /// This is the list of EventPipe providers for the sentinel EventSource that indicates that the process is ready
         /// </summary>
-        private List<EventPipeProvider> _sentinelProviders = new List<EventPipeProvider>()
+        private List<EventPipeProvider> _sentinelProviders = new()
         {
             new EventPipeProvider("SentinelEventSource", EventLevel.Verbose, -1)
         };
@@ -192,7 +192,7 @@ namespace EventPipe.UnitTests.Common
             sentinelTask.Start();
 
             int processId = Process.GetCurrentProcess().Id;
-            object threadSync = new object(); // for locking eventpipeSession access
+            object threadSync = new(); // for locking eventpipeSession access
             Func<int> optionalTraceValidationCallback = null;
             DiagnosticsClient client = new DiagnosticsClient(processId);
             var readerTask = new Task(() => {

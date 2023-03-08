@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
         }
 
         private static Command InstallCommand() =>
-            new Command(
+            new(
                 name: "install",
                 description: "Installs SOS and configures LLDB to load it on startup.")
             {
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
             };
 
         private static Option ArchitectureOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-a", "--arch", "--architecture" },
                 description: "The processor architecture to install.")
             {
@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
             };
 
         private static Command UninstallCommand() =>
-            new Command(
+            new(
                 name: "uninstall",
                 description: "Uninstalls SOS and reverts any configuration changes to LLDB.")
             {

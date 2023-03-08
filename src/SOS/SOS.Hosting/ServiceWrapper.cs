@@ -10,8 +10,8 @@ namespace SOS.Hosting
 {
     public sealed class ServiceWrapper : IDisposable
     {
-        private readonly Dictionary<Guid, Func<COMCallableIUnknown>> _factories = new Dictionary<Guid, Func<COMCallableIUnknown>>();
-        private readonly Dictionary<Guid, COMCallableIUnknown> _wrappers = new Dictionary<Guid, COMCallableIUnknown>();
+        private readonly Dictionary<Guid, Func<COMCallableIUnknown>> _factories = new();
+        private readonly Dictionary<Guid, COMCallableIUnknown> _wrappers = new();
 
         public ServiceWrapper()
         {

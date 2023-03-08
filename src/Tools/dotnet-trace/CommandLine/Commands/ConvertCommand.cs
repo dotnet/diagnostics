@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         public static Command ConvertCommand() =>
-            new Command(
+            new(
                 name: "convert",
                 description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the nettrace format")
             {
@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }.ExistingOnly();
 
         private static Option OutputOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
                 description: "Output filename. Extension of target format will be added.")
             {

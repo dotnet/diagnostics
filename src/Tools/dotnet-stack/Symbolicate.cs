@@ -18,9 +18,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class SymbolicateHandler
     {
-        private static readonly Regex s_regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
-        private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new Dictionary<string, string>();
-        private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new Dictionary<string, MetadataReader>();
+        private static readonly Regex s_regex = new(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new();
+        private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new();
 
         private delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
 
@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     Directory.GetCurrentDirectory()
                 };
-                foreach (var path in searchDir)
+                foreach (DirectoryInfo path in searchDir)
                 {
                     searchPaths.Add(path.FullName);
                 }
@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             try
             {
                 List<string> files = new List<string>();
-                foreach (var assemDir in paths)
+                foreach (string assemDir in paths)
                 {
                     if (Directory.Exists(assemDir))
                     {
@@ -296,7 +296,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         }
 
         public static Command SymbolicateCommand() =>
-            new Command(
+            new(
                 name: "symbolicate", description: "Get the line number from the Method Token and IL Offset in a stacktrace")
             {
                 // Handler
@@ -316,7 +316,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }.ExistingOnly();
 
         public static Option<DirectoryInfo[]> SearchDirectoryOption() =>
-            new Option<DirectoryInfo[]>(new[] { "-d", "--search-dir" }, "Path of multiple directories with assembly and pdb")
+            new(new[] { "-d", "--search-dir" }, "Path of multiple directories with assembly and pdb")
             {
                 Argument = new Argument<DirectoryInfo[]>(name: "directory1 directory2 ...", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()).GetDirectories())
                 {
@@ -325,7 +325,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option<FileInfo> OutputFileOption() =>
-            new Option<FileInfo>(new[] { "-o", "--output" }, "Output directly to a file (Default: <input-path>.symbolicated)")
+            new(new[] { "-o", "--output" }, "Output directly to a file (Default: <input-path>.symbolicated)")
             {
                 Argument = new Argument<FileInfo>(name: "output-path")
                 {
@@ -334,6 +334,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option<bool> StandardOutOption() =>
-            new Option<bool>(new[] { "-c", "--stdout" }, getDefaultValue: () => false, "Output directly to a console");
+            new(new[] { "-c", "--stdout" }, getDefaultValue: () => false, "Output directly to a console");
     }
 }

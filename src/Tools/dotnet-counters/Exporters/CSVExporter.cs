@@ -10,10 +10,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
     internal class CSVExporter : ICounterRenderer
     {
-        private object _lock = new object(); // protects the StringBuilder instance.
-        private string _output;
+        private readonly object _lock = new(); // protects the StringBuilder instance.
+        private readonly string _output;
         private StringBuilder builder;
-        private int flushLength = 10_000; // Arbitrary length to flush
+        private readonly int flushLength = 10_000; // Arbitrary length to flush
 
         public string Output { get; set; }
 

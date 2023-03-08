@@ -39,20 +39,20 @@ namespace Microsoft.Diagnostics.TestHelpers
         // Be careful not to cause deadlocks by calling the logging callbacks with the lock held.
         // The logger has its own lock and it will hold that lock when it calls into property getters
         // on this type.
-        private object _lock = new object();
-        private List<IProcessLogger> _loggers;
-        private Process _p;
+        private readonly object _lock = new();
+        private readonly List<IProcessLogger> _loggers;
+        private readonly Process _p;
         private DateTime _startTime;
         private TimeSpan _timeout;
         private ITestOutputHelper _traceOutput;
         private int? _expectedExitCode;
-        private TaskCompletionSource<Process> _waitForProcessStartTaskSource;
-        private Task<int> _waitForExitTask;
-        private Task _timeoutProcessTask;
-        private Task _readStdOutTask;
-        private Task _readStdErrTask;
-        private CancellationTokenSource _cancelSource;
-        private string _replayCommand;
+        private readonly TaskCompletionSource<Process> _waitForProcessStartTaskSource;
+        private readonly Task<int> _waitForExitTask;
+        private readonly Task _timeoutProcessTask;
+        private readonly Task _readStdOutTask;
+        private readonly Task _readStdErrTask;
+        private readonly CancellationTokenSource _cancelSource;
+        private readonly string _replayCommand;
         private KillReason? _killReason;
 
         public ProcessRunner(string exePath, string arguments, string replayCommand = null)

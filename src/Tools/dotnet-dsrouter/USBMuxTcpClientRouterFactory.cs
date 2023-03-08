@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             public AMDeviceNotificationCallbackInfo(IntPtr device, AMDeviceNotificationMessage message)
             {
-                this.am_device = device;
+                am_device = device;
                 this.message = message;
             }
 

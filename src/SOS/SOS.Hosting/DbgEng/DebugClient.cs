@@ -97,7 +97,8 @@ namespace SOS.Hosting.DbgEng
 
         internal static int NotImplemented
         {
-            get {
+            get
+            {
                 System.Diagnostics.Debugger.Break();
                 return HResult.E_NOTIMPL;
             }

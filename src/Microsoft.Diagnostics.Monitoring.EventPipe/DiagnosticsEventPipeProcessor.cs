@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly MonitoringSourceConfiguration _configuration;
         private readonly Func<EventPipeEventSource, Func<Task>, CancellationToken, Task> _onEventSourceAvailable;
 
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
 
         private TaskCompletionSource<bool> _initialized;
         private TaskCompletionSource<bool> _sessionStarted;

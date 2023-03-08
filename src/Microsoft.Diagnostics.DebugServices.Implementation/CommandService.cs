@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private Parser _parser;
         private readonly CommandLineBuilder _rootBuilder;
-        private readonly Dictionary<string, CommandHandler> _commandHandlers = new Dictionary<string, CommandHandler>();
+        private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
 
         /// <summary>
         /// Create an instance of the command processor;

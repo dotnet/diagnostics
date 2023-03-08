@@ -10,8 +10,8 @@ namespace Microsoft.Diagnostics
 {
     public sealed class ManagedCallbackWrapper : COMCallableIUnknown
     {
-        private static readonly Guid IID_ICorDebugManagedCallback = new Guid("3D6F5F60-7538-11D3-8D5B-00104B35E7EF");
-        private static readonly Guid IID_ICorDebugManagedCallback2 = new Guid("250E5EEA-DB5C-4C76-B6F3-8C46F12E3203");
+        private static readonly Guid IID_ICorDebugManagedCallback = new("3D6F5F60-7538-11D3-8D5B-00104B35E7EF");
+        private static readonly Guid IID_ICorDebugManagedCallback2 = new("250E5EEA-DB5C-4C76-B6F3-8C46F12E3203");
 
         private readonly DebuggeeInfo _startInfo;
 

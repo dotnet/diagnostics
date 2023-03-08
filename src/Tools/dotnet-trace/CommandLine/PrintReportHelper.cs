@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
 
             int n = nodesToReport.Count;
             int maxDigit = (int)Math.Log10(n) + 1;
-            string extra = new string(' ', maxDigit - 1);
+            string extra = new(' ', maxDigit - 1);
 
             string header = "Top " + n.ToString() + " Functions (" + measureType + ")";
             string uniformHeader = MakeFixedWidth(header, functionColumnWidth + 7);
@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
                 {
                     string inclusiveMeasure = "";
                     string exclusiveMeasure = "";
-                    string number = new string(' ', maxDigit + 2); //+2 to account for '. '
+                    string number = new(' ', maxDigit + 2); //+2 to account for '. '
 
                     if (j == 0)
                     {

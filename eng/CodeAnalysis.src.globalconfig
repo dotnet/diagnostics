@@ -1402,7 +1402,7 @@ dotnet_diagnostic.IDE0005.severity = suggestion
 dotnet_diagnostic.IDE0007.severity = silent
 
 # IDE0008: Use explicit type
-dotnet_diagnostic.IDE0008.severity = suggestion
+dotnet_diagnostic.IDE0008.severity = warning
 
 # IDE0009: Add this or Me qualification
 dotnet_diagnostic.IDE0009.severity = silent
@@ -1610,7 +1610,7 @@ dotnet_diagnostic.IDE0083.severity = silent
 dotnet_diagnostic.IDE0084.severity = none
 
 # IDE0090: Use 'new(...)'
-dotnet_diagnostic.IDE0090.severity = silent
+dotnet_diagnostic.IDE0090.severity = warning
 
 # IDE0100: Remove redundant equality
 dotnet_diagnostic.IDE0100.severity = warning

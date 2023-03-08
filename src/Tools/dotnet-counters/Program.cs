@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             TimeSpan duration);
 
         private static Command MonitorCommand() =>
-            new Command(
+            new(
                 name: "monitor",
                 description: "Start monitoring a .NET application")
             {
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Command CollectCommand() =>
-            new Command(
+            new(
                 name: "collect",
                 description: "Monitor counters in a .NET application and export the result into a file")
             {
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process that will be monitored.")
             {
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id that will be monitored.")
             {
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option RefreshIntervalOption() =>
-            new Option(
+            new(
                 alias: "--refresh-interval",
                 description: "The number of seconds to delay between updating the displayed counters.")
             {
@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ExportFormatOption() =>
-            new Option(
+            new(
                 alias: "--format",
                 description: "The format of exported counter data.")
             {
@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ExportFileNameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
                 description: "The output file name.")
             {
@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option CounterOption() =>
-            new Option(
+            new(
                 alias: "--counters",
                 description: "A comma-separated list of counter providers. Counter providers can be specified as <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without qualifying counter_names then all counters will be shown. For example \"System.Runtime[cpu-usage,working-set],Microsoft.AspNetCore.Hosting\" includes the cpu-usage and working-set counters from the System.Runtime provider and all the counters from the Microsoft.AspNetCore.Hosting provider. To discover provider and counter names, use the list command.")
             {
@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Command ListCommand() =>
-            new Command(
+            new(
                 name: "list",
                 description: "Display a list of counter names and descriptions, grouped by provider.")
             {
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option RuntimeVersionOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-r", "--runtime-version" },
                 description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0")
             {
@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option DiagnosticPortOption() =>
-            new Option(
+            new(
                 alias: "--diagnostic-port",
                 description: "The path to diagnostic port to be used.")
             {
@@ -174,7 +174,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ResumeRuntimeOption() =>
-            new Option(
+            new(
                 alias: "--resume-runtime",
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option MaxHistogramOption() =>
-            new Option(
+            new(
                 alias: "--maxHistograms",
                 description: "The maximum number of histograms that can be tracked. Each unique combination of provider name, histogram name, and dimension values" +
                 " counts as one histogram. Tracking more histograms uses more memory in the target process so this bound guards against unintentional high memory use.")
@@ -191,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option MaxTimeSeriesOption() =>
-            new Option(
+            new(
                 alias: "--maxTimeSeries",
                 description: "The maximum number of time series that can be tracked. Each unique combination of provider name, metric name, and dimension values" +
                 " counts as one time series. Tracking more time series uses more memory in the target process so this bound guards against unintentional high memory use.")
@@ -200,7 +200,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option DurationOption() =>
-            new Option(
+            new(
                 alias: "--duration",
                 description: @"When specified, will run for the given timespan and then automatically stop. Provided in the form of dd:hh:mm:ss.")
             {

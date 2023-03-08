@@ -10,11 +10,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
     internal class JSONExporter : ICounterRenderer
     {
-        private object _lock = new object();
-        private string _output;
-        private string _processName;
+        private readonly object _lock = new();
+        private readonly string _output;
+        private readonly string _processName;
         private StringBuilder builder;
-        private int flushLength = 10_000; // Arbitrary length to flush
+        private readonly int flushLength = 10_000; // Arbitrary length to flush
 
         public JSONExporter(string output, string processName)
         {

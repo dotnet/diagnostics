@@ -172,7 +172,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeProjectFileExists(output);
         }
 
-        private SemaphoreSlim _dotnetRestoreLock = new SemaphoreSlim(1);
+        private SemaphoreSlim _dotnetRestoreLock = new(1);
 
         protected async Task Restore(string extraArgs, ITestOutputHelper output)
         {

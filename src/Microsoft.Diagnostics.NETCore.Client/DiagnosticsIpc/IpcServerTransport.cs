@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (_disposed)
             {
-                throw new ObjectDisposedException(this.GetType().Name);
+                throw new ObjectDisposedException(GetType().Name);
             }
         }
 
@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private NamedPipeServerStream _stream;
 
-        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellation = new();
         private readonly string _pipeName;
         private readonly int _maxInstances;
 
@@ -160,7 +160,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal abstract class IpcSocketServerTransport : IpcServerTransport
     {
-        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellation = new();
         protected IpcSocket _socket;
 
         protected IpcSocketServerTransport(IIpcServerTransportCallbackInternal transportCallback = null)

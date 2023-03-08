@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         public static Command ListProfilesCommand() =>
-            new Command(
+            new(
                 name: "list-profiles",
                 description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile")
             {

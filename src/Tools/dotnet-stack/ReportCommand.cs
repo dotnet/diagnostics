@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                 // using the generated trace file, symbolicate and compute stacks.
                 tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
-                using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
                 using (var eventLog = new TraceLog(tempEtlxFilename))
                 {
                     var stackSource = new MutableTraceEventStackSource(eventLog)
@@ -164,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             return 0;
         }
 
-        private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
+        private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, MutableTraceEventStackSource stackSource)
         {
             console.Out.WriteLine($"Thread (0x{threadId:X}):");
             StackSourceCallStackIndex stackIndex = stackSourceSample.StackIndex;
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         }
 
         public static Command ReportCommand() =>
-            new Command(
+            new(
                 name: "report",
                 description: "reports the managed stacks from a running .NET process")
             {
@@ -191,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         private static Option DurationOption() =>
-            new Option(
+            new(
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
             {
@@ -200,7 +200,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to report the stack.")
             {
@@ -208,7 +208,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to report the stack.")
             {
