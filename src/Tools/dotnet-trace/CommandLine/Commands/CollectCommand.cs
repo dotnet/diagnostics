@@ -292,10 +292,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             {
                                 rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
                                 Console.CursorVisible = false;
+                                if (!rewriter.IsRewriteConsoleLineSupported)
+                                {
+                                    ConsoleWriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
+                                }
                             }
 
                             Action printStatus = () => {
-                                if (printStatusOverTime)
+                                if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
                                 {
                                     rewriter?.RewriteConsoleLine();
                                     fileInfo.Refresh();
