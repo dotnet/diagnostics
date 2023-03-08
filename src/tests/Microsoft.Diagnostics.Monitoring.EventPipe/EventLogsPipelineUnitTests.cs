@@ -262,7 +262,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(0, result.EventId);
             Assert.Equal(string.Empty, result.EventName);
             Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
-            Validate(result.Arguments, ("arg", "6"));
+            Validate(result.Arguments, ("Arg", "6"));
         }
 
         private static void ValidateLoggerRemoteCategoryWarningMessage(StreamReader reader)
