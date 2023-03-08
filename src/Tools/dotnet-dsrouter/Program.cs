@@ -6,7 +6,6 @@ using System.CommandLine;
 using System.CommandLine.Binding;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common.Utils;
