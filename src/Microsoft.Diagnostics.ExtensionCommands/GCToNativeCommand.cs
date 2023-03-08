@@ -29,7 +29,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private int Width
         {
-            get {
+            get
+            {
                 int width = Console.WindowWidth;
                 if (width == 0)
                 {

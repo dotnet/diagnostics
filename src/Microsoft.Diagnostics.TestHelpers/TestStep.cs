@@ -528,14 +528,13 @@ namespace Microsoft.Diagnostics.TestHelpers
                     }
                     string machine = machineElement.Value;
                     XElement processIDElement = initialStepStateElement.Element("ProcessID");
-                    int processID;
                     if (processIDElement == null ||
                         !processIDElement.Value.StartsWith("0x"))
                     {
                         return false;
                     }
                     string processIdNumberText = processIDElement.Value.Substring("0x".Length);
-                    if (!int.TryParse(processIdNumberText, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out processID))
+                    if (!int.TryParse(processIdNumberText, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int processID))
                     {
                         return false;
                     }
@@ -545,9 +544,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                     {
                         processName = processNameElement.Value;
                     }
-                    DateTimeOffset startTime;
                     XElement startTimeElement = initialStepStateElement.Element("StartTime");
-                    if (startTimeElement == null || !DateTimeOffset.TryParse(startTimeElement.Value, out startTime))
+                    if (startTimeElement == null || !DateTimeOffset.TryParse(startTimeElement.Value, out DateTimeOffset startTime))
                     {
                         return false;
                     }
@@ -579,8 +577,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         return;
                     }
                     XElement runStateElement = finalTaskStateElement.Element("RunState");
-                    TestStepRunState runState;
-                    if (runStateElement == null || !Enum.TryParse(runStateElement.Value, out runState))
+                    if (runStateElement == null || !Enum.TryParse(runStateElement.Value, out TestStepRunState runState))
                     {
                         return;
                     }
@@ -588,8 +585,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     XElement completeTimeElement = finalTaskStateElement.Element("CompleteTime");
                     if (completeTimeElement != null)
                     {
-                        DateTimeOffset tempCompleteTime;
-                        if (!DateTimeOffset.TryParse(completeTimeElement.Value, out tempCompleteTime))
+                        if (!DateTimeOffset.TryParse(completeTimeElement.Value, out DateTimeOffset tempCompleteTime))
                         {
                             return;
                         }

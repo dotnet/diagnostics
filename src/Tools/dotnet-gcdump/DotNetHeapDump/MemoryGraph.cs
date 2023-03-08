@@ -106,8 +106,7 @@ namespace Graphs
         /// </summary>
         public NodeIndex GetNodeIndex(ulong objectAddress)
         {
-            NodeIndex nodeIndex;
-            if (!m_addressToNodeIndex.TryGetValue(objectAddress, out nodeIndex))
+            if (!m_addressToNodeIndex.TryGetValue(objectAddress, out NodeIndex nodeIndex))
             {
                 nodeIndex = CreateNode();
                 m_nodeAddresses[(int)nodeIndex] = objectAddress;

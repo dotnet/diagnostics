@@ -136,7 +136,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             if (obj is Enum)
+            {
                 return obj.ToString();
+            }
 
             return obj switch
             {

@@ -732,21 +732,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get {
+            get
+            {
                 return _ipcServerRouterFactory.IpcServerPath;
             }
         }
 
         public override string TcpAddress
         {
-            get {
+            get
+            {
                 return _netServerRouterFactory.ServerAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get {
+            get
+            {
                 return _logger;
             }
         }
@@ -928,21 +931,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get {
+            get
+            {
                 return _ipcServerRouterFactory.IpcServerPath;
             }
         }
 
         public override string TcpAddress
         {
-            get {
+            get
+            {
                 return _tcpClientRouterFactory.TcpClientAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get {
+            get
+            {
                 return _logger;
             }
         }
@@ -1051,21 +1057,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get {
+            get
+            {
                 return _ipcClientRouterFactory.IpcClientPath;
             }
         }
 
         public override string TcpAddress
         {
-            get {
+            get
+            {
                 return _tcpServerRouterFactory.ServerAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get {
+            get
+            {
                 return _logger;
             }
         }
@@ -1199,21 +1208,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override string IpcAddress
         {
-            get {
+            get
+            {
                 return _ipcClientRouterFactory.IpcClientPath;
             }
         }
 
         public override string TcpAddress
         {
-            get {
+            get
+            {
                 return _tcpClientRouterFactory.TcpClientAddress;
             }
         }
 
         public override ILogger Logger
         {
-            get {
+            get
+            {
                 return _logger;
             }
         }
@@ -1498,7 +1510,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public bool IsRunning
         {
-            get {
+            get
+            {
                 if (_backendReadFrontendWriteTask == null || _frontendReadBackendWriteTask == null || _disposed)
                 {
                     return false;

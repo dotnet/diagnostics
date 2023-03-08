@@ -595,7 +595,8 @@ namespace Microsoft.Diagnostics.Repl
 
         int IConsoleService.WindowWidth
         {
-            get {
+            get
+            {
                 try
                 {
                     return Console.WindowWidth;

@@ -67,7 +67,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public string DefaultSymbolCache
         {
-            get {
+            get
+            {
                 if (_defaultSymbolCache == null)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -86,7 +87,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 return _defaultSymbolCache;
             }
-            set {
+            set
+            {
                 _defaultSymbolCache = value;
             }
         }

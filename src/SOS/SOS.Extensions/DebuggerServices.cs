@@ -389,7 +389,8 @@ namespace SOS
 
         public bool SupportsDml
         {
-            get {
+            get
+            {
                 uint supported = 0;
                 VTable.SupportsDml(Self, &supported);
                 return supported != 0;

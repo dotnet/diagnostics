@@ -295,7 +295,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         // if the name is null, we have to assume it's an awaiter
 
-                        Func<ClrInstanceField, bool> hasOneAwaiterField = static f => {
+                        Func<IClrInstanceField, bool> hasOneAwaiterField = static f => {
                             return f.Name is null
                                 || f.Name.StartsWith("<>u__", StringComparison.Ordinal);
                         };
@@ -955,7 +955,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     case ClrElementType.Char:
                         char c = obj.ReadField<char>(fieldName);
-                        return c is >= (char)32 and < (char)127 ? $"'{c}'" : $"'\\u{(int)c:X4}'";
+                        return c >= 32 && c < 127 ? $"'{c}'" : $"'\\u{(int)c:X4}'";
 
                     case ClrElementType.Int8:
                         return obj.ReadField<sbyte>(fieldName);
@@ -1159,55 +1159,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     sb.Append(s);
                 }
 
-                if ((stateFlags & 0x10000) != 0)
-                {
-                    Append("Started");
-                }
-
-                if ((stateFlags & 0x20000) != 0)
-                {
-                    Append("DelegateInvoked");
-                }
-
-                if ((stateFlags & 0x40000) != 0)
-                {
-                    Append("Disposed");
-                }
-
-                if ((stateFlags & 0x80000) != 0)
-                {
-                    Append("ExceptionObservedByParent");
-                }
-
-                if ((stateFlags & 0x100000) != 0)
-                {
-                    Append("CancellationAcknowledged");
-                }
-
-                if ((stateFlags & 0x200000) != 0)
-                {
-                    Append("Faulted");
-                }
-
-                if ((stateFlags & 0x400000) != 0)
-                {
-                    Append("Canceled");
-                }
-
-                if ((stateFlags & 0x800000) != 0)
-                {
-                    Append("WaitingOnChildren");
-                }
-
-                if ((stateFlags & 0x1000000) != 0)
-                {
-                    Append("RanToCompletion");
-                }
-
-                if ((stateFlags & 0x4000000) != 0)
-                {
-                    Append("CompletionReserved");
-                }
+                if ((stateFlags & 0x10000) != 0) { Append("Started"); }
+                if ((stateFlags & 0x20000) != 0) { Append("DelegateInvoked"); }
+                if ((stateFlags & 0x40000) != 0) { Append("Disposed"); }
+                if ((stateFlags & 0x80000) != 0) { Append("ExceptionObservedByParent"); }
+                if ((stateFlags & 0x100000) != 0) { Append("CancellationAcknowledged"); }
+                if ((stateFlags & 0x200000) != 0) { Append("Faulted"); }
+                if ((stateFlags & 0x400000) != 0) { Append("Canceled"); }
+                if ((stateFlags & 0x800000) != 0) { Append("WaitingOnChildren"); }
+                if ((stateFlags & 0x1000000) != 0) { Append("RanToCompletion"); }
+                if ((stateFlags & 0x4000000) != 0) { Append("CompletionReserved"); }
 
                 if (sb is not null)
                 {

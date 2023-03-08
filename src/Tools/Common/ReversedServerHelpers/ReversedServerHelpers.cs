@@ -76,14 +76,16 @@ namespace Microsoft.Internal.Common.Utils
 
         public bool HasChildProc
         {
-            get {
+            get
+            {
                 return _childProc != null;
             }
         }
 
         public Process ChildProc
         {
-            get {
+            get
+            {
                 return _childProc;
             }
         }

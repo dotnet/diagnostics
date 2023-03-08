@@ -518,7 +518,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             internal IConsoleService ConsoleService
             {
-                get {
+                get
+                {
                     _console ??= Services.GetService<IConsoleService>();
                     return _console;
                 }

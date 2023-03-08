@@ -89,7 +89,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public Version RuntimeVersion
         {
-            get {
+            get
+            {
                 if (_runtimeVersion is null)
                 {
                     Version version = _clrInfo.Version;

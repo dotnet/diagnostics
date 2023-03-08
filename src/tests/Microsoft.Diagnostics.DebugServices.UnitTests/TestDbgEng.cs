@@ -168,7 +168,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             private DEBUG_STATUS ExecutionStatus
             {
-                get {
+                get
+                {
                     HResult hr = Control.GetExecutionStatus(out DEBUG_STATUS status);
                     if (hr != HResult.S_OK)
                     {
@@ -176,7 +177,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                     return status;
                 }
-                set {
+                set
+                {
                     HResult hr = Control.SetExecutionStatus(value);
                     if (hr != HResult.S_OK)
                     {

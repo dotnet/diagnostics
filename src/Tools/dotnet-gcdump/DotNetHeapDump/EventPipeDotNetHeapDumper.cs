@@ -79,7 +79,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 int gcNum = -1;
 
-                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data) {
+                gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
+                {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -94,7 +95,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 };
 
-                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data) {
+                gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data)
+                {
                     if (data.ProcessID != processID)
                     {
                         return;
@@ -107,7 +109,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     }
                 };
 
-                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data) {
+                gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
+                {
                     if (data.ProcessID != processID)
                     {
                         return;

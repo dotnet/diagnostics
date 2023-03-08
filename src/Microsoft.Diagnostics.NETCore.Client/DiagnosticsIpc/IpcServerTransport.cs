@@ -63,7 +63,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static int MaxAllowedConnections
         {
-            get {
+            get
+            {
                 return -1;
             }
         }

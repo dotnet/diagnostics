@@ -835,8 +835,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 foreach (ClrObject obj in _heap.EnumerateObjects(new MemoryRange(start, end)))
+                {
                     if (obj.IsValid)
+                    {
                         yield return obj;
+                    }
+                }
             }
         }
 
@@ -1092,7 +1096,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             const string defaultContent = "?";
 
-            IAddressableTypedEntity field = GetFieldFrom(obj, propertyName);
+            IClrValue field = GetFieldFrom(obj, propertyName);
             if (field.Type is ClrType fieldType)
             {
                 if (fieldType.IsString)
@@ -1107,7 +1111,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     return $"dumpobj {field.Address:x16}";
                 }
-                else if (IsSimpleType(fieldType.Name) && TryGetSimpleValue(obj, fieldType, propertyName, out var simpleValuecontent))
+                else if (IsSimpleType(fieldType.Name) && TryGetSimpleValue(obj, fieldType, propertyName, out string simpleValuecontent))
                 {
                     return simpleValuecontent;
                 }
@@ -1119,7 +1123,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else
             {
                 if (field is ClrObject objectField && objectField.IsNull)
+                {
                     return "null";
+                }
 
                 return defaultContent;
             }

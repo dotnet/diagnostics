@@ -174,8 +174,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
             if (info.UsesJavaScript || info.UsesDotNet)
             {
                 // Merge with previous values.
-                ProcessInfo prev;
-                if (ret.TryGetValue(info.ID, out prev))
+                if (ret.TryGetValue(info.ID, out ProcessInfo prev))
                 {
                     info.UsesDotNet |= prev.UsesDotNet;
                     info.UsesJavaScript |= prev.UsesJavaScript;
@@ -327,8 +326,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
         TotalProcessCommit = deserializer.ReadInt64();
         TotalProcessWorkingSet = deserializer.ReadInt64();
 
-        int count;
-        deserializer.Read(out count);
+        deserializer.Read(out int count);
         if (count != 0)
         {
             float[] a = new float[count];
@@ -471,7 +469,8 @@ public class InteropInfo : IFastSerializable
 
         public string moduleName
         {
-            get {
+            get
+            {
                 if (_moduleName == null)
                 {
                     int pos = fileName.LastIndexOf('\\');

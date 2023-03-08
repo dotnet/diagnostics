@@ -431,7 +431,8 @@ namespace SOS.Hosting
 
         private static string DbiName
         {
-            get {
+            get
+            {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     return "mscordbi.dll";
@@ -453,7 +454,8 @@ namespace SOS.Hosting
 
         private static string DacName
         {
-            get {
+            get
+            {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     return "mscordaccore.dll";
@@ -475,7 +477,8 @@ namespace SOS.Hosting
 
         private ISymbolService SymbolService
         {
-            get {
+            get
+            {
                 if (_symbolService is null)
                 {
                     _symbolService = new SymbolService(this);

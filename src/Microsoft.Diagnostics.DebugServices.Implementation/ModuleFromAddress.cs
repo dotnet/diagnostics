@@ -28,7 +28,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override uint? IndexTimeStamp
         {
-            get {
+            get
+            {
                 PEFile peFile = Services.GetService<PEFile>();
                 return peFile?.Timestamp;
             }
@@ -36,7 +37,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override uint? IndexFileSize
         {
-            get {
+            get
+            {
                 PEFile peFile = Services.GetService<PEFile>();
                 return peFile?.SizeOfImage;
             }

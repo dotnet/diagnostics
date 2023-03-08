@@ -75,7 +75,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public bool IsPEImage
         {
-            get {
+            get
+            {
                 // For Windows targets, we can always assume that all the modules are PEs.
                 if (Target.OperatingSystem == OSPlatform.Windows)
                 {
@@ -88,7 +89,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public bool IsManaged
         {
-            get {
+            get
+            {
                 Services.GetService<PEFile>();
                 return (_flags & Flags.IsManaged) != 0;
             }
@@ -96,7 +98,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public bool? IsFileLayout
         {
-            get {
+            get
+            {
                 Services.GetService<PEFile>();
                 if ((_flags & Flags.IsFileLayout) != 0)
                 {
@@ -117,7 +120,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public virtual ImmutableArray<byte> BuildId
         {
-            get {
+            get
+            {
                 if (_buildId.IsDefault)
                 {
                     byte[] id = ModuleService.GetBuildId(ImageBase);

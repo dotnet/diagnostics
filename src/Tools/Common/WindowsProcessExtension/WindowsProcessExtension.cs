@@ -52,9 +52,8 @@ namespace Microsoft.Internal.Common.Utils
 
                 int unicodeStringOffset = processBitness == 64 ? 0x70 : 0x40;
 
-                IntPtr ptr;
 
-                if (!ReadIntPtr(processHandle, pPeb + offset, out ptr))
+                if (!ReadIntPtr(processHandle, pPeb + offset, out IntPtr ptr))
                 {
                     return "[cannot determine command line arguments]";
                 }
@@ -130,13 +129,12 @@ namespace Microsoft.Internal.Common.Utils
         {
             ProcessNativeMethods.ProcessInformation pbi = default(ProcessNativeMethods.ProcessInformation);
             int pbiSize = Marshal.SizeOf(pbi);
-            int res_len;
             ProcessNativeMethods.NtQueryInformationProcess(
                 hProcess,
                 ProcessNativeMethods.ProcessBasicInformation,
                 ref pbi,
                 pbiSize,
-                out res_len);
+                out int res_len);
 
             if (res_len != pbiSize)
             {
@@ -182,8 +180,7 @@ namespace Microsoft.Internal.Common.Utils
         {
             if (System.Environment.Is64BitOperatingSystem)
             {
-                bool wow64;
-                if (!ProcessNativeMethods.IsWow64Process(hProcess, out wow64))
+                if (!ProcessNativeMethods.IsWow64Process(hProcess, out bool wow64))
                 {
                     return 32;
                 }

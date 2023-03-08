@@ -187,7 +187,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                         // If we found no matching regions, expand the current region to be the right length.
                                         if (!foundNext)
+                                        {
                                             region.End = mem.Address + mem.Size.Value;
+                                        }
                                     }
                                     else if (region.Size > mem.Size.Value)
                                     {
@@ -241,7 +243,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static IEnumerable<(ulong Address, ulong? Size, ClrMemoryKind Kind)> EnumerateClrMemoryAddresses(ClrRuntime runtime)
         {
             foreach (ClrNativeHeapInfo nativeHeap in runtime.EnumerateClrNativeHeaps())
+            {
                 yield return (nativeHeap.Address, nativeHeap.Size, nativeHeap.Kind == NativeHeapKind.Unknown ? ClrMemoryKind.None : (ClrMemoryKind)nativeHeap.Kind);
+            }
 
             ulong prevHandle = 0;
             ulong granularity = 0x100;
@@ -265,10 +269,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (ClrSegment seg in runtime.Heap.Segments)
             {
                 if (seg.CommittedMemory.Length > 0)
+                {
                     yield return (seg.CommittedMemory.Start, null, ClrMemoryKind.GCHeap);
+                }
 
                 if (seg.ReservedMemory.Length > 0)
+                {
                     yield return (seg.ReservedMemory.Start, null, ClrMemoryKind.GCHeapReserve);
+                }
             }
         }
 
@@ -283,9 +291,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     and not ClrMemoryKind.HighFrequencyHeap)
                 {
                     if (mem.Size is not ulong size)
+                    {
                         size = 0;
+                    }
 
-                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address+size:x}] {mem.Kind}.");
+                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + size:x}] {mem.Kind}.");
                 }
 
                 region.ClrMemoryKind = mem.Kind;
@@ -305,7 +315,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     DescribedRegion range = FindMemory(ranges, sp);
                     if (range is not null)
+                    {
                         range.Usage = MemoryRegionUsage.Stack;
+                    }
                 }
             }
         }
@@ -458,7 +470,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             HandleTable,
         }
 
-        internal class DescribedRegion : IMemoryRegion
+        internal sealed class DescribedRegion : IMemoryRegion
         {
             public DescribedRegion()
             {
@@ -518,7 +530,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             public string Name
             {
-                get {
+                get
+                {
                     if (ClrMemoryKind != ClrMemoryKind.None)
                     {
                         if (ClrMemoryKind == ClrMemoryKind.GCHeapReserve)
@@ -530,12 +543,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
 
                     if (Usage != MemoryRegionUsage.Unknown)
+                    {
                         return Usage.ToString();
+                    }
 
                     if (State == MemoryRegionState.MEM_RESERVE)
                     {
                         if (PrevRegionName is not null)
+                        {
                             return $"[{PrevRegionName}Reserve]";
+                        }
 
                         return "[RESERVED]";
                     }

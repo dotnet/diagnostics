@@ -61,7 +61,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public KeyValuePair<string, object> this[int index]
         {
-            get {
+            get
+            {
                 if (index < 0 || index >= Count)
                 {
                     throw new IndexOutOfRangeException(nameof(index));
@@ -78,7 +79,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public int Count
         {
-            get {
+            get
+            {
                 if (_formatter == null)
                 {
                     return 1;
