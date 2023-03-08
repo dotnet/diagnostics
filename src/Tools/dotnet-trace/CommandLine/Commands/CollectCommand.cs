@@ -284,16 +284,23 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             {
                                 rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
                                 Console.CursorVisible = false;
+                                if (!rewriter.IsRewriteConsoleLineSupported)
+                                {
+                                    ConsoleWriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
+                                }
                             }
 
                             Action printStatus = () =>
                             {
                                 if (printStatusOverTime)
                                 {
-                                    rewriter?.RewriteConsoleLine();
-                                    fileInfo.Refresh();
-                                    ConsoleWriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
-                                    ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                    if (rewriter.IsRewriteConsoleLineSupported)
+                                    {
+                                        rewriter?.RewriteConsoleLine();
+                                        fileInfo.Refresh();
+                                        ConsoleWriteLine($"[{stopwatch.Elapsed.ToString(@"dd\:hh\:mm\:ss")}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                        ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
+                                    }
                                 }
 
                                 if (rundownRequested)
