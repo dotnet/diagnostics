@@ -11,10 +11,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     internal sealed class TableOutput
     {
         private readonly char _spacing = ' ';
+        
         public string Divider { get; set; } = " ";
-        public bool AlignLeft { get; set; }
+        
+        public bool AlignLeft { get; set; } = false;
+        
+        public int ColumnCount => _formats.Length;
 
         public IConsoleService Console { get; }
+        
         public int TotalWidth => 1 * (_formats.Length - 1) + _formats.Sum(c => Math.Abs(c.width));
 
         private readonly (int width, string format)[] _formats;
