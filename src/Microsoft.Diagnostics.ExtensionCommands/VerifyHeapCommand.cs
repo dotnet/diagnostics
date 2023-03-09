@@ -203,7 +203,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             string message = corruption.Kind switch
             {
-                //ObjectCorruptionKind.CouldNotReadMethodTable => $"Could not read method table for Object {objAddress:x}",
+                ObjectCorruptionKind.CouldNotReadMethodTable => $"Could not read method table for Object {obj:x}",
                 //ObjectCorruptionKind.ObjectNotPointerAligned => $"Object {obj:x} is not pointer aligned",
                 //ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj:x} has an unaligned member at {corruption.Offset:x}: is not pointer aligned",
                 ObjectCorruptionKind.CouldNotReadObject => $"Could not read object {obj:x} at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
