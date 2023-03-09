@@ -4,6 +4,7 @@
 using System.Threading;
 using Microsoft.Diagnostics.DebugServices;
 using SOS.Hosting.DbgEng.Interop;
+using System.Xml.Linq;
 
 namespace SOS.Extensions
 {
@@ -27,6 +28,12 @@ namespace SOS.Extensions
 
         public void WriteDml(string text) => _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);
 
+        public void WriteDmlExec(string text, string cmd)
+        {
+            string dml = $"<exec \"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
+            WriteDml(dml);
+        }
+
         public bool SupportsDml => _supportsDml ??= _debuggerServices.SupportsDml;
 
         public CancellationToken CancellationToken { get; set; }
@@ -34,5 +41,10 @@ namespace SOS.Extensions
         int IConsoleService.WindowWidth => _debuggerServices.GetOutputWidth();
 
         #endregion
+
+        private string DmlEscape(string text)
+        {
+            return new XText(text).ToString();
+        }
     }
 }

@@ -158,6 +158,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
+        public void WriteDmlExec(string text, string action)
+        {
+            _consoleService.WriteDmlExec(text, action);
+
+            foreach (StreamWriter writer in _writers)
+            {
+                try
+                {
+                    writer.Write(text);
+                }
+                catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                {
+                }
+            }
+        }
+
         public CancellationToken CancellationToken
         {
             get { return _consoleService.CancellationToken; }

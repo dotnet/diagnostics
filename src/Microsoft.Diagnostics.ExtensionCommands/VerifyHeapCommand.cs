@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -255,7 +256,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 columns[i++] = ValueWithError(segment?.SubHeap.Index, format: "", error: "");
 
             columns[i++] = ValueWithError(segment?.Address, format: "x12", error: "");
-            columns[i++] = corruption.Object.Address;
+            columns[i++] = new DmlExec(corruption.Object.Address, $"!ListNearObj {corruption.Object.Address:x}");
             columns[i++] = corruption.Kind;
             columns[i++] = message;
 

@@ -30,6 +30,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console = console;
         }
 
+        public void WriteSpacer(char spacer)
+        {
+            Console.WriteLine(new string(spacer, Divider.Length * (_formats.Length - 1) + _formats.Sum(c => Math.Abs(c.width))));
+        }
+
         public void WriteRow(params object[] columns)
         {
             StringBuilder sb = new(Divider.Length * columns.Length + _formats.Sum(c => Math.Abs(c.width)) + 32);
@@ -42,18 +47,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
-
-                string value;
-                if (string.IsNullOrWhiteSpace(format))
-                {
-                    value = columns[i]?.ToString();
-                }
-                else
-                {
-                    value = Format(columns[i], format);
-                }
-
-                AddValue(_spacing, sb, width, value ?? "");
+                FormatColumn(_spacing, columns[i], sb, width, format);
             }
 
             Console.WriteLine(sb.ToString());
@@ -71,40 +65,54 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
-
-                string value;
-                if (string.IsNullOrWhiteSpace(format))
-                {
-                    value = columns[i]?.ToString();
-                }
-                else
-                {
-                    value = Format(columns[i], format);
-                }
-
-                AddValue(spacing, sb, width, value ?? "");
+                
+                FormatColumn(spacing, columns[i], sb, width, format);
             }
 
             Console.WriteLine(sb.ToString());
         }
 
-
-        public void WriteSpacer(char spacer)
+        private void FormatColumn(char spacing, object value, StringBuilder sb, int width, string format)
         {
-            Console.WriteLine(new string(spacer, Divider.Length * (_formats.Length - 1) + _formats.Sum(c => Math.Abs(c.width))));
+            string action = null;
+            string text;
+            if (value is DmlExec dml)
+            {
+                value = dml.Text;
+                if (Console.SupportsDml)
+                    action = dml.Action;
+            }
+
+            if (string.IsNullOrWhiteSpace(format))
+                text = value?.ToString();
+            else
+                text = Format(value, format);
+
+            AddValue(spacing, sb, width, text ?? "", action);
         }
 
-        private void AddValue(char spacing, StringBuilder sb, int width, string value)
+        private void AddValue(char spacing, StringBuilder sb, int width, string value, string action)
         {
             bool leftAlign = AlignLeft ? width > 0 : width < 0;
             width = Math.Abs(width);
 
             if (width == 0)
             {
-                sb.Append(value);
+                if (string.IsNullOrWhiteSpace(action))
+                {
+                    sb.Append(value);
+                }
+                else
+                {
+                    WriteAndClear(sb);
+                    Console.WriteDmlExec(value, action);
+                }
             }
             else if (value.Length > width)
             {
+                if (!string.IsNullOrWhiteSpace(action))
+                    WriteAndClear(sb);
+
                 if (width <= 3)
                 {
                     sb.Append(value, 0, width);
@@ -122,15 +130,53 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     sb.Append(value);
                 }
 
+                if (!string.IsNullOrWhiteSpace(action))
+                    WriteDmlExecAndClear(sb, action);
             }
             else if (leftAlign)
             {
-                sb.Append(value.PadRight(width, spacing));
+                if (!string.IsNullOrWhiteSpace(action))
+                {
+                    WriteAndClear(sb);
+                    Console.WriteDmlExec(value, action);
+                }
+                else
+                {
+                    sb.Append(value);
+                }
+
+                int remaining = width - value.Length;
+                if (remaining > 0)
+                    sb.Append(' ', remaining);
             }
             else
             {
-                sb.Append(value.PadLeft(width, spacing));
+                int remaining = width - value.Length;
+                if (remaining > 0)
+                    sb.Append(' ', remaining);
+
+                if (!string.IsNullOrWhiteSpace(action))
+                {
+                    WriteAndClear(sb);
+                    Console.WriteDmlExec(value, action);
+                }
+                else
+                {
+                    sb.Append(value);
+                }
             }
+        }
+
+        private void WriteDmlExecAndClear(StringBuilder sb, string action)
+        {
+            Console.WriteDmlExec(sb.ToString(), action);
+            sb.Clear();
+        }
+
+        private void WriteAndClear(StringBuilder sb)
+        {
+            Console.Write(sb.ToString());
+            sb.Clear();
         }
 
         private static string Format(object obj, string format)
@@ -156,6 +202,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 string s => s,
                 _ => throw new NotImplementedException(obj.GetType().ToString()),
             };
+        }
+
+        public class DmlExec
+        {
+            public object Text { get; }
+            public string Action { get; }
+
+            public DmlExec(object text, string action)
+            {
+                Text = text;
+                Action = action;
+            }
         }
     }
 }

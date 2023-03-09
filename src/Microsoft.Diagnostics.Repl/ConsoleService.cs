@@ -591,6 +591,8 @@ namespace Microsoft.Diagnostics.Repl
 
         void IConsoleService.WriteDml(string text) => throw new NotSupportedException();
 
+        void IConsoleService.WriteDmlExec(string text, string _) => throw new NotSupportedException();
+
         CancellationToken IConsoleService.CancellationToken { get; set; }
 
         int IConsoleService.WindowWidth
