@@ -2,9 +2,7 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 

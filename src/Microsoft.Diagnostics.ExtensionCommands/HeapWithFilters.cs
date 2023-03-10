@@ -15,10 +15,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private int? _gcheap;
         private readonly ClrHeap _heap;
 
-        public bool HasFilters => _gcheap is not null || Segment is not null || MemoryRange is not null;
+        /// <summary>
+        /// Whether the heap will be filtered at all
+        /// </summary>
+        public bool HasFilters => _gcheap is not null || Segment is not null || MemoryRange is not null || MinimumObjectSize > 0 || MaximumObjectSize > 0;
 
+        /// <summary>
+        /// Only enumerate objects or segments within this range.
+        /// </summary>
         public MemoryRange? MemoryRange { get; set; }
+
+        /// <summary>
+        /// Only enumerate the segment or objects on the segment which matches the given address.
+        /// This address may be anywhere within a Segment's committed memory.
+        /// </summary>
         public ulong? Segment { get; set; }
+
+        /// <summary>
+        /// The GC Heap number to filter on.
+        /// </summary>
         public int? GCHeap
         {
             get => _gcheap;
@@ -31,6 +46,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        /// <summary>
+        /// The minimum size of an object to enumerate.
+        /// </summary>
+        public ulong MinimumObjectSize { get; set; }
+
+        /// <summary>
+        /// The maximum size of an object to enumerate
+        /// </summary>
+        public ulong MaximumObjectSize { get; set; }
+
+        /// <summary>
+        /// The order in which to enumerate segments.  This also applies to object enumeration.
+        /// </summary>
         public Func<IEnumerable<ClrSegment>, IOrderedEnumerable<ClrSegment>> SortSegments { get; set; }
 
         public HeapWithFilters(ClrHeap heap)
@@ -115,6 +143,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (ClrObject obj in objs)
                 {
                     cancellation.ThrowIfCancellationRequested();
+
+                    ulong size = obj.Size;
+                    if (MinimumObjectSize != 0 && size < MinimumObjectSize)
+                        continue;
+
+                    if (MaximumObjectSize != 0 && size > MaximumObjectSize)
+                        continue;
+
                     yield return obj;
                 }
             }

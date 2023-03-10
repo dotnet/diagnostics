@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public IConsoleService Console { get; set; }
 
 
-        public bool IsObjectLive(ulong obj)
+        public bool IsLive(ulong obj)
         {
             _liveObjs ??= CreateObjectSet();
             return _liveObjs.Contains(obj);

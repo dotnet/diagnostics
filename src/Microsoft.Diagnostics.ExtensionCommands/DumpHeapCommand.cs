@@ -2,6 +2,7 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -23,36 +24,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; }
 
-        [Option(Name = "-mt")]
+        [Option(Name = "--mt")]
         public string MethodTableString { get; set; }
 
         private ulong? MethodTable { get; set; }
 
-        [Option(Name = "-type")]
+        [Option(Name = "--type")]
         public string Type { get; set; }
 
         [Option(Name = "--stat")]
         public bool Stat { get; set; }
 
-        [Option(Name = "-strings")]
+        [Option(Name = "--strings")]
         public bool Strings { get; set; }
 
-        [Option(Name = "-verify")]
+        [Option(Name = "--verify")]
         public bool Verify { get; set; }
 
-        [Option(Name = "-short")]
+        [Option(Name = "--short")]
         public bool Short { get; set; }
 
-        [Option(Name = "-min")]
+        [Option(Name = "--min")]
         public ulong Min { get; set; }
 
-        [Option(Name = "-max")]
+        [Option(Name = "--max")]
         public ulong Max { get; set; }
 
-        [Option(Name = "-live")]
+        [Option(Name = "--live")]
         public bool Live { get; set; }
 
-        [Option(Name = "-dead")]
+        [Option(Name = "--dead")]
         public bool Dead{ get; set; }
 
         [Option(Name = "--gcheap", Aliases = new string[] { "-h" })]
@@ -77,22 +78,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             bool checkTypeName = !string.IsNullOrWhiteSpace(Type);
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
+
             foreach (ClrObject obj in FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken))
             {
                 ulong mt = obj.Type?.MethodTable ?? 0;
                 if (mt == 0)
                     MemoryService.ReadPointer(obj, out mt);
 
+                // Filter by MT
                 if (MethodTable.HasValue && mt != MethodTable.Value)
                     continue;
 
-                ulong size = obj.Size;
-                if (Min != 0 && size < Min)
+                // Filter by liveness
+                if (Live && !LiveObjects.IsLive(obj))
                     continue;
 
-                if (Max != 0 && size > Max)
+                if (Dead && LiveObjects.IsLive(obj))
                     continue;
-
+                    
+                // Filter by type name
                 if (checkTypeName)
                 {
                     string typeName = obj.Type?.Name ?? "";
@@ -106,6 +110,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     continue;
                 }
 
+                ulong size = obj.Size;
                 if (!Stat)
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeapMT(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
 
@@ -193,6 +198,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 string end = MemoryRange.Length > 1 ? MemoryRange[1] : null;
                 FilteredHeap.FilterByHexMemoryRange(start, end);
             }
+
+            if (Min > 0)
+                FilteredHeap.MinimumObjectSize = Min;
+
+            if (Max > 0)
+                FilteredHeap.MaximumObjectSize = Max;
 
             FilteredHeap.SortSegments = (seg) => seg.OrderBy(seg => seg.Start);
         }
