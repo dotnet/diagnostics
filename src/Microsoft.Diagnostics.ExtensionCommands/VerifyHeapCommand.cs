@@ -2,6 +2,7 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -29,11 +30,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help ="Optional memory ranges in the form of: [Start] [End]")]
         public string[] MemoryRange { get; set; }
 
+        [Option(Name = "--segment", Aliases = new string[] { "-s " })]
+        public string Segment { get; set; }
+
         public override void Invoke()
         {
             ClrHeap heap = Runtime.Heap;
             IEnumerable<ClrSegment> segments = heap.Segments;
-            if (GCHeap > 0)
+            if (GCHeap >= 0)
             {
                 if (!heap.Segments.Any(f => f.SubHeap.Index == GCHeap))
                 {
@@ -44,52 +48,68 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 segments = segments.Where(seg => seg.SubHeap.Index == GCHeap);
             }
 
-            MemoryRange? range = null;
-            if (MemoryRange is not null && MemoryRange.Length > 0)
+            MemoryRange range = ParseMemoryRange(MemoryRange);
+            if (range.Length > 0 && !segments.Any(seg => seg.ObjectRange.Overlaps(range) && (GCHeap < 0 || seg.SubHeap.Index == GCHeap)))
             {
-                if (MemoryRange.Length > 2)
-                {
-                    Console.WriteLineError("Bad arguments.");
-                    return;
-                }
+                if (GCHeap < 0)
+                    throw new ArgumentException($"No GC segments within the range [{range.Start}, {range.End:x}]");
 
-                if (!ulong.TryParse(MemoryRange[0], NumberStyles.HexNumber, null, out ulong start))
-                {
-                    Console.WriteLineError($"Invalid start address: {MemoryRange[0]}");
-                    return;
-                }
+                throw new ArgumentException($"No GC segments within the range [{range.Start:x}, {range.End:x}] on gc_heap {GCHeap}");
+            }
 
-                ulong end = segments.Max(seg => seg.End);
-                if (MemoryRange.Length == 2)
-                {
-                    if (!ulong.TryParse(MemoryRange[1], NumberStyles.HexNumber, null, out end))
-                    {
-                        Console.WriteLineError($"Invalid end address: {MemoryRange[1]}");
-                        return;
-                    }
-                }
+            ulong segment = 0;
+            if (!string.IsNullOrWhiteSpace(Segment))
+            {
+                if (!ulong.TryParse(Segment, NumberStyles.HexNumber, null, out segment))
+                    throw new ArgumentException($"Invalid segment address: {segment}");
 
-                range = new(start, end);
-                if (!segments.Any(seg => seg.ObjectRange.Overlaps(range.Value) && (GCHeap < 0 || seg.SubHeap.Index == GCHeap)))
+                if (!segments.Any(seg => seg.Address == segment || seg.CommittedMemory.Contains(segment)))
                 {
-                    if (GCHeap < 0)
-                    {
-                        Console.WriteLineError($"No GC segments within the range [{start:x}, {end:x}]");
-                        return;
-                    }
-                    else
-                    {
-                        Console.WriteLineError($"No GC segments within the range [{start:x}, {end:x}] on gc_heap {GCHeap}");
-                        return;
-                    }
+                    string onHeap = GCHeap > 0 ? $" on gc_heap {GCHeap}" : "";
+                    string inMemoryRange = range.Start != 0 ? $" in range [{range.Start:x}, {range.End:x}]" : "";
+                    throw new ArgumentException($"No GC segments matching address {segment:x}{onHeap}{inMemoryRange}.");
                 }
             }
 
-
             ClrObject obj = FindMostInterestingObject();
-            WriteAndRun(obj, (ushort)0xcccc, () => VerifyHeap(range, GCHeap));
+            WriteAndRun(obj, (ushort)0xcccc, () => VerifyHeap(range, GCHeap, segment));
 
             //VerifyHeap(range, GCHeap);
+        }
+
+        private MemoryRange ParseMemoryRange(string[] memoryRange)
+        {
+            ImmutableArray<ClrSegment> segments = Runtime.Heap.Segments;
+            if (memoryRange is not null && memoryRange.Length > 0)
+            {
+                if (memoryRange.Length > 2)
+                    throw new ArgumentException("Too many arguments.");
+
+                if (!ulong.TryParse(memoryRange[0], NumberStyles.HexNumber, null, out ulong start))
+                    throw new ArgumentException($"Invalid start address: {memoryRange[0]}"))
+
+                ulong end = segments.Max(seg => seg.End);
+                if (memoryRange.Length == 2)
+                {
+                    string endString = memoryRange[1];
+                    bool length = false;
+                    if (endString.StartsWith("L"))
+                    {
+                        length = true;
+                        endString = endString.Substring(1);
+                    }
+
+                    if (!ulong.TryParse(endString, NumberStyles.HexNumber, null, out end))
+                        throw new ArgumentException($"Invalid end address: {memoryRange[1]}");
+
+                    if (length)
+                        end += start;
+                }
+
+                return new(start, end);
+            }
+
+            return default;
         }
 
         #region TEST CODE - Should not be merged into Repo
@@ -149,14 +169,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         #endregion
 
-        private void VerifyHeap(MemoryRange? range, int gcheap)
+        private void VerifyHeap(MemoryRange range, int gcheap, ulong segment)
         {
             int errors = 0;
             TableOutput output = null;
             ClrHeap heap = Runtime.Heap;
 
             // Verify heap
-            foreach (var corruption in heap.VerifyHeap(EnumerateObjects(range, gcheap)))
+            foreach (var corruption in heap.VerifyHeap(EnumerateObjects(range, gcheap, segment)))
             {
                 errors++;
                 WriteError(ref output, heap, corruption);
@@ -164,7 +184,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Verify SyncBlock table unless the user asked us to verify only a small range:
             int syncBlockErrors = 0;
-            if (gcheap < 0 && range is null)
+            if (gcheap < 0 && range.Length == 0)
             {
                 int totalSyncBlocks = 0;
                 foreach (SyncBlock syncBlk in heap.EnumerateSyncBlocks())
@@ -314,9 +334,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return "???";
         }
 
-        private IEnumerable<ClrObject> EnumerateObjects(MemoryRange? range, int gcheap)
+        private IEnumerable<ClrObject> EnumerateObjects(MemoryRange range, int gcheap, ulong segmentAddress)
         {
             _totalObjects = 0;
+
+            if (range.Length == 0 && range.Start != 0)
+                yield break;
 
             ClrHeap heap = Runtime.Heap;
             IEnumerable<ClrSegment> segments = heap.Segments;
@@ -325,7 +348,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (ClrSegment segment in segments)
             {
-                IEnumerable<ClrObject> objs = /*range.HasValue ? segment.EnumerateObjects(range.Value, carefully: true) :*/ segment.EnumerateObjects(carefully: true);
+                if (segmentAddress != 0 && segment.Address != segmentAddress && !segment.CommittedMemory.Contains(segmentAddress))
+                    continue;
+
+                IEnumerable<ClrObject> objs = range.Length > 0 ? segment.EnumerateObjects(range, carefully: true) : segment.EnumerateObjects(carefully: true);
                 foreach (ClrObject obj in objs)
                 {
                     _totalObjects++;
