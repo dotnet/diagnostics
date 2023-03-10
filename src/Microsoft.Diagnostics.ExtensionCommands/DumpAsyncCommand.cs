@@ -1000,7 +1000,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         IClrValue arrayObj = obj.ReadObjectField(fieldName);
                         if (!arrayObj.IsNull)
                         {
-                            ClrArray arrayObjAsArray = arrayObj.AsArray();
+                            IClrArray arrayObjAsArray = arrayObj.AsArray();
                             return $"{arrayObj.Type?.ComponentType?.ToString() ?? "unknown"}[{arrayObjAsArray.Length}]";
                         }
                         return "null";
