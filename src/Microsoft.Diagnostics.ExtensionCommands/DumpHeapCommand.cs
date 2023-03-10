@@ -2,11 +2,8 @@
 using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -69,7 +66,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            Stopwatch sw = Stopwatch.StartNew();
             ParseArguments();
 
             TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
@@ -155,9 +151,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");
                 }
             }
-
-            TimeSpan elapsed = sw.Elapsed;
-            Console.WriteLine($"Elapsed: {elapsed} ({elapsed.Milliseconds:n0})");
         }
 
         private void ParseArguments()
