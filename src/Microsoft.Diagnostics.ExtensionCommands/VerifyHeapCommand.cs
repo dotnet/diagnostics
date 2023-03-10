@@ -5,10 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -158,7 +155,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console.WriteLine($"{totalSyncBlocks:n0} SyncBlocks verified, {syncBlockErrors:n0} error{(syncBlockErrors == 1 ? "" :"s")}.");
             }
 
-            Console.WriteLine();
+            if (errors + syncBlockErrors > 0)
+                Console.WriteLine();
             Console.WriteLine($"{_totalObjects:n0} objects verified, {errors:n0} error{(errors == 1 ? "" : "s")}.");
         }
 
