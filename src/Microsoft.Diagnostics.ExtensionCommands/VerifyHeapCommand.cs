@@ -27,11 +27,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--gcheap", Aliases = new string[] { "-h" })]
         public int GCHeap { get; set; } = -1;
 
+        [Option(Name = "--segment", Aliases = new string[] { "-s" })]
+        public string Segment { get; set; }
+
         [Argument(Help ="Optional memory ranges in the form of: [Start] [End]")]
         public string[] MemoryRange { get; set; }
-
-        [Option(Name = "--segment", Aliases = new string[] { "-s " })]
-        public string Segment { get; set; }
 
         public override void Invoke()
         {
@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     throw new ArgumentException("Too many arguments.");
 
                 if (!ulong.TryParse(memoryRange[0], NumberStyles.HexNumber, null, out ulong start))
-                    throw new ArgumentException($"Invalid start address: {memoryRange[0]}"))
+                    throw new ArgumentException($"Invalid start address: {memoryRange[0]}");
 
                 ulong end = segments.Max(seg => seg.End);
                 if (memoryRange.Length == 2)
@@ -184,7 +184,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Verify SyncBlock table unless the user asked us to verify only a small range:
             int syncBlockErrors = 0;
-            if (gcheap < 0 && range.Length == 0)
+            if (gcheap < 0 && range.Length == 0 && segment == 0)
             {
                 int totalSyncBlocks = 0;
                 foreach (SyncBlock syncBlk in heap.EnumerateSyncBlocks())
@@ -224,17 +224,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             string message = corruption.Kind switch
             {
-                ObjectCorruptionKind.CouldNotReadMethodTable => $"Could not read method table for Object {obj:x}",
-                //ObjectCorruptionKind.ObjectNotPointerAligned => $"Object {obj:x} is not pointer aligned",
-                //ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj:x} has an unaligned member at {corruption.Offset:x}: is not pointer aligned",
-                ObjectCorruptionKind.CouldNotReadObject => $"Could not read object {obj:x} at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
-                ObjectCorruptionKind.ObjectNotOnTheHeap => $"Tried to validate {obj:x} but its address was not on any segment.",
-                ObjectCorruptionKind.BadMethodTable => $"Object {obj:x} has an invalid method table {ReadPointerWithError(obj):x}",
-                ObjectCorruptionKind.BadObjectReference => $"Object {obj:x} has a bad member at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
-                ObjectCorruptionKind.FreeObjectReference => $"Object {obj:x} contains free object at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
-                ObjectCorruptionKind.ObjectTooLarge => $"Object {obj:x} is too large, size={obj.Size:x}, segmentEnd: {ValueWithError(heap.GetSegmentByAddress(obj)?.End)}",
-                ObjectCorruptionKind.CouldNotReadCardTable => $"Could not verify object {obj:x}: could not read card table",
-                ObjectCorruptionKind.CouldNotReadGCDesc => $"Could not verify object {obj:x}: could not read GCDesc",
+                ObjectCorruptionKind.CouldNotReadMethodTable => $"Could not read method table for Object {obj.Address:x}",
+                ObjectCorruptionKind.ObjectNotPointerAligned => $"Object {obj.Address:x} is not pointer aligned",
+                ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj.Address:x} has an unaligned member at {corruption.Offset:x}: is not pointer aligned",
+                ObjectCorruptionKind.CouldNotReadObject => $"Could not read object {obj.Address:x} at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                ObjectCorruptionKind.ObjectNotOnTheHeap => $"Tried to validate {obj.Address:x} but its address was not on any segment.",
+                ObjectCorruptionKind.BadMethodTable => $"Object {obj.Address:x} has an invalid method table {ReadPointerWithError(obj):x}",
+                ObjectCorruptionKind.BadObjectReference => $"Object {obj.Address:x} has a bad member at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                ObjectCorruptionKind.FreeObjectReference => $"Object {obj.Address:x} contains free object at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                ObjectCorruptionKind.ObjectTooLarge => $"Object {obj.Address:x} is too large, size={obj.Size:x}, segmentEnd: {ValueWithError(heap.GetSegmentByAddress(obj)?.End)}",
+                ObjectCorruptionKind.CouldNotReadCardTable => $"Could not verify object {obj.Address:x}: could not read card table",
+                ObjectCorruptionKind.CouldNotReadGCDesc => $"Could not verify object {obj.Address:x}: could not read GCDesc",
                 ObjectCorruptionKind.SyncBlockMismatch => GetSyncBlockFailureMessage(corruption),
                 ObjectCorruptionKind.SyncBlockZero => GetSyncBlockFailureMessage(corruption),
                 _ => ""
@@ -249,7 +249,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (heap.IsServer)
                 {
-                    output = new(Console, (-4, ""), (-12, "x12"), (-12, "x12"), (22, ""), (0, ""))
+                    output = new(Console, (-4, ""), (-12, "x12"), (-12, "x12"), (32, ""), (0, ""))
                     {
                         AlignLeft = true,
                     };
@@ -346,7 +346,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (gcheap >= 0)
                 segments = segments.Where(seg => seg.SubHeap.Index == gcheap);
 
-            foreach (ClrSegment segment in segments)
+            foreach (ClrSegment segment in segments.OrderBy(s => s.SubHeap.Index).ThenBy(s => s.Address))
             {
                 if (segmentAddress != 0 && segment.Address != segmentAddress && !segment.CommittedMemory.Contains(segmentAddress))
                     continue;
