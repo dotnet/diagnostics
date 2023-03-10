@@ -354,6 +354,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 IEnumerable<ClrObject> objs = range.Length > 0 ? segment.EnumerateObjects(range, carefully: true) : segment.EnumerateObjects(carefully: true);
                 foreach (ClrObject obj in objs)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
                     _totalObjects++;
                     yield return obj;
                 }
