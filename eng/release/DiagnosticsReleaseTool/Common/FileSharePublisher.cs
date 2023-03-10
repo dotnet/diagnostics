@@ -65,8 +65,8 @@ namespace ReleaseTool.Core
 
                 try
                 {
-                    using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
-                    using var destStream = new FileStream(destinationUri, FileMode.Create, FileAccess.ReadWrite);
+                    using FileStream srcStream = new(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
+                    using FileStream destStream = new(destinationUri, FileMode.Create, FileAccess.ReadWrite);
                     await srcStream.CopyToAsync(destStream, ct);
 
                     destStream.Position = 0;

@@ -17,7 +17,7 @@ namespace DiagnosticsReleaseTool.CommandLine
     {
         private static async Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(PrepareRelease())
                 .CancelOnProcessTermination()
                 .UseDefaults()
@@ -27,7 +27,7 @@ namespace DiagnosticsReleaseTool.CommandLine
         }
 
         public static Command PrepareRelease() =>
-            new Command(
+            new(
                 name: "prepare-release",
                 description: "Given a darc drop, generates validated manifests and layouts to initiate a tool release.")
             {
@@ -43,7 +43,7 @@ namespace DiagnosticsReleaseTool.CommandLine
 
 
         private static Option<bool> DiagnosticLoggingOption() =>
-            new Option<bool>(
+            new(
                 aliases: new[] { "-v", "--verbose" },
                 description: "Enables diagnostic logging",
                 getDefaultValue: () => false);
@@ -57,7 +57,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             }.ExistingOnly();
 
         private static Option<bool> ToolManifestVerificationOption() =>
-            new Option<bool>(
+            new(
                 alias: "--verify-tool-manifest",
                 description: "Verifies that the assets being published match the manifest",
                 getDefaultValue: () => true);
@@ -71,7 +71,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             }.ExistingOnly();
 
         private static Option<string> ReleaseNameOption() =>
-            new Option<string>(
+            new(
                 aliases: new[] { "-r", "--release-name" },
                 description: "Name of this release.")
             {
@@ -87,7 +87,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             .LegalFilePathsOnly();
 
         private static Option<string> AzureStorageAccountNameOption() =>
-            new Option<string>(
+            new(
                 aliases: new[] { "-n", "--account-name" },
                 description: "Storage account name, must be in public azure cloud.")
             {
@@ -95,7 +95,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             };
 
         private static Option<string> AzureStorageAccountKeyOption() =>
-            new Option<string>(
+            new(
                 aliases: new[] { "-k", "--account-key" },
                 description: "Storage account key, in base 64 format.")
             {
@@ -103,7 +103,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             };
 
         private static Option<string> AzureStorageContainerNameOption() =>
-            new Option<string>(
+            new(
                 aliases: new[] { "-c", "--container-name" },
                 description: "Storage account container name where the files will be uploaded.")
             {
@@ -111,7 +111,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             };
 
         private static Option<int> AzureStorageSasExpirationOption() =>
-            new Option<int>(
+            new(
                 aliases: new[] { "--sas-valid-days" },
                 description: "Number of days to allow access to the blobs via the provided SAS URIs.",
                 getDefaultValue: () => 1);

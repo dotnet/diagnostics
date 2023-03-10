@@ -36,15 +36,15 @@ namespace DiagnosticsReleaseTool.Impl
 
         public Stream GenerateManifest(IEnumerable<FileReleaseData> filesProcessed)
         {
-            var stream = new MemoryStream();
+            MemoryStream stream = new();
 
-            var jro = new JsonWriterOptions
+            JsonWriterOptions jro = new()
             {
                 Indented = true,
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
 
-            using (var writer = new Utf8JsonWriter(stream, jro))
+            using (Utf8JsonWriter writer = new(stream, jro))
             {
                 writer.WriteStartObject();
 
@@ -109,7 +109,7 @@ namespace DiagnosticsReleaseTool.Impl
             writer.WritePropertyName("PublishInstructions");
             writer.WriteStartArray();
 
-            var options = new JsonSerializerOptions
+            JsonSerializerOptions options = new()
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 WriteIndented = true
@@ -120,7 +120,7 @@ namespace DiagnosticsReleaseTool.Impl
                 if (fileToRelease.FileMetadata.ShouldPublishToCdn)
                 {
                     FileWithCdnData fileWithCdnData = GetFileWithCdnData(fileToRelease);
-                    JsonSerializer.Serialize<FileWithCdnData>(writer, fileWithCdnData, options);
+                    JsonSerializer.Serialize(writer, fileWithCdnData, options);
                 }
             }
 
@@ -152,21 +152,21 @@ namespace DiagnosticsReleaseTool.Impl
 
         private string GenerateSubpath(FileReleaseData fileToRelease)
         {
-            var fi = new FileInfo(fileToRelease.FileMap.LocalSourcePath);
-            var enc = System.Text.Encoding.UTF8;
+            FileInfo fi = new(fileToRelease.FileMap.LocalSourcePath);
+            System.Text.Encoding enc = System.Text.Encoding.UTF8;
             byte[] hashResult = System.Security.Cryptography.SHA256.HashData(enc.GetBytes(fileToRelease.FileMap.RelativeOutputPath));
             string pathHash = BitConverter.ToString(hashResult).Replace("-", string.Empty);
 
             return $"{_productReleaseMetadata.ReleaseVersion}/{pathHash}/{fi.Name}";
         }
 
-        private static readonly Regex s_akaMsMetadataMatcher = new Regex(
+        private static readonly Regex s_akaMsMetadataMatcher = new(
                 $@"<(?<metadata>[a-zA-Z]\w*)>",
                 RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
         private string GenerateLinkFromMetadata(FileReleaseData fileToRelease, string linkSchema)
         {
-            var fi = new FileInfo(fileToRelease.FileMap.LocalSourcePath);
+            FileInfo fi = new(fileToRelease.FileMap.LocalSourcePath);
             string link = linkSchema;
             //TODO: Revisit for perf if necessary...
             MatchCollection results = s_akaMsMetadataMatcher.Matches(linkSchema);
@@ -212,9 +212,9 @@ namespace DiagnosticsReleaseTool.Impl
         private void WriteMetadata(Utf8JsonWriter writer)
         {
             // There's no way to obtain the json DOM for an object...
-            byte[] metadataJsonObj = JsonSerializer.SerializeToUtf8Bytes<ReleaseMetadata>(_productReleaseMetadata);
+            byte[] metadataJsonObj = JsonSerializer.SerializeToUtf8Bytes(_productReleaseMetadata);
             JsonDocument metadataDoc = JsonDocument.Parse(metadataJsonObj);
-            foreach (var element in metadataDoc.RootElement.EnumerateObject())
+            foreach (JsonProperty element in metadataDoc.RootElement.EnumerateObject())
             {
                 element.WriteTo(writer);
             }

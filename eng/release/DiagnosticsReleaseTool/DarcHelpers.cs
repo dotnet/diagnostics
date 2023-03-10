@@ -49,9 +49,9 @@ namespace DiagnosticsReleaseTool.Util
                 JsonElement buildList = jsonDoc.RootElement.GetProperty("builds");
 
                 // This iteration is necessary due to the public/private nature repos.
-                var repoBuilds = buildList.EnumerateArray()
+                IEnumerable<JsonElement> repoBuilds = buildList.EnumerateArray()
                                           .Where(build => {
-                                              var buildUri = new Uri(build.GetProperty("repo").GetString());
+                                              Uri buildUri = new(build.GetProperty("repo").GetString());
                                               return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
                                           });
 
@@ -63,7 +63,7 @@ namespace DiagnosticsReleaseTool.Util
 
                 JsonElement build = repoBuilds.First();
 
-                var releaseMetadata = new ReleaseMetadata(
+                ReleaseMetadata releaseMetadata = new(
                     releaseVersion: releaseVersion,
                     repoUrl: build.GetProperty("repo").GetString(),
                     branch: build.GetProperty("branch").GetString(),
@@ -86,7 +86,7 @@ namespace DiagnosticsReleaseTool.Util
                 // pretty stable schema.
                 JsonElement productList = jsonDoc.RootElement[0].GetProperty("products");
 
-                var matchingProducts = productList.EnumerateArray()
+                IEnumerable<JsonElement> matchingProducts = productList.EnumerateArray()
                                                .Where(prod => projectNames.Contains(prod.GetProperty("name").GetString()));
 
                 if (matchingProducts.Count() != 1)

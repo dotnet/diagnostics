@@ -64,7 +64,7 @@ namespace ReleaseTool.Core
             }
 
 
-            var filesInToolBundleToPublish = new List<(FileMapping, FileMetadata)>();
+            List<(FileMapping, FileMetadata)> filesInToolBundleToPublish = new();
 
             foreach (FileInfo extractedFile in unzipDirInfo.EnumerateFiles("*", SearchOption.AllDirectories))
             {
@@ -80,14 +80,14 @@ namespace ReleaseTool.Core
                 {
                     localPath = Path.Combine(_stagingPath, relativePath);
                     Directory.CreateDirectory(Path.GetDirectoryName(localPath));
-                    using (FileStream srcStream = new FileStream(extractedFile.FullName, FileMode.Open, FileAccess.Read))
-                    using (FileStream destStream = new FileStream(localPath, FileMode.Create, FileAccess.Write))
+                    using (FileStream srcStream = new(extractedFile.FullName, FileMode.Open, FileAccess.Read))
+                    using (FileStream destStream = new(localPath, FileMode.Create, FileAccess.Write))
                     {
                         await srcStream.CopyToAsync(destStream, ct);
                     }
                 }
 
-                var fileMap = new FileMapping(localPath, relativePath);
+                FileMapping fileMap = new(localPath, relativePath);
                 FileMetadata metadata = _getMetadataForInnerFileFunc(file, extractedFile);
                 filesInToolBundleToPublish.Add((fileMap, metadata));
             }

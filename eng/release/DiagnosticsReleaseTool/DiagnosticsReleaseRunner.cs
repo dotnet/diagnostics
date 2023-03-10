@@ -21,11 +21,11 @@ namespace DiagnosticsReleaseTool.Impl
         internal static async Task<int> PrepareRelease(Config releaseConfig, bool verbose, CancellationToken ct)
         {
             // TODO: This will throw if invalid drop path is given.
-            var darcLayoutHelper = new DarcHelpers(releaseConfig.DropPath);
+            DarcHelpers darcLayoutHelper = new(releaseConfig.DropPath);
 
             ILogger logger = GetDiagLogger(verbose);
 
-            var layoutWorkerList = new List<ILayoutWorker>
+            List<ILayoutWorker> layoutWorkerList = new()
             {
                 // TODO: We may want to inject a logger.
                 new NugetLayoutWorker(stagingPath: releaseConfig.StagingDirectory.FullName),
@@ -38,7 +38,7 @@ namespace DiagnosticsReleaseTool.Impl
                 )
             };
 
-            var verifierList = new List<IReleaseVerifier> { };
+            List<IReleaseVerifier> verifierList = new() { };
 
             if (releaseConfig.ShouldVerifyManifest)
             {
@@ -54,7 +54,7 @@ namespace DiagnosticsReleaseTool.Impl
             IPublisher releasePublisher = new AzureBlobBublisher(releaseConfig.AccountName, releaseConfig.AccountKey, releaseConfig.ContainerName, releaseConfig.ReleaseName, releaseConfig.SasValidDays, logger);
             IManifestGenerator manifestGenerator = new DiagnosticsManifestGenerator(releaseMetadata, releaseConfig.ToolManifest, logger);
 
-            using var diagnosticsRelease = new Release(
+            using Release diagnosticsRelease = new(
                 productBuildPath: basePublishDirectory,
                 layoutWorkers: layoutWorkerList,
                 verifiers: verifierList,

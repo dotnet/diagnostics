@@ -100,7 +100,7 @@ namespace ReleaseTool.Core
             {
                 _logger.LogError("Aggregate Exception");
 
-                foreach (var ex in agEx.InnerExceptions)
+                foreach (Exception ex in agEx.InnerExceptions)
                 {
                     _logger.LogError(ex, "Inner Exception");
                 }
@@ -121,7 +121,7 @@ namespace ReleaseTool.Core
             // Manifest
             using IDisposable scope = _logger.BeginScope("Manifest Generation");
             Stream manifestStream = _manifestGenerator.GenerateManifest(_filesToRelease);
-            var fi = new FileInfo(_manifestSavePath);
+            FileInfo fi = new(_manifestSavePath);
             fi.Directory.Create();
 
             using (FileStream fs = fi.Open(FileMode.Create, FileAccess.Write))
@@ -184,9 +184,9 @@ namespace ReleaseTool.Core
         private async Task<int> LayoutFilesAsync(CancellationToken ct)
         {
             int unhandledFiles = 0;
-            var relativePublishPathsUsed = new HashSet<string>();
+            HashSet<string> relativePublishPathsUsed = new();
 
-            using var scope = _logger.BeginScope("Laying out files");
+            using IDisposable scope = _logger.BeginScope("Laying out files");
 
             _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath.Name);
 

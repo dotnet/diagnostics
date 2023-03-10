@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -334,7 +335,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             HashSet<ulong> seen = new();
             List<ClrObject> pinned = new();
 
-            foreach (IClrRoot root in Runtime.Heap.EnumerateRoots().Where(r => r.IsPinned))
+            foreach (ClrRoot root in Runtime.Heap.EnumerateRoots().Where(r => r.IsPinned))
             {
                 if (root.Object.IsValid && !root.Object.IsFree)
                 {
