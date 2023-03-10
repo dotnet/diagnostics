@@ -218,11 +218,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public class DmlObj : DmlExec
+        public class DmlDumpObj : DmlExec
         {
-            public DmlObj(ulong address)
-                : base(address, $"!dumpobj /d {address}")
+            public DmlDumpObj(ulong address)
+                : base(address, address != 0 ? $"!dumpobj /d {address}" : "")
             {
+            }
+        }
+
+        public class DmlDumpHeapMT : DmlExec
+        {
+            public DmlDumpHeapMT(ulong methodTable)
+                : base (methodTable, methodTable != 0 ? $"!dumpheap -mt {methodTable:x}" : "")
+            {
+
             }
         }
     }

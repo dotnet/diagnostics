@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 output.WriteRow("Object", "ModifiedAddr", "Old Value", "New Value", "Expected Failure");
 
                 foreach (Change change in _changes)
-                    output.WriteRow(new DmlObj(change.Object), change.AddressModified, change.OriginalValue.Reverse(), change.NewValue.Reverse(), change.ExpectedFailure);
+                    output.WriteRow(new DmlDumpObj(change.Object), change.AddressModified, change.OriginalValue.Reverse(), change.NewValue.Reverse(), change.ExpectedFailure);
             }
 
             Console.WriteLine();
