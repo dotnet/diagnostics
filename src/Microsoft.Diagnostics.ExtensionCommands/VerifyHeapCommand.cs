@@ -10,7 +10,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "verifyheap", Help = "Displays a list of all managed objects.")]
+    [Command(Name = "verifyheap", Help = "Searches the managed heap for memory corruption..")]
     public class VerifyHeapCommand : CommandBase
     {
         private int _totalObjects;
@@ -32,85 +32,47 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            ClrHeap heap = Runtime.Heap;
-            IEnumerable<ClrSegment> segments = heap.Segments;
+            HeapWithFilters filteredHeap = new(Runtime.Heap);
             if (GCHeap >= 0)
-            {
-                if (!heap.Segments.Any(f => f.SubHeap.Index == GCHeap))
-                {
-                    Console.WriteLineError($"No gc_heap with index: {GCHeap}");
-                    return;
-                }
+                filteredHeap.GCHeap = GCHeap;
 
-                segments = segments.Where(seg => seg.SubHeap.Index == GCHeap);
-            }
-
-            MemoryRange range = ParseMemoryRange(MemoryRange);
-            if (range.Length > 0 && !segments.Any(seg => seg.ObjectRange.Overlaps(range) && (GCHeap < 0 || seg.SubHeap.Index == GCHeap)))
-            {
-                if (GCHeap < 0)
-                    throw new ArgumentException($"No GC segments within the range [{range.Start}, {range.End:x}]");
-
-                throw new ArgumentException($"No GC segments within the range [{range.Start:x}, {range.End:x}] on gc_heap {GCHeap}");
-            }
-
-            ulong segment = 0;
             if (!string.IsNullOrWhiteSpace(Segment))
-            {
-                if (!ulong.TryParse(Segment, NumberStyles.HexNumber, null, out segment))
-                    throw new ArgumentException($"Invalid segment address: {segment}");
+                filteredHeap.FilterBySegmentHex(Segment);
 
-                if (!segments.Any(seg => seg.Address == segment || seg.CommittedMemory.Contains(segment)))
+            if (MemoryRange is not null && MemoryRange.Length > 0)
+            {
+                if (MemoryRange.Length > 2)
                 {
-                    string onHeap = GCHeap > 0 ? $" on gc_heap {GCHeap}" : "";
-                    string inMemoryRange = range.Start != 0 ? $" in range [{range.Start:x}, {range.End:x}]" : "";
-                    throw new ArgumentException($"No GC segments matching address {segment:x}{onHeap}{inMemoryRange}.");
+                    string badArgument = MemoryRange.FirstOrDefault(f => f.StartsWith("-") || f.StartsWith("/"));
+                    if (badArgument != null)
+                        throw new ArgumentException($"Unknown argument: {badArgument}");
+
+                    throw new ArgumentException("Too many arguments to !verifyheap");
                 }
+
+                string start = MemoryRange[0];
+                string end = MemoryRange.Length > 1 ? MemoryRange[1] : null;
+                filteredHeap.FilterByHexMemoryRange(start, end);
             }
 
-            IEnumerable<ClrObject> objects = EnumerateObjects(range, GCHeap, segment);
-            bool verifySyncTable = GCHeap < 0 && range.Length == 0 && segment == 0;
-
-            VerifyHeap(objects, verifySyncTable);
+            VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
         }
 
-        private MemoryRange ParseMemoryRange(string[] memoryRange)
+        private IEnumerable<ClrObject> EnumerateWithCount(IEnumerable<ClrObject> objs)
         {
-            ImmutableArray<ClrSegment> segments = Runtime.Heap.Segments;
-            if (memoryRange is not null && memoryRange.Length > 0)
+            _totalObjects = 0;
+            foreach (ClrObject obj in objs)
             {
-                if (memoryRange.Length > 2)
-                    throw new ArgumentException("Too many arguments.");
-
-                if (!ulong.TryParse(memoryRange[0], NumberStyles.HexNumber, null, out ulong start))
-                    throw new ArgumentException($"Invalid start address: {memoryRange[0]}");
-
-                ulong end = segments.Max(seg => seg.End);
-                if (memoryRange.Length == 2)
-                {
-                    string endString = memoryRange[1];
-                    bool length = false;
-                    if (endString.StartsWith("L"))
-                    {
-                        length = true;
-                        endString = endString.Substring(1);
-                    }
-
-                    if (!ulong.TryParse(endString, NumberStyles.HexNumber, null, out end))
-                        throw new ArgumentException($"Invalid end address: {memoryRange[1]}");
-
-                    if (length)
-                        end += start;
-                }
-
-                return new(start, end);
+                _totalObjects++;
+                yield return obj;
             }
-
-            return default;
         }
 
         private void VerifyHeap(IEnumerable<ClrObject> objects, bool verifySyncTable)
         {
+            // Count _totalObjects
+            objects = EnumerateWithCount(objects);
+
             int errors = 0;
             TableOutput output = null;
             ClrHeap heap = Runtime.Heap;
@@ -274,33 +236,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return value.ToString("x");
 
             return "???";
-        }
-
-        private IEnumerable<ClrObject> EnumerateObjects(MemoryRange range, int gcheap, ulong segmentAddress)
-        {
-            _totalObjects = 0;
-
-            if (range.Length == 0 && range.Start != 0)
-                yield break;
-
-            ClrHeap heap = Runtime.Heap;
-            IEnumerable<ClrSegment> segments = heap.Segments;
-            if (gcheap >= 0)
-                segments = segments.Where(seg => seg.SubHeap.Index == gcheap);
-
-            foreach (ClrSegment segment in segments.OrderBy(s => s.SubHeap.Index).ThenBy(s => s.Address))
-            {
-                if (segmentAddress != 0 && segment.Address != segmentAddress && !segment.CommittedMemory.Contains(segmentAddress))
-                    continue;
-
-                IEnumerable<ClrObject> objs = range.Length > 0 ? segment.EnumerateObjects(range, carefully: true) : segment.EnumerateObjects(carefully: true);
-                foreach (ClrObject obj in objs)
-                {
-                    Console.CancellationToken.ThrowIfCancellationRequested();
-                    _totalObjects++;
-                    yield return obj;
-                }
-            }
         }
     }
 }
