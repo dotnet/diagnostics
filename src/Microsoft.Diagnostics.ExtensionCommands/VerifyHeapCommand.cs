@@ -71,10 +71,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            ClrObject obj = FindMostInterestingObject();
-            WriteAndRun(obj, (ushort)0xcccc, () => VerifyHeap(range, GCHeap, segment));
+            IEnumerable<ClrObject> objects = EnumerateObjects(range, GCHeap, segment);
+            bool verifySyncTable = GCHeap < 0 && range.Length == 0 && segment == 0;
 
-            //VerifyHeap(range, GCHeap);
+            VerifyHeap(objects, verifySyncTable);
         }
 
         private MemoryRange ParseMemoryRange(string[] memoryRange)
@@ -112,71 +112,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return default;
         }
 
-        #region TEST CODE - Should not be merged into Repo
-
-        private ClrObject FindMostInterestingObject()
-        {
-            foreach (ClrSegment seg in Runtime.Heap.Segments.OrderByDescending(s => s.ObjectRange.Length))
-            {
-                foreach (ClrObject obj in seg.EnumerateObjects().OrderByDescending(obj => obj.EnumerateReferenceAddresses().Count()))
-                {
-                    if (obj.IsFree)
-                        continue;
-
-                    if (obj.SyncBlock is null)
-                        continue;
-
-                    if (!obj.EnumerateReferenceAddresses().Any())
-                        continue;
-
-                    return obj;
-                }
-            }
-
-            throw new InvalidDataException();
-        }
-
-        private unsafe T WriteValue<T>(ulong address, T value)
-            where T : unmanaged
-        {
-            byte[] old = new byte[sizeof(T)];
-
-            Span<T> span = new(&value, 1);
-            Span<byte> newBuffer = MemoryMarshal.Cast<T, byte>(span);
-
-            if (!MemoryService.ReadMemory(address, old, old.Length, out int read) || read != old.Length)
-                throw new Exception();
-
-            if (!MemoryService.WriteMemory(address, newBuffer, out int written) || written != newBuffer.Length)
-                throw new Exception();
-
-            return Unsafe.As<byte, T>(ref old[0]);
-        }
-
-        public void WriteAndRun<T>(ulong location,  T value, Action action)
-            where T : unmanaged
-        {
-            T old = WriteValue(location, value);
-            try
-            {
-                action();
-            }
-            finally
-            {
-                WriteValue(location, old);
-            }
-        }
-
-        #endregion
-
-        private void VerifyHeap(MemoryRange range, int gcheap, ulong segment)
+        private void VerifyHeap(IEnumerable<ClrObject> objects, bool verifySyncTable)
         {
             int errors = 0;
             TableOutput output = null;
             ClrHeap heap = Runtime.Heap;
 
             // Verify heap
-            foreach (var corruption in heap.VerifyHeap(EnumerateObjects(range, gcheap, segment)))
+            foreach (var corruption in heap.VerifyHeap(objects))
             {
                 errors++;
                 WriteError(ref output, heap, corruption);
@@ -184,7 +127,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Verify SyncBlock table unless the user asked us to verify only a small range:
             int syncBlockErrors = 0;
-            if (gcheap < 0 && range.Length == 0 && segment == 0)
+            if (verifySyncTable)
             {
                 int totalSyncBlocks = 0;
                 foreach (SyncBlock syncBlk in heap.EnumerateSyncBlocks())
@@ -210,7 +153,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
 
-                Console.WriteLine();
+                if (syncBlockErrors > 0)
+                    Console.WriteLine();
                 Console.WriteLine($"{totalSyncBlocks:n0} SyncBlocks verified, {syncBlockErrors:n0} error{(syncBlockErrors == 1 ? "" :"s")}.");
             }
 

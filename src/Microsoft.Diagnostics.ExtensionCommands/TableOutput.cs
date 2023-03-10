@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
@@ -199,6 +200,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 uint ui => ui.ToString(format),
                 int i => i.ToString(format),
                 StringBuilder sb => sb.ToString(),
+                IEnumerable<byte> bytes => string.Join("", bytes.Select(b => b.ToString("x2"))),
                 string s => s,
                 _ => throw new NotImplementedException(obj.GetType().ToString()),
             };
@@ -213,6 +215,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 Text = text;
                 Action = action;
+            }
+        }
+
+        public class DmlObj : DmlExec
+        {
+            public DmlObj(ulong address)
+                : base(address, $"!dumpobj /d {address}")
+            {
             }
         }
     }
