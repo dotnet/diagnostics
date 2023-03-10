@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--segment", Aliases = new string[] { "-s" })]
         public string Segment { get; set; }
 
-        [Argument(Help ="Optional memory ranges in the form of: [Start] [End]")]
+        [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
         public override void Invoke()
