@@ -23,12 +23,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
         private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
 
-        private readonly CancellationTokenSource _disposalSource = new CancellationTokenSource();
-        private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new HandleableCollection<IpcEndpointInfo>();
-        private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new ConcurrentDictionary<Guid, HandleableCollection<Stream>>();
+        private readonly CancellationTokenSource _disposalSource = new();
+        private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new();
+        private readonly ConcurrentDictionary<Guid, HandleableCollection<Stream>> _streamCollections = new();
         private readonly string _address;
 
-        private bool _disposed = false;
+        private bool _disposed;
         private Task _acceptTransportTask;
         private IpcServerTransport _transport;
         private Kind _kind = Kind.Ipc;
@@ -147,7 +147,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _acceptTransportTask = AcceptTransportAsync(_transport, _disposalSource.Token);
 
             if (_acceptTransportTask.IsFaulted)
+            {
                 _acceptTransportTask.Wait(); // Rethrow aggregated exception.
+            }
         }
 
         /// <summary>
@@ -239,8 +241,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     // Cancel parsing of advertise data after timeout period to
                     // mitigate runtimes that write partial data and do not close the stream (avoid waiting forever).
-                    using var parseCancellationSource = new CancellationTokenSource();
-                    using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, parseCancellationSource.Token);
+                    using CancellationTokenSource parseCancellationSource = new();
+                    using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, parseCancellationSource.Token);
                     try
                     {
                         parseCancellationSource.CancelAfter(ParseAdvertiseTimeout);
@@ -262,8 +264,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     // does not execute the factory under a lock thus it is not thread-safe. Create the collection and
                     // use a thread-safe version of GetOrAdd; use equality comparison on the result to determine if
                     // the new collection was added to the dictionary or if an existing one was returned.
-                    var newStreamCollection = new HandleableCollection<Stream>();
-                    var streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
+                    HandleableCollection<Stream> newStreamCollection = new();
+                    HandleableCollection<Stream> streamCollection = _streamCollections.GetOrAdd(runtimeCookie, newStreamCollection);
 
                     try
                     {
@@ -272,7 +274,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                         if (newStreamCollection == streamCollection)
                         {
-                            ServerIpcEndpoint endpoint = new ServerIpcEndpoint(this, runtimeCookie);
+                            ServerIpcEndpoint endpoint = new(this, runtimeCookie);
                             _endpointInfos.Add(new IpcEndpointInfo(endpoint, pid, runtimeCookie));
                         }
                         else
@@ -342,10 +344,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static bool TestStream(Stream stream)
         {
-            if (null == stream)
+            if (stream is null)
             {
                 throw new ArgumentNullException(nameof(stream));
-            }
+            };
 
             if (stream is ExposedSocketNetworkStream networkStream)
             {

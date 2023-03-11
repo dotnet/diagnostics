@@ -1,10 +1,13 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using SOS.Hosting.DbgEng.Interop;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Threading;
+using Microsoft.Diagnostics.DebugServices;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
-    internal class ConsoleServiceFromDebuggerServices : IConsoleService
+    internal sealed class ConsoleServiceFromDebuggerServices : IConsoleService
     {
         private readonly DebuggerServices _debuggerServices;
         private bool? _supportsDml;

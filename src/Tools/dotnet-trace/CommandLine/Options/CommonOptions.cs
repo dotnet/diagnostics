@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.CommandLine;
 
@@ -9,7 +8,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal static class CommonOptions
     {
         public static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect the trace.")
             {
@@ -17,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         public static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to collect the trace.")
             {
@@ -27,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static TraceFileFormat DefaultTraceFileFormat() => TraceFileFormat.NetTrace;
 
         public static Option FormatOption() =>
-            new Option(
+            new(
                 alias: "--format",
                 description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat()}.")
             {
@@ -35,9 +34,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
         public static Option ConvertFormatOption() =>
-            new Option(
+            new(
                 alias: "--format",
-                description: $"Sets the output format for the trace file conversion.") 
+                description: $"Sets the output format for the trace file conversion.")
             {
                 Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
             };

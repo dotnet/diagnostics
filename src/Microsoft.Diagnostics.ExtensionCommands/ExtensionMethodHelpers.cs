@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -14,11 +17,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             updated /= 1024;
             if (updated < 1024)
+            {
                 return $"{updated:0.00}kb";
+            }
 
             updated /= 1024;
             if (updated < 1024)
+            {
                 return $"{updated:0.00}mb";
+            }
 
             updated /= 1024;
             return $"{updated:0.00}gb";

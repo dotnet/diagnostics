@@ -1,14 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,9 +27,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private const string Path6 = "/Privacy/Sub/Path/test.html";
         private const string Path7 = "/About/style.css";
 
-        private readonly static IReadOnlyList<string> Paths = new[] { Path1, Path2, Path3, Path4, Path5, Path6, Path7 };
+        private static readonly IReadOnlyList<string> Paths = new[] { Path1, Path2, Path3, Path4, Path5, Path6, Path7 };
 
-        private readonly static Dictionary<string, IReadOnlyList<string>> Patterns = new()
+        private static readonly Dictionary<string, IReadOnlyList<string>> Patterns = new()
         {
             { "**/*", Paths },
             { "**/*.j", Array.Empty<string>() },
@@ -46,11 +42,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public void TestGlobs()
         {
-            foreach(KeyValuePair<string, IReadOnlyList<string>> keyValuePair in Patterns)
+            foreach (KeyValuePair<string, IReadOnlyList<string>> keyValuePair in Patterns)
             {
-                var matcher = new GlobMatcher(new[] { keyValuePair.Key }, null);
+                GlobMatcher matcher = new(new[] { keyValuePair.Key }, null);
 
-                foreach(string value in keyValuePair.Value)
+                foreach (string value in keyValuePair.Value)
                 {
                     if (!matcher.Match(value))
                     {
@@ -58,7 +54,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     };
                 }
 
-                foreach(string value in Paths.Except(keyValuePair.Value))
+                foreach (string value in Paths.Except(keyValuePair.Value))
                 {
                     if (matcher.Match(value))
                     {
@@ -71,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [Fact]
         public void TestMultiplePatterns()
         {
-            var matcher = new GlobMatcher(new[] { "**/*" }, new[] { "**/*.js", "**/*.css" });
+            GlobMatcher matcher = new(new[] { "**/*" }, new[] { "**/*.js", "**/*.css" });
 
             Assert.True(matcher.Match(Path1));
             Assert.True(matcher.Match(Path2));

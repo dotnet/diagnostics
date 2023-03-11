@@ -1,24 +1,23 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting
 {
     internal sealed unsafe class DataTargetWrapper : COMCallableIUnknown
     {
-        private static readonly Guid IID_ICLRDataTarget = new Guid("3E11CCEE-D08B-43e5-AF01-32717A64DA03");
-        private static readonly Guid IID_ICLRDataTarget2 = new Guid("6d05fae3-189c-4630-a6dc-1c251e1c01ab");
-        private static readonly Guid IID_ICLRDataTarget4 = new Guid("E799DC06-E099-4713-BDD9-906D3CC02CF2");
-        private static readonly Guid IID_ICLRMetadataLocator = new Guid("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
-        private static readonly Guid IID_ICLRRuntimeLocator = new Guid("b760bf44-9377-4597-8be7-58083bdc5146");
+        private static readonly Guid IID_ICLRDataTarget = new("3E11CCEE-D08B-43e5-AF01-32717A64DA03");
+        private static readonly Guid IID_ICLRDataTarget2 = new("6d05fae3-189c-4630-a6dc-1c251e1c01ab");
+        private static readonly Guid IID_ICLRDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
+        private static readonly Guid IID_ICLRMetadataLocator = new("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
+        private static readonly Guid IID_ICLRRuntimeLocator = new("b760bf44-9377-4597-8be7-58083bdc5146");
 
         // For ClrMD's magic hand shake
         private const ulong MagicCallbackConstant = 0x43;
@@ -72,7 +71,7 @@ namespace SOS.Hosting
             AddRef();
         }
 
-        void AddDataTarget(VTableBuilder builder)
+        private void AddDataTarget(VTableBuilder builder)
         {
             builder.AddMethod(new GetMachineTypeDelegate(GetMachineType));
             builder.AddMethod(new GetPointerSizeDelegate(GetPointerSize));
@@ -87,7 +86,7 @@ namespace SOS.Hosting
             builder.AddMethod(new RequestDelegate(Request));
         }
 
-        void AddDataTarget2(VTableBuilder builder)
+        private void AddDataTarget2(VTableBuilder builder)
         {
             AddDataTarget(builder);
             builder.AddMethod(new AllocVirtualDelegate(AllocVirtual));
@@ -234,7 +233,7 @@ namespace SOS.Hosting
             {
                 Marshal.Copy(registerContext, 0, context, contextSize);
             }
-            catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is ArgumentNullException)
+            catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
             {
                 Trace.TraceError($"DataTargetWrapper.GetThreadContext Marshal.Copy FAILED {ex}");
                 return HResult.E_INVALIDARG;
@@ -274,10 +273,12 @@ namespace SOS.Hosting
             uint protectFlags,
             ulong* buffer)
         {
-            if (_remoteMemoryService == null) {
+            if (_remoteMemoryService == null)
+            {
                 return HResult.E_NOTIMPL;
             }
-            if (!_remoteMemoryService.AllocateMemory(address, size, typeFlags, protectFlags, out ulong remoteAddress)) {
+            if (!_remoteMemoryService.AllocateMemory(address, size, typeFlags, protectFlags, out ulong remoteAddress))
+            {
                 return HResult.E_FAIL;
             }
             SOSHost.Write(buffer, remoteAddress);
@@ -290,10 +291,12 @@ namespace SOS.Hosting
             uint size,
             uint typeFlags)
         {
-            if (_remoteMemoryService == null) {
+            if (_remoteMemoryService == null)
+            {
                 return HResult.E_NOTIMPL;
             }
-            if (!_remoteMemoryService.FreeMemory(address, size, typeFlags)) {
+            if (!_remoteMemoryService.FreeMemory(address, size, typeFlags))
+            {
                 return HResult.E_FAIL;
             }
             return HResult.S_OK;
@@ -311,7 +314,8 @@ namespace SOS.Hosting
         {
             try
             {
-                if (_threadUnwindService == null) {
+                if (_threadUnwindService == null)
+                {
                     return HResult.E_NOTIMPL;
                 }
                 return _threadUnwindService.Unwind(threadId, contextSize, context);
@@ -472,8 +476,8 @@ namespace SOS.Hosting
             [In] IntPtr self,
             [In][MarshalAs(UnmanagedType.LPWStr)] string fileName,
             [In] uint imageTimestamp,
-            [In] uint imageSize, 
-            [In] [MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
+            [In] uint imageSize,
+            [In][MarshalAs(UnmanagedType.LPArray, SizeConst = 16)] byte[] mvid,
             [In] uint mdRva,
             [In] uint flags,
             [In] uint bufferSize,

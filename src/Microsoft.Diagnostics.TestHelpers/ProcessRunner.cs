@@ -1,11 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
@@ -21,10 +22,10 @@ namespace Microsoft.Diagnostics.TestHelpers
     ///   b) Use the various WithXXX methods to modify the configuration of the process to launch
     ///   c) await RunAsync() to start the process and wait for it to terminate. Configuration
     ///      changes are no longer possible
-    ///   d) While waiting for RunAsync(), optionally call Kill() one or more times. This will expedite 
+    ///   d) While waiting for RunAsync(), optionally call Kill() one or more times. This will expedite
     ///      the termination of the process but there is no guarantee the process is terminated by
     ///      the time Kill() returns.
-    ///      
+    ///
     ///   Although the entire API of this type has been designed to be thread-safe, its typical that
     ///   only calls to Kill() and property getters invoked within the logging callbacks will be called
     ///   asynchronously.
@@ -37,26 +38,25 @@ namespace Microsoft.Diagnostics.TestHelpers
         // Be careful not to cause deadlocks by calling the logging callbacks with the lock held.
         // The logger has its own lock and it will hold that lock when it calls into property getters
         // on this type.
-        object _lock = new object();
-
-        List<IProcessLogger> _loggers;
-        Process _p;
-        DateTime _startTime;
-        TimeSpan _timeout;
-        ITestOutputHelper _traceOutput;
-        int? _expectedExitCode;
-        TaskCompletionSource<Process> _waitForProcessStartTaskSource;
-        Task<int> _waitForExitTask;
-        Task _timeoutProcessTask;
-        Task _readStdOutTask;
-        Task _readStdErrTask;
-        CancellationTokenSource _cancelSource;
-        private string _replayCommand;
+        private readonly object _lock = new();
+        private readonly List<IProcessLogger> _loggers;
+        private readonly Process _p;
+        private DateTime _startTime;
+        private TimeSpan _timeout;
+        private ITestOutputHelper _traceOutput;
+        private int? _expectedExitCode;
+        private readonly TaskCompletionSource<Process> _waitForProcessStartTaskSource;
+        private readonly Task<int> _waitForExitTask;
+        private readonly Task _timeoutProcessTask;
+        private readonly Task _readStdOutTask;
+        private readonly Task _readStdErrTask;
+        private readonly CancellationTokenSource _cancelSource;
+        private readonly string _replayCommand;
         private KillReason? _killReason;
 
         public ProcessRunner(string exePath, string arguments, string replayCommand = null)
         {
-            ProcessStartInfo psi = new ProcessStartInfo();
+            ProcessStartInfo psi = new();
             psi.FileName = exePath;
             psi.Arguments = arguments;
             psi.UseShellExecute = false;
@@ -76,29 +76,27 @@ namespace Microsoft.Diagnostics.TestHelpers
                 _killReason = null;
                 _waitForProcessStartTaskSource = new TaskCompletionSource<Process>();
                 Task<Process> startTask = _waitForProcessStartTaskSource.Task;
-                
+
                 // unfortunately we can't use the default Process stream reading because it only returns full lines and we have scenarios
                 // that need to receive the output before the newline character is written
-                _readStdOutTask = startTask.ContinueWith(t =>
-                {
+                _readStdOutTask = startTask.ContinueWith(t => {
                     ReadStreamToLoggers(_p.StandardOutput, ProcessStream.StandardOut, _cancelSource.Token);
-                }, 
+                },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _readStdErrTask = startTask.ContinueWith(t =>
-                {
+                _readStdErrTask = startTask.ContinueWith(t => {
                     ReadStreamToLoggers(_p.StandardError, ProcessStream.StandardError, _cancelSource.Token);
-                }, 
+                },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
-                _timeoutProcessTask = startTask.ContinueWith(t =>
-                {
-                    Task.Delay(_timeout, _cancelSource.Token).ContinueWith(t2 => Kill(KillReason.TimedOut), TaskContinuationOptions.NotOnCanceled);
+                _timeoutProcessTask = startTask.ContinueWith(async t => {
+                    await Task.Delay(_timeout, _cancelSource.Token).ConfigureAwait(false);
+                    Kill(KillReason.TimedOut);
                 },
                 _cancelSource.Token, TaskContinuationOptions.LongRunning, TaskScheduler.Default);
 
                 _waitForExitTask = InternalWaitForExit(startTask, _readStdOutTask, _readStdErrTask);
-                
+
                 if (replayCommand == null)
                 {
                     _replayCommand = ExePath + " " + Arguments;
@@ -109,7 +107,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
         }
-        
+
         public string ReplayCommand
         {
             get { lock (_lock) { return _replayCommand; } }
@@ -217,7 +215,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get { lock (_lock) { return _p.Id; } }
         }
 
-        public Dictionary<string,string> EnvironmentVariables
+        public Dictionary<string, string> EnvironmentVariables
         {
             get { lock (_lock) { return new Dictionary<string, string>(_p.StartInfo.Environment); } }
         }
@@ -291,7 +289,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 p = _p;
             }
             // this is safe to call on multiple threads, it only launches the process once
-            bool started = p.Start();
+            _ = p.Start();
 
             IProcessLogger[] loggers = null;
             lock (_lock)
@@ -321,55 +319,56 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             IProcessLogger[] loggers = Loggers;
 
-            // for the best efficiency we want to read in chunks, but if the underlying stream isn't
-            // going to timeout partial reads then we have to fall back to reading one character at a time
-            int readChunkSize = 1;
-            if (reader.BaseStream.CanTimeout)
-            {
-                readChunkSize = 1000;
-            }
+            const int BufferSize = 2048;
+            using IMemoryOwner<byte> memOwner = MemoryPool<byte>.Shared.Rent(BufferSize);
 
-            char[] buffer = new char[readChunkSize];
-            bool lastCharWasCarriageReturn = false;
             do
             {
-                int charsRead = 0;
-                int lastStartLine = 0;
-                charsRead = reader.ReadBlock(buffer, 0, readChunkSize);
+                Span<char> buffer = MemoryMarshal.Cast<byte, char>(memOwner.Memory.Span.Slice(0, BufferSize));
+                int charsRead = reader.Read(buffer);
+
+                buffer = buffer[0..charsRead];
 
                 // this lock keeps the standard out/error streams from being intermixed
-                lock (loggers)
+                lock (Loggers)
                 {
-                    for (int i = 0; i < charsRead; i++)
+                    while (!buffer.IsEmpty)
                     {
-                        // eat the \n after a \r, if any
-                        bool isNewLine = buffer[i] == '\n';
-                        bool isCarriageReturn = buffer[i] == '\r';
-                        if (lastCharWasCarriageReturn && isNewLine)
+                        string line;
+                        int index = buffer.IndexOf('\n');
+                        // If no newline, just write the buffer sans the trailing \r.
+                        if (index == -1)
                         {
-                            lastStartLine++;
-                            lastCharWasCarriageReturn = false;
-                            continue;
-                        }
-                        lastCharWasCarriageReturn = isCarriageReturn;
-                        if (isCarriageReturn || isNewLine)
-                        {
-                            string line = new string(buffer, lastStartLine, i - lastStartLine);
-                            lastStartLine = i + 1;
+                            buffer = buffer[^1] == '\r'
+                                ? buffer[0..^1]
+                                : buffer;
+                            line = new string(buffer);
                             foreach (IProcessLogger logger in loggers)
                             {
-                                logger.WriteLine(this, line, stream);
+                                logger.Write(this, line, stream);
                             }
+                            break;
                         }
-                    }
 
-                    // flush any fractional line
-                    if (charsRead > lastStartLine)
-                    {
-                        string line = new string(buffer, lastStartLine, charsRead - lastStartLine);
+                        // If we start with a new line, flush the current line.
+                        if (index == 0)
+                        {
+                            line = string.Empty;
+                        }
+                        else
+                        {
+                            // Otherwise found the \n. Trim the \r and emit the partial buffer.
+                            Span<char> charSeq = buffer[index - 1] == '\r'
+                                ? buffer[0..(index - 1)]
+                                : buffer[0..index];
+                            line = new string(charSeq);
+                        }
+
+                        buffer = buffer.Slice(index + 1);
+
                         foreach (IProcessLogger logger in loggers)
                         {
-                            logger.Write(this, line, stream);
+                            logger.WriteLine(this, line, stream);
                         }
                     }
                 }
@@ -422,24 +421,27 @@ namespace Microsoft.Diagnostics.TestHelpers
         private async Task<int> InternalWaitForExit(Task<Process> startProcessTask, Task stdOutTask, Task stdErrTask)
         {
             DebugTrace("starting InternalWaitForExit");
-            Process p = await startProcessTask;
+            Process p = await startProcessTask.ConfigureAwait(false);
             DebugTrace("InternalWaitForExit {0} '{1}'", p.Id, _replayCommand);
 
-            Task processExit = Task.Factory.StartNew(() =>
-            {
-                DebugTrace("starting Process.WaitForExit {0}", p.Id);
-                p.WaitForExit();
-                DebugTrace("ending Process.WaitForExit {0}", p.Id);
-            },
-            TaskCreationOptions.LongRunning);
-
             DebugTrace("awaiting process {0} exit", p.Id);
-            await processExit;
+            await p.WaitForExitAsync().ConfigureAwait(false);
             DebugTrace("process {0} completed with exit code {1}", p.Id, p.ExitCode);
 
             DebugTrace("awaiting to flush stdOut and stdErr for process {0} for up to 15 seconds", p.Id);
-            var streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
-            var completedTask = await Task.WhenAny(streamsTask, Task.Delay(TimeSpan.FromSeconds(15)));
+
+            Task streamsTask = Task.WhenAll(stdOutTask, stdErrTask);
+
+            streamsTask = streamsTask.ContinueWith(
+                t => DebugTrace(t.Exception.ToString()),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
+
+            Task completedTask = await Task.WhenAny(
+                    streamsTask,
+                    Task.Delay(TimeSpan.FromSeconds(15)))
+                .ConfigureAwait(false);
 
             if (completedTask != streamsTask)
             {
@@ -480,9 +482,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        class ConsoleTestOutputHelper : ITestOutputHelper
+        private sealed class ConsoleTestOutputHelper : ITestOutputHelper
         {
-            readonly ITestOutputHelper _output;
+            private readonly ITestOutputHelper _output;
 
             public ConsoleTestOutputHelper(ITestOutputHelper output)
             {
@@ -492,20 +494,14 @@ namespace Microsoft.Diagnostics.TestHelpers
             public void WriteLine(string message)
             {
                 Console.WriteLine(message);
-                if (_output != null)
-                {
-                    _output.WriteLine(message);
-                }
+                _output?.WriteLine(message);
 
             }
 
             public void WriteLine(string format, params object[] args)
             {
                 Console.WriteLine(format, args);
-                if (_output != null)
-                {
-                    _output.WriteLine(format, args);
-                }
+                _output?.WriteLine(format, args);
             }
         }
     }

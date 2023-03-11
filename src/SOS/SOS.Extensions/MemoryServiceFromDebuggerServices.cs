@@ -1,19 +1,18 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Extensions
 {
     /// <summary>
     /// Memory service implementation using the native debugger services
     /// </summary>
-    internal class MemoryServiceFromDebuggerServices : IMemoryService
+    internal sealed class MemoryServiceFromDebuggerServices : IMemoryService
     {
         private readonly DebuggerServices _debuggerServices;
 
@@ -22,7 +21,7 @@ namespace SOS.Extensions
         /// </summary>
         /// <param name="target">target instance</param>
         /// <param name="debuggerServices">native debugger services</param>
-        internal MemoryServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices) 
+        internal MemoryServiceFromDebuggerServices(ITarget target, DebuggerServices debuggerServices)
         {
             Debug.Assert(target != null);
             Debug.Assert(debuggerServices != null);
@@ -58,7 +57,8 @@ namespace SOS.Extensions
         public bool ReadMemory(ulong address, Span<byte> buffer, out int bytesRead)
         {
             HResult hr = _debuggerServices.ReadVirtual(address, buffer, out bytesRead);
-            if (hr != HResult.S_OK) {
+            if (hr != HResult.S_OK)
+            {
                 bytesRead = 0;
             }
             return bytesRead > 0;
@@ -74,7 +74,8 @@ namespace SOS.Extensions
         public bool WriteMemory(ulong address, Span<byte> buffer, out int bytesWritten)
         {
             HResult hr = _debuggerServices.WriteVirtual(address, buffer, out bytesWritten);
-            if (hr != HResult.S_OK) {
+            if (hr != HResult.S_OK)
+            {
                 bytesWritten = 0;
             }
             return bytesWritten > 0;

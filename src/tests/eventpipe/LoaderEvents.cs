@@ -1,18 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using System.IO;
-using System.Runtime.Loader;
-using System.Reflection;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.IO;
+using System.Reflection;
+using System.Runtime.Loader;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.LoaderEventsValidation
 {
@@ -34,39 +33,40 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         [Fact]
         public async void AssemblyLoad_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
-            {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     //LoaderKeyword (0x8): 0b1000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b1000)
                 };
 
-                string assemblyPath=null;
-                Action _eventGeneratingAction = () => 
-                {
+                string assemblyPath = null;
+                Action _eventGeneratingAction = () => {
                     GetAssemblyPath();
                     try
                     {
                         for (int i = 0; i < 100; i++)
                         {
                             if (i % 10 == 0)
+                            {
                                 Logger.logger.Log($"Load/Unload Assembly {i} times...");
-                            AssemblyLoad assemblyLoad = new AssemblyLoad();
-                            assemblyLoad.LoadFromAssemblyPath(assemblyPath+"\\Microsoft.Diagnostics.Runtime.dll");
+                            }
+
+                            AssemblyLoad assemblyLoad = new();
+                            assemblyLoad.LoadFromAssemblyPath(assemblyPath + "\\Microsoft.Diagnostics.Runtime.dll");
                             assemblyLoad.Unload();
                         }
                         GC.Collect();
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        Logger.logger.Log(ex.Message+ex.StackTrace);
+                        Logger.logger.Log(ex.Message + ex.StackTrace);
                     }
                 };
 
@@ -76,8 +76,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 }
 
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int LoaderAssemblyLoadEvents = 0;
                     int LoaderAssemblyUnloadEvents = 0;
                     source.Clr.LoaderAssemblyLoad += (eventData) => LoaderAssemblyLoadEvents += 1;
@@ -102,11 +101,11 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                         //Unload method just marks as unloadable, not unload immediately, so we check the unload events >=1 to make the tests stable
                         bool LoaderModuleResult = LoaderModuleLoadEvents >= 100 && LoaderModuleUnloadEvents >= 1;
                         Logger.logger.Log("LoaderModuleResult check: " + LoaderModuleResult);
-                        
+
                         return LoaderAssemblyResult && LoaderModuleResult ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

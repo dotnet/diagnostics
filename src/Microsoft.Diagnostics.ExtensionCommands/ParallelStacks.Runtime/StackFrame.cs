@@ -1,8 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -25,7 +23,7 @@ namespace ParallelStacks
         private void ComputeNames(ClrStackFrame frame)
         {
             // start by parsing (short)type name
-            var typeName = frame.Method?.Type.Name;
+            string typeName = frame.Method?.Type.Name;
             if (string.IsNullOrEmpty(typeName))
             {
                 // IL generated frames
@@ -38,7 +36,7 @@ namespace ParallelStacks
 
             // generic methods are not well formatted by ClrMD
             // foo<...>()  =>   foo[[...]]()
-            var signature = frame.Method?.Signature;
+            string signature = frame.Method?.Signature;
             if (string.IsNullOrEmpty(signature))
             {
                 Text = "?";
@@ -49,7 +47,7 @@ namespace ParallelStacks
                 Signature.AddRange(BuildSignature(signature));
             }
 
-            var methodName = frame.Method?.Name;
+            string methodName = frame.Method?.Name;
             if (string.IsNullOrEmpty(methodName))
             {
                 // IL generated frames
@@ -80,9 +78,11 @@ namespace ParallelStacks
         public static string GetNextTypeName(string typeName, ref int start, ref int end)
         {
             if (string.IsNullOrEmpty(typeName))
+            {
                 return string.Empty;
+            }
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // need to make the difference between generic and non generic parameters
             //      *.Int32                                         --> Int32
@@ -90,10 +90,10 @@ namespace ParallelStacks
             //      *.IDictionary`2<*.Int32,*.IList`1<*.String>>    --> IDictionary + continue on *.Int32,*.IList`1<*.String>>
             //      *.Int32,*.IList`1<*.String>>                    --> Int32 + continue on *.IList`1<*.String>>
             //      *.Int32>                                        --> Int32
-            //  1. look for generic 
+            //  1. look for generic
             //  2. if not, look for , as separator of generic parameters
-            var pos = typeName.IndexOf('`', start, end - start);
-            var next = typeName.IndexOf(',', start, end - start);
+            int pos = typeName.IndexOf('`', start, end - start);
+            int next = typeName.IndexOf(',', start, end - start);
 
             // simple case of 1 type name (with maybe no namespace)
             if ((pos == -1) && (next == -1))
@@ -117,8 +117,8 @@ namespace ParallelStacks
             // at least 1 type name (even before a generic type)
             if (pos == -1)
             {
-                // *.Int32,xxx  with xxx could contain a generic 
-                AppendTypeNameWithoutNamespace(sb, typeName, start, next-1);
+                // *.Int32,xxx  with xxx could contain a generic
+                AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
                 // skip this type
                 start = next + 1;
@@ -136,7 +136,7 @@ namespace ParallelStacks
 
             // a non generic type before another type parameter
             // *.Int32,xxx
-            AppendTypeNameWithoutNamespace(sb, typeName, start, next-1);
+            AppendTypeNameWithoutNamespace(sb, typeName, start, next - 1);
 
             // skip this type
             start = next + 1;
@@ -148,13 +148,13 @@ namespace ParallelStacks
         {
             // System.Collections.Generic.IList`1<System.Collections.Generic.IEnumerable`1<System.String>>
             // System.Collections.Generic.IDictionary`2<Int32,System.String>
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // look for ` to get the name and the count of generic parameters
-            var pos = typeName.IndexOf('`', start, end - start);
+            int pos = typeName.IndexOf('`', start, end - start);
 
             // build the name                                       V-- don't want ` in the name
-            AppendTypeNameWithoutNamespace(sb, typeName, start, pos-1);
+            AppendTypeNameWithoutNamespace(sb, typeName, start, pos - 1);
             sb.Append('<');
 
             // go to the first generic parameter
@@ -163,7 +163,7 @@ namespace ParallelStacks
             // get each generic parameter
             while (start < end)
             {
-                var genericParameter = GetNextTypeName(typeName, ref start, ref end);
+                string genericParameter = GetNextTypeName(typeName, ref start, ref end);
                 sb.Append(genericParameter);
                 if (start < end)
                 {
@@ -176,7 +176,7 @@ namespace ParallelStacks
 
         public static void AppendTypeNameWithoutNamespace(StringBuilder sb, string typeName, int start, int end)
         {
-            var pos = typeName.LastIndexOf('.', end, end - start);
+            int pos = typeName.LastIndexOf('.', end, end - start);
             if (pos == -1)
             {   // no namespace
                 sb.Append(typeName, start, end - start + 1);
@@ -191,8 +191,8 @@ namespace ParallelStacks
         public static IEnumerable<string> BuildSignature(string fullName)
         {
             // {namespace.}type.method[[]](..., ..., ...)
-            var parameters = new List<string>();
-            var pos = fullName.LastIndexOf('(');
+            List<string> parameters = new();
+            int pos = fullName.LastIndexOf('(');
             if (pos == -1)
             {
                 return parameters;
@@ -200,7 +200,6 @@ namespace ParallelStacks
 
             // look for each parameter, one after the other
             int next = pos;
-            string parameter = string.Empty;
             while (next != (fullName.Length - 1))
             {
                 next = fullName.IndexOf(", ", pos);
@@ -211,8 +210,11 @@ namespace ParallelStacks
                 }
 
                 //                             skip   .      ,
-                parameter = GetParameter(fullName, pos + 1, next - 1);
-                if (parameter != null) parameters.Add(parameter);
+                string parameter = GetParameter(fullName, pos + 1, next - 1);
+                if (parameter != null)
+                {
+                    parameters.Add(parameter);
+                }
 
                 pos = next + 1;
             }
@@ -225,23 +227,27 @@ namespace ParallelStacks
             const string BYREF = " ByRef";
             //   ()  no parameter
             if (start >= end)
+            {
                 return null;
+            }
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
 
             // handle ByRef case
-            var isByRef = false;
+            bool isByRef = false;
             if (fullName.LastIndexOf(BYREF, end) == end - BYREF.Length)
             {
                 isByRef = true;
                 end -= BYREF.Length;
             }
 
-            var typeName = GetShortTypeName(fullName, start, end);
+            string typeName = GetShortTypeName(fullName, start, end);
             sb.Append(typeName);
 
             if (isByRef)
+            {
                 sb.Append(BYREF);
+            }
 
             return sb.ToString();
         }
@@ -250,13 +256,13 @@ namespace ParallelStacks
         {
             // foo[[...]] --> foo<...>
             // namespace.type.Foo[[System.String, Int32]](System.Collections.Generic.IDictionary`2<Int32,System.String>)
-            var pos = fullName.IndexOf("[[");
+            int pos = fullName.IndexOf("[[");
             if (pos == -1)
             {
                 return fullName;
             }
 
-            var start = fullName.LastIndexOf('.', pos);
+            int start = fullName.LastIndexOf('.', pos);
             return fullName.Substring(start + 1, pos - start - 1);
         }
     }

@@ -1,7 +1,10 @@
-﻿using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
@@ -9,7 +12,7 @@ namespace SOS.Extensions
     /// A helper class to capture output of DbgEng commands that will restore the previous output callbacks
     /// when disposed.
     /// </summary>
-    internal class DbgEngOutputHolder : IDebugOutputCallbacksWide, IDisposable
+    internal sealed class DbgEngOutputHolder : IDebugOutputCallbacksWide, IDisposable
     {
         private readonly IDebugClient5 _client;
         private readonly IDebugOutputCallbacksWide _previous;
@@ -29,19 +32,25 @@ namespace SOS.Extensions
             _client.GetOutputCallbacksWide(out _previous);
             HResult hr = _client.SetOutputCallbacksWide(this);
             if (!hr)
+            {
                 throw Marshal.GetExceptionForHR(hr);
+            }
         }
 
         public void Dispose()
         {
             if (_previous is not null)
+            {
                 _client.SetOutputCallbacksWide(_previous);
+            }
         }
 
         public int Output(DEBUG_OUTPUT Mask, [In, MarshalAs(UnmanagedType.LPStr)] string Text)
         {
             if ((InterestMask & Mask) != 0 && Text is not null)
+            {
                 OutputReceived?.Invoke(Mask, Text);
+            }
 
             return 0;
         }

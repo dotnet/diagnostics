@@ -1,7 +1,10 @@
-﻿using Microsoft.Diagnostics.DebugServices;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -9,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         private readonly char _spacing = ' ';
         public string Divider { get; set; } = " ";
-        public bool AlignLeft { get; set; } = false;
+        public bool AlignLeft { get; set; }
 
         public IConsoleService Console { get; }
         public int TotalWidth => 1 * (_formats.Length - 1) + _formats.Sum(c => Math.Abs(c.width));
@@ -29,15 +32,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             for (int i = 0; i < columns.Length; i++)
             {
                 if (i != 0)
+                {
                     sb.Append(Divider);
+                }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
 
                 string value;
                 if (string.IsNullOrWhiteSpace(format))
+                {
                     value = columns[i]?.ToString();
+                }
                 else
+                {
                     value = Format(columns[i], format);
+                }
 
                 AddValue(_spacing, sb, width, value ?? "");
             }
@@ -52,15 +61,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             for (int i = 0; i < columns.Length; i++)
             {
                 if (i != 0)
+                {
                     sb.Append(spacing, Divider.Length);
+                }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
 
                 string value;
                 if (string.IsNullOrWhiteSpace(format))
+                {
                     value = columns[i]?.ToString();
+                }
                 else
+                {
                     value = Format(columns[i], format);
+                }
 
                 AddValue(spacing, sb, width, value ?? "");
             }
@@ -116,10 +131,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static string Format(object obj, string format)
         {
             if (obj is null)
+            {
                 return null;
+            }
 
             if (obj is Enum)
+            {
                 return obj.ToString();
+            }
 
             return obj switch
             {

@@ -1,20 +1,19 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting;
 
 namespace Microsoft.Diagnostics
-{    
+{
     public unsafe class ICLRDebugging : CallableCOMWrapper
     {
-        public static readonly Guid IID_ICLRDebugging = new Guid("D28F3C5A-9634-4206-A509-477552EEFB10");
-        public static readonly Guid CLSID_ICLRDebugging = new Guid("BACC578D-FBDD-48A4-969F-02D932B74634");
+        public static readonly Guid IID_ICLRDebugging = new("D28F3C5A-9634-4206-A509-477552EEFB10");
+        public static readonly Guid CLSID_ICLRDebugging = new("BACC578D-FBDD-48A4-969F-02D932B74634");
 
         private ref readonly ICLRDebuggingVTable VTable => ref Unsafe.AsRef<ICLRDebuggingVTable>(_vtable);
 
@@ -33,7 +32,7 @@ namespace Microsoft.Diagnostics
             ClrDebuggingVersion maxDebuggerSupportedVersion,
             in Guid riidProcess,
             out IntPtr process,
-            out ClrDebuggingVersion version, 
+            out ClrDebuggingVersion version,
             out ClrDebuggingProcessFlags flags)
         {
             return VTable.OpenVirtualProcess(

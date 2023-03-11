@@ -1,14 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -16,7 +14,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -50,7 +48,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start(testProcessTimeout: 60_000);
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
             // Don't dispose of the session here because it unnecessarily hangs the test for 30 secs
             EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -79,19 +77,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start(testProcessTimeout: 60_000);
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
             runner.WriteLine($"Trying to start an EventPipe session");
-            using (var session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
+            using (EventPipeSession session = await clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
                 new EventPipeProvider("System.Runtime", EventLevel.Informational, 0, new Dictionary<string, string>() {
                     { "EventCounterIntervalSec", "1" }
                 })
             }))
             {
-                var evntCnt = 0;
+                int evntCnt = 0;
 
                 Task streamTask = Task.Run(() => {
-                    var source = new EventPipeEventSource(session.EventStream);
+                    EventPipeEventSource source = new(session.EventStream);
                     source.Dynamic.All += (TraceEvent obj) => {
                         runner.WriteLine("Got an event");
                         evntCnt += 1;
@@ -120,24 +118,24 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [SkippableTheory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionUnavailableTest(TestConfiguration config)
         {
-            return EventPipeSessionUnavailableTestCore(config, useAsync: false);
+            return EventPipeSessionTests.EventPipeSessionUnavailableTestCore(config, useAsync: false);
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionUnavailableTestAsync(TestConfiguration config)
         {
-            return EventPipeSessionUnavailableTestCore(config, useAsync: true);
+            return EventPipeSessionTests.EventPipeSessionUnavailableTestCore(config, useAsync: true);
         }
 
         /// <summary>
         /// Tries to start an EventPipe session on a non-existent process
         /// </summary>
-        private async Task EventPipeSessionUnavailableTestCore(TestConfiguration config, bool useAsync)
+        private static async Task EventPipeSessionUnavailableTestCore(TestConfiguration config, bool useAsync)
         {
-            List<int> pids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            List<int> pids = new(DiagnosticsClient.GetPublishedProcesses());
             int arbitraryPid = 1;
 
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(arbitraryPid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(arbitraryPid), useAsync);
 
             await Assert.ThrowsAsync<ServerNotAvailableException>(() => clientShim.StartEventPipeSession(new List<EventPipeProvider>()
             {
@@ -164,7 +162,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start(testProcessTimeout: 60_000);
-            DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
             // Don't dispose of the session here because it unnecessarily hangs the test for 30 secs
             EventPipeSession session = await clientShim.StartEventPipeSession(new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational));
             Assert.True(session.EventStream != null);

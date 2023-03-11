@@ -1,18 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
     /// The service manager registers any ServiceExportAttribute on types and methods and sets properties,
-    /// fields and methods marked  with the ServiceImportAttribute that match the provided services. Tracks 
+    /// fields and methods marked  with the ServiceImportAttribute that match the provided services. Tracks
     /// any unresolved service requests and injects them when the service is registered.
     /// </summary>
     public class ServiceManager : IServiceManager
@@ -49,7 +48,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns></returns>
         public ServiceContainerFactory CreateServiceContainerFactory(ServiceScope scope, IServiceProvider parent)
         {
-            if (!_finalized) throw new InvalidOperationException();
+            if (!_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             return new ServiceContainerFactory(parent, _factories[(int)scope]);
         }
 
@@ -60,7 +63,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>the provider factories for the type</returns>
         public IEnumerable<ServiceFactory> EnumerateProviderFactories(Type providerType)
         {
-            if (!_finalized) throw new InvalidOperationException();
+            if (!_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             if (_providerFactories.TryGetValue(providerType, out List<ServiceFactory> factories))
             {
@@ -90,7 +96,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="serviceType">service implementation type</param>
         public void RegisterExportedServices(Type serviceType)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             for (Type currentType = serviceType; currentType is not null; currentType = currentType.BaseType)
             {
@@ -132,8 +141,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="factory">function to create service instance</param>
         public void AddServiceFactory(ServiceScope scope, Type serviceType, ServiceFactory factory)
         {
-            if (factory is null) throw new ArgumentNullException(nameof(factory));
-            if (_finalized) throw new InvalidOperationException();
+            if (factory is null)
+            {
+                throw new ArgumentNullException(nameof(factory));
+            }
+
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             if (scope == ServiceScope.Provider)
             {
@@ -154,7 +170,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public void LoadExtensions()
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
 
             List<string> extensionPaths = new();
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
@@ -174,7 +193,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         string[] extensionFiles = Directory.GetFiles(searchPath, "*.dll");
                         extensionPaths.AddRange(extensionFiles);
                     }
-                    catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+                    catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or System.Security.SecurityException)
                     {
                         Trace.TraceError(ex.ToString());
                     }
@@ -192,13 +211,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="extensionPath">extension assembly path</param>
         public void LoadExtension(string extensionPath)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             Assembly assembly = null;
             try
             {
                 assembly = Assembly.LoadFrom(extensionPath);
             }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is BadImageFormatException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException or ArgumentException or BadImageFormatException or System.Security.SecurityException)
             {
                 Trace.TraceError(ex.ToString());
             }
@@ -214,13 +237,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="assembly">extension assembly</param>
         public void RegisterAssembly(Assembly assembly)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
+
             try
             {
                 RegisterExportedServices(assembly);
                 _notifyExtensionLoad.Fire(assembly);
             }
-            catch (Exception ex) when (ex is DiagnosticsException || ex is NotSupportedException || ex is FileNotFoundException)
+            catch (Exception ex) when (ex is DiagnosticsException or NotSupportedException or FileNotFoundException)
             {
                 Trace.TraceError(ex.ToString());
             }

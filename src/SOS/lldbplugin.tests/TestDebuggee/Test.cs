@@ -1,17 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
-class Test
+internal sealed class Test
 {
-    static void LikelyInlined()
+    private static void LikelyInlined()
     {
         Console.WriteLine("I would like to be inlined");
     }
 
-    static void UnlikelyInlined()
+    private static void UnlikelyInlined()
     {
         Console.Write("I");
         Console.Write(" ");
@@ -46,48 +45,47 @@ class Test
         Console.Write("\n");
     }
 
-    static void ClrU()
+    private static void ClrU()
     {
         Console.WriteLine("test dumpclass");
     }
 
-    static void DumpClass()
+    private static void DumpClass()
     {
         Console.WriteLine("test dumpclass");
     }
 
-    static void DumpIL()
+    private static void DumpIL()
     {
         Console.WriteLine("test dumpil");
     }
 
-    static void DumpMD()
+    private static void DumpMD()
     {
         Console.WriteLine("test dumpmd");
     }
 
-    static void DumpModule()
+    private static void DumpModule()
     {
         Console.WriteLine("test dumpmodule");
     }
 
-    static void DumpObject()
+    private static void DumpObject()
     {
         Console.WriteLine("test dumpobject");
     }
 
-    static void DumpStackObjects()
+    private static void DumpStackObjects()
     {
         Console.WriteLine("test dso");
     }
 
-    static void Name2EE()
+    private static void Name2EE()
     {
         Console.WriteLine("test name2ee");
     }
 
-
-    static int Main()
+    private static int Main()
     {
         DumpIL();
         LikelyInlined();

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -22,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public ContextService(IHost host)
         {
             _host = host;
-            var parent = new ContextServiceProvider(this);
+            ContextServiceProvider parent = new(this);
             _serviceContainer = host.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Context, parent);
 
             // Clear the current context when a target is flushed or destroyed
@@ -35,7 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #region IContextService
 
         /// <summary>
-        /// Current context service provider. Contains the current ITarget, IThread 
+        /// Current context service provider. Contains the current ITarget, IThread
         /// and IRuntime instances along with all per target and global services.
         /// </summary>
         public IServiceProvider Services => _serviceContainer;
@@ -53,7 +52,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void SetCurrentTarget(int targetId)
         {
             ITarget target = _host.EnumerateTargets().SingleOrDefault((target) => target.Id == targetId);
-            if (target is null) {
+            if (target is null)
+            {
                 throw new DiagnosticsException($"Invalid target id {targetId}");
             }
             SetCurrentTarget(target);
@@ -77,14 +77,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public void ClearCurrentThread() => SetCurrentThread(null);
 
         /// <summary>
-        /// Set the current runtime 
+        /// Set the current runtime
         /// </summary>
         /// <param name="runtimeId">runtime id</param>
         /// <exception cref="DiagnosticsException">invalid runtime id</exception>
         public void SetCurrentRuntime(int runtimeId)
         {
             IRuntime runtime = RuntimeService?.EnumerateRuntimes().SingleOrDefault((runtime) => runtime.Id == runtimeId);
-            if (runtime is null) {
+            if (runtime is null)
+            {
                 throw new DiagnosticsException($"Invalid runtime id {runtimeId}");
             }
             SetCurrentRuntime(runtime);
@@ -162,7 +163,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // First check if there is a .NET Core runtime loaded
                     foreach (IRuntime runtime in runtimes)
                     {
-                        if (runtime.RuntimeType == RuntimeType.NetCore || runtime.RuntimeType == RuntimeType.SingleFile)
+                        if (runtime.RuntimeType is RuntimeType.NetCore or RuntimeType.SingleFile)
                         {
                             _currentRuntime = runtime;
                             break;
@@ -181,10 +182,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                     }
                     // If no core or desktop runtime, get the first one if any
-                    if (_currentRuntime is null)
-                    {
-                        _currentRuntime = runtimes.FirstOrDefault();
-                    }
+                    _currentRuntime ??= runtimes.FirstOrDefault();
                 }
             }
             return _currentRuntime;
@@ -205,7 +203,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected bool IsTargetEqual(ITarget left, ITarget right)
         {
-            if (left is null || right is null) {
+            if (left is null || right is null)
+            {
                 return left == right;
             }
             return left == right;
@@ -213,7 +212,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected bool IsThreadEqual(IThread left, IThread right)
         {
-            if (left is null || right is null) {
+            if (left is null || right is null)
+            {
                 return left == right;
             }
             return left == right;
@@ -221,7 +221,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected bool IsRuntimeEqual(IRuntime left, IRuntime right)
         {
-            if (left is null || right is null) {
+            if (left is null || right is null)
+            {
                 return left == right;
             }
             return left == right;
@@ -234,7 +235,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Special context service parent forwarding wrapper
         /// </summary>
-        private class ContextServiceProvider : IServiceProvider
+        private sealed class ContextServiceProvider : IServiceProvider
         {
             private readonly ContextService _contextService;
 

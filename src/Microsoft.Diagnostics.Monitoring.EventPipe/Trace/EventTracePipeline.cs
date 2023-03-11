@@ -1,12 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -32,9 +31,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 //It is important that the underlying stream be completely read, or disposed.
                 //If rundown is enabled, the underlying stream must be drained or disposed, or the app hangs.
-                using Stream eventStream = await _provider.Value.ProcessEvents(Client, Settings.Duration, token);
+                using Stream eventStream = await _provider.Value.ProcessEvents(Client, Settings.Duration, token).ConfigureAwait(false);
 
-                await _onStreamAvailable(eventStream, token);
+                await _onStreamAvailable(eventStream, token).ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
@@ -46,9 +45,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             if (_provider.IsValueCreated)
             {
-                await _provider.Value.DisposeAsync();
+                await _provider.Value.DisposeAsync().ConfigureAwait(false);
             }
-            await base.OnCleanup();
+            await base.OnCleanup().ConfigureAwait(false);
         }
 
         protected override Task OnStop(CancellationToken token)

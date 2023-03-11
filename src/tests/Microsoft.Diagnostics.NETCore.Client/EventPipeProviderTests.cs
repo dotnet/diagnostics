@@ -1,14 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using Xunit;
-
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -21,30 +16,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void EqualTest1()
         {
-            EventPipeProvider provider1 = new EventPipeProvider("myProvider", EventLevel.Informational);
-            EventPipeProvider provider2 = new EventPipeProvider("myProvider", EventLevel.Informational);
+            EventPipeProvider provider1 = new("myProvider", EventLevel.Informational);
+            EventPipeProvider provider2 = new("myProvider", EventLevel.Informational);
             Assert.True(provider1 == provider2);
         }
 
         [Fact]
         public void EqualTest2()
         {
-            EventPipeProvider provider1 = new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(-1));
-            EventPipeProvider provider2 = new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(-1));
+            EventPipeProvider provider1 = new("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(-1));
+            EventPipeProvider provider2 = new("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(-1));
             Assert.True(provider1 == provider2);
         }
 
         [Fact]
         public void EqualTest3()
         {
-            EventPipeProvider provider1 = new EventPipeProvider(
+            EventPipeProvider provider1 = new(
                 "System.Runtime",
                 EventLevel.Verbose,
                 (long)(-1),
                 new Dictionary<string, string>() {
                     { "EventCounterIntervalSec", "1" }
                 });
-            EventPipeProvider provider2 = new EventPipeProvider(
+            EventPipeProvider provider2 = new(
                 "System.Runtime",
                 EventLevel.Verbose,
                 (long)(-1),
@@ -57,7 +52,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void InEqualityTest()
         {
-            var providers = new EventPipeProvider[5];
+            EventPipeProvider[] providers = new EventPipeProvider[5];
             providers[0] = new EventPipeProvider("myProvider", EventLevel.Informational);
             providers[1] = new EventPipeProvider("myProvider", EventLevel.Informational, (long)(-1));
             providers[2] = new EventPipeProvider("myProvider", EventLevel.Verbose, (long)(-1));
@@ -76,9 +71,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     { "EventCounterIntervalSec", "2" }
                 });
 
-            for (var i = 0; i < providers.Length-1; i++)
+            for (int i = 0; i < providers.Length - 1; i++)
             {
-                for (var j = i+1; j < providers.Length; j++)
+                for (int j = i + 1; j < providers.Length; j++)
                 {
                     Assert.True(providers[i] != providers[j]);
                 }
@@ -88,19 +83,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void ToStringTest1()
         {
-            var provider = new EventPipeProvider("MyProvider", EventLevel.Verbose, (long)(0xdeadbeef));
+            EventPipeProvider provider = new("MyProvider", EventLevel.Verbose, (long)(0xdeadbeef));
             Assert.Equal("MyProvider:0x00000000DEADBEEF:5", provider.ToString());
         }
 
         [Fact]
         public void ToStringTest2()
         {
-            var provider1 = new EventPipeProvider("MyProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+            EventPipeProvider provider1 = new("MyProvider", EventLevel.Verbose, (long)(0xdeadbeef),
                 new Dictionary<string, string>()
                 {
                     { "key1", "value1" },
                 });
-            var provider2 = new EventPipeProvider("MyProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+            EventPipeProvider provider2 = new("MyProvider", EventLevel.Verbose, (long)(0xdeadbeef),
                 new Dictionary<string, string>()
                 {
                     { "key1", "value1" },
@@ -118,7 +113,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ";Request.Method" +
                 "\r\n";
 
-            var provider = new EventPipeProvider("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+            EventPipeProvider provider = new("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
                 new Dictionary<string, string>()
                 {
                     { "FilterAndPayloadSpecs", diagnosticFilterString }
@@ -138,7 +133,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ";RequestName=SomeRequest" +
                 "\r\n";
 
-            var provider = new EventPipeProvider("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+            EventPipeProvider provider = new("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
                 new Dictionary<string, string>()
                 {
                     { "FilterAndPayloadSpecs", diagnosticFilterString }
@@ -157,7 +152,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ";RequestName=SomeRequest" +
                 "\r\n";
 
-            var provider = new EventPipeProvider("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+            EventPipeProvider provider = new("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
                 new Dictionary<string, string>()
                 {
                     { "ArgumentKeyWith;Semicolon=Equal", diagnosticFilterString }
@@ -176,7 +171,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ";RequestName=SomeRequest" +
                 "\r\n";
 
-            var provider = new EventPipeProvider("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
+            EventPipeProvider provider = new("DiagnosticSourceProvider", EventLevel.Verbose, (long)(0xdeadbeef),
                 new Dictionary<string, string>()
                 {
                     { "ArgumentKeyWith;Semicolon=Equal", diagnosticFilterString },

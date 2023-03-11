@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Threading;
@@ -22,19 +21,19 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
         [Fact]
         public async Task TestStartStopCancelDispose()
         {
-            var timePipeline = new DelayPipeline();
-            var cancellationTokenSource = new CancellationTokenSource();
-            var token = cancellationTokenSource.Token;
+            DelayPipeline timePipeline = new();
+            CancellationTokenSource cancellationTokenSource = new();
+            CancellationToken token = cancellationTokenSource.Token;
 
             await Assert.ThrowsAsync<PipelineException>(() => timePipeline.StopAsync());
 
-            var startTask = timePipeline.RunAsync(token);
-            var secondStartCall = timePipeline.RunAsync(token);
+            Task startTask = timePipeline.RunAsync(token);
+            Task secondStartCall = timePipeline.RunAsync(token);
             Assert.Equal(startTask, secondStartCall);
 
-            var stopSource = new CancellationTokenSource();
-            var stopTask = timePipeline.StopAsync(stopSource.Token);
-            var secondStopCall = timePipeline.StopAsync(stopSource.Token);
+            CancellationTokenSource stopSource = new();
+            Task stopTask = timePipeline.StopAsync(stopSource.Token);
+            Task secondStopCall = timePipeline.StopAsync(stopSource.Token);
             Assert.Equal(stopTask, secondStopCall);
 
             stopSource.Cancel();
@@ -53,7 +52,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
         [Fact]
         public async Task TestStart()
         {
-            var timePipeline = new DelayPipeline(TimeSpan.Zero);
+            DelayPipeline timePipeline = new(TimeSpan.Zero);
             await timePipeline.RunAsync(CancellationToken.None);
 
             Assert.Equal(1, timePipeline.ExecutedCleanup);
@@ -65,10 +64,10 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
 
         private sealed class DelayPipeline : Pipeline
         {
-            public int ExecutedCleanup { get; private set; } = 0;
+            public int ExecutedCleanup { get; private set; }
             public TimeSpan Delay { get; }
 
-            public DelayPipeline() : this(Timeout.InfiniteTimeSpan) 
+            public DelayPipeline() : this(Timeout.InfiniteTimeSpan)
             {
             }
 

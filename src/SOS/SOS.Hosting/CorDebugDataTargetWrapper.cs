@@ -1,21 +1,20 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
     public sealed unsafe class CorDebugDataTargetWrapper : COMCallableIUnknown
     {
-        private static readonly Guid IID_ICorDebugDataTarget = new Guid("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
-        private static readonly Guid IID_ICorDebugDataTarget4 = new Guid("E799DC06-E099-4713-BDD9-906D3CC02CF2");
-        private static readonly Guid IID_ICorDebugMutableDataTarget = new Guid("A1B8A756-3CB6-4CCB-979F-3DF999673A59");
-        private static readonly Guid IID_ICorDebugMetaDataLocator = new Guid("7cef8ba9-2ef7-42bf-973f-4171474f87d9");
+        private static readonly Guid IID_ICorDebugDataTarget = new("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
+        private static readonly Guid IID_ICorDebugDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
+        private static readonly Guid IID_ICorDebugMutableDataTarget = new("A1B8A756-3CB6-4CCB-979F-3DF999673A59");
+        private static readonly Guid IID_ICorDebugMetaDataLocator = new("7cef8ba9-2ef7-42bf-973f-4171474f87d9");
 
         private readonly ITarget _target;
         private readonly ISymbolService _symbolService;
@@ -91,7 +90,7 @@ namespace SOS.Hosting
                     default:
                         return HResult.E_FAIL;
                 }
-            } 
+            }
             else if (_target.OperatingSystem == OSPlatform.Linux || _target.OperatingSystem == OSPlatform.OSX)
             {
                 switch (_target.Architecture)
@@ -160,7 +159,7 @@ namespace SOS.Hosting
             {
                 Marshal.Copy(registerContext, 0, context, (int)contextSize);
             }
-            catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is ArgumentNullException)
+            catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
             {
                 return HResult.E_INVALIDARG;
             }
@@ -179,7 +178,8 @@ namespace SOS.Hosting
         {
             try
             {
-                if (_threadUnwindService == null) {
+                if (_threadUnwindService == null)
+                {
                     return HResult.E_NOTIMPL;
                 }
                 return _threadUnwindService.Unwind(threadId, contextSize, context);

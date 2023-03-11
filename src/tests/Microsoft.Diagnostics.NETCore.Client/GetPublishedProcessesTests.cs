@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -14,7 +13,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -39,7 +38,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start();
 
-            List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+            List<int> publishedProcesses = new(DiagnosticsClient.GetPublishedProcesses());
             foreach (int p in publishedProcesses)
             {
                 runner.WriteLine($"Saw published process {p}");
@@ -56,32 +55,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     runner[i] = await TestRunner.Create(config, _output, "Tracee");
                     await runner[i].Start();
                     pids[i] = runner[i].Pid;
                 }
 
-                List<int> publishedProcesses = new List<int>(DiagnosticsClient.GetPublishedProcesses());
+                List<int> publishedProcesses = new(DiagnosticsClient.GetPublishedProcesses());
                 foreach (int p in publishedProcesses)
                 {
                     _output.WriteLine($"[{DateTime.Now}] Saw published process {p}");
                 }
 
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     Assert.Contains(publishedProcesses, p => p == pids[i]);
                 }
 
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     runner[i].WakeupTracee();
                 }
             }
             finally
             {
-                for (var i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     await runner[i].DisposeAsync();
                 }
@@ -94,8 +93,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             await runner.Start();
 
-            var client = new DiagnosticsClient(runner.Pid);
-            using var timeoutSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+            DiagnosticsClient client = new(runner.Pid);
+            using CancellationTokenSource timeoutSource = new(TimeSpan.FromMilliseconds(250));
             try
             {
                 await client.WaitForConnectionAsync(timeoutSource.Token);

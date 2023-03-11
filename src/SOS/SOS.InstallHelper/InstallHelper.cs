@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -111,8 +110,7 @@ namespace SOS
 
                 // Copy native SOS files
                 WriteLine($"Copying files from {SOSNativeSourcePath}");
-                RetryOperation("Problem installing native SOS binaries", () =>
-                {
+                RetryOperation("Problem installing native SOS binaries", () => {
                     foreach (string file in Directory.EnumerateFiles(SOSNativeSourcePath))
                     {
                         string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
@@ -122,8 +120,7 @@ namespace SOS
 
                 // Copy managed SOS files
                 WriteLine($"Copying files from {SOSManagedSourcePath}");
-                RetryOperation("Problem installing managed SOS binaries", () =>
-                {
+                RetryOperation("Problem installing managed SOS binaries", () => {
                     foreach (string file in Directory.EnumerateFiles(SOSManagedSourcePath))
                     {
                         string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
@@ -131,7 +128,7 @@ namespace SOS
                     }
                 });
 
-                // Configure lldb 
+                // Configure lldb
                 if (LLDBInitFile != null)
                 {
                     Configure();
@@ -192,8 +189,8 @@ namespace SOS
             }
         }
 
-        const string InitFileStart = "#START - ADDED BY SOS INSTALLER";
-        const string InitFileEnd = "#END - ADDED BY SOS INSTALLER";
+        private const string InitFileStart = "#START - ADDED BY SOS INSTALLER";
+        private const string InitFileEnd = "#END - ADDED BY SOS INSTALLER";
 
         /// <summary>
         /// Configure lldb to load SOS.
@@ -210,7 +207,7 @@ namespace SOS
             bool existing = false;
 
             // Remove the start/end marker from an existing .lldbinit file
-            var lines = new List<string>();
+            List<string> lines = new();
             if (File.Exists(LLDBInitFile))
             {
                 existing = true;
@@ -282,7 +279,7 @@ namespace SOS
         /// <param name="errorMessage">text message or null (don't throw exception)</param>
         /// <param name="operation">callback</param>
         /// <exception cref="SOSInstallerException">errorMessage</exception>
-        private void RetryOperation(string errorMessage, Action operation)
+        private static void RetryOperation(string errorMessage, Action operation)
         {
             Exception lastfailure = null;
 
@@ -301,7 +298,7 @@ namespace SOS
                     // Sleep to allow any temporary error condition to clear up
                     System.Threading.Thread.Sleep(1000);
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is UnauthorizedAccessException || ex is SecurityException)
+                catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException or SecurityException)
                 {
                     if (errorMessage == null)
                     {
@@ -347,7 +344,7 @@ namespace SOS
                         os = "linux-musl";
                     }
                 }
-                catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException || ex is IOException)
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException)
                 {
                 }
             }

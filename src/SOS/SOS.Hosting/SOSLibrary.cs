@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
@@ -79,16 +78,20 @@ namespace SOS.Hosting
             if (_sosLibrary == IntPtr.Zero)
             {
                 string sos;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
                     sos = "sos.dll";
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
                     sos = "libsos.so";
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
                     sos = "libsos.dylib";
                 }
-                else {
+                else
+                {
                     throw new PlatformNotSupportedException($"Unsupported operating system: {RuntimeInformation.OSDescription}");
                 }
                 string sosPath = Path.Combine(SOSPath, sos);
@@ -96,7 +99,7 @@ namespace SOS.Hosting
                 {
                     _sosLibrary = Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.LoadLibrary(sosPath);
                 }
-                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
                     // This is a workaround for the Microsoft SDK docker images. Can fail when LoadLibrary uses libdl.so to load the SOS module.
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -109,7 +112,7 @@ namespace SOS.Hosting
                     }
                 }
                 Debug.Assert(_sosLibrary != IntPtr.Zero);
-                var initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
+                SOSInitializeDelegate initializeFunc = SOSHost.GetDelegateFunction<SOSInitializeDelegate>(_sosLibrary, SOSInitialize);
                 if (initializeFunc == null)
                 {
                     throw new EntryPointNotFoundException($"Can not find SOS module initialization function: {SOSInitialize}");
@@ -131,7 +134,7 @@ namespace SOS.Hosting
             Trace.TraceInformation("SOSHost: Uninitialize");
             if (_sosLibrary != IntPtr.Zero)
             {
-                var uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
+                SOSUninitializeDelegate uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
                 uninitializeFunc?.Invoke();
 
                 Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.FreeLibrary(_sosLibrary);
@@ -150,7 +153,7 @@ namespace SOS.Hosting
         {
             Debug.Assert(_sosLibrary != IntPtr.Zero);
 
-            var commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
+            SOSCommandDelegate commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
             if (commandFunc == null)
             {
                 throw new DiagnosticsException($"SOS command not found: {command}");

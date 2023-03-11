@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -27,7 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             IEnumerable<TestHost> configurations;
             if (TestDataPath != null)
             {
-                Dictionary<string, string> initialConfig = new Dictionary<string, string>
+                Dictionary<string, string> initialConfig = new()
                 {
                     ["OS"] = OS.Kind.ToString(),
                     ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
@@ -40,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 TestConfiguration.BaseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 configurations = TestRunConfiguration.Instance.Configurations.Select((config) => new TestDebugger(config, Target));
             }
-            using var debugServicesTests = new DebugServicesTests(this);
+            using DebugServicesTests debugServicesTests = new(this);
             foreach (TestHost host in configurations)
             {
                 if (!host.Config.IsTestDbgEng())
@@ -72,7 +71,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         #endregion
     }
 
-    class TestDebugger : TestHost
+    internal class TestDebugger : TestHost
     {
         private readonly ITarget _target;
 

@@ -1,11 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.SymbolStore;
-using System;
 using System.Collections.Immutable;
 using System.IO;
+using Microsoft.SymbolStore;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -23,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices
 
         /// <summary>
         /// The default symbol cache path:
-        /// 
+        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
@@ -94,7 +92,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="module">module interface</param>
         /// <returns>module path or null</returns>
         string DownloadSymbolFile(IModule module);
-        
+
         /// <summary>
         /// Download a file from the symbol stores/server.
         /// </summary>

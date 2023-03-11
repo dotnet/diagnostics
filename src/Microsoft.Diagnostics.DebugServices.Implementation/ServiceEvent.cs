@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -11,7 +10,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ServiceEvent : IServiceEvent
     {
-        private class EventNode : LinkedListNode, IDisposable
+        private sealed class EventNode : LinkedListNode, IDisposable
         {
             private readonly Action _callback;
 
@@ -51,10 +50,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public IDisposable RegisterOneShot(Action callback) => Register(oneshot: true, callback);
 
+#pragma warning disable CA1859
+        // Use concrete types when possible for improved performance. Explicitly obscure any functionality other than a duspose token.
         private IDisposable Register(bool oneshot, Action callback)
+#pragma warning restore CA1859
         {
             // Insert at the end of the list
-            var node = new EventNode(oneshot, callback);
+            EventNode node = new(oneshot, callback);
             _events.InsertBefore(node);
             return node;
         }
@@ -73,7 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ServiceEvent<T> : IServiceEvent<T>
     {
-        private class EventNode : LinkedListNode, IDisposable
+        private sealed class EventNode : LinkedListNode, IDisposable
         {
             private readonly Action<T> _callback;
 
@@ -113,10 +115,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public IDisposable RegisterOneShot(Action<T> callback) => Register(oneshot: true, callback);
 
+#pragma warning disable CA1859
+        // Use concrete types when possible for improved performance. Explicitly obscure any functionality other than a duspose token.
         private IDisposable Register(bool oneshot, Action<T> callback)
+#pragma warning restore CA1859
         {
             // Insert at the end of the list
-            var node = new EventNode(oneshot, callback);
+            EventNode node = new(oneshot, callback);
             _events.InsertBefore(node);
             return node;
         }

@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -27,7 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             if (settings.CounterGroups.Length > 0)
             {
                 _filter = new CounterFilter(Settings.CounterIntervalSeconds);
-                foreach (var counterGroup in settings.CounterGroups)
+                foreach (EventPipeCounterGroup counterGroup in settings.CounterGroups)
                 {
                     _filter.AddFilter(counterGroup.ProviderName, counterGroup.CounterNames, counterGroup.IntervalSeconds);
                 }
@@ -40,12 +39,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            var config = new MetricSourceConfiguration(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
-                {
-                    Provider = counterGroup.ProviderName,
-                    IntervalSeconds = counterGroup.IntervalSeconds,
-                    Type = (MetricType)counterGroup.Type
-                }),
+            MetricSourceConfiguration config = new(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
+            {
+                Provider = counterGroup.ProviderName,
+                IntervalSeconds = counterGroup.IntervalSeconds,
+                Type = (MetricType)counterGroup.Type
+            }),
                 Settings.MaxHistograms, Settings.MaxTimeSeries);
 
             _sessionId = config.SessionId;
@@ -55,10 +54,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
-            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token));
+            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token)).ConfigureAwait(false);
 
-            eventSource.Dynamic.All += traceEvent =>
-            {
+            eventSource.Dynamic.All += traceEvent => {
                 try
                 {
                     if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload counterPayload))
@@ -71,15 +69,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             };
 
-            using var sourceCompletedTaskSource = new EventTaskSource<Action>(
+            using EventTaskSource<Action> sourceCompletedTaskSource = new(
                 taskComplete => taskComplete,
                 handler => eventSource.Completed += handler,
                 handler => eventSource.Completed -= handler,
                 token);
 
-            await sourceCompletedTaskSource.Task;
+            await sourceCompletedTaskSource.Task.ConfigureAwait(false);
 
-            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStopped(token));
+            await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStopped(token)).ConfigureAwait(false);
         }
 
         private async Task ExecuteCounterLoggerActionAsync(Func<ICountersLogger, Task> action)
@@ -88,7 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 try
                 {
-                    await action(logger);
+                    await action(logger).ConfigureAwait(false);
                 }
                 catch (ObjectDisposedException)
                 {

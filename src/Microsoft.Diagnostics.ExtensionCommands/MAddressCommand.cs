@@ -1,7 +1,10 @@
-﻿using Microsoft.Diagnostics.DebugServices;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -27,7 +30,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             if (TagReserveMemoryHeuristically && !IncludeReserveMemory)
+            {
                 throw new DiagnosticsException("Cannot use --tagReserve without --includeReserve");
+            }
 
             PrintMemorySummary(ListAll, ShowImageTable, IncludeReserveMemory, TagReserveMemoryHeuristically);
         }
@@ -36,7 +41,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             IEnumerable<DescribedRegion> memoryRanges = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory, tagReserveMemoryHeuristically);
             if (!includeReserveMemory)
+            {
                 memoryRanges = memoryRanges.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
+            }
 
             DescribedRegion[] ranges = memoryRanges.ToArray();
 
@@ -44,7 +51,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Tag reserved memory based on what's adjacent.
             if (tagReserveMemoryHeuristically)
+            {
                 CollapseReserveRegions(ranges);
+            }
 
             if (printAllMemory)
             {
@@ -60,7 +69,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 output.WriteRowWithSpacing('-', "Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
                 foreach (DescribedRegion mem in ranges)
+                {
                     output.WriteRow(mem.Name, mem.Start, mem.End, mem.Size.ConvertToHumanReadable(), mem.Type, mem.State, mem.Protection, mem.Image);
+                }
 
                 output.WriteSpacer('-');
             }
@@ -71,8 +82,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                   group mem by mem.Image into g
                                   let Size = g.Sum(k => (long)(k.End - k.Start))
                                   orderby Size descending
-                                  select new
-                                  {
+                                  select new {
                                       Image = g.Key,
                                       Count = g.Count(),
                                       Size
@@ -110,8 +120,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                               let Count = g.Count()
                               let Size = g.Sum(f => (long)(f.End - f.Start))
                               orderby Size descending
-                              select new
-                              {
+                              select new {
                                   Name = g.Key,
                                   Count,
                                   Size

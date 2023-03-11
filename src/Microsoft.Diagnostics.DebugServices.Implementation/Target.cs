@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -143,7 +142,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     Directory.Delete(_tempDirectory);
                 }
-                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                 }
                 _tempDirectory = null;
@@ -162,16 +161,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             string process = ProcessId.HasValue ? string.Format("{0} (0x{0:X})", ProcessId.Value) : "<none>";
             sb.AppendLine($"Target OS: {OperatingSystem} Architecture: {Architecture} ProcessId: {process}");
-            if (_tempDirectory != null) {
+            if (_tempDirectory != null)
+            {
                 sb.AppendLine($"Temp path: {_tempDirectory}");
             }
-            if (_dumpPath != null) {
+            if (_dumpPath != null)
+            {
                 sb.AppendLine($"Dump path: {_dumpPath}");
             }
-            var runtimeService = Services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = Services.GetService<IRuntimeService>();
             if (runtimeService != null)
             {
                 sb.AppendLine(runtimeService.ToString());

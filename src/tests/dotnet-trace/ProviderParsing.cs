@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
-using Xunit;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.NETCore.Client;
+using Xunit;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -179,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(providerTwo.Keywords == 2);
             Assert.True(providerTwo.EventLevel == System.Diagnostics.Tracing.EventLevel.Error);
             Assert.True(providerTwo.Arguments.Count == 1);
-            Assert.True(providerTwo.Arguments["FilterAndPayloadSpecs"]== "QuotedValue");
+            Assert.True(providerTwo.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
 
             Assert.True(providerThree.Name == "ProviderThree");
             Assert.True(providerThree.Keywords == 3);
@@ -255,7 +254,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [Theory]
         [InlineData("ProviderOne:0x1:LogAlways")]
-        [InlineData("ProviderOne:0x1:LogAlwayS")]        
+        [InlineData("ProviderOne:0x1:LogAlwayS")]
         public void TextLevelProviderSpecLogAlways_CorrectlyParse(string providerToParse)
         {
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);

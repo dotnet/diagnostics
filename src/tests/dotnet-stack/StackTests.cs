@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -62,8 +61,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             Command reportCommand = ReportCommandHandler.ReportCommand();
 
-            var console = new TestConsole();
-            var parser = new Parser(reportCommand);
+            TestConsole console = new();
+            Parser parser = new(reportCommand);
 
             await using TestRunner runner = await TestRunner.Create(config, _output, "StackTracee", usePipe: false);
             await runner.Start();
@@ -90,7 +89,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             int partIdx = 0;
             while (stackParts[partIdx].StartsWith("#") || stackParts[partIdx].StartsWith("Thread") || stackParts[partIdx].StartsWith("Found"))
+            {
                 partIdx++;
+            }
 
             Assert.True(stackParts.Length - partIdx == correctStackParts.Length, $"{stackParts.Length - partIdx} != {correctStackParts.Length}");
 

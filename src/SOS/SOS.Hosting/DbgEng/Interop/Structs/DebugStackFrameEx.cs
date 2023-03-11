@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Runtime.InteropServices;
 
@@ -33,12 +32,20 @@ namespace SOS.Hosting.DbgEng.Interop
             FuncTableEntry = dsf.FuncTableEntry;
 
             fixed (ulong* pParams = Params)
+            {
                 for (int i = 0; i < 4; ++i)
+                {
                     pParams[i] = dsf.Params[i];
+                }
+            }
 
             fixed (ulong* pReserved = Params)
+            {
                 for (int i = 0; i < 6; ++i)
+                {
                     pReserved[i] = dsf.Reserved[i];
+                }
+            }
 
             Virtual = dsf.Virtual;
             FrameNumber = dsf.FrameNumber;

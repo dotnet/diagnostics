@@ -1,5 +1,6 @@
-﻿using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.TestHelpers;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -7,13 +8,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
@@ -46,7 +49,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
-        ITestOutputHelper Output { get; set; }
+        private ITestOutputHelper Output { get; set; }
 
         public DebugServicesTests(ITestOutputHelper output)
         {
@@ -62,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             ITarget target = host.Target;
             Assert.NotNull(target);
 
-            var contextService = target.Services.GetService<IContextService>();
+            IContextService contextService = target.Services.GetService<IContextService>();
             Assert.NotNull(contextService);
             Assert.NotNull(contextService.GetCurrentTarget());
 
@@ -76,7 +79,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ModuleTests(TestHost host)
         {
-            var moduleService = host.Target.Services.GetService<IModuleService>();
+            IModuleService moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> moduleData in host.TestData.Modules)
@@ -114,7 +117,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.NotNull(module);
 
                 if (host.Target.Host.HostType != HostType.Lldb)
-                { 
+                {
                     // Check that the resulting module matches the test data
                     host.TestData.CompareMembers(moduleData, module);
                 }
@@ -177,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                             Assert.True(symbol.TryGetValue("Name", out string name));
                             Assert.True(symbol.TryGetValue("Value", out ulong value));
                             Trace.TraceInformation("IExportSymbols.GetSymbolAddress({0}) == {1:X16}", name, value);
-                            
+
                             Assert.True(exportSymbols.TryGetSymbolAddress(name, out ulong offset));
                             Assert.Equal(value, offset);
                         }
@@ -213,13 +216,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void ThreadTests(TestHost host)
         {
-            var threadService = host.Target.Services.GetService<IThreadService>();
+            IThreadService threadService = host.Target.Services.GetService<IThreadService>();
             Assert.NotNull(threadService);
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> threadData in host.TestData.Threads)
             {
                 Assert.True(threadData.TryGetValue("ThreadId", out uint threadId));
-                
+
                 IThread thread = threadService.GetThreadFromId(threadId);
                 Assert.NotNull(thread);
 
@@ -261,10 +264,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 throw new SkipTestException("Not supported on Alpine Linux");
             }
-            var runtimeService = host.Target.Services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = host.Target.Services.GetService<IRuntimeService>();
             Assert.NotNull(runtimeService);
 
-            var contextService = host.Target.Services.GetService<IContextService>();
+            IContextService contextService = host.Target.Services.GetService<IContextService>();
             Assert.NotNull(contextService);
             Assert.NotNull(contextService.GetCurrentRuntime());
 

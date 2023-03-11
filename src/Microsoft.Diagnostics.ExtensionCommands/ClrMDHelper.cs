@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -34,12 +33,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             const string stateFieldName = "m_stateFlags";
 
-            var type = _heap.GetObjectType(address);
+            ClrType type = _heap.GetObjectType(address);
             if ((type != null) && (type.Name.StartsWith("System.Threading.Tasks.Task")))
             {
                 // could be other Task-prefixed types in the same namespace such as TaskCompletionSource
                 if (type.GetFieldByName(stateFieldName) == null)
+                {
                     return 0;
+                }
 
                 return (ulong)_heap.GetObject(address).ReadField<int>(stateFieldName);
             }
@@ -51,34 +52,61 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             TaskStatus tks;
 
-            if ((flag & TASK_STATE_FAULTED) != 0) tks = TaskStatus.Faulted;
-            else if ((flag & TASK_STATE_CANCELED) != 0) tks = TaskStatus.Canceled;
-            else if ((flag & TASK_STATE_RAN_TO_COMPLETION) != 0) tks = TaskStatus.RanToCompletion;
-            else if ((flag & TASK_STATE_WAITING_ON_CHILDREN) != 0) tks = TaskStatus.WaitingForChildrenToComplete;
-            else if ((flag & TASK_STATE_DELEGATE_INVOKED) != 0) tks = TaskStatus.Running;
-            else if ((flag & TASK_STATE_STARTED) != 0) tks = TaskStatus.WaitingToRun;
-            else if ((flag & TASK_STATE_WAITINGFORACTIVATION) != 0) tks = TaskStatus.WaitingForActivation;
-            else if (flag == 0) tks = TaskStatus.Created;
-            else return null;
+            if ((flag & TASK_STATE_FAULTED) != 0)
+            {
+                tks = TaskStatus.Faulted;
+            }
+            else if ((flag & TASK_STATE_CANCELED) != 0)
+            {
+                tks = TaskStatus.Canceled;
+            }
+            else if ((flag & TASK_STATE_RAN_TO_COMPLETION) != 0)
+            {
+                tks = TaskStatus.RanToCompletion;
+            }
+            else if ((flag & TASK_STATE_WAITING_ON_CHILDREN) != 0)
+            {
+                tks = TaskStatus.WaitingForChildrenToComplete;
+            }
+            else if ((flag & TASK_STATE_DELEGATE_INVOKED) != 0)
+            {
+                tks = TaskStatus.Running;
+            }
+            else if ((flag & TASK_STATE_STARTED) != 0)
+            {
+                tks = TaskStatus.WaitingToRun;
+            }
+            else if ((flag & TASK_STATE_WAITINGFORACTIVATION) != 0)
+            {
+                tks = TaskStatus.WaitingForActivation;
+            }
+            else if (flag == 0)
+            {
+                tks = TaskStatus.Created;
+            }
+            else
+            {
+                return null;
+            }
 
             return tks.ToString();
         }
 
         // from CLR implementation in https://github.com/dotnet/runtime/blob/main/src/libraries/System.Private.CoreLib/src/System/Threading/Tasks/Task.cs#L141
-        internal const int TASK_STATE_STARTED                      = 0x00010000;
-        internal const int TASK_STATE_DELEGATE_INVOKED             = 0x00020000;
-        internal const int TASK_STATE_DISPOSED                     = 0x00040000;
-        internal const int TASK_STATE_EXCEPTIONOBSERVEDBYPARENT    = 0x00080000;
-        internal const int TASK_STATE_CANCELLATIONACKNOWLEDGED     = 0x00100000;
-        internal const int TASK_STATE_FAULTED                      = 0x00200000;
-        internal const int TASK_STATE_CANCELED                     = 0x00400000;
-        internal const int TASK_STATE_WAITING_ON_CHILDREN          = 0x00800000;
-        internal const int TASK_STATE_RAN_TO_COMPLETION            = 0x01000000;
-        internal const int TASK_STATE_WAITINGFORACTIVATION         = 0x02000000;
-        internal const int TASK_STATE_COMPLETION_RESERVED          = 0x04000000;
+        internal const int TASK_STATE_STARTED = 0x00010000;
+        internal const int TASK_STATE_DELEGATE_INVOKED = 0x00020000;
+        internal const int TASK_STATE_DISPOSED = 0x00040000;
+        internal const int TASK_STATE_EXCEPTIONOBSERVEDBYPARENT = 0x00080000;
+        internal const int TASK_STATE_CANCELLATIONACKNOWLEDGED = 0x00100000;
+        internal const int TASK_STATE_FAULTED = 0x00200000;
+        internal const int TASK_STATE_CANCELED = 0x00400000;
+        internal const int TASK_STATE_WAITING_ON_CHILDREN = 0x00800000;
+        internal const int TASK_STATE_RAN_TO_COMPLETION = 0x01000000;
+        internal const int TASK_STATE_WAITINGFORACTIVATION = 0x02000000;
+        internal const int TASK_STATE_COMPLETION_RESERVED = 0x04000000;
         internal const int TASK_STATE_WAIT_COMPLETION_NOTIFICATION = 0x10000000;
-        internal const int TASK_STATE_EXECUTIONCONTEXT_IS_NULL     = 0x20000000;
-        internal const int TASK_STATE_TASKSCHEDULED_WAS_FIRED      = 0x40000000;
+        internal const int TASK_STATE_EXECUTIONCONTEXT_IS_NULL = 0x20000000;
+        internal const int TASK_STATE_TASKSCHEDULED_WAS_FIRED = 0x40000000;
 
         public IEnumerable<TimerInfo> EnumerateTimers()
         {
@@ -86,9 +114,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // - the former is relying on a single static TimerQueue.s_queue
             // - the latter uses an array of TimerQueue (static TimerQueue.Instances field)
             // each queue refers to TimerQueueTimer linked list via its m_timers or _shortTimers/_longTimers fields
-            var timerQueueType = GetMscorlib().GetTypeByName("System.Threading.TimerQueue");
+            ClrType timerQueueType = GetMscorlib().GetTypeByName("System.Threading.TimerQueue");
             if (timerQueueType == null)
+            {
                 yield break;
+            }
 
             // .NET Core case
             ClrStaticField instancesField = timerQueueType.GetStaticFieldByName("<Instances>k__BackingField");
@@ -96,20 +126,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // until the ClrMD bug to get static field value is fixed, iterate on each object of the heap
                 // to find each TimerQueue and iterate on (slower but it works)
-                foreach (var obj in _heap.EnumerateObjects())
+                foreach (ClrObject obj in _heap.EnumerateObjects())
                 {
-                    var objType = obj.Type;
-                    if (objType == null) continue;
-                    if (objType == _heap.FreeType) continue;
-                    if (string.CompareOrdinal(objType.Name, "System.Threading.TimerQueue") != 0)
+                    ClrType objType = obj.Type;
+                    if (objType == null)
+                    {
                         continue;
+                    }
+
+                    if (objType == _heap.FreeType)
+                    {
+                        continue;
+                    }
+
+                    if (string.CompareOrdinal(objType.Name, "System.Threading.TimerQueue") != 0)
+                    {
+                        continue;
+                    }
 
                     // m_timers is the start of the linked list of TimerQueueTimer in pre 3.0
-                    var timersField = objType.GetFieldByName("m_timers");
+                    ClrInstanceField timersField = objType.GetFieldByName("m_timers");
                     if (timersField != null)
                     {
-                        var currentTimerQueueTimer = obj.ReadObjectField("m_timers");
-                        foreach (var timer in GetTimers(currentTimerQueueTimer, false))
+                        ClrObject currentTimerQueueTimer = obj.ReadObjectField("m_timers");
+                        foreach (TimerInfo timer in GetTimers(currentTimerQueueTimer, false))
                         {
                             yield return timer;
                         }
@@ -119,10 +159,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         // get short timers
                         timersField = objType.GetFieldByName("_shortTimers");
                         if (timersField == null)
+                        {
                             throw new InvalidOperationException("Missing _shortTimers field. Check the .NET Core version implementation of TimerQueue.");
+                        }
 
-                        var currentTimerQueueTimer = obj.ReadObjectField("_shortTimers");
-                        foreach (var timer in GetTimers(currentTimerQueueTimer, true))
+                        ClrObject currentTimerQueueTimer = obj.ReadObjectField("_shortTimers");
+                        foreach (TimerInfo timer in GetTimers(currentTimerQueueTimer, true))
                         {
                             timer.IsShort = true;
                             yield return timer;
@@ -130,7 +172,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         // get long timers
                         currentTimerQueueTimer = obj.ReadObjectField("_longTimers");
-                        foreach (var timer in GetTimers(currentTimerQueueTimer, true))
+                        foreach (TimerInfo timer in GetTimers(currentTimerQueueTimer, true))
                         {
                             timer.IsShort = false;
                             yield return timer;
@@ -141,19 +183,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else
             {
                 // .NET Framework implementation
-                var instanceField = timerQueueType.GetStaticFieldByName("s_queue");
+                ClrStaticField instanceField = timerQueueType.GetStaticFieldByName("s_queue");
                 if (instanceField == null)
-                    yield break;
-
-                foreach (var domain in _clr.AppDomains)
                 {
-                    var timerQueue = instanceField.ReadObject(domain);
+                    yield break;
+                }
+
+                foreach (ClrAppDomain domain in _clr.AppDomains)
+                {
+                    ClrObject timerQueue = instanceField.ReadObject(domain);
                     if ((timerQueue.IsNull) || (!timerQueue.IsValid))
+                    {
                         continue;
+                    }
 
                     // m_timers is the start of the list of TimerQueueTimer
-                    var currentTimerQueueTimer = timerQueue.ReadObjectField("m_timers");
-                    foreach (var timer in GetTimers(currentTimerQueueTimer, false))
+                    ClrObject currentTimerQueueTimer = timerQueue.ReadObjectField("m_timers");
+                    foreach (TimerInfo timer in GetTimers(currentTimerQueueTimer, false))
                     {
                         yield return timer;
                     }
@@ -165,9 +211,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             while (timerQueueTimer.Address != 0)
             {
-                var ti = GetTimerInfo(timerQueueTimer);
+                TimerInfo ti = GetTimerInfo(timerQueueTimer);
                 if (ti == null)
+                {
                     continue;
+                }
 
                 yield return ti;
 
@@ -179,13 +227,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private TimerInfo GetTimerInfo(ClrObject currentTimerQueueTimer)
         {
-            var ti = new TimerInfo()
+            TimerInfo ti = new()
             {
                 TimerQueueTimerAddress = currentTimerQueueTimer.Address
             };
 
             // field names prefix changes from "m_" to "_" in .NET Core 3.0
-            var is30Format = currentTimerQueueTimer.Type.GetFieldByName("_dueTime") != null;
+            bool is30Format = currentTimerQueueTimer.Type.GetFieldByName("_dueTime") != null;
             ClrObject state;
             if (is30Format)
             {
@@ -206,7 +254,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (state.IsValid)
             {
                 ti.StateAddress = state.Address;
-                var stateType = _heap.GetObjectType(ti.StateAddress);
+                ClrType stateType = _heap.GetObjectType(ti.StateAddress);
                 if (stateType != null)
                 {
                     ti.StateTypeName = stateType.Name;
@@ -214,12 +262,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // decipher the callback details
-            var timerCallback = is30Format ?
+            ClrObject timerCallback = is30Format ?
                 currentTimerQueueTimer.ReadObjectField("_timerCallback") :
                 currentTimerQueueTimer.ReadObjectField("m_timerCallback");
             if (timerCallback.IsValid)
             {
-                var elementType = timerCallback.Type;
+                ClrType elementType = timerCallback.Type;
                 if (elementType != null)
                 {
                     if (elementType.Name == "System.Threading.TimerCallback")
@@ -247,19 +295,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private string BuildTimerCallbackMethodName(ClrObject timerCallback)
         {
-            var methodPtr = timerCallback.ReadField<ulong>("_methodPtr");
+            ulong methodPtr = timerCallback.ReadField<ulong>("_methodPtr");
             if (methodPtr != 0)
             {
-                var method = _clr.GetMethodByInstructionPointer(methodPtr);
+                ClrMethod method = _clr.GetMethodByInstructionPointer(methodPtr);
                 if (method != null)
                 {
                     // look for "this" to figure out the real callback implementor type
-                    var thisTypeName = "?";
-                    var thisPtr = timerCallback.ReadObjectField("_target");
+                    string thisTypeName = "?";
+                    ClrObject thisPtr = timerCallback.ReadObjectField("_target");
                     if (thisPtr.IsValid)
                     {
-                        var thisRef = thisPtr.Address;
-                        var thisType = _heap.GetObjectType(thisRef);
+                        ulong thisRef = thisPtr.Address;
+                        ClrType thisType = _heap.GetObjectType(thisRef);
                         if (thisType != null)
                         {
                             thisTypeName = thisType.Name;
@@ -286,7 +334,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ClrModule mscorlib = GetMscorlib();
             return IsNetCore() ?
-                EnumerateGlobalThreadPoolItemsInNetCore(mscorlib) :
+                EnumerateGlobalThreadPoolItemsInNetCore() :
                 EnumerateGlobalThreadPoolItemsInNetFramework(mscorlib);
         }
 
@@ -294,11 +342,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ClrModule mscorlib = GetMscorlib();
             return IsNetCore() ?
-                EnumerateLocalThreadPoolItemsInNetCore(mscorlib) :
+                EnumerateLocalThreadPoolItemsInNetCore() :
                 EnumerateLocalThreadPoolItemsInNetFramework(mscorlib);
         }
 
-        private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetCore(ClrModule corelib)
+        private IEnumerable<ThreadPoolItem> EnumerateGlobalThreadPoolItemsInNetCore()
         {
             // Look at the code to enumerate ThreadPool items from ThreadPool.cs
             // in https://github.com/dotnet/runtime/blob/ee9dc4984ce172697d94471a6be57d61116e34b6/src/libraries/System.Private.CoreLib/src/System/Threading/ThreadPool.cs#L1184
@@ -307,27 +355,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // and each thread has a dedicated WorkStealingQueue stored in WorkStealingQueueList._queues (a WorkStealingQueue[])
             //
             // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
-            var heap = _clr.Heap;
+            ClrHeap heap = _clr.Heap;
             if (!heap.CanWalkHeap)
+            {
                 yield break;
+            }
 
-            foreach (var obj in _heap.EnumerateObjects())
+            foreach (ClrObject obj in _heap.EnumerateObjects())
             {
 
-                var objType = obj.Type;
-                if (objType == null) continue;
-                if (objType == _heap.FreeType) continue;
+                ClrType objType = obj.Type;
+                if (objType == null)
+                {
+                    continue;
+                }
+
+                if (objType == _heap.FreeType)
+                {
+                    continue;
+                }
 
                 if (string.CompareOrdinal(objType.Name, "System.Threading.ThreadPoolWorkQueue") == 0)
                 {
                     // work items are stored in a ConcurrentQueue stored in the "workItems" field
-                    var workItemsField = objType.GetFieldByName("workItems");
+                    ClrInstanceField workItemsField = objType.GetFieldByName("workItems");
                     if (workItemsField == null)
+                    {
                         throw new InvalidOperationException("Unsupported version of .NET: missing 'workItems' field in ThreadPoolWorkQueue");
+                    }
 
-                    var workItems = obj.ReadObjectField("workItems");
+                    ClrObject workItems = obj.ReadObjectField("workItems");
 
-                    foreach (var workItem in EnumerateWorkItemsAddressInConcurrentQueue(workItems.Address))
+                    foreach (ClrObject workItem in EnumerateWorkItemsAddressInConcurrentQueue(workItems.Address))
                     {
                         yield return GetThreadPoolItem(workItem);
                     }
@@ -353,7 +412,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // create a raw information
-            ThreadPoolItem tpi = new ThreadPoolItem()
+            ThreadPoolItem tpi = new()
             {
                 Type = ThreadRoot.Raw,
                 Address = item.Address,
@@ -365,21 +424,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private ThreadPoolItem GetTask(ClrObject task)
         {
-            ThreadPoolItem tpi = new ThreadPoolItem()
+            ThreadPoolItem tpi = new()
             {
                 Address = task.Address,
                 Type = ThreadRoot.Task
             };
 
             // look for the context in m_action._target
-            var action = task.ReadObjectField("m_action");
+            ClrObject action = task.ReadObjectField("m_action");
             if (!action.IsValid)
             {
                 tpi.MethodName = " [no action]";
                 return tpi;
             }
 
-            var target = action.ReadObjectField("_target");
+            ClrObject target = action.ReadObjectField("_target");
             if (!target.IsValid)
             {
                 tpi.MethodName = " [no target]";
@@ -389,19 +448,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             tpi.MethodName = BuildDelegateMethodName(target.Type, action);
 
             // get the task scheduler if any
-            var taskScheduler = task.ReadObjectField("m_taskScheduler");
+            ClrObject taskScheduler = task.ReadObjectField("m_taskScheduler");
             if (taskScheduler.IsValid)
             {
-                var schedulerType = taskScheduler.Type.ToString();
+                string schedulerType = taskScheduler.Type.ToString();
                 if (string.CompareOrdinal("System.Threading.Tasks.ThreadPoolTaskScheduler", schedulerType) != 0)
+                {
                     tpi.MethodName = $"{tpi.MethodName} [{schedulerType}]";
+                }
             }
             return tpi;
         }
 
         private ThreadPoolItem GetQueueUserWorkItemCallback(ClrObject element)
         {
-            ThreadPoolItem tpi = new ThreadPoolItem()
+            ThreadPoolItem tpi = new()
             {
                 Address = (ulong)element,
                 Type = ThreadRoot.WorkItem
@@ -409,7 +470,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // look for the callback given to ThreadPool.QueueUserWorkItem()
             // for .NET Core, the callback is stored in a different field _callback
-            var elementType = element.Type;
+            ClrType elementType = element.Type;
             ClrObject callback;
             if (elementType.GetFieldByName("_callback") != null)
             {
@@ -425,7 +486,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return tpi;
             }
 
-            var target = callback.ReadObjectField("_target");
+            ClrObject target = callback.ReadObjectField("_target");
             if (!target.IsValid)
             {
                 tpi.MethodName = "[no callback target]";
@@ -448,7 +509,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         internal string BuildDelegateMethodName(ClrType targetType, ClrObject action)
         {
-            var methodPtr = action.ReadField<ulong>("_methodPtr");
+            ulong methodPtr = action.ReadField<ulong>("_methodPtr");
             if (methodPtr != 0)
             {
                 ClrMethod method = _clr.GetMethodByInstructionPointer(methodPtr);
@@ -491,20 +552,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private IEnumerable<ClrObject> EnumerateWorkItemsAddressInConcurrentQueue(ulong address)
         {
             // Look at EnumerateConcurrentQueue() for more details about ConcurrentQueue
-            var cq = _heap.GetObject(address);
-            var currentSegment = cq.ReadObjectField("_head");
+            ClrObject cq = _heap.GetObject(address);
+            ClrObject currentSegment = cq.ReadObjectField("_head");
             while (!currentSegment.IsNull && currentSegment.IsValid)
             {
-                var slots = currentSegment.ReadObjectField("_slots").AsArray();
-                var count = slots.Length;
+                ClrArray slots = currentSegment.ReadObjectField("_slots").AsArray();
+                int count = slots.Length;
                 for (int current = 0; current < count; current++)
                 {
-                    var slot = slots.GetStructValue(current);
-                    var slotEntry = slot.ReadField<UIntPtr>("Item");
+                    ClrValueType slot = slots.GetStructValue(current);
+                    UIntPtr slotEntry = slot.ReadField<UIntPtr>("Item");
 
                     // skip empty null slots
                     if (slotEntry == UIntPtr.Zero)
+                    {
                         continue;
+                    }
 
                     yield return _heap.GetObject(slotEntry.ToUInt64());
                 }
@@ -513,32 +576,41 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             };
         }
 
-        private IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItemsInNetCore(ClrModule corelib)
+        private IEnumerable<ThreadPoolItem> EnumerateLocalThreadPoolItemsInNetCore()
         {
             // in .NET Core, each thread has a dedicated WorkStealingQueue stored in WorkStealingQueueList._queues (a WorkStealingQueue[])
             //
             // until we can access static fields values in .NET Core with ClrMD, we need to browse the whole heap...
-            var heap = _clr.Heap;
+            ClrHeap heap = _clr.Heap;
             if (!heap.CanWalkHeap)
+            {
                 yield break;
+            }
 
-            foreach (var obj in heap.EnumerateObjects())
+            foreach (ClrObject obj in heap.EnumerateObjects())
             {
                 if (!obj.IsValid)
+                {
                     continue;
-                var type = obj.Type;
+                }
+
+                ClrType type = obj.Type;
                 if (type == null)
+                {
                     continue;
+                }
 
                 if (string.CompareOrdinal(type.Name, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue") == 0)
                 {
-                    var stealingQueue = obj;
-                    var workItems = stealingQueue.ReadObjectField("m_array").AsArray();
+                    ClrObject stealingQueue = obj;
+                    ClrArray workItems = stealingQueue.ReadObjectField("m_array").AsArray();
                     for (int current = 0; current < workItems.Length; current++)
                     {
-                        var workItem = workItems.GetObjectValue(current);
+                        ClrObject workItem = workItems.GetObjectValue(current);
                         if (!workItem.IsValid)
+                        {
                             continue;
+                        }
 
                         yield return GetThreadPoolItem(workItem);
                     }
@@ -558,27 +630,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ClrType queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolGlobals");
             if (queueType == null)
+            {
                 yield break;
+            }
 
             ClrStaticField workQueueField = queueType.GetStaticFieldByName("workQueue");
             if (workQueueField == null)
+            {
                 yield break;
+            }
 
             // the CLR keeps one static instance per application domain
-            foreach (var appDomain in _clr.AppDomains)
+            foreach (ClrAppDomain appDomain in _clr.AppDomains)
             {
-                var workQueue = workQueueField.ReadObject(appDomain);
+                ClrObject workQueue = workQueueField.ReadObject(appDomain);
                 if (!workQueue.IsValid)
+                {
                     continue;
+                }
 
                 // should be  System.Threading.ThreadPoolWorkQueue
-                var workQueueType = workQueue.Type;
+                ClrType workQueueType = workQueue.Type;
                 if (workQueueType == null)
+                {
                     continue;
-                if (string.CompareOrdinal(workQueueType.Name, "System.Threading.ThreadPoolWorkQueue") != 0)
-                    continue;
+                }
 
-                foreach (var item in EnumerateThreadPoolWorkQueue(workQueue))
+                if (string.CompareOrdinal(workQueueType.Name, "System.Threading.ThreadPoolWorkQueue") != 0)
+                {
+                    continue;
+                }
+
+                foreach (ThreadPoolItem item in EnumerateThreadPoolWorkQueue(workQueue))
                 {
                     yield return item;
                 }
@@ -588,16 +671,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private IEnumerable<ThreadPoolItem> EnumerateThreadPoolWorkQueue(ClrObject workQueue)
         {
             // start from the tail and follow the Next
-            var currentQueueSegment = workQueue.ReadObjectField("queueTail");
+            ClrObject currentQueueSegment = workQueue.ReadObjectField("queueTail");
             while (currentQueueSegment.IsValid)
             {
                 // get the System.Threading.ThreadPoolWorkQueue+QueueSegment nodes array
-                var nodes = currentQueueSegment.ReadObjectField("nodes").AsArray();
+                ClrArray nodes = currentQueueSegment.ReadObjectField("nodes").AsArray();
                 for (int currentNode = 0; currentNode < nodes.Length; currentNode++)
                 {
-                    var item = nodes.GetObjectValue(currentNode);
+                    ClrObject item = nodes.GetObjectValue(currentNode);
                     if (!item.IsValid)
+                    {
                         continue;
+                    }
 
                     yield return GetThreadPoolItem(item);
                 }
@@ -612,28 +697,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // hopefully, they are all stored in static (one per app domain) instance
             // of ThreadPoolWorkQueue.SparseArray<ThreadPoolWorkQueue.WorkStealingQueue>
             //
-            var queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
+            ClrType queueType = mscorlib.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
             if (queueType == null)
+            {
                 yield break;
+            }
 
             ClrStaticField threadQueuesField = queueType.GetStaticFieldByName("allThreadQueues");
             if (threadQueuesField == null)
+            {
                 yield break;
+            }
 
             foreach (ClrAppDomain domain in _clr.AppDomains)
             {
-                var threadQueue = threadQueuesField.ReadObject(domain);
+                ClrObject threadQueue = threadQueuesField.ReadObject(domain);
                 if (!threadQueue.IsValid)
+                {
                     continue;
+                }
 
-                var sparseArray = threadQueue.ReadObjectField("m_array").AsArray();
+                ClrArray sparseArray = threadQueue.ReadObjectField("m_array").AsArray();
                 for (int current = 0; current < sparseArray.Length; current++)
                 {
-                    var stealingQueue = sparseArray.GetObjectValue(current);
+                    ClrObject stealingQueue = sparseArray.GetObjectValue(current);
                     if (!stealingQueue.IsValid)
+                    {
                         continue;
+                    }
 
-                    foreach (var item in EnumerateThreadPoolStealingQueue(stealingQueue))
+                    foreach (ThreadPoolItem item in EnumerateThreadPoolStealingQueue(stealingQueue))
                     {
                         yield return item;
                     }
@@ -643,12 +736,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private IEnumerable<ThreadPoolItem> EnumerateThreadPoolStealingQueue(ClrObject stealingQueue)
         {
-            var array = stealingQueue.ReadObjectField("m_array").AsArray();
+            ClrArray array = stealingQueue.ReadObjectField("m_array").AsArray();
             for (int current = 0; current < array.Length; current++)
             {
-                var item = array.GetObjectValue(current);
+                ClrObject item = array.GetObjectValue(current);
                 if (!item.IsValid)
+                {
                     continue;
+                }
 
                 yield return GetThreadPoolItem(item);
             }
@@ -657,22 +752,31 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public IEnumerable<KeyValuePair<string, string>> EnumerateConcurrentDictionary(ulong address)
         {
             bool isNetCore = IsNetCore();
-            var tablesFieldName = isNetCore ? "_tables" : "m_tables";
-            var bucketsFieldName = isNetCore ? "_buckets" : "m_buckets";
-            var keyFieldName = isNetCore ? "_key" : "m_key";
-            var valueFieldName = isNetCore ? "_value" : "m_value";
-            var nextFieldName = isNetCore ? "_next" : "m_next";
+            string tablesFieldName = isNetCore ? "_tables" : "m_tables";
+            string bucketsFieldName = isNetCore ? "_buckets" : "m_buckets";
+            string keyFieldName = isNetCore ? "_key" : "m_key";
+            string valueFieldName = isNetCore ? "_value" : "m_value";
+            string nextFieldName = isNetCore ? "_next" : "m_next";
 
-            var cd = _heap.GetObject(address);
+            ClrObject cd = _heap.GetObject(address);
             if (!cd.IsValid)
+            {
                 throw new InvalidOperationException("Address does not correspond to a ConcurrentDictionary");
-            var tables = cd.ReadObjectField(tablesFieldName);
+            }
+
+            ClrObject tables = cd.ReadObjectField(tablesFieldName);
             if (!tables.IsValid)
+            {
                 throw new InvalidOperationException($"ConcurrentDictionary does not own {tablesFieldName} attribute");
-            var buckets = tables.ReadObjectField(bucketsFieldName);
+            }
+
+            ClrObject buckets = tables.ReadObjectField(bucketsFieldName);
             if (!buckets.IsValid)
+            {
                 throw new InvalidOperationException($"ConcurrentDictionary tables does not own {bucketsFieldName} attribute");
-            var bucketsArray = buckets.AsArray();
+            }
+
+            ClrArray bucketsArray = buckets.AsArray();
 
             for (int i = 0; i < bucketsArray.Length; i++)
             {
@@ -704,8 +808,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // Node is at the head object of a linked list
                 while (!node.IsNull && node.IsValid)
                 {
-                    var key = DumpPropertyValue(node, keyFieldName);
-                    var value = DumpPropertyValue(node, valueFieldName);
+                    string key = DumpPropertyValue(node, keyFieldName);
+                    string value = DumpPropertyValue(node, valueFieldName);
 
                     yield return new KeyValuePair<string, string>(key, value);
 
@@ -723,18 +827,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IEnumerable<ClrObject> EnumerateObjectsInGeneration(GCGeneration generation)
         {
-            foreach (var segment in _heap.Segments)
+            foreach (ClrSegment segment in _heap.Segments)
             {
-                if (!TryGetSegmentMemoryRange(segment, generation, out var start, out var end))
+                if (!TryGetSegmentMemoryRange(segment, generation, out ulong start, out ulong end))
+                {
                     continue;
+                }
 
                 foreach (ClrObject obj in _heap.EnumerateObjects(new MemoryRange(start, end)))
+                {
                     if (obj.IsValid)
+                    {
                         yield return obj;
+                    }
+                }
             }
         }
 
-        private bool TryGetSegmentMemoryRange(ClrSegment segment, GCGeneration generation, out ulong start, out ulong end)
+        private static bool TryGetSegmentMemoryRange(ClrSegment segment, GCGeneration generation, out ulong start, out ulong end)
         {
             start = 0;
             end = 0;
@@ -784,16 +894,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // A ConcurrentQueue<T> contains a linked list of Segment starting from _head
             // and each Segment contains an array of Slot<T> value type in _slots
             // Each Slot<T> is a value type that contains the real T in its Item field
-            var itemIsValueType = true;
+            bool itemIsValueType = true;
             ClrType itemType = null;
-            var cqType = _heap.GetObjectType(address);
-            var cq = _heap.GetObject(address);
-            var currentSegment = cq.ReadObjectField("_head");
+            ClrObject cq = _heap.GetObject(address);
+            ClrObject currentSegment = cq.ReadObjectField("_head");
             while (!currentSegment.IsNull && currentSegment.IsValid)
             {
-                var s = currentSegment.ReadObjectField("_slots");
-
-                var slots = currentSegment.ReadObjectField("_slots").AsArray();
+                ClrArray slots = currentSegment.ReadObjectField("_slots").AsArray();
                 if (itemType == null)
                 {
                     itemType = _heap.GetObjectType(slots.Address).ComponentType;
@@ -807,7 +914,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     // look for the first slot Item field that contains the T value
                     // could be a reference or a value type
-                    var slot = slots.GetStructValue(0);
+                    ClrValueType slot = slots.GetStructValue(0);
                     if (!slot.IsValid)
                     {
                         yield return $"dumparray {slots.Address:x16}";
@@ -816,7 +923,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         continue;
                     }
 
-                    var itemField = slot.Type.GetFieldByName("Item");
+                    ClrInstanceField itemField = slot.Type.GetFieldByName("Item");
                     itemType = itemField.Type;
 
                     if (itemType == null)
@@ -841,13 +948,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
 
-                var count = slots.Length;
+                int count = slots.Length;
                 for (int current = 0; current < count; current++)
                 {
-                    var slot = slots.GetStructValue(current);
+                    ClrValueType slot = slots.GetStructValue(current);
                     if (itemIsValueType)
                     {
-                        if (TryGetSimpleValue(slot, itemType, "Item", out var content))
+                        if (TryGetSimpleValue(slot, itemType, "Item", out string content))
                         {
                             yield return content;
                         }
@@ -863,13 +970,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     else
                     {
                         // Item is holding the reference to the object in the heap
-                        var slotEntry = slot.ReadField<UIntPtr>("Item");
+                        UIntPtr slotEntry = slot.ReadField<UIntPtr>("Item");
 
                         // skip empty null slots
                         if (slotEntry == UIntPtr.Zero)
+                        {
                             continue;
+                        }
 
-                        var slotType = _heap.GetObjectType(slotEntry.ToUInt64());
+                        ClrType slotType = _heap.GetObjectType(slotEntry.ToUInt64());
                         if (slotType.IsString)
                         {
                             yield return $"\"{new ClrObject(slotEntry.ToUInt64(), slotType).AsString()}\"";
@@ -890,13 +999,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             // A ConcurrentQueue<T> contains a linked list of Segment starting from m_head
             // and each Segment contains an array of T in m_array
-            var itemIsValueType = true;
-            var cq = _heap.GetObject(address);
+            bool itemIsValueType = true;
+            ClrObject cq = _heap.GetObject(address);
             ClrType itemType = null;
-            var currentSegment = cq.ReadObjectField("m_head");
+            ClrObject currentSegment = cq.ReadObjectField("m_head");
             while (!currentSegment.IsNull && currentSegment.IsValid)
             {
-                var items = currentSegment.ReadObjectField("m_array").AsArray();
+                ClrArray items = currentSegment.ReadObjectField("m_array").AsArray();
                 if (itemType == null)
                 {
                     itemType = _heap.GetObjectType(items.Address)?.ComponentType;
@@ -912,15 +1021,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     itemIsValueType = itemType.IsValueType;
                 }
 
-                var count = items.Length;
+                int count = items.Length;
                 for (int current = 0; current < count; current++)
                 {
                     if (itemIsValueType)
                     {
-                        var item = items.GetStructValue(current);
+                        ClrValueType item = items.GetStructValue(current);
 
                         // display value for simple types such as numbers and bool
-                        if ((item.Type != null) && HasSimpleValue(items, current, item, out var content))
+                        if ((item.Type != null) && HasSimpleValue(items, current, item, out string content))
                         {
                             yield return content;
                         }
@@ -931,7 +1040,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     else
                     {
-                        var item = items.GetObjectValue(current);
+                        ClrObject item = items.GetObjectValue(current);
                         if (item.IsNull || !item.IsValid)
                         {
                             // skip null reference special case
@@ -987,7 +1096,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             const string defaultContent = "?";
 
-            var field = GetFieldFrom(obj, propertyName);
+            IClrValue field = GetFieldFrom(obj, propertyName);
             if (field.Type is ClrType fieldType)
             {
                 if (fieldType.IsString)
@@ -1002,7 +1111,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     return $"dumpobj {field.Address:x16}";
                 }
-                else if (IsSimpleType(fieldType.Name) && TryGetSimpleValue(obj, fieldType, propertyName, out var simpleValuecontent))
+                else if (IsSimpleType(fieldType.Name) && TryGetSimpleValue(obj, fieldType, propertyName, out string simpleValuecontent))
                 {
                     return simpleValuecontent;
                 }
@@ -1014,63 +1123,66 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else
             {
                 if (field is ClrObject objectField && objectField.IsNull)
+                {
                     return "null";
+                }
 
                 return defaultContent;
             }
             return defaultContent;
         }
+
         private static bool HasSimpleValue(ClrArray items, int index, ClrValueType item, out string content)
         {
             content = null;
-            var typeName = item.Type.Name;
+            string typeName = item.Type.Name;
             switch (typeName)
             {
                 case "System.Char":
-                    content = $"'{items.GetValue<System.Char>(index)}'";
+                    content = $"'{items.GetValue<char>(index)}'";
                     break;
                 case "System.Boolean":
-                    content = items.GetValue<System.Boolean>(index).ToString();
+                    content = items.GetValue<bool>(index).ToString();
                     break;
                 case "System.SByte":
-                    content = items.GetValue<System.SByte>(index).ToString();
+                    content = items.GetValue<sbyte>(index).ToString();
                     break;
                 case "System.Byte":
-                    content = items.GetValue<System.Byte>(index).ToString();
+                    content = items.GetValue<byte>(index).ToString();
                     break;
                 case "System.Int16":
-                    content = items.GetValue<System.Int16>(index).ToString();
+                    content = items.GetValue<short>(index).ToString();
                     break;
                 case "System.UInt16":
-                    content = items.GetValue<System.UInt16>(index).ToString();
+                    content = items.GetValue<ushort>(index).ToString();
                     break;
                 case "System.Int32":
-                    content = items.GetValue<System.Int32>(index).ToString();
+                    content = items.GetValue<int>(index).ToString();
                     break;
                 case "System.UInt32":
-                    content = items.GetValue<System.UInt32>(index).ToString();
+                    content = items.GetValue<uint>(index).ToString();
                     break;
                 case "System.Int64":
-                    content = items.GetValue<System.Int64>(index).ToString();
+                    content = items.GetValue<long>(index).ToString();
                     break;
                 case "System.UInt64":
-                    content = items.GetValue<System.UInt64>(index).ToString();
+                    content = items.GetValue<ulong>(index).ToString();
                     break;
                 case "System.Single":
-                    content = items.GetValue<System.Single>(index).ToString();
+                    content = items.GetValue<float>(index).ToString();
                     break;
                 case "System.Double":
-                    content = items.GetValue<System.Double>(index).ToString();
+                    content = items.GetValue<double>(index).ToString();
                     break;
                 case "System.IntPtr":
                     {
-                        var val = items.GetValue<System.IntPtr>(index);
+                        IntPtr val = items.GetValue<IntPtr>(index);
                         content = (val == IntPtr.Zero) ? "null" : $"0x{val.ToInt64():x16}";
                     }
                     break;
                 case "System.UIntPtr":
                     {
-                        var val = items.GetValue<System.UIntPtr>(index);
+                        UIntPtr val = items.GetValue<UIntPtr>(index);
                         content = (val == UIntPtr.Zero) ? "null" : $"0x{val.ToUInt64():x16}";
                     }
                     break;
@@ -1085,54 +1197,54 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static bool TryGetSimpleValue(IClrValue item, ClrType type, string fieldName, out string content)
         {
             content = null;
-            var typeName = type.Name;
+            string typeName = type.Name;
             switch (typeName)
             {
                 case "System.Char":
-                    content = $"'{item.ReadField<System.Char>(fieldName)}'";
+                    content = $"'{item.ReadField<char>(fieldName)}'";
                     break;
                 case "System.Boolean":
-                    content = item.ReadField<System.Boolean>(fieldName).ToString();
+                    content = item.ReadField<bool>(fieldName).ToString();
                     break;
                 case "System.SByte":
-                    content = item.ReadField<System.SByte>(fieldName).ToString();
+                    content = item.ReadField<sbyte>(fieldName).ToString();
                     break;
                 case "System.Byte":
-                    content = item.ReadField<System.Byte>(fieldName).ToString();
+                    content = item.ReadField<byte>(fieldName).ToString();
                     break;
                 case "System.Int16":
-                    content = item.ReadField<System.Int16>(fieldName).ToString();
+                    content = item.ReadField<short>(fieldName).ToString();
                     break;
                 case "System.UInt16":
-                    content = item.ReadField<System.UInt16>(fieldName).ToString();
+                    content = item.ReadField<ushort>(fieldName).ToString();
                     break;
                 case "System.Int32":
-                    content = item.ReadField<System.Int32>(fieldName).ToString();
+                    content = item.ReadField<int>(fieldName).ToString();
                     break;
                 case "System.UInt32":
-                    content = item.ReadField<System.UInt32>(fieldName).ToString();
+                    content = item.ReadField<uint>(fieldName).ToString();
                     break;
                 case "System.Int64":
-                    content = item.ReadField<System.Int64>(fieldName).ToString();
+                    content = item.ReadField<long>(fieldName).ToString();
                     break;
                 case "System.UInt64":
-                    content = item.ReadField<System.UInt64>(fieldName).ToString();
+                    content = item.ReadField<ulong>(fieldName).ToString();
                     break;
                 case "System.Single":
-                    content = item.ReadField<System.Single>(fieldName).ToString();
+                    content = item.ReadField<float>(fieldName).ToString();
                     break;
                 case "System.Double":
-                    content = item.ReadField<System.Double>(fieldName).ToString();
+                    content = item.ReadField<double>(fieldName).ToString();
                     break;
                 case "System.IntPtr":
                     {
-                        var val = item.ReadField<System.IntPtr>(fieldName);
+                        IntPtr val = item.ReadField<IntPtr>(fieldName);
                         content = (val == IntPtr.Zero) ? "null" : $"0x{val.ToInt64():x}";
                     }
                     break;
                 case "System.UIntPtr":
                     {
-                        var val = item.ReadField<System.UIntPtr>(fieldName);
+                        UIntPtr val = item.ReadField<UIntPtr>(fieldName);
                         content = (val == UIntPtr.Zero) ? "null" : $"0x{val.ToUInt64():x}";
                     }
                     break;
@@ -1146,17 +1258,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ClrModule GetMscorlib()
         {
-            var bclModule = _clr.BaseClassLibrary;
+            ClrModule bclModule = _clr.BaseClassLibrary;
             return bclModule;
         }
 
         public bool IsNetCore()
         {
-            var coreLib = GetMscorlib();
+            ClrModule coreLib = GetMscorlib();
             if (coreLib == null)
+            {
                 throw new InvalidOperationException("Impossible to find core library");
+            }
 
-            return (coreLib.Name.ToLower().Contains("corelib"));
+            return (coreLib.Name.ToLowerInvariant().Contains("corelib"));
         }
 
         public bool Is64Bits()

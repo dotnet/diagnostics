@@ -1,4 +1,6 @@
-﻿using Microsoft.Diagnostics.DebugServices;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -7,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -32,39 +35,39 @@ namespace Microsoft.Diagnostics.TestHelpers
             Debug.Assert(target is not null);
             AddMembers(Target, typeof(ITarget), target, nameof(ITarget.Id), nameof(ITarget.GetTempDirectory));
 
-            var modulesElement = new XElement("Modules");
+            XElement modulesElement = new("Modules");
             Target.Add(modulesElement);
 
-            var moduleService = services.GetService<IModuleService>();
+            IModuleService moduleService = services.GetService<IModuleService>();
             string runtimeModuleName = target.GetPlatformModuleName("coreclr");
             foreach (IModule module in moduleService.EnumerateModules())
             {
-                var moduleElement = new XElement("Module");
+                XElement moduleElement = new("Module");
                 modulesElement.Add(moduleElement);
                 AddModuleMembers(moduleElement, module, runtimeModuleName);
             }
 
-            var threadsElement = new XElement("Threads");
+            XElement threadsElement = new("Threads");
             Target.Add(threadsElement);
 
-            var threadService = services.GetService<IThreadService>();
-            var registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
+            IThreadService threadService = services.GetService<IThreadService>();
+            int[] registerIndexes = new int[] { threadService.InstructionPointerIndex, threadService.StackPointerIndex, threadService.FramePointerIndex };
             foreach (IThread thread in threadService.EnumerateThreads())
             {
-                var threadElement = new XElement("Thread");
+                XElement threadElement = new("Thread");
                 threadsElement.Add(threadElement);
                 AddMembers(threadElement, typeof(IThread), thread, nameof(IThread.ThreadIndex), nameof(IThread.GetThreadContext));
 
-                var registersElement = new XElement("Registers");
+                XElement registersElement = new("Registers");
                 threadElement.Add(registersElement);
                 foreach (int registerIndex in registerIndexes)
                 {
-                    var registerElement = new XElement("Register");
+                    XElement registerElement = new("Register");
                     registersElement.Add(registerElement);
 
                     if (threadService.TryGetRegisterInfo(registerIndex, out RegisterInfo info))
                     {
-                        AddMembers(registerElement, typeof(RegisterInfo), info, nameof(Object.ToString), nameof(Object.GetHashCode));
+                        AddMembers(registerElement, typeof(RegisterInfo), info, nameof(object.ToString), nameof(object.GetHashCode));
                     }
                     if (thread.TryGetRegisterValue(registerIndex, out ulong value))
                     {
@@ -73,17 +76,17 @@ namespace Microsoft.Diagnostics.TestHelpers
                 }
             }
 
-            var runtimesElement = new XElement("Runtimes");
+            XElement runtimesElement = new("Runtimes");
             Target.Add(runtimesElement);
 
-            var runtimeService = services.GetService<IRuntimeService>();
+            IRuntimeService runtimeService = services.GetService<IRuntimeService>();
             foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
             {
-                var runtimeElement = new XElement("Runtime");
+                XElement runtimeElement = new("Runtime");
                 runtimesElement.Add(runtimeElement);
                 AddMembers(runtimeElement, typeof(IRuntime), runtime, nameof(IRuntime.GetDacFilePath), nameof(IRuntime.GetDbiFilePath));
 
-                var runtimeModuleElement = new XElement("RuntimeModule");
+                XElement runtimeModuleElement = new("RuntimeModule");
                 runtimeElement.Add(runtimeModuleElement);
                 AddModuleMembers(runtimeModuleElement, runtime.RuntimeModule, symbolModuleName: null);
             }
@@ -132,7 +135,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                             exportSymbolsElement = new XElement("ExportSymbols");
                             element.Add(exportSymbolsElement);
                         }
-                        var symbolElement = new XElement("Symbol");
+                        XElement symbolElement = new("Symbol");
                         exportSymbolsElement.Add(symbolElement);
                         return symbolElement;
                     }
@@ -159,7 +162,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                             symbolsElement = new XElement("Symbols");
                             element.Add(symbolsElement);
                         }
-                        var symbolElement = new XElement("Symbol");
+                        XElement symbolElement = new("Symbol");
                         symbolsElement.Add(symbolElement);
                         return symbolElement;
                     }
@@ -167,12 +170,13 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        private void AddMembers(XElement element, Type type, object instance, params string[] membersToSkip)
+        private static void AddMembers(XElement element, Type type, object instance, params string[] membersToSkip)
         {
             MemberInfo[] members = type.GetMembers(BindingFlags.Public | BindingFlags.Instance);
             foreach (MemberInfo member in members)
             {
-                if (membersToSkip.Any((skip) => member.Name == skip)) {
+                if (membersToSkip.Any((skip) => member.Name == skip))
+                {
                     continue;
                 }
                 string result = null;
@@ -250,18 +254,20 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        private string ToHex<T>(T value) where T : struct 
+        private static string ToHex<T>(T value) where T : struct
         {
             int digits = Marshal.SizeOf(typeof(T)) * 2;
             return string.Format($"0x{{0:X{digits}}}", value);
         }
 
-        private bool IsModuleEqual(IModule module, string moduleName)
+        private static bool IsModuleEqual(IModule module, string moduleName)
         {
-            if (module.Target.OperatingSystem == OSPlatform.Windows) {
+            if (module.Target.OperatingSystem == OSPlatform.Windows)
+            {
                 return StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-            else {
+            else
+            {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
         }

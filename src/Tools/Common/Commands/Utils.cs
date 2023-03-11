@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
 {
-    internal class CommandUtils
+    internal static class CommandUtils
     {
         // Returns processId that matches the given name.
         // It also checks whether the process has a diagnostics server port.
@@ -18,9 +17,9 @@ namespace Microsoft.Internal.Common.Utils
         // with the given name, then this returns -1
         public static int FindProcessIdWithName(string name)
         {
-            var publishedProcessesPids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-            var processesWithMatchingName = Process.GetProcessesByName(name);
-            var commonId = -1;
+            List<int> publishedProcessesPids = new(DiagnosticsClient.GetPublishedProcesses());
+            Process[] processesWithMatchingName = Process.GetProcessesByName(name);
+            int commonId = -1;
 
             for (int i = 0; i < processesWithMatchingName.Length; i++)
             {
@@ -62,7 +61,7 @@ namespace Microsoft.Internal.Common.Utils
 
         /// <summary>
         /// A helper method for validating --process-id, --name, --diagnostic-port options for collect commands.
-        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
+        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
         /// such duplication, it prints the appropriate error message.
         /// </summary>
         /// <param name="processId">process ID</param>
@@ -127,18 +126,18 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
-    internal class LineRewriter
+    internal sealed class LineRewriter
     {
-        public int LineToClear { get; set; } = 0;
+        public int LineToClear { get; set; }
 
-        public LineRewriter() {}
+        public LineRewriter() { }
 
         // ANSI escape codes:
         //  [2K => clear current line
         //  [{LineToClear};0H => move cursor to column 0 of row `LineToClear`
         public void RewriteConsoleLine()
         {
-            var useConsoleFallback = true;
+            bool useConsoleFallback = true;
             if (!Console.IsInputRedirected)
             {
                 // in case of console input redirection, the control ANSI codes would appear
@@ -164,19 +163,23 @@ namespace Microsoft.Internal.Common.Utils
         private static bool? _isSetCursorPositionSupported;
         public bool IsRewriteConsoleLineSupported
         {
-            get {
+            get
+            {
                 bool isSupported = _isSetCursorPositionSupported ?? EnsureInitialized();
                 return isSupported;
 
                 bool EnsureInitialized()
                 {
-                    try {
-                        var left = Console.CursorLeft;
-                        var top = Console.CursorTop;
+                    try
+                    {
+                        int left = Console.CursorLeft;
+                        int top = Console.CursorTop;
                         Console.SetCursorPosition(0, LineToClear);
                         Console.SetCursorPosition(left, top);
                         _isSetCursorPositionSupported = true;
-                    } catch {
+                    }
+                    catch
+                    {
                         _isSetCursorPositionSupported = false;
                     }
                     return (bool)_isSetCursorPositionSupported;
@@ -185,12 +188,12 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
-    internal class ReturnCode
+    internal enum ReturnCode
     {
-        public static int Ok = 0;
-        public static int SessionCreationError = 1;
-        public static int TracingError = 2;
-        public static int ArgumentError = 3;
-        public static int UnknownError = 4;
+        Ok,
+        SessionCreationError,
+        TracingError,
+        ArgumentError,
+        UnknownError
     }
 }

@@ -1,11 +1,14 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System;
-using System.Buffers;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -13,16 +16,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     public sealed class NativeAddressHelper
     {
         [ServiceImport]
-        public ITarget Target { get; set; } 
+        public ITarget Target { get; set; }
 
         [ServiceImport]
-        public IMemoryService MemoryService { get; set; } 
+        public IMemoryService MemoryService { get; set; }
 
         [ServiceImport]
-        public IThreadService ThreadService { get; set; } 
+        public IThreadService ThreadService { get; set; }
 
         [ServiceImport]
-        public IRuntimeService RuntimeService { get; set; } 
+        public IRuntimeService RuntimeService { get; set; }
 
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
@@ -47,7 +50,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// large chunk of memory and commit the beginning of it as it allocates more and more memory...the RESERVE
         /// region was actually "caused" by the Heap space before it).  Sometimes this will simply be wrong when
         /// a MEM_COMMIT region is next to an unrelated MEM_RESERVE region.
-        /// 
+        ///
         /// This is a heuristic, so use it accordingly.</param>
         /// <exception cref="InvalidOperationException">If !address fails we will throw InvalidOperationException.  This is usually
         /// because symbols for ntdll couldn't be found.</exception>
@@ -61,7 +64,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                                          select new DescribedRegion(region, ModuleService.GetModuleFromAddress(region.Start));
 
             if (!includeReserveMemory)
+            {
                 addressResult = addressResult.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
+            }
 
             List<DescribedRegion> rangeList = addressResult.ToList();
             if (tagClrMemoryRanges)
@@ -130,7 +135,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // mark it as some other unknown type.  CLR still allocated it, and it's still close
                                         // by the other region kind.
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)
+                                        {
                                             region.ClrMemoryKind = mem.Kind;
+                                        }
 
                                         DescribedRegion middleRegion = new(region)
                                         {
@@ -180,7 +187,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                         // If we found no matching regions, expand the current region to be the right length.
                                         if (!foundNext)
+                                        {
                                             region.End = mem.Address + mem.Size.Value;
+                                        }
                                     }
                                     else if (region.Size > mem.Size.Value)
                                     {
@@ -193,7 +202,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                         region.Start = newRange.End;
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)  // see note above
+                                        {
                                             region.ClrMemoryKind = mem.Kind;
+                                        }
                                     }
                                 }
 
@@ -211,13 +222,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     string memName = mem.Name;
                     if (memName == "RESERVED")
+                    {
                         TagMemoryRecursive(mem, ranges);
+                    }
                 }
             }
 
             // On Linux, !address doesn't mark stack space.  Go do that.
             if (Target.OperatingSystem == OSPlatform.Linux)
+            {
                 MarkStackSpace(ranges);
+            }
 
             return ranges;
         }
@@ -228,7 +243,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static IEnumerable<(ulong Address, ulong? Size, ClrMemoryKind Kind)> EnumerateClrMemoryAddresses(ClrRuntime runtime)
         {
             foreach (ClrNativeHeapInfo nativeHeap in runtime.EnumerateClrNativeHeaps())
+            {
                 yield return (nativeHeap.Address, nativeHeap.Size, nativeHeap.Kind == NativeHeapKind.Unknown ? ClrMemoryKind.None : (ClrMemoryKind)nativeHeap.Kind);
+            }
 
             ulong prevHandle = 0;
             ulong granularity = 0x100;
@@ -252,10 +269,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (ClrSegment seg in runtime.Heap.Segments)
             {
                 if (seg.CommittedMemory.Length > 0)
+                {
                     yield return (seg.CommittedMemory.Start, null, ClrMemoryKind.GCHeap);
+                }
 
                 if (seg.ReservedMemory.Length > 0)
+                {
                     yield return (seg.ReservedMemory.Start, null, ClrMemoryKind.GCHeapReserve);
+                }
             }
         }
 
@@ -266,20 +287,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // Only warn when the region kind meaningfully changes.  Many regions are reported as
                 // HighFrequencyHeap originally but are classified into more specific regions, so we
                 // don't warn for those.
-                if (region.ClrMemoryKind != ClrMemoryKind.None
-                    && region.ClrMemoryKind != ClrMemoryKind.HighFrequencyHeap)
+                if (region.ClrMemoryKind is not ClrMemoryKind.None
+                    and not ClrMemoryKind.HighFrequencyHeap)
                 {
                     if (mem.Size is not ulong size)
+                    {
                         size = 0;
+                    }
 
-                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address+size:x}] {mem.Kind}.");
+                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + size:x}] {mem.Kind}.");
                 }
 
                 region.ClrMemoryKind = mem.Kind;
             }
 
             if (region.Usage == MemoryRegionUsage.Unknown)
+            {
                 region.Usage = MemoryRegionUsage.CLR;
+            }
         }
 
         private void MarkStackSpace(DescribedRegion[] ranges)
@@ -290,7 +315,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     DescribedRegion range = FindMemory(ranges, sp);
                     if (range is not null)
+                    {
                         range.Usage = MemoryRegionUsage.Stack;
+                    }
                 }
             }
         }
@@ -298,7 +325,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static DescribedRegion FindMemory(DescribedRegion[] ranges, ulong ptr)
         {
             if (ptr < ranges[0].Start || ptr >= ranges.Last().End)
+            {
                 return null;
+            }
 
             int low = 0;
             int high = ranges.Length - 1;
@@ -330,7 +359,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// memory and commit the beginning of it as it allocates more and more memory...the RESERVE region
         /// was actually "caused" by the Heap space before it).  Sometimes this will simply be wrong when
         /// a MEM_COMMIT region is next to an unrelated MEM_RESERVE region.
-        /// 
+        ///
         /// This is a heuristic, so use it accordingly.
         /// </summary>
         internal static void CollapseReserveRegions(DescribedRegion[] ranges)
@@ -339,22 +368,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 string memName = mem.Name;
                 if (memName == "RESERVED")
+                {
                     TagMemoryRecursive(mem, ranges);
+                }
             }
         }
 
         private static DescribedRegion TagMemoryRecursive(DescribedRegion mem, DescribedRegion[] ranges)
         {
             if (mem.Name != "RESERVED")
+            {
                 return mem;
+            }
 
             DescribedRegion found = ranges.SingleOrDefault(r => r.End == mem.Start);
             if (found is null)
+            {
                 return null;
+            }
 
             DescribedRegion nonReserved = TagMemoryRecursive(found, ranges);
             if (nonReserved is null)
+            {
                 return null;
+            }
 
             mem.PrevRegionName = nonReserved.Name;
             return nonReserved;
@@ -374,7 +411,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     int size = Math.Min(remaining > int.MaxValue ? int.MaxValue : (int)remaining, arrayBytes);
                     bool res = ReadMemory(curr, array, size, out int bytesRead);
                     if (!res || bytesRead <= 0)
+                    {
                         break;
+                    }
 
                     for (int i = 0; i < bytesRead / sizeof(ulong); i++)
                     {
@@ -382,7 +421,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         DescribedRegion found = FindMemory(ranges, ptr);
                         if (found is not null)
+                        {
                             yield return (curr + (uint)i * sizeof(ulong), ptr, found);
+                        }
                     }
 
                     curr += (uint)bytesRead;
@@ -429,7 +470,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             HandleTable,
         }
 
-        internal class DescribedRegion : IMemoryRegion
+        internal sealed class DescribedRegion : IMemoryRegion
         {
             public DescribedRegion()
             {
@@ -494,34 +535,48 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (ClrMemoryKind != ClrMemoryKind.None)
                     {
                         if (ClrMemoryKind == ClrMemoryKind.GCHeapReserve)
+                        {
                             return $"[{ClrMemoryKind}]";
+                        }
 
                         return ClrMemoryKind.ToString();
                     }
 
                     if (Usage != MemoryRegionUsage.Unknown)
+                    {
                         return Usage.ToString();
+                    }
 
                     if (State == MemoryRegionState.MEM_RESERVE)
                     {
                         if (PrevRegionName is not null)
+                        {
                             return $"[{PrevRegionName}Reserve]";
+                        }
 
                         return "[RESERVED]";
                     }
                     else if (State == MemoryRegionState.MEM_FREE)
+                    {
                         return "[FREE]";
+                    }
 
                     if (Type == MemoryRegionType.MEM_IMAGE || !string.IsNullOrWhiteSpace(Image))
+                    {
                         return "Image";
+                    }
 
                     string result = Protection.ToString();
                     if (Type == MemoryRegionType.MEM_MAPPED)
                     {
                         if (string.IsNullOrWhiteSpace(result))
+                        {
                             result = Type.ToString();
+                        }
                         else
+                        {
                             result = result.Replace("PAGE", "MAPPED");
+                        }
                     }
 
                     return result;

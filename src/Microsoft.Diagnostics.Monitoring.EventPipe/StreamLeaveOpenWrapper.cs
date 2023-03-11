@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -69,6 +68,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => _baseStream.CopyToAsync(destination, bufferSize, cancellationToken);
 
-        public override async ValueTask DisposeAsync() => await base.DisposeAsync();
+        public override async ValueTask DisposeAsync() => await base.DisposeAsync().ConfigureAwait(false);
     }
 }

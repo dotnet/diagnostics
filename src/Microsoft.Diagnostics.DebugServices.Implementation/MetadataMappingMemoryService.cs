@@ -1,23 +1,22 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Memory service wrapper that maps always module's metadata into the address 
+    /// Memory service wrapper that maps always module's metadata into the address
     /// space even is some or all of the memory exists in the coredump. lldb returns
-    /// zero's (instead of failing the memory read) for missing pages in core dumps 
-    /// that older (less than 5.0) createdumps generate  so it needs this special 
+    /// zero's (instead of failing the memory read) for missing pages in core dumps
+    /// that older (less than 5.0) createdumps generate  so it needs this special
     /// metadata  mapping memory service.
     /// </summary>
     public class MetadataMappingMemoryService : IMemoryService, IDisposable
@@ -42,7 +41,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             _memoryService = memoryService;
             _runtimeService = container.GetService<IRuntimeService>();
-            _symbolService = container.GetService<ISymbolService>();    
+            _symbolService = container.GetService<ISymbolService>();
 
             ITarget target = container.GetService<ITarget>();
             target.OnFlushEvent.Register(Flush);
@@ -94,7 +93,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 MetadataRegion region = FindRegion(address);
                 if (region != null)
                 {
-                    if (region.ReadMetaData(address, buffer, out bytesRead)) {
+                    if (region.ReadMetaData(address, buffer, out bytesRead))
+                    {
                         return true;
                     }
                 }
@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                var runtimes = _runtimeService.EnumerateRuntimes();
+                System.Collections.Generic.IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();
                 if (runtimes.Any())
                 {
                     foreach (IRuntime runtime in runtimes)
@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Debug.Assert(module.ImageBase != 0);
 
-            var metadata = ImmutableArray<byte>.Empty;
+            ImmutableArray<byte> metadata = ImmutableArray<byte>.Empty;
             bool isVirtual = module.Layout != ModuleLayout.Flat;
             try
             {
@@ -195,14 +195,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceError($"GetMetaData: {module.ImageBase:X16} not valid PE");
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"GetMetaData: loaded {module.ImageBase:X16} exception {ex.Message}");
             }
             return metadata;
         }
 
-        class MetadataRegion : IComparable<MetadataRegion>
+        private sealed class MetadataRegion : IComparable<MetadataRegion>
         {
             private readonly MetadataMappingMemoryService _memoryService;
             private readonly ClrModule _module;

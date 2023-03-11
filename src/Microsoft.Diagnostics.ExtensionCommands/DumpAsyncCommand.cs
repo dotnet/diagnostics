@@ -1,16 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 #nullable enable
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -142,7 +141,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // Enumerate all of the "frames", and create a mapping from a rendering of that
                 // frame to its associated type and how many times that frame occurs.
-                var typeCounts = new Dictionary<string, (ClrType Type, int Count)>();
+                Dictionary<string, (ClrType Type, int Count)> typeCounts = new();
                 foreach (KeyValuePair<ClrObject, AsyncObject> pair in objects)
                 {
                     ClrObject obj = pair.Key;
@@ -157,7 +156,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         value = (obj.Type, 0);
                     }
-                    
+
                     value.Count++;
                     typeCounts[description] = value;
                 }
@@ -175,7 +174,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             void RenderCoalescedStacks()
             {
                 // Find all stacks to include.
-                var startingList = new List<ClrObject>();
+                List<ClrObject> startingList = new();
                 foreach (KeyValuePair<ClrObject, AsyncObject> entry in objects)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
@@ -197,13 +196,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 void RenderLevel(List<ClrObject> frames, int depth)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
-                    List<ClrObject> nextLevel = new List<ClrObject>();
+                    List<ClrObject> nextLevel = new();
 
                     // Grouping function.  We want to treat all objects that render the same as the same entity.
                     // For async state machines, we include the await state, both because we want it to render
                     // and because we want to see state machines at different positions as part of different groups.
-                    Func<ClrObject, string> groupBy = o =>
-                    {
+                    Func<ClrObject, string> groupBy = o => {
                         string description = Describe(o);
                         if (objects.TryGetValue(o, out AsyncObject asyncObject) && asyncObject.IsStateMachine)
                         {
@@ -260,7 +258,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Render each stack of frames.</summary>
             void RenderStacks()
             {
-                var stack = new Stack<(AsyncObject AsyncObject, int Depth)>();
+                Stack<(AsyncObject AsyncObject, int Depth)> stack = new();
 
                 // Find every top-level object (ones that nothing else has as a continuation) and output
                 // a stack starting from each.
@@ -295,8 +293,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         // field with any non-zero bytes, it must be the one in use.  This can have false negatives,
                         // as it's perfectly valid for an awaiter to be all zero bytes, but it's better than nothing.
 
-                        if ((top.AwaitState == 0) ||
-                            stateMachine.Type.Fields.Count(f => f.Name is null || f.Name.StartsWith("<>u__", StringComparison.Ordinal) == true) == 1) // if the name is null, we have to assume it's an awaiter
+                        // if the name is null, we have to assume it's an awaiter
+
+                        Func<IClrInstanceField, bool> hasOneAwaiterField = static f => {
+                            return f.Name is null
+                                || f.Name.StartsWith("<>u__", StringComparison.Ordinal);
+                        };
+
+                        if ((top.AwaitState == 0)
+                            || stateMachine.Type.Fields.Count(hasOneAwaiterField) == 1)
                         {
                             if (stateMachine.Type.GetFieldByName("<>u__1") is ClrInstanceField field &&
                                 TrySynthesizeAwaiterFrame(field))
@@ -433,7 +438,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 bool sawShouldInclude = false;
                 bool sawStateMachine = IncludeTasks;
 
-                var stack = new Stack<AsyncObject>();
+                Stack<AsyncObject> stack = new();
                 stack.Push(obj);
                 while (stack.Count > 0)
                 {
@@ -463,7 +468,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (obj?.Type is not null)
                 {
-                    string depthTab = new string(' ', depth * TabWidth);
+                    string depthTab = new(' ', depth * TabWidth);
 
                     WriteHeaderLine($"{depthTab}{"Address",16} {"MT",16} {"Type",-32} {"Value",16} Name");
                     foreach (ClrInstanceField field in obj.Type.Fields)
@@ -551,7 +556,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Finds all of the relevant async-related objects on the heap.</summary>
             Dictionary<ClrObject, AsyncObject> CollectObjects()
             {
-                var found = new Dictionary<ClrObject, AsyncObject>();
+                Dictionary<ClrObject, AsyncObject> found = new();
 
                 // Enumerate the heap, looking for all relevant objects.
                 foreach (ClrObject obj in heap.EnumerateObjects())
@@ -1057,7 +1062,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         /// <summary>Creates an indenting string.</summary>
         /// <param name="count">The number of tabs.</param>
-        private static string Tabs(int count) => new string(' ', count * TabWidth);
+        private static string Tabs(int count) => new(' ', count * TabWidth);
 
         /// <summary>Shortens a string to a maximum length by eliding part of the string with ...</summary>
         private static string? Truncate(string? value, int maxLength)
@@ -1146,20 +1151,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 void Append(string s)
                 {
                     sb ??= new StringBuilder();
-                    if (sb.Length != 0) sb.Append("|");
+                    if (sb.Length != 0)
+                    {
+                        sb.Append('|');
+                    }
+
                     sb.Append(s);
                 }
 
-                if ((stateFlags & 0x10000) != 0) Append("Started");
-                if ((stateFlags & 0x20000) != 0) Append("DelegateInvoked");
-                if ((stateFlags & 0x40000) != 0) Append("Disposed");
-                if ((stateFlags & 0x80000) != 0) Append("ExceptionObservedByParent");
-                if ((stateFlags & 0x100000) != 0) Append("CancellationAcknowledged");
-                if ((stateFlags & 0x200000) != 0) Append("Faulted");
-                if ((stateFlags & 0x400000) != 0) Append("Canceled");
-                if ((stateFlags & 0x800000) != 0) Append("WaitingOnChildren");
-                if ((stateFlags & 0x1000000) != 0) Append("RanToCompletion");
-                if ((stateFlags & 0x4000000) != 0) Append("CompletionReserved");
+                if ((stateFlags & 0x10000) != 0) { Append("Started"); }
+                if ((stateFlags & 0x20000) != 0) { Append("DelegateInvoked"); }
+                if ((stateFlags & 0x40000) != 0) { Append("Disposed"); }
+                if ((stateFlags & 0x80000) != 0) { Append("ExceptionObservedByParent"); }
+                if ((stateFlags & 0x100000) != 0) { Append("CancellationAcknowledged"); }
+                if ((stateFlags & 0x200000) != 0) { Append("Faulted"); }
+                if ((stateFlags & 0x400000) != 0) { Append("Canceled"); }
+                if ((stateFlags & 0x800000) != 0) { Append("WaitingOnChildren"); }
+                if ((stateFlags & 0x1000000) != 0) { Append("RanToCompletion"); }
+                if ((stateFlags & 0x4000000) != 0) { Append("CompletionReserved"); }
 
                 if (sb is not null)
                 {

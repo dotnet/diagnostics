@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,14 +13,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.CommonTestRunner
 {
     public class TestRunner : IAsyncDisposable
     {
-        private static readonly string _timeFormat = "mm\\:ss\\.fff";
-        private readonly ITestOutputHelper _outputHelper;
+        private const string _timeFormat = "mm\\:ss\\.fff";
+        private readonly IndentedTestOutputHelper _outputHelper;
         private readonly ProcessRunner _runner;
         private readonly DateTime _startTime;
         private readonly NamedPipeServerStream _pipeServer;
@@ -47,14 +45,14 @@ namespace Microsoft.Diagnostics.CommonTestRunner
             Debug.Assert(testExeName != null);
 
             // Restore and build the debuggee.
-            DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, testExeName, outputHelper);
+            DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, testExeName, outputHelper).ConfigureAwait(false);
 
             // Get the full debuggee launch command line (includes the host if required)
             string exePath = debuggeeConfig.BinaryExePath;
             string pipeName = null;
 
-            var arguments = new StringBuilder();
-            var managedArguments = new StringBuilder();
+            StringBuilder arguments = new();
+            StringBuilder managedArguments = new();
             if (!string.IsNullOrWhiteSpace(config.HostExe))
             {
                 exePath = config.HostExe;
@@ -153,9 +151,9 @@ namespace Microsoft.Diagnostics.CommonTestRunner
 
             if (waitForTracee)
             {
-                await WaitForTracee();
+                await WaitForTracee().ConfigureAwait(false);
             }
-            else 
+            else
             {
                 // Retry getting the module count because we can catch the process during startup and it fails temporarily.
                 for (int retry = 0; retry < 5; retry++)
@@ -173,9 +171,8 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 // Block until we see the IPC channel created, or until timeout specified.
                 try
                 {
-                    var source = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                    await Task.Run(cancellationToken: source.Token, action: () =>
-                    {
+                    CancellationTokenSource source = new(TimeSpan.FromSeconds(15));
+                    await Task.Run(cancellationToken: source.Token, action: () => {
                         while (true)
                         {
                             string[] matchingFiles;
@@ -195,7 +192,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                             }
                             Task.Delay(100);
                         }
-                    });
+                    }).ConfigureAwait(false);
                 }
                 catch (TaskCanceledException)
                 {
@@ -233,7 +230,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
         {
             WriteLine("WaitForExitAsync");
             Task timeoutTask = Task.Delay(timeout);
-            Task result = await Task.WhenAny(_runner.WaitForExit(), timeoutTask);
+            Task result = await Task.WhenAny(_runner.WaitForExit(), timeoutTask).ConfigureAwait(false);
             if (result == timeoutTask)
             {
                 throw new TaskCanceledException($"WaitForExitAsync timed out {Pid}");
@@ -248,11 +245,11 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 WriteLine("WaitForTracee");
                 try
                 {
-                    var source = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-                    await _pipeServer.WaitForConnectionAsync(source.Token);
+                    CancellationTokenSource source = new(TimeSpan.FromMinutes(2));
+                    await _pipeServer.WaitForConnectionAsync(source.Token).ConfigureAwait(false);
                     WriteLine("WaitForTracee: DONE");
                 }
-                catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
+                catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
                 {
                     WriteLine($"WaitForTracee: canceled {ex}");
                 }
@@ -268,7 +265,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 {
                     _pipeServer.WriteByte(42);
                 }
-                catch (Exception ex) when (ex is IOException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is IOException or InvalidOperationException)
                 {
                     Trace.TraceError($"WakeupTracee {Pid} failed {ex}");
                 }
@@ -286,7 +283,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                     int signal = _pipeServer.ReadByte();
                     WriteLine($"WaitForSignal DONE {signal}");
                 }
-                catch (Exception ex) when (ex is IOException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is IOException or InvalidOperationException)
                 {
                     WriteLine($"WaitForSignal failed {ex}");
                 }
@@ -299,7 +296,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
             WakeupTracee();
             try
             {
-                await WaitForExit(TimeSpan.FromSeconds(10));
+                await WaitForExit(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
             }
             catch (TaskCanceledException)
             {
@@ -318,7 +315,7 @@ namespace Microsoft.Diagnostics.CommonTestRunner
     }
 
     public static class TestConfigExtensions
-    { 
+    {
         public static string DotNetTraceHost(this TestConfiguration config)
         {
             string dotnetTraceHost = config.GetValue("DotNetTraceHost");

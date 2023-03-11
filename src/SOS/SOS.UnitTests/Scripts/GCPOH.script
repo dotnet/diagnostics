@@ -32,11 +32,11 @@ VERIFY:<HEXVAL>\s+4\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+19\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+22\]\s+
 
 SOSCOMMAND:GCRoot -all <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+19\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+22\]\s+
 
 SOSCOMMAND:VerifyHeap
 VERIFY:\s*No heap corruption detected.\s*

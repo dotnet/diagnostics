@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics
 {
@@ -23,12 +22,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         // This allows caching of the event map between multiple instances of the trigger that
         // use the same event provider as the source of counter events.
         private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>> _eventMapCache =
-            new ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>>(StringComparer.OrdinalIgnoreCase);
+            new(StringComparer.OrdinalIgnoreCase);
 
         private readonly CounterFilter _filter;
         private readonly SystemDiagnosticsMetricsTriggerImpl _impl;
         private readonly string _meterName;
-        private string _sessionId;
+        private readonly string _sessionId;
 
         public SystemDiagnosticsMetricsTrigger(SystemDiagnosticsMetricsTriggerSettings settings)
         {
@@ -68,7 +67,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         {
             Validate(settings);
 
-            var config = new MetricSourceConfiguration(settings.CounterIntervalSeconds, MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter), settings.MaxHistograms, settings.MaxTimeSeries);
+            MetricSourceConfiguration config = new(
+                settings.CounterIntervalSeconds,
+                MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter),
+                settings.MaxHistograms,
+                settings.MaxTimeSeries);
             settings.SessionId = config.SessionId;
 
             return config;

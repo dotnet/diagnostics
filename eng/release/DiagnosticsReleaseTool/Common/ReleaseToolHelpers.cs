@@ -1,9 +1,12 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.IO;
 
 namespace ReleaseTool.Core
 {
-    static class Helpers
+    internal static class Helpers
     {
         internal static string GetDefaultPathForFileCategory(FileInfo file, FileClass fileClass)
         {
@@ -14,7 +17,7 @@ namespace ReleaseTool.Core
         internal static FileMetadata GetDefaultFileMetadata(FileInfo fileInfo, FileClass fileClass)
         {
             string sha512Hash = GetSha512(fileInfo);
-            FileMetadata result = new FileMetadata(
+            FileMetadata result = new(
                 fileClass,
                 FileMetadata.GetDefaultCatgoryForClass(fileClass),
                 sha512: sha512Hash);
@@ -24,7 +27,7 @@ namespace ReleaseTool.Core
         internal static string GetSha512(FileInfo fileInfo)
         {
             using FileStream fileReadStream = fileInfo.OpenRead();
-            using var sha = System.Security.Cryptography.SHA512.Create();
+            using System.Security.Cryptography.SHA512 sha = System.Security.Cryptography.SHA512.Create();
             byte[] hashValueBytes = sha.ComputeHash(fileReadStream);
             return Convert.ToHexString(hashValueBytes);
         }

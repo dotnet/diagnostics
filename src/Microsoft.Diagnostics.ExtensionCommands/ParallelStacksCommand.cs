@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using ParallelStacks.Runtime;
-using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -20,17 +19,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
-            var ps = ParallelStacks.Runtime.ParallelStack.Build(Runtime);
+            ParallelStack ps = ParallelStacks.Runtime.ParallelStack.Build(Runtime);
             if (ps == null)
             {
                 return;
             }
 
-            int threadIDsCountLimit = AllThreads ? -1 : 4;  // by default, show at most 4 thread ID per group 
+            int threadIDsCountLimit = AllThreads ? -1 : 4;  // by default, show at most 4 thread ID per group
 
-            var visitor = new MonoColorConsoleRenderer(Console, limit: threadIDsCountLimit);
+            MonoColorConsoleRenderer visitor = new(Console, limit: threadIDsCountLimit);
             WriteLine("");
-            foreach (var stack in ps.Stacks)
+            foreach (ParallelStack stack in ps.Stacks)
             {
                 Write("________________________________________________");
                 stack.Render(visitor);
@@ -47,7 +46,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
     "-------------------------------------------------------------------------------" + Environment.NewLine +
     "ParallelStacks" + Environment.NewLine +
     Environment.NewLine +

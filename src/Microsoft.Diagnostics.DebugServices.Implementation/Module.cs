@@ -1,17 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -50,7 +49,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         public virtual void Dispose()
-        { 
+        {
             _serviceContainer.RemoveService(typeof(IModule));
             _serviceContainer.RemoveService(typeof(IExportSymbols));
             _serviceContainer.DisposeServices();
@@ -155,7 +154,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     try
                     {
                         Stream stream = ModuleService.MemoryService.CreateMemoryStream();
-                        var elfFile = new ELFFile(new StreamAddressSpace(stream), ImageBase, true);
+                        ELFFile elfFile = new(new StreamAddressSpace(stream), ImageBase, true);
                         if (elfFile.IsValid())
                         {
                             ELFSection section = elfFile.FindSectionByName(".gnu_debuglink");
@@ -166,11 +165,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                     }
                     catch (Exception ex) when
-                       (ex is InvalidVirtualAddressException ||
-                        ex is ArgumentOutOfRangeException ||
-                        ex is IndexOutOfRangeException ||
-                        ex is OverflowException ||
-                        ex is BadInputFormatException)
+                       (ex is InvalidVirtualAddressException or
+                        ArgumentOutOfRangeException or
+                        IndexOutOfRangeException or
+                        OverflowException or
+                        BadInputFormatException)
                     {
                         Trace.TraceWarning("ELF .gnu_debuglink section in {0}: {1}", this, ex.Message);
                     }
@@ -195,7 +194,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 PEFile image = Services.GetService<PEFile>();
                 if (image is not null)
-                { 
+                {
                     if (image.TryGetExportSymbol(name, out ulong offset))
                     {
                         address = ImageBase + offset;
@@ -243,12 +242,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         version = fileInfo.ToVersion();
                     }
                 }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+                catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
                 {
                     Trace.TraceError($"GetVersion: exception {ex.Message}");
                 }
             }
-            else 
+            else
             {
                 // If we can't get the version from the PE, search for version string embedded in the module data
                 version = Utilities.ParseVersionString(GetVersionString());

@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsMetrics
 {
@@ -36,7 +35,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
                 _valueFilterHistogram = histogramValues =>
                 {
-                    if (!histogramValues.TryGetValue(settings.HistogramPercentile.Value, out var value) || !evalFunc(value))
+                    if (!histogramValues.TryGetValue(settings.HistogramPercentile.Value, out double value) || !evalFunc(value))
                     {
                         return false;
                     }
@@ -72,7 +71,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             }
         }
 
-        private Dictionary<int, double> CreatePayloadDictionary(PercentilePayload percentilePayload)
+        private static Dictionary<int, double> CreatePayloadDictionary(PercentilePayload percentilePayload)
         {
             return percentilePayload.Quantiles.ToDictionary(keySelector: p => CounterUtilities.CreatePercentile(p.Percentage), elementSelector: p => p.Value);
         }

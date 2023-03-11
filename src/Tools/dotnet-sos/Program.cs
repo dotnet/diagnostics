@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Tools.Common;
-using SOS;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
@@ -11,6 +8,8 @@ using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.Tools.Common;
+using SOS;
 
 namespace Microsoft.Diagnostics.Tools.SOS
 {
@@ -18,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
     {
         public static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(InstallCommand())
                 .AddCommand(UninstallCommand())
                 .UseDefaults()
@@ -28,7 +27,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
         }
 
         private static Command InstallCommand() =>
-            new Command(
+            new(
                 name: "install",
                 description: "Installs SOS and configures LLDB to load it on startup.")
             {
@@ -39,15 +38,15 @@ namespace Microsoft.Diagnostics.Tools.SOS
             };
 
         private static Option ArchitectureOption() =>
-            new Option(
-                aliases: new[] { "-a", "--arch", "--architecture" }, 
+            new(
+                aliases: new[] { "-a", "--arch", "--architecture" },
                 description: "The processor architecture to install.")
             {
                 Argument = new Argument<Architecture>(name: "architecture")
             };
 
         private static Command UninstallCommand() =>
-            new Command(
+            new(
                 name: "uninstall",
                 description: "Uninstalls SOS and reverts any configuration changes to LLDB.")
             {
@@ -58,11 +57,13 @@ namespace Microsoft.Diagnostics.Tools.SOS
         {
             try
             {
-                var sosInstaller = new InstallHelper((message) => console.Out.WriteLine(message), architecture);
-                if (install) {
+                InstallHelper sosInstaller = new((message) => console.Out.WriteLine(message), architecture);
+                if (install)
+                {
                     sosInstaller.Install();
                 }
-                else {
+                else
+                {
                     sosInstaller.Uninstall();
                 }
             }

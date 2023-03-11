@@ -1,13 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -23,8 +22,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly Dictionary<int, RegisterInfo> _lookupByIndex;
         private Dictionary<uint, IThread> _threads;
 
-        internal protected readonly IServiceProvider Services;
-        internal protected readonly ITarget Target;
+        protected internal readonly IServiceProvider Services;
+        protected internal readonly ITarget Target;
 
         public ThreadService(IServiceProvider services)
         {
@@ -64,13 +63,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     throw new PlatformNotSupportedException($"Unsupported architecture: {Target.Architecture}");
             }
 
-            var registers = new List<RegisterInfo>();
+            List<RegisterInfo> registers = new();
             int index = 0;
 
             FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-            foreach (FieldInfo field in fields) {
+            foreach (FieldInfo field in fields)
+            {
                 RegisterAttribute registerAttribute = field.GetCustomAttributes<RegisterAttribute>(inherit: false).SingleOrDefault();
-                if (registerAttribute is null) {
+                if (registerAttribute is null)
+                {
                     continue;
                 }
                 RegisterType registerType = registerAttribute.RegisterType & RegisterType.TypeMask;
@@ -83,17 +84,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     default:
                         continue;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.ProgramCounter) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.ProgramCounter) != 0)
+                {
                     InstructionPointerIndex = index;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.StackPointer) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.StackPointer) != 0)
+                {
                     StackPointerIndex = index;
                 }
-                if ((registerAttribute.RegisterType & RegisterType.FramePointer) != 0) {
+                if ((registerAttribute.RegisterType & RegisterType.FramePointer) != 0)
+                {
                     FramePointerIndex = index;
                 }
                 FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
-                var registerInfo = new RegisterInfo(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLower());
+                RegisterInfo registerInfo = new(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLowerInvariant());
                 registers.Add(registerInfo);
                 index++;
             }
@@ -111,7 +115,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 foreach (IThread thread in _threads.Values)
                 {
-                    if (thread is IDisposable disposable) {
+                    if (thread is IDisposable disposable)
+                    {
                         disposable.Dispose();
                     }
                 }
@@ -146,28 +151,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Return the register index for the register name
         /// </summary>
         /// <param name="name">register name</param>
-        /// <param name="index">returns register index or -1</param>
+        /// <param name="registerIndex">returns register index or -1</param>
         /// <returns>true if name found</returns>
-        public bool TryGetRegisterIndexByName(string name, out int index)
+        public bool TryGetRegisterIndexByName(string name, out int registerIndex)
         {
             if (_lookupByName.TryGetValue(name, out RegisterInfo info))
             {
-                index = info.RegisterIndex;
+                registerIndex = info.RegisterIndex;
                 return true;
             }
-            index = int.MaxValue;
+            registerIndex = int.MaxValue;
             return false;
         }
 
         /// <summary>
         /// Returns the register info (name, offset, size, etc).
         /// </summary>
-        /// <param name="index">register index</param>
+        /// <param name="registerIndex">register index</param>
         /// <param name="info">RegisterInfo</param>
         /// <returns>true if index found</returns>
-        public bool TryGetRegisterInfo(int index, out RegisterInfo info)
+        public bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info)
         {
-            return _lookupByIndex.TryGetValue(index, out info);
+            return _lookupByIndex.TryGetValue(registerIndex, out info);
         }
 
         /// <summary>
@@ -205,13 +210,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
         public IThread GetThreadFromId(uint threadId)
         {
-            if (!GetThreads().TryGetValue(threadId, out IThread thread)) {
+            if (!GetThreads().TryGetValue(threadId, out IThread thread))
+            {
                 throw new DiagnosticsException($"Invalid thread id: {threadId}");
             }
             return thread;
         }
 
-        #endregion 
+        #endregion
 
         /// <summary>
         /// Get the thread context
@@ -220,8 +226,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>context array</returns>
         internal byte[] GetThreadContext(Thread thread)
         {
-            var threadContext = new byte[_contextSize];
-            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext)) {
+            byte[] threadContext = new byte[_contextSize];
+            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext))
+            {
                 throw new DiagnosticsException();
             }
             return threadContext;
@@ -242,9 +249,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<uint, IThread> GetThreads()
         {
-            if (_threads is null) {
-                _threads = GetThreadsInner().OrderBy((thread) => thread.ThreadId).ToDictionary((thread) => thread.ThreadId);
-            }
+            _threads ??= GetThreadsInner().OrderBy((thread) => thread.ThreadId).ToDictionary((thread) => thread.ThreadId);
             return _threads;
         }
 

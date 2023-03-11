@@ -1,15 +1,17 @@
-using Azure;
-using Azure.Storage;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Azure.Storage.Sas;
-using Microsoft.Extensions.Logging;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Buffers;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
+using Microsoft.Extensions.Logging;
 
 namespace ReleaseTool.Core
 {
@@ -42,12 +44,12 @@ namespace ReleaseTool.Core
         {
             get
             {
-                StorageSharedKeyCredential credential = new StorageSharedKeyCredential(_accountName, _accountKey);
+                StorageSharedKeyCredential credential = new(_accountName, _accountKey);
                 return credential;
             }
         }
 
-        private BlobClientOptions BlobOptions
+        private static BlobClientOptions BlobOptions
         {
             get
             {
@@ -99,13 +101,13 @@ namespace ReleaseTool.Core
                         return null;
                     }
 
-                    using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
+                    using FileStream srcStream = new(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
 
                     BlobClient blobClient = client.GetBlobClient(GetBlobName(_releaseName, fileMap.RelativeOutputPath));
 
                     await blobClient.UploadAsync(srcStream, overwrite: true, ct);
 
-                    BlobSasBuilder sasBuilder = new BlobSasBuilder()
+                    BlobSasBuilder sasBuilder = new()
                     {
                         BlobContainerName = client.Name,
                         BlobName = blobClient.Name,
@@ -120,7 +122,7 @@ namespace ReleaseTool.Core
 
                     result = accessUri;
                 }
-                catch (IOException ioEx) when (!(ioEx is PathTooLongException))
+                catch (IOException ioEx) when (ioEx is not PathTooLongException)
                 {
                     _logger.LogWarning(ioEx, $"Failed to publish {fileMap.LocalSourcePath}, retries remaining: {retriesLeft}.");
 
@@ -153,7 +155,7 @@ namespace ReleaseTool.Core
         {
             if (_client == null)
             {
-                BlobServiceClient serviceClient = new BlobServiceClient(AccountBlobUri, AccountCredential, BlobOptions);
+                BlobServiceClient serviceClient = new(AccountBlobUri, AccountCredential, BlobOptions);
                 _logger.LogInformation($"Attempting to connect to {serviceClient.Uri} to store blobs.");
 
                 BlobContainerClient newClient;
@@ -180,7 +182,7 @@ namespace ReleaseTool.Core
                         // Add the new (or update existing) "download" policy to the container
                         // This is used to mint the SAS tokens without an expiration policy
                         // Expiration can be added later by modifying this policy
-                        BlobSignedIdentifier downloadPolicyIdentifier = new BlobSignedIdentifier()
+                        BlobSignedIdentifier downloadPolicyIdentifier = new()
                         {
                             Id = AccessPolicyDownloadId,
                             AccessPolicy = new BlobAccessPolicy()
@@ -212,7 +214,7 @@ namespace ReleaseTool.Core
             return _client;
         }
 
-        private async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, BlobDownloadStreamingResult destBlobDownloadStream, CancellationToken ct)
+        private static async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, BlobDownloadStreamingResult destBlobDownloadStream, CancellationToken ct)
         {
             if (srcStream.Length != destBlobDownloadStream.Details.ContentLength)
             {

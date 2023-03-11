@@ -1,11 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
@@ -15,11 +13,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public static readonly Func<object, Exception, string> Callback = (state, exception) => ((LogObject)state).ToString();
 
         private readonly string _formattedMessage;
-        private List<KeyValuePair<string, object>> _items = new List<KeyValuePair<string, object>>();
+        private List<KeyValuePair<string, object>> _items = new();
 
         public LogObject(JsonElement element, string formattedMessage = null)
         {
-            foreach (var item in element.EnumerateObject())
+            foreach (JsonProperty item in element.EnumerateObject())
             {
                 switch (item.Value.ValueKind)
                 {

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -22,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         internal const int MaxCachedFormatters = 1024;
         private const string NullFormat = "[null]";
         private static int _count;
-        private static ConcurrentDictionary<string, LogValuesFormatter> _formatters = new ConcurrentDictionary<string, LogValuesFormatter>();
+        private static ConcurrentDictionary<string, LogValuesFormatter> _formatters = new();
         private readonly LogValuesFormatter _formatter;
         private readonly object[] _values;
         private readonly string _originalMessage;
@@ -45,8 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else
                 {
-                    _formatter = _formatters.GetOrAdd(format, f =>
-                    {
+                    _formatter = _formatters.GetOrAdd(format, f => {
                         Interlocked.Increment(ref _count);
                         return new LogValuesFormatter(f);
                     });

@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Security;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -43,10 +42,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public void Enable(string filePath)
         {
             if (filePath is not null)
-            { 
+            {
                 FileStream stream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 CloseLogging();
-                _writer = new StreamWriter(stream) {
+                _writer = new StreamWriter(stream)
+                {
                     AutoFlush = true
                 };
                 _fileLoggingService?.AddStream(stream);
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         #endregion
 
         /// <summary>
-        /// Initializes the diagnostic logging service.  Reads the DOTNET_ENABLED_SOS_LOGGING 
+        /// Initializes the diagnostic logging service.  Reads the DOTNET_ENABLED_SOS_LOGGING
         /// environment variable to log to console or file.
         /// </summary>
         /// <param name="logfile"></param>
@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Instance.Enable(logfile == "1" ? null : logfile);
                 }
             }
-            catch (Exception ex) when ( ex is IOException || ex is NotSupportedException || ex is SecurityException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException or NotSupportedException or SecurityException or UnauthorizedAccessException)
             {
             }
         }
@@ -106,7 +106,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private void CloseLogging()
         {
             if (_writer is not null)
-            { 
+            {
                 _fileLoggingService?.RemoveStream(_writer.BaseStream);
                 _writer.Flush();
                 _writer.Close();
@@ -114,7 +114,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        class LoggingListener : TraceListener
+        private sealed class LoggingListener : TraceListener
         {
             private readonly DiagnosticLoggingService _diagnosticLoggingService;
 
@@ -139,7 +139,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         _diagnosticLoggingService._writer.Write(message);
                         return;
                     }
-                    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                    catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                     {
                     }
                 }
@@ -155,7 +155,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         _diagnosticLoggingService._writer.WriteLine(message);
                         return;
                     }
-                    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is NotSupportedException)
+                    catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
                     {
                     }
                 }

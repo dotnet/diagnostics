@@ -1,11 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +8,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -20,7 +18,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -50,14 +48,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
             });
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryInformationMessage(reader);
             ValidateLoggerRemoteCategoryWarningMessage(reader);
@@ -79,15 +76,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Warning;
             });
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryWarningMessage(reader);
@@ -107,8 +103,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
@@ -120,7 +115,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryInformationMessage(reader);
             ValidateLoggerRemoteCategoryWarningMessage(reader);
@@ -139,8 +134,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             PipelineException exception = await Assert.ThrowsAsync<PipelineException>(
                 () => GetLogsAsync(
                     config,
-                    settings =>
-                    {
+                    settings => {
                         settings.UseAppFilters = false;
                         settings.LogLevel = LogLevel.None;
                     }));
@@ -163,7 +157,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
@@ -183,8 +177,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
                 {
                     { LoggerRemoteTestName, LogLevel.Warning }
@@ -193,7 +186,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryWarningMessage(reader);
@@ -213,8 +206,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
             }
 
-            using Stream outputStream = await GetLogsAsync(config, settings =>
-            {
+            using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
                 settings.FilterSpecs = new Dictionary<string, LogLevel?>()
@@ -226,7 +218,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using var reader = new StreamReader(outputStream);
+            using StreamReader reader = new(outputStream);
 
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
@@ -236,19 +228,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)
         {
-            var outputStream = new MemoryStream();
+            MemoryStream outputStream = new();
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, LoggerRemoteTestName, _output))
             {
-                using var loggerFactory = new LoggerFactory(new[] { new TestStreamingLoggerProvider(outputStream) });
-                var client = new DiagnosticsClient(testRunner.Pid);
+                using LoggerFactory loggerFactory = new(new[] { new TestStreamingLoggerProvider(outputStream) });
+                DiagnosticsClient client = new(testRunner.Pid);
 
-                var logSettings = new EventLogsPipelineSettings { Duration = Timeout.InfiniteTimeSpan };
+                EventLogsPipelineSettings logSettings = new() { Duration = Timeout.InfiniteTimeSpan };
                 if (null != settingsCallback)
                 {
                     settingsCallback(logSettings);
                 }
-                await using var pipeline = new EventLogsPipeline(client, logSettings, loggerFactory);
+                await using EventLogsPipeline pipeline = new(client, logSettings, loggerFactory);
 
                 await PipelineTestUtilities.ExecutePipelineWithTracee(pipeline, testRunner);
             }
@@ -270,7 +262,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(0, result.EventId);
             Assert.Equal(string.Empty, result.EventName);
             Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
-            Validate(result.Arguments, ("arg", "6"));
+            Validate(result.Arguments, ("Arg", "6"));
         }
 
         private static void ValidateLoggerRemoteCategoryWarningMessage(StreamReader reader)
@@ -340,7 +332,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
             Assert.NotNull(values);
-            foreach(var expectedValue in expectedValues)
+            foreach ((string key, object value) expectedValue in expectedValues)
             {
                 Assert.True(values.TryGetValue(expectedValue.key, out JsonElement value));
                 //TODO For now this will always be a string

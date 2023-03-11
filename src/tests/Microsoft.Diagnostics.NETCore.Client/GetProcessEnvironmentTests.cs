@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -12,7 +11,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -55,8 +54,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             string testVal = "BAR";
             runner.AddEnvVar(testKey, testVal);
             await runner.Start();
-            var clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
-            Dictionary<string,string> env = await clientShim.GetProcessEnvironment();
+            DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
+            Dictionary<string, string> env = await clientShim.GetProcessEnvironment();
 
             Assert.True(env.ContainsKey(testKey) && env[testKey].Equals(testVal));
 

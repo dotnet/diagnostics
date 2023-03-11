@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -14,7 +13,7 @@ namespace SOS.Extensions
     /// </summary>
     public static class AssemblyResolver
     {
-        private static bool s_initialized = false;
+        private static bool s_initialized;
 
         /// <summary>
         /// Call to enable the assembly resolver for the current AppDomain.
@@ -31,7 +30,7 @@ namespace SOS.Extensions
         private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
             // apply any existing policy
-            AssemblyName referenceName = new AssemblyName(AppDomain.CurrentDomain.ApplyPolicy(args.Name));
+            AssemblyName referenceName = new(AppDomain.CurrentDomain.ApplyPolicy(args.Name));
             string fileName = referenceName.Name + ".dll";
             string assemblyPath;
             string probingPath;
@@ -39,11 +38,12 @@ namespace SOS.Extensions
 
             // Look next to requesting assembly
             assemblyPath = args.RequestingAssembly?.Location;
-            if (!String.IsNullOrEmpty(assemblyPath))
+            if (!string.IsNullOrEmpty(assemblyPath))
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
                 Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assembly)) {
+                if (Probe(probingPath, referenceName.Version, out assembly))
+                {
                     Debug.WriteLine($"Matched {probingPath} based on RequestingAssembly");
                     return assembly;
                 }
@@ -51,11 +51,12 @@ namespace SOS.Extensions
 
             // Look next to the executing assembly
             assemblyPath = Assembly.GetExecutingAssembly().Location;
-            if (!String.IsNullOrEmpty(assemblyPath))
+            if (!string.IsNullOrEmpty(assemblyPath))
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
                 Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assembly)) {
+                if (Probe(probingPath, referenceName.Version, out assembly))
+                {
                     Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
                     return assembly;
                 }
@@ -77,7 +78,8 @@ namespace SOS.Extensions
             if (File.Exists(filePath))
             {
                 AssemblyName name = AssemblyName.GetAssemblyName(filePath);
-                if (name.Version >= minimumVersion) {
+                if (name.Version >= minimumVersion)
+                {
                     assembly = Assembly.LoadFile(filePath);
                     return true;
                 }

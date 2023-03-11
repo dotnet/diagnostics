@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -28,9 +27,9 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class TestStep
     {
-        string _logFilePath;
-        string _stateFilePath;
-        TimeSpan _timeout;
+        private string _logFilePath;
+        private string _stateFilePath;
+        private TimeSpan _timeout;
 
         public TestStep(string logFilePath, string friendlyName)
         {
@@ -42,23 +41,23 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public string FriendlyName { get; private set; }
 
-        async public Task Execute(ITestOutputHelper output)
+        public async Task Execute(ITestOutputHelper output)
         {
             // if this step is in progress on another thread, wait for it
-            TestStepState stepState = await AcquireStepStateLock(output);
+            TestStepState stepState = await AcquireStepStateLock(output).ConfigureAwait(false);
 
             //if this thread wins the race we do the work on this thread, otherwise
             //we log the winner's saved output
             if (stepState.RunState != TestStepRunState.InProgress)
             {
                 LogHeader(stepState, true, output);
-                LogPreviousResults(stepState, output);
+                LogPreviousResults(output);
                 LogFooter(stepState, output);
                 ThrowExceptionIfFaulted(stepState);
             }
             else
             {
-                await UncachedExecute(stepState, output);
+                await UncachedExecute(stepState, output).ConfigureAwait(false);
             }
         }
 
@@ -70,13 +69,13 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private async Task UncachedExecute(TestStepState stepState, ITestOutputHelper output)
         {
-            using (FileTestOutputHelper stepLog = new FileTestOutputHelper(_logFilePath))
+            using (FileTestOutputHelper stepLog = new(_logFilePath))
             {
                 try
                 {
                     LogHeader(stepState, false, output);
-                    MultiplexTestOutputHelper mux = new MultiplexTestOutputHelper(new IndentedTestOutputHelper(output), stepLog);
-                    await DoWork(mux);
+                    MultiplexTestOutputHelper mux = new(new IndentedTestOutputHelper(output), stepLog);
+                    await DoWork(mux).ConfigureAwait(false);
                     stepState = stepState.Complete();
                 }
                 catch (Exception e)
@@ -86,7 +85,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 finally
                 {
                     LogFooter(stepState, output);
-                    await WriteFinalStepState(stepState, output);
+                    await WriteFinalStepState(stepState, output).ConfigureAwait(false);
                     ThrowExceptionIfFaulted(stepState);
                 }
             }
@@ -110,7 +109,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     File.Delete(tempPath);
                 }
-                
+
             }
             catch (IOException ex)
             {
@@ -142,7 +141,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        async private Task WriteFinalStepState(TestStepState stepState, ITestOutputHelper output)
+        private async Task WriteFinalStepState(TestStepState stepState, ITestOutputHelper output)
         {
             const int NumberOfRetries = 5;
             FileStream stepStateStream = null;
@@ -168,9 +167,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             using (stepStateStream)
             {
                 stepStateStream.Seek(0, SeekOrigin.End);
-                StreamWriter writer = new StreamWriter(stepStateStream);
-                await writer.WriteAsync(Environment.NewLine + stepState.SerializeFinalState());
-                await writer.FlushAsync();
+                StreamWriter writer = new(stepStateStream);
+                await writer.WriteAsync(Environment.NewLine + stepState.SerializeFinalState()).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
             }
         }
 
@@ -211,13 +210,11 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private async Task<TestStepState> AcquireStepStateLock(ITestOutputHelper output)
         {
-            TestStepState initialStepState = new TestStepState();
-            
-            bool stepStateFileExists = false;
+            TestStepState initialStepState = new();
             while (true)
             {
                 TestStepState openedStepState = null;
-                stepStateFileExists = File.Exists(_stateFilePath);
+                bool stepStateFileExists = File.Exists(_stateFilePath);
                 if (!stepStateFileExists && TryWriteInitialStepState(initialStepState, output))
                 {
                     // this thread gets to do the work, persist the initial lock state
@@ -251,7 +248,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 //
                 // If we wait for too long in either case we will eventually timeout.
                 ThrowExceptionForIncompleteWorkIfNeeded(initialStepState, openedStepState, stepStateFileExists, output);
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
             }
         }
 
@@ -264,9 +261,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                                  !IsOpenedStateChangeable(openedStepState);
             if (timeout || notFinishable)
             {
-                TestStepState currentState = openedStepState != null ? openedStepState : initialStepState;
+                TestStepState currentState = openedStepState ?? initialStepState;
                 LogHeader(currentState, true, output);
-                StringBuilder errorMessage = new StringBuilder();
+                StringBuilder errorMessage = new();
                 if (timeout)
                 {
                     errorMessage.Append("Timeout after " + _timeout + ". ");
@@ -285,7 +282,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     // these error cases should have a valid previous log we can restore
                     Debug.Assert(currentState == openedStepState);
-                    LogPreviousResults(currentState, output);
+                    LogPreviousResults(output);
 
                     errorMessage.AppendLine("This step was not marked complete in: " + Environment.NewLine +
                                             _stateFilePath);
@@ -344,17 +341,17 @@ namespace Microsoft.Diagnostics.TestHelpers
         private static string GetReuseStepStateReason(TestStepState openedStepState)
         {
             //This heuristic may need to change, in some cases it is probably too eager to
-            //reuse past results when we wanted to retest something. 
+            //reuse past results when we wanted to retest something.
 
             if (openedStepState.RunState == TestStepRunState.Complete)
             {
                 return "successful steps are always reused";
             }
-            else if(!IsPreviousMachineSame(openedStepState))
+            else if (!IsPreviousMachineSame(openedStepState))
             {
                 return "steps on run on other machines are always reused, regardless of success";
             }
-            else if(IsPreviousProcessRunning(openedStepState))
+            else if (IsPreviousProcessRunning(openedStepState))
             {
                 return "steps run in currently executing processes are always reused, regardless of success";
             }
@@ -377,12 +374,12 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private static bool IsOpenedStateChangeable(TestStepState openedStepState)
         {
-            return (openedStepState.RunState == TestStepRunState.InProgress && 
+            return (openedStepState.RunState == TestStepRunState.InProgress &&
                     IsPreviousMachineSame(openedStepState) &&
                     IsPreviousProcessRunning(openedStepState));
         }
 
-        private void LogPreviousResults(TestStepState cachedTaskState, ITestOutputHelper output)
+        private void LogPreviousResults(ITestOutputHelper output)
         {
             ITestOutputHelper indentedOutput = new IndentedTestOutputHelper(output);
             try
@@ -403,20 +400,20 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private void ThrowExceptionIfFaulted(TestStepState cachedStepState)
         {
-            if(cachedStepState.RunState == TestStepRunState.Faulted)
+            if (cachedStepState.RunState == TestStepRunState.Faulted)
             {
                 throw new TestStepException(FriendlyName, cachedStepState.ErrorMessage, cachedStepState.ErrorStackTrace);
             }
         }
 
-        enum TestStepRunState
+        private enum TestStepRunState
         {
             InProgress,
             Complete,
             Faulted
         }
 
-        class TestStepState
+        private sealed class TestStepState
         {
             public TestStepState()
             {
@@ -468,14 +465,14 @@ namespace Microsoft.Diagnostics.TestHelpers
                 return WithFinalState(TestStepRunState.Complete, DateTimeOffset.Now, null, null);
             }
 
-            TestStepState WithFinalState(TestStepRunState runState, DateTimeOffset? taskCompleteTime, string errorMessage, string errorStackTrace)
+            private TestStepState WithFinalState(TestStepRunState runState, DateTimeOffset? taskCompleteTime, string errorMessage, string errorStackTrace)
             {
                 return new TestStepState(runState, Machine, ProcessID, ProcessName, StartTime, taskCompleteTime, errorMessage, errorStackTrace);
             }
 
             public string SerializeInitialState()
             {
-                XElement initState = new XElement("InitialStepState",
+                XElement initState = new("InitialStepState",
                     new XElement("Machine", Machine),
                     new XElement("ProcessID", "0x" + ProcessID.ToString("x")),
                     new XElement("ProcessName", ProcessName),
@@ -486,7 +483,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             public string SerializeFinalState()
             {
-                XElement finalState = new XElement("FinalStepState",
+                XElement finalState = new("FinalStepState",
                     new XElement("RunState", RunState)
                     );
                 if (CompleteTime != null)
@@ -511,7 +508,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     // The XmlReader is not happy with two root nodes so we crudely split them.
                     int indexOfInitialStepStateElementEnd = text.IndexOf("</InitialStepState>");
-                    if(indexOfInitialStepStateElementEnd == -1)
+                    if (indexOfInitialStepStateElementEnd == -1)
                     {
                         return false;
                     }
@@ -531,14 +528,13 @@ namespace Microsoft.Diagnostics.TestHelpers
                     }
                     string machine = machineElement.Value;
                     XElement processIDElement = initialStepStateElement.Element("ProcessID");
-                    int processID;
                     if (processIDElement == null ||
                         !processIDElement.Value.StartsWith("0x"))
                     {
                         return false;
                     }
                     string processIdNumberText = processIDElement.Value.Substring("0x".Length);
-                    if (!int.TryParse(processIdNumberText, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out processID))
+                    if (!int.TryParse(processIdNumberText, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int processID))
                     {
                         return false;
                     }
@@ -548,9 +544,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                     {
                         processName = processNameElement.Value;
                     }
-                    DateTimeOffset startTime;
                     XElement startTimeElement = initialStepStateElement.Element("StartTime");
-                    if (startTimeElement == null || !DateTimeOffset.TryParse(startTimeElement.Value, out startTime))
+                    if (startTimeElement == null || !DateTimeOffset.TryParse(startTimeElement.Value, out DateTimeOffset startTime))
                     {
                         return false;
                     }
@@ -570,7 +565,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // as if the stream had terminated at the end of the InitialTaskState node.
                 // This covers a small window of time when appending the FinalTaskState node is in progress.
                 //
-                if(string.IsNullOrWhiteSpace(text))
+                if (string.IsNullOrWhiteSpace(text))
                 {
                     return;
                 }
@@ -582,8 +577,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         return;
                     }
                     XElement runStateElement = finalTaskStateElement.Element("RunState");
-                    TestStepRunState runState;
-                    if (runStateElement == null || !Enum.TryParse<TestStepRunState>(runStateElement.Value, out runState))
+                    if (runStateElement == null || !Enum.TryParse(runStateElement.Value, out TestStepRunState runState))
                     {
                         return;
                     }
@@ -591,8 +585,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     XElement completeTimeElement = finalTaskStateElement.Element("CompleteTime");
                     if (completeTimeElement != null)
                     {
-                        DateTimeOffset tempCompleteTime;
-                        if (!DateTimeOffset.TryParse(completeTimeElement.Value, out tempCompleteTime))
+                        if (!DateTimeOffset.TryParse(completeTimeElement.Value, out DateTimeOffset tempCompleteTime))
                         {
                             return;
                         }

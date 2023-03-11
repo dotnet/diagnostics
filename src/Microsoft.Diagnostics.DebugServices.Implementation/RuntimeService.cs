@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -33,7 +32,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 foreach (IRuntime runtime in _runtimes)
                 {
-                    if (runtime is IDisposable disposable) {
+                    if (runtime is IDisposable disposable)
+                    {
                         disposable.Dispose();
                     }
                 }
@@ -62,10 +62,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
-    
+
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             if (_runtimes is not null)
             {
                 IRuntime currentRuntime = _services.GetService<IContextService>()?.GetCurrentRuntime();

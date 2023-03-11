@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -16,9 +15,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             try
             {
-                var stats = new Dictionary<string, TimerStat>(64);
+                Dictionary<string, TimerStat> stats = new(64);
                 int totalCount = 0;
-                foreach (var timer in Helper.EnumerateTimers().OrderBy(t => t.Period))
+                foreach (TimerInfo timer in Helper.EnumerateTimers().OrderBy(t => t.Period))
                 {
                     totalCount++;
 
@@ -48,7 +47,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         ));
                     }
 
-                    if (!stats.TryGetValue(key, out var stat))
+                    if (!stats.TryGetValue(key, out TimerStat stat))
                     {
                         stat = new TimerStat()
                         {
@@ -63,10 +62,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 // create a summary
-                WriteLine($"{Environment.NewLine}   {totalCount.ToString()} timers{Environment.NewLine}-----------------------------------------------");
-                foreach (var stat in stats.OrderBy(kvp => kvp.Value.Count))
+                WriteLine($"{Environment.NewLine}   {totalCount} timers{Environment.NewLine}-----------------------------------------------");
+                foreach (KeyValuePair<string, TimerStat> stat in stats.OrderBy(kvp => kvp.Value.Count))
                 {
-                    WriteLine($"{stat.Value.Count.ToString(),4} | {stat.Value.Line}");
+                    WriteLine($"{stat.Value.Count,4} | {stat.Value.Line}");
                 }
             }
             catch (Exception x)
@@ -75,7 +74,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        static string GetTimerString(TimerInfo timer)
+        private static string GetTimerString(TimerInfo timer)
         {
             if (timer.IsShort.HasValue)
             {
@@ -110,7 +109,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
             "-------------------------------------------------------------------------------" + Environment.NewLine +
             "TimerInfo" + Environment.NewLine +
             Environment.NewLine +
@@ -133,7 +132,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     }
 
 
-    internal class TimerStat
+    internal sealed class TimerStat
     {
         public string Line { get; set; }
         public int Count { get; set; }

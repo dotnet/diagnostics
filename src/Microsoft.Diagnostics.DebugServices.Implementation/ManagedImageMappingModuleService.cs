@@ -1,12 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -28,7 +27,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
             int moduleIndex = 0;
 
             IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();

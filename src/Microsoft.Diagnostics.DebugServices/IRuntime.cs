@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -11,11 +10,11 @@ namespace Microsoft.Diagnostics.DebugServices
     /// </summary>
     public enum RuntimeType
     {
-        Unknown     = 0,
-        Desktop     = 1,
-        NetCore     = 2,
-        SingleFile  = 3,
-        Other       = 4
+        Unknown = 0,
+        Desktop = 1,
+        NetCore = 2,
+        SingleFile = 3,
+        Other = 4
     }
 
     /// <summary>
@@ -44,7 +43,7 @@ namespace Microsoft.Diagnostics.DebugServices
         RuntimeType RuntimeType { get; }
 
         /// <summary>
-        /// Returns the runtime version. This may be different from the runtime 
+        /// Returns the runtime version. This may be different from the runtime
         /// module's file version for single-file apps. Can be null.
         /// </summary>
         Version RuntimeVersion { get; }

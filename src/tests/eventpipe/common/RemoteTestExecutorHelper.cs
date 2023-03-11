@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.RemoteExecutor;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Microsoft.DotNet.RemoteExecutor;
 using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.Common
@@ -14,7 +13,7 @@ namespace EventPipe.UnitTests.Common
     {
         public static async Task RunTestCaseAsync(Action testCase, ITestOutputHelper output)
         {
-            var options = new RemoteInvokeOptions()
+            RemoteInvokeOptions options = new()
             {
                 StartInfo = new ProcessStartInfo() { RedirectStandardOutput = true, RedirectStandardError = true }
             };
