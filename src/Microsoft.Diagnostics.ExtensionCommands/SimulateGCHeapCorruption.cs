@@ -191,8 +191,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             byte[] old = new byte[sizeof(T)];
 
-            Span<T> span = new(&value, 1);
-            Span<byte> newBuffer = MemoryMarshal.Cast<T, byte>(span);
+            Span<byte> newBuffer = new(&value, sizeof(T));
 
             if (!MemoryService.ReadMemory(address, old, old.Length, out int read) || read != old.Length)
                 throw new Exception("Failed to read memory.");
