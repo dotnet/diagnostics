@@ -1,9 +1,12 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -11,7 +14,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpheap", Help = "Displays a list of all managed objects.")]
     public class DumpHeapCommand : CommandBase
     {
-        const char StringReplacementCharacter = '.';
+        private const char StringReplacementCharacter = '.';
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -94,7 +97,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (Dead && LiveObjects.IsLive(obj))
                     continue;
-                    
+
                 // Filter by type name
                 if (checkTypeName)
                 {
@@ -122,13 +125,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     string value = obj.AsString(1024);
 
                     stringTable ??= new();
-                    var key = (value, size);
+                    (string value, ulong size) key = (value, size);
                     stringTable.TryGetValue(key, out uint stringCount);
                     stringTable[key] = stringCount + 1;
                 }
                 else
                 {
-                    if (!stats.TryGetValue(mt, out var typeStats))
+                    if (!stats.TryGetValue(mt, out (int Count, ulong Size, string TypeName) typeStats))
                         stats.Add(mt, (1, size, obj.Type?.Name ?? $"<unknown_type_{mt:x}>"));
                     else
                         stats[mt] = (typeStats.Count + 1, typeStats.Size + size, typeStats.TypeName);
@@ -152,7 +155,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     int possibleWidth = Console.WindowWidth - countLen - sizeLen - 2;
                     if (possibleWidth > 16)
                         stringLen = Math.Min(possibleWidth, stringLen);
-                    
 
                     Console.WriteLine("Statistics:");
                     TableOutput statsTable = new(Console, (countLen, "n0"), (sizeLen, "n0"), (0, ""));
@@ -174,10 +176,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         statsTable.WriteRow(item.Count, item.TotalSize, item.String);
 
                 }
-                else if (stats.Any())
+                else if (stats.Count != 0)
                 {
                     if (!StatOnly)
-                       Console.WriteLine();
+                        Console.WriteLine();
 
                     int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
                     countLen = Math.Max(countLen, "Count".Length);

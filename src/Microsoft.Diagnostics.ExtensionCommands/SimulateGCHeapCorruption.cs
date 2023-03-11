@@ -1,9 +1,13 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+
 using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -24,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            switch (Command?.ToLower())
+            switch (Command?.ToLowerInvariant())
             {
                 case "revert":
                 case "rollback":
@@ -106,7 +110,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ClrObject[] withRefs = FindObjectsWithReferences().Take(3).ToArray();
             if (withRefs.Length >= 1)
             {
-                var entry = GetFirstReference(withRefs[0]);
+                (ulong Object, ulong FirstReference) entry = GetFirstReference(withRefs[0]);
                 WriteValue(ObjectCorruptionKind.BadObjectReference, entry.Object, entry.FirstReference, 0xcccccccc);
             }
             if (withRefs.Length >= 2)
@@ -114,13 +118,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong free = Runtime.Heap.EnumerateObjects().FirstOrDefault(f => f.IsFree);
                 if (free != 0)
                 {
-                    var entry = GetFirstReference(withRefs[1]);
+                    (ulong Object, ulong FirstReference) entry = GetFirstReference(withRefs[1]);
                     WriteValue(ObjectCorruptionKind.FreeObjectReference, entry.Object, entry.FirstReference, free);
                 }
             }
             if (withRefs.Length >= 3)
             {
-                var entry = GetFirstReference(withRefs[2]);
+                (ulong Object, ulong FirstReference) entry = GetFirstReference(withRefs[2]);
                 WriteValue(ObjectCorruptionKind.ObjectReferenceNotPointerAligned, entry.Object, entry.FirstReference, (byte)1);
             }
 
@@ -206,7 +210,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             });
         }
 
-        class Change
+        private sealed class Change
         {
             public ulong Object { get; set; }
             public ulong AddressModified { get; set; }

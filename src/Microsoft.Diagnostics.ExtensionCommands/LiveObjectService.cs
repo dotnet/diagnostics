@@ -1,8 +1,11 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -11,7 +14,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         public int UpdateSeconds { get; set; } = 15;
 
-        private ObjectSet _liveObjs = null;
+        private ObjectSet _liveObjs;
 
         public bool PrintWarning { get; set; } = true;
 

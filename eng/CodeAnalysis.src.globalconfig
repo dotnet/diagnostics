@@ -1411,7 +1411,7 @@ dotnet_diagnostic.IDE0009.severity = silent
 dotnet_diagnostic.IDE0010.severity = silent
 
 # IDE0011: Add braces
-dotnet_diagnostic.IDE0011.severity = warning
+dotnet_diagnostic.IDE0011.severity = none
 
 # IDE0016: Use 'throw' expression
 dotnet_diagnostic.IDE0016.severity = silent

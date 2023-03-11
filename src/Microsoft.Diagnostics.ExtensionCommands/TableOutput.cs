@@ -12,15 +12,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     internal sealed class TableOutput
     {
         private readonly char _spacing = ' ';
-        
+
         public string Divider { get; set; } = " ";
-        
-        public bool AlignLeft { get; set; } = false;
-        
+
+        public bool AlignLeft { get; set; }
+
         public int ColumnCount => _formats.Length;
 
         public IConsoleService Console { get; }
-        
+
         public int TotalWidth => 1 * (_formats.Length - 1) + _formats.Sum(c => Math.Abs(c.width));
 
         private readonly (int width, string format)[] _formats;
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
-                
+
                 FormatColumn(spacing, columns[i], sb, width, format);
             }
 
@@ -148,13 +148,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 int remaining = width - value.Length;
                 if (remaining > 0)
-                    sb.Append(' ', remaining);
+                    sb.Append(spacing, remaining);
             }
             else
             {
                 int remaining = width - value.Length;
                 if (remaining > 0)
-                    sb.Append(' ', remaining);
+                    sb.Append(spacing, remaining);
 
                 if (!string.IsNullOrWhiteSpace(action))
                 {
@@ -218,7 +218,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public class DmlDumpObj : DmlExec
+        public sealed class DmlDumpObj : DmlExec
         {
             public DmlDumpObj(ulong address)
                 : base(address, address != 0 ? $"!dumpobj /d {address}" : "")
@@ -226,7 +226,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public class DmlDumpHeapMT : DmlExec
+        public sealed class DmlDumpHeapMT : DmlExec
         {
             public DmlDumpHeapMT(ulong methodTable)
                 : base (methodTable, methodTable != 0 ? $"!dumpheap -mt {methodTable:x}" : "")

@@ -1,13 +1,16 @@
-﻿using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    internal class HeapWithFilters
+    internal sealed class HeapWithFilters
     {
         private int? _gcheap;
         private readonly ClrHeap _heap;

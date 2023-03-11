@@ -1,9 +1,11 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -76,7 +78,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ClrHeap heap = Runtime.Heap;
 
             // Verify heap
-            foreach (var corruption in heap.VerifyHeap(objects))
+            foreach (ObjectCorruption corruption in heap.VerifyHeap(objects))
             {
                 errors++;
                 WriteError(ref output, heap, corruption);
@@ -212,7 +214,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return result;
         }
 
-        private string ValueWithError(int? value, string format = "x", string error = "???")
+        private static string ValueWithError(int? value, string format = "x", string error = "???")
         {
             if (value.HasValue)
                 return value.Value.ToString(format);
@@ -220,7 +222,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return error;
         }
 
-        private string ValueWithError(ulong? value, string format = "x", string error = "???")
+        private static string ValueWithError(ulong? value, string format = "x", string error = "???")
         {
             if (value.HasValue)
                 return value.Value.ToString(format);
