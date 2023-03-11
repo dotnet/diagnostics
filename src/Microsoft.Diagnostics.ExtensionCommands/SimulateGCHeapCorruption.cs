@@ -137,7 +137,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             List();
         }
 
-        private (ulong Object, ulong FirstReference) GetFirstReference(ClrObject obj)
+        private static (ulong Object, ulong FirstReference) GetFirstReference(ClrObject obj)
         {
             return (obj, obj.EnumerateReferenceAddresses().First());
         }

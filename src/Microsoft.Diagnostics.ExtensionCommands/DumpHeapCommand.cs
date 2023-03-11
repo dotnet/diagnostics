@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
@@ -228,7 +229,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 maxLen = Math.Min(str.Length, maxLen);
                 Debug.Assert(maxLen <= 128);
-                
+
                 Span<char> buffer = stackalloc char[maxLen];
                 ReadOnlySpan<char> value = str.AsSpan(0, buffer.Length);
 
@@ -293,7 +294,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             FilteredHeap.SortSegments = (seg) => seg.OrderBy(seg => seg.Start);
         }
 
-        private bool ParseHexString(string str, out ulong value)
+        private static bool ParseHexString(string str, out ulong value)
         {
             value = 0;
             if (string.IsNullOrWhiteSpace(str))

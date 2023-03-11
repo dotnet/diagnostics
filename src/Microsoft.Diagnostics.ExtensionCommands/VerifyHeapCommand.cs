@@ -187,7 +187,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             output.WriteRow(columns);
         }
 
-        private string GetSyncBlockFailureMessage(ObjectCorruption corruption)
+        private static string GetSyncBlockFailureMessage(ObjectCorruption corruption)
         {
             Debug.Assert(corruption.Kind == ObjectCorruptionKind.SyncBlockZero || corruption.Kind == ObjectCorruptionKind.SyncBlockMismatch);
 
@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // We shouldn't have a case where ClrSyncBlockIndex < 0 && SyncBLockIndex < 0, but we'll handle that case anyway
                 if (corruption.SyncBlockIndex >= 0)
                     result = $"Object {corruption.Object:x} had a SyncBlock index of {corruption.SyncBlockIndex} but the runtime has no matching SyncBlock";
-                else 
+                else
                     result = $"Object {corruption.Object:x} had no SyncBlock when it was expected to";
             }
 

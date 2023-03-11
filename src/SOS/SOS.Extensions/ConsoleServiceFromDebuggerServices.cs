@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Threading;
+using System.Xml.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using SOS.Hosting.DbgEng.Interop;
-using System.Xml.Linq;
 
 namespace SOS.Extensions
 {
@@ -42,9 +42,6 @@ namespace SOS.Extensions
 
         #endregion
 
-        private string DmlEscape(string text)
-        {
-            return new XText(text).ToString();
-        }
+        private static string DmlEscape(string text) => new XText(text).ToString();
     }
 }
