@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -41,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _factories = new Dictionary<Type, ServiceFactory>[(int)ServiceScope.Max];
             _providerFactories = new Dictionary<Type, List<ServiceFactory>>();
-            _extensions = new List<object>(); 
+            _extensions = new List<object>();
             NotifyExtensionLoad = new ServiceEvent<Assembly>();
             NotifyExtensionLoadFailure = new ServiceEvent<Exception>();
             for (int i = 0; i < (int)ServiceScope.Max; i++)
@@ -62,7 +61,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 throw new InvalidOperationException();
             }
-
             return new ServiceContainerFactory(parent, _factories[(int)scope]);
         }
 
@@ -77,7 +75,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 throw new InvalidOperationException();
             }
-
             if (_providerFactories.TryGetValue(providerType, out List<ServiceFactory> factories))
             {
                 return factories;
@@ -112,7 +109,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 throw new InvalidOperationException();
             }
-
             for (Type currentType = serviceType; currentType is not null; currentType = currentType.BaseType)
             {
                 if (currentType == typeof(object) || currentType == typeof(ValueType))
@@ -156,13 +152,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="assembly">extension assembly</param>
         public void RegisterAssembly(Assembly assembly)
         {
-            if (_finalized) throw new InvalidOperationException();
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
             try
             {
                 RegisterExportedServices(assembly);
                 NotifyExtensionLoad.Fire(assembly);
             }
-            catch (Exception ex) when 
+            catch (Exception ex) when
                 (ex is DiagnosticsException ||
                  ex is ArgumentException ||
                  ex is NotSupportedException ||
@@ -194,12 +193,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 throw new ArgumentNullException(nameof(factory));
             }
-
             if (_finalized)
             {
                 throw new InvalidOperationException();
             }
-
             _factories[(int)scope].Add(serviceType, factory);
         }
 
@@ -210,9 +207,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="factory">function to create provider instance</param>
         public void AddProviderFactory(Type providerType, ServiceFactory factory)
         {
-            if (factory is null) throw new ArgumentNullException(nameof(factory));
-            if (_finalized) throw new InvalidOperationException();
-
+            if (factory is null)
+            {
+                throw new ArgumentNullException(nameof(factory));
+            }
+            if (_finalized)
+            {
+                throw new InvalidOperationException();
+            }
             if (!_providerFactories.TryGetValue(providerType, out List<ServiceFactory> factories))
             {
                 _providerFactories.Add(providerType, factories = new List<ServiceFactory>());
@@ -234,7 +236,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 throw new InvalidOperationException();
             }
-
             List<string> extensionPaths = new();
             string diagnosticExtensions = Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS");
             if (!string.IsNullOrEmpty(diagnosticExtensions))
@@ -293,7 +294,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     assembly = UseAssemblyLoadContext(extensionPath);
                 }
             }
-            catch (Exception ex) when 
+            catch (Exception ex) when
                 (ex is IOException
                  or ArgumentException
                  or InvalidOperationException
@@ -328,7 +329,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return assembly;
         }
 
-        private class ExtensionLoadContext : AssemblyLoadContext
+        private sealed class ExtensionLoadContext : AssemblyLoadContext
         {
             private static readonly HashSet<string> s_defaultAssemblies = new() {
                 "Microsoft.Diagnostics.DebugServices",
