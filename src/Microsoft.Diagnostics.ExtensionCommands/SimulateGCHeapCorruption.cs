@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (withRefs.Length >= 1)
             {
                 (ulong Object, ulong FirstReference) entry = GetFirstReference(withRefs[0]);
-                WriteValue(ObjectCorruptionKind.BadObjectReference, entry.Object, entry.FirstReference, 0xcccccccc);
+                WriteValue(ObjectCorruptionKind.InvalidObjectReference, entry.Object, entry.FirstReference, 0xcccccccc);
             }
             if (withRefs.Length >= 2)
             {
@@ -130,7 +130,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ClrObject[] arrays = FindArrayObjects().Take(2).ToArray();
             if (arrays.Length >= 1)
-                WriteValue(ObjectCorruptionKind.BadMethodTable, arrays[0], arrays[0], 0xcccccccc);
+                WriteValue(ObjectCorruptionKind.InvalidMethodTable, arrays[0], arrays[0], 0xcccccccc);
             if (arrays.Length >= 2)
                 WriteValue(ObjectCorruptionKind.ObjectTooLarge, arrays[1], arrays[1] + (uint)MemoryService.PointerSize, 0xcccccccc);
 

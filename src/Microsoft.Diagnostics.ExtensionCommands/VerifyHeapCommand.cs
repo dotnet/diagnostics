@@ -128,19 +128,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             string message = corruption.Kind switch
             {
-                ObjectCorruptionKind.CouldNotReadMethodTable => $"Could not read method table for Object {obj.Address:x}",
-                ObjectCorruptionKind.ObjectNotPointerAligned => $"Object {obj.Address:x} is not pointer aligned",
-                ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj.Address:x} has an unaligned member at {corruption.Offset:x}: is not pointer aligned",
-                ObjectCorruptionKind.CouldNotReadObject => $"Could not read object {obj.Address:x} at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                // odd failures
                 ObjectCorruptionKind.ObjectNotOnTheHeap => $"Tried to validate {obj.Address:x} but its address was not on any segment.",
-                ObjectCorruptionKind.BadMethodTable => $"Object {obj.Address:x} has an invalid method table {ReadPointerWithError(obj):x}",
-                ObjectCorruptionKind.BadObjectReference => $"Object {obj.Address:x} has a bad member at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
-                ObjectCorruptionKind.FreeObjectReference => $"Object {obj.Address:x} contains free object at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                ObjectCorruptionKind.ObjectNotPointerAligned => $"Object {obj.Address:x} is not pointer aligned",
+
+                // Object failures
                 ObjectCorruptionKind.ObjectTooLarge => $"Object {obj.Address:x} is too large, size={obj.Size:x}, segmentEnd: {ValueWithError(heap.GetSegmentByAddress(obj)?.End)}",
-                ObjectCorruptionKind.CouldNotReadCardTable => $"Could not verify object {obj.Address:x}: could not read card table",
-                ObjectCorruptionKind.CouldNotReadGCDesc => $"Could not verify object {obj.Address:x}: could not read GCDesc",
+                ObjectCorruptionKind.InvalidMethodTable => $"Object {obj.Address:x} has an invalid method table {ReadPointerWithError(obj):x}",
+                ObjectCorruptionKind.InvalidThinlock => $"Object {obj.Address:x} has an invalid thin lock",
                 ObjectCorruptionKind.SyncBlockMismatch => GetSyncBlockFailureMessage(corruption),
                 ObjectCorruptionKind.SyncBlockZero => GetSyncBlockFailureMessage(corruption),
+
+                // Object reference failures
+                ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj.Address:x} has an unaligned member at {corruption.Offset:x}: is not pointer aligned",
+                ObjectCorruptionKind.InvalidObjectReference => $"Object {obj.Address:x} has a bad member at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                ObjectCorruptionKind.FreeObjectReference => $"Object {obj.Address:x} contains free object at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+
+                // Memory read failures
+                ObjectCorruptionKind.CouldNotReadObject => $"Could not read object {obj.Address:x} at offset {corruption.Offset:x}: {ReadPointerWithError(obj + (uint)corruption.Offset)}",
+                ObjectCorruptionKind.CouldNotReadMethodTable => $"Could not read method table for Object {obj.Address:x}",
+                ObjectCorruptionKind.CouldNotReadCardTable => $"Could not verify object {obj.Address:x}: could not read card table",
+                ObjectCorruptionKind.CouldNotReadGCDesc => $"Could not verify object {obj.Address:x}: could not read GCDesc",
+
                 _ => ""
             };
 
