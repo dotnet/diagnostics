@@ -8,10 +8,11 @@ using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    // TODO: thinlock, don't complete PR without it
     [Command(Name = "dumpheap", Help = "Displays a list of all managed objects.")]
     public class DumpHeapCommand : CommandBase
     {
+        const char StringReplacementCharacter = '.';
+
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
@@ -30,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public string Type { get; set; }
 
         [Option(Name = "--stat")]
-        public bool Stat { get; set; }
+        public bool StatOnly { get; set; }
 
         [Option(Name = "--strings")]
         public bool Strings { get; set; }
@@ -69,11 +70,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ParseArguments();
 
             TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
-            if (!Stat && !Short)
+            if (!StatOnly && !Short)
                 objectTable.WriteRow("Address", "MT", "Size");
 
             bool checkTypeName = !string.IsNullOrWhiteSpace(Type);
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
+            Dictionary<(string String, ulong Size), uint> stringTable = null;
 
             foreach (ClrObject obj in FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken))
             {
@@ -81,7 +83,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (mt == 0)
                     MemoryService.ReadPointer(obj, out mt);
 
-                // Filter by MT
+                // Filter by MT, if the user specified -strings then MethodTable has been pre-set
+                // to the string MethodTable
                 if (MethodTable.HasValue && mt != MethodTable.Value)
                     continue;
 
@@ -107,23 +110,75 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 ulong size = obj.Size;
-                if (!Stat)
+                if (!StatOnly)
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeapMT(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
 
-                if (!stats.TryGetValue(mt, out var typeStats))
-                    stats.Add(mt, (1, size, obj.Type?.Name ?? $"<unknown_type_{mt:x}>"));
+                if (Strings)
+                {
+                    // We only read a maximum of 1024 characters for each string.  This may lead to some collisions if strings are unique
+                    // only after their 1024th character while being the exact same size as another string.  However, this will be correct
+                    // the VAST majority of the time, and it will also keep us from hitting OOM or other weirdness if the heap is corrupt.
+
+                    string value = obj.AsString(1024);
+
+                    stringTable ??= new();
+                    var key = (value, size);
+                    stringTable.TryGetValue(key, out uint stringCount);
+                    stringTable[key] = stringCount + 1;
+                }
                 else
-                    stats[mt] = (typeStats.Count + 1, typeStats.Size + size, typeStats.TypeName);
+                {
+                    if (!stats.TryGetValue(mt, out var typeStats))
+                        stats.Add(mt, (1, size, obj.Type?.Name ?? $"<unknown_type_{mt:x}>"));
+                    else
+                        stats[mt] = (typeStats.Count + 1, typeStats.Size + size, typeStats.TypeName);
+                }
             }
 
             if (!Short)
             {
-                if (stats.Any())
+                if (Strings && stringTable is not null)
                 {
-                    if (!Stat)
-                       Console.WriteLine();
+                    if (!StatOnly)
+                        Console.WriteLine();
+
+                    int countLen = stringTable.Max(ts => ts.Value).ToString("n0").Length;
+                    countLen = Math.Max(countLen, "Count".Length);
+
+                    int sizeLen = stringTable.Max(ts => ts.Key.Size * ts.Value).ToString("n0").Length;
+                    sizeLen = Math.Max(countLen, "TotalSize".Length);
+
+                    int stringLen = 128;
+                    int possibleWidth = Console.WindowWidth - countLen - sizeLen - 2;
+                    if (possibleWidth > 16)
+                        stringLen = Math.Min(possibleWidth, stringLen);
+                    
 
                     Console.WriteLine("Statistics:");
+                    TableOutput statsTable = new(Console, (countLen, "n0"), (sizeLen, "n0"), (0, ""));
+
+                    var stringsSorted = from item in stringTable
+                                        let Count = item.Value
+                                        let Size = item.Key.Size
+                                        let String = Sanitize(item.Key.String, stringLen)
+                                        let TotalSize = Count * Size
+                                        orderby TotalSize
+                                        select new
+                                        {
+                                            Count,
+                                            TotalSize,
+                                            String
+                                        };
+
+                    foreach (var item in stringsSorted)
+                        statsTable.WriteRow(item.Count, item.TotalSize, item.String);
+
+                }
+                else if (stats.Any())
+                {
+                    if (!StatOnly)
+                       Console.WriteLine();
+
                     int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
                     countLen = Math.Max(countLen, "Count".Length);
 
@@ -131,6 +186,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     sizeLen = Math.Max(countLen, "TotalSize".Length);
 
                     TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
+
+                    Console.WriteLine("Statistics:");
                     statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
 
                     var statsSorted = from item in stats
@@ -151,6 +208,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");
                 }
             }
+        }
+
+        private string Sanitize(string str, int maxLen)
+        {
+            IEnumerable<char> chars = str.Take(maxLen);
+
+            if (chars.All(char.IsLetterOrDigit))
+                return str;
+
+            return new(chars.Select(c => (char.IsLetterOrDigit(c) || char.IsPunctuation(c) || c == ' ') ? c : StringReplacementCharacter).ToArray());
         }
 
         private void ParseArguments()
@@ -197,6 +264,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             if (Max > 0)
                 FilteredHeap.MaximumObjectSize = Max;
+
+            if (Strings)
+                MethodTable = Runtime.Heap.StringType.MethodTable;
 
             FilteredHeap.SortSegments = (seg) => seg.OrderBy(seg => seg.Start);
         }
