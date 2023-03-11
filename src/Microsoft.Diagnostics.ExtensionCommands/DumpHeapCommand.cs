@@ -214,12 +214,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private string Sanitize(string str, int maxLen)
         {
-            IEnumerable<char> chars = str.Take(maxLen);
+            foreach (char ch in str)
+            {
+                if (!char.IsLetterOrDigit(ch))
+                {
+                    return Core(str, maxLen);
+                }
+            }
 
-            if (chars.All(char.IsLetterOrDigit))
-                return str;
+            return str;
 
-            return new(chars.Select(c => (char.IsLetterOrDigit(c) || char.IsPunctuation(c) || c == ' ') ? c : StringReplacementCharacter).ToArray());
+            static string Core(string str, int maxLen)
+            {
+                maxLen = Math.Min(str.Length, maxLen);
+                Debug.Assert(maxLen <= 128);
+                
+                Span<char> buffer = stackalloc char[maxLen];
+                ReadOnlySpan<char> value = str.AsSpan(0, buffer.Length);
+
+                for (int i = 0; i < value.Length; ++i)
+                {
+                    char ch = value[i];
+                    buffer[i] = char.IsLetterOrDigit(ch) || char.IsPunctuation(ch) || ch == ' ' ? ch : StringReplacementCharacter;
+                }
+
+                return buffer.ToString();
+            }
         }
 
         private void ParseArguments()
