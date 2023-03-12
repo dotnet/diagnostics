@@ -170,7 +170,7 @@ public class SOSRunner : IDisposable
     }
 
     public const string HexValueRegEx = "[A-Fa-f0-9]+(`[A-Fa-f0-9]+)?";
-    public const string DecValueRegEx = "[0-9]+(`[,0-9]+)?";
+    public const string DecValueRegEx = "[,0-9]+(`[,0-9]+)?";
 
     public NativeDebugger Debugger { get; private set; }
 
