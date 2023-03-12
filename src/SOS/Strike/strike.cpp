@@ -3879,12 +3879,14 @@ namespace sos
 DECLARE_API(DumpHeap)
 {
     INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
     return ExecuteCommand("dumpheap", args);
 }
 
 DECLARE_API(VerifyHeap)
 {
     INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
     return ExecuteCommand("verifyheap", args);
 }
 
