@@ -64,6 +64,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--segment", Aliases = new string[] { "-s" })]
         public string Segment { get; set; }
 
+        [Option(Name = "--thinlock", Aliases = new string[] { "-s" })]
+        public bool ThinLock { get; set; }
+
         [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -73,8 +76,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ParseArguments();
 
+            TableOutput thinLockOutput = null;
             TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
-            if (!StatOnly && !Short)
+            if (!StatOnly && !Short && !ThinLock)
                 objectTable.WriteRow("Address", "MT", "Size");
 
             bool checkTypeName = !string.IsNullOrWhiteSpace(Type);
@@ -105,6 +109,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     string typeName = obj.Type?.Name ?? "";
                     if (!typeName.Contains(Type))
                         continue;
+                }
+
+                if (ThinLock)
+                {
+                    ClrThinLock thinLock = obj.GetThinLock();
+                    if (thinLock != null)
+                    {
+                        if (thinLockOutput is null)
+                        {
+                            thinLockOutput = new(Console, (12, "x"), (16, "x"), (16, "x"), (10, "n0"));
+                            thinLockOutput.WriteRow("Object", "Thread", "OSId", "Recursion");
+                        }
+
+                        thinLockOutput.WriteRow(new DmlDumpObj(obj), thinLock.Thread?.Address ?? 0, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
+                    }
+
+                    continue;
                 }
 
                 if (Short)
@@ -139,7 +160,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            if (!Short)
+            if (!Short && !ThinLock)
             {
                 if (Strings && stringTable is not null)
                 {
