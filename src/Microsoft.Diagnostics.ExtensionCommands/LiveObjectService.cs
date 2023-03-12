@@ -12,9 +12,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [ServiceExport(Scope = ServiceScope.Runtime)]
     public class LiveObjectService
     {
-        public int UpdateSeconds { get; set; } = 15;
-
         private ObjectSet _liveObjs;
+
+        public int UpdateSeconds { get; set; } = 15;
 
         public bool PrintWarning { get; set; } = true;
 

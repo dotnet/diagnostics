@@ -132,6 +132,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             Console.WriteLine($"{_totalObjects:n0} objects verified, {errors:n0} error{(errors == 1 ? "" : "s")}.");
+
+            if (errors == 0 && syncBlockErrors == 0)
+            {
+                Console.WriteLine("No heap corruption detected.");
+            }
         }
 
         private void WriteError(ref TableOutput output, ClrHeap heap, ObjectCorruption corruption)
