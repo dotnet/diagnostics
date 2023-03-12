@@ -26,45 +26,45 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; }
 
-        [Option(Name = "--mt")]
+        [Option(Name = "-mt")]
         public string MethodTableString { get; set; }
 
         private ulong? MethodTable { get; set; }
 
-        [Option(Name = "--type")]
+        [Option(Name = "-type")]
         public string Type { get; set; }
 
-        [Option(Name = "--stat")]
+        [Option(Name = "-stat")]
         public bool StatOnly { get; set; }
 
-        [Option(Name = "--strings")]
+        [Option(Name = "-strings")]
         public bool Strings { get; set; }
 
-        [Option(Name = "--verify")]
+        [Option(Name = "-verify")]
         public bool Verify { get; set; }
 
-        [Option(Name = "--short")]
+        [Option(Name = "-short")]
         public bool Short { get; set; }
 
-        [Option(Name = "--min")]
+        [Option(Name = "-min")]
         public ulong Min { get; set; }
 
-        [Option(Name = "--max")]
+        [Option(Name = "-max")]
         public ulong Max { get; set; }
 
-        [Option(Name = "--live")]
+        [Option(Name = "-live")]
         public bool Live { get; set; }
 
-        [Option(Name = "--dead")]
+        [Option(Name = "-dead")]
         public bool Dead{ get; set; }
 
-        [Option(Name = "--gcheap", Aliases = new string[] { "-h" })]
+        [Option(Name = "-heap")]
         public int GCHeap { get; set; } = -1;
 
-        [Option(Name = "--segment", Aliases = new string[] { "-s" })]
+        [Option(Name = "-segment")]
         public string Segment { get; set; }
 
-        [Option(Name = "--thinlock", Aliases = new string[] { "-s" })]
+        [Option(Name = "-thinlock")]
         public bool ThinLock { get; set; }
 
         [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]

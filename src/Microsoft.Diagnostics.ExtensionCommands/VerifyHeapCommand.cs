@@ -21,10 +21,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
-        [Option(Name = "--gcheap", Aliases = new string[] { "-h" })]
+        [Option(Name = "-heap")]
         public int GCHeap { get; set; } = -1;
 
-        [Option(Name = "--segment", Aliases = new string[] { "-s" })]
+        [Option(Name = "-segment")]
         public string Segment { get; set; }
 
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
