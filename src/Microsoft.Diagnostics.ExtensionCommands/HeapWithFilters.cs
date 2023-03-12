@@ -144,12 +144,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     cancellation.ThrowIfCancellationRequested();
 
-                    ulong size = obj.Size;
-                    if (MinimumObjectSize != 0 && size < MinimumObjectSize)
-                        continue;
+                    if (obj.IsValid)
+                    {
+                        ulong size = obj.Size;
+                        if (MinimumObjectSize != 0 && size < MinimumObjectSize)
+                            continue;
 
-                    if (MaximumObjectSize != 0 && size > MaximumObjectSize)
-                        continue;
+                        if (MaximumObjectSize != 0 && size > MaximumObjectSize)
+                            continue;
+                    }
 
                     yield return obj;
                 }

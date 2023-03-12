@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     continue;
                 }
 
-                ulong size = obj.Size;
+                ulong size = obj.IsValid ? obj.Size : 0;
                 if (!StatOnly)
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeapMT(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
 
