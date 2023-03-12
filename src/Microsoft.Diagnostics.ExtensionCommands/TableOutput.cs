@@ -81,13 +81,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 value = dml.Text;
                 if (Console.SupportsDml)
+                {
                     action = dml.Action;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(format))
+            {
                 text = value?.ToString();
+            }
             else
+            {
                 text = Format(value, format);
+            }
 
             AddValue(spacing, sb, width, text ?? "", action);
         }
@@ -112,7 +118,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else if (value.Length > width)
             {
                 if (!string.IsNullOrWhiteSpace(action))
+                {
                     WriteAndClear(sb);
+                }
 
                 if (width <= 3)
                 {
@@ -132,7 +140,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 if (!string.IsNullOrWhiteSpace(action))
+                {
                     WriteDmlExecAndClear(sb, action);
+                }
             }
             else if (leftAlign)
             {
@@ -148,13 +158,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 int remaining = width - value.Length;
                 if (remaining > 0)
+                {
                     sb.Append(spacing, remaining);
+                }
             }
             else
             {
                 int remaining = width - value.Length;
                 if (remaining > 0)
+                {
                     sb.Append(spacing, remaining);
+                }
 
                 if (!string.IsNullOrWhiteSpace(action))
                 {

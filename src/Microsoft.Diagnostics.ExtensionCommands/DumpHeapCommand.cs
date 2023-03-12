@@ -79,7 +79,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             TableOutput thinLockOutput = null;
             TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
             if (!StatOnly && !Short && !ThinLock)
+            {
                 objectTable.WriteRow("Address", "MT", "Size");
+            }
 
             bool checkTypeName = !string.IsNullOrWhiteSpace(Type);
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
@@ -89,26 +91,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 ulong mt = obj.Type?.MethodTable ?? 0;
                 if (mt == 0)
+                {
                     MemoryService.ReadPointer(obj, out mt);
+                }
 
                 // Filter by MT, if the user specified -strings then MethodTable has been pre-set
                 // to the string MethodTable
                 if (MethodTable.HasValue && mt != MethodTable.Value)
+                {
                     continue;
+                }
 
                 // Filter by liveness
                 if (Live && !LiveObjects.IsLive(obj))
+                {
                     continue;
+                }
 
                 if (Dead && LiveObjects.IsLive(obj))
+                {
                     continue;
+                }
 
                 // Filter by type name
-                if (checkTypeName)
+                if (checkTypeName && obj.Type?.Name is not null && !obj.Type.Name.Contains(Type))
                 {
-                    string typeName = obj.Type?.Name ?? "";
-                    if (!typeName.Contains(Type))
-                        continue;
+                    continue;
                 }
 
                 if (ThinLock)
@@ -136,7 +144,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 ulong size = obj.IsValid ? obj.Size : 0;
                 if (!StatOnly)
+                {
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeapMT(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
+                }
 
                 if (Strings)
                 {
@@ -154,18 +164,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 else
                 {
                     if (!stats.TryGetValue(mt, out (int Count, ulong Size, string TypeName) typeStats))
+                    {
                         stats.Add(mt, (1, size, obj.Type?.Name ?? $"<unknown_type_{mt:x}>"));
+                    }
                     else
+                    {
                         stats[mt] = (typeStats.Count + 1, typeStats.Size + size, typeStats.TypeName);
+                    }
                 }
             }
 
+            // Print statistics, but not for -short or -thinlock
             if (!Short && !ThinLock)
             {
                 if (Strings && stringTable is not null)
                 {
+                    // For -strings, we print the strings themselves with their stats
                     if (!StatOnly)
+                    {
                         Console.WriteLine();
+                    }
 
                     int countLen = stringTable.Max(ts => ts.Value).ToString("n0").Length;
                     countLen = Math.Max(countLen, "Count".Length);
@@ -176,7 +194,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     int stringLen = 128;
                     int possibleWidth = Console.WindowWidth - countLen - sizeLen - 2;
                     if (possibleWidth > 16)
+                    {
                         stringLen = Math.Min(possibleWidth, stringLen);
+                    }
 
                     Console.WriteLine("Statistics:");
                     TableOutput statsTable = new(Console, (countLen, "n0"), (sizeLen, "n0"), (0, ""));
@@ -195,13 +215,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         };
 
                     foreach (var item in stringsSorted)
+                    {
                         statsTable.WriteRow(item.Count, item.TotalSize, item.String);
-
+                    }
                 }
                 else if (stats.Count != 0)
                 {
+                    // Print statistics table
                     if (!StatOnly)
+                    {
                         Console.WriteLine();
+                    }
 
                     int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
                     countLen = Math.Max(countLen, "Count".Length);
@@ -227,7 +251,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                       };
 
                     foreach (var item in statsSorted)
+                    {
                         statsTable.WriteRow(item.MethodTable, item.Count, item.Size, item.TypeName);
+                    }
 
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");
                 }
@@ -240,13 +266,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (!char.IsLetterOrDigit(ch))
                 {
-                    return Core(str, maxLen);
+                    return FilterString(str, maxLen);
                 }
             }
 
             return str;
 
-            static string Core(string str, int maxLen)
+            static string FilterString(string str, int maxLen)
             {
                 maxLen = Math.Min(str.Length, maxLen);
                 Debug.Assert(maxLen <= 128);
@@ -275,17 +301,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (!string.IsNullOrWhiteSpace(MethodTableString))
             {
                 if (ParseHexString(MethodTableString, out ulong mt))
+                {
                     MethodTable = mt;
+                }
                 else
+                {
                     throw new ArgumentException($"Invalid MethodTable: {MethodTableString}");
+                }
             }
 
             FilteredHeap = new(Runtime.Heap);
             if (GCHeap >= 0)
+            {
                 FilteredHeap.GCHeap = GCHeap;
+            }
 
             if (!string.IsNullOrWhiteSpace(Segment))
+            {
                 FilteredHeap.FilterBySegmentHex(Segment);
+            }
 
             if (MemoryRange is not null && MemoryRange.Length > 0)
             {
@@ -293,7 +327,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     string badArgument = MemoryRange.FirstOrDefault(f => f.StartsWith("-") || f.StartsWith("/"));
                     if (badArgument != null)
+                    {
                         throw new ArgumentException($"Unknown argument: {badArgument}");
+                    }
 
                     throw new ArgumentException("Too many arguments to !dumpheap");
                 }
@@ -304,13 +340,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             if (Min > 0)
+            {
                 FilteredHeap.MinimumObjectSize = Min;
+            }
 
             if (Max > 0)
+            {
                 FilteredHeap.MaximumObjectSize = Max;
+            }
 
             if (Strings)
+            {
                 MethodTable = Runtime.Heap.StringType.MethodTable;
+            }
 
             FilteredHeap.SortSegments = (seg) => seg.OrderBy(seg => seg.Start);
         }
@@ -319,12 +361,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             value = 0;
             if (string.IsNullOrWhiteSpace(str))
+            {
                 return false;
+            }
 
             if (!ulong.TryParse(str, NumberStyles.HexNumber, null, out value))
             {
                 if (str.StartsWith("/") || str.StartsWith("-"))
+                {
                     throw new ArgumentException($"Unknown argument: {str}");
+                }
 
                 throw new ArgumentException($"Unknown format: {str}, expected hex number");
             }

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
@@ -64,7 +63,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 output.WriteRow("Object", "ModifiedAddr", "Old Value", "New Value", "Expected Failure");
 
                 foreach (Change change in _changes)
+                {
                     output.WriteRow(new DmlDumpObj(change.Object), change.AddressModified, change.OriginalValue.Reverse(), change.NewValue.Reverse(), change.ExpectedFailure);
+                }
             }
 
             Console.WriteLine();
@@ -83,9 +84,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (Change change in _changes)
             {
                 if (!MemoryService.WriteMemory(change.AddressModified, change.OriginalValue, out int written))
+                {
                     Console.WriteLine($"Failed to restore memory at address: {change.AddressModified:x}, heap is still corrupted!");
+                }
                 else if (written != change.OriginalValue.Length)
+                {
                     Console.WriteLine($"Failed to restore memory at address: {change.AddressModified:x}, only wrote {written} bytes out of {change.OriginalValue.Length}!");
+                }
             }
 
             _changes.Clear();
@@ -103,9 +108,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ClrObject[] syncBlocks = FindObjectsWithSyncBlock().Take(2).ToArray();
             if (syncBlocks.Length >= 1)
+            {
                 WriteValue(ObjectCorruptionKind.SyncBlockMismatch, syncBlocks[0], syncBlocks[0] - 4, (byte)0xcc);
+            }
+
             if (syncBlocks.Length >= 2)
+            {
                 WriteValue(ObjectCorruptionKind.SyncBlockZero, syncBlocks[1], syncBlocks[1] - 4, 0x08000000);
+            }
 
             ClrObject[] withRefs = FindObjectsWithReferences().Take(3).ToArray();
             if (withRefs.Length >= 1)
@@ -130,9 +140,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             ClrObject[] arrays = FindArrayObjects().Take(2).ToArray();
             if (arrays.Length >= 1)
+            {
                 WriteValue(ObjectCorruptionKind.InvalidMethodTable, arrays[0], arrays[0], 0xcccccccc);
+            }
+
             if (arrays.Length >= 2)
+            {
                 WriteValue(ObjectCorruptionKind.ObjectTooLarge, arrays[1], arrays[1] + (uint)MemoryService.PointerSize, 0xcccccccc);
+            }
 
             List();
         }
@@ -149,10 +164,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ClrObject obj = Runtime.Heap.GetObject(sync.Object);
 
                 if (_changes.Any(ch => ch.Object == obj))
+                {
                     continue;
+                }
 
                 if (obj.IsValid && !obj.IsFree)
+                {
                     yield return obj;
+                }
             }
         }
 
@@ -161,13 +180,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (ClrObject obj in Runtime.Heap.EnumerateObjects())
             {
                 if (obj.IsFree || !obj.IsValid)
+                {
                     continue;
+                }
 
                 if (_changes.Any(ch => ch.Object == obj))
+                {
                     continue;
+                }
 
                 if (obj.EnumerateReferenceAddresses().Any())
+                {
                     yield return obj;
+                }
             }
         }
 
@@ -176,13 +201,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (ClrObject obj in Runtime.Heap.EnumerateObjects())
             {
                 if (obj.IsFree || !obj.IsValid)
+                {
                     continue;
+                }
 
                 if (_changes.Any(ch => ch.Object == obj))
+                {
                     continue;
+                }
 
                 if (obj.IsArray)
+                {
                     yield return obj;
+                }
             }
         }
 
@@ -194,10 +225,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Span<byte> newBuffer = new(&value, sizeof(T));
 
             if (!MemoryService.ReadMemory(address, old, old.Length, out int read) || read != old.Length)
+            {
                 throw new Exception("Failed to read memory.");
+            }
 
             if (!MemoryService.WriteMemory(address, newBuffer, out int written) || written != newBuffer.Length)
+            {
                 throw new Exception($"Failed to write to {address:x}");
+            }
 
             _changes.Add(new()
             {

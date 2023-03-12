@@ -40,7 +40,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             bool printWarning = PrintWarning;
 
             if (printWarning)
+            {
                 Console.WriteLine("Calculating live objects, this may take a while...");
+            }
 
             int roots = 0;
             Queue<ulong> todo = new();
@@ -54,7 +56,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 if (live.Add(root.Object))
+                {
                     todo.Enqueue(root.Object);
+                }
             }
 
             // We calculate the % complete based on how many are left in our todo queue.
@@ -66,9 +70,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (printWarning && sw.Elapsed.TotalSeconds > updateSeconds)
                 {
                     if (todo.Count > maxCount)
+                    {
                         Console.WriteLine($"Calculating live objects: {live.Count:n0} found");
+                    }
                     else
+                    {
                         Console.WriteLine($"Calculating live objects: {live.Count:n0} found - {(maxCount - todo.Count) * 100 / (float)maxCount:0.0}% complete");
+                    }
 
                     maxCount = Math.Max(maxCount, todo.Count);
                     sw.Restart();
@@ -80,12 +88,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ClrObject obj = heap.GetObject(currAddress);
 
                 foreach (ulong address in obj.EnumerateReferenceAddresses(carefully: false, considerDependantHandles: true))
+                {
                     if (live.Add(address))
+                    {
                         todo.Enqueue(address);
+                    }
+                }
             }
 
             if (printWarning)
+            {
                 Console.WriteLine($"Calculating live objects complete: {live.Count:n0} objects from {roots:n0} roots");
+            }
 
             return live;
         }

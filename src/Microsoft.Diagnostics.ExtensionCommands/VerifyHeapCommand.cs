@@ -34,10 +34,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             HeapWithFilters filteredHeap = new(Runtime.Heap);
             if (GCHeap >= 0)
+            {
                 filteredHeap.GCHeap = GCHeap;
+            }
 
             if (!string.IsNullOrWhiteSpace(Segment))
+            {
                 filteredHeap.FilterBySegmentHex(Segment);
+            }
 
             if (MemoryRange is not null && MemoryRange.Length > 0)
             {
@@ -45,7 +49,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     string badArgument = MemoryRange.FirstOrDefault(f => f.StartsWith("-") || f.StartsWith("/"));
                     if (badArgument != null)
+                    {
                         throw new ArgumentException($"Unknown argument: {badArgument}");
+                    }
 
                     throw new ArgumentException("Too many arguments to !verifyheap");
                 }
@@ -113,12 +119,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 if (syncBlockErrors > 0)
+                {
                     Console.WriteLine();
+                }
+
                 Console.WriteLine($"{totalSyncBlocks:n0} SyncBlocks verified, {syncBlockErrors:n0} error{(syncBlockErrors == 1 ? "" :"s")}.");
             }
 
             if (errors + syncBlockErrors > 0)
+            {
                 Console.WriteLine();
+            }
+
             Console.WriteLine($"{_totalObjects:n0} objects verified, {errors:n0} error{(errors == 1 ? "" : "s")}.");
         }
 
@@ -186,7 +198,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             object[] columns = new object[output.ColumnCount];
             int i = 0;
             if (heap.IsServer)
+            {
                 columns[i++] = ValueWithError(segment?.SubHeap.Index, format: "", error: "");
+            }
 
             columns[i++] = ValueWithError(segment?.Address, format: "x12", error: "");
             columns[i++] = new DmlExec(corruption.Object.Address, $"!ListNearObj {corruption.Object.Address:x}");
@@ -207,17 +221,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 result = $"Object {corruption.Object:x} should have a SyncBlock index of {corruption.ClrSyncBlockIndex} ";
                 if (corruption.SyncBlockIndex >= 0)
+                {
                     result += $"but instead had an index of {corruption.SyncBlockIndex}";
+                }
                 else
+                {
                     result += $"but instead had no SyncBlock";
+                }
             }
             else
             {
                 // We shouldn't have a case where ClrSyncBlockIndex < 0 && SyncBLockIndex < 0, but we'll handle that case anyway
                 if (corruption.SyncBlockIndex >= 0)
+                {
                     result = $"Object {corruption.Object:x} had a SyncBlock index of {corruption.SyncBlockIndex} but the runtime has no matching SyncBlock";
+                }
                 else
+                {
                     result = $"Object {corruption.Object:x} had no SyncBlock when it was expected to";
+                }
             }
 
             return result;
@@ -226,7 +248,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static string ValueWithError(int? value, string format = "x", string error = "???")
         {
             if (value.HasValue)
+            {
                 return value.Value.ToString(format);
+            }
 
             return error;
         }
@@ -234,7 +258,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static string ValueWithError(ulong? value, string format = "x", string error = "???")
         {
             if (value.HasValue)
+            {
                 return value.Value.ToString(format);
+            }
 
             return error;
         }
@@ -242,7 +268,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private string ReadPointerWithError(ulong address)
         {
             if (MemoryService.ReadPointer(address, out ulong value))
+            {
                 return value.ToString("x");
+            }
 
             return "???";
         }
