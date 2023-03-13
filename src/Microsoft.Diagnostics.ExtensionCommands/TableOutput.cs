@@ -235,7 +235,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public sealed class DmlDumpObj : DmlExec
         {
             public DmlDumpObj(ulong address)
-                : base(address, address != 0 ? $"!dumpobj /d {address}" : "")
+                : base(address, address != 0 ? $"!dumpobj /d {address:x}" : "")
             {
             }
         }
