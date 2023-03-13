@@ -252,7 +252,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     foreach (var item in statsSorted)
                     {
-                        statsTable.WriteRow(item.MethodTable, item.Count, item.Size, item.TypeName);
+                        statsTable.WriteRow(new DmlDumpHeapMT(item.MethodTable), item.Count, item.Size, item.TypeName);
                     }
 
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");

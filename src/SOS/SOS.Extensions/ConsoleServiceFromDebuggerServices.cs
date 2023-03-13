@@ -30,7 +30,7 @@ namespace SOS.Extensions
 
         public void WriteDmlExec(string text, string cmd)
         {
-            string dml = $"<exec \"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
+            string dml = $"<exec cmd=\"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
             WriteDml(dml);
         }
 
