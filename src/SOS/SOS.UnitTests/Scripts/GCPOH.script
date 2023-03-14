@@ -27,8 +27,8 @@ VERIFY:\s+Array:       Rank 1, Number of elements 100, Type Byte\s+
 SOSCOMMAND:ObjSize <PREVPOUT>
 
 SOSCOMMAND:GCWhere <PREVPOUT>
-# we care that the Gen is 4 (POH)
-VERIFY:<HEXVAL>\s+4\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+# we care that the Gen is 'pinned' (POH)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+pinned.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
