@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -246,6 +247,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 : base (methodTable, methodTable != 0 ? $"!dumpheap -mt {methodTable:x}" : "")
             {
 
+            }
+        }
+
+        public sealed class DmlDumpHeapSegment : DmlExec
+        {
+            public DmlDumpHeapSegment(ClrSegment seg)
+                : base(seg?.Address ?? 0, seg != null ? $"!dumpheap -segment {seg.Address:x}" : "")
+            {
             }
         }
     }

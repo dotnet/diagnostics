@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -454,14 +455,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (heap.IsServer)
                 {
-                    Console.WriteLine($"Heap {gc_heap.Index} ({gc_heap.Address:x16})");
+                    Console.Write("Heap ");
+                    Console.WriteDmlExec(gc_heap.Index.ToString(), $"!dumpheap -heap {gc_heap.Index}");
+                    Console.WriteLine(" ({gc_heap.Address:x16})");
                 }
 
                 if (!gc_heap.HasRegions)
                 {
                     for (int i = 0; i <= 2 && i < gc_heap.GenerationTable.Length; i++)
                     {
-                        Console.WriteLine($"generation {i} starts at {gc_heap.GenerationTable[i].AllocationStart:x}");
+                        ClrSegment seg = heap.GetSegmentByAddress(gc_heap.GenerationTable[i].AllocationStart);
+                        MemoryRange range = default;
+                        if (seg is not null)
+                        {
+                            range = i switch
+                            {
+                                0 => seg.Generation0,
+                                1 => seg.Generation1,
+                                2 => seg.Generation2,
+                                _ => default
+                            };
+                        }
+
+                        if (range.Length > 0)
+                        {
+                            Console.Write($"generation {i} starts at ");
+                            Console.WriteDmlExec(gc_heap.GenerationTable[i].AllocationStart.ToString("x"), $"!dumpheap {range.Start:x} {range.End:x}");
+                            Console.WriteLine();
+                        }
+                        else
+                        {
+                            Console.WriteLine($"generation {i} starts at {gc_heap.GenerationTable[i].AllocationStart:x}");
+                        }
                     }
 
                     Console.Write("ephemeral segment allocation context: ");
@@ -577,7 +602,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private static void WriteSegment(TableOutput gcOutput, ClrSegment segment)
         {
-            gcOutput.WriteRow(segment.Address,
+            gcOutput.WriteRow(new DmlDumpHeapSegment(segment),
                 segment.ObjectRange.Start, segment.ObjectRange.End, segment.CommittedMemory.End,
                 FormatMemorySize(segment.ObjectRange.Length), FormatMemorySize(segment.CommittedMemory.Length));
         }
