@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 Debug.Assert(prev < objAddress); // also works if there's no previous object, Address == 0
-                localConsistency = VerifyAndPrintObject(output, "Before:", heap, prev) && localConsistency;
+                localConsistency = VerifyAndPrintObject(output, "Before:", heap, segment, prev) && localConsistency;
 
                 if (prev.IsValid)
                 {
@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     localConsistency = false;
 
                     ClrObject expected = heap.GetObject(expectedNextObject);
-                    VerifyAndPrintObject(output, "Expected:", heap, expected);
+                    VerifyAndPrintObject(output, "Expected:", heap, segment, expected);
                     MemoryRange allocContextPlusGap = PrintGapIfExists(output, segment, segAllocContexts, new(expectedNextObject, objAddress));
 
                     if (allocContextPlusGap.End != 0)
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (segment.ObjectRange.Contains(curr))
                 {
-                    localConsistency = VerifyAndPrintObject(output, "Current:", heap, curr) && localConsistency;
+                    localConsistency = VerifyAndPrintObject(output, "Current:", heap, segment, curr) && localConsistency;
 
                     // If curr is valid, we need to print and skip the allocation context
                     expectedNextObject = Align(curr + curr.Size, segment);
@@ -210,7 +210,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // we are here, then we are likely looking at a recently collected object on a compacted segment
                     // which hasn't been zeroed yet.
                     Console.WriteLineError($"Object {objAddress:x} is not in the allocated range of the segment, it may have been collected but not zeroed.");
-                    VerifyAndPrintObject(output, "Current:", heap, curr);
+                    VerifyAndPrintObject(output, "Current:", heap, segment, curr);
 
                     foundLastObject = true;
                 }
@@ -218,7 +218,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else if (expectedNextObject == curr)
             {
                 // The objAddress isn't a valid object but it's exactly where one should be
-                localConsistency = VerifyAndPrintObject(output, "Current:", heap, curr) && localConsistency;
+                localConsistency = VerifyAndPrintObject(output, "Current:", heap, segment, curr) && localConsistency;
 
                 // Since curr is invalid, we won't know the size of the object to check for an allocation context.
                 // In this case, we'll check again if we found a valid next object to print the gap.
@@ -236,7 +236,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         PrintGapIfExists(output, segment, segAllocContexts, new(curr, next));
                     }
 
-                    localConsistency = VerifyAndPrintObject(output, "Next:", heap, next) && localConsistency;
+                    localConsistency = VerifyAndPrintObject(output, "Next:", heap, segment, next) && localConsistency;
                     if (next != expectedNextObject)
                     {
                         localConsistency = false;
@@ -323,7 +323,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return (size + AlignConst) & ~AlignConst;
         }
 
-        private bool VerifyAndPrintObject(TableOutput output, string which, ClrHeap heap, ClrObject obj)
+        private bool VerifyAndPrintObject(TableOutput output, string which, ClrHeap heap, ClrSegment segment, ClrObject obj)
         {
             bool isObjectValid = !heap.IsObjectCorrupted(obj, out ObjectCorruption corruption) && obj.IsValid;
 
@@ -335,11 +335,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             string size = FormatSize(obj.IsValid ? obj.Size : 0);
             if (corruption is null)
             {
-                output.WriteRow(which, new DmlListNearObj(obj), size, typeName);
+                output.WriteRow(which, new DmlDumpObj(obj), size, typeName);
             }
             else
             {
-                output.WriteRow(which, new DmlDumpObj(obj), size, typeName, $"Error Detected: {VerifyHeapCommand.GetObjectCorruptionMessage(MemoryService, heap, corruption)}");
+                output.WriteRow(which, new DmlListNearObj(obj), size, typeName);
+                Console.Write($"Error Detected: {VerifyHeapCommand.GetObjectCorruptionMessage(MemoryService, heap, corruption)} ");
+                Console.WriteDmlExec("[verify heap]", $"!verifyheap -s {segment.Address:X}");
+                Console.WriteLine();
             }
 
             return isObjectValid;
@@ -351,11 +354,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             if (!MemoryService.ReadPointer(obj.Address, out ulong mt))
             {
-                return $"<error reading mt at: {obj.Address:x}>";
+                return $"[error reading mt at: {obj.Address:x}]";
             }
             else
             {
-                return $"<error reading type name...mt:{mt:x}>";
+                return $"Unknown";
             }
         }
     }
