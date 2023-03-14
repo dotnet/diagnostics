@@ -352,7 +352,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private string GetErrorTypeName(ClrObject obj)
         {
-            if (!MemoryService.ReadPointer(obj.Address, out ulong mt))
+            if (!MemoryService.ReadPointer(obj.Address, out _))
             {
                 return $"[error reading mt at: {obj.Address:x}]";
             }
