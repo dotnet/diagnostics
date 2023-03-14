@@ -457,7 +457,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     Console.Write("Heap ");
                     Console.WriteDmlExec(gc_heap.Index.ToString(), $"!dumpheap -heap {gc_heap.Index}");
-                    Console.WriteLine(" ({gc_heap.Address:x16})");
+                    Console.WriteLine($" ({gc_heap.Address:x16})");
                 }
 
                 if (!gc_heap.HasRegions)
