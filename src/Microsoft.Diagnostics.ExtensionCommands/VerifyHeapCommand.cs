@@ -10,9 +10,11 @@ using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "verifyheap", Help = "Searches the managed heap for memory corruption..")]
+    [Command(Name = CommandName, Help = "Searches the managed heap for memory corruption..")]
     public class VerifyHeapCommand : CommandBase
     {
+        private const string CommandName = "verifyheap";
+
         private int _totalObjects;
 
         [ServiceImport]
@@ -43,22 +45,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 filteredHeap.FilterBySegmentHex(Segment);
             }
 
-            if (MemoryRange is not null && MemoryRange.Length > 0)
+            if (MemoryRange is not null)
             {
-                if (MemoryRange.Length > 2)
-                {
-                    string badArgument = MemoryRange.FirstOrDefault(f => f.StartsWith("-") || f.StartsWith("/"));
-                    if (badArgument != null)
-                    {
-                        throw new ArgumentException($"Unknown argument: {badArgument}");
-                    }
-
-                    throw new ArgumentException("Too many arguments to !verifyheap");
-                }
-
-                string start = MemoryRange[0];
-                string end = MemoryRange.Length > 1 ? MemoryRange[1] : null;
-                filteredHeap.FilterByHexMemoryRange(start, end);
+                filteredHeap.FilterByStringMemoryRange(MemoryRange, CommandName);
             }
 
             VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
