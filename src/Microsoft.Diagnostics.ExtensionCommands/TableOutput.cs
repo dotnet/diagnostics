@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -240,12 +241,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public sealed class DmlDumpHeapMT : DmlExec
+        public sealed class DmlListNearObj : DmlExec
         {
-            public DmlDumpHeapMT(ulong methodTable)
+            public DmlListNearObj(ulong address)
+                : base(address, address != 0 ? $"!sos listnearobj {address:x}" : "")
+            {
+            }
+        }
+
+        public sealed class DmlVerifyObj : DmlExec
+        {
+            public DmlVerifyObj(ulong address)
+                : base(address, address != 0 ? $"!verifyobj /d {address:x}" : "")
+            {
+            }
+        }
+
+        public sealed class DmlDumpHeap : DmlExec
+        {
+            public DmlDumpHeap(string text, MemoryRange range)
+                : base(text, $"!dumpheap {range.Start:x} {range.End:x}")
+            {
+            }
+
+            public DmlDumpHeap(ulong methodTable)
                 : base (methodTable, methodTable != 0 ? $"!dumpheap -mt {methodTable:x}" : "")
             {
+            }
+        }
 
+        public sealed class DmlVerifyHeap : DmlExec
+        {
+            public DmlVerifyHeap(string text, ClrSegment what)
+                : base(text, $"!verifyheap -segment {what.Address}")
+            {
             }
         }
     }
