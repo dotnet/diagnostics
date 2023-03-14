@@ -4115,7 +4115,7 @@ DECLARE_API(ListNearObj)
     INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    return ExecuteCommand("gcwhere", args);
+    return ExecuteCommand("listnearobj", args);
 }
 
 DECLARE_API(GCHeapStat)
