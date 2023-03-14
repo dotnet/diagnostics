@@ -39,6 +39,7 @@ VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+22\]\s+
 
 SOSCOMMAND:VerifyHeap
+VERIFY:.* 0 errors.*
 VERIFY:\s*No heap corruption detected.\s*
 
 SOSCOMMAND:GCHeapStat

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -61,6 +62,15 @@ namespace Microsoft.Diagnostics.DebugServices
         /// A string of options that are parsed before the command line options
         /// </summary>
         public string DefaultOptions;
+    }
+
+    /// <summary>
+    /// Marks a class as a Debug-Only command.  These commands are only available for debug versions
+    /// of SOS, but does not appear in shipping builds.
+    /// </summary>
+    [Conditional("DEBUG")]
+    public class DebugCommandAttribute : CommandAttribute
+    {
     }
 
     /// <summary>

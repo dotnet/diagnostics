@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Threading;
+using System.Xml.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using SOS.Hosting.DbgEng.Interop;
 
@@ -27,6 +28,12 @@ namespace SOS.Extensions
 
         public void WriteDml(string text) => _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);
 
+        public void WriteDmlExec(string text, string cmd)
+        {
+            string dml = $"<exec cmd=\"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
+            WriteDml(dml);
+        }
+
         public bool SupportsDml => _supportsDml ??= _debuggerServices.SupportsDml;
 
         public CancellationToken CancellationToken { get; set; }
@@ -34,5 +41,7 @@ namespace SOS.Extensions
         int IConsoleService.WindowWidth => _debuggerServices.GetOutputWidth();
 
         #endregion
+
+        private static string DmlEscape(string text) => new XText(text).ToString();
     }
 }

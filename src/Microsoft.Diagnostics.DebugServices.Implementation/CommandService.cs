@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         break;
                     }
-                    CommandAttribute[] commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
+                    CommandAttribute[] commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: true);
                     foreach (CommandAttribute commandAttribute in commandAttributes)
                     {
                         if ((commandAttribute.Flags & CommandFlags.Manual) == 0 || factory != null)

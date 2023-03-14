@@ -19,13 +19,8 @@ EXTCOMMAND: dcd 0000000000000001
 VERIFY: is not referencing an object
 
 # Checks on ConcurrentDictionary<int, string[]>
-SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
-IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, mscorlib\],\[System.String\[\], mscorlib\]\]<POUT>
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, System.Private.CoreLib\],\[System.String\[\], System.Private.CoreLib\]\]<POUT>
-ENDIF:DESKTOP
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, System.String\[\]>[^+]<POUT>
 EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 2 items
 VERIFY: Key: 2
@@ -34,13 +29,8 @@ VERIFY: Name:\s+System.String\[\]
 VERIFY: Number of elements 4
 
 # Checks on ConcurrentDictionary<int, int>
-SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
-IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, mscorlib\],\[System.Int32, mscorlib\]\]<POUT>
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, System.Private.CoreLib\],\[System.Int32, System.Private.CoreLib\]\]<POUT>
-ENDIF:DESKTOP
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, System.Int32>[^+]<POUT>
 EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 3 items
 VERIFY: Key: 0\s+Value: 1
@@ -48,13 +38,8 @@ VERIFY: Key: 31\s+Value: 17
 VERIFY: Key: 1521482\s+Value: 512487
 
 # Checks on ConcurrentDictionary<string, bool>
-SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
-IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.String, mscorlib\],\[System.Boolean, mscorlib\]\]<POUT>
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.String, System.Private.CoreLib\],\[System.Boolean, System.Private.CoreLib\]\]<POUT>
-ENDIF:DESKTOP
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.String, System.Boolean>[^+]<POUT>
 EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 3 items
 VERIFY: Key: "String true"\s+Value: True
@@ -62,8 +47,8 @@ VERIFY: Key: "String false"\s+Value: False
 VERIFY: Key: "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS\.\.\.\s+Value: False
 
 # Checks on ConcurrentDictionary<DumpSampleStruct, DumpSampleClass>
-SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[DotnetDumpCommands\.Program\+DumpSampleStruct, DotnetDumpCommands\],\[DotnetDumpCommands\.Program\+DumpSampleClass, DotnetDumpCommands\]\]<POUT>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<DotnetDumpCommands\.Program\+DumpSampleStruct, DotnetDumpCommands\.Program\+DumpSampleClass>[^+]<POUT>
 EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 2 items
 VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: null
@@ -79,13 +64,8 @@ VERIFY: instance\s+00000000\s+\<Value2\>
 ENDIF:32BIT
 
 # Checks on ConcurrentDictionary<int, DumpSampleStruct>
-SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary`2[[
-IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, mscorlib\],\[DotnetDumpCommands\.Program\+DumpSampleStruct, DotnetDumpCommands\]\]<POUT>
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary`2\[\[System.Int32, System.Private.CoreLib\],\[DotnetDumpCommands\.Program\+DumpSampleStruct, DotnetDumpCommands\]\]<POUT>
-ENDIF:DESKTOP
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, DotnetDumpCommands\.Program\+DumpSampleStruct>[^+]<POUT>
 EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 1 items
 VERIFY: Key: 0\s+Value: dumpvc <HEXVAL> <HEXVAL>

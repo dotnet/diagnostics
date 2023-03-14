@@ -31,6 +31,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>Writes Debugger Markup Language (DML) markup text.</summary>
         void WriteDml(string text);
 
+        /// <summary>
+        /// Writes an exec tag to the output stream.
+        /// </summary>
+        /// <param name="text">The display text.</param>
+        /// <param name="action">The action to perform.</param>
+        void WriteDmlExec(string text, string action);
+
         /// <summary>Gets whether <see cref="WriteDml"/> is supported.</summary>
         bool SupportsDml { get; }
 

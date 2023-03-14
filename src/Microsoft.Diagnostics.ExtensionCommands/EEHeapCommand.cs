@@ -20,10 +20,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
-        [Option(Name = "--gc", Aliases = new string[] { "-gc" }, Help = "Only display the GC.")]
+        [Option(Name = "-gc", Help = "Only display the GC.")]
         public bool ShowGC { get; set; }
 
-        [Option(Name = "--loader", Aliases = new string[] { "-loader" }, Help = "Only display the Loader.")]
+        [Option(Name = "-loader", Help = "Only display the Loader.")]
         public bool ShowLoader { get; set; }
 
         public override void Invoke()
