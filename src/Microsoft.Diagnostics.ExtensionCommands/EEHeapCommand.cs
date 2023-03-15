@@ -8,14 +8,22 @@ using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "eeheap", Help = "Displays information about native memory that CLR has allocated.")]
+    [Command(Name = CommandName, Help = "Displays information about native memory that CLR has allocated.")]
     public class EEHeapCommand : CommandBase
     {
+        private const string CommandName = "eeheap";
+
+        private HeapWithFilters HeapWithFilters { get; set; }
+
+        // Don't use the word "Total" if we have filtered out entries
+        private string TotalString => HeapWithFilters.HasFilters ? "Partial" : "Total";
+
         [ServiceImport]
-        public IRuntimeService RuntimeService { get; set; }
+        public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -26,32 +34,44 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-loader", Help = "Only display the Loader.")]
         public bool ShowLoader { get; set; }
 
+        [Option(Name = "-heap")]
+        public int GCHeap { get; set; } = -1;
+
+        [Option(Name = "-segment")]
+        public string Segment { get; set; }
+
+        [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
+        public string[] MemoryRange { get; set; }
+
         public override void Invoke()
         {
-            IRuntime[] runtimes = RuntimeService.EnumerateRuntimes().ToArray();
-
-            ulong totalBytes = 0;
-            StringBuilder stringBuilder = null;
-            foreach (IRuntime iRuntime in runtimes)
+            HeapWithFilters = new(Runtime.Heap)
             {
-                if (runtimes.Length > 1)
-                {
-                    WriteDivider($"{iRuntime.RuntimeType} {iRuntime.RuntimeModule?.GetVersionData()}");
-                }
+                // The user may want to filter loader regions by address
+                ThrowIfNoMatchingGCRegions = false
+            };
 
-                ClrRuntime clrRuntime = iRuntime.Services.GetService<ClrRuntime>();
-                totalBytes += PrintOneRuntime(ref stringBuilder, clrRuntime);
+            if (GCHeap >= 0)
+            {
+                HeapWithFilters.GCHeap = GCHeap;
             }
 
-            // Only print the total bytes if we walked everything.
-            if (runtimes.Length > 1 && !ShowGC && !ShowLoader)
+            if (!string.IsNullOrWhiteSpace(Segment))
             {
-                WriteLine($"Total bytes consumed by all CLRs: {FormatMemorySize(totalBytes, "0")}");
+                HeapWithFilters.FilterBySegmentHex(Segment);
             }
+
+            if (MemoryRange is not null)
+            {
+                HeapWithFilters.FilterByStringMemoryRange(MemoryRange, CommandName);
+            }
+
+            PrintOneRuntime(Runtime);
         }
 
-        private ulong PrintOneRuntime(ref StringBuilder stringBuilder, ClrRuntime clrRuntime)
+        private ulong PrintOneRuntime(ClrRuntime clrRuntime)
         {
+            StringBuilder stringBuilder = null;
             TableOutput output = new(Console, (21, "x12"), (0, "x12"))
             {
                 AlignLeft = true
@@ -78,7 +98,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (!ShowGC && !ShowLoader)
             {
                 WriteLine();
-                WriteLine($"Total bytes consumed by CLR: {FormatMemorySize(totalSize, "0")}");
+                WriteLine($"{TotalString} bytes consumed by CLR: {FormatMemorySize(totalSize, "0")}");
                 WriteLine();
             }
 
@@ -129,13 +149,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> heapsByKind = from heap in appDomain.EnumerateLoaderAllocatorHeaps()
-                                                                                           where loaderAllocatorsSeen.Add(heap.Address)
-                                                                                           group heap by heap.Kind into g
-                                                                                           orderby GetSortOrder(g.Key)
-                                                                                           select g;
+            IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> filteredHeapsByKind = from heap in appDomain.EnumerateLoaderAllocatorHeaps()
+                                                                                                   where IsIncludedInFilter(heap)
+                                                                                                   where loaderAllocatorsSeen.Add(heap.Address)
+                                                                                                   group heap by heap.Kind into g
+                                                                                                   orderby GetSortOrder(g.Key)
+                                                                                                   select g;
 
-            return PrintAppDomainHeapsByKind(output, heapsByKind);
+            return PrintAppDomainHeapsByKind(output, filteredHeapsByKind);
         }
 
         private static int GetSortOrder(NativeHeapKind key)
@@ -161,14 +182,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             };
         }
 
-        private ulong PrintAppDomainHeapsByKind(TableOutput output, IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> heapsByKind)
+        private ulong PrintAppDomainHeapsByKind(TableOutput output, IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> filteredHeapsByKind)
         {
             // Just build and print the table.
             ulong totalSize = 0;
             ulong totalWasted = 0;
             StringBuilder text = new(512);
 
-            foreach (IGrouping<NativeHeapKind, ClrNativeHeapInfo> item in heapsByKind)
+            foreach (IGrouping<NativeHeapKind, ClrNativeHeapInfo> item in filteredHeapsByKind)
             {
                 text.Clear();
                 NativeHeapKind kind = item.Key;
@@ -204,7 +225,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 WriteSizeAndWasted(text, totalSize, totalWasted);
                 text.Append('.');
-                output.WriteRow("Total size:", text);
+                output.WriteRow($"{TotalString} size:", text);
             }
             else
             {
@@ -218,13 +239,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ulong PrintCodeHeaps(TableOutput output, ClrRuntime clrRuntime)
         {
             ulong totalSize = 0;
-
             StringBuilder text = new(512);
             foreach (ClrJitManager jitManager in clrRuntime.EnumerateJitManagers())
             {
                 output.WriteRow("JIT Manager:", jitManager.Address);
 
-                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().OrderBy(r => r.Kind).ThenBy(r => r.Address);
+                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().Where(IsIncludedInFilter).OrderBy(r => r.Kind).ThenBy(r => r.Address);
 
                 ulong jitMgrSize = 0, jitMgrWasted = 0;
                 foreach (ClrNativeHeapInfo heap in heaps)
@@ -246,13 +266,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteSizeAndWasted(text, jitMgrSize, jitMgrWasted);
                 text.Append('.');
 
-                output.WriteRow("Total size:", text);
+                output.WriteRow($"{TotalString} size:", text);
                 WriteDivider();
 
                 totalSize += jitMgrSize;
             }
 
             return totalSize;
+        }
+
+        private bool IsIncludedInFilter(ClrNativeHeapInfo info)
+        {
+            // ClrNativeHeapInfo is only filtered by memory range (not heap or segment).
+            if (HeapWithFilters.MemoryRange is not MemoryRange filterRange)
+            {
+                // no filter, so include everything
+                return true;
+            }
+
+            if (filterRange.Contains(info.Address))
+            {
+                return true;
+            }
+
+            if (info.Size is ulong size && size > 0)
+            {
+                // Check for the last valid address in the range
+                return filterRange.Contains(info.Address + size - 1);
+            }
+
+            return false;
         }
 
         private (ulong Size, ulong Wasted) CalculateSizeAndWasted(StringBuilder sb, ClrNativeHeapInfo heap)
@@ -324,7 +367,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong moduleSize = 0, moduleWasted = 0;
 
                 text.Clear();
-                foreach (ClrNativeHeapInfo info in module.EnumerateThunkHeap())
+                foreach (ClrNativeHeapInfo info in module.EnumerateThunkHeap().Where(IsIncludedInFilter))
                 {
                     if (text.Length > 0)
                     {
@@ -348,7 +391,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             text.Clear();
             WriteSizeAndWasted(text, totalSize, totalWasted);
-            output.WriteRow("Total size:", text);
+            output.WriteRow($"{TotalString} size:", text);
 
             return totalSize;
         }
@@ -408,18 +451,42 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine($"Number of GC Heaps: {heap.SubHeaps.Length}");
             WriteDivider();
 
-            foreach (ClrSubHeap gc_heap in heap.SubHeaps)
+            foreach (ClrSubHeap gc_heap in HeapWithFilters.EnumerateFilteredSubHeaps())
             {
                 if (heap.IsServer)
                 {
-                    Console.WriteLine($"Heap {gc_heap.Index} ({gc_heap.Address:x16})");
+                    Console.Write("Heap ");
+                    Console.WriteDmlExec(gc_heap.Index.ToString(), $"!dumpheap -heap {gc_heap.Index}");
+                    Console.WriteLine($" ({gc_heap.Address:x16})");
                 }
 
                 if (!gc_heap.HasRegions)
                 {
                     for (int i = 0; i <= 2 && i < gc_heap.GenerationTable.Length; i++)
                     {
-                        Console.WriteLine($"generation {i} starts at {gc_heap.GenerationTable[i].AllocationStart:x}");
+                        ClrSegment seg = heap.GetSegmentByAddress(gc_heap.GenerationTable[i].AllocationStart);
+                        MemoryRange range = default;
+                        if (seg is not null)
+                        {
+                            range = i switch
+                            {
+                                0 => seg.Generation0,
+                                1 => seg.Generation1,
+                                2 => seg.Generation2,
+                                _ => default
+                            };
+                        }
+
+                        if (range.Length > 0)
+                        {
+                            Console.Write($"generation {i} starts at ");
+                            Console.WriteDmlExec(gc_heap.GenerationTable[i].AllocationStart.ToString("x"), $"!dumpheap {range.Start:x} {range.End:x}");
+                            Console.WriteLine();
+                        }
+                        else
+                        {
+                            Console.WriteLine($"generation {i} starts at {gc_heap.GenerationTable[i].AllocationStart:x}");
+                        }
                     }
 
                     Console.Write("ephemeral segment allocation context: ");
@@ -438,7 +505,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteSegmentHeader(gcOutput);
 
                 bool[] needToPrintGen = new bool[] { gc_heap.HasRegions, gc_heap.HasRegions, gc_heap.HasRegions };
-                IEnumerable<ClrSegment> ephemeralSegments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Ephemeral || (seg.Kind >= GCSegmentKind.Generation0 && seg.Kind <= GCSegmentKind.Generation2));
+                IEnumerable<ClrSegment> ephemeralSegments = HeapWithFilters.EnumerateFilteredSegments(gc_heap).Where(seg => seg.Kind == GCSegmentKind.Ephemeral || (seg.Kind >= GCSegmentKind.Generation0 && seg.Kind <= GCSegmentKind.Generation2));
                 IEnumerable<ClrSegment> segments = ephemeralSegments.OrderBy(seg => seg.Kind).ThenBy(seg => seg.Start);
                 foreach (ClrSegment segment in segments)
                 {
@@ -453,7 +520,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 // print frozen object heap
-                segments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Frozen).OrderBy(seg => seg.Start);
+                segments = HeapWithFilters.EnumerateFilteredSegments(gc_heap).Where(seg => seg.Kind == GCSegmentKind.Frozen).OrderBy(seg => seg.Start);
                 if (segments.Any())
                 {
                     Console.WriteLine("Frozen object heap");
@@ -475,7 +542,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.WriteLine($"Large object heap starts at {gc_heap.GenerationTable[3].AllocationStart:x}");
                 }
 
-                segments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Large).OrderBy(seg => seg.Start);
+                segments = HeapWithFilters.EnumerateFilteredSegments(gc_heap).Where(seg => seg.Kind == GCSegmentKind.Large).OrderBy(seg => seg.Start);
                 WriteSegmentHeader(gcOutput);
 
                 foreach (ClrSegment segment in segments)
@@ -484,7 +551,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 // print pinned object heap
-                segments = gc_heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Pinned).OrderBy(seg => seg.Start);
+                segments = HeapWithFilters.EnumerateFilteredSegments(gc_heap).Where(seg => seg.Kind == GCSegmentKind.Pinned).OrderBy(seg => seg.Start);
                 if (segments.Any())
                 {
                     if (gc_heap.HasRegions || gc_heap.GenerationTable.Length <= 3)
@@ -504,17 +571,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
 
-                Console.WriteLine($"Total Allocated Size:              Size: {FormatMemorySize((ulong)gc_heap.Segments.Sum(r => (long)r.ObjectRange.Length))} bytes.");
-                Console.WriteLine($"Total Committed Size:              Size: {FormatMemorySize((ulong)gc_heap.Segments.Sum(r => (long)r.CommittedMemory.Length))} bytes.");
+                if (HeapWithFilters.HasFilters)
+                {
+                    Console.WriteLine($"{TotalString} Allocated Size:              Size: {FormatMemorySize((ulong)HeapWithFilters.EnumerateFilteredSegments(gc_heap).Sum(r => (long)r.ObjectRange.Length))} bytes.");
+                    Console.WriteLine($"{TotalString} Committed Size:              Size: {FormatMemorySize((ulong)HeapWithFilters.EnumerateFilteredSegments(gc_heap).Sum(r => (long)r.CommittedMemory.Length))} bytes.");
+                }
 
                 Console.WriteLine("------------------------------");
             }
 
-            ulong totalAllocated = (ulong)heap.SubHeaps.SelectMany(gc_heap => gc_heap.Segments).Sum(r => (long)r.ObjectRange.Length);
-            ulong totalCommitted = (ulong)heap.SubHeaps.SelectMany(gc_heap => gc_heap.Segments).Sum(r => (long)r.CommittedMemory.Length);
+            string prefix = "";
+            if (HeapWithFilters.HasFilters)
+            {
+                prefix = "Partial ";
+            }
 
-            Console.WriteLine($"GC Allocated Heap Size:    Size: {FormatMemorySize(totalAllocated)} bytes.");
-            Console.WriteLine($"GC Committed Heap Size:    Size: {FormatMemorySize(totalCommitted)} bytes.");
+            ulong totalAllocated = (ulong)HeapWithFilters.EnumerateFilteredSegments().Sum(r => (long)r.ObjectRange.Length);
+            ulong totalCommitted = (ulong)HeapWithFilters.EnumerateFilteredSegments().Sum(r => (long)r.CommittedMemory.Length);
+
+            Console.WriteLine($"{prefix}GC Allocated Heap Size:    Size: {FormatMemorySize(totalAllocated)} bytes.");
+            Console.WriteLine($"{prefix}GC Committed Heap Size:    Size: {FormatMemorySize(totalCommitted)} bytes.");
 
             return totalCommitted;
         }
@@ -526,7 +602,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private static void WriteSegment(TableOutput gcOutput, ClrSegment segment)
         {
-            gcOutput.WriteRow(segment.Address,
+            gcOutput.WriteRow(new DmlDumpHeapSegment(segment),
                 segment.ObjectRange.Start, segment.ObjectRange.End, segment.CommittedMemory.End,
                 FormatMemorySize(segment.ObjectRange.Length), FormatMemorySize(segment.CommittedMemory.Length));
         }
@@ -542,30 +618,5 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         private void WriteDivider(char c = '-', int width = 40) => WriteLine(new string(c, width));
-
-        private void WriteDivider(string header, int width = 120)
-        {
-            int lhs = (width - header.Length - 2) / 2;
-            if (lhs < 0)
-            {
-                WriteLine(header);
-                return;
-            }
-
-            int rhs = lhs;
-            if ((header.Length % 2) == 1)
-            {
-                rhs++;
-            }
-
-            StringBuilder sb = new(width + 1);
-            sb.Append('-', lhs);
-            sb.Append(' ');
-            sb.Append(header);
-            sb.Append(' ');
-            sb.Append('-', rhs);
-
-            WriteLine(sb.ToString());
-        }
     }
 }

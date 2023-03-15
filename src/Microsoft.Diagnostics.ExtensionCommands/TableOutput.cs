@@ -277,5 +277,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
             }
         }
+
+        public sealed class DmlDumpHeapSegment : DmlExec
+        {
+            public DmlDumpHeapSegment(ClrSegment seg)
+                : base(seg?.Address ?? 0, seg != null ? $"!dumpheap -segment {seg.Address:x}" : "")
+            {
+            }
+        }
     }
 }
