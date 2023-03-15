@@ -47,14 +47,10 @@ namespace SOS.Extensions
         private ITarget _target;
 
         /// <summary>
-        /// Enable the assembly resolver to get the right versions in the same directory as this assembly.
+        /// Initialize the logging service
         /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
-            {
-                AssemblyResolver.Enable();
-            }
             DiagnosticLoggingService.Initialize();
         }
 

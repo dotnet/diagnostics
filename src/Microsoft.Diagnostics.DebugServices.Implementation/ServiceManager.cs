@@ -34,6 +34,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public IServiceEvent<Exception> NotifyExtensionLoadFailure { get; }
 
         /// <summary>
+        /// Enable the assembly resolver on desktop Framework
+        /// </summary>
+        static ServiceManager()
+        {
+            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
+            {
+                AssemblyResolver.Enable();
+            }
+        }
+
+        /// <summary>
         /// Create a service manager instance
         /// </summary>
         public ServiceManager()
@@ -162,11 +173,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 NotifyExtensionLoad.Fire(assembly);
             }
             catch (Exception ex) when
-                (ex is DiagnosticsException ||
-                 ex is ArgumentException ||
-                 ex is NotSupportedException ||
-                 ex is FileLoadException ||
-                 ex is FileNotFoundException)
+                (ex is DiagnosticsException
+                 or ArgumentException
+                 or NotSupportedException
+                 or FileLoadException
+                 or FileNotFoundException)
             {
                 Trace.TraceError(ex.ToString());
                 NotifyExtensionLoadFailure.Fire(new DiagnosticsException($"Extension load failure - {ex.Message} {assembly.Location}", ex));
@@ -287,7 +298,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Assembly load contexts are not supported by the desktop framework
                 if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
                 {
-                    assembly = Assembly.LoadFrom(extensionPath);
+                    assembly = Assembly.LoadFile(extensionPath);
                 }
                 else
                 {
@@ -345,13 +356,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 "SOS.InstallHelper"
             };
 
-            private Dictionary<string, string> _extensionPaths;
+            private static readonly string _defaultAssembliesPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-            public string ExtensionPath { get; }
+            private readonly string _extensionPath;
+            private Dictionary<string, string> _extensionPaths;
 
             public ExtensionLoadContext(string extensionPath)
             {
-                ExtensionPath = extensionPath;
+                _extensionPath = extensionPath;
             }
 
             protected override Assembly Load(AssemblyName assemblyName)
@@ -360,7 +372,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     if (_extensionPaths == null)
                     {
-                        string[] extensionFiles = Directory.GetFiles(Path.GetDirectoryName(ExtensionPath), "*.dll");
+                        string[] extensionFiles = Directory.GetFiles(Path.GetDirectoryName(_extensionPath), "*.dll");
                         _extensionPaths = new Dictionary<string, string>();
                         foreach (string file in extensionFiles)
                         {
@@ -370,8 +382,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 if (s_defaultAssemblies.Contains(assemblyName.Name))
                 {
-                    string assemblyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                    Assembly assembly = Default.LoadFromAssemblyPath(Path.Combine(assemblyPath, assemblyName.Name) + ".dll");
+                    Assembly assembly = Default.LoadFromAssemblyPath(Path.Combine(_defaultAssembliesPath, assemblyName.Name) + ".dll");
                     if (assemblyName.Version.Major != assembly.GetName().Version.Major)
                     {
                         throw new InvalidOperationException($"Extension assembly reference version not supported for {assemblyName.Name} {assemblyName.Version}");
@@ -383,6 +394,87 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return LoadFromAssemblyPath(path);
                 }
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Used to enable app-local assembly unification.
+        /// </summary>
+        private static class AssemblyResolver
+        {
+            private static bool s_initialized;
+
+            /// <summary>
+            /// Call to enable the assembly resolver for the current AppDomain.
+            /// </summary>
+            public static void Enable()
+            {
+                if (!s_initialized)
+                {
+                    s_initialized = true;
+                    AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+                }
+            }
+
+            private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+            {
+                // apply any existing policy
+                AssemblyName referenceName = new(AppDomain.CurrentDomain.ApplyPolicy(args.Name));
+                string fileName = referenceName.Name + ".dll";
+                string assemblyPath;
+                string probingPath;
+                Assembly assembly;
+
+                // Look next to requesting assembly
+                assemblyPath = args.RequestingAssembly?.Location;
+                if (!string.IsNullOrEmpty(assemblyPath))
+                {
+                    probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
+                    Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
+                    if (Probe(probingPath, referenceName.Version, out assembly))
+                    {
+                        Debug.WriteLine($"Matched {probingPath} based on RequestingAssembly");
+                        return assembly;
+                    }
+                }
+
+                // Look next to the executing assembly
+                assemblyPath = Assembly.GetExecutingAssembly().Location;
+                if (!string.IsNullOrEmpty(assemblyPath))
+                {
+                    probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
+                    Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
+                    if (Probe(probingPath, referenceName.Version, out assembly))
+                    {
+                        Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
+                        return assembly;
+                    }
+                }
+
+                return null;
+            }
+
+            /// <summary>
+            /// Considers a path to load for satisfying an assembly ref and loads it
+            /// if the file exists and version is sufficient.
+            /// </summary>
+            /// <param name="filePath">Path to consider for load</param>
+            /// <param name="minimumVersion">Minimum version to consider</param>
+            /// <param name="assembly">loaded assembly</param>
+            /// <returns>true if assembly was loaded</returns>
+            private static bool Probe(string filePath, Version minimumVersion, out Assembly assembly)
+            {
+                if (File.Exists(filePath))
+                {
+                    AssemblyName name = AssemblyName.GetAssemblyName(filePath);
+                    if (name.Version >= minimumVersion)
+                    {
+                        assembly = Assembly.LoadFile(filePath);
+                        return true;
+                    }
+                }
+                assembly = null;
+                return false;
             }
         }
     }
