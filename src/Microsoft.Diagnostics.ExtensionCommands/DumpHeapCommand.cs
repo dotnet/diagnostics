@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong size = obj.IsValid ? obj.Size : 0;
                 if (!StatOnly)
                 {
-                    objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeapMT(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
+                    objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeap(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
                 }
 
                 if (Strings)
@@ -252,7 +252,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     foreach (var item in statsSorted)
                     {
-                        statsTable.WriteRow(new DmlDumpHeapMT(item.MethodTable), item.Count, item.Size, item.TypeName);
+                        statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
                     }
 
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");

@@ -40,7 +40,7 @@ VERIFY:<HEXVAL>\s<HEXVAL>\s([Gg][Cc]where!\$0_)*GCWhere\s+
 
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 0
-VERIFY:<HEXVAL>\s+0\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+0.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
@@ -110,7 +110,7 @@ ENDIF:CDB
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 1
-VERIFY:<HEXVAL>\s+1\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+1.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
@@ -159,7 +159,7 @@ SOSCOMMAND:EEHeap -gc
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 2
-VERIFY:<HEXVAL>\s+2\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+2.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
@@ -181,8 +181,8 @@ SOSCOMMAND:EEHeap -gc
 
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
-# we care that the Gen is still 2 or 0 on Windows 3.x 
-VERIFY:<HEXVAL>\s+[02]\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+# we care that the Gen is still 2 or 0 on Windows 3.x
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+[02].*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
