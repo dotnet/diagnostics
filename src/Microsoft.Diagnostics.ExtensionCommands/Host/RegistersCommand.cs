@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
-        [ServiceImport]
+        [ServiceImport(Optional = true)]
         public IThread CurrentThread { get; set; }
 
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]

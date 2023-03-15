@@ -63,11 +63,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 _consoleService.AddCommandHistory(history);
             }
             catch (Exception ex) when
-                (ex is IOException or
-                 ArgumentNullException or
-                 UnauthorizedAccessException or
-                 NotSupportedException or
-                 SecurityException)
+                (ex is IOException
+                 or ArgumentNullException
+                 or UnauthorizedAccessException
+                 or NotSupportedException
+                 or SecurityException)
             {
             }
 
@@ -85,9 +85,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             // Add the specially handled exit command
             _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));
-
-            // Add "sos" command manually
-            _commandService.AddCommands(typeof(SOSCommand), (services) => new SOSCommand(_commandService, services));
 
             // Display any extension assembly loads on console
             _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => _fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
@@ -107,6 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceContainer.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
             _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             _serviceContainer.AddService<ICommandService>(_commandService);
+            _serviceContainer.AddService<CommandService>(_commandService);
 
             SymbolService symbolService = new(this);
             _serviceContainer.AddService<ISymbolService>(symbolService);
@@ -133,18 +131,24 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 symbolService.AddCachePath(symbolService.DefaultSymbolCache);
                 symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
 
-                // Run the commands from the dotnet-dump command line
+                // Run the commands from the dotnet-dump command line. Any errors/exceptions from the
+                // command execution will be displayed and dotnet-dump exited.
                 if (command != null)
                 {
-                    foreach (string cmd in command)
+                    foreach (string commandLine in command)
                     {
-                        _commandService.Execute(cmd, contextService.Services);
+                        if (!_commandService.Execute(commandLine, contextService.Services))
+                        {
+                            throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{commandLine}'");
+                        }
                         if (_consoleService.Shutdown)
                         {
                             break;
                         }
                     }
                 }
+
+                // Now start the REPL command loop if the console isn't redirected
                 if (!_consoleService.Shutdown && (!Console.IsOutputRedirected || Console.IsInputRedirected))
                 {
                     // Start interactive command line processing
@@ -153,21 +157,25 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) => {
                         _fileLoggingConsoleService.WriteLine("{0}{1}", prompt, commandLine);
-                        _commandService.Execute(commandLine, contextService.Services);
+                        if (!_commandService.Execute(commandLine, contextService.Services))
+                        {
+                            throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{commandLine}'");
+                        }
                     });
                 }
             }
             catch (Exception ex) when
-                (ex is ClrDiagnosticsException or
-                 FileNotFoundException or
-                 DirectoryNotFoundException or
-                 UnauthorizedAccessException or
-                 PlatformNotSupportedException or
-                 InvalidDataException or
-                 InvalidOperationException or
-                 NotSupportedException)
+                (ex is ClrDiagnosticsException
+                 or DiagnosticsException
+                 or FileNotFoundException
+                 or DirectoryNotFoundException
+                 or UnauthorizedAccessException
+                 or PlatformNotSupportedException
+                 or InvalidDataException
+                 or InvalidOperationException
+                 or NotSupportedException)
             {
-                _fileLoggingConsoleService.WriteError($"{ex.Message}");
+                _fileLoggingConsoleService.WriteLineError($"{ex.Message}");
                 return Task.FromResult(1);
             }
             finally
@@ -186,10 +194,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         File.WriteAllLines(historyFileName, _consoleService.GetCommandHistory());
                     }
                     catch (Exception ex) when
-                        (ex is IOException or
-                         UnauthorizedAccessException or
-                         NotSupportedException or
-                         SecurityException)
+                        (ex is IOException
+                         or UnauthorizedAccessException
+                         or NotSupportedException
+                         or SecurityException)
                     {
                     }
                 }

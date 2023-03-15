@@ -9,7 +9,7 @@ using Microsoft.Diagnostics.DebugServices;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "threadpoolqueue", Aliases = new string[] { "tpq" }, Help = "Displays queued ThreadPool work items.")]
-    public class ThreadPoolQueueCommand : ExtensionCommandBase
+    public class ThreadPoolQueueCommand : ClrMDHelperCommandBase
     {
         public override void ExtensionInvoke()
         {
@@ -102,42 +102,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             wi.Count++;
         }
 
-        protected override string GetDetailedHelp()
-        {
-            return DetailedHelpText;
-        }
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"-------------------------------------------------------------------------------
+ThreadPoolQueue
 
-        private readonly string DetailedHelpText =
-    "-------------------------------------------------------------------------------" + Environment.NewLine +
-    "ThreadPoolQueue" + Environment.NewLine +
-    Environment.NewLine +
-    "ThreadPoolQueue lists the enqueued work items in the Clr Thread Pool followed by a summary of the different tasks/work items." + Environment.NewLine +
-    "The global queue is first iterated before local per-thread queues." + Environment.NewLine +
-    "The name of the method to be called (on which instance if any) is also provided when available." + Environment.NewLine +
-    Environment.NewLine +
-    "> tpq" + Environment.NewLine +
-    Environment.NewLine +
-    "global work item queue________________________________" + Environment.NewLine +
-    "0x000002AC3C1DDBB0 Work | (ASP.global_asax)System.Web.HttpApplication.ResumeStepsWaitCallback" + Environment.NewLine +
-    "                       ..." + Environment.NewLine +
-    "0x000002AABEC19148 Task | System.Threading.Tasks.Dataflow.Internal.TargetCore<System.Action>.<ProcessAsyncIfNecessary_Slow>b__3" + Environment.NewLine +
-    "" + Environment.NewLine +
-    "local per thread work items_____________________________________" + Environment.NewLine +
-    "0x000002AE79D80A00 System.Threading.Tasks.ContinuationTaskFromTask" + Environment.NewLine +
-    "                       ..." + Environment.NewLine +
-    "0x000002AB7CBB84A0 Task | System.Net.Http.HttpClientHandler.StartRequest" + Environment.NewLine +
-    "" + Environment.NewLine +
-    "   7 Task System.Threading.Tasks.Dataflow.Internal.TargetCore<System.Action>.<ProcessAsyncIfNecessary_Slow>b__3" + Environment.NewLine +
-    "                       ..." + Environment.NewLine +
-    "  84 Task System.Net.Http.HttpClientHandler.StartRequest" + Environment.NewLine +
-    "----" + Environment.NewLine +
-    "6039" + Environment.NewLine +
-    "" + Environment.NewLine +
-    "1810 Work  (ASP.global_asax) System.Web.HttpApplication.ResumeStepsWaitCallback" + Environment.NewLine +
-    "----" + Environment.NewLine +
-    "1810" + Environment.NewLine +
-    ""
-    ;
+ThreadPoolQueue lists the enqueued work items in the Clr Thread Pool followed by a summary of the different tasks/work items.
+The global queue is first iterated before local per-thread queues.
+The name of the method to be called (on which instance if any) is also provided when available.
+
+> tpq
+
+global work item queue________________________________
+0x000002AC3C1DDBB0 Work | (ASP.global_asax)System.Web.HttpApplication.ResumeStepsWaitCallback
+                       ...
+0x000002AABEC19148 Task | System.Threading.Tasks.Dataflow.Internal.TargetCore<System.Action>.<ProcessAsyncIfNecessary_Slow>b__3
+
+local per thread work items_____________________________________
+0x000002AE79D80A00 System.Threading.Tasks.ContinuationTaskFromTask
+                       ...
+0x000002AB7CBB84A0 Task | System.Net.Http.HttpClientHandler.StartRequest
+
+   7 Task System.Threading.Tasks.Dataflow.Internal.TargetCore<System.Action>.<ProcessAsyncIfNecessary_Slow>b__3
+                       ...
+  84 Task System.Net.Http.HttpClientHandler.StartRequest
+----
+6039
+
+1810 Work  (ASP.global_asax) System.Web.HttpApplication.ResumeStepsWaitCallback
+----
+1810";
 
         private sealed class WorkInfo
         {

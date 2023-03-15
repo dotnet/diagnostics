@@ -7,12 +7,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name ="pathto", Help = "Displays the GC path from <root> to <target>.")]
-    public class PathToCommand : CommandBase
+    [Command(Name ="pathto", Aliases = new[] { "PathTo" }, Help = "Displays the GC path from <root> to <target>.")]
+    public class PathToCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public RootCacheService RootCache { get; set; }
 
@@ -22,7 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "target")]
         public string TargetAddress { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             if (TryParseAddress(SourceAddress, out ulong source))
             {

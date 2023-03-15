@@ -9,40 +9,36 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "dumpconcurrentdictionary", Aliases = new string[] { "dcd" }, Help = "Displays concurrent dictionary content.")]
-    public class DumpConcurrentDictionaryCommand : ExtensionCommandBase
+    public class DumpConcurrentDictionaryCommand : ClrMDHelperCommandBase
     {
         [Argument(Help = "The address of a ConcurrentDictionary object.")]
         public string Address { get; set; }
 
-        [ServiceImport]
+        [ServiceImport(Optional = true)]
         public ClrRuntime Runtime { get; set; }
 
         public override void ExtensionInvoke()
         {
             if (string.IsNullOrEmpty(Address))
             {
-                WriteLine("Missing ConcurrentDictionary address...");
-                return;
+                throw new DiagnosticsException("Missing ConcurrentDictionary address...");
             }
 
             if (!TryParseAddress(Address, out ulong address))
             {
-                WriteLine("Hexadecimal address expected...");
-                return;
+                throw new DiagnosticsException("Hexadecimal address expected...");
             }
 
             ClrHeap heap = Runtime.Heap;
             ClrType type = heap.GetObjectType(address);
             if (type?.Name is null)
             {
-                WriteLine($"{Address:x16} is not referencing an object...");
-                return;
+                throw new DiagnosticsException($"{Address:x16} is not referencing an object...");
             }
 
             if (!type.Name.StartsWith("System.Collections.Concurrent.ConcurrentDictionary<"))
             {
-                WriteLine($"{Address:x16} is not a ConcurrentDictionary but an instance of {type.Name}...");
-                return;
+                throw new DiagnosticsException($"{Address:x16} is not a ConcurrentDictionary but an instance of {type.Name}...");
             }
 
             WriteLine($"{type.Name}");
@@ -67,9 +63,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine(string.Empty);
         }
 
-        protected override string GetDetailedHelp()
-        {
-            return
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
 DumpConcurrentDictionary
 Lists all items (key/value pairs) in the given concurrent dictionary.
@@ -89,7 +84,6 @@ System.Collections.Concurrent.ConcurrentDictionary<System.Int32, ForDump.DumpStr
 - In case of reference types, the command to dump each object is shown (e.g. dumpobj <[item] address>).
 - For value types, the command to dump each value type is shown (e.g. dumpvc <the Element Methodtable> <[item] address>).
 ";
-        }
 
         private static string Truncate(string str, int nbMaxChars)
         {

@@ -1778,8 +1778,6 @@ CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
 
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
 
-HRESULT ExecuteCommand(PCSTR commandName, PCSTR args);
-
 enum ARGTYPE {COBOOL,COSIZE_T,COHEX,COSTRING};
 struct CMDOption
 {

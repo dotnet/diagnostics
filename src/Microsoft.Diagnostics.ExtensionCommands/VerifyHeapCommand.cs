@@ -9,15 +9,12 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = CommandName, Help = "Searches the managed heap for memory corruption..")]
-    public class VerifyHeapCommand : CommandBase
+    [Command(Name = CommandName, Aliases = new[] { "VerifyHeap" }, Help = "Searches the managed heap for memory corruption..")]
+    public class VerifyHeapCommand : ClrRuntimeCommandBase
     {
         private const string CommandName = "verifyheap";
 
         private int _totalObjects;
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -31,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             HeapWithFilters filteredHeap = new(Runtime.Heap);
             if (GCHeap >= 0)

@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.DebugServices;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "taskstate", Aliases = new string[] { "tks" }, Help = "Displays a Task state in a human readable format.")]
-    public class TaskStateCommand : ExtensionCommandBase
+    public class TaskStateCommand : ClrMDHelperCommandBase
     {
         [Argument(Help = "The Task instance address.")]
         public string Address { get; set; }
@@ -57,23 +57,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
 
-        protected override string GetDetailedHelp()
-        {
-            return DetailedHelpText;
-        }
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"-------------------------------------------------------------------------------
+TaskState [hexa address] [-v <decimal state value>]
 
-        private readonly string DetailedHelpText =
-            "-------------------------------------------------------------------------------" + Environment.NewLine +
-            "TaskState [hexa address] [-v <decimal state value>]" + Environment.NewLine +
-            Environment.NewLine +
-            "TaskState translates a Task m_stateFlags field value into human readable format." + Environment.NewLine +
-            "It supports hexadecimal address corresponding to a task instance or -v <decimal state value>." + Environment.NewLine +
-            Environment.NewLine +
-            "> tks 000001db16cf98f0" + Environment.NewLine +
-            "Running" + Environment.NewLine +
-            Environment.NewLine +
-            "> tks -v 73728" + Environment.NewLine +
-            "WaitingToRun"
-            ;
+TaskState translates a Task m_stateFlags field value into human readable format.
+It supports hexadecimal address corresponding to a task instance or -v <decimal state value>.
+
+> tks 000001db16cf98f0
+Running
+
+> tks -v 73728
+WaitingToRun
+";
     }
 }

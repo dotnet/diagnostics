@@ -11,19 +11,16 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "verifyobj", Help = "Checks the given object for signs of corruption.")]
-    public sealed class VerifyObjectCommand : CommandBase
+    [Command(Name = "verifyobj", Aliases = new[] { "VerifyObj" }, Help = "Checks the given object for signs of corruption.")]
+    public sealed class VerifyObjectCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public IMemoryService Memory { get; set; }
 
-        [Argument(Name = "ObjectAddress", Help = "The object to verify.")]
+        [Argument(Name = "objectaddress", Help = "The object to verify.")]
         public string ObjectAddress { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             if (!TryParseAddress(ObjectAddress, out ulong objAddress))
             {

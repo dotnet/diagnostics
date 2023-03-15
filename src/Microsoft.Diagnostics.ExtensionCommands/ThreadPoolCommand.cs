@@ -11,19 +11,16 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "threadpool", Help = "Displays info about the runtime thread pool.")]
-    public sealed class ThreadPoolCommand : CommandBase
+    [Command(Name = "threadpool", Aliases = new[] { "ThreadPool" }, Help = "Displays info about the runtime thread pool.")]
+    public sealed class ThreadPoolCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [Option(Name = "-ti", Help = "Print the hill climbing log.", Aliases = new string[] { "-hc" })]
         public bool PrintHillClimbingLog { get; set; }
 
         [Option(Name = "-wi", Help = "Print all work items that are queued.")]
         public bool PrintWorkItems { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             // Runtime.ThreadPool shouldn't be null unless there was a problem with the dump.
             ClrThreadPool threadPool = Runtime.ThreadPool;

@@ -11,15 +11,12 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "ephrefs", Help = "Finds older generation objects which reference objects in the ephemeral segment.")]
-    public class FindReferencesToEphemeralCommand : CommandBase
+    public class FindReferencesToEphemeralCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         private readonly HashSet<ulong> _referenced = new();
         private ulong _referencedSize;
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             Table output = new(Console, DumpObj, DumpHeap, ByteCount, Column.ForEnum<Generation>(), Column.ForEnum<Generation>(), ByteCount, Integer, TypeName);
 
@@ -70,7 +67,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine();
             Console.WriteLine($"{objCount:n0} older generation objects referenced {_referenced.Count:n0} younger objects ({_referencedSize:n0} bytes)");
         }
-
 
         private IEnumerable<EphemeralRefCount> FindObjectsWithEphemeralReferences()
         {

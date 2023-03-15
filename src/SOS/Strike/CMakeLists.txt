@@ -89,6 +89,7 @@ if(WIN32)
     gchist.cpp
     gcroot.cpp
     symbols.cpp
+    managedcommands.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp

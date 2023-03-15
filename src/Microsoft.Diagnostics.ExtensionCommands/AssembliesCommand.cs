@@ -9,28 +9,21 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
-    public class ClrModulesCommand : CommandBase
+    [Command(Name = "assemblies", Aliases = new[] { "clrmodules" }, Help = "Lists the managed assemblies in the process.")]
+    public class AssembliesCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport(Optional = true)]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
-        [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]
-        public string ModuleName { get; set; }
+        [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on assembly name (path not included).")]
+        public string AssemblyName { get; set; }
 
-        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the modules.")]
+        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the assemblies.")]
         public bool Verbose { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
-            if (Runtime == null)
-            {
-                throw new DiagnosticsException("No CLR runtime set");
-            }
-            Regex regex = ModuleName is not null ? new Regex(ModuleName, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) : null;
+            Regex regex = AssemblyName is not null ? new Regex(AssemblyName, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) : null;
             foreach (ClrModule module in Runtime.EnumerateModules())
             {
                 if (regex is null || !string.IsNullOrEmpty(module.Name) && regex.IsMatch(Path.GetFileName(module.Name)))

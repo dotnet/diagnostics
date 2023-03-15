@@ -70,15 +70,7 @@
 #include <list>
 #endif // !FEATURE_PAL
 #include <wchar.h>
-
 #include "platformspecific.h"
-
-#define NOEXTAPI
-#define KDEXT_64BIT
-#include <wdbgexts.h>
-#undef DECLARE_API
-#undef StackTrace
-
 #include <dbghelp.h>
 
 #include <stdio.h>
@@ -222,7 +214,7 @@ extern const char* g_sosPrefix;
 
 DECLARE_API (MinidumpMode)
 {
-    INIT_API ();
+    INIT_API(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     DWORD_PTR Value=0;
 
@@ -234,7 +226,7 @@ DECLARE_API (MinidumpMode)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg == 0)
     {
@@ -269,7 +261,7 @@ DECLARE_API (MinidumpMode)
 \**********************************************************************/
 DECLARE_API(IP2MD)
 {
-    INIT_API();
+    INIT_API("ip2md");
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL dml = FALSE;
@@ -286,14 +278,14 @@ DECLARE_API(IP2MD)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     EnableDMLHolder dmlHolder(dml);
 
     if (IP == 0)
     {
         ExtOut("%s is not IP\n", args);
-        return Status;
+        return E_INVALIDARG;
     }
 
     CLRDATA_ADDRESS cdaStart = TO_CDADDR(IP);
@@ -376,25 +368,6 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
     return hr;
 }
 
-
-//
-// Executes managed extension commands
-//
-HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
-{
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
-    {
-        if (commandName != nullptr && strlen(commandName) > 0)
-        {
-            return hostServices->DispatchCommand(commandName, args);
-        }
-    }
-    ExtErr("Unrecognized command %s\n", commandName);
-    return E_NOTIMPL;
-}
-
-
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -457,7 +430,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
 
 DECLARE_API(DumpStack)
 {
-    INIT_API_NO_RET_ON_FAILURE();
+    INIT_API_NO_RET_ON_FAILURE(nullptr);
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -483,7 +456,9 @@ DECLARE_API(DumpStack)
     };
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
+    {
+        return E_INVALIDARG;
+    }
 
     // symlines will be non-zero only if SYMOPT_LOAD_LINES was set in the symbol options
     ULONG symlines = 0;
@@ -516,7 +491,7 @@ DECLARE_API(DumpStack)
 \**********************************************************************/
 DECLARE_API (EEStack)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -537,7 +512,7 @@ DECLARE_API (EEStack)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder enableDML(dml);
@@ -620,28 +595,13 @@ DECLARE_API (EEStack)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to dump the address and name of all       *
-*    Managed Objects on the stack.                                     *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(DumpStackObjects)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("dumpstackobjects", args);
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
 *    This function is called to dump the contents of a MethodDesc      *
 *    for a given address                                               *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpMD)
 {
-    INIT_API();
+    INIT_API("dumpmd");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -659,7 +619,7 @@ DECLARE_API(DumpMD)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -757,7 +717,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData);
 \**********************************************************************/
 DECLARE_API(DumpIL)
 {
-    INIT_API();
+    INIT_API("dumpil");
     MINIDUMP_NOT_SUPPORTED();
     DWORD_PTR dwStartAddr = NULL;
     DWORD_PTR dwDynamicMethodObj = NULL;
@@ -778,7 +738,7 @@ DECLARE_API(DumpIL)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -955,7 +915,7 @@ void DumpSigWorker (
 \**********************************************************************/
 DECLARE_API(DumpSig)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -973,12 +933,12 @@ DECLARE_API(DumpSig)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg != 2)
     {
         ExtOut("%sdumpsig <sigaddr> <moduleaddr>\n", SOSPrefix);
-        return Status;
+        return E_INVALIDARG;
     }
 
     DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
@@ -1002,7 +962,7 @@ DECLARE_API(DumpSig)
 \**********************************************************************/
 DECLARE_API(DumpSigElem)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -1020,13 +980,13 @@ DECLARE_API(DumpSigElem)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     if (nArg != 2)
     {
         ExtOut("%sdumpsigelem <sigaddr> <moduleaddr>\n", SOSPrefix);
-        return Status;
+        return E_INVALIDARG;
     }
 
     DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
@@ -1035,7 +995,7 @@ DECLARE_API(DumpSigElem)
     if (dwSigAddr == 0 || dwModuleAddr == 0)
     {
         ExtOut("Invalid parameters %s %s\n", sigExpr.data, moduleExpr.data);
-        return Status;
+        return E_INVALIDARG;
     }
 
     DumpSigWorker(dwSigAddr, dwModuleAddr, FALSE);
@@ -1051,7 +1011,7 @@ DECLARE_API(DumpSigElem)
 \**********************************************************************/
 DECLARE_API(DumpClass)
 {
-    INIT_API();
+    INIT_API("dumpclass");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = 0;
@@ -1069,13 +1029,13 @@ DECLARE_API(DumpClass)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     if (nArg == 0)
     {
         ExtOut("Missing EEClass address\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -1170,7 +1130,7 @@ DECLARE_API(DumpMT)
     DWORD_PTR dwStartAddr=0;
     DWORD_PTR dwOriginalAddr;
 
-    INIT_API();
+    INIT_API("dumpmt");
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -1189,7 +1149,7 @@ DECLARE_API(DumpMT)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -1198,7 +1158,7 @@ DECLARE_API(DumpMT)
     if (nArg == 0)
     {
         Print("Missing MethodTable address\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     dwOriginalAddr = dwStartAddr;
@@ -1207,7 +1167,7 @@ DECLARE_API(DumpMT)
     if (!IsMethodTable(dwStartAddr))
     {
         Print(dwOriginalAddr, " is not a MethodTable\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     DacpMethodTableData vMethTable;
@@ -1216,7 +1176,7 @@ DECLARE_API(DumpMT)
     if (vMethTable.bIsFree)
     {
         Print("Free MethodTable\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     DacpMethodTableCollectibleData vMethTableCollectible;
@@ -1834,7 +1794,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
 \**********************************************************************/
 DECLARE_API(DumpArray)
 {
-    INIT_API();
+    INIT_API("dumparray");
 
     DumpArrayFlags flags;
 
@@ -1857,7 +1817,7 @@ DECLARE_API(DumpArray)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -1865,7 +1825,7 @@ DECLARE_API(DumpArray)
     if (p_Object == 0)
     {
         ExtOut("Invalid parameter %s\n", flags.strObject);
-        return Status;
+        return E_INVALIDARG;
     }
 
     if (!sos::IsObject(p_Object, true))
@@ -2052,7 +2012,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
 \**********************************************************************/
 DECLARE_API(DumpObj)
 {
-    INIT_API();
+    INIT_API("dumpobj");
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -2073,7 +2033,7 @@ DECLARE_API(DumpObj)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     DWORD_PTR p_Object = GetExpression(str_Object.data);
@@ -2081,7 +2041,7 @@ DECLARE_API(DumpObj)
     if (p_Object == 0)
     {
         ExtOut("Invalid parameter %s\n", args);
-        return Status;
+        return E_INVALIDARG;
     }
 
     try {
@@ -2112,7 +2072,7 @@ DECLARE_API(DumpObj)
 \**********************************************************************/
 DECLARE_API(DumpALC)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -2129,7 +2089,7 @@ DECLARE_API(DumpALC)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     DWORD_PTR p_Object = GetExpression(str_Object.data);
@@ -2137,7 +2097,7 @@ DECLARE_API(DumpALC)
     if (p_Object == 0)
     {
         ExtOut("Invalid parameter %s\n", args);
-        return Status;
+        return E_INVALIDARG;
     }
 
     try
@@ -2163,7 +2123,7 @@ DECLARE_API(DumpALC)
 
 DECLARE_API(DumpDelegate)
 {
-    INIT_API();
+    INIT_API("dumpdelegate");
     MINIDUMP_NOT_SUPPORTED();
 
     try
@@ -2182,12 +2142,12 @@ DECLARE_API(DumpDelegate)
         size_t nArg;
         if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
         {
-            return Status;
+            return E_INVALIDARG;
         }
         if (nArg != 1)
         {
             ExtOut("Usage: %sdumpdelegate <delegate object address>\n", SOSPrefix);
-            return Status;
+            return E_INVALIDARG;
         }
 
         EnableDMLHolder dmlHolder(dml);
@@ -2879,7 +2839,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
 DECLARE_API(PrintException)
 {
-    INIT_API();
+    INIT_API("printexception");
 
     BOOL dml = FALSE;
     BOOL bShowNested = FALSE;
@@ -2901,7 +2861,7 @@ DECLARE_API(PrintException)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     CheckBreakingRuntimeChange();
@@ -2969,7 +2929,7 @@ DECLARE_API(PrintException)
             {
                 ExtOut("Invalid exception object %s\n", args);
             }
-            return Status;
+            return E_INVALIDARG;
         }
 
         if (bCCW)
@@ -2996,7 +2956,7 @@ DECLARE_API(PrintException)
     if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
     {
         ExtOut("The current thread is unmanaged\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     if (Thread.firstNestedException)
@@ -3048,7 +3008,7 @@ DECLARE_API(PrintException)
 \**********************************************************************/
 DECLARE_API(DumpVC)
 {
-    INIT_API();
+    INIT_API("dumpvc");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_MT = NULL;
@@ -3067,7 +3027,7 @@ DECLARE_API(DumpVC)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -3092,7 +3052,7 @@ DECLARE_API(DumpVC)
 
 DECLARE_API(DumpRCW)
 {
-    INIT_API();
+    INIT_API(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
@@ -3109,7 +3069,7 @@ DECLARE_API(DumpRCW)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -3220,7 +3180,7 @@ DECLARE_API(DumpRCW)
 
 DECLARE_API(DumpCCW)
 {
-    INIT_API();
+    INIT_API(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
@@ -3237,7 +3197,7 @@ DECLARE_API(DumpCCW)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -3480,7 +3440,7 @@ DECLARE_API(DumpCCW)
 */
 DECLARE_API(DumpPermissionSet)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -3493,7 +3453,7 @@ DECLARE_API(DumpPermissionSet)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg!=1)
     {
@@ -3507,18 +3467,6 @@ DECLARE_API(DumpPermissionSet)
 
 #endif // _DEBUG
 #endif // FEATURE_PAL
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function dumps GC heap size.                                 *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(EEHeap)
-{
-    INIT_API_EXT();
-    return ExecuteCommand("eeheap", args);
-}
 
 void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 {
@@ -3538,20 +3486,6 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 
         inStat->Delete();
     }
-}
-
-DECLARE_API(TraverseHeap)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-    return ExecuteCommand("traverseheap", args);
-}
-
-DECLARE_API(DumpRuntimeTypes)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-    return ExecuteCommand("dumpruntimetypes", args);
 }
 
 namespace sos
@@ -3591,52 +3525,6 @@ namespace sos
     };
 }
 
-DECLARE_API(DumpHeap)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-    return ExecuteCommand("dumpheap", args);
-}
-
-DECLARE_API(VerifyHeap)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-    return ExecuteCommand("verifyheap", args);
-}
-
-DECLARE_API(AnalyzeOOM)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("analyzeoom", args);
-}
-
-DECLARE_API(VerifyObj)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("verifyobj", args);
-}
-
-DECLARE_API(ListNearObj)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("listnearobj", args);
-}
-
-DECLARE_API(GCHeapStat)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("gcheapstat", args);
-}
-
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -3646,7 +3534,7 @@ DECLARE_API(GCHeapStat)
 \**********************************************************************/
 DECLARE_API(SyncBlk)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL bDumpAll = FALSE;
@@ -3665,7 +3553,7 @@ DECLARE_API(SyncBlk)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -3878,7 +3766,7 @@ void VisitRcw(CLRDATA_ADDRESS RCW,CLRDATA_ADDRESS Context,CLRDATA_ADDRESS Thread
 
 DECLARE_API(RCWCleanupList)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -3914,21 +3802,6 @@ DECLARE_API(RCWCleanupList)
     return Status;
 }
 #endif // FEATURE_COMINTEROP
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the contents of the finalizer     *
-*    queue.                                                            *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(FinalizeQueue)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("finalizequeue", args);
-}
 
 enum {
     // These are the values set in m_dwTransientFlags.
@@ -3988,7 +3861,7 @@ void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
 \**********************************************************************/
 DECLARE_API(DumpModule)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
 
@@ -4011,12 +3884,12 @@ DECLARE_API(DumpModule)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg != 1)
     {
         ExtOut("Usage: DumpModule [-mt] <Module Address>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -4164,7 +4037,7 @@ DECLARE_API(DumpModule)
 \**********************************************************************/
 DECLARE_API(DumpDomain)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_DomainAddr = 0;
@@ -4182,7 +4055,7 @@ DECLARE_API(DumpDomain)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -4285,7 +4158,7 @@ DECLARE_API(DumpDomain)
 \**********************************************************************/
 DECLARE_API(DumpAssembly)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_AssemblyAddr = 0;
@@ -4303,7 +4176,7 @@ DECLARE_API(DumpAssembly)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -4823,7 +4696,7 @@ static const struct ThreadStateTable ThreadStates[] =
 
 DECLARE_API(ThreadState)
 {
-    INIT_API_NODAC();
+    INIT_API_NODAC(nullptr);
 
     size_t state = GetExpression(args);
     int count = 0;
@@ -4849,7 +4722,7 @@ DECLARE_API(ThreadState)
 
 DECLARE_API(Threads)
 {
-    INIT_API();
+    INIT_API("clrthreads");
 
     BOOL bPrintSpecialThreads = FALSE;
     BOOL bPrintLiveThreadsOnly = FALSE;
@@ -4865,7 +4738,7 @@ DECLARE_API(Threads)
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     if (bSwitchToManagedExceptionThread)
@@ -4927,7 +4800,7 @@ DECLARE_API(Threads)
 \**********************************************************************/
 DECLARE_API(WatsonBuckets)
 {
-    INIT_API();
+    INIT_API(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     // We don't need to support minidumps for this command.
@@ -5954,14 +5827,14 @@ void EnableModuleLoadUnloadCallbacks()
 
 DECLARE_API(SOSHandleCLRN)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     return HandleCLRNotificationEvent();
 }
 
 HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
 {
-    INIT_API();
+    INIT_API_EFN();
     EnableModuleLoadUnloadCallbacks();
     return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 }
@@ -5970,13 +5843,13 @@ HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
 
 HRESULT HandleExceptionNotification(ILLDBServices *client)
 {
-    INIT_API();
+    INIT_API_EFN();
     return HandleCLRNotificationEvent();
 }
 
 HRESULT HandleRuntimeLoadedNotification(ILLDBServices *client)
 {
-    INIT_API();
+    INIT_API_EFN();
     EnableModuleLoadUnloadCallbacks();
     return g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 }
@@ -5985,7 +5858,7 @@ HRESULT HandleRuntimeLoadedNotification(ILLDBServices *client)
 
 DECLARE_API(bpmd)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     char buffer[1024];
 
@@ -6027,7 +5900,7 @@ DECLARE_API(bpmd)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     bool fBadParam = false;
@@ -6359,23 +6232,9 @@ DECLARE_API(bpmd)
     return Status;
 }
 
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the managed threadpool            *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(ThreadPool)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("threadpool", args);
-}
-
 DECLARE_API(FindAppDomain)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_Object = NULL;
@@ -6393,7 +6252,7 @@ DECLARE_API(FindAppDomain)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -6468,7 +6327,7 @@ DECLARE_API(FindAppDomain)
 #ifdef FEATURE_COMINTEROP
 DECLARE_API(COMState)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -6643,7 +6502,7 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
 
 DECLARE_API(EHInfo)
 {
-    INIT_API();
+    INIT_API("ehinfo");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -6662,7 +6521,7 @@ DECLARE_API(EHInfo)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (0 == nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -6724,7 +6583,7 @@ DECLARE_API(EHInfo)
 \**********************************************************************/
 DECLARE_API(GCInfo)
 {
-    INIT_API();
+    INIT_API("gcinfo");
     MINIDUMP_NOT_SUPPORTED();
 
     TADDR taStartAddr = NULL;
@@ -6742,7 +6601,7 @@ DECLARE_API(GCInfo)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (0 == nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -7020,7 +6879,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 \**********************************************************************/
 DECLARE_API(u)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -7049,7 +6908,7 @@ DECLARE_API(u)
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || (nArg < 1))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     // symlines will be non-zero only if SYMOPT_LOAD_LINES was set in the symbol options
     ULONG symlines = 0;
@@ -7553,10 +7412,8 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
 \**********************************************************************/
 DECLARE_API(DumpLog)
 {
-    INIT_API_NO_RET_ON_FAILURE();
-
+    INIT_API_NO_RET_ON_FAILURE("dumplog");
     MINIDUMP_NOT_SUPPORTED();
-
     _ASSERTE(g_pRuntime != nullptr);
 
     // Not supported on desktop runtime
@@ -7584,7 +7441,7 @@ DECLARE_API(DumpLog)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg > 0 && sFileName.data != NULL)
     {
@@ -7648,7 +7505,7 @@ DECLARE_API(DumpLog)
 
 DECLARE_API (DumpGCLog)
 {
-    INIT_API_NODAC();
+    INIT_API_NODAC(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -7748,7 +7605,7 @@ exit:
 #ifndef FEATURE_PAL
 DECLARE_API (DumpGCConfigLog)
 {
-    INIT_API();
+    INIT_API(nullptr);
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
@@ -7964,7 +7821,7 @@ void PrintInterestingGCInfo(DacpGCInterestingInfoData* dataPerHeap)
 
 DECLARE_API(DumpGCData)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
@@ -8048,7 +7905,7 @@ extern char sccsid[];
 \**********************************************************************/
 DECLARE_API(EEVersion)
 {
-    INIT_API_NO_RET_ON_FAILURE();
+    INIT_API_NO_RET_ON_FAILURE("eeversion");
 
     static const int fileVersionBufferSize = 1024;
     ArrayHolder<char> fileVersionBuffer = new char[fileVersionBufferSize];
@@ -8139,39 +7996,31 @@ DECLARE_API(EEVersion)
 \**********************************************************************/
 DECLARE_API(SOSStatus)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE("sosstatus");
 
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
+    BOOL bReset = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-reset", &bReset, COBOOL, FALSE},
+        {"--reset", &bReset, COBOOL, FALSE},
+        {"-r", &bReset, COBOOL, FALSE},
+    };
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
-        Status = hostServices->DispatchCommand("sosstatus", args);
+        return E_INVALIDARG;
     }
-    else
+    if (bReset)
     {
-        BOOL bReset = FALSE;
-        CMDOption option[] =
-        {   // name, vptr, type, hasValue
-            {"-reset", &bReset, COBOOL, FALSE},
-            {"--reset", &bReset, COBOOL, FALSE},
-            {"-r", &bReset, COBOOL, FALSE},
-        };
-        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
+        ITarget* target = GetTarget();
+        if (target != nullptr)
         {
-            return Status;
+            target->Flush();
         }
-        if (bReset)
-        {
-            ITarget* target = GetTarget();
-            if (target != nullptr)
-            {
-                target->Flush();
-            }
-            ExtOut("Internal cached state reset\n");
-            return S_OK;
-        }
-        Target::DisplayStatus();
+        ExtOut("Internal cached state reset\n");
+        return S_OK;
     }
-    return Status;
+    Target::DisplayStatus();
+    return S_OK;
 }
 
 #ifndef FEATURE_PAL
@@ -8184,7 +8033,7 @@ DECLARE_API(SOSStatus)
 \**********************************************************************/
 DECLARE_API (ProcInfo)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -8464,7 +8313,7 @@ DECLARE_API (ProcInfo)
 \**********************************************************************/
 DECLARE_API(Token2EE)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     StringHolder DllName;
@@ -8485,13 +8334,13 @@ DECLARE_API(Token2EE)
     size_t nArg;
     if (!GetCMDOption(args,option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg!=2)
     {
         ExtOut("Usage: %stoken2ee module_name mdToken\n", SOSPrefix);
         ExtOut("       You can pass * for module_name to search all modules.\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -8557,7 +8406,7 @@ DECLARE_API(Token2EE)
 \**********************************************************************/
 DECLARE_API(Name2EE)
 {
-    INIT_API();
+    INIT_API("name2ee");
     MINIDUMP_NOT_SUPPORTED();
 
     StringHolder DllName, TypeName;
@@ -8577,7 +8426,7 @@ DECLARE_API(Name2EE)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -8620,7 +8469,7 @@ DECLARE_API(Name2EE)
         ExtOut("       use * for module_name to search all loaded modules\n");
         ExtOut("Examples: %sname2ee  mscorlib.dll System.String.ToString\n", SOSPrefix);
         ExtOut("          %sname2ee *!System.String\n", SOSPrefix);
-        return Status;
+        return E_INVALIDARG;
     }
 
     int numModule;
@@ -8675,43 +8524,9 @@ DECLARE_API(Name2EE)
     return Status;
 }
 
-
-DECLARE_API(PathTo)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("pathto", args);
-}
-
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function finds all roots (on stack or in handles) for a      *
-*    given object.                                                     *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(GCRoot)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("gcroot", args);
-}
-
-DECLARE_API(GCWhere)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("gcwhere", args);
-}
-
-
 DECLARE_API(FindRoots)
 {
-    INIT_API_EXT();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     if (IsDumpFile())
@@ -8737,7 +8552,7 @@ DECLARE_API(FindRoots)
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -8939,8 +8754,10 @@ public:
             {"/d", &mDML, COBOOL, FALSE},
         };
 
-        if (!GetCMDOption(args,option,ARRAY_SIZE(option),NULL,0,NULL))
+        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
+        {
             sos::Throw<sos::Exception>("Failed to parse command line arguments.");
+        }
 
         if (type != NULL) {
             if (_stricmp(type, "Pinned") == 0)
@@ -9195,7 +9012,7 @@ private:
 \**********************************************************************/
 DECLARE_API(GCHandles)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     try
@@ -9218,7 +9035,7 @@ DECLARE_API(GCHandles)
 #ifndef FEATURE_PAL
 DECLARE_API(TraceToCode)
 {
-    INIT_API_NODAC();
+    INIT_API_NODAC(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
 
@@ -9310,7 +9127,7 @@ DECLARE_API(TraceToCode)
 #ifndef FEATURE_PAL
 DECLARE_API(GetCodeTypeFlags)
 {
-    INIT_API();
+    INIT_API(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
 
@@ -9326,7 +9143,7 @@ DECLARE_API(GetCodeTypeFlags)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t preg = 1; // by default
@@ -9336,7 +9153,7 @@ DECLARE_API(GetCodeTypeFlags)
         if (preg > 19)
         {
             ExtOut("Pseudo-register number must be between 0 and 19\n");
-            return Status;
+            return E_INVALIDARG;
         }
     }
 
@@ -9407,7 +9224,7 @@ DECLARE_API(GetCodeTypeFlags)
 
 DECLARE_API(StopOnException)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
 
@@ -9434,19 +9251,19 @@ DECLARE_API(StopOnException)
     size_t nArg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (IsDumpFile())
     {
         ExtOut("Live debugging session required\n");
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg < 1 || nArg > 2)
     {
         ExtOut("usage: StopOnException [-derived] [-create | -create2] <type name>\n");
         ExtOut("                       [<pseudo-register number for result>]\n");
         ExtOut("ex:    StopOnException -create System.OutOfMemoryException 1\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t preg = 1; // by default
@@ -9456,7 +9273,7 @@ DECLARE_API(StopOnException)
         if (preg > 19)
         {
             ExtOut("Pseudo-register number must be between 0 and 19\n");
-            return Status;
+            return E_INVALIDARG;
         }
     }
 
@@ -9541,25 +9358,11 @@ DECLARE_API(StopOnException)
     return Status;
 }
 
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function finds the size of an object or all roots.           *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(ObjSize)
-{
-    INIT_API_EXT();
-    MINIDUMP_NOT_SUPPORTED();
-
-    return ExecuteCommand("objsize", args);
-}
-
 #ifndef FEATURE_PAL
 // For FEATURE_PAL, MEMORY_BASIC_INFORMATION64 doesn't exist yet. TODO?
 DECLARE_API(GCHandleLeaks)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -9580,7 +9383,7 @@ DECLARE_API(GCHandleLeaks)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -11548,7 +11351,7 @@ WatchCmd g_watchCmd;
 // The grand new !Watch command, private to Apollo for now
 DECLARE_API(Watch)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE(nullptr);
     StringHolder addExpression;
     StringHolder aExpression;
     StringHolder saveName;
@@ -11582,7 +11385,7 @@ DECLARE_API(Watch)
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     if(addExpression.data != NULL || aExpression.data != NULL)
@@ -11671,7 +11474,7 @@ DECLARE_API(Watch)
 
 DECLARE_API(ClrStack)
 {
-    INIT_API();
+    INIT_API("clrstack");
 
     BOOL bAll = FALSE;
     BOOL bParams = FALSE;
@@ -11715,7 +11518,7 @@ DECLARE_API(ClrStack)
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     EnableDMLHolder dmlHolder(dml);
@@ -11785,9 +11588,9 @@ BOOL IsMemoryInfoAvailable()
     return TRUE;
 }
 
-DECLARE_API( VMMap )
+DECLARE_API(VMMap)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     if (IsMiniDumpFile() || !IsMemoryInfoAvailable())
     {
@@ -11799,37 +11602,28 @@ DECLARE_API( VMMap )
     }
 
     return Status;
-}   // DECLARE_API( vmmap )
+}
 
 #endif // FEATURE_PAL
 
 DECLARE_API(SOSFlush)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE("sosflush");
 
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
+    ITarget* target = GetTarget();
+    if (target != nullptr)
     {
-        Status = hostServices->DispatchCommand("sosflush", args);
+        target->Flush();
     }
-    else
-    {
-        ITarget* target = GetTarget();
-        if (target != nullptr)
-        {
-            target->Flush();
-        }
-        ExtOut("Internal cached state reset\n");
-        return S_OK;
-    }
-    return Status;
+    ExtOut("Internal cached state reset\n");
+    return S_OK;
 }
 
 #ifndef FEATURE_PAL
 
 DECLARE_API( VMStat )
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     if (IsMiniDumpFile() || !IsMemoryInfoAvailable())
     {
@@ -11851,7 +11645,7 @@ DECLARE_API( VMStat )
 \**********************************************************************/
 DECLARE_API(SaveModule)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -11867,16 +11661,16 @@ DECLARE_API(SaveModule)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return Status;
+        return E_INVALIDARG;
     }
     if (nArg != 2)
     {
         ExtOut("Usage: SaveModule <address> <file to save>\n");
-        return Status;
+        return E_INVALIDARG;
     }
     if (moduleAddr == 0) {
         ExtOut ("Invalid arg\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     char* ptr = Location.data;
@@ -12057,7 +11851,7 @@ DECLARE_API(dbgout)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     Output::SetDebugOutputEnabled(!bOff);
@@ -12532,7 +12326,7 @@ HRESULT CALLBACK _EFN_StackTrace(
     size_t uiSizeOfContext,
     DWORD Flags)
 {
-    INIT_API();
+    INIT_API_EFN();
 
     Status = ImplementEFNStackTraceTry(client, wszTextOut, puiTextLength,
         pTransitionContexts, puiTransitionContextCount,
@@ -12819,7 +12613,7 @@ HRESULT ImplementEFNGetManagedExcepStack(
 // hard-to-get-to SOS APIs.
 DECLARE_API(VerifyStackTrace)
 {
-    INIT_API();
+    INIT_API(nullptr);
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL bVerifyManagedExcepStack = FALSE;
@@ -12830,7 +12624,7 @@ DECLARE_API(VerifyStackTrace)
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL,0,NULL))
     {
-        return Status;
+        return E_INVALIDARG;
     }
 
     if (bVerifyManagedExcepStack)
@@ -13024,7 +12818,7 @@ DECLARE_API(VerifyStackTrace)
 // This is an internal-only Apollo extension to save breakpoint/watch state
 DECLARE_API(SaveState)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -13036,7 +12830,7 @@ DECLARE_API(SaveState)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return E_FAIL;
+        return E_INVALIDARG;
     }
 
     if(nArg == 0)
@@ -13064,7 +12858,7 @@ DECLARE_API(SaveState)
 
 DECLARE_API(SuppressJitOptimization)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE(nullptr);
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -13076,7 +12870,7 @@ DECLARE_API(SuppressJitOptimization)
     size_t nArg;
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        return E_FAIL;
+        return E_INVALIDARG;
     }
 
     if (nArg == 1 && (_stricmp(onOff.data, "On") == 0))
@@ -13244,7 +13038,7 @@ HRESULT LoadModuleEvent(IDebugClient* client, PCSTR moduleName)
 
 DECLARE_API(StopOnCatch)
 {
-    INIT_API();
+    INIT_API(nullptr);
     MINIDUMP_NOT_SUPPORTED();
 
     g_stopOnNextCatch = TRUE;
@@ -13359,7 +13153,7 @@ public:
 
 DECLARE_API(enummem)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     ToRelease<ICLRDataEnumMemoryRegions> enumMemoryRegions;
     Status = g_clrData->QueryInterface(__uuidof(ICLRDataEnumMemoryRegions), (void**)&enumMemoryRegions);
@@ -13405,7 +13199,7 @@ _EFN_GetManagedExcepStack(
     ULONG cbString
     )
 {
-    INIT_API();
+    INIT_API_EFN();
 
     ArrayHolder<WCHAR> tmpStr = new NOTHROW WCHAR[cbString];
     if (tmpStr == NULL)
@@ -13436,7 +13230,7 @@ _EFN_GetManagedExcepStackW(
     ULONG cchString
     )
 {
-    INIT_API();
+    INIT_API_EFN();
 
     return ImplementEFNGetManagedExcepStack(StackObjAddr, wszStackString, cchString);
 }
@@ -13452,7 +13246,7 @@ _EFN_GetManagedObjectName(
     ULONG cbName
     )
 {
-    INIT_API ();
+    INIT_API_EFN();
 
     if (!sos::IsObject(objAddr, false))
     {
@@ -13481,7 +13275,7 @@ _EFN_GetManagedObjectFieldInfo(
     PULONG pOffset
     )
 {
-    INIT_API();
+    INIT_API_EFN();
     DacpObjectData objData;
     LPWSTR fieldName = (LPWSTR)alloca(mdNameLen * sizeof(WCHAR));
 
@@ -13530,7 +13324,7 @@ DECLARE_API(VerifyGMT)
 {
     ULONG osThreadId;
     {
-        INIT_API();
+        INIT_API(nullptr);
 
         CMDValue arg[] =
         {   // vptr, type
@@ -13540,13 +13334,13 @@ DECLARE_API(VerifyGMT)
 
         if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
         {
-            return Status;
+            return E_INVALIDARG;
         }
     }
     ULONG64 managedThread;
     HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedThread);
     {
-        INIT_API();
+        INIT_API(nullptr);
         ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
@@ -13565,7 +13359,7 @@ _EFN_GetManagedThread(
     ULONG osThreadId,
     PULONG64 pManagedThread)
 {
-    INIT_API();
+    INIT_API_EFN();
 
     _ASSERTE(pManagedThread != nullptr);
     *pManagedThread = 0;
@@ -13623,7 +13417,7 @@ DECLARE_API(SetHostRuntime)
     size_t narg;
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &narg))
     {
-        return E_FAIL;
+        return E_INVALIDARG;
     }
     if (narg > 0 || bNetCore || bNetFx || bNone)
     {
@@ -13689,41 +13483,31 @@ exit:
 //
 DECLARE_API(SetClrPath)
 {
-    INIT_API_NOEE();
+    INIT_API_NODAC("setclrpath");
 
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
+    StringHolder runtimeModulePath;
+    CMDValue arg[] =
     {
-        return hostServices->DispatchCommand("setclrpath", args);
+        {&runtimeModulePath.data, COSTRING},
+    };
+    size_t narg;
+    if (!GetCMDOption(args, nullptr, 0, arg, ARRAY_SIZE(arg), &narg))
+    {
+        return E_FAIL;
     }
-    else
+    if (narg > 0)
     {
-        INIT_API_EE();
-
-        StringHolder runtimeModulePath;
-        CMDValue arg[] =
+        std::string fullPath;
+        if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
         {
-            {&runtimeModulePath.data, COSTRING},
-        };
-        size_t narg;
-        if (!GetCMDOption(args, nullptr, 0, arg, ARRAY_SIZE(arg), &narg))
-        {
+            ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
             return E_FAIL;
         }
-        if (narg > 0)
-        {
-            std::string fullPath;
-            if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
-            {
-                ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
-                return E_FAIL;
-            }
-            g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
-        }
-        const char* runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
-        if (runtimeDirectory != nullptr) {
-            ExtOut("Runtime module directory: %s\n", runtimeDirectory);
-        }
+        g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
+    }
+    const char* runtimeDirectory = g_pRuntime->GetRuntimeDirectory();
+    if (runtimeDirectory != nullptr) {
+        ExtOut("Runtime module directory: %s\n", runtimeDirectory);
     }
     return S_OK;
 }
@@ -13733,137 +13517,45 @@ DECLARE_API(SetClrPath)
 //
 DECLARE_API(runtimes)
 {
-    INIT_API_NOEE();
+    INIT_API_NOEE("runtimes");
 
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
+    BOOL bNetFx = FALSE;
+    BOOL bNetCore = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-netfx", &bNetFx, COBOOL, FALSE},
+        {"-netcore", &bNetCore, COBOOL, FALSE},
+    };
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
-        Status = hostServices->DispatchCommand("runtimes", args);
+        return E_INVALIDARG;
     }
-    else
+    if (bNetCore || bNetFx)
     {
-        BOOL bNetFx = FALSE;
-        BOOL bNetCore = FALSE;
-        CMDOption option[] =
-        {   // name, vptr, type, hasValue
-            {"-netfx", &bNetFx, COBOOL, FALSE},
-            {"-netcore", &bNetCore, COBOOL, FALSE},
-        };
-        if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-        {
-            return Status;
-        }
-        if (bNetCore || bNetFx)
-        {
 #ifndef FEATURE_PAL
-            if (IsWindowsTarget())
+        if (IsWindowsTarget())
+        {
+            PCSTR name = bNetFx ? "desktop .NET Framework" : ".NET Core";
+            if (!Target::SwitchRuntime(bNetFx))
             {
-                PCSTR name = bNetFx ? "desktop .NET Framework" : ".NET Core";
-                if (!Target::SwitchRuntime(bNetFx))
-                {
-                    ExtErr("The %s runtime is not loaded\n", name);
-                    return E_FAIL;
-                }
-                ExtOut("Switched to %s runtime successfully\n", name);
+                ExtErr("The %s runtime is not loaded\n", name);
+                return E_INVALIDARG;
             }
-            else
-#endif
-            {
-                ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
-                return E_FAIL;
-            }
+            ExtOut("Switched to %s runtime successfully\n", name);
         }
         else
+#endif
         {
-            Target::DisplayStatus();
+            ExtErr("The '-netfx' and '-netcore' options are only supported on Windows targets\n");
+            return E_INVALIDARG;
         }
-    }
-    return Status;
-}
-
-#ifdef HOST_WINDOWS
-//
-// Sets the symbol server path.
-//
-DECLARE_API(SetSymbolServer)
-{
-    INIT_API_EXT();
-    return ExecuteCommand("setsymbolserver", args);
-}
-
-//
-// Dumps the managed assemblies
-//
-DECLARE_API(clrmodules)
-{
-    INIT_API_EXT();
-    return ExecuteCommand("clrmodules", args);
-}
-
-//
-// Dumps the Native AOT crash info
-//
-DECLARE_API(crashinfo)
-{
-    INIT_API_EXT();
-    return ExecuteCommand("crashinfo", args);
-}
-
-//
-// Dumps async stacks
-//
-DECLARE_API(DumpAsync)
-{
-    INIT_API_EXT();
-    return ExecuteCommand("dumpasync", args);
-}
-
-//
-// Enables and disables managed extension logging
-//
-DECLARE_API(logging)
-{
-    INIT_API_EXT();
-    return ExecuteCommand("logging", args);
-}
-
-typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);
-
-//
-// Executes managed extension commands
-//
-DECLARE_API(ext)
-{
-    INIT_API_EXT();
-
-    if (args == nullptr || strlen(args) <= 0)
-    {
-        args = "Help";
-    }
-    std::string arguments(args);
-    size_t pos = arguments.find(' ');
-    std::string commandName = arguments.substr(0, pos);
-    if (pos != std::string::npos)
-    {
-        arguments = arguments.substr(pos + 1);
     }
     else
     {
-        arguments.clear();
-    }
-    Status = ExecuteCommand(commandName.c_str(), arguments.c_str());
-    if (Status == E_NOTIMPL)
-    {
-        PFN_COMMAND commandFunc = (PFN_COMMAND)GetProcAddress(g_hInstance, commandName.c_str());
-        if (commandFunc != nullptr)
-        {
-            Status = (*commandFunc)(client, arguments.c_str());
-        }
+        Target::DisplayStatus();
     }
     return Status;
 }
-
-#endif // HOST_WINDOWS
 
 void PrintHelp (__in_z LPCSTR pszCmdName)
 {
@@ -13969,7 +13661,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
 \**********************************************************************/
 DECLARE_API(Help)
 {
-    INIT_API_EXT();
+    INIT_API_NOEE("help");
 
     StringHolder commandName;
     CMDValue arg[] =
@@ -13986,15 +13678,6 @@ DECLARE_API(Help)
 
     if (nArg == 1)
     {
-        IHostServices* hostServices = GetHostServices();
-        if (hostServices != nullptr)
-        {
-            if (hostServices->DisplayHelp(commandName.data) == S_OK)
-            {
-                return S_OK;
-            }
-        }
-
         // Convert commandName to lower-case
         LPSTR curChar = commandName.data;
         while (*curChar != '\0')
@@ -14016,12 +13699,6 @@ DECLARE_API(Help)
     else
     {
         PrintHelp ("contents");
-        IHostServices* hostServices = GetHostServices();
-        if (hostServices != nullptr)
-        {
-            ExtOut("\n");
-            hostServices->DisplayHelp(nullptr);
-        }
     }
 
     return S_OK;

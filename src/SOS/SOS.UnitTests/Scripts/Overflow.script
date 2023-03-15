@@ -9,12 +9,7 @@ CONTINUE
 
 LOADSOS
 
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads -managedexception
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads -managedexception
-ENDIF:DOTNETDUMP
 
 # 5) Verifying that PrintException gives us the right exception in the format above.
 SOSCOMMAND:PrintException

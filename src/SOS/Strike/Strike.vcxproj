@@ -393,6 +393,7 @@
     <ClCompile Include="exts.cpp" />
     <ClCompile Include="gchist.cpp" />
     <ClCompile Include="gcroot.cpp" />
+    <ClCompile Include="managedcommands.cpp" />
     <ClCompile Include="metadata.cpp" />
     <ClCompile Include="platform\datatarget.cpp" />
     <ClCompile Include="platform\hostimpl.cpp" />

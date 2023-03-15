@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Hosting
@@ -43,17 +42,45 @@ namespace SOS.Hosting
     [Command(Name = "ip2md",             DefaultOptions = "IP2MD",               Help = "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.")]
     [Command(Name = "name2ee",           DefaultOptions = "Name2EE",             Help = "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.")]
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
-    [Command(Name = "soshelp",           DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
     [Command(Name = "threadstate",       DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
-    [Command(Name = "comstate",          DefaultOptions = "COMState",            Flags = CommandFlags.Windows, Help = "Lists the COM apartment model for each thread.")]
-    [Command(Name = "dumprcw",           DefaultOptions = "DumpRCW",             Flags = CommandFlags.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
-    [Command(Name = "dumpccw",           DefaultOptions = "DumpCCW",             Flags = CommandFlags.Windows, Help = "Displays information about a COM Callable Wrapper.")]
-    [Command(Name = "dumppermissionset", DefaultOptions = "DumpPermissionSet",   Flags = CommandFlags.Windows, Help = "Displays a PermissionSet object (debug build only).")]
-    [Command(Name = "gchandleleaks",     DefaultOptions = "GCHandleLeaks",       Flags = CommandFlags.Windows, Help = "Helps in tracking down GCHandle leaks")]
-    [Command(Name = "watsonbuckets",     DefaultOptions = "WatsonBuckets",       Flags = CommandFlags.Windows, Help = "Displays the Watson buckets.")]
-    public class SOSCommand : CommandBase
+    public class SOSCommand : SOSCommandBase
     {
+        [FilterInvoke]
+        public static bool FilterInvoke(
+            [ServiceImport(Optional = true)] ManagedOnlyCommandFilter managedOnly,
+            [ServiceImport(Optional = true)] IRuntime runtime) =>
+                managedOnly == null &&
+                runtime != null && (runtime.RuntimeType == RuntimeType.NetCore || runtime.RuntimeType == RuntimeType.Desktop || runtime.RuntimeType == RuntimeType.SingleFile);
+    }
+
+    [Command(Name = "comstate",          DefaultOptions = "COMState",            Help = "Lists the COM apartment model for each thread.")]
+    [Command(Name = "dumprcw",           DefaultOptions = "DumpRCW",             Help = "Displays information about a Runtime Callable Wrapper.")]
+    [Command(Name = "dumpccw",           DefaultOptions = "DumpCCW",             Help = "Displays information about a COM Callable Wrapper.")]
+    [Command(Name = "dumppermissionset", DefaultOptions = "DumpPermissionSet",   Help = "Displays a PermissionSet object (debug build only).")]
+    [Command(Name = "gchandleleaks",     DefaultOptions = "GCHandleLeaks",       Help = "Helps in tracking down GCHandle leaks.")]
+    [Command(Name = "watsonbuckets",     DefaultOptions = "WatsonBuckets",       Help = "Displays the Watson buckets.")]
+    public class WindowsSOSCommand : SOSCommandBase
+    {
+        [FilterInvoke]
+        public static bool FilterInvoke(
+            [ServiceImport(Optional = true)] ITarget target,
+            [ServiceImport(Optional = true)] ManagedOnlyCommandFilter managedOnly,
+            [ServiceImport(Optional = true)] IRuntime runtime) =>
+                target != null &&
+                target.OperatingSystem == OSPlatform.Windows &&
+                SOSCommand.FilterInvoke(managedOnly, runtime);
+    }
+
+    public class SOSCommandBase : CommandBase
+    {
+        /// <summary>
+        /// Empty service used to prevent native commands from being run
+        /// </summary>
+        public class ManagedOnlyCommandFilter
+        {
+        }
+
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }
 
@@ -62,22 +89,15 @@ namespace SOS.Hosting
 
         public override void Invoke()
         {
-            try
-            {
-                Debug.Assert(Arguments != null && Arguments.Length > 0);
-                string arguments = string.Concat(Arguments.Skip(1).Select((arg) => arg + " ")).Trim();
-                SOSHost.ExecuteCommand(Arguments[0], arguments);
-            }
-            catch (Exception ex) when (ex is FileNotFoundException or EntryPointNotFoundException or InvalidOperationException)
-            {
-                WriteLineError(ex.Message);
-            }
+            Debug.Assert(Arguments != null && Arguments.Length > 0);
+            string arguments = string.Concat(Arguments.Skip(1).Select((arg) => arg + " ")).Trim();
+            SOSHost.ExecuteCommand(Arguments[0], arguments);
         }
 
         [HelpInvoke]
-        public void InvokeHelp()
+        public string GetDetailedHelp()
         {
-            SOSHost.ExecuteCommand("Help", Arguments[0]);
+            return SOSHost.GetHelpText(Arguments[0]);
         }
     }
 }

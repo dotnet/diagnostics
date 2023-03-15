@@ -20,19 +20,13 @@
 #include <winver.h>
 #include <wchar.h>
 
-#define NOEXTAPI
-#define KDEXT_64BIT
-#include <wdbgexts.h>
-#undef DECLARE_API
-#undef StackTrace
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
-
 #include "strike.h"
+
 // We need to define the target address type.  This will be used in the
 // functions that read directly from the debuggee address space, vs. using
 // the DAC tgo read the DAC-ized data structures.
@@ -257,8 +251,8 @@ void GcHistAddLog(LPCSTR msg, StressMsg* stressMsg)
 
 DECLARE_API(HistStats)
 {
-    INIT_API();
-
+    INIT_API(nullptr);
+    
     ExtOut ("%8s %8s %8s\n",
         "GCCount", "Promotes", "Relocs");
     ExtOut ("-----------------------------------\n");
@@ -337,7 +331,7 @@ DECLARE_API(HistStats)
 
 DECLARE_API(HistRoot)
 {
-    INIT_API();
+    INIT_API(nullptr);
     size_t nArg;
 
     StringHolder rootstr;
@@ -348,12 +342,13 @@ DECLARE_API(HistRoot)
     };
 
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
-
+    { 
+        return E_INVALIDARG;
+    }
     if (nArg != 1)
     {
         ExtOut ("!Root <valid object pointer>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t Root = (size_t) GetExpression(rootstr.data);
@@ -452,7 +447,7 @@ DECLARE_API(HistRoot)
 
 DECLARE_API(HistObjFind)
 {
-    INIT_API();
+    INIT_API(nullptr);
     size_t nArg;
 
     StringHolder objstr;
@@ -463,12 +458,13 @@ DECLARE_API(HistObjFind)
     };
 
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
-
+    {
+        return E_INVALIDARG;
+    }
     if (nArg != 1)
     {
         ExtOut ("!ObjSearch <valid object pointer>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t object = (size_t) GetExpression(objstr.data);
@@ -531,7 +527,7 @@ DECLARE_API(HistObjFind)
 
 DECLARE_API(HistObj)
 {
-    INIT_API();
+    INIT_API(nullptr);
     size_t nArg;
 
     StringHolder objstr;
@@ -542,12 +538,13 @@ DECLARE_API(HistObj)
     };
 
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
-
+    {
+        return E_INVALIDARG;
+    }
     if (nArg != 1)
     {
         ExtOut ("!object <valid object pointer>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t object = (size_t) GetExpression(objstr.data);
@@ -599,7 +596,7 @@ DECLARE_API(HistObj)
 
 DECLARE_API(HistInit)
 {
-    INIT_API();
+    INIT_API(nullptr);
 
     GcHistClear();
 
@@ -625,7 +622,7 @@ DECLARE_API(HistInit)
 
 DECLARE_API(HistClear)
 {
-    INIT_API();
+    INIT_API(nullptr);
     GcHistClear();
     ExtOut("Completed successfully.\n");
     return Status;

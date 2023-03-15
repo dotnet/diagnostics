@@ -9,17 +9,17 @@ IFDEF:NETCORE_OR_DOTNETDUMP
 # Load SOS even though it doesn't actually load the sos module on dotnet-dump but it runs some initial settings/commands.
 LOADSOS
 
-EXTCOMMAND: dumpgen
+!EXTCOMMAND: dumpgen
 VERIFY: Generation argument is missing
 
-EXTCOMMAND: dumpgen invalid
+!EXTCOMMAND: dumpgen invalid
 VERIFY: invalid is not a supported generation
 
 !IFDEF:LLDB
-EXTCOMMAND: dumpgen gen0 -mt
+!EXTCOMMAND: dumpgen gen0 -mt
 VERIFY: Required argument missing for option: -mt
 
-EXTCOMMAND: dumpgen gen1 -mt zzzzz
+!EXTCOMMAND: dumpgen gen1 -mt zzzzz
 VERIFY: Hexadecimal address expected for -mt option
 ENDIF:LLDB
 

@@ -11,11 +11,12 @@ using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
-    internal sealed unsafe class DebuggerServices : CallableCOMWrapper
+    internal sealed unsafe class DebuggerServices : CallableCOMWrapper, SOSHost.INativeClient
     {
         internal enum OperatingSystem
         {
@@ -40,6 +41,7 @@ namespace SOS.Extensions
             : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
+            Client = punk;
 
             // This uses COM marshalling code, so we also check that the OSPlatform is Windows.
             if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -51,6 +53,12 @@ namespace SOS.Extensions
                 }
             }
         }
+
+        #region INativeClient
+
+        public IntPtr Client { get; }
+
+        #endregion
 
         public HResult GetOperatingSystem(out OperatingSystem operatingSystem)
         {

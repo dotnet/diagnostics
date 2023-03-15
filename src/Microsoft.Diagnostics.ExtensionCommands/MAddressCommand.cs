@@ -43,11 +43,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = ListFlag, Help = "A separated list of memory regions to list allocations for.")]
         public string List { get; set; }
 
-        [ServiceImport]
+        [ServiceImport(Optional = true)]
         public NativeAddressHelper AddressHelper { get; set; }
 
         public override void Invoke()
         {
+            if (AddressHelper == null)
+            {
+                throw new CommandNotFoundException("The memory region service does not exists. This command is only supported under windbg/cdb debuggers.");
+            }
+
             if (TagReserveMemoryHeuristically && !IncludeReserveMemory)
             {
                 throw new DiagnosticsException($"Cannot use {ReserveHeuristicFlag} without {ReserveFlag}");
@@ -197,14 +202,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [HelpInvoke]
-        public void HelpInvoke()
-        {
-            WriteLine(
+        public static string GetDetailedHelp() =>
 $@"-------------------------------------------------------------------------------
-maddress is a managed version of !address, which attempts to annotate all memory
+!maddress is a managed version of !address, which attempts to annotate all memory
 with information about CLR's heaps.
 
-usage: !sos maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{ReserveFlag} [{ReserveHeuristicFlag}]]
+usage: !maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{ReserveFlag} [{ReserveHeuristicFlag}]]
 
 Flags:
     {SummaryFlag}
@@ -238,7 +241,9 @@ Flags:
     {BySizeFlag}
         Order the list of memory blocks by size (descending) when printing the list
         of all memory blocks instead of by address.
-");
-        }
+";
+
+        [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] NativeAddressHelper helper) => helper != null;
     }
 }

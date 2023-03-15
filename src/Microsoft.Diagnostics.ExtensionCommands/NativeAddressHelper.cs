@@ -12,22 +12,29 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [ServiceExport(Scope = ServiceScope.Target)]
     public sealed class NativeAddressHelper : IDisposable
     {
         private readonly IDisposable _onFlushEvent;
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
 
-        public NativeAddressHelper(ITarget target)
+        [ServiceExport(Scope = ServiceScope.Target)]
+        public static NativeAddressHelper Create(ITarget target, [ServiceImport(Optional = true)] IMemoryRegionService memoryRegionService)
+        {
+            return memoryRegionService != null ? new NativeAddressHelper(target, memoryRegionService) : null;
+        }
+
+        private NativeAddressHelper(ITarget target, IMemoryRegionService memoryRegionService)
         {
             Target = target;
+            MemoryRegionService = memoryRegionService;
             _onFlushEvent = target.OnFlushEvent.Register(() => _previous = default);
         }
 
         public void Dispose() => _onFlushEvent.Dispose();
 
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        public ITarget Target { get; }
+
+        public IMemoryRegionService MemoryRegionService { get; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -40,9 +47,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
-
-        [ServiceImport]
-        public IMemoryRegionService MemoryRegionService { get; set; }
 
         [ServiceImport]
         public IConsoleService Console { get; set; }
@@ -107,9 +111,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
                     ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
-                    RootCacheService rootCache = runtime.Services.GetService<RootCacheService>();
                     if (clrRuntime is not null)
                     {
+                        RootCacheService rootCache = runtime.Services.GetService<RootCacheService>() ?? throw new DiagnosticsException("NativeAddressHelper: RootCacheService not found");
                         foreach ((ulong Address, ulong Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime, rootCache, includeHandleTableIfSlow))
                         {
                             // The GCBookkeeping range is a large region of memory that the GC reserved.  We'll simply mark every

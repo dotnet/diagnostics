@@ -5,7 +5,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    public abstract class ExtensionCommandBase : CommandBase
+    public abstract class ClrMDHelperCommandBase : CommandBase
     {
         /// <summary>
         /// Helper bound to the current ClrRuntime that provides high level services on top of ClrMD.
@@ -17,19 +17,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             if (Helper == null)
             {
-                throw new DiagnosticsException("No CLR runtime set");
+                throw new CommandNotFoundException(ClrRuntimeCommandBase.RuntimeNotFoundMessage);
             }
             ExtensionInvoke();
         }
 
         public abstract void ExtensionInvoke();
 
-        [HelpInvoke]
-        public void InvokeHelp()
-        {
-            WriteLine(GetDetailedHelp());
-        }
-
-        protected abstract string GetDetailedHelp();
+        [FilterInvoke(Message = ClrRuntimeCommandBase.RuntimeNotFoundMessage)]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrMDHelper helper) => helper != null;
     }
 }

@@ -11,19 +11,16 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "gcheapstat", DefaultOptions = "GCHeapStat", Help = "Displays various GC heap stats.")]
-    public class GCHeapStatCommand : CommandBase
+    [Command(Name = "gcheapstat", Aliases = new[] { "GCHeapStat" }, Help = "Displays various GC heap stats.")]
+    public class GCHeapStatCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; }
 
         [Option(Name = "-unreachable", Aliases = new string[] { "-inclUnrooted", "-iu" })]
         public bool IncludeUnreachable { get; set; }
 
-        public override void Invoke()
+        public override void ExtensionInvoke()
         {
             HeapInfo[] heaps = Runtime.Heap.SubHeaps.Select(h => GetHeapInfo(h)).ToArray();
             bool printFrozen = heaps.Any(h => h.Frozen.Committed != 0);

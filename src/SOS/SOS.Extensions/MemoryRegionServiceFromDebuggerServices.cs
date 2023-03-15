@@ -15,10 +15,10 @@ namespace SOS.Extensions
         private readonly IDebugClient5 _client;
         private readonly IDebugControl5 _control;
 
-        public MemoryRegionServiceFromDebuggerServices(IDebugClient5 client, IDebugControl5 control)
+        public MemoryRegionServiceFromDebuggerServices(IDebugClient5 client)
         {
             _client = client;
-            _control = control;
+            _control = (IDebugControl5)client;
         }
 
         public IEnumerable<IMemoryRegion> EnumerateRegions()

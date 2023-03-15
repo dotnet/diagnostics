@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface ICommandService
     {
         /// <summary>
-        /// Enumerates all the command's name and help
+        /// Enumerates all the command's name, help and aliases
         /// </summary>
         IEnumerable<(string name, string help, IEnumerable<string> aliases)> Commands { get; }
 
@@ -23,11 +23,19 @@ namespace Microsoft.Diagnostics.DebugServices
         void AddCommands(Type type);
 
         /// <summary>
-        /// Displays the help for a command
+        /// Gets the all the command help
+        /// </summary>
+        /// <param name="services">service provider</param>
+        /// <returns>command invocation and help enumeration</returns>
+        public IEnumerable<(string Invocation, string Help)> GetHelp(IServiceProvider services);
+
+        /// <summary>
+        /// Displays the detailed help for a command
         /// </summary>
         /// <param name="commandName">name of the command or alias</param>
         /// <param name="services">service provider</param>
-        /// <returns>true if success, false if command not found</returns>
-        bool DisplayHelp(string commandName, IServiceProvider services);
+        /// <param name="consoleWidth">the width to format the help or int.MaxValue</param>
+        /// <returns>help text or null if not found</returns>
+        string GetDetailedHelp(string commandName, IServiceProvider services, int consoleWidth);
     }
 }

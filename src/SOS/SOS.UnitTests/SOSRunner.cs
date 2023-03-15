@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -696,6 +697,13 @@ public class SOSRunner : IDisposable
             // Issue: https://github.com/dotnet/diagnostics/issues/3126
             processRunner.WithRuntimeConfiguration("EnableWriteXorExecute", "0");
 
+            // Setup the extension environment variable
+            string extensions = config.DotNetDiagnosticExtensions();
+            if (!string.IsNullOrEmpty(extensions)) 
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS", extensions);
+            }
+
             DumpType? dumpType = null;
             if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
             {
@@ -793,6 +801,7 @@ public class SOSRunner : IDisposable
                     {
                         await ContinueExecution();
                     }
+                    // Adds the "!" prefix under dbgeng, nothing under lldb. Meant for SOS (native) commands.
                     else if (line.StartsWith("SOSCOMMAND:"))
                     {
                         string input = line.Substring("SOSCOMMAND:".Length).TrimStart();
@@ -801,6 +810,19 @@ public class SOSRunner : IDisposable
                             throw new Exception($"SOS command FAILED: {input}");
                         }
                     }
+                    else if (line.StartsWith("!SOSCOMMAND:"))
+                    {
+                        string input = line.Substring("!SOSCOMMAND:".Length).TrimStart();
+                        if (await RunSosCommand(input))
+                        {
+                            // The cdb runcommand extension doesn't get the execute command failures (limitation in dbgeng).
+                            if (Debugger != NativeDebugger.Cdb)
+                            {
+                                throw new Exception($"SOS command did not fail: {input}");
+                            }
+                        }
+                    }
+                    // Adds the "!sos" prefix under dbgeng, "sos " under lldb. Meant for extensions (managed) commands
                     else if (line.StartsWith("EXTCOMMAND:"))
                     {
                         string input = line.Substring("EXTCOMMAND:".Length).TrimStart();
@@ -809,12 +831,37 @@ public class SOSRunner : IDisposable
                             throw new Exception($"Extension command FAILED: {input}");
                         }
                     }
+                    else if (line.StartsWith("!EXTCOMMAND:"))
+                    {
+                        string input = line.Substring("!EXTCOMMAND:".Length).TrimStart();
+                        if (await RunSosCommand(input, extensionCommand: true))
+                        {
+                            // The cdb runcommand extension doesn't get the execute command failures (limitation in dbgeng).
+                            if (Debugger != NativeDebugger.Cdb)
+                            {
+                                throw new Exception($"Extension command did not fail: {input}");
+                            }
+                        }
+                    }
+                    // Never adds any prefix. Meant for native debugger commands.
                     else if (line.StartsWith("COMMAND:"))
                     {
                         string input = line.Substring("COMMAND:".Length).TrimStart();
                         if (!await RunCommand(input))
                         {
                             throw new Exception($"Debugger command FAILED: {input}");
+                        }
+                    }
+                    else if (line.StartsWith("!COMMAND:"))
+                    {
+                        string input = line.Substring("!COMMAND:".Length).TrimStart();
+                        if (await RunCommand(input))
+                        {
+                            // The cdb runcommand extension doesn't get the execute command failures (limitation in dbgeng).
+                            if (Debugger != NativeDebugger.Cdb)
+                            {
+                                throw new Exception($"Debugger command did not fail: {input}");
+                            }
                         }
                     }
                     else if (line.StartsWith("VERIFY:"))
@@ -1060,8 +1107,6 @@ public class SOSRunner : IDisposable
                 }
                 break;
             case NativeDebugger.Lldb:
-                command = "sos " + command;
-                break;
             case NativeDebugger.DotNetDump:
                 if (extensionCommand)
                 {
@@ -1679,6 +1724,11 @@ public static class TestConfigurationExtensions
     {
         string dotnetDumpPath = config.GetValue("DotNetDumpPath");
         return TestConfiguration.MakeCanonicalPath(dotnetDumpPath);
+    }
+
+    public static string DotNetDiagnosticExtensions(this TestConfiguration config)
+    {
+        return TestConfiguration.MakeCanonicalPath(config.GetValue("DotNetDiagnosticExtensions"));
     }
 
     public static string SOSPath(this TestConfiguration config)

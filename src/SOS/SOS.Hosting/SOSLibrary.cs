@@ -16,6 +16,22 @@ namespace SOS.Hosting
     /// </summary>
     public sealed class SOSLibrary : IDisposable
     {
+       /// <summary>
+       /// Provides the SOS module handle
+       /// </summary>
+       public interface ISOSModule
+       {
+           /// <summary>
+           /// The SOS module path
+           /// </summary>
+           string SOSPath { get; }
+
+           /// <summary>
+           /// The SOS module handle
+           /// </summary>
+           IntPtr SOSHandle { get; }
+       }
+
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
             IntPtr ILLDBServices,
@@ -29,10 +45,20 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate void SOSUninitializeDelegate();
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true, EntryPoint = "FindResourceA")]
+        public static extern IntPtr FindResource(IntPtr hModule, string name, string type);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr LoadResource(IntPtr hModule, IntPtr hResource);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr LockResource(IntPtr hResource);
+
         private const string SOSInitialize = "SOSInitializeByHost";
         private const string SOSUninitialize = "SOSUninitializeByHost";
 
         private readonly HostWrapper _hostWrapper;
+        private readonly bool _uninitializeLibrary;
         private IntPtr _sosLibrary = IntPtr.Zero;
 
         /// <summary>
@@ -41,12 +67,12 @@ namespace SOS.Hosting
         public string SOSPath { get; set; }
 
         [ServiceExport(Scope = ServiceScope.Global)]
-        public static SOSLibrary Create(IHost host)
+        public static SOSLibrary Create(IHost host, [ServiceImport(Optional = true)] ISOSModule sosModule)
         {
             SOSLibrary sosLibrary = null;
             try
             {
-                sosLibrary = new SOSLibrary(host);
+                sosLibrary = new SOSLibrary(host, sosModule);
                 sosLibrary.Initialize();
             }
             catch
@@ -61,10 +87,20 @@ namespace SOS.Hosting
         /// Create an instance of the hosting class
         /// </summary>
         /// <param name="target">target instance</param>
-        private SOSLibrary(IHost host)
+        /// <param name="host">sos library info or null</param>
+        private SOSLibrary(IHost host, ISOSModule sosModule)
         {
-            string rid = InstallHelper.GetRid();
-            SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+            if (sosModule is not null)
+            {
+                SOSPath = sosModule.SOSPath;
+                _sosLibrary = sosModule.SOSHandle;
+            }
+            else
+            {
+                string rid = InstallHelper.GetRid();
+                SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+                _uninitializeLibrary = true;
+            }
             _hostWrapper = new HostWrapper(host);
         }
 
@@ -131,15 +167,15 @@ namespace SOS.Hosting
         /// </summary>
         private void Uninitialize()
         {
-            Trace.TraceInformation("SOSHost: Uninitialize");
-            if (_sosLibrary != IntPtr.Zero)
+            Trace.TraceInformation("SOSLibrary: Uninitialize");
+            if (_uninitializeLibrary && _sosLibrary != IntPtr.Zero)
             {
                 SOSUninitializeDelegate uninitializeFunc = SOSHost.GetDelegateFunction<SOSUninitializeDelegate>(_sosLibrary, SOSUninitialize);
                 uninitializeFunc?.Invoke();
 
                 Microsoft.Diagnostics.Runtime.DataTarget.PlatformFunctions.FreeLibrary(_sosLibrary);
-                _sosLibrary = IntPtr.Zero;
             }
+            _sosLibrary = IntPtr.Zero;
             _hostWrapper.ReleaseWithCheck();
         }
 
@@ -156,17 +192,85 @@ namespace SOS.Hosting
             SOSCommandDelegate commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
             if (commandFunc == null)
             {
-                throw new DiagnosticsException($"SOS command not found: {command}");
+                throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{command}'");
             }
             int result = commandFunc(client, arguments ?? "");
             if (result == HResult.E_NOTIMPL)
             {
-                throw new CommandNotSupportedException($"SOS command not found: {command}");
+                throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{command}'");
             }
             if (result != HResult.S_OK)
             {
                 Trace.TraceError($"SOS command FAILED 0x{result:X8}");
+                throw new DiagnosticsException(string.Empty);
             }
+        }
+
+        public string GetHelpText(string command)
+        {
+            string helpText;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                IntPtr hResInfo = FindResource(_sosLibrary, "DOCUMENTATION", "TEXT");
+                if (hResInfo == IntPtr.Zero)
+                {
+                    throw new DiagnosticsException("Can not SOS help text");
+                }
+                IntPtr hResource = LoadResource(_sosLibrary, hResInfo);
+                if (hResource == IntPtr.Zero)
+                {
+                    throw new DiagnosticsException("Can not SOS help text");
+                }
+                IntPtr helpTextPtr = LockResource(hResource);
+                if (helpTextPtr == IntPtr.Zero)
+                {
+                    throw new DiagnosticsException("Can not SOS help text");
+                }
+                helpText = Marshal.PtrToStringAnsi(helpTextPtr);
+            }
+            else
+            {
+                string helpTextFile = Path.Combine(SOSPath, "sosdocsunix.txt");
+                helpText = File.ReadAllText(helpTextFile);
+            }
+            command = command.ToLowerInvariant();
+            string searchString = $"COMMAND: {command}.";
+
+            // Search for command in help text file
+            int start = helpText.IndexOf(searchString);
+            if (start == -1)
+            {
+                throw new DiagnosticsException($"Documentation for {command} not found");
+            }
+
+            // Go to end of line
+            start = helpText.IndexOf('\n', start);
+            if (start == -1)
+            {
+                throw new DiagnosticsException($"No newline in documentation resource or file");
+            }
+
+            // Find the first occurrence of \\ followed by an \r or an \n on a line by itself.
+            int end = start++;
+            while (true)
+            {
+                end = helpText.IndexOf("\\\\", end + 1);
+                if (end == -1)
+                {
+                    break;
+                }
+                char c = helpText[end - 1];
+                if (c is '\r' or '\n')
+                {
+                    break;
+                }
+                c = helpText[end + 3];
+                if (c is '\r' or '\n')
+                {
+                    break;
+                }
+            }
+            return end == -1 ? helpText.Substring(start) : helpText.Substring(start, end - start);
         }
     }
 }

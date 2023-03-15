@@ -99,6 +99,11 @@ namespace SOS.Extensions
             _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices));
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
+            if (debuggerServices.DebugClient is not null)
+            {
+                _serviceContainerFactory.AddServiceFactory<IMemoryRegionService>((services) => new MemoryRegionServiceFromDebuggerServices(debuggerServices.DebugClient));
+            }
+
             Finished();
         }
 

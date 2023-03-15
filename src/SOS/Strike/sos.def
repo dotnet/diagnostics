@@ -7,7 +7,8 @@ EXPORTS
     AnalyzeOOM
     analyzeoom=AnalyzeOOM
     ao=AnalyzeOOM
-    clrmodules
+    assemblies
+    clrmodules=assemblies
     ClrStack
     clrstack=ClrStack
     CLRStack=ClrStack
@@ -27,6 +28,7 @@ EXPORTS
     dumpdelegate=DumpDelegate
     DumpDomain
     dumpdomain=DumpDomain
+    dumpexceptions
 #ifdef TRACE_GC
     DumpGCLog
     dumpgclog=DumpGCLog
@@ -38,6 +40,8 @@ EXPORTS
     DumpGCConfigLog
     dumpgcconfiglog=DumpGCConfigLog
     dclog=DumpGCConfigLog
+    dumpgen
+    dg=dumpgen
     DumpHeap
     dumpheap=DumpHeap
     DumpIL
@@ -121,6 +125,7 @@ EXPORTS
     ListNearObj
     listnearobj=ListNearObj
     lno=ListNearObj
+    maddress
     Name2EE
     name2ee=Name2EE
     ObjSize
@@ -137,6 +142,7 @@ EXPORTS
     setsymbolserver=SetSymbolServer
     SetClrPath
     setclrpath=SetClrPath
+    sizestats
     SOSFlush
     sosflush=SOSFlush
     StopOnException
@@ -161,6 +167,7 @@ EXPORTS
     Traverseheap=TraverseHeap
     u
     U=u
+    clru=u
     VerifyHeap
     verifyheap=VerifyHeap
     Verifyheap=VerifyHeap
