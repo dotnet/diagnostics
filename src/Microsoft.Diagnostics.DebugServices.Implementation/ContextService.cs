@@ -266,6 +266,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     return _contextService.GetCurrentTarget();
                 }
+                // Check the current target (if exists) for the service.
+                ITarget currentTarget = _contextService.GetCurrentTarget();
+                if (currentTarget is not null)
+                {
+                    // This will chain to the global services if not found in the current target
+                    object service = currentTarget.Services.GetService(type);
+                    if (service is not null)
+                    {
+                        return service;
+                    }
+                }
                 // Check the current runtime (if exists) for the service.
                 IRuntime currentRuntime = _contextService.GetCurrentRuntime();
                 if (currentRuntime is not null)
@@ -283,17 +294,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     // This will chain to the target then the global services if not found in the current thread
                     object service = currentThread.Services.GetService(type);
-                    if (service is not null)
-                    {
-                        return service;
-                    }
-                }
-                // Check the current target (if exists) for the service.
-                ITarget currentTarget = _contextService.GetCurrentTarget();
-                if (currentTarget is not null)
-                {
-                    // This will chain to the global services if not found in the current target
-                    object service = currentTarget.Services.GetService(type);
                     if (service is not null)
                     {
                         return service;

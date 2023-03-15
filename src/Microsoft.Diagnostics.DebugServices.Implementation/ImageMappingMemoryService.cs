@@ -300,7 +300,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         if ((offset + sizeof(ulong)) <= data.Length)
                                         {
                                             ulong value = BitConverter.ToUInt64(data, offset);
-                                            value += baseDelta;
+                                            unchecked { value += baseDelta; }
                                             byte[] source = BitConverter.GetBytes(value);
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }

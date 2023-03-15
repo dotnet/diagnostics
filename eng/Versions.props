@@ -28,13 +28,13 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp60Version>6.0.12</MicrosoftNETCoreApp60Version>
+    <MicrosoftNETCoreApp60Version>6.0.14</MicrosoftNETCoreApp60Version>
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
-    <MicrosoftNETCoreApp70Version>7.0.2</MicrosoftNETCoreApp70Version>
+    <MicrosoftNETCoreApp70Version>7.0.3</MicrosoftNETCoreApp70Version>
     <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
-    <SingleFileRuntime70Version>$(MicrosoftNETCoreApp70Version)</SingleFileRuntime70Version>
+    <SingleFileRuntime70Version>7.0.2</SingleFileRuntime70Version>
     <SingleFileRuntimeLatestVersion>8.0.0-preview.2.23127.4</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
@@ -59,6 +59,7 @@
     <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemMemoryVersion>4.5.4</SystemMemoryVersion>
+    <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
     <SystemTextEncodingsWebVersion>4.7.2</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>

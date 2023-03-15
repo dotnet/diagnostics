@@ -91,6 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             // Display any extension assembly loads on console
             _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => _fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
+            _serviceManager.NotifyExtensionLoadFailure.Register((Exception ex) => _fileLoggingConsoleService.WriteLine(ex.Message));
 
             // Load any extra extensions
             _serviceManager.LoadExtensions();

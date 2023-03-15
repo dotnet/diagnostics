@@ -6,23 +6,24 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
-namespace SOS.Extensions
+namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
     /// Used to enable app-local assembly unification.
     /// </summary>
     public static class AssemblyResolver
     {
-        private static bool s_initialized;
+        private static readonly string _defaultAssembliesPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        private static bool _initialized;
 
         /// <summary>
         /// Call to enable the assembly resolver for the current AppDomain.
         /// </summary>
         public static void Enable()
         {
-            if (!s_initialized)
+            if (!_initialized)
             {
-                s_initialized = true;
+                _initialized = true;
                 AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
             }
         }
@@ -50,16 +51,12 @@ namespace SOS.Extensions
             }
 
             // Look next to the executing assembly
-            assemblyPath = Assembly.GetExecutingAssembly().Location;
-            if (!string.IsNullOrEmpty(assemblyPath))
+            probingPath = Path.Combine(_defaultAssembliesPath, fileName);
+            Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
+            if (Probe(probingPath, referenceName.Version, out assembly))
             {
-                probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
-                Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
-                if (Probe(probingPath, referenceName.Version, out assembly))
-                {
-                    Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
-                    return assembly;
-                }
+                Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
+                return assembly;
             }
 
             return null;
