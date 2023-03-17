@@ -13,6 +13,15 @@ using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
+    // Make sure the name of the fields match the option names.
+    internal record struct DumpCollectionConfig(
+            int ProcessId,
+            string ProcessName,
+            string DumpOutputPath,
+            bool EnableDiagnosticOutput,
+            bool GenerateCrashReport,
+            Dumper.DumpTypeOption DumpType);
+
     internal static class Program
     {
         public static Task<int> Main(string[] args)
@@ -31,9 +40,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new(name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
-                CommandHandler.Create<IConsole, int, string, bool, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),
+                CommandHandler.Create<DumpCollectionConfig, IConsole>(Dumper.Collect),
                 // Options
-                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption(), ProcessNameOption()
+                ProcessIdOption(), ProcessNameOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -41,6 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect a memory dump.")
             {
+                Name = nameof(DumpCollectionConfig.ProcessId),
                 Argument = new Argument<int>(name: "pid")
             };
 
@@ -49,15 +59,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to collect a memory dump.")
             {
-                Argument = new Argument<string>(name: "name")
+                Name = nameof(DumpCollectionConfig.ProcessName),
+                Argument = new Argument<string>(name: "ProcessName")
             };
 
         private static Option OutputOption() =>
             new(
                 aliases: new[] { "-o", "--output" },
-                description: @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS' 
+                description: @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS'
 on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
             {
+                Name = nameof(DumpCollectionConfig.DumpOutputPath),
                 Argument = new Argument<string>(name: "output_dump_path")
             };
 
@@ -66,6 +78,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 alias: "--diag",
                 description: "Enable dump collection diagnostic logging.")
             {
+                Name = nameof(DumpCollectionConfig.EnableDiagnosticOutput),
                 Argument = new Argument<bool>(name: "diag")
             };
 
@@ -74,6 +87,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 alias: "--crashreport",
                 description: "Enable crash report generation.")
             {
+                Name = nameof(DumpCollectionConfig.GenerateCrashReport),
                 Argument = new Argument<bool>(name: "crashreport")
             };
 
@@ -82,6 +96,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 alias: "--type",
                 description: @"The dump type determines the kinds of information that are collected from the process. There are several types: Full - The largest dump containing all memory including the module images. Heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped images. Mini - A small dump containing module lists, thread lists, exception information and all stacks. Triage - A small dump containing module lists, thread lists, exception information, all stacks and PII removed.")
             {
+                Name = nameof(DumpCollectionConfig.DumpType),
                 Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", getDefaultValue: () => Dumper.DumpTypeOption.Full)
             };
 
