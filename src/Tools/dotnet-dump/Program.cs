@@ -7,6 +7,7 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
@@ -17,6 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
     internal record struct DumpCollectionConfig(
             int ProcessId,
             string ProcessName,
+            string DiagnosticPort,
             string DumpOutputPath,
             bool EnableDiagnosticOutput,
             bool GenerateCrashReport,
@@ -42,7 +44,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Handler
                 CommandHandler.Create<DumpCollectionConfig, IConsole>(Dumper.Collect),
                 // Options
-                ProcessIdOption(), ProcessNameOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption()
+                ProcessIdOption(), ProcessNameOption(), DiagnosticPortOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -61,6 +63,15 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
                 Name = nameof(DumpCollectionConfig.ProcessName),
                 Argument = new Argument<string>(name: "ProcessName")
+            };
+
+        private static Option DiagnosticPortOption() =>
+            new(
+                alias: "--diagnostic-port",
+                description: @"The path to a diagnostic port to be used.")
+            {
+                Name = nameof(DumpCollectionConfig.DiagnosticPort),
+                Argument = new Argument<string>(name: "diagnosticPort")
             };
 
         private static Option OutputOption() =>

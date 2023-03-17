@@ -29,6 +29,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-counters" />
     <InternalsVisibleTo Include="dotnet-dsrouter" />
+    <InternalsVisibleTo Include="dotnet-dump" />
     <InternalsVisibleTo Include="dotnet-monitor" />
     <InternalsVisibleTo Include="dotnet-trace" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />

@@ -6,6 +6,8 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 
@@ -30,31 +32,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         internal static int Collect(DumpCollectionConfig config, IConsole console)
         {
-            if (config.ProcessName is not null)
+            if (!CommandUtils.ValidateArgumentsForAttach(config.ProcessId, config.ProcessName, config.DiagnosticPort, out int targetPprocessId))
             {
-                if (config.ProcessId != 0)
-                {
-                    console.Error.WriteLine("Can only specify either --name or --process-id option.");
-                    return -1;
-                }
-
-                config.ProcessId = CommandUtils.FindProcessIdWithName(config.ProcessName);
-
-                if (config.ProcessId < 0)
-                {
-                    return -1;
-                }
-            }
-
-            if (config.ProcessId == 0)
-            {
-                console.Error.WriteLine("ProcessId is required.");
-                return -1;
-            }
-
-            if (config.ProcessId < 0)
-            {
-                console.Error.WriteLine($"The PID cannot be negative: {config.ProcessId}");
                 return -1;
             }
 
@@ -98,12 +77,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         return -1;
                     }
 
-                    Windows.CollectDump(config.ProcessId, config.DumpOutputPath, config.DumpType);
+                    Windows.CollectDump(targetPprocessId, config.DumpOutputPath, config.DumpType);
                 }
                 else
                 {
-                    DiagnosticsClient client = new(config.ProcessId);
-
                     DumpType dumpType = config.DumpType switch
                     {
                         DumpTypeOption.Full => DumpType.Full,
@@ -113,9 +90,33 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         _ => throw new ArgumentException("Invalid dump type.")
                     };
 
+                    DiagnosticsClient client;
+                    if (!string.IsNullOrEmpty(config.DiagnosticPort))
+                    {
+                        IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(config.DiagnosticPort);
+                        if (portConfig.IsListenConfig)
+                        {
+                            console.Error.WriteLine("dotnet-dump only supports connect mode to a runtime.");
+                            return -1;
+                        }
+
+                        client = new DiagnosticsClient(portConfig);
+                    }
+                    else
+                    {
+                        client = new DiagnosticsClient(targetPprocessId);
+                    }
+
                     WriteDumpFlags flags = WriteDumpFlags.None;
-                    if (config.EnableDiagnosticOutput) { flags |= WriteDumpFlags.LoggingEnabled; }
-                    if (config.GenerateCrashReport) { flags |= WriteDumpFlags.CrashReportEnabled; }
+                    if (config.EnableDiagnosticOutput)
+                    {
+                        console.Out.WriteLine("Diagnostic output requested. Logging will appear in the console of the target process.");
+                        flags |= WriteDumpFlags.LoggingEnabled;
+                    }
+                    if (config.GenerateCrashReport)
+                    {
+                        flags |= WriteDumpFlags.CrashReportEnabled;
+                    }
 
                     // Send the command to the runtime to initiate the core dump
                     client.WriteDump(dumpType, config.DumpOutputPath, flags);
@@ -134,6 +135,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
+                if (!config.EnableDiagnosticOutput)
+                {
+                    console.Error.WriteLine($"Consider rerunning the command with diagnostic output enabled.");
+                }
                 return -1;
             }
 
