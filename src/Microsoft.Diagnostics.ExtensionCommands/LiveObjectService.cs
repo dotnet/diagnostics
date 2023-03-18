@@ -24,6 +24,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IConsoleService Console { get; set; }
 
+        public bool IsLive(ClrObject obj) => IsLive(obj.Address);
+
         public bool IsLive(ulong obj)
         {
             _liveObjs ??= CreateObjectSet();

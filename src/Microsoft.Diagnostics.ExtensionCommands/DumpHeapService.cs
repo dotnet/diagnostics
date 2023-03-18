@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
                     }
 
-                    Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");
+                    Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
                 }
             }
         }

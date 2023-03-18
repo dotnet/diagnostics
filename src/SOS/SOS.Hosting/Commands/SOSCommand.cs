@@ -48,7 +48,6 @@ namespace SOS.Hosting
     [Command(Name = "histstats",         DefaultOptions = "HistStats",           Help = "Displays stress log stats.")]
     [Command(Name = "ip2md",             DefaultOptions = "IP2MD",               Help = "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.")]
     [Command(Name = "name2ee",           DefaultOptions = "Name2EE",             Help = "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.")]
-    [Command(Name = "objsize",           DefaultOptions = "ObjSize",             Help = "Lists the sizes of the all the objects found on managed threads.")]
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [Command(Name = "soshelp",           DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
