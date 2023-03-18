@@ -22,6 +22,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public RootCacheService RootCache { get; set; }
 
+        [ServiceImport]
+        public ManagedFileLineService FileLineService { get; set; }
+
         [Option(Name="-nostacks", Help ="Do not use stack roots.")]
         public bool NoStacks { get; set; }
 
@@ -94,21 +97,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private void PrintPath(ClrRoot root, GCRoot.ChainLink link)
         {
             PrintRoot(root);
-            //TableOutput objectOutput = new(Console, (2, ""), (16, "x16"))
-            //{
-            //    AlignLeft = true,
-            //    Indent = new(' ', 10)
-            //};
+            TableOutput objectOutput = new(Console, (2, ""), (16, "x16"))
+            {
+                AlignLeft = true,
+                Indent = new(' ', 10)
+            };
 
-            //ulong prevObj = 0;
+            ulong prevObj = 0;
             while (link != null)
             {
-                //bool isDependentHandleLink = RootCache.IsDependentHandleLink(prevObj, link.Object);
-                _ = Runtime.Heap.GetObject(link.Object);
+                bool isDependentHandleLink = RootCache.IsDependentHandleLink(prevObj, link.Object);
+                ClrObject obj = Runtime.Heap.GetObject(link.Object);
 
-                //objectOutput.WriteRow("->", obj.IsValid ? new DmlDumpObj(obj) : obj.Address, obj.Type?.Name ?? "<unknown type>", (isDependentHandleLink ? " (dependent handle)" : ""));
+                objectOutput.WriteRow("->", obj.IsValid ? new DmlDumpObj(obj) : obj.Address, obj.Type?.Name ?? "<unknown type>", (isDependentHandleLink ? " (dependent handle)" : ""));
 
-                //prevObj = link.Object;
+                prevObj = link.Object;
                 link = link.Next;
             }
 
@@ -260,6 +263,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     _lineBuilder.Append(')');
                 }
+
+                if (currFrame.Method.NativeCode < currFrame.InstructionPointer)
+                {
+                    ulong offset = currFrame.InstructionPointer - currFrame.Method.NativeCode;
+                    int intOffset = offset < int.MaxValue ? (int)offset : 0;
+                    (string source, int line) = FileLineService.GetSourceFromManagedMethod(currFrame.Method, intOffset);
+
+                    if (source is not null)
+                    {
+                        _lineBuilder.Append('[');
+                        _lineBuilder.Append(source);
+                        _lineBuilder.Append('@');
+                        _lineBuilder.Append(line);
+                        _lineBuilder.Append(']');
+                    }
+                }
             }
 
             return _lineBuilder.ToString();
@@ -282,10 +301,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     _lineBuilder.Append('-');
                     _lineBuilder.Append(Math.Abs(stackRoot.RegisterOffset).ToString("x"));
                 }
-                else
-                {
-                    _lineBuilder.Append(':');
-                }
+
+                _lineBuilder.Append(':');
             }
 
             if (stackRoot.Address != 0)
