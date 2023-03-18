@@ -97,7 +97,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private void PrintPath(ClrRoot root, GCRoot.ChainLink link)
         {
             PrintRoot(root);
-            TableOutput objectOutput = new(Console, (2, ""), (16, "x16"))
+            PrintPath(Console, RootCache, Runtime.Heap, link);
+            Console.WriteLine();
+        }
+
+        public static void PrintPath(IConsoleService console, RootCacheService rootCache, ClrHeap heap, GCRoot.ChainLink link)
+        {
+            TableOutput objectOutput = new(console, (2, ""), (16, "x16"))
             {
                 AlignLeft = true,
                 Indent = new(' ', 10)
@@ -106,16 +112,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong prevObj = 0;
             while (link != null)
             {
-                bool isDependentHandleLink = RootCache.IsDependentHandleLink(prevObj, link.Object);
-                ClrObject obj = Runtime.Heap.GetObject(link.Object);
+                bool isDependentHandleLink = rootCache.IsDependentHandleLink(prevObj, link.Object);
+                ClrObject obj = heap.GetObject(link.Object);
 
                 objectOutput.WriteRow("->", obj.IsValid ? new DmlDumpObj(obj) : obj.Address, obj.Type?.Name ?? "<unknown type>", (isDependentHandleLink ? " (dependent handle)" : ""));
 
                 prevObj = link.Object;
                 link = link.Next;
             }
-
-            Console.WriteLine();
         }
 
         private void PrintRoot(ClrRoot root)
