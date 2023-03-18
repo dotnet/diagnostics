@@ -562,7 +562,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(Stream pdbStream)
         {
-            if (pdbStream != null)
+            if (pdbStream is null)
             {
                 throw new ArgumentNullException(nameof(pdbStream));
             }
