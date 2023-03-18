@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ClrObject obj = Runtime.Heap.GetObject(address);
             if (!obj.IsValid)
             {
-                Console.WriteWarning($"Warning: {address:x} is not a valid object.");
+                Console.WriteWarning($"Warning: {address:x} is not a valid object");
             }
 
             GCRoot gcroot = new(Runtime.Heap, (found) =>

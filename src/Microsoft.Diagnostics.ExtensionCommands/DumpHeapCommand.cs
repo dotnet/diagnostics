@@ -231,7 +231,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     countLen = Math.Max(countLen, "Count".Length);
 
                     int sizeLen = stats.Values.Max(ts => ts.Size).ToString("n0").Length;
-                    sizeLen = Math.Max(countLen, "TotalSize".Length);
+                    sizeLen = Math.Max(sizeLen, "TotalSize".Length);
 
                     TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
 
