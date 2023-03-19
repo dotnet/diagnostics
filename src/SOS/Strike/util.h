@@ -1775,21 +1775,7 @@ void AssemblyInfo(DacpAssemblyData* pAssembly);
 
 size_t GetNumComponents(TADDR obj);
 
-struct GenUsageStat
-{
-    size_t allocd;
-    size_t freed;
-    size_t unrooted;
-    size_t committed;
-};
-
-struct HeapUsageStat
-{
-    GenUsageStat  genUsage[5]; // gen0, 1, 2, LOH, POH
-};
-
 extern DacpUsefulGlobalsData g_special_usefulGlobals;
-BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsageStat *hpUsage);
 
 class HeapStat
 {
