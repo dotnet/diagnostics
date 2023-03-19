@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (i != 0)
                 {
-                    _rowBuilder.Append(Indent);
+                    _rowBuilder.Append(_spacing);
                 }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
