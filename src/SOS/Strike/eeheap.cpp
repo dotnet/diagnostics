@@ -535,9 +535,7 @@ BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsage
     allocInfo.Init();
 
     // this will create the bitmap of rooted objects only if bIncUnreachable is true
-    GCRootImpl gcroot;
-    std::unordered_set<TADDR> emptyLiveObjs;
-    const std::unordered_set<TADDR>& liveObjs = (bIncUnreachable ? gcroot.GetLiveObjects() : emptyLiveObjs);
+    std::unordered_set<TADDR> liveObjs;
 
     TADDR taddrSeg;
     DacpHeapSegmentData dacpSeg;

@@ -88,6 +88,9 @@
 #include <stdexcept>
 #include <deque>
 
+#include <iostream>
+#include <sstream>
+
 #include "strike.h"
 #include "sos.h"
 
@@ -3868,14 +3871,6 @@ namespace sos
     };
 }
 
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function dumps all objects on GC heap. It also displays      *
-*    statistics of objects.  If GC heap is corrupted, it will stop at
-*    the bad place.  (May not work if GC is in progress.)              *
-*                                                                      *
-\**********************************************************************/
 DECLARE_API(DumpHeap)
 {
     INIT_API_EXT();
@@ -3890,161 +3885,12 @@ DECLARE_API(VerifyHeap)
     return ExecuteCommand("verifyheap", args);
 }
 
-enum failure_get_memory
-{
-    fgm_no_failure = 0,
-    fgm_reserve_segment = 1,
-    fgm_commit_segment_beg = 2,
-    fgm_commit_eph_segment = 3,
-    fgm_grow_table = 4,
-    fgm_commit_table = 5
-};
-
-enum oom_reason
-{
-    oom_no_failure = 0,
-    oom_budget = 1,
-    oom_cant_commit = 2,
-    oom_cant_reserve = 3,
-    oom_loh = 4,
-    oom_low_mem = 5,
-    oom_unproductive_full_gc = 6
-};
-
-static const char *const str_oom[] =
-{
-    "There was no managed OOM due to allocations on the GC heap", // oom_no_failure
-    "This is likely to be a bug in GC", // oom_budget
-    "Didn't have enough memory to commit", // oom_cant_commit
-    "This is likely to be a bug in GC", // oom_cant_reserve
-    "Didn't have enough memory to allocate an LOH segment", // oom_loh
-    "Low on memory during GC", // oom_low_mem
-    "Could not do a full GC" // oom_unproductive_full_gc
-};
-
-static const char *const str_fgm[] =
-{
-    "There was no failure to allocate memory", // fgm_no_failure
-    "Failed to reserve memory", // fgm_reserve_segment
-    "Didn't have enough memory to commit beginning of the segment", // fgm_commit_segment_beg
-    "Didn't have enough memory to commit the new ephemeral segment", // fgm_commit_eph_segment
-    "Didn't have enough memory to grow the internal GC data structures", // fgm_grow_table
-    "Didn't have enough memory to commit the internal GC data structures", // fgm_commit_table
-};
-
-void PrintOOMInfo(DacpOomData* oomData)
-{
-    ExtOut("Managed OOM occurred after GC #%d (Requested to allocate %d bytes)\n",
-        oomData->gc_index, oomData->alloc_size);
-
-    if ((oomData->reason == oom_budget) ||
-        (oomData->reason == oom_cant_reserve))
-    {
-        // TODO: This message needs to be updated with more precious info.
-        ExtOut("%s, please contact PSS\n", str_oom[oomData->reason]);
-    }
-    else
-    {
-        ExtOut("Reason: %s\n", str_oom[oomData->reason]);
-    }
-
-    // Now print out the more detailed memory info if any.
-    if (oomData->fgm != fgm_no_failure)
-    {
-        ExtOut("Detail: %s: %s (%d bytes)",
-            (oomData->loh_p ? "LOH" : "SOH"),
-            str_fgm[oomData->fgm],
-            oomData->size);
-
-        if ((oomData->fgm == fgm_commit_segment_beg) ||
-            (oomData->fgm == fgm_commit_eph_segment) ||
-            (oomData->fgm == fgm_grow_table) ||
-            (oomData->fgm == fgm_commit_table))
-        {
-            // If it's a commit error (fgm_grow_table can indicate a reserve
-            // or a commit error since we make one VirtualAlloc call to
-            // reserve and commit), we indicate the available commit
-            // space if we recorded it.
-            if (oomData->available_pagefile_mb)
-            {
-                ExtOut(" - on GC entry available commit space was %d MB",
-                    oomData->available_pagefile_mb);
-            }
-        }
-
-        ExtOut("\n");
-    }
-}
-
 DECLARE_API(AnalyzeOOM)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    if (!InitializeHeapData ())
-    {
-        ExtOut("GC Heap not initialized yet.\n");
-        return S_OK;
-    }
-
-    BOOL bHasManagedOOM = FALSE;
-    DacpOomData oomData;
-    memset (&oomData, 0, sizeof(oomData));
-    if (!IsServerBuild())
-    {
-        if (oomData.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting OOM data\n");
-            return E_FAIL;
-        }
-        if (oomData.reason != oom_no_failure)
-        {
-            bHasManagedOOM = TRUE;
-            PrintOOMInfo(&oomData);
-        }
-    }
-    else
-    {
-        DWORD dwNHeaps = GetGcHeapCount();
-        DWORD dwAllocSize;
-        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-        {
-            ExtOut("Failed to get GCHeaps:  integer overflow\n");
-            return Status;
-        }
-
-        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-        {
-            ExtOut("Failed to get GCHeaps\n");
-            return Status;
-        }
-
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            if (oomData.Request(g_sos, heapAddrs[n]) != S_OK)
-            {
-                ExtOut("Heap %d: Error requesting OOM data\n", n);
-                return E_FAIL;
-            }
-            if (oomData.reason != oom_no_failure)
-            {
-                if (!bHasManagedOOM)
-                {
-                    bHasManagedOOM = TRUE;
-                }
-                ExtOut("---------Heap %#-2d---------\n", n);
-                PrintOOMInfo(&oomData);
-            }
-        }
-    }
-
-    if (!bHasManagedOOM)
-    {
-        ExtOut("%s\n", str_oom[oomData.reason]);
-    }
-
-    return S_OK;
+    return ExecuteCommand("analyzeoom", args);
 }
 
 DECLARE_API(VerifyObj)
@@ -10067,41 +9913,10 @@ DECLARE_API(Name2EE)
 
 DECLARE_API(PathTo)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR root = NULL;
-    DWORD_PTR target = NULL;
-    BOOL dml = FALSE;
-    size_t nArg;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&root, COHEX},
-        {&target, COHEX},
-    };
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    if (root == 0 || target == 0)
-    {
-        ExtOut("Invalid argument %s\n", args);
-        return Status;
-    }
-
-    GCRootImpl gcroot;
-    bool result = gcroot.PrintPathToObject(root, target);
-
-    if (!result)
-        ExtOut("Did not find a path from %p to %p.\n", SOS_PTR(root), SOS_PTR(target));
-
-    return Status;
+    return ExecuteCommand("pathto", args);
 }
 
 
@@ -10114,49 +9929,10 @@ DECLARE_API(PathTo)
 \**********************************************************************/
 DECLARE_API(GCRoot)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL bNoStacks = FALSE;
-    DWORD_PTR obj = NULL;
-    BOOL dml = FALSE;
-    BOOL all = FALSE;
-    size_t nArg;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-nostacks", &bNoStacks, COBOOL, FALSE},
-        {"-all", &all, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-
-    {   // vptr, type
-        {&obj, COHEX}
-    };
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-    if (obj == 0)
-    {
-        ExtOut("Invalid argument %s\n", args);
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    GCRootImpl gcroot;
-    int i = gcroot.PrintRootsForObject(obj, all == TRUE, bNoStacks == TRUE);
-
-    if (IsInterrupt())
-        ExtOut("Interrupted, data may be incomplete.\n");
-
-    if (all)
-        ExtOut("Found %d roots.\n", i);
-    else
-        ExtOut("Found %d unique roots (run '%sgcroot -all' to see all roots).\n", i, SOSPrefix);
-
-    return Status;
+    return ExecuteCommand("gcroot", args);
 }
 
 DECLARE_API(GCWhere)
@@ -10167,9 +9943,10 @@ DECLARE_API(GCWhere)
     return ExecuteCommand("gcwhere", args);
 }
 
+
 DECLARE_API(FindRoots)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
     if (IsDumpFile())
@@ -10269,10 +10046,10 @@ DECLARE_API(FindRoots)
             return Status;
         }
 
-        GCRootImpl gcroot;
-        int roots = gcroot.FindRoots(CNotification::GetCondemnedGen(), taObj);
+        std::stringstream argsBuilder;
+        argsBuilder << "-gcgen " << CNotification::GetCondemnedGen() << " " << std::hex << taObj;
 
-        ExtOut("Found %d roots.\n", roots);
+        return ExecuteCommand("gcroot", argsBuilder.str().c_str());
     }
 
     return Status;
@@ -11027,50 +10804,10 @@ DECLARE_API(StopOnException)
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL dml = FALSE;
-    StringHolder str_Object;
-
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&str_Object.data, COSTRING}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    TADDR obj = GetExpression(str_Object.data);
-
-    GCRootImpl gcroot;
-    if (obj == 0)
-    {
-        gcroot.ObjSize();
-    }
-    else
-    {
-        if(!sos::IsObject(obj))
-        {
-            ExtOut("%p is not a valid object.\n", SOS_PTR(obj));
-            return Status;
-        }
-
-        size_t size = gcroot.ObjSize(obj);
-        TADDR mt = 0;
-        MOVE(mt, obj);
-        sos::MethodTable methodTable = mt;
-        ExtOut("sizeof(%p) = %d (0x%x) bytes (%S)\n", SOS_PTR(obj), size, size, methodTable.GetName());
-    }
-    return Status;
+    return ExecuteCommand("objsize", args);
 }
 
 #ifndef FEATURE_PAL
