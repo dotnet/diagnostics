@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [ServiceExport(Scope = ServiceScope.Runtime)]
     public class LiveObjectService
     {
-        private ObjectSet _liveObjs;
+        private HashSet<ulong> _liveObjs;
 
         public int UpdateSeconds { get; set; } = 15;
 
@@ -35,10 +35,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return _liveObjs.Contains(obj);
         }
 
-        private ObjectSet CreateObjectSet()
+        private HashSet<ulong> CreateObjectSet()
         {
             ClrHeap heap = Runtime.Heap;
-            ObjectSet live = new(heap);
+            HashSet<ulong> live = new();
 
             Stopwatch sw = Stopwatch.StartNew();
             int updateSeconds = Math.Max(UpdateSeconds, 10);
