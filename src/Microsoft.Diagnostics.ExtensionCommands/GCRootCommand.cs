@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -17,6 +18,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ClrRoot _lastRoot;
 
         [ServiceImport]
+        public IMemoryService Memory { get; set; }
+
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
@@ -24,6 +28,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public ManagedFileLineService FileLineService { get; set; }
+
+        [Option(Name = "-gcgen", Help = "Implementation helper for !findroots.")]
+        public int? AsGCGeneration { get; set; }
 
         [Option(Name="-nostacks", Help ="Do not use stack roots.")]
         public bool NoStacks { get; set; }
@@ -51,47 +58,145 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return found == address;
             });
 
-            int count = 0;
-            if (NoStacks)
+            int count;
+            if (AsGCGeneration.HasValue)
             {
-                foreach (ClrRoot root in RootCache.GetHandleRoots())
+                int gen = AsGCGeneration.Value;
+                if (gen < 0 || gen > 1)
                 {
-                    Console.CancellationToken.ThrowIfCancellationRequested();
-                    GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
-                    if (item is not null)
+                    // If not gen0 or gen1, treat it as a normal !gcroot
+                    if (NoStacks)
                     {
-                        PrintPath(root, item);
-                        count++;
+                        count = PrintNonStackRoots(gcroot);
+                    }
+                    else
+                    {
+                        count = PrintAllRoots(gcroot);
                     }
                 }
-
-                foreach (ClrRoot root in RootCache.GetFinalizerQueueRoots())
+                else
                 {
-                    Console.CancellationToken.ThrowIfCancellationRequested();
-                    GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
-                    if (item is not null)
-                    {
-                        PrintPath(root, item);
-                        count++;
-                    }
+                    count = PrintOlderGenerationRoots(gcroot, gen);
+                    count += PrintNonStackRoots(gcroot);
                 }
+            }
+            else if (NoStacks)
+            {
+                count = PrintNonStackRoots(gcroot);
             }
             else
             {
-                foreach (ClrRoot root in RootCache.EnumerateRoots())
-                {
-                    Console.CancellationToken.ThrowIfCancellationRequested();
-                    GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
-                    if (item is not null)
-                    {
-                        PrintPath(root, item);
-                        count++;
-                    }
-                }
+                count = PrintAllRoots(gcroot);
             }
 
             Console.WriteLine($"Found {count:n0} unique roots.");
             Console.WriteLine($"Total time: {sw.Elapsed}");
+        }
+
+        private int PrintOlderGenerationRoots(GCRoot gcroot, int gen)
+        {
+            int count = 0;
+
+            bool noInternalRootData = true;
+            foreach (ClrSubHeap subheap in Runtime.Heap.SubHeaps)
+            {
+                MemoryRange internalRootArray = subheap.InternalRootArray;
+                if (internalRootArray.Length == 0)
+                {
+                    continue;
+                }
+
+                noInternalRootData = false;
+
+                bool first = true;
+                ulong address = internalRootArray.Start;
+                while (internalRootArray.Contains(address))
+                {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
+                    if (Memory.ReadPointer(address, out ulong objAddress))
+                    {
+                        ClrObject obj = Runtime.Heap.GetObject(objAddress);
+                        if (obj.IsValid)
+                        {
+                            GCRoot.ChainLink path = gcroot.FindPathFrom(obj);
+                            if (path is not null)
+                            {
+                                if (first)
+                                {
+                                    Console.WriteLine("Older Generation:");
+                                    first = false;
+                                }
+
+                                Console.WriteLine($"    {objAddress:x}");
+                                PrintPath(Console, RootCache, Runtime.Heap, path);
+                                Console.WriteLine();
+
+                                count++;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLineWarning($"Warning: GC internal root array contained invalid object: *{address:x} = {objAddress:x}");
+                        }
+                    }
+
+                    address += (uint)Memory.PointerSize;
+                }
+            }
+
+            if (noInternalRootData)
+            {
+                throw new InvalidDataException("Could not gather needed data, possibly due to memory constraints in the debuggee.\n" +
+                                              $"To try again, re-issue the '!findroots -gen {gen}' command.");
+            }
+
+            return count;
+        }
+
+        private int PrintAllRoots(GCRoot gcroot)
+        {
+            int count = 0;
+            foreach (ClrRoot root in RootCache.EnumerateRoots())
+            {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+                GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
+                if (item is not null)
+                {
+                    PrintPath(root, item);
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private int PrintNonStackRoots(GCRoot gcroot)
+        {
+            int count = 0;
+            foreach (ClrRoot root in RootCache.GetHandleRoots())
+            {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+                GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
+                if (item is not null)
+                {
+                    PrintPath(root, item);
+                    count++;
+                }
+            }
+
+            foreach (ClrRoot root in RootCache.GetFinalizerQueueRoots())
+            {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+                GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
+                if (item is not null)
+                {
+                    PrintPath(root, item);
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private void PrintPath(ClrRoot root, GCRoot.ChainLink link)
