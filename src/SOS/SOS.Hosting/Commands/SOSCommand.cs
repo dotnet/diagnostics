@@ -9,7 +9,6 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Hosting
 {
-    [Command(Name = "analyzeoom",        DefaultOptions = "AnalyzeOOM",          Help = "Displays the info of the last OOM that occurred on an allocation request to the GC heap.")]
     [Command(Name = "clrstack",          DefaultOptions = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",        DefaultOptions = "Threads",             Help = "Lists the managed threads running.")]
     [Command(Name = "dbgout",            DefaultOptions = "dbgout",              Help = "Enables/disables (-off) internal SOS logging.")]
