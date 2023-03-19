@@ -31,8 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ReadOnlyCollection<(ulong Source, ulong Target)> GetDependentHandles()
         {
-            // This is effectively "InitializeHandleRoots".  This sets _dependentHandles.
-            GetHandleRoots();
+            InitializeHandleRoots();
 
             // We keep _dependentHandles as a List instead of ReadOnlyCollection so we can use
             // List<>.BinarySearch.
@@ -134,6 +133,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 Console.WriteLineWarning("Caching GC roots, this may take a while.");
                 Console.WriteLineWarning("Subsequent runs of this command will be faster.");
+                Console.WriteLine();
                 _printedWarning = true;
             }
         }
