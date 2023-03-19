@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (TryParseAddress(ObjectAddress, out ulong objAddress))
+            if (!TryParseAddress(ObjectAddress, out ulong objAddress))
             {
                 throw new ArgumentException($"Could not parse target object address: {objAddress:x}");
             }
@@ -42,6 +42,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console.WriteLine($"{objAddress:x} is not a valid object");
                 return;
             }
+
+            Console.Write($"Objects which ");
+            Console.WriteDmlExec(obj.Address.ToString("x"), $"!dumpobj {obj.Address:x}");
+            Console.WriteLine($"({obj.Type?.Name ?? " <unknown type>"}) transitively keep alive:");
+            Console.WriteLine();
 
             DumpHeapService.DisplayKind displayKind = Strings ? DumpHeapService.DisplayKind.Strings : DumpHeapService.DisplayKind.Normal;
             DumpHeap.PrintHeap(GetTransitiveClosure(obj), displayKind, Stat);
@@ -60,7 +65,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (ClrObject child in parent.EnumerateReferences())
                 {
-                    if (child.IsValid && !seen.Add(child))
+                    if (child.IsValid && seen.Add(child))
                     {
                         queue.Enqueue(child);
                     }
