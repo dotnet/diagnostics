@@ -2102,6 +2102,7 @@ BOOL VerifyObject(const GCHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
 void DumpStackObjectsHelper (TADDR StackTop, TADDR StackBottom, BOOL verifyFields);
 
+HRESULT ExecuteCommand(PCSTR commandName, PCSTR args);
 
 enum ARGTYPE {COBOOL,COSIZE_T,COHEX,COSTRING};
 struct CMDOption

@@ -7,6 +7,7 @@
 //
 // ==--==
 #include <assert.h>
+#include <sstream>
 #include "sos.h"
 #include "safemath.h"
 #include "releaseholder.h"
@@ -779,7 +780,14 @@ void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, B
         TADDR rngStart = (TADDR)SegQueue(heapDetails, gen_segment(GetMaxGeneration()));
         TADDR rngEnd   = (TADDR)SegQueueLimit(heapDetails, gen_segment(0));
 
-        PrintNotReachableInRange(rngStart, rngEnd, TRUE, bAllReady ? stat : NULL, bShort);
+        std::stringstream argsBuilder;
+        argsBuilder << std::hex << rngStart << " ";
+        argsBuilder << std::hex << rngEnd << " ";
+        argsBuilder << "-nofinalizer ";
+        if (bShort)
+            argsBuilder << "-short";
+
+        ExecuteCommand("notreachableinrange", argsBuilder.str().c_str());
     }
 
     if (!bShort)

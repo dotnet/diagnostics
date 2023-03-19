@@ -74,6 +74,15 @@ namespace Microsoft.Diagnostics.DebugServices
     }
 
     /// <summary>
+    /// Marks a class as a helper command.  These commands are helpers to make other commands in
+    /// SOS work.  They aren't meant to be used generally as a command.  It's fine for anyone to
+    /// call these commands, but they aren't discoverable via !help.
+    /// </summary>
+    public class HelperCommandAttribute : CommandAttribute
+    {
+    }
+
+    /// <summary>
     /// Marks the property as a Option.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]

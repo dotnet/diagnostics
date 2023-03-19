@@ -133,6 +133,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 CommandLineBuilder builder = new(new Command(_rootBuilder.Command.Name));
                 foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
                 {
+                    // Don't display internal commands in !help to not clutter real commands with
+                    // internal implementation helpers.
+                    if (cmd.GetType().GetCustomAttribute<HelperCommandAttribute>() != null)
+                    {
+                        continue;
+                    }
+
                     if (cmd.Handler is CommandHandler handler)
                     {
                         if (handler.IsValidPlatform(target))

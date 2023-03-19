@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return i >= 0;
         }
 
-        public IEnumerable<ClrRoot> EnumerateRoots()
+        public IEnumerable<ClrRoot> EnumerateRoots(bool includeFinalizer = true)
         {
             PrintWarning();
 
@@ -54,10 +54,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 yield return root;
             }
 
-            foreach (ClrRoot root in GetFinalizerQueueRoots())
+            if (includeFinalizer)
             {
-                Console.CancellationToken.ThrowIfCancellationRequested();
-                yield return root;
+                foreach (ClrRoot root in GetFinalizerQueueRoots())
+                {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+                    yield return root;
+                }
             }
 
             // If we made it here without the user breaking out of the enumeration
@@ -150,7 +153,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // may be surprised by a very long pause.  We skip this second message if the user is calling EnumerateRoots().
             if (!_printedStackWarning)
             {
-                Console.WriteLineWarning("Caching stack roots, this may take a while.  Subsequent runs of this command should be faster.");
+                Console.WriteLineWarning("Caching GC stack roots, this may take a while.");
+                Console.WriteLineWarning("Subsequent runs of this command will be faster.");
+                Console.WriteLine();
                 _printedStackWarning = true;
             }
 

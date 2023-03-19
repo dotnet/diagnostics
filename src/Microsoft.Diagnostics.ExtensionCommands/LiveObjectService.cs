@@ -19,6 +19,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool PrintWarning { get; set; } = true;
 
         [ServiceImport]
+        public RootCacheService RootCache { get; set; }
+
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
@@ -48,7 +51,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             int roots = 0;
             Queue<ulong> todo = new();
-            foreach (ClrRoot root in heap.EnumerateRoots())
+            foreach (ClrRoot root in RootCache.EnumerateRoots())
             {
                 roots++;
                 if (printWarning && sw.Elapsed.TotalSeconds > updateSeconds && live.Count > 0)
