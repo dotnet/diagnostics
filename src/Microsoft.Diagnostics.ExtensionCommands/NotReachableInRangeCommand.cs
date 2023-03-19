@@ -10,6 +10,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
+    /// <summary>
+    /// Prints objects and statistics for a range of object pointers.
+    /// </summary>
     [HelperCommand(Name = "notreachableinrange", Help = "A helper command for !finalizerqueue")]
     public class NotReachableInRangeCommand : CommandBase
     {
