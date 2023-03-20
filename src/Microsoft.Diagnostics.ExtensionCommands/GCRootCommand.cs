@@ -377,7 +377,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (source is not null)
                 {
-                    _lineBuilder.Append('[');
+                    _lineBuilder.Append(" [");
                     _lineBuilder.Append(source);
                     _lineBuilder.Append('@');
                     _lineBuilder.Append(line);
