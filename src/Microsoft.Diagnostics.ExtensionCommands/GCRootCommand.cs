@@ -379,7 +379,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     _lineBuilder.Append(" [");
                     _lineBuilder.Append(source);
-                    _lineBuilder.Append('@');
+                    _lineBuilder.Append(" @ ");
                     _lineBuilder.Append(line);
                     _lineBuilder.Append(']');
                 }
