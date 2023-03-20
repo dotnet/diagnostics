@@ -72,7 +72,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>.*
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 
 SOSCOMMAND:DumpDomain
 VERIFY:\s*System Domain:\s+<HEXVAL>\s+
