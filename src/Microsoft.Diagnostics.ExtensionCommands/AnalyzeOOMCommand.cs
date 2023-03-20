@@ -4,7 +4,6 @@
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.DacInterface;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -23,29 +22,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 Console.WriteLine(oom.Reason switch
                 {
-                    OOMReason.Budget or OOMReason.CantReserve => "OOM was due to an internal .Net error, likely a bug in the GC",
-                    OOMReason.CantCommit => "Didn't have enough memory to commit",
-                    OOMReason.LOH => "Didn't have enough memory to allocate an LOH segment",
-                    OOMReason.LowMem => "Low on memory during GC",
-                    OOMReason.UnproductiveFullGC => "Could not do a full GC",
+                    OutOfMemoryReason.Budget or OutOfMemoryReason.CantReserve => "OOM was due to an internal .Net error, likely a bug in the GC",
+                    OutOfMemoryReason.CantCommit => "Didn't have enough memory to commit",
+                    OutOfMemoryReason.LOH => "Didn't have enough memory to allocate an LOH segment",
+                    OutOfMemoryReason.LowMem => "Low on memory during GC",
+                    OutOfMemoryReason.UnproductiveFullGC => "Could not do a full GC",
                     _ => oom.Reason.ToString() // shouldn't happen, we handle all cases above
                 });
 
-                if (oom.GetMemoryFailure != OOMGetMemoryFailure.None)
+                if (oom.GetMemoryFailure != GetMemoryFailureReason.None)
                 {
                     string message = oom.GetMemoryFailure switch
                     {
-                        OOMGetMemoryFailure.ReserveSegment => "Failed to reserve memory",
-                        OOMGetMemoryFailure.CommitSegmentBegin => "Didn't have enough memory to commit beginning of the segment",
-                        OOMGetMemoryFailure.CommitEphemeralSegment => "Didn't have enough memory to commit the new ephemeral segment",
-                        OOMGetMemoryFailure.GrowTable => "Didn't have enough memory to grow the internal GC data structures",
-                        OOMGetMemoryFailure.CommitTable => "Didn't have enough memory to commit the internal GC data structures",
+                        GetMemoryFailureReason.ReserveSegment => "Failed to reserve memory",
+                        GetMemoryFailureReason.CommitSegmentBegin => "Didn't have enough memory to commit beginning of the segment",
+                        GetMemoryFailureReason.CommitEphemeralSegment => "Didn't have enough memory to commit the new ephemeral segment",
+                        GetMemoryFailureReason.GrowTable => "Didn't have enough memory to grow the internal GC data structures",
+                        GetMemoryFailureReason.CommitTable => "Didn't have enough memory to commit the internal GC data structures",
                         _ => oom.GetMemoryFailure.ToString() // shouldn't happen, we handle all cases above
                     };
 
                     Console.WriteLine($"Details: {(oom.IsLargeObjectHeap ? "LOH" : "SOH")} {message} {oom.Size:n0} bytes");
 
-                    // If it's a commit error (OOMGetMemoryFailure.GrowTable can indicate a reserve
+                    // If it's a commit error (GetMemoryFailureReason.GrowTable can indicate a reserve
                     // or a commit error since we make one VirtualAlloc call to reserve and commit),
                     // we indicate the available commit space if we recorded it.
                     if (oom.AvailablePageFileMB != 0)
