@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
-        public (string Source, int Line) GetSourceFromManagedMethod(ClrMethod method, int nativeOffset)
+        public (string Source, int Line) GetSourceFromManagedMethod(ClrMethod method, ulong ip)
         {
             ClrModule clrModule = method?.Type?.Module;
             if (clrModule is null)
@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return default;
             }
 
-            int ilOffset = GetILOffsetForNativeOffset(method, nativeOffset >= 0 ? (uint)nativeOffset : 0);
+            int ilOffset = GetILOffsetForNativeOffset(method, ip);
             ISymbolFile symbols = GetSymbolForClrModule(clrModule);
             if (symbols is null)
             {
@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private static int GetILOffsetForNativeOffset(ClrMethod method, uint nativeOffset)
+        private static int GetILOffsetForNativeOffset(ClrMethod method, ulong ip)
         {
             ImmutableArray<ILToNativeMap> ilmap = method.ILOffsetMap;
             if (ilmap.IsDefaultOrEmpty)
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             (ulong Distance, int Offset) closest = (ulong.MaxValue, -1);
             foreach (ILToNativeMap entry in ilmap)
             {
-                ulong distance = GetDistance(entry, nativeOffset);
+                ulong distance = GetDistance(entry, ip);
                 if (distance == 0)
                 {
                     return entry.ILOffset;
@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return closest.Offset;
         }
 
-        private static ulong GetDistance(ILToNativeMap entry, uint nativeOffset)
+        private static ulong GetDistance(ILToNativeMap entry, ulong nativeOffset)
         {
             ulong distance = 0;
             if (nativeOffset < entry.StartAddress)

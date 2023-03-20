@@ -373,20 +373,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     _lineBuilder.Append(')');
                 }
 
-                if (currFrame.Method.NativeCode < currFrame.InstructionPointer)
-                {
-                    ulong offset = currFrame.InstructionPointer - currFrame.Method.NativeCode;
-                    int intOffset = offset < int.MaxValue ? (int)offset : 0;
-                    (string source, int line) = FileLineService.GetSourceFromManagedMethod(currFrame.Method, intOffset);
+                (string source, int line) = FileLineService.GetSourceFromManagedMethod(currFrame.Method, currFrame.InstructionPointer);
 
-                    if (source is not null)
-                    {
-                        _lineBuilder.Append('[');
-                        _lineBuilder.Append(source);
-                        _lineBuilder.Append('@');
-                        _lineBuilder.Append(line);
-                        _lineBuilder.Append(']');
-                    }
+                if (source is not null)
+                {
+                    _lineBuilder.Append('[');
+                    _lineBuilder.Append(source);
+                    _lineBuilder.Append('@');
+                    _lineBuilder.Append(line);
+                    _lineBuilder.Append(']');
                 }
             }
 
