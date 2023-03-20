@@ -46,8 +46,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return symbolFile;
             }
 
-            IModule module = ModuleService.GetModuleFromBaseAddress(clrModule.ImageBase);
-            if (module is null)
+            IModule module;
+            try
+            {
+                module = ModuleService.GetModuleFromBaseAddress(clrModule.ImageBase);
+                if (module is null)
+                {
+                    return null;
+                }
+            }
+            catch (DiagnosticsException)
             {
                 return null;
             }
