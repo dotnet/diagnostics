@@ -14,14 +14,14 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.23118.1">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.23168.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>38d3196e1596eb525367ec8d65fcc1f30a58261c</Sha>
+      <Sha>b12f035e893c34ec2c965d75f6e21b7a2667e98d</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="8.0.0-beta.23120.1">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="8.0.0-beta.23168.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c4a85adbff520f62bfade7a6132f471506c3d35a</Sha>
+      <Sha>b12f035e893c34ec2c965d75f6e21b7a2667e98d</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22316.2" Pinned="true">
       <Uri>https://github.com/dotnet/arcade</Uri>
@@ -52,9 +52,9 @@
       <Sha>fdbe4632b67ee16bd1856417cda93fdbf84139ec</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.SourceLink.GitHub" Version="1.2.0-beta-23117-02" CoherentParentDependency="Microsoft.DotNet.Arcade.Sdk">
+    <Dependency Name="Microsoft.SourceLink.GitHub" Version="1.2.0-beta-23165-02" CoherentParentDependency="Microsoft.DotNet.Arcade.Sdk">
       <Uri>https://github.com/dotnet/sourcelink</Uri>
-      <Sha>955e79b0b955a9f57078b2399a782fcde44a9261</Sha>
+      <Sha>3f43bf1b2dead2cb51f20dc47f6dfd7981248820</Sha>
       <SourceBuild RepoName="sourcelink" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.6.0-1.23073.4">
