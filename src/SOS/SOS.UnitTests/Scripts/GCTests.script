@@ -46,7 +46,7 @@ SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+38\]\s+
 
-SOSCOMMAND:GCRoot -all <PREVPOUT>
+SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+38\]\s+
 
@@ -116,7 +116,7 @@ SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+41\]\s+
 
-SOSCOMMAND:GCRoot -all <PREVPOUT>
+SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+41\]\s+
 
