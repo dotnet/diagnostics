@@ -62,6 +62,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// A string of options that are parsed before the command line options
         /// </summary>
         public string DefaultOptions;
+
+        /// <summary>
+        /// Whether to show this command in the summary page of !help.
+        /// </summary>
+        public bool ShowInHelp = true;
     }
 
     /// <summary>
@@ -70,15 +75,6 @@ namespace Microsoft.Diagnostics.DebugServices
     /// </summary>
     [Conditional("DEBUG")]
     public class DebugCommandAttribute : CommandAttribute
-    {
-    }
-
-    /// <summary>
-    /// Marks a class as a helper command.  These commands are helpers to make other commands in
-    /// SOS work.  They aren't meant to be used generally as a command.  It's fine for anyone to
-    /// call these commands, but they aren't discoverable via !help.
-    /// </summary>
-    public class HelperCommandAttribute : CommandAttribute
     {
     }
 

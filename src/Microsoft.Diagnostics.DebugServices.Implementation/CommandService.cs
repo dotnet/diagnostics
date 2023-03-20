@@ -133,9 +133,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 CommandLineBuilder builder = new(new Command(_rootBuilder.Command.Name));
                 foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
                 {
-                    // Don't display internal commands in !help to not clutter real commands with
-                    // internal implementation helpers.
-                    if (cmd.GetType().GetCustomAttribute<HelperCommandAttribute>() != null)
+                    // Skip any attributes which have ShowInHelp == false.
+                    if (!cmd.GetType().GetCustomAttributes<CommandAttribute>(inherit: true).Any(c => c.ShowInHelp))
                     {
                         continue;
                     }

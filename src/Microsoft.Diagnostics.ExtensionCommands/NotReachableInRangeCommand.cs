@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// <summary>
     /// Prints objects and statistics for a range of object pointers.
     /// </summary>
-    [HelperCommand(Name = "notreachableinrange", Help = "A helper command for !finalizerqueue")]
+    [Command(Name = "notreachableinrange", Help = "A helper command for !finalizerqueue", ShowInHelp = false)]
     public class NotReachableInRangeCommand : CommandBase
     {
         private HashSet<ulong> _nonFQLiveObjects;
