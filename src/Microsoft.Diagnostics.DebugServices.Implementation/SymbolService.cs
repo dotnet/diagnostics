@@ -562,7 +562,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(Stream pdbStream)
         {
-            if (pdbStream != null)
+            if (pdbStream is null)
             {
                 throw new ArgumentNullException(nameof(pdbStream));
             }
@@ -679,14 +679,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using Stream stream = Utilities.TryOpenFile(fileName);
                 if (stream is not null)
                 {
-                    PEFile peFile = new(new StreamAddressSpace(stream), false);
-                    PEFileKeyGenerator generator = new(Tracer.Instance, peFile, fileName);
-                    foreach (SymbolStoreKey key in generator.GetKeys(flags))
+                    if ((flags & KeyTypeFlags.IdentityKey) != 0)
                     {
-                        if (fileKey.Equals(key))
+                        PEFile peFile = new(new StreamAddressSpace(stream), false);
+                        PEFileKeyGenerator generator = new(Tracer.Instance, peFile, fileName);
+                        foreach (SymbolStoreKey key in generator.GetKeys(flags).ToArray())
                         {
-                            Trace.TraceInformation($"DownloadPE: local file match {fileName}");
-                            return fileName;
+                            if (fileKey.Equals(key))
+                            {
+                                Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                                return fileName;
+                            }
+                        }
+                    }
+                    else if ((flags & KeyTypeFlags.SymbolKey) != 0)
+                    {
+                        KeyGenerator generator = new PortablePDBFileKeyGenerator(Tracer.Instance, new SymbolStoreFile(stream, fileName));
+                        foreach (SymbolStoreKey key in generator.GetKeys(KeyTypeFlags.IdentityKey))
+                        {
+                            if (fileKey.Equals(key))
+                            {
+                                Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                                return fileName;
+                            }
+                        }
+
+                        generator = new PDBFileKeyGenerator(Tracer.Instance, new SymbolStoreFile(stream, fileName));
+                        foreach (SymbolStoreKey key in generator.GetKeys(KeyTypeFlags.IdentityKey))
+                        {
+                            if (fileKey.Equals(key))
+                            {
+                                Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                                return fileName;
+                            }
                         }
                     }
                 }

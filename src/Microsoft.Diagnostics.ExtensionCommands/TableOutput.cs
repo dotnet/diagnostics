@@ -12,9 +12,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 {
     internal sealed class TableOutput
     {
+        private readonly StringBuilder _rowBuilder = new(260);
         private readonly char _spacing = ' ';
 
         public string Divider { get; set; } = " ";
+
+        public string Indent { get; set; } = "";
 
         public bool AlignLeft { get; set; }
 
@@ -39,39 +42,41 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public void WriteRow(params object[] columns)
         {
-            StringBuilder sb = new(Divider.Length * columns.Length + _formats.Sum(c => Math.Abs(c.width)) + 32);
+            _rowBuilder.Clear();
+            _rowBuilder.Append(Indent);
 
             for (int i = 0; i < columns.Length; i++)
             {
                 if (i != 0)
                 {
-                    sb.Append(Divider);
+                    _rowBuilder.Append(_spacing);
                 }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
-                FormatColumn(_spacing, columns[i], sb, width, format);
+                FormatColumn(_spacing, columns[i], _rowBuilder, width, format);
             }
 
-            Console.WriteLine(sb.ToString());
+            Console.WriteLine(_rowBuilder.ToString());
         }
 
         public void WriteRowWithSpacing(char spacing, params object[] columns)
         {
-            StringBuilder sb = new(columns.Length + _formats.Sum(c => Math.Abs(c.width)));
+            _rowBuilder.Clear();
+            _rowBuilder.Append(Indent);
 
             for (int i = 0; i < columns.Length; i++)
             {
                 if (i != 0)
                 {
-                    sb.Append(spacing, Divider.Length);
+                    _rowBuilder.Append(spacing, Divider.Length);
                 }
 
                 (int width, string format) = i < _formats.Length ? _formats[i] : default;
 
-                FormatColumn(spacing, columns[i], sb, width, format);
+                FormatColumn(spacing, columns[i], _rowBuilder, width, format);
             }
 
-            Console.WriteLine(sb.ToString());
+            Console.WriteLine(_rowBuilder.ToString());
         }
 
         private void FormatColumn(char spacing, object value, StringBuilder sb, int width, string format)

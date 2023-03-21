@@ -44,11 +44,11 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+0.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+38\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
-SOSCOMMAND:GCRoot -all <PREVPOUT>
+SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+38\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -114,11 +114,11 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+1.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+41\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
-SOSCOMMAND:GCRoot -all <PREVPOUT>
+SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+41\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -163,7 +163,7 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+2.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+44\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 ENDIF:OSX
 
@@ -186,7 +186,7 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+[02].*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+48\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 ENDIF:OSX
 

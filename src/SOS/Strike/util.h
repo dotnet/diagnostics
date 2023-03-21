@@ -1775,21 +1775,7 @@ void AssemblyInfo(DacpAssemblyData* pAssembly);
 
 size_t GetNumComponents(TADDR obj);
 
-struct GenUsageStat
-{
-    size_t allocd;
-    size_t freed;
-    size_t unrooted;
-    size_t committed;
-};
-
-struct HeapUsageStat
-{
-    GenUsageStat  genUsage[5]; // gen0, 1, 2, LOH, POH
-};
-
 extern DacpUsefulGlobalsData g_special_usefulGlobals;
-BOOL GCHeapUsageStats(const GCHeapDetails& heap, BOOL bIncUnreachable, HeapUsageStat *hpUsage);
 
 class HeapStat
 {
@@ -2102,6 +2088,7 @@ BOOL VerifyObject(const GCHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
 void DumpStackObjectsHelper (TADDR StackTop, TADDR StackBottom, BOOL verifyFields);
 
+HRESULT ExecuteCommand(PCSTR commandName, PCSTR args);
 
 enum ARGTYPE {COBOOL,COSIZE_T,COHEX,COSTRING};
 struct CMDOption
@@ -2153,8 +2140,6 @@ void CharArrayContent(TADDR pos, ULONG num, bool widechar);
 void StringObjectContent (size_t obj, BOOL fLiteral=FALSE, const int length=-1);  // length=-1: dump everything in the string object.
 
 UINT FindAllPinnedAndStrong (DWORD_PTR handlearray[],UINT arraySize);
-void PrintNotReachableInRange(TADDR rngStart, TADDR rngEnd, BOOL bExcludeReadyForFinalization,
-    HeapStat* stat, BOOL bShort);
 
 const char *EHTypeName(EHClauseType et);
 
@@ -2969,207 +2954,6 @@ private:
     static void PrintHeap(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable, LPVOID token);
     static void PrintOutTree(size_t methodTable, size_t ID, LPVOID token);
     void TraceHandles();
-};
-
-
-class GCRootImpl
-{
-private:
-    struct MTInfo
-    {
-        TADDR MethodTable;
-        WCHAR  *TypeName;
-
-        TADDR *Buffer;
-        CGCDesc *GCDesc;
-
-        TADDR LoaderAllocatorObjectHandle;
-        bool ArrayOfVC;
-        bool ContainsPointers;
-        bool Collectible;
-        size_t BaseSize;
-        size_t ComponentSize;
-
-        const WCHAR *GetTypeName()
-        {
-            if (!TypeName)
-                TypeName = CreateMethodTableName(MethodTable);
-
-            if (!TypeName)
-                return W("<error>");
-
-            return TypeName;
-        }
-
-        MTInfo()
-            : MethodTable(0), TypeName(0), Buffer(0), GCDesc(0),
-              ArrayOfVC(false), ContainsPointers(false), Collectible(false), BaseSize(0), ComponentSize(0)
-        {
-        }
-
-        ~MTInfo()
-        {
-            if (Buffer)
-                delete [] Buffer;
-
-            if (TypeName)
-                delete [] TypeName;
-        }
-    };
-
-    struct RootNode
-    {
-        RootNode *Next;
-        RootNode *Prev;
-        TADDR Object;
-        MTInfo *MTInfo;
-
-        bool FilledRefs;
-        bool FromDependentHandle;
-        RootNode *GCRefs;
-
-
-        const WCHAR *GetTypeName()
-        {
-            if (!MTInfo)
-                return W("<unknown>");
-
-            return MTInfo->GetTypeName();
-        }
-
-        RootNode()
-            : Next(0), Prev(0)
-        {
-            Clear();
-        }
-
-        void Clear()
-        {
-            if (Next && Next->Prev == this)
-                Next->Prev = NULL;
-
-            if (Prev && Prev->Next == this)
-                Prev->Next = NULL;
-
-            Next = 0;
-            Prev = 0;
-            Object = 0;
-            MTInfo = 0;
-            FilledRefs = false;
-            FromDependentHandle = false;
-            GCRefs = 0;
-        }
-
-        void Remove(RootNode *&list)
-        {
-            RootNode *curr_next = Next;
-
-            // We've already considered this object, remove it.
-            if (Prev == NULL)
-            {
-                // If we've filtered out the head, update it.
-                list = curr_next;
-
-                if (curr_next)
-                    curr_next->Prev = NULL;
-            }
-            else
-            {
-                // Otherwise remove the current item from the list
-                Prev->Next = curr_next;
-
-                if (curr_next)
-                    curr_next->Prev = Prev;
-            }
-        }
-    };
-
-public:
-    static void GetDependentHandleMap(std::unordered_map<TADDR, std::list<TADDR>> &map);
-
-public:
-    // Finds all objects which root "target" and prints the path from the root
-    // to "target".  If all is true, all possible paths to the object are printed.
-    // If all is false, only completely unique paths will be printed.
-    int PrintRootsForObject(TADDR obj, bool all, bool noStacks);
-
-    // Finds a path from root to target if it exists and prints it out.  Returns
-    // true if it found a path, false otherwise.
-    bool PrintPathToObject(TADDR root, TADDR target);
-
-    // Calculates the size of the closure of objects kept alive by root.
-    size_t ObjSize(TADDR root);
-
-    // Walks each root, printing out the total amount of memory held alive by it.
-    void ObjSize();
-
-    // Returns the set of all live objects in the process.
-    const std::unordered_set<TADDR> &GetLiveObjects(bool excludeFQ = false);
-
-    // See !FindRoots.
-    int FindRoots(int gen, TADDR target);
-
-private:
-    // typedefs
-    typedef void (*ReportCallback)(TADDR root, RootNode *path, bool printHeader);
-
-    // Book keeping and debug.
-    void ClearAll();
-    void ClearNodes();
-    void ClearSizeData();
-
-    // Printing roots
-    int PrintRootsOnHandleTable(int gen = -1);
-    int PrintRootsOnAllThreads();
-    int PrintRootsOnThread(DWORD osThreadId);
-    int PrintRootsOnFQ(bool notReadyForFinalization = false);
-    int PrintRootsInOlderGen();
-    int PrintRootsInRange(LinearReadCache &cache, TADDR start, TADDR stop, ReportCallback func, bool printHeader);
-
-    // Calculate gc root
-    RootNode *FilterRoots(RootNode *&list);
-    RootNode *FindPathToTarget(TADDR root);
-    RootNode *GetGCRefs(RootNode *path, RootNode *node);
-
-    void InitDependentHandleMap();
-
-    //Reporting:
-    void ReportOneHandlePath(const SOSHandleData &handle, RootNode *node, bool printHeader);
-    void ReportOnePath(DWORD thread, const SOSStackRefData &stackRef, RootNode *node, bool printThread, bool printFrame);
-    static void ReportOneFQEntry(TADDR root, RootNode *path, bool printHeader);
-    static void ReportOlderGenEntry(TADDR root, RootNode *path, bool printHeader);
-    void ReportSizeInfo(const SOSHandleData &handle, TADDR obj);
-    void ReportSizeInfo(DWORD thread, const SOSStackRefData &ref, TADDR obj);
-
-    // Data reads:
-    TADDR ReadPointer(TADDR location);
-    TADDR ReadPointerCached(TADDR location);
-
-    // Object/MT data:
-    MTInfo *GetMTInfo(TADDR mt);
-    size_t GetComponents(TADDR obj, TADDR mt);
-    size_t GetSizeOfObject(TADDR obj, MTInfo *info);
-
-    // RootNode management:
-    RootNode *NewNode(TADDR obj = 0, MTInfo *mtinfo = 0, bool fromDependent = false);
-    void DeleteNode(RootNode *node);
-
-private:
-
-    bool mAll,  // Print all roots or just unique roots?
-         mSize; // Print rooting information or total size info?
-
-    std::list<RootNode*> mCleanupList;  // A list of RootNode's we've newed up.  This is only used to delete all of them later.
-    std::list<RootNode*> mRootNewList;  // A list of unused RootNodes that are free to use instead of having to "new" up more.
-
-    std::unordered_map<TADDR, MTInfo*> mMTs;     // The MethodTable cache which maps from MT -> MethodTable data (size, gcdesc, string typename)
-    std::unordered_map<TADDR, RootNode*> mTargets;   // The objects that we are searching for.
-    std::unordered_set<TADDR> mConsidered;       // A hashtable of objects we've already visited.
-    std::unordered_map<TADDR, size_t> mSizes;   // A mapping from object address to total size of data the object roots.
-
-    std::unordered_map<TADDR, std::list<TADDR>> mDependentHandleMap;
-
-    LinearReadCache mCache;     // A linear cache which stops us from having to read from the target process more than 1-2 times per object.
 };
 
 //

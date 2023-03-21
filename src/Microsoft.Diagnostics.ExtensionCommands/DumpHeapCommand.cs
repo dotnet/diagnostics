@@ -3,20 +3,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "dumpheap", Help = "Displays a list of all managed objects.")]
     public class DumpHeapCommand : CommandBase
     {
-        private const char StringReplacementCharacter = '.';
-
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
@@ -25,6 +20,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; }
+
+        [ServiceImport]
+        public DumpHeapService DumpHeap { get; set; }
 
         [Option(Name = "-mt")]
         public string MethodTableString { get; set; }
@@ -39,9 +37,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = "-strings")]
         public bool Strings { get; set; }
-
-        [Option(Name = "-verify")]
-        public bool Verify { get; set; }
 
         [Option(Name = "-short")]
         public bool Short { get; set; }
@@ -76,218 +71,78 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ParseArguments();
 
-            TableOutput thinLockOutput = null;
-            TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
-            if (!StatOnly && !Short && !ThinLock)
+            IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken);
+            if (Live)
             {
-                objectTable.WriteRow("Address", "MT", "Size");
+                objectsToPrint = objectsToPrint.Where(LiveObjects.IsLive);
+            }
+            else if (Dead)
+            {
+                objectsToPrint = objectsToPrint.Where(obj => !LiveObjects.IsLive(obj));
             }
 
-            bool checkTypeName = !string.IsNullOrWhiteSpace(Type);
-            Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
-            Dictionary<(string String, ulong Size), uint> stringTable = null;
-
-            foreach (ClrObject obj in FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken))
+            if (Type is not null)
             {
-                ulong mt = obj.Type?.MethodTable ?? 0;
-                if (mt == 0)
-                {
-                    MemoryService.ReadPointer(obj, out mt);
-                }
+                objectsToPrint = objectsToPrint.Where(obj => obj.Type?.Name?.Contains(Type) ?? false);
+            }
 
-                // Filter by MT, if the user specified -strings then MethodTable has been pre-set
-                // to the string MethodTable
-                if (MethodTable.HasValue && mt != MethodTable.Value)
-                {
-                    continue;
-                }
-
-                // Filter by liveness
-                if (Live && !LiveObjects.IsLive(obj))
-                {
-                    continue;
-                }
-
-                if (Dead && LiveObjects.IsLive(obj))
-                {
-                    continue;
-                }
-
-                // Filter by type name
-                if (checkTypeName && obj.Type?.Name is not null && !obj.Type.Name.Contains(Type))
-                {
-                    continue;
-                }
-
-                if (ThinLock)
-                {
-                    ClrThinLock thinLock = obj.GetThinLock();
-                    if (thinLock != null)
+            if (MethodTable.HasValue)
+            {
+                objectsToPrint = objectsToPrint.Where(obj => {
+                    ulong mt;
+                    if (obj.Type is not null)
                     {
-                        if (thinLockOutput is null)
-                        {
-                            thinLockOutput = new(Console, (12, "x"), (16, "x"), (16, "x"), (10, "n0"));
-                            thinLockOutput.WriteRow("Object", "Thread", "OSId", "Recursion");
-                        }
-
-                        thinLockOutput.WriteRow(new DmlDumpObj(obj), thinLock.Thread?.Address ?? 0, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
-                    }
-
-                    continue;
-                }
-
-                if (Short)
-                {
-                    Console.WriteLine(obj.Address.ToString("x12"));
-                    continue;
-                }
-
-                ulong size = obj.IsValid ? obj.Size : 0;
-                if (!StatOnly)
-                {
-                    objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeap(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
-                }
-
-                if (Strings)
-                {
-                    // We only read a maximum of 1024 characters for each string.  This may lead to some collisions if strings are unique
-                    // only after their 1024th character while being the exact same size as another string.  However, this will be correct
-                    // the VAST majority of the time, and it will also keep us from hitting OOM or other weirdness if the heap is corrupt.
-
-                    string value = obj.AsString(1024);
-
-                    stringTable ??= new();
-                    (string value, ulong size) key = (value, size);
-                    stringTable.TryGetValue(key, out uint stringCount);
-                    stringTable[key] = stringCount + 1;
-                }
-                else
-                {
-                    if (!stats.TryGetValue(mt, out (int Count, ulong Size, string TypeName) typeStats))
-                    {
-                        stats.Add(mt, (1, size, obj.Type?.Name ?? $"<unknown_type_{mt:x}>"));
+                        mt = obj.Type.MethodTable;
                     }
                     else
                     {
-                        stats[mt] = (typeStats.Count + 1, typeStats.Size + size, typeStats.TypeName);
+                        MemoryService.ReadPointer(obj, out mt);
                     }
-                }
+
+                    return mt == MethodTable.Value;
+                });
             }
 
-            // Print statistics, but not for -short or -thinlock
-            if (!Short && !ThinLock)
+            if (Min != 0 || Max != 0)
             {
-                if (Strings && stringTable is not null)
+                objectsToPrint = objectsToPrint.Where(obj =>
                 {
-                    // For -strings, we print the strings themselves with their stats
-                    if (!StatOnly)
+                    // We cannot get the size of an invalid object
+                    if (!obj.IsValid)
                     {
-                        Console.WriteLine();
+                        return false;
                     }
 
-                    int countLen = stringTable.Max(ts => ts.Value).ToString("n0").Length;
-                    countLen = Math.Max(countLen, "Count".Length);
-
-                    int sizeLen = stringTable.Max(ts => ts.Key.Size * ts.Value).ToString("n0").Length;
-                    sizeLen = Math.Max(countLen, "TotalSize".Length);
-
-                    int stringLen = 128;
-                    int possibleWidth = Console.WindowWidth - countLen - sizeLen - 2;
-                    if (possibleWidth > 16)
+                    ulong size = obj.Size;
+                    if (Min != 0 && size < Min)
                     {
-                        stringLen = Math.Min(possibleWidth, stringLen);
+                        return false;
                     }
 
-                    Console.WriteLine("Statistics:");
-                    TableOutput statsTable = new(Console, (countLen, "n0"), (sizeLen, "n0"), (0, ""));
-
-                    var stringsSorted = from item in stringTable
-                                        let Count = item.Value
-                                        let Size = item.Key.Size
-                                        let String = Sanitize(item.Key.String, stringLen)
-                                        let TotalSize = Count * Size
-                                        orderby TotalSize
-                                        select new
-                                        {
-                                            Count,
-                                            TotalSize,
-                                            String
-                                        };
-
-                    foreach (var item in stringsSorted)
+                    if (Max != 0 && size > Max)
                     {
-                        statsTable.WriteRow(item.Count, item.TotalSize, item.String);
-                    }
-                }
-                else if (stats.Count != 0)
-                {
-                    // Print statistics table
-                    if (!StatOnly)
-                    {
-                        Console.WriteLine();
+                        return false;
                     }
 
-                    int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
-                    countLen = Math.Max(countLen, "Count".Length);
-
-                    int sizeLen = stats.Values.Max(ts => ts.Size).ToString("n0").Length;
-                    sizeLen = Math.Max(countLen, "TotalSize".Length);
-
-                    TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
-
-                    Console.WriteLine("Statistics:");
-                    statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
-
-                    var statsSorted = from item in stats
-                                      let MethodTable = item.Key
-                                      let Size = item.Value.Size
-                                      orderby Size
-                                      select new
-                                      {
-                                          MethodTable = item.Key,
-                                          item.Value.Count,
-                                          Size,
-                                          item.Value.TypeName
-                                      };
-
-                    foreach (var item in statsSorted)
-                    {
-                        statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
-                    }
-
-                    Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects");
-                }
+                    return true;
+                });
             }
-        }
 
-        private string Sanitize(string str, int maxLen)
-        {
-            foreach (char ch in str)
+            DumpHeapService.DisplayKind displayKind = DumpHeapService.DisplayKind.Normal;
+            if (ThinLock)
             {
-                if (!char.IsLetterOrDigit(ch))
-                {
-                    return FilterString(str, maxLen);
-                }
+                displayKind = DumpHeapService.DisplayKind.ThinLock;
             }
-
-            return str;
-
-            static string FilterString(string str, int maxLen)
+            else if (Strings)
             {
-                maxLen = Math.Min(str.Length, maxLen);
-                Debug.Assert(maxLen <= 128);
-
-                Span<char> buffer = stackalloc char[maxLen];
-                ReadOnlySpan<char> value = str.AsSpan(0, buffer.Length);
-
-                for (int i = 0; i < value.Length; ++i)
-                {
-                    char ch = value[i];
-                    buffer[i] = char.IsLetterOrDigit(ch) || char.IsPunctuation(ch) || ch == ' ' ? ch : StringReplacementCharacter;
-                }
-
-                return buffer.ToString();
+                displayKind = DumpHeapService.DisplayKind.Strings;
             }
+            else if (Short)
+            {
+                displayKind = DumpHeapService.DisplayKind.Short;
+            }
+
+            DumpHeap.PrintHeap(objectsToPrint, displayKind, StatOnly);
         }
 
         private void ParseArguments()
@@ -300,7 +155,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             if (!string.IsNullOrWhiteSpace(MethodTableString))
             {
-                if (ParseHexString(MethodTableString, out ulong mt))
+                if (TryParseAddress(MethodTableString, out ulong mt))
                 {
                     MethodTable = mt;
                 }
@@ -355,27 +210,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             FilteredHeap.SortSegments = (seg) => seg.OrderBy(seg => seg.Start);
-        }
-
-        private static bool ParseHexString(string str, out ulong value)
-        {
-            value = 0;
-            if (string.IsNullOrWhiteSpace(str))
-            {
-                return false;
-            }
-
-            if (!ulong.TryParse(str, NumberStyles.HexNumber, null, out value))
-            {
-                if (str.StartsWith("/") || str.StartsWith("-"))
-                {
-                    throw new ArgumentException($"Unknown argument: {str}");
-                }
-
-                throw new ArgumentException($"Unknown format: {str}, expected hex number");
-            }
-
-            return true;
         }
     }
 }

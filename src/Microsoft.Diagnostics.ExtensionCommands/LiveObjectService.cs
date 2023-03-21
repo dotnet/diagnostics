@@ -12,11 +12,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [ServiceExport(Scope = ServiceScope.Runtime)]
     public class LiveObjectService
     {
-        private ObjectSet _liveObjs;
+        private HashSet<ulong> _liveObjs;
 
         public int UpdateSeconds { get; set; } = 15;
 
         public bool PrintWarning { get; set; } = true;
+
+        [ServiceImport]
+        public RootCacheService RootCache { get; set; }
 
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
@@ -24,16 +27,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IConsoleService Console { get; set; }
 
+        public bool IsLive(ClrObject obj) => IsLive(obj.Address);
+
         public bool IsLive(ulong obj)
         {
             _liveObjs ??= CreateObjectSet();
             return _liveObjs.Contains(obj);
         }
 
-        private ObjectSet CreateObjectSet()
+        private HashSet<ulong> CreateObjectSet()
         {
             ClrHeap heap = Runtime.Heap;
-            ObjectSet live = new(heap);
+            HashSet<ulong> live = new();
 
             Stopwatch sw = Stopwatch.StartNew();
             int updateSeconds = Math.Max(UpdateSeconds, 10);
@@ -46,7 +51,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             int roots = 0;
             Queue<ulong> todo = new();
-            foreach (ClrRoot root in heap.EnumerateRoots())
+            foreach (ClrRoot root in RootCache.EnumerateRoots())
             {
                 roots++;
                 if (printWarning && sw.Elapsed.TotalSeconds > updateSeconds && live.Count > 0)

@@ -9,7 +9,6 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Hosting
 {
-    [Command(Name = "analyzeoom",        DefaultOptions = "AnalyzeOOM",          Help = "Displays the info of the last OOM that occurred on an allocation request to the GC heap.")]
     [Command(Name = "clrstack",          DefaultOptions = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",        DefaultOptions = "Threads",             Help = "Lists the managed threads running.")]
     [Command(Name = "dbgout",            DefaultOptions = "dbgout",              Help = "Enables/disables (-off) internal SOS logging.")]
@@ -37,8 +36,6 @@ namespace SOS.Hosting
     [Command(Name = "finalizequeue",     DefaultOptions = "FinalizeQueue",       Help = "Displays all objects registered for finalization.")]
     [Command(Name = "findappdomain",     DefaultOptions = "FindAppDomain",       Help = "Attempts to resolve the AppDomain of a GC object.")]
     [Command(Name = "gchandles",         DefaultOptions = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]
-    [Command(Name = "gcheapstat",        DefaultOptions = "GCHeapStat",          Help = "Displays various GC heap stats.")]
-    [Command(Name = "gcroot",            DefaultOptions = "GCRoot",              Help = "Displays info about references (or roots) to an object at the specified address.")]
     [Command(Name = "gcinfo",            DefaultOptions = "GCInfo",              Help = "Displays JIT GC encoding for a method.")]
     [Command(Name = "histclear",         DefaultOptions = "HistClear",           Help = "Releases any resources used by the family of Hist commands.")]
     [Command(Name = "histinit",          DefaultOptions = "HistInit",            Help = "Initializes the SOS structures from the stress log saved in the debuggee.")]
@@ -48,8 +45,6 @@ namespace SOS.Hosting
     [Command(Name = "histstats",         DefaultOptions = "HistStats",           Help = "Displays stress log stats.")]
     [Command(Name = "ip2md",             DefaultOptions = "IP2MD",               Help = "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.")]
     [Command(Name = "name2ee",           DefaultOptions = "Name2EE",             Help = "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.")]
-    [Command(Name = "objsize",           DefaultOptions = "ObjSize",             Help = "Lists the sizes of the all the objects found on managed threads.")]
-    [Command(Name = "pathto",            DefaultOptions = "PathTo",              Help = "Displays the GC path from <root> to <target>.")]
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [Command(Name = "soshelp",           DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
