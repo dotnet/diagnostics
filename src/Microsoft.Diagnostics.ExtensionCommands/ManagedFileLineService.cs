@@ -20,6 +20,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
+        [ServiceImport]
+        public ClrRuntime Runtime { get; set; }
+
         public (string Source, int Line) GetSourceFromManagedMethod(ClrMethod method, ulong ip)
         {
             ClrModule clrModule = method?.Type?.Module;
@@ -49,7 +52,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             IModule module;
             try
             {
-                module = ModuleService.GetModuleFromBaseAddress(clrModule.ImageBase);
+                if (Runtime.ClrInfo.IsSingleFile)
+                {
+                    module = ModuleService.GetModuleFromBaseAddress(Runtime.ClrInfo.ModuleInfo.ImageBase);
+                }
+                else
+                {
+                    module = ModuleService.GetModuleFromBaseAddress(clrModule.ImageBase);
+                }
                 if (module is null)
                 {
                     return null;

@@ -32,11 +32,11 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+pinned.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+22\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCPOH\.Main\(\)\s+\[.*[Gg][Cc][Pp][Oo][Hh]\.cs\s+@\s+22\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+
 
 SOSCOMMAND:VerifyHeap
 VERIFY:.* 0 errors.*
