@@ -133,12 +133,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 CommandLineBuilder builder = new(new Command(_rootBuilder.Command.Name));
                 foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
                 {
-                    // Skip any attributes which have ShowInHelp == false.
-                    if (!cmd.GetType().GetCustomAttributes<CommandAttribute>(inherit: true).Any(c => c.ShowInHelp))
-                    {
-                        continue;
-                    }
-
                     if (cmd.Handler is CommandHandler handler)
                     {
                         if (handler.IsValidPlatform(target))

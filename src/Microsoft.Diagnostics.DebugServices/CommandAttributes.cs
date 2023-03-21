@@ -62,11 +62,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// A string of options that are parsed before the command line options
         /// </summary>
         public string DefaultOptions;
-
-        /// <summary>
-        /// Whether to show this command in the summary page of !help.
-        /// </summary>
-        public bool ShowInHelp = true;
     }
 
     /// <summary>
