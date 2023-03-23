@@ -21,8 +21,8 @@
     <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0-preview.3.23155.1</VSRedistCommonNetCoreSharedFrameworkx6480Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0-preview.3.23155.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.4.23171.7</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.4.23171.7</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.4.23172.5</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.4.23172.5</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>8.0.100-preview.3.23156.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
