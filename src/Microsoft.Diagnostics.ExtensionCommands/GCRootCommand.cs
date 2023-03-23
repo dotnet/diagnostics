@@ -40,7 +40,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            Stopwatch sw = Stopwatch.StartNew();
             if (!TryParseAddress(TargetAddress, out ulong address))
             {
                 throw new ArgumentException($"Could not parse target object address: {TargetAddress:x}");
@@ -90,7 +89,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             Console.WriteLine($"Found {count:n0} unique roots.");
-            Console.WriteLine($"Total time: {sw.Elapsed}");
         }
 
         private int PrintOlderGenerationRoots(GCRoot gcroot, int gen)
