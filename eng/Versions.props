@@ -21,8 +21,8 @@
     <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0-preview.3.23155.1</VSRedistCommonNetCoreSharedFrameworkx6480Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0-preview.3.23155.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.4.23171.1</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.4.23171.1</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.4.23177.14</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.4.23177.14</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>8.0.100-preview.3.23156.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
@@ -68,7 +68,7 @@
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
-    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>8.0.0-alpha.1.23170.3</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
+    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>8.0.0-alpha.1.23178.3</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
     <MicrosoftSourceLinkGitHubVersion>1.2.0-beta-23165-02</MicrosoftSourceLinkGitHubVersion>
     <!-- Roslyn and analyzers -->
     <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
