@@ -3,8 +3,8 @@
 
 using System;
 using System.Buffers.Binary;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,9 +14,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /**
      * ==ADVERTISE PROTOCOL==
      * Before standard IPC Protocol communication can occur on a client-mode connection
-     * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION 
+     * the runtime must advertise itself over the connection. ALL SUBSEQUENT COMMUNICATION
      * IS STANDARD DIAGNOSTICS IPC PROTOCOL COMMUNICATION.
-     * 
+     *
      * The flow for Advertise is a one-way burst of 34 bytes consisting of
      * 8 bytes  - "ADVR_V1\0" (ASCII chars + null byte)
      * 16 bytes - CLR Instance Cookie (little-endian)
@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static byte[] Magic_V1 => Encoding.ASCII.GetBytes("ADVR_V1" + '\0');
         private static readonly int IpcAdvertiseV1SizeInBytes = Magic_V1.Length + 16 + 8 + 2; // 34 bytes
 
-        private IpcAdvertise(byte[] magic, Guid cookie, UInt64 pid, UInt16 future)
+        private IpcAdvertise(byte[] magic, Guid cookie, ulong pid, ushort future)
         {
             Future = future;
             Magic = magic;
@@ -67,14 +67,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] cookieBuffer = new byte[16];
             Array.Copy(buffer, index, cookieBuffer, 0, 16);
-            Guid cookie = new Guid(cookieBuffer);
+            Guid cookie = new(cookieBuffer);
             index += 16;
 
-            UInt64 pid = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(buffer, index, 8));
+            ulong pid = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(buffer, index, 8));
             index += 8;
 
-            UInt16 future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(buffer, index, 2));
-            index += 2;
+            ushort future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(buffer, index, 2));
 
             // FUTURE: switch on incoming magic and change if version ever increments
             return new IpcAdvertise(magic, cookie, pid, future);
@@ -104,7 +103,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Array.Copy(BitConverter.GetBytes(future), 0, buffer, index, sizeof(short));
             index += sizeof(short);
 
-            await stream.WriteAsync(buffer, 0, index).ConfigureAwait(false);
+            await stream.WriteAsync(buffer, 0, index, token).ConfigureAwait(false);
         }
 
         public override string ToString()
@@ -112,9 +111,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return $"{{ Magic={Magic}; ClrInstanceId={RuntimeInstanceCookie}; ProcessId={ProcessId}; Future={Future} }}";
         }
 
-        private UInt16 Future { get; } = 0;
+        private ushort Future { get; }
         public byte[] Magic { get; } = Magic_V1;
-        public UInt64 ProcessId { get; } = 0;
+        public ulong ProcessId { get; }
         public Guid RuntimeInstanceCookie { get; } = Guid.Empty;
     }
 }

@@ -1,13 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.TestHelpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -15,7 +14,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -32,8 +31,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private sealed class TestMetricsLogger : ICountersLogger
         {
-            private readonly List<string> _expectedCounters = new List<string>();
-            private Dictionary<string, ICounterPayload> _metrics = new Dictionary<string, ICounterPayload>();
+            private readonly List<string> _expectedCounters = new();
+            private Dictionary<string, ICounterPayload> _metrics = new();
             private readonly TaskCompletionSource<object> _foundExpectedCountersSource;
 
             public TestMetricsLogger(IDictionary<string, IEnumerable<string>> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource)
@@ -89,21 +88,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterEventPipeline(TestConfiguration config)
         {
-            var expectedCounters = new[] { "cpu-usage", "working-set" };
+            string[] expectedCounters = new[] { "cpu-usage", "working-set" };
             string expectedProvider = "System.Runtime";
 
             IDictionary<string, IEnumerable<string>> expectedMap = new Dictionary<string, IEnumerable<string>>();
             expectedMap.Add(expectedProvider, expectedCounters);
 
-            var foundExpectedCountersSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            var logger = new TestMetricsLogger(expectedMap, foundExpectedCountersSource);
+            TestMetricsLogger logger = new(expectedMap, foundExpectedCountersSource);
 
-            await using (var testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
             {
-                var client = new DiagnosticsClient(testRunner.Pid);
+                DiagnosticsClient client = new(testRunner.Pid);
 
-                await using MetricsPipeline pipeline = new MetricsPipeline(client, new MetricsPipelineSettings
+                await using MetricsPipeline pipeline = new(client, new MetricsPipelineSettings
                 {
                     Duration = Timeout.InfiniteTimeSpan,
                     CounterGroups = new[]
@@ -125,7 +124,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(logger.Metrics.Any());
 
-            var actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
+            IOrderedEnumerable<string> actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
 
             Assert.Equal(expectedCounters, actualMetrics);
             Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));

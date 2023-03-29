@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Shared;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
 {
@@ -52,44 +52,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         /// The sliding duration of time in which the event counter must maintain a value
         /// above, below, or between the thresholds specified by <see cref="GreaterThan"/> and <see cref="LessThan"/>.
         /// </summary>
-        [Range(typeof(TimeSpan), SlidingWindowDuration_MinValue, SlidingWindowDuration_MaxValue)]
+        [Range(typeof(TimeSpan), SharedTriggerSettingsConstants.SlidingWindowDuration_MinValue, SharedTriggerSettingsConstants.SlidingWindowDuration_MaxValue)]
         public TimeSpan SlidingWindowDuration { get; set; }
 
         /// <summary>
         /// The sampling interval of the event counter.
         /// </summary>
-        [Range(CounterIntervalSeconds_MinValue, CounterIntervalSeconds_MaxValue)]
+        [Range(SharedTriggerSettingsConstants.CounterIntervalSeconds_MinValue, SharedTriggerSettingsConstants.CounterIntervalSeconds_MaxValue)]
         public float CounterIntervalSeconds { get; set; }
 
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {
-            List<ValidationResult> results = new();
-
-            if (!GreaterThan.HasValue && !LessThan.HasValue)
-            {
-                results.Add(new ValidationResult(
-                    EitherGreaterThanLessThanMessage,
-                    new[]
-                    {
-                        nameof(GreaterThan),
-                        nameof(LessThan)
-                    }));
-            }
-            else if (GreaterThan.HasValue && LessThan.HasValue)
-            {
-                if (GreaterThan.Value >= LessThan.Value)
-                {
-                    results.Add(new ValidationResult(
-                        GreaterThanMustBeLessThanLessThanMessage,
-                        new[]
-                        {
-                            nameof(GreaterThan),
-                            nameof(LessThan)
-                        }));
-                }
-            }
-
-            return results;
+            return SharedTriggerSettingsValidation.Validate(GreaterThan, LessThan);
         }
     }
 }

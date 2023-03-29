@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -29,17 +28,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionThrowsWhenDisposedTest()
         {
-            var collection = new HandleableCollection<int>();
+            HandleableCollection<int> collection = new();
 
             AddRangeAndVerifyItems(collection, endInclusive: 9);
 
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 removeItem = false;
                 return 20 == item;
             };
 
-            using var cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPositiveVerificationTimeout);
 
             Task handleTask = Task.Run(() => collection.Handle(handler, DefaultPositiveVerificationTimeout));
             Task handleAsyncTask = collection.HandleAsync(handler, cancellation.Token);
@@ -87,25 +85,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionDefaultHandlerTest()
         {
-            await HandleableCollectionDefaultHandlerTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionDefaultHandlerTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionDefaultHandlerTestAsync()
         {
-            await HandleableCollectionDefaultHandlerTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionDefaultHandlerTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that the default handler handles one item at a time and
         /// removes each item after each successful handling.
         /// </summary>
-        private async Task HandleableCollectionDefaultHandlerTestCore(bool useAsync)
+        private static async Task HandleableCollectionDefaultHandlerTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             AddRangeAndVerifyItems(collection, endInclusive: 14);
 
@@ -127,13 +125,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionComplexHandlerTest()
         {
-            await HandleableCollectionComplexHandlerTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionComplexHandlerTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionComplexHandlerTestAsync()
         {
-            await HandleableCollectionComplexHandlerTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionComplexHandlerTestCore(useAsync: true);
         }
 
         /// <summary>
@@ -141,18 +139,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// handling an item and that the handled item is the item on which
         /// the handler completed.
         /// </summary>
-        private async Task HandleableCollectionComplexHandlerTestCore(bool useAsync)
+        private static async Task HandleableCollectionComplexHandlerTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             const int expectedItem = 7;
             AddRangeAndVerifyItems(collection, endInclusive: expectedItem);
 
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 removeItem = false;
 
                 // Remove every third item
@@ -173,31 +170,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionHandleBeforeAddTest()
         {
-            await HandleableCollectionHandleBeforeAddTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionHandleBeforeAddTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionHandleBeforeAddTestAsync()
         {
-            await HandleableCollectionHandleBeforeAddTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionHandleBeforeAddTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that handler can be added before an item is provided to the collection.
         /// </summary>
-        private async Task HandleableCollectionHandleBeforeAddTestCore(bool useAsync)
+        private static async Task HandleableCollectionHandleBeforeAddTestCore(bool useAsync)
         {
-            using var collection = new TestHandleableCollection<int>();
+            using TestHandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             // Register to be notified when handler is beginning to be processed
             Task handlerBeginTask = collection.WaitForHandlerBeginAsync(DefaultPositiveVerificationTimeout);
 
             const int expectedItem = 3;
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 // Terminate handler on some item in the middle of the collection
                 if (expectedItem == item)
                 {
@@ -238,31 +234,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionHandleNoRemovalTest()
         {
-            await HandleableCollectionHandleNoRemovalTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionHandleNoRemovalTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionHandleNoRemovalTestAsync()
         {
-            await HandleableCollectionHandleNoRemovalTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionHandleNoRemovalTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that handler does not have to remove an item from the collection
         /// and that the handled item is the item on which the handler completed.
         /// </summary>
-        private async Task HandleableCollectionHandleNoRemovalTestCore(bool useAsync)
+        private static async Task HandleableCollectionHandleNoRemovalTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
             const int expectedItem = 2;
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 // Do not remove any item (the purpose of this test is to handle an
                 // item without removing it).
                 removeItem = false;
@@ -283,13 +278,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionClearItemsTest()
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
-            HandleableCollection<int>.Handler handler = (int value, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int value, out bool removeItem) => {
                 if (value == 7)
                 {
                     removeItem = true;
@@ -300,7 +294,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return false;
             };
 
-            using var cancellation = new CancellationTokenSource(DefaultPositiveVerificationTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPositiveVerificationTimeout);
             Task handleAsyncTask = Task.Run(() => collection.HandleAsync(handler, cancellation.Token));
 
             // Task.Delay intentionally shorter than default timeout to check that HandleAsync
@@ -338,30 +332,29 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public async Task HandleableCollectionHandlerThrowsTest()
         {
-            await HandleableCollectionHandlerThrowsTestCore(useAsync: false);
+            await HandleableCollectionTests.HandleableCollectionHandlerThrowsTestCore(useAsync: false);
         }
 
         [Fact]
         public async Task HandleableCollectionHandlerThrowsTestAsync()
         {
-            await HandleableCollectionHandlerThrowsTestCore(useAsync: true);
+            await HandleableCollectionTests.HandleableCollectionHandlerThrowsTestCore(useAsync: true);
         }
 
         /// <summary>
         /// Tests that handler does not have to remove an item from the collection
         /// and that the handled item is the item on which the handler completed.
         /// </summary>
-        private async Task HandleableCollectionHandlerThrowsTestCore(bool useAsync)
+        private static async Task HandleableCollectionHandlerThrowsTestCore(bool useAsync)
         {
-            using var collection = new HandleableCollection<int>();
+            using HandleableCollection<int> collection = new();
             Assert.Empty(collection);
 
-            var shim = new HandleableCollectionApiShim<int>(collection, useAsync);
+            HandleableCollectionApiShim<int> shim = new(collection, useAsync);
 
             AddRangeAndVerifyItems(collection, endInclusive: 4);
 
-            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) =>
-            {
+            HandleableCollection<int>.Handler handler = (int item, out bool removeItem) => {
                 if (6 == item)
                 {
                     throw new InvalidOperationException();
@@ -440,7 +433,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     if (expectTimeout)
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(() => _collection.HandleAsync(cancellation.Token));
@@ -469,7 +462,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (_useAsync)
                 {
-                    using var cancellation = new CancellationTokenSource(timeout);
+                    using CancellationTokenSource cancellation = new(timeout);
                     return await _collection.HandleAsync(handler, cancellation.Token);
                 }
                 else
@@ -481,13 +474,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private class TestHandleableCollection<T> : HandleableCollection<T>
         {
-            private readonly List<TaskCompletionSource<object>> _handlerBeginSources = new List<TaskCompletionSource<object>>();
+            private readonly List<TaskCompletionSource<object>> _handlerBeginSources = new();
 
             protected override void OnHandlerBegin()
             {
                 lock (_handlerBeginSources)
                 {
-                    foreach (var source in _handlerBeginSources)
+                    foreach (TaskCompletionSource<object> source in _handlerBeginSources)
                     {
                         source.TrySetResult(null);
                     }
@@ -497,10 +490,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             public async Task WaitForHandlerBeginAsync(TimeSpan timeout)
             {
-                TaskCompletionSource<object> handlerBeginSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                using var timeoutCancellation = new CancellationTokenSource();
-                var token = timeoutCancellation.Token;
-                using var _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
+                TaskCompletionSource<object> handlerBeginSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                using CancellationTokenSource timeoutCancellation = new();
+                CancellationToken token = timeoutCancellation.Token;
+                using CancellationTokenRegistration _ = token.Register(() => handlerBeginSource.TrySetCanceled(token));
 
                 lock (_handlerBeginSources)
                 {

@@ -63,7 +63,7 @@ Examining the GC history           Other
 HistInit                           SetHostRuntime (sethostruntime)
 HistRoot                           SetSymbolServer (setsymbolserver)
 HistObj                            SetClrPath (setclrpath)
-HistObjFind                        SOSFlush
+HistObjFind                        SOSFlush (sosflush)
 HistClear                          SOSStatus (sosstatus)
                                    FAQ
                                    Help (soshelp)
@@ -2171,16 +2171,16 @@ default one.
 To turn on the stress log, set the following environment variables before
 starting the .NET Core app:
 
-set COMPlus_StressLog = 1
-set COMPlus_LogFacility = 0xffffffbf (this is a bit mask, almost all logging is on.
-                                      This is also the default value if the key 
-                                      isn't specified)
-set COMPlus_StressLogSize = 65536 (this is the default value if the key isn't
-                                   specified)
-set COMPlus_LogLevel = 6          (this is the default value if the key isn't
-                                   specified.  The higher the number the more
-                                   detailed logs are generated.  The maximum 
-                                   value is decimal 10)
+set DOTNET_StressLog = 1
+set DOTNET_LogFacility = 0xffffffbf (This is a bit mask, almost all logging is on.
+                                     This is also the default value if the key
+                                     isn't specified)
+set DOTNET_StressLogSize = 65536 (This is the default value if the key isn't
+                                  specified)
+set DOTNET_LogLevel = 6 (This is the default value if the key isn't
+                         specified. The higher the number the more
+                         detailed logs are generated. The maximum
+                         value is decimal 10)
 
 StressLogSize is the size in bytes of the in-memory log allocated for each 
 thread in the process. In the case above, each thread gets a 64K log. You 
@@ -2663,8 +2663,7 @@ COMMAND: sosstatus.
 
 -reset - reset all the cached internal SOS state.
 
-Display internal SOS status, reset the internal cached state, or change between the desktop .NET framework
-or .NET Core runtimes when both are loaded in the process or dump.
+Displays internal SOS status or resets the internal cached state.
 
     0:000> !sosstatus
     Target platform: 8664 Context size 04d0
@@ -2673,6 +2672,12 @@ or .NET Core runtimes when both are loaded in the process or dump.
     DBI file path: C:\Users\mikem\AppData\Local\Temp\SymbolCache\mscordbi.dll/5d0707425c2000/mscordbi.dll
     Cache: C:\Users\mikem\AppData\Local\Temp\SymbolCache
     Server: http://msdl.microsoft.com/download/symbols/
+\\
+
+COMMAND: sosflush.
+!sosflush
+
+Resets the internal cached state.
 \\
 
 COMMAND: setclrpath.

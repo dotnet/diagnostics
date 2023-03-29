@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -87,11 +86,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 Handle handle = MetadataTokens.Handle(methodToken);
                 if (handle.Kind != HandleKind.MethodDefinition)
+                {
                     return false;
+                }
 
                 MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
                 if (methodDebugHandle.IsNil)
+                {
                     return false;
+                }
 
                 MethodDebugInformation methodDebugInfo = _reader.GetMethodDebugInformation(methodDebugHandle);
                 SequencePointCollection sequencePoints = methodDebugInfo.GetSequencePoints();
@@ -100,10 +103,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 foreach (SequencePoint point in sequencePoints)
                 {
                     if (point.Offset > ilOffset)
+                    {
                         break;
+                    }
 
                     if (point.StartLine != 0 && !point.IsHidden)
+                    {
                         nearestPoint = point;
+                    }
                 }
 
                 if (nearestPoint.HasValue)
@@ -137,7 +144,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 Handle handle = MetadataTokens.Handle(methodToken);
                 if (handle.Kind != HandleKind.MethodDefinition)
+                {
                     return false;
+                }
 
                 MethodDebugInformationHandle methodDebugHandle = ((MethodDefinitionHandle)handle).ToDebugInformationHandle();
                 LocalScopeHandleCollection localScopes = _reader.GetLocalScopes(methodDebugHandle);
@@ -151,7 +160,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (localVar.Index == localIndex)
                         {
                             if (localVar.Attributes == LocalVariableAttributes.DebuggerHidden)
+                            {
                                 return false;
+                            }
 
                             localVarName = _reader.GetString(localVar.Name);
                             return true;

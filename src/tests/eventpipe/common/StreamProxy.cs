@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Buffers;
@@ -16,7 +15,7 @@ namespace EventPipe.UnitTests.Common
     public class StreamProxy : Stream
     {
         private Stream ProxiedStream { get; }
-        private MemoryStream InternalStream => new MemoryStream();
+        private static MemoryStream InternalStream => new();
         public override bool CanRead => ProxiedStream.CanRead;
 
         public override bool CanSeek => ProxiedStream.CanSeek;
@@ -42,14 +41,18 @@ namespace EventPipe.UnitTests.Common
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (buffer == null || offset < 0 || count < 0)
+            {
                 throw new ArgumentException("Invalid input into Read");
+            }
 
             byte[] localBuffer = ArrayPool<byte>.Shared.Rent(count);
-            var readCount = ProxiedStream.Read(localBuffer, 0, count);
+            int readCount = ProxiedStream.Read(localBuffer, 0, count);
             if (readCount == 0)
+            {
                 return readCount;
+            }
 
-            InternalStream.Write(localBuffer, 0, readCount);
+            StreamProxy.InternalStream.Write(localBuffer, 0, readCount);
 
             if (buffer.Length - offset < count)
             {
@@ -77,10 +80,10 @@ namespace EventPipe.UnitTests.Common
         public override void Write(byte[] buffer, int offset, int count)
         {
             // This stream is only for "reading" from. No need for this method.
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
-        protected bool disposed = false;
+        protected bool disposed;
         protected override void Dispose(bool disposing)
         {
             if (!disposed)
@@ -88,7 +91,7 @@ namespace EventPipe.UnitTests.Common
                 if (disposing)
                 {
                     ProxiedStream.Dispose();
-                    InternalStream.Dispose();
+                    StreamProxy.InternalStream.Dispose();
                 }
 
                 disposed = true;
@@ -97,14 +100,14 @@ namespace EventPipe.UnitTests.Common
 
         public void DumpStreamToDisk()
         {
-            var streamDumpDir = System.Environment.GetEnvironmentVariable("_PIPELINE_STREAMDUMPDIR") ?? Path.GetTempPath();
+            string streamDumpDir = System.Environment.GetEnvironmentVariable("_PIPELINE_STREAMDUMPDIR") ?? Path.GetTempPath();
             Logger.logger.Log($"\t streamDumpDir = {streamDumpDir}");
-            var filePath = Path.Combine(streamDumpDir, Path.GetRandomFileName() + ".nettrace");
-            using (var streamDumpFile = File.Create(filePath))
+            string filePath = Path.Combine(streamDumpDir, Path.GetRandomFileName() + ".nettrace");
+            using (FileStream streamDumpFile = File.Create(filePath))
             {
                 Logger.logger.Log($"\t Writing stream for PID {System.Diagnostics.Process.GetCurrentProcess().Id} to {filePath}");
-                InternalStream.Seek(0, SeekOrigin.Begin);
-                InternalStream.CopyTo(streamDumpFile);
+                StreamProxy.InternalStream.Seek(0, SeekOrigin.Begin);
+                StreamProxy.InternalStream.CopyTo(streamDumpFile);
             }
         }
     }

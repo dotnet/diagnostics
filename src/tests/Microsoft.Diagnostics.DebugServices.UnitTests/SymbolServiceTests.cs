@@ -1,13 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -24,7 +22,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void SymbolPathTests()
         {
-            var symbolService = new SymbolService(this);
+            SymbolService symbolService = new(this);
             Assert.False(symbolService.ParseSymbolPath("srv"));
             Assert.False(symbolService.ParseSymbolPath("cache"));
             Assert.False(symbolService.ParseSymbolPath("symsrv"));
@@ -48,7 +46,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.True(symbolService.ParseSymbolPath("cache*;srv*"));
             Assert.Equal(defaultPath, symbolService.FormatSymbolStores());
             symbolService.DisableSymbolStore();
-            
+
             Assert.True(symbolService.ParseSymbolPath("srv*https://msdl.microsoft.com/download/symbols/"));
             Assert.Equal(defaultServer, symbolService.FormatSymbolStores());
             symbolService.DisableSymbolStore();
@@ -97,13 +95,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
-        HostType IHost.HostType => HostType.DotnetDump;
+        public IServiceEvent<ITarget> OnTargetCreate { get; } = new ServiceEvent<ITarget>();
 
-        IServiceProvider IHost.Services => throw new NotImplementedException();
+        public HostType HostType => HostType.DotnetDump;
 
-        IEnumerable<ITarget> IHost.EnumerateTargets() => throw new NotImplementedException();
+        public IServiceProvider Services => throw new NotImplementedException();
 
-        void IHost.DestroyTarget(ITarget target) => throw new NotImplementedException();
+        public IEnumerable<ITarget> EnumerateTargets() => throw new NotImplementedException();
 
         #endregion
     }
@@ -112,8 +110,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     {
         public static string FormatSymbolStores(this SymbolService symbolService)
         {
-            StringBuilder sb = new StringBuilder();
-            symbolService.ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
+            StringBuilder sb = new();
+            symbolService.ForEachSymbolStore<SymbolStore.SymbolStores.SymbolStore>((symbolStore) => sb.AppendLine(symbolStore.ToString()));
             return sb.ToString().Replace(Environment.NewLine, " ").TrimEnd();
         }
     }

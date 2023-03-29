@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 
@@ -18,8 +17,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         Flags = CommandFlags.Global)]
     public class SetSymbolServerCommand : CommandBase
     {
+        [ServiceImport]
         public ISymbolService SymbolService { get; set; }
 
+        [ServiceImport(Optional = true)]
         public IModuleService ModuleService { get; set; }
 
         [Option(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
@@ -89,7 +90,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 SymbolService.AddDirectoryPath(Directory);
             }
-            if (LoadSymbols)
+            if (LoadSymbols && ModuleService is not null)
             {
                 foreach (IModule module in ModuleService.EnumerateModules())
                 {

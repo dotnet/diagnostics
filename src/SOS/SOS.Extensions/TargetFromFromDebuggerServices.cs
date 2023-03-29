@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting.DbgEng.Interop;
-using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace SOS.Extensions
@@ -16,10 +15,10 @@ namespace SOS.Extensions
     /// <summary>
     /// ITarget implementation for the ClrMD IDataReader
     /// </summary>
-    internal class TargetFromDebuggerServices : Target
+    internal sealed class TargetFromDebuggerServices : Target
     {
         /// <summary>
-        /// Create a target instance from IDataReader
+        /// Build a target instance from IDataReader
         /// </summary>
         internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host, int id)
             : base(host, id, dumpPath: null)
@@ -38,7 +37,8 @@ namespace SOS.Extensions
 
             hr = debuggerServices.GetDebuggeeType(out DEBUG_CLASS debugClass, out DEBUG_CLASS_QUALIFIER qualifier);
             Debug.Assert(hr == HResult.S_OK);
-            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP) {
+            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP)
+            {
                 IsDump = true;
             }
 
@@ -72,22 +72,29 @@ namespace SOS.Extensions
             }
 
             // Add the thread, memory, and module services
-            IMemoryService rawMemoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
-            ServiceProvider.AddServiceFactory<IModuleService>(() => new ModuleServiceFromDebuggerServices(this, rawMemoryService, debuggerServices));
-            ServiceProvider.AddServiceFactory<IThreadService>(() => new ThreadServiceFromDebuggerServices(this, debuggerServices));
-            ServiceProvider.AddServiceFactory<IMemoryService>(() => {
+            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) => {
                 Debug.Assert(Host.HostType != HostType.DotnetDump);
-                IMemoryService memoryService = rawMemoryService;
+                IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
                 if (IsDump && Host.HostType == HostType.Lldb)
                 {
-                    // This is a special memory service that maps the managed assemblies' metadata into the address 
+                    ServiceContainerFactory clone = _serviceContainerFactory.Clone();
+                    clone.RemoveServiceFactory<IMemoryService>();
+
+                    // lldb doesn't map managed modules into the address space
+                    memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: true);
+
+                    // This is a special memory service that maps the managed assemblies' metadata into the address
                     // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
-                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping 
+                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping
                     // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
-                    return new MetadataMappingMemoryService(this, memoryService);
+                    memoryService = new MetadataMappingMemoryService(clone.Build(), memoryService);
                 }
                 return memoryService;
             });
+
+            Finished();
         }
     }
 }

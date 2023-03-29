@@ -1,45 +1,65 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Memory service wrapper that maps always module's metadata into the address 
+    /// Memory service wrapper that maps always module's metadata into the address
     /// space even is some or all of the memory exists in the coredump. lldb returns
-    /// zero's (instead of failing the memory read) for missing pages in core dumps 
-    /// that older (less than 5.0) createdumps generate  so it needs this special 
+    /// zero's (instead of failing the memory read) for missing pages in core dumps
+    /// that older (less than 5.0) createdumps generate  so it needs this special
     /// metadata  mapping memory service.
     /// </summary>
-    public class MetadataMappingMemoryService : IMemoryService
+    public class MetadataMappingMemoryService : IMemoryService, IDisposable
     {
-        private readonly ITarget _target;
+        private readonly ServiceContainer _serviceContainer;
         private readonly IMemoryService _memoryService;
+        private readonly IRuntimeService _runtimeService;
+        private readonly ISymbolService _symbolService;
+        private readonly IDisposable _onChangeEvent;
         private bool _regionInitialized;
         private ImmutableArray<MetadataRegion> _regions;
-        private IRuntimeService _runtimeService;
-        private ISymbolService _symbolService;
 
         /// <summary>
         /// Memory service constructor
         /// </summary>
-        /// <param name="target">target instance</param>
+        /// <param name="container">service container</param>
         /// <param name="memoryService">memory service to wrap</param>
-        public MetadataMappingMemoryService(ITarget target, IMemoryService memoryService)
+        public MetadataMappingMemoryService(ServiceContainer container, IMemoryService memoryService)
         {
-            _target = target;
+            _serviceContainer = container;
+            container.AddService(memoryService);
+
             _memoryService = memoryService;
+            _runtimeService = container.GetService<IRuntimeService>();
+            _symbolService = container.GetService<ISymbolService>();
+
+            ITarget target = container.GetService<ITarget>();
             target.OnFlushEvent.Register(Flush);
-            target.DisposeOnDestroy(SymbolService?.OnChangeEvent.Register(Flush));
+
+            ISymbolService symbolService = container.GetService<ISymbolService>();
+            _onChangeEvent = symbolService?.OnChangeEvent.Register(Flush);
+        }
+
+        public void Dispose()
+        {
+            Flush();
+            _onChangeEvent?.Dispose();
+            _serviceContainer.RemoveService(typeof(IMemoryService));
+            _serviceContainer.DisposeServices();
+            if (_memoryService is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         }
 
         /// <summary>
@@ -73,7 +93,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 MetadataRegion region = FindRegion(address);
                 if (region != null)
                 {
-                    if (region.ReadMetaData(address, buffer, out bytesRead)) {
+                    if (region.ReadMetaData(address, buffer, out bytesRead))
+                    {
                         return true;
                     }
                 }
@@ -103,16 +124,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                var runtimes = RuntimeService.EnumerateRuntimes();
+                System.Collections.Generic.IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();
                 if (runtimes.Any())
                 {
                     foreach (IRuntime runtime in runtimes)
                     {
                         Trace.TraceInformation($"FindRegion: initializing regions for runtime #{runtime.Id}");
                         ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
-                        if (clrRuntime != null)
+                        if (clrRuntime is not null)
                         {
-                            Trace.TraceInformation($"FindRegion: initializing regions for CLR runtime #{runtime.Id}");
+                            Trace.TraceInformation($"FindRegion: initializing regions for ClrRuntime #{runtime.Id}");
                             _regions = clrRuntime.EnumerateModules()
                                 .Where((module) => module.MetadataAddress != 0 && module.IsPEFile && !module.IsDynamic)
                                 .Select((module) => new MetadataRegion(this, module))
@@ -159,7 +180,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             Debug.Assert(module.ImageBase != 0);
 
-            var metadata = ImmutableArray<byte>.Empty;
+            ImmutableArray<byte> metadata = ImmutableArray<byte>.Empty;
             bool isVirtual = module.Layout != ModuleLayout.Flat;
             try
             {
@@ -167,25 +188,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
                 if (peFile.IsValid())
                 {
-                    metadata = SymbolService.GetMetadata(module.Name, peFile.Timestamp, peFile.SizeOfImage);
+                    metadata = _symbolService.GetMetadata(module.Name, peFile.Timestamp, peFile.SizeOfImage);
                 }
                 else
                 {
                     Trace.TraceError($"GetMetaData: {module.ImageBase:X16} not valid PE");
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"GetMetaData: loaded {module.ImageBase:X16} exception {ex.Message}");
             }
             return metadata;
         }
 
-        private IRuntimeService RuntimeService => _runtimeService ??= _target.Services.GetService<IRuntimeService>();
-
-        private ISymbolService SymbolService => _symbolService ??= _target.Services.GetService<ISymbolService>();
-
-        class MetadataRegion : IComparable<MetadataRegion>
+        private sealed class MetadataRegion : IComparable<MetadataRegion>
         {
             private readonly MetadataMappingMemoryService _memoryService;
             private readonly ClrModule _module;

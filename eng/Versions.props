@@ -16,23 +16,26 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.408101</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.417001</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6470Version>7.0.2</VSRedistCommonNetCoreSharedFrameworkx6470Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>7.0.2</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0-preview.3.23155.1</VSRedistCommonNetCoreSharedFrameworkx6480Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0-preview.3.23155.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>7.0.2</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>7.0.2</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.4.23178.4</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.4.23178.4</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>7.0.103-servicing.23073.22</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>8.0.100-preview.3.23156.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp60Version>6.0.8</MicrosoftNETCoreApp60Version>
+    <MicrosoftNETCoreApp60Version>6.0.14</MicrosoftNETCoreApp60Version>
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
+    <MicrosoftNETCoreApp70Version>7.0.3</MicrosoftNETCoreApp70Version>
+    <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
-    <SingleFileRuntime60Version>6.0.8</SingleFileRuntime60Version>
-    <SingleFileRuntimeLatestVersion>7.0.2</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
+    <SingleFileRuntime70Version>7.0.2</SingleFileRuntime70Version>
+    <SingleFileRuntimeLatestVersion>8.0.0-preview.2.23127.4</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -40,10 +43,9 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>5.0.0</SystemReflectionMetadataVersion>
-    <MicrosoftWin32PrimitivesVersion>4.3.0</MicrosoftWin32PrimitivesVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>1.1.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>2.3.408001</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>3.0.0-beta.23177.1</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <!-- Use pinned version to avoid picking up latest (which doesn't support netcoreapp3.1) during source-build -->
@@ -57,13 +59,44 @@
     <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemMemoryVersion>4.5.4</SystemMemoryVersion>
+    <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
     <SystemTextEncodingsWebVersion>4.7.2</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>4.7.1</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>8.0.0-beta.23168.1</MicrosoftDotNetCodeAnalysisVersion>
+    <StyleCopAnalyzersVersion>1.2.0-beta.406</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
-    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>8.0.0-alpha.1.23076.1</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
-    <MicrosoftSourceLinkGitHubVersion>1.2.0-beta-22518-02</MicrosoftSourceLinkGitHubVersion>
+    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>8.0.0-alpha.1.23178.3</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
+    <MicrosoftSourceLinkGitHubVersion>1.2.0-beta-23165-02</MicrosoftSourceLinkGitHubVersion>
+    <!-- Roslyn and analyzers -->
+    <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
+    <MicrosoftCodeAnalysisVersion_3_11>3.11.0</MicrosoftCodeAnalysisVersion_3_11>
+    <!-- Compatibility with VS 17.0/.NET SDK 6.0.1xx  -->
+    <MicrosoftCodeAnalysisVersion_4_0>4.0.1</MicrosoftCodeAnalysisVersion_4_0>
+    <!-- Compatibility with VS 17.4/.NET SDK 7.0.1xx -->
+    <!--
+      The exact version is a moving target until we ship.
+      It should never go ahead of the Roslyn version included in the SDK version in dotnet/arcade's global.json to avoid causing breaks in product construction.
+    -->
+    <MicrosoftCodeAnalysisVersion_4_4>4.4.0</MicrosoftCodeAnalysisVersion_4_4>
+    <MicrosoftCodeAnalysisVersion_LatestVS>4.4.0</MicrosoftCodeAnalysisVersion_LatestVS>
+    <MicrosoftCodeAnalysisVersion_LatestVS Condition="'$(DotNetBuildFromSource)' == 'true'">$(MicrosoftCodeAnalysisVersion)</MicrosoftCodeAnalysisVersion_LatestVS>
+    <MicrosoftCodeAnalysisAnalyzersVersion>3.3.5-beta1.23124.1</MicrosoftCodeAnalysisAnalyzersVersion>
+    <MicrosoftCodeAnalysisNetAnalyzersVersion>8.0.0-preview1.23124.1</MicrosoftCodeAnalysisNetAnalyzersVersion>
+    <!--
+      These packages affect the design-time experience in VS, so we update them at the same cadance as the MicrosoftCodeAnalysisVersion_LatestVS version.
+    -->
+    <MicrosoftCodeAnalysisCSharpCodeStyleVersion>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisCSharpCodeStyleVersion>
+    <!-- dotnet/roslyn dependencies -->
+    <!--
+      These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
+      Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property above to ensure
+      they do not break the local dev experience.
+    -->
+    <MicrosoftCodeAnalysisCSharpVersion>4.6.0-1.23073.4</MicrosoftCodeAnalysisCSharpVersion>
+    <MicrosoftCodeAnalysisVersion>4.6.0-1.23073.4</MicrosoftCodeAnalysisVersion>
+    <MicrosoftNetCompilersToolsetVersion>4.6.0-1.23073.4</MicrosoftNetCompilersToolsetVersion>
   </PropertyGroup>
 </Project>

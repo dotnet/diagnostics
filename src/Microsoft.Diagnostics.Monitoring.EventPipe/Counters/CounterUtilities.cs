@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -15,26 +14,30 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         //is treated as invalid and excluded from the payload.
         public static IDictionary<string, string> GetMetadata(string metadataPayload, char kvSeparator = ':')
         {
-            var metadataDict = new Dictionary<string, string>();
+            Dictionary<string, string> metadataDict = new();
 
             ReadOnlySpan<char> metadata = metadataPayload;
 
-            while (!metadata.IsEmpty) {
+            while (!metadata.IsEmpty)
+            {
                 int commaIndex = metadata.IndexOf(',');
 
                 ReadOnlySpan<char> kvPair;
 
-                if (commaIndex < 0) {
+                if (commaIndex < 0)
+                {
                     kvPair = metadata;
                     metadata = default;
                 }
-                else {
+                else
+                {
                     kvPair = metadata[..commaIndex];
                     metadata = metadata.Slice(commaIndex + 1);
                 }
 
                 int colonIndex = kvPair.IndexOf(kvSeparator);
-                if (colonIndex < 0) {
+                if (colonIndex < 0)
+                {
                     metadataDict.Clear();
                     break;
                 }
@@ -47,9 +50,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return metadataDict;
         }
 
-        public static string AppendPercentile(string tags, double quantile) => AppendPercentile(tags, FormattableString.Invariant($"Percentile={(int)(100 * quantile)}"));
+        public static int CreatePercentile(double quantile) => (int)(100 * quantile);
+
+        public static string AppendPercentile(string tags, double quantile) => AppendPercentile(tags, FormattableString.Invariant($"Percentile={CreatePercentile(quantile)}"));
 
         private static string AppendPercentile(string tags, string percentile) => string.IsNullOrEmpty(tags) ? percentile : string.Concat(tags, ",", percentile);
     }
 }
- 

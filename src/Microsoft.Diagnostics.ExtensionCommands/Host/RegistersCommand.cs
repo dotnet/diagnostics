@@ -1,17 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "registers", Aliases = new string[] { "r" }, Help = "Displays the thread's registers.")]
     public class RegistersCommand : CommandBase
     {
+        [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
+        [ServiceImport]
         public IThread CurrentThread { get; set; }
 
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]

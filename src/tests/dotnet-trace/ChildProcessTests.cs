@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.TestHelpers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Diagnostics.CommonTestRunner;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -14,7 +13,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -38,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             DebuggeeConfiguration debuggeeConfig = DebuggeeCompiler.Execute(config, "ExitCodeTracee", OutputHelper).GetAwaiter().GetResult();
 
-            var dotnetTraceArguments = new StringBuilder();
+            StringBuilder dotnetTraceArguments = new();
             dotnetTraceArguments.Append(config.DotNetTracePath());
             dotnetTraceArguments.Append(' ');
             dotnetTraceArguments.Append(dotnetTraceCommand);
@@ -58,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             dotnetTraceArguments.Append(' ');
             dotnetTraceArguments.Append(traceeArguments);
 
-            ProcessStartInfo startInfo = new ProcessStartInfo(config.DotNetTraceHost(), dotnetTraceArguments.ToString());
+            ProcessStartInfo startInfo = new(config.DotNetTraceHost(), dotnetTraceArguments.ToString());
 
             OutputHelper.WriteLine($"Launching: {startInfo.FileName} {startInfo.Arguments}");
             startInfo.RedirectStandardInput = true;
@@ -115,7 +114,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             string[] stringsInOutput = new string[] { "\nthis\n", "\nis\n", "\na\n" };
             foreach (string s in stringsInOutput)
+            {
                 Assert.DoesNotContain(s, stdOut);
+            }
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
@@ -127,7 +128,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             string[] stringsInOutput = new string[] { "\nthis\n", "\nis\n", "\na\n" };
             foreach (string s in stringsInOutput)
+            {
                 Assert.Contains(s, stdOut);
+            }
         }
     }
 }

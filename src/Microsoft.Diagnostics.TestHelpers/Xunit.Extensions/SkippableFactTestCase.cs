@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
@@ -20,8 +23,8 @@ namespace Xunit.Extensions
                                                         ExceptionAggregator aggregator,
                                                         CancellationTokenSource cancellationTokenSource)
         {
-            var skipMessageBus = new SkippableFactMessageBus(messageBus);
-            var result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource);
+            SkippableFactMessageBus skipMessageBus = new(messageBus);
+            RunSummary result = await base.RunAsync(diagnosticMessageSink, skipMessageBus, constructorArguments, aggregator, cancellationTokenSource).ConfigureAwait(false);
             if (skipMessageBus.DynamicallySkippedTestCount > 0)
             {
                 result.Failed -= skipMessageBus.DynamicallySkippedTestCount;

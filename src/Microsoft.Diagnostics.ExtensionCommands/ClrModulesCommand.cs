@@ -1,20 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
     public class ClrModulesCommand : CommandBase
     {
+        [ServiceImport(Optional = true)]
         public ClrRuntime Runtime { get; set; }
 
+        [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]

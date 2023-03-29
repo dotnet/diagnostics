@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -35,23 +34,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 throw new InvalidOperationException("End of stream", e);
             }
-            catch (Exception ex) when (!(ex is OperationCanceledException))
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 throw new InvalidOperationException("Failed to start the event pipe session", ex);
             }
 
-            _currentTask = Task.Run(async () =>
-            {
-                using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _currentTask = Task.Run(async () => {
+                using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 linkedSource.CancelAfter(duration);
-                using var _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
+                using CancellationTokenRegistration _ = linkedSource.Token.Register(() => _stopProcessingSource.TrySetResult(null));
 
                 // Use TaskCompletionSource instead of Task.Delay with cancellation to avoid
                 // using exceptions for normal termination of event stream.
                 await _stopProcessingSource.Task.ConfigureAwait(false);
 
                 await StopSessionAsync(session).ConfigureAwait(false);
-            });
+            }, cancellationToken);
 
             return session.EventStream;
         }
@@ -84,12 +82,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
             // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
             // before collection started and got rid of a pipe that once existed.
-            // Since we are catching this at the end of a session we know that the pipe once existed (otherwise the exception would've 
+            // Since we are catching this at the end of a session we know that the pipe once existed (otherwise the exception would've
             // been thrown at the beginning directly)
             catch (PlatformNotSupportedException)
             {
             }
-            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it. 
+            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it.
             catch (ServerNotAvailableException)
             {
             }

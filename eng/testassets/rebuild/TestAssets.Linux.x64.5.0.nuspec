@@ -20,7 +20,7 @@
     <copyright>Copyright 2021</copyright>
   </metadata>
   <files>
-    <file src="TestAssets.Linux.x64.5.0\1.0.246501\content\SymbolTestApp\*.*" target="content/SymbolTestApp" />
-    <file src="TestAssets.Linux.x64.5.0\1.0.246501\content\LineNums\*.*" target="content/LineNums" />
+    <file src="TestAssets.Linux.x64.5.0\1.0.257801\content\SymbolTestApp\*.*" target="content/SymbolTestApp" />
+    <file src="TestAssets.Linux.x64.5.0\1.0.257801\content\LineNums\*.*" target="content/LineNums" />
   </files>
 </package>

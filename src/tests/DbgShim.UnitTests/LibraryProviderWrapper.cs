@@ -1,15 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -17,6 +8,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 using Xunit;
 
 namespace SOS.Hosting
@@ -30,9 +31,9 @@ namespace SOS.Hosting
             Runtime = 2,
         };
 
-        public static readonly Guid IID_ICLRDebuggingLibraryProvider = new Guid("3151C08D-4D09-4f9b-8838-2880BF18FE51");
-        public static readonly Guid IID_ICLRDebuggingLibraryProvider2 = new Guid("E04E2FF1-DCFD-45D5-BCD1-16FFF2FAF7BA");
-        public static readonly Guid IID_ICLRDebuggingLibraryProvider3 = new Guid("DE3AAB18-46A0-48B4-BF0D-2C336E69EA1B");
+        public static readonly Guid IID_ICLRDebuggingLibraryProvider = new("3151C08D-4D09-4f9b-8838-2880BF18FE51");
+        public static readonly Guid IID_ICLRDebuggingLibraryProvider2 = new("E04E2FF1-DCFD-45D5-BCD1-16FFF2FAF7BA");
+        public static readonly Guid IID_ICLRDebuggingLibraryProvider3 = new("DE3AAB18-46A0-48B4-BF0D-2C336E69EA1B");
 
         public IntPtr ILibraryProvider { get; }
 
@@ -72,9 +73,21 @@ namespace SOS.Hosting
 
         private static OSPlatform GetRunningOS()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return OSPlatform.Windows;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return OSPlatform.Linux;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return OSPlatform.OSX;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return OSPlatform.Windows;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return OSPlatform.Linux;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return OSPlatform.OSX;
+            }
+
             throw new NotSupportedException($"OS not supported {RuntimeInformation.OSDescription}");
         }
 
@@ -149,9 +162,9 @@ namespace SOS.Hosting
                 {
                     if (_dbiModulePath != null)
                     {
-                        modulePath = _dbiModulePath; 
+                        modulePath = _dbiModulePath;
                     }
-                    else 
+                    else
                     {
                         modulePath = DownloadModule(DbiName, timeStamp, sizeOfImage);
                     }
@@ -174,7 +187,7 @@ namespace SOS.Hosting
                 {
                     TestGetPEInfo(modulePath, timeStamp, sizeOfImage);
                 }
-                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath); 
+                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath);
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideLibrary2 SUCCEEDED {modulePath}");
                 return HResult.S_OK;
             }
@@ -210,9 +223,9 @@ namespace SOS.Hosting
                 {
                     if (_dbiModulePath != null)
                     {
-                        modulePath = _dbiModulePath; 
+                        modulePath = _dbiModulePath;
                     }
-                    else 
+                    else
                     {
                         modulePath = DownloadModule(DbiName, timeStamp, sizeOfImage);
                     }
@@ -230,7 +243,7 @@ namespace SOS.Hosting
                     }
                 }
                 TestGetPEInfo(modulePath, timeStamp, sizeOfImage);
-                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath); 
+                modulePathOut = Marshal.StringToCoTaskMemUni(modulePath);
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary SUCCEEDED {modulePath}");
                 return HResult.S_OK;
             }
@@ -261,7 +274,7 @@ namespace SOS.Hosting
                 string modulePath = null;
                 if (buildIdBytes != null && buildIdSize > 0)
                 {
-                    Span<byte> span = new Span<byte>(buildIdBytes, buildIdSize);
+                    Span<byte> span = new(buildIdBytes, buildIdSize);
                     buildId = span.ToArray();
                 }
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideUnixLibrary {fileName} {runtimeModulePath} {indexType} {string.Concat(buildId.Select((b) => b.ToString("x2")))}");
@@ -360,7 +373,7 @@ namespace SOS.Hosting
             return downloadedPath;
         }
 
-        private void TestGetPEInfo(string filePath, uint timeStamp, uint sizeOfImage)
+        private static void TestGetPEInfo(string filePath, uint timeStamp, uint sizeOfImage)
         {
             if (filePath != null && timeStamp != 0 && sizeOfImage != 0)
             {
@@ -369,7 +382,7 @@ namespace SOS.Hosting
                     using Stream stream = Utilities.TryOpenFile(filePath);
                     if (stream is not null)
                     {
-                        var peFile = new PEFile(new StreamAddressSpace(stream), false);
+                        PEFile peFile = new(new StreamAddressSpace(stream), false);
                         if (peFile.IsValid())
                         {
                             Assert.Equal(peFile.Timestamp, timeStamp);
@@ -382,7 +395,7 @@ namespace SOS.Hosting
             }
         }
 
-        private void TestBuildId(ImmutableArray<byte> expectedBuildId, byte[] actualBuildId)
+        private static void TestBuildId(ImmutableArray<byte> expectedBuildId, byte[] actualBuildId)
         {
             if (expectedBuildId.Length > 0)
             {
@@ -396,19 +409,19 @@ namespace SOS.Hosting
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    using ELFModule elfModule = ELFModule.OpenFile(filePath);
-                    if (elfModule is not null)
+                    using ELFFile elfFile = Utilities.OpenELFFile(filePath);
+                    if (elfFile is not null)
                     {
-                        return elfModule.BuildID.ToImmutableArray();
+                        return elfFile.BuildID.ToImmutableArray();
                     }
                     throw new ArgumentException($"TestBuildId {filePath} not valid ELF file");
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    using MachOModule machOModule = MachOModule.OpenFile(filePath);
-                    if (machOModule is not null)
+                    using MachOFile machOFile = Utilities.OpenMachOFile(filePath);
+                    if (machOFile is not null)
                     {
-                        return machOModule.Uuid.ToImmutableArray();
+                        return machOFile.Uuid.ToImmutableArray();
                     }
                     throw new ArgumentException($"TestBuildId {filePath} not valid MachO file");
                 }
@@ -416,31 +429,55 @@ namespace SOS.Hosting
             return ImmutableArray<byte>.Empty;
         }
 
-        private string DbiName
+        private static string DbiName
         {
             get
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "mscordbi.dll";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "libmscordbi.so";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "libmscordbi.dylib";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return "mscordbi.dll";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return "libmscordbi.so";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return "libmscordbi.dylib";
+                }
+
                 throw new NotSupportedException($"OS not supported {RuntimeInformation.OSDescription}");
             }
         }
 
-        private string DacName 
+        private static string DacName
         {
-            get 
+            get
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return "mscordaccore.dll";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return "libmscordaccore.so";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return "libmscordaccore.dylib";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return "mscordaccore.dll";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return "libmscordaccore.so";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return "libmscordaccore.dylib";
+                }
+
                 throw new NotSupportedException($"OS not supported {RuntimeInformation.OSDescription}");
             }
         }
 
         private ISymbolService SymbolService
         {
-            get 
+            get
             {
                 if (_symbolService is null)
                 {
@@ -456,13 +493,13 @@ namespace SOS.Hosting
 
         IServiceEvent IHost.OnShutdownEvent => throw new NotImplementedException();
 
+        IServiceEvent<ITarget> IHost.OnTargetCreate => throw new NotImplementedException();
+
         HostType IHost.HostType => HostType.DotnetDump;
 
         IServiceProvider IHost.Services => throw new NotImplementedException();
 
         IEnumerable<ITarget> IHost.EnumerateTargets() => throw new NotImplementedException();
-
-        void IHost.DestroyTarget(ITarget target) => throw new NotImplementedException();
 
         #endregion
 

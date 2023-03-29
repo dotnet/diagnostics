@@ -1,11 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,13 +8,17 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
     /// Module service base implementation
     /// </summary>
-    public abstract class ModuleService : IModuleService
+    public abstract class ModuleService : IModuleService, IDisposable
     {
         [Flags]
         internal enum ELFProgramHeaderAttributes : uint
@@ -32,39 +31,45 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         // MachO writable segment attribute
-        const uint VmProtWrite = 0x02;
+        private const uint VmProtWrite = 0x02;
 
-        internal protected readonly ITarget Target;
-        internal protected IMemoryService RawMemoryService;
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
         private Dictionary<ulong, IModule> _modules;
-        private IModule[] _sortedByBaseAddress; 
+        private IModule[] _sortedByBaseAddress;
 
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
 
-        public ModuleService(ITarget target, IMemoryService rawMemoryService)
-        {
-            Debug.Assert(target != null);
-            Target = target;
-            RawMemoryService = rawMemoryService;
+        protected internal readonly IServiceProvider Services;
+        protected internal readonly ITarget Target;
 
-            target.OnFlushEvent.Register(() => {
-                _versionCache?.Clear();
-                if (_modules != null)
+        public ModuleService(IServiceProvider services)
+        {
+            Services = services;
+            Target = services.GetService<ITarget>();
+            Target.OnFlushEvent.Register(Flush);
+        }
+
+        public void Dispose() => Flush();
+
+        private void Flush()
+        {
+            _versionCache?.Clear();
+            if (_modules is not null)
+            {
+                foreach (IModule module in _modules.Values)
                 {
-                    foreach (IModule module in _modules.Values)
+                    if (module is IDisposable disposable)
                     {
-                        if (module is IDisposable disposable) {
-                            disposable.Dispose();
-                        }
+                        disposable.Dispose();
                     }
                 }
+                _modules.Clear();
                 _modules = null;
-                _sortedByBaseAddress = null;
-            });
+            }
+            _sortedByBaseAddress = null;
         }
 
         #region IModuleService
@@ -103,7 +108,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="DiagnosticsException">base address not found</exception>
         IModule IModuleService.GetModuleFromBaseAddress(ulong baseAddress)
         {
-            if (!GetModules().TryGetValue(baseAddress, out IModule module)) {
+            if (!GetModules().TryGetValue(baseAddress, out IModule module))
+            {
                 throw new DiagnosticsException($"Invalid module base address: {baseAddress:X16}");
             }
             return module;
@@ -116,7 +122,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>module or null</returns>
         IModule IModuleService.GetModuleFromAddress(ulong address)
         {
-            Debug.Assert((address & ~RawMemoryService.SignExtensionMask()) == 0);
+            Debug.Assert((address & ~MemoryService.SignExtensionMask()) == 0);
             IModule[] modules = GetSortedModules();
             int min = 0, max = modules.Length - 1;
 
@@ -127,17 +133,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IModule module = modules[mid];
 
                 ulong start = module.ImageBase;
-                Debug.Assert((start & ~RawMemoryService.SignExtensionMask()) == 0);
+                Debug.Assert((start & ~MemoryService.SignExtensionMask()) == 0);
                 ulong end = start + module.ImageSize;
 
-                if (address >= start && address < end) {
+                if (address >= start && address < end)
+                {
                     return module;
                 }
 
-                if (module.ImageBase < address) {
+                if (module.ImageBase < address)
+                {
                     min = mid + 1;
                 }
-                else { 
+                else
+                {
                     max = mid - 1;
                 }
             }
@@ -160,7 +169,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     yield return module;
                 }
-            }    
+            }
         }
 
         #endregion
@@ -170,10 +179,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private Dictionary<ulong, IModule> GetModules()
         {
-            if (_modules == null)
-            {
-                _modules = GetModulesInner();
-            }
+            _modules ??= GetModulesInner();
             return _modules;
         }
 
@@ -183,10 +189,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns></returns>
         private IModule[] GetSortedModules()
         {
-            if (_sortedByBaseAddress == null)
-            {
-                _sortedByBaseAddress = GetModules().OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
-            }
+            _sortedByBaseAddress ??= GetModules().OrderBy((pair) => pair.Key).Select((pair) => pair.Value).ToArray();
             return _sortedByBaseAddress;
         }
 
@@ -260,7 +263,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             flags = 0;
             try
             {
-                Stream stream = RawMemoryService.CreateMemoryStream(address, size);
+                Stream stream = MemoryService.CreateMemoryStream(address, size);
                 PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
                 if (peFile.IsValid())
                 {
@@ -271,7 +274,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return peFile;
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"GetPEInfo: {address:X16} isVirtual {isVirtual} exception {ex.Message}");
             }
@@ -288,13 +291,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // This code is called by the image mapping memory service so it needs to use the
             // original or raw memory service to prevent recursion so it can't use the ELFFile
             // or MachOFile instance that is available from the IModule.Services provider.
-            Stream stream = RawMemoryService.CreateMemoryStream();
+            Stream stream = MemoryService.CreateMemoryStream();
             byte[] buildId = null;
             try
             {
                 if (Target.OperatingSystem == OSPlatform.Linux)
                 {
-                    var elfFile = new ELFFile(new StreamAddressSpace(stream), address, true);
+                    ELFFile elfFile = new(new StreamAddressSpace(stream), address, true);
                     if (elfFile.IsValid())
                     {
                         buildId = elfFile.BuildID;
@@ -302,14 +305,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else if (Target.OperatingSystem == OSPlatform.OSX)
                 {
-                    var machOFile = new MachOFile(new StreamAddressSpace(stream), address, true);
+                    MachOFile machOFile = new(new StreamAddressSpace(stream), address, true);
                     if (machOFile.IsValid())
                     {
                         buildId = machOFile.Uuid;
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
             {
                 Trace.TraceError($"GetBuildId: {address:X16} exception {ex.Message}");
             }
@@ -321,7 +324,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="module">module to get version string</param>
         /// <returns>version string or null</returns>
-        protected string GetVersionString(IModule module)
+        internal string GetVersionString(IModule module)
         {
             try
             {
@@ -371,7 +374,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
             {
                 Trace.TraceError($"GetVersionString: {module} exception {ex.Message}");
             }
@@ -389,11 +392,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             byte[] buffer = new byte[s_versionString.Length];
 
-            if (_versionCache == null)
-            {
-                // We use the possibly mapped memory service to find the version string in case it isn't in the dump.
-                _versionCache = new ReadVirtualCache(MemoryService);
-            }
+            // We use the mapped memory service to find the version string in case it isn't in the dump.
+            _versionCache ??= new ReadVirtualCache(MemoryService);
             _versionCache.Clear();
 
             while (size > 0)
@@ -406,7 +406,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         address += (ulong)s_versionLength;
                         size -= s_versionLength;
 
-                        var sb = new StringBuilder();
+                        StringBuilder sb = new();
                         byte[] ch = new byte[1];
                         while (true)
                         {
@@ -448,22 +448,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private bool IsModuleEqual(IModule module, string moduleName)
         {
-            if (Target.OperatingSystem == OSPlatform.Windows) {
+            if (Target.OperatingSystem == OSPlatform.Windows)
+            {
                 return StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-            else {
+            else
+            {
                 return string.Equals(Path.GetFileName(module.FileName), moduleName);
             }
-        } 
+        }
 
-        internal protected IMemoryService MemoryService => _memoryService ??= Target.Services.GetService<IMemoryService>();
+        protected internal IMemoryService MemoryService => _memoryService ??= Services.GetService<IMemoryService>();
 
-        internal protected ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
+        protected internal ISymbolService SymbolService => _symbolService ??= Services.GetService<ISymbolService>();
 
         /// <summary>
         /// Search memory helper class
         /// </summary>
-        internal class ReadVirtualCache
+        internal sealed class ReadVirtualCache
         {
             private const int CACHE_SIZE = 4096;
 

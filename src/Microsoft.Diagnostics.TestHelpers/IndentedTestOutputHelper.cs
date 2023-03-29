@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Xunit.Abstractions;
 
@@ -12,8 +11,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public class IndentedTestOutputHelper : ITestOutputHelper
     {
-        readonly string _indentText;
-        readonly ITestOutputHelper _output;
+        private readonly string _indentText;
+        private readonly ITestOutputHelper _output;
 
         public IndentedTestOutputHelper(ITestOutputHelper innerOutput, string indentText = "    ")
         {

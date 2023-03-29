@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -14,21 +13,25 @@ namespace ParallelStacks.Runtime
     {
         public static ParallelStack Build(ClrRuntime runtime)
         {
-            var ps = new ParallelStack();
-            var stackFrames = new List<ClrStackFrame>(64);
-            foreach (var thread in runtime.Threads)
+            ParallelStack ps = new();
+            List<ClrStackFrame> stackFrames = new(64);
+            foreach (ClrThread thread in runtime.Threads)
             {
                 stackFrames.Clear();
-                foreach (var stackFrame in thread.EnumerateStackTrace().Reverse())
+                foreach (ClrStackFrame stackFrame in thread.EnumerateStackTrace().Reverse())
                 {
                     if ((stackFrame.Kind != ClrStackFrameKind.ManagedMethod) || (stackFrame.Method == null))
+                    {
                         continue;
+                    }
 
                     stackFrames.Add(stackFrame);
                 }
 
                 if (stackFrames.Count == 0)
+                {
                     continue;
+                }
 
                 ps.AddStack(thread.OSThreadId, stackFrames.ToArray());
             }
@@ -54,7 +57,7 @@ namespace ParallelStacks.Runtime
                     throw new InvalidOperationException("Unsupported platform...");
                 }
 
-                var runtime = CreateRuntime(dataTarget, dacFilePath);
+                ClrRuntime runtime = CreateRuntime(dataTarget, dacFilePath);
                 if (runtime == null)
                 {
                     return null;
@@ -91,7 +94,7 @@ namespace ParallelStacks.Runtime
                     throw new InvalidOperationException("Unsupported platform...");
                 }
 
-                var runtime = CreateRuntime(dataTarget, dacFilePath);
+                ClrRuntime runtime = CreateRuntime(dataTarget, dacFilePath);
                 if (runtime == null)
                 {
                     return null;
@@ -117,11 +120,11 @@ namespace ParallelStacks.Runtime
                     $"Architecture mismatch:  This tool is {(Environment.Is64BitProcess ? "64 bit" : "32 bit")} but target is {(isTarget64Bit ? "64 bit" : "32 bit")}");
             }
 
-            var version = dataTarget.ClrVersions[0];
-            var runtime = (dacFilePath != null) ? version.CreateRuntime(dacFilePath) : version.CreateRuntime();
+            ClrInfo version = dataTarget.ClrVersions[0];
+            ClrRuntime runtime = (dacFilePath != null) ? version.CreateRuntime(dacFilePath) : version.CreateRuntime();
             return runtime;
         }
-        
+
         private ParallelStack(ClrStackFrame frame = null)
         {
             Stacks = new List<ParallelStack>();
@@ -138,8 +141,8 @@ namespace ParallelStacks.Runtime
         private void AddStack(uint threadId, ClrStackFrame[] frames, int index = 0)
         {
             ThreadIds.Add(threadId);
-            var firstFrame = frames[index].Method?.Signature;
-            var callstack = Stacks.FirstOrDefault(s => s.Frame.Text == firstFrame);
+            string firstFrame = frames[index].Method?.Signature;
+            ParallelStack callstack = Stacks.FirstOrDefault(s => s.Frame.Text == firstFrame);
             if (callstack == null)
             {
                 callstack = new ParallelStack(frames[index]);

@@ -1,9 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.DebugServices
@@ -25,9 +23,14 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IHost
     {
         /// <summary>
-        /// Invoked on hosting debugger or dotnet-dump shutdown
+        /// Fires on hosting debugger or dotnet-dump shutdown
         /// </summary>
         IServiceEvent OnShutdownEvent { get; }
+
+        /// <summary>
+        /// Fires when an new target is created.
+        /// </summary>
+        IServiceEvent<ITarget> OnTargetCreate { get; }
 
         /// <summary>
         /// Returns the hosting debugger type
@@ -43,11 +46,5 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Enumerates all the targets
         /// </summary>
         IEnumerable<ITarget> EnumerateTargets();
-
-        /// <summary>
-        /// Destroys/closes the specified target instance
-        /// </summary>
-        /// <param name="target">target instance</param>
-        void DestroyTarget(ITarget target);
     }
 }

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 #include "sosplugin.h"
 #include <dlfcn.h>
@@ -218,7 +217,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("setsymbolserver", "Enables the symbol server support ");
     g_services->AddCommand("soshelp", new sosCommand("Help"), "Displays all available commands when no parameter is specified, or displays detailed help information about the specified command: 'soshelp <command>'.");
     g_services->AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
-    g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Flushes the DAC caches.");
+    g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Resets the internal cached state.");
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
     g_services->AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");

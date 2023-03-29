@@ -1,13 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,8 +35,8 @@ namespace Microsoft.Diagnostics.Monitoring
     /// </summary>
     internal abstract class Pipeline : IAsyncDisposable
     {
-        private readonly CancellationTokenSource _disposeSource = new CancellationTokenSource();
-        private object _lock = new object();
+        private readonly CancellationTokenSource _disposeSource = new();
+        private readonly object _lock = new();
         private bool _isCleanedUp;
         private Task _runTask;
         private Task _stopTask;
@@ -79,10 +73,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 else
                 {
-                    if (_runTask == null)
-                    {
-                        _runTask = RunAsyncCore(token);
-                    }
+                    _runTask ??= RunAsyncCore(token);
                     runTask = _runTask;
                 }
             }
@@ -91,12 +82,12 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task RunAsyncCore(CancellationToken token)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
+            using (CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
             {
                 try
                 {
                     linkedSource.Token.ThrowIfCancellationRequested();
-                    await OnRun(linkedSource.Token);
+                    await OnRun(linkedSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -106,7 +97,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 finally
                 {
-                    await Cleanup();
+                    await Cleanup().ConfigureAwait(false);
                 }
             }
         }
@@ -140,10 +131,7 @@ namespace Microsoft.Diagnostics.Monitoring
                 }
                 else
                 {
-                    if (_stopTask == null)
-                    {
-                        _stopTask = StopAsyncCore(token);
-                    }
+                    _stopTask ??= StopAsyncCore(token);
                     stopTask = _stopTask;
                 }
             }
@@ -152,16 +140,16 @@ namespace Microsoft.Diagnostics.Monitoring
 
         private async Task StopAsyncCore(CancellationToken token)
         {
-            using (var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
+            using (CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(token, _disposeSource.Token))
             {
                 try
                 {
                     linkedSource.Token.ThrowIfCancellationRequested();
-                    await OnStop(linkedSource.Token);
+                    await OnStop(linkedSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
-                    await Cleanup();
+                    await Cleanup().ConfigureAwait(false);
                     //Give precedence to the parameter token rather than the linked token
                     token.ThrowIfCancellationRequested();
                     throw;
@@ -174,10 +162,7 @@ namespace Microsoft.Diagnostics.Monitoring
             Task cleanupTask = null;
             lock (_lock)
             {
-                if (_cleanupTask == null)
-                {
-                    _cleanupTask = OnCleanup();
-                }
+                _cleanupTask ??= OnCleanup();
                 cleanupTask = _cleanupTask;
             }
             return cleanupTask;
@@ -201,9 +186,9 @@ namespace Microsoft.Diagnostics.Monitoring
             _disposeSource.Cancel();
 
             //It's necessary to fully acquire the task, await it, and then move on to the next task.
-            await SafeExecuteTask(() => _runTask);
-            await SafeExecuteTask(() => _stopTask);
-            await SafeExecuteTask(() => _cleanupTask);
+            await SafeExecuteTask(() => _runTask).ConfigureAwait(false);
+            await SafeExecuteTask(() => _stopTask).ConfigureAwait(false);
+            await SafeExecuteTask(() => _cleanupTask).ConfigureAwait(false);
 
             _disposeSource.Dispose();
         }
@@ -220,7 +205,7 @@ namespace Microsoft.Diagnostics.Monitoring
             {
                 try
                 {
-                    await task;
+                    await task.ConfigureAwait(false);
                 }
                 catch
                 {

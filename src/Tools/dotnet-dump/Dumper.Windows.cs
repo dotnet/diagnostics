@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Win32.SafeHandles;
 using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -27,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
 
                 // Open the file for writing
-                using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+                using (FileStream stream = new(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {
                     NativeMethods.MINIDUMP_TYPE dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
                     switch (type)
@@ -96,10 +95,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 public const int PROCESS_QUERY_INFORMATION = 0x0400;
 
                 [DllImport("kernel32.dll", SetLastError = true)]
-                public extern static SafeProcessHandle OpenProcess(int access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+                public static extern SafeProcessHandle OpenProcess(int access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
 
                 [DllImport("Dbghelp.dll", SetLastError = true)]
-                public extern static bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
+                public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
 
                 [StructLayout(LayoutKind.Sequential, Pack = 4)]
                 public struct MINIDUMP_EXCEPTION_INFORMATION
@@ -112,31 +111,31 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 [Flags]
                 public enum MINIDUMP_TYPE : uint
                 {
-                    MiniDumpNormal                         = 0,
-                    MiniDumpWithDataSegs                   = 1 << 0,
-                    MiniDumpWithFullMemory                 = 1 << 1,
-                    MiniDumpWithHandleData                 = 1 << 2,
-                    MiniDumpFilterMemory                   = 1 << 3,
-                    MiniDumpScanMemory                     = 1 << 4,
-                    MiniDumpWithUnloadedModules            = 1 << 5,
+                    MiniDumpNormal = 0,
+                    MiniDumpWithDataSegs = 1 << 0,
+                    MiniDumpWithFullMemory = 1 << 1,
+                    MiniDumpWithHandleData = 1 << 2,
+                    MiniDumpFilterMemory = 1 << 3,
+                    MiniDumpScanMemory = 1 << 4,
+                    MiniDumpWithUnloadedModules = 1 << 5,
                     MiniDumpWithIndirectlyReferencedMemory = 1 << 6,
-                    MiniDumpFilterModulePaths              = 1 << 7,
-                    MiniDumpWithProcessThreadData          = 1 << 8,
-                    MiniDumpWithPrivateReadWriteMemory     = 1 << 9,
-                    MiniDumpWithoutOptionalData            = 1 << 10,
-                    MiniDumpWithFullMemoryInfo             = 1 << 11,
-                    MiniDumpWithThreadInfo                 = 1 << 12,
-                    MiniDumpWithCodeSegs                   = 1 << 13,
-                    MiniDumpWithoutAuxiliaryState          = 1 << 14,
-                    MiniDumpWithFullAuxiliaryState         = 1 << 15,
-                    MiniDumpWithPrivateWriteCopyMemory     = 1 << 16,
-                    MiniDumpIgnoreInaccessibleMemory       = 1 << 17,
-                    MiniDumpWithTokenInformation           = 1 << 18,
-                    MiniDumpWithModuleHeaders              = 1 << 19,
-                    MiniDumpFilterTriage                   = 1 << 20,
-                    MiniDumpWithAvxXStateContext           = 1 << 21,
-                    MiniDumpWithIptTrace                   = 1 << 22,
-                    MiniDumpValidTypeFlags                 = (-1) ^ ((~1) << 22)
+                    MiniDumpFilterModulePaths = 1 << 7,
+                    MiniDumpWithProcessThreadData = 1 << 8,
+                    MiniDumpWithPrivateReadWriteMemory = 1 << 9,
+                    MiniDumpWithoutOptionalData = 1 << 10,
+                    MiniDumpWithFullMemoryInfo = 1 << 11,
+                    MiniDumpWithThreadInfo = 1 << 12,
+                    MiniDumpWithCodeSegs = 1 << 13,
+                    MiniDumpWithoutAuxiliaryState = 1 << 14,
+                    MiniDumpWithFullAuxiliaryState = 1 << 15,
+                    MiniDumpWithPrivateWriteCopyMemory = 1 << 16,
+                    MiniDumpIgnoreInaccessibleMemory = 1 << 17,
+                    MiniDumpWithTokenInformation = 1 << 18,
+                    MiniDumpWithModuleHeaders = 1 << 19,
+                    MiniDumpFilterTriage = 1 << 20,
+                    MiniDumpWithAvxXStateContext = 1 << 21,
+                    MiniDumpWithIptTrace = 1 << 22,
+                    MiniDumpValidTypeFlags = (-1) ^ ((~1) << 22)
                 }
             }
         }

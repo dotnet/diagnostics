@@ -1,43 +1,66 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using Microsoft.FileFormats;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
     /// Memory service wrapper that maps and fixes up PE module on read memory errors.
     /// </summary>
-    internal class ImageMappingMemoryService : IMemoryService
+    public class ImageMappingMemoryService : IMemoryService, IDisposable
     {
+        private readonly ServiceContainer _serviceContainer;
         private readonly IMemoryService _memoryService;
         private readonly IModuleService _moduleService;
         private readonly MemoryCache _memoryCache;
+        private readonly IDisposable _onChangeEvent;
         private readonly HashSet<ulong> _recursionProtection;
 
         /// <summary>
-        /// The PE and ELF image mapping memory service. This service assumes that the managed PE 
-        /// assemblies are in the module service's list. This is true for dbgeng, dotnet-dump but not
-        /// true for lldb (only native modules are provided).
+        /// The PE, ELF and MacOS image mapping memory service. For the dotnet-dump linux dump reader and
+        /// dbgeng the native module service providers managed and modules, but under lldb only native
+        /// modules are provided. The "managed" flag is for those later cases.
         /// </summary>
-        /// <param name="target">target instance</param>
+        /// <param name="container">service container</param>
         /// <param name="memoryService">memory service to wrap</param>
-        internal ImageMappingMemoryService(ITarget target, IMemoryService memoryService)
+        /// <param name="managed">if true, map managed modules, else native</param>
+        public ImageMappingMemoryService(ServiceContainer container, IMemoryService memoryService, bool managed)
         {
+            _serviceContainer = container;
+            container.AddService(memoryService);
+
             _memoryService = memoryService;
-            _moduleService = target.Services.GetService<IModuleService>();
+            _moduleService = managed ? new ManagedImageMappingModuleService(container) : container.GetService<IModuleService>();
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
             _recursionProtection = new HashSet<ulong>();
-            target.OnFlushEvent.Register(_memoryCache.FlushCache);
-            target.DisposeOnDestroy(target.Services.GetService<ISymbolService>()?.OnChangeEvent.Register(_memoryCache.FlushCache));
+
+            ITarget target = container.GetService<ITarget>();
+            target.OnFlushEvent.Register(Flush);
+
+            ISymbolService symbolService = container.GetService<ISymbolService>();
+            _onChangeEvent = symbolService?.OnChangeEvent.Register(Flush);
         }
+
+        public void Dispose()
+        {
+            Flush();
+            _onChangeEvent?.Dispose();
+            _serviceContainer.RemoveService(typeof(IMemoryService));
+            _serviceContainer.DisposeServices();
+            if (_memoryService is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+
+        protected void Flush() => _memoryCache.FlushCache();
 
         #region IMemoryService
 
@@ -85,8 +108,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
-        /// Read memory from a PE module for the memory cache. Finds locally or downloads a module 
-        /// and "maps" it into the address space. This function can return more than requested which 
+        /// Read memory from a PE module for the memory cache. Finds locally or downloads a module
+        /// and "maps" it into the address space. This function can return more than requested which
         /// means the block should not be cached.
         /// </summary>
         /// <param name="address">memory address</param>
@@ -95,18 +118,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
             Debug.Assert((address & ~_memoryService.SignExtensionMask()) == 0);
-            IModule module = _moduleService.GetModuleFromAddress(address);
-            if (module != null)
+
+            // Default is to cache errors
+            byte[] data = Array.Empty<byte>();
+
+            // Recursion can happen in the case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
+            // used to get the timestamp/filesize or build id are not in the dump.
+            if (!_recursionProtection.Contains(address))
             {
-                // Recursion can happen in the case where the PE, ELF or MachO headers (in the module.Services.GetService<>() calls)
-                // used to get the timestamp/filesize or build id are not in the dump.
-                if (!_recursionProtection.Contains(address))
+                _recursionProtection.Add(address);
+                try
                 {
-                    _recursionProtection.Add(address);
-                    try
+                    IModule module = _moduleService.GetModuleFromAddress(address);
+                    if (module != null)
                     {
                         // We found a module that contains the memory requested. Now find or download the PE image.
-                        PEReader reader = module.Services.GetService<PEReader>();
+                        PEReader reader = module.Services.GetService<PEModule>()?.GetPEReader();
                         if (reader is not null)
                         {
                             int rva = (int)(address - module.ImageBase);
@@ -119,7 +146,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             // Not reading anything in the PE's header
                             if (rva > reader.PEHeaders.PEHeader.SizeOfHeaders)
                             {
-                                // This property can cause recursion because this PE being mapped here is read to determine the layout 
+                                // This property can cause recursion because this PE being mapped here is read to determine the layout
                                 if (!module.IsFileLayout.GetValueOrDefault(true))
                                 {
                                     // If the PE image that we are mapping into has the "loaded" layout convert the rva to a flat/file based one.
@@ -137,8 +164,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                             try
                             {
-                                byte[] data = null;
-
                                 // Read the memory from the PE image found/downloaded above
                                 PEMemoryBlock block = reader.GetEntireImage();
                                 if (rva < block.Length)
@@ -154,10 +179,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                         Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X8} {module.FileName}");
                                     }
                                 }
-                                
-                                return data;
                             }
-                            catch (Exception ex) when (ex is BadImageFormatException || ex is InvalidOperationException || ex is IOException)
+                            catch (Exception ex) when (ex is BadImageFormatException or InvalidOperationException or IOException)
                             {
                                 Trace.TraceError($"ReadMemoryFromModule: exception: address {address:X16} {ex.Message} {module.FileName}");
                             }
@@ -165,12 +188,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         else
                         {
                             // Find or download the ELF image, if one.
-                            Reader virtualAddressReader = module.Services.GetService<ELFModule>()?.VirtualAddressReader;
-                            if (virtualAddressReader is null)
-                            {
-                                // Find or download the MachO image, if one.
-                                virtualAddressReader = module.Services.GetService<MachOModule>()?.VirtualAddressReader;
-                            }
+                            Reader virtualAddressReader = module.Services.GetService<ELFModule>()?.GetELFFile()?.VirtualAddressReader;
+                            // Find or download the MachO image, if one.
+                            virtualAddressReader ??= module.Services.GetService<MachOModule>()?.GetMachOFile()?.VirtualAddressReader;
                             if (virtualAddressReader is not null)
                             {
                                 // Read the memory from the image.
@@ -181,46 +201,45 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 #if TRACE_VERBOSE
                                     Trace.TraceInformation($"ReadMemoryFromModule: address {address:X16} rva {rva:X16} size {bytesRequested:X8} in ELF or MachO file {module.FileName}");
 #endif
-                                    byte[] data = new byte[bytesRequested];
+                                    data = new byte[bytesRequested];
                                     uint read = virtualAddressReader.Read(rva, data, 0, (uint)bytesRequested);
                                     if (read == 0)
                                     {
                                         Trace.TraceError($"ReadMemoryFromModule: FAILED address {address:X16} rva {rva:X16} {module.FileName}");
-                                        data = null;
+                                        data = Array.Empty<byte>();
                                     }
-                                    return data;
                                 }
-                                catch (Exception ex) when (ex is BadInputFormatException || ex is InvalidVirtualAddressException)
+                                catch (Exception ex) when (ex is BadInputFormatException or InvalidVirtualAddressException)
                                 {
                                     Trace.TraceError($"ReadMemoryFromModule: ELF or MachO file exception: address {address:X16} {ex.Message} {module.FileName}");
                                 }
                             }
                         }
                     }
-                    finally
-                    {
-                        _recursionProtection.Remove(address);
-                    }
                 }
-                else
+                finally
                 {
-                    Trace.TraceError($"ReadMemoryFromModule: recursion: address {address:X16} size {bytesRequested:X8} {module.FileName}");
+                    _recursionProtection.Remove(address);
                 }
             }
-            return null;
+            else
+            {
+                throw new InvalidOperationException($"ReadMemoryFromModule: recursion: address {address:X16} size {bytesRequested:X8}");
+            }
+            return data;
         }
 
-        enum BaseRelocationType
+        private enum BaseRelocationType
         {
-            ImageRelBasedAbsolute   = 0,
-            ImageRelBasedHigh       = 1,
-            ImageRelBasedLow        = 2,
-            ImageRelBasedHighLow    = 3,
-            ImageRelBasedHighAdj    = 4,
-            ImageRelBasedDir64      = 10,
+            ImageRelBasedAbsolute = 0,
+            ImageRelBasedHigh = 1,
+            ImageRelBasedLow = 2,
+            ImageRelBasedHighLow = 3,
+            ImageRelBasedHighAdj = 4,
+            ImageRelBasedDir64 = 10,
         }
 
-        private void ApplyRelocations(IModule module, PEReader reader, int dataVA, byte[] data)
+        private static void ApplyRelocations(IModule module, PEReader reader, int dataVA, byte[] data)
         {
             PEMemoryBlock relocations = reader.GetSectionData(".reloc");
             if (relocations.Length > 0)
@@ -235,7 +254,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // Read IMAGE_BASE_RELOCATION struct
                     int virtualAddress = blob.ReadInt32();
                     int sizeOfBlock = blob.ReadInt32();
-
+                    if (sizeOfBlock <= 0)
+                    {
+                        break;
+                    }
                     // Each relocation block covers 4K
                     if (dataVA >= virtualAddress && dataVA < (virtualAddress + 4096))
                     {
@@ -248,10 +270,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             // Read relocation type/offset
                             ushort entry = blob.ReadUInt16();
-                            if (entry == 0) {
+                            if (entry == 0)
+                            {
                                 break;
                             }
-                            var type = (BaseRelocationType)(entry >> 12);       // type is 4 upper bits
+                            BaseRelocationType type = (BaseRelocationType)(entry >> 12);       // type is 4 upper bits
                             int relocVA = virtualAddress + (entry & 0xfff);     // offset is 12 lower bits
 
                             // Is this relocation in the data?
@@ -272,17 +295,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
                                         break;
-                                    
+
                                     case BaseRelocationType.ImageRelBasedDir64:
                                         if ((offset + sizeof(ulong)) <= data.Length)
                                         {
                                             ulong value = BitConverter.ToUInt64(data, offset);
-                                            value += baseDelta;
+                                            unchecked { value += baseDelta; }
                                             byte[] source = BitConverter.GetBytes(value);
                                             Array.Copy(source, 0, data, offset, source.Length);
                                         }
                                         break;
-                                    
+
                                     default:
                                         Debug.Fail($"ApplyRelocations: invalid relocation type {type}");
                                         break;

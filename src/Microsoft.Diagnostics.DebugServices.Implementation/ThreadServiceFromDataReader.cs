@@ -1,14 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.DataReaders.Implementation;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -20,8 +18,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly IDataReader _dataReader;
         private readonly IThreadReader _threadReader;
 
-        public ThreadServiceFromDataReader(ITarget target, IDataReader dataReader)
-            : base(target)
+        public ThreadServiceFromDataReader(IServiceProvider services, IDataReader dataReader)
+            : base(services)
         {
             _dataReader = dataReader;
             _threadReader = (IThreadReader)dataReader;

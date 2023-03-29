@@ -1,9 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Threading;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -13,7 +11,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IContextService
     {
         /// <summary>
-        /// Current context service provider. Contains the current ITarget, IThread 
+        /// Current context service provider. Contains the current ITarget, IThread
         /// and IRuntime instances along with all per target and global services.
         /// </summary>
         IServiceProvider Services { get; }
@@ -46,7 +44,7 @@ namespace Microsoft.Diagnostics.DebugServices
         void ClearCurrentThread();
 
         /// <summary>
-        /// Set the current runtime 
+        /// Set the current runtime
         /// </summary>
         /// <param name="runtimeId">runtime id</param>
         void SetCurrentRuntime(int runtimeId);

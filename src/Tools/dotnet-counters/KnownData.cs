@@ -1,24 +1,21 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
-using Microsoft.Diagnostics.Tracing.Parsers;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     internal static class KnownData
     {
         private const string maxVersion = "8.0";
-        
+
         internal static readonly string[] s_AllVersions = new[] { net30, net31, net50, net60, net70, net80 };
         private static readonly string[] s_StartingNet5 = new[] { net50, net60, net70, net80 };
         private static readonly string[] s_StartingNet6 = new[] { net60, net70, net80 };
         private static readonly string[] s_StartingNet7 = new[] { net70, net80 };
-        
+
         private static readonly IReadOnlyDictionary<string, CounterProvider> _knownProviders =
             CreateKnownProviders(maxVersion).ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
@@ -35,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "System.Runtime", // Name
                 "A default set of performance counters provided by the .NET runtime.", // Description
                 "0xffffffff", // Keywords
-                "5", // Level 
+                "5", // Level
                 new[] { // Counters
                     new CounterProfile{ Name="cpu-usage", Description="The percent of process' CPU usage relative to all of the system CPU resources [0-100]", SupportedVersions=s_AllVersions },
                     new CounterProfile{ Name="working-set", Description="Amount of working set used by the process (MB)", SupportedVersions=s_AllVersions },
@@ -68,7 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 "Microsoft.AspNetCore.Hosting", // Name
                 "A set of performance counters provided by ASP.NET Core.", // Description
                 "0x0", // Keywords
-                "4", // Level 
+                "4", // Level
                 new[] { // Counters
                     new CounterProfile{ Name="requests-per-second", Description="Number of requests between update intervals", SupportedVersions=s_AllVersions },
                     new CounterProfile{ Name="total-requests", Description="Total number of requests", SupportedVersions=s_AllVersions },

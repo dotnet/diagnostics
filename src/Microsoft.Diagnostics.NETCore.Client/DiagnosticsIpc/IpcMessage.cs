@@ -2,10 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,14 +15,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     internal enum DiagnosticsIpcError : uint
     {
-        Fail                  = 0x80004005,
-        InvalidArgument       = 0x80070057,
-        NotSupported          = 0x80131515,
+        Fail = 0x80004005,
+        InvalidArgument = 0x80070057,
+        NotSupported = 0x80131515,
         ProfilerAlreadyActive = 0x8013136A,
-        BadEncoding           = 0x80131384,
-        UnknownCommand        = 0x80131385,
-        UnknownMagic          = 0x80131386,
-        UnknownError          = 0x80131387,
+        BadEncoding = 0x80131384,
+        UnknownCommand = 0x80131385,
+        UnknownMagic = 0x80131386,
+        UnknownError = 0x80131387,
     }
 
     /// <summary>
@@ -32,7 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     internal enum DiagnosticsMessageType : uint
     {
         /// <summary>
-        /// Initiates core dump generation 
+        /// Initiates core dump generation
         /// </summary>
         GenerateCoreDump = 1,
         /// <summary>
@@ -88,18 +87,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
-        public byte[] Payload { get; private set; } = null;
-        public IpcHeader Header { get; private set; } = default;
+        public byte[] Payload { get; private set; }
+        public IpcHeader Header { get; private set; }
 
         public byte[] Serialize()
-        { 
+        {
             byte[] serializedData = null;
             // Verify things will fit in the size capacity
-            Header.Size = checked((UInt16)(IpcHeader.HeaderSizeInBytes + Payload.Length));
+            Header.Size = checked((ushort)(IpcHeader.HeaderSizeInBytes + Payload.Length));
             byte[] headerBytes = Header.Serialize();
 
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 writer.Write(headerBytes);
                 writer.Write(Payload);
@@ -112,8 +111,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static IpcMessage Parse(Stream stream)
         {
-            IpcMessage message = new IpcMessage();
-            using (var reader = new BinaryReader(stream, Encoding.UTF8, true))
+            IpcMessage message = new();
+            using (BinaryReader reader = new(stream, Encoding.UTF8, true))
             {
                 message.Header = IpcHeader.Parse(reader);
                 message.Payload = reader.ReadBytes(message.Header.Size - IpcHeader.HeaderSizeInBytes);
@@ -123,7 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static async Task<IpcMessage> ParseAsync(Stream stream, CancellationToken cancellationToken)
         {
-            IpcMessage message = new IpcMessage();
+            IpcMessage message = new();
             message.Header = await IpcHeader.ParseAsync(stream, cancellationToken).ConfigureAwait(false);
             message.Payload = await stream.ReadBytesAsync(message.Header.Size - IpcHeader.HeaderSizeInBytes, cancellationToken).ConfigureAwait(false);
             return message;

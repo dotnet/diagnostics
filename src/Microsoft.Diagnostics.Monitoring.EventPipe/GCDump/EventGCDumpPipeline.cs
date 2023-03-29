@@ -1,15 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Graphs;
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Graphs;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Parsers.Clr;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -31,8 +30,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             int gcNum = -1;
 
-            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) =>
-            {
+            Action<GCStartTraceData, Action> gcStartHandler = (GCStartTraceData data, Action taskComplete) => {
                 taskComplete();
 
                 if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
@@ -41,13 +39,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             };
 
-            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) =>
-            {
+            Action<GCBulkNodeTraceData, Action> gcBulkNodeHandler = (GCBulkNodeTraceData data, Action taskComplete) => {
                 taskComplete();
             };
 
-            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) =>
-            {
+            Action<GCEndTraceData, Action> gcEndHandler = (GCEndTraceData data, Action taskComplete) => {
                 if (data.Count == gcNum)
                 {
                     taskComplete();
@@ -55,22 +51,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             };
 
             // Register event handlers on the event source and represent their completion as tasks
-            using var gcStartTaskSource = new EventTaskSource<Action<GCStartTraceData>>(
+            using EventTaskSource<Action<GCStartTraceData>> gcStartTaskSource = new(
                 taskComplete => data => gcStartHandler(data, taskComplete),
                 handler => eventSource.Clr.GCStart += handler,
                 handler => eventSource.Clr.GCStart -= handler,
                 token);
-            using var gcBulkNodeTaskSource = new EventTaskSource<Action<GCBulkNodeTraceData>>(
+            using EventTaskSource<Action<GCBulkNodeTraceData>> gcBulkNodeTaskSource = new(
                 taskComplete => data => gcBulkNodeHandler(data, taskComplete),
                 handler => eventSource.Clr.GCBulkNode += handler,
                 handler => eventSource.Clr.GCBulkNode -= handler,
                 token);
-            using var gcStopTaskSource = new EventTaskSource<Action<GCEndTraceData>>(
+            using EventTaskSource<Action<GCEndTraceData>> gcStopTaskSource = new(
                 taskComplete => data => gcEndHandler(data, taskComplete),
                 handler => eventSource.Clr.GCStop += handler,
                 handler => eventSource.Clr.GCStop -= handler,
                 token);
-            using var sourceCompletedTaskSource = new EventTaskSource<Action>(
+            using EventTaskSource<Action> sourceCompletedTaskSource = new(
                 taskComplete => taskComplete,
                 handler => eventSource.Completed += handler,
                 handler => eventSource.Completed -= handler,
@@ -80,7 +76,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             Task gcDataTask = Task.WhenAny(gcStartTaskSource.Task, gcBulkNodeTaskSource.Task);
             Task gcStopTask = gcStopTaskSource.Task;
 
-            DotNetHeapDumpGraphReader dumper = new DotNetHeapDumpGraphReader(TextWriter.Null)
+            DotNetHeapDumpGraphReader dumper = new(TextWriter.Null)
             {
                 DotNetHeapInfo = new DotNetHeapInfo()
             };
@@ -91,21 +87,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // event source some time to produce the events, but if it doesn't start producing them within
             // a short amount of time (5 seconds), then stop processing events to allow them to be flushed.
             Task eventsTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), token);
-            Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask);
+            Task completedTask = await Task.WhenAny(gcDataTask, eventsTimeoutTask).ConfigureAwait(false);
 
             token.ThrowIfCancellationRequested();
 
             // If started receiving GC events, wait for the GC Stop event.
             if (completedTask == gcDataTask)
             {
-                await gcStopTask;
+                await gcStopTask.ConfigureAwait(false);
             }
 
             // Stop receiving events; if haven't received events yet, this will force flushing of events.
-            await stopSessionAsync();
+            await stopSessionAsync().ConfigureAwait(false);
 
             // Wait for all received events to be processed.
-            await sourceCompletedTaskSource.Task;
+            await sourceCompletedTaskSource.Task.ConfigureAwait(false);
 
             // Check that GC data and stop events were received. This is done by checking that the
             // associated tasks have ran to completion. If one of them has not reached the completion state, then

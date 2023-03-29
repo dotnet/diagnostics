@@ -1934,16 +1934,16 @@ default one.
 To turn on the stress log, set the following environment variables before
 starting the .NET Core app:
 
-export COMPlus_StressLog = 1
-export COMPlus_LogFacility = 0xffffffbf (this is a bit mask, almost all logging is on.
-                                         This is also the default value if the key 
-                                         isn't specified)
-export COMPlus_StressLogSize = 65536 (this is the default value if the key isn't
-                                      specified)
-export COMPlus_LogLevel = 6          (this is the default value if the key isn't
-                                      specified.  The higher the number the more
-                                      detailed logs are generated.  The maximum 
-                                      value is decimal 10)
+export DOTNET_StressLog = 1
+export DOTNET_LogFacility = 0xffffffbf (This is a bit mask, almost all logging is on.
+                                        This is also the default value if the key
+                                        isn't specified)
+export DOTNET_StressLogSize = 65536 (This is the default value if the key isn't
+                                     specified)
+export DOTNET_LogLevel = 6 (This is the default value if the key isn't
+                            specified. The higher the number the more
+                            detailed logs are generated. The maximum
+                            value is decimal 10)
 
 StressLogSize is the size in bytes of the in-memory log allocated for each 
 thread in the process. In the case above, each thread gets a 64K log. You 
@@ -2324,7 +2324,13 @@ SOSStatus [-reset]
 
 -reset - reset all the cached internal SOS state.
 
-Display internal SOS status or reset the internal cached state.
+Displays internal SOS status or resets the internal cached state.
+\\
+
+COMMAND: sosflush.
+sosflush
+
+Resets the internal cached state.
 \\
 
 COMMAND: setclrpath.

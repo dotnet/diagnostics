@@ -1,12 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 //WARNING
@@ -23,20 +22,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private static readonly object[] EmptyArray = Array.Empty<object>();
         private static readonly char[] FormatDelimiters = { ',', ':' };
         private readonly string _format;
-        private readonly List<string> _valueNames = new List<string>();
+        private readonly List<string> _valueNames = new();
 
         public LogValuesFormatter(string format)
         {
             OriginalFormat = format;
 
-            var sb = new StringBuilder();
-            var scanIndex = 0;
-            var endIndex = format.Length;
+            StringBuilder sb = new();
+            int scanIndex = 0;
+            int endIndex = format.Length;
 
             while (scanIndex < endIndex)
             {
-                var openBraceIndex = FindBraceIndex(format, '{', scanIndex, endIndex);
-                var closeBraceIndex = FindBraceIndex(format, '}', openBraceIndex, endIndex);
+                int openBraceIndex = FindBraceIndex(format, '{', scanIndex, endIndex);
+                int closeBraceIndex = FindBraceIndex(format, '}', openBraceIndex, endIndex);
 
                 if (closeBraceIndex == endIndex)
                 {
@@ -46,7 +45,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 else
                 {
                     // Format item syntax : { index[,alignment][ :formatString] }.
-                    var formatDelimiterIndex = FindIndexOfAny(format, FormatDelimiters, openBraceIndex, closeBraceIndex);
+                    int formatDelimiterIndex = FindIndexOfAny(format, FormatDelimiters, openBraceIndex, closeBraceIndex);
 
                     sb.Append(format, scanIndex, openBraceIndex - scanIndex + 1);
                     sb.Append(_valueNames.Count.ToString(CultureInfo.InvariantCulture));
@@ -66,9 +65,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private static int FindBraceIndex(string format, char brace, int startIndex, int endIndex)
         {
             // Example: {{prefix{{{Argument}}}suffix}}.
-            var braceIndex = endIndex;
-            var scanIndex = startIndex;
-            var braceOccurenceCount = 0;
+            int braceIndex = endIndex;
+            int scanIndex = startIndex;
+            int braceOccurenceCount = 0;
 
             while (scanIndex < endIndex)
             {
@@ -113,7 +112,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private static int FindIndexOfAny(string format, char[] chars, int startIndex, int endIndex)
         {
-            var findIndex = format.IndexOfAny(chars, startIndex, endIndex - startIndex);
+            int findIndex = format.IndexOfAny(chars, startIndex, endIndex - startIndex);
             return findIndex == -1 ? endIndex : findIndex;
         }
 
@@ -167,8 +166,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public IEnumerable<KeyValuePair<string, object>> GetValues(object[] values)
         {
-            var valueArray = new KeyValuePair<string, object>[values.Length + 1];
-            for (var index = 0; index != _valueNames.Count; ++index)
+            KeyValuePair<string, object>[] valueArray = new KeyValuePair<string, object>[values.Length + 1];
+            for (int index = 0; index != _valueNames.Count; ++index)
             {
                 valueArray[index] = new KeyValuePair<string, object>(_valueNames[index], values[index]);
             }
@@ -177,7 +176,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return valueArray;
         }
 
-        private object FormatArgument(object value)
+        private static object FormatArgument(object value)
         {
             if (value == null)
             {
@@ -191,7 +190,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             // if the value implements IEnumerable, build a comma separated string.
-            var enumerable = value as IEnumerable;
+            IEnumerable enumerable = value as IEnumerable;
             if (enumerable != null)
             {
                 return string.Join(", ", enumerable.Cast<object>().Select(o => o ?? NullValue));

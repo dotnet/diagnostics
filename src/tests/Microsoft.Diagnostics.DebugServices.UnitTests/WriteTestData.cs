@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
 using Microsoft.Diagnostics.TestHelpers;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -9,7 +9,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     [Command(Name = "writetestdata", Help = "Writes the test data xml file.")]
     public class WriteTestDataCommand : CommandBase
     {
-        public ITarget Target { get; set; }
+        [ServiceImport]
+        public IServiceProvider Services { get; set; }
 
         [Argument(Name = "FileName", Help = "Test data file path.")]
         public string FileName { get; set; }
@@ -20,8 +21,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 throw new DiagnosticsException("Test data file parameter needed");
             }
-            var testDataWriter = new TestDataWriter();
-            testDataWriter.Build(Target);
+            TestDataWriter testDataWriter = new();
+            testDataWriter.Build(Services);
             testDataWriter.Write(FileName);
             WriteLine($"Test data written to {FileName} successfully");
         }

@@ -1,23 +1,22 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting
 {
     internal sealed unsafe class LLDBServices : COMCallableIUnknown
     {
-        private static readonly Guid IID_ILLDBServices = new Guid("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
-        private static readonly Guid IID_ILLDBServices2 = new Guid("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
+        private static readonly Guid IID_ILLDBServices = new("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
+        private static readonly Guid IID_ILLDBServices2 = new("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
 
         public IntPtr ILLDBServices { get; }
 
@@ -44,24 +43,24 @@ namespace SOS.Hosting
             builder.AddMethod(new GetDebuggeeTypeDelegate(soshost.GetDebuggeeType));
             builder.AddMethod(new GetPageSizeDelegate(soshost.GetPageSize));
             builder.AddMethod(new GetExecutingProcessorTypeDelegate(soshost.GetExecutingProcessorType));
-            builder.AddMethod(new ExecuteDelegate(soshost.Execute));
+            builder.AddMethod(new ExecuteDelegate(SOSHost.Execute));
             builder.AddMethod(new GetLastEventInformationDelegate(soshost.GetLastEventInformation));
-            builder.AddMethod(new DisassembleDelegate(soshost.Disassemble));
+            builder.AddMethod(new DisassembleDelegate(SOSHost.Disassemble));
 
             builder.AddMethod(new GetContextStackTraceDelegate(GetContextStackTrace));
             builder.AddMethod(new ReadVirtualDelegate(soshost.ReadVirtual));
             builder.AddMethod(new WriteVirtualDelegate(soshost.WriteVirtual));
 
-            builder.AddMethod(new GetSymbolOptionsDelegate(soshost.GetSymbolOptions));
-            builder.AddMethod(new GetNameByOffsetDelegate(soshost.GetNameByOffset));
+            builder.AddMethod(new GetSymbolOptionsDelegate(SOSHost.GetSymbolOptions));
+            builder.AddMethod(new GetNameByOffsetDelegate(SOSHost.GetNameByOffset));
             builder.AddMethod(new GetNumberModulesDelegate(soshost.GetNumberModules));
             builder.AddMethod(new GetModuleByIndexDelegate(soshost.GetModuleByIndex));
             builder.AddMethod(new GetModuleByModuleNameDelegate(soshost.GetModuleByModuleName));
             builder.AddMethod(new GetModuleByOffsetDelegate(soshost.GetModuleByOffset));
             builder.AddMethod(new GetModuleNamesDelegate(soshost.GetModuleNames));
-            builder.AddMethod(new GetLineByOffsetDelegate(soshost.GetLineByOffset));
-            builder.AddMethod(new GetSourceFileLineOffsetsDelegate(soshost.GetSourceFileLineOffsets));
-            builder.AddMethod(new FindSourceFileDelegate(soshost.FindSourceFile));
+            builder.AddMethod(new GetLineByOffsetDelegate(SOSHost.GetLineByOffset));
+            builder.AddMethod(new GetSourceFileLineOffsetsDelegate(SOSHost.GetSourceFileLineOffsets));
+            builder.AddMethod(new FindSourceFileDelegate(SOSHost.FindSourceFile));
 
             builder.AddMethod(new GetCurrentProcessSystemIdDelegate(soshost.GetCurrentProcessSystemId));
             builder.AddMethod(new GetCurrentThreadIdDelegate(soshost.GetCurrentThreadId));
@@ -94,17 +93,18 @@ namespace SOS.Hosting
 
         #region ILLDBServices
 
-        string GetCoreClrDirectory(
+        private string GetCoreClrDirectory(
             IntPtr self)
         {
-            IRuntime currentRuntime = _soshost.Services.GetService<IRuntime>();
-            if (currentRuntime is not null) {
+            IRuntime currentRuntime = _soshost.ContextService.GetCurrentRuntime();
+            if (currentRuntime is not null)
+            {
                 return Path.GetDirectoryName(currentRuntime.RuntimeModule.FileName);
             }
             return null;
         }
 
-        int VirtualUnwind(
+        private int VirtualUnwind(
             IntPtr self,
             uint threadId,
             uint contextSize,
@@ -113,20 +113,20 @@ namespace SOS.Hosting
             return HResult.E_NOTIMPL;
         }
 
-        int SetExceptionCallback(
+        private int SetExceptionCallback(
             IntPtr self,
             PFN_EXCEPTION_CALLBACK callback)
         {
             return HResult.S_OK;
         }
 
-        int ClearExceptionCallback(
+        private int ClearExceptionCallback(
             IntPtr self)
         {
             return HResult.S_OK;
         }
 
-        int GetContextStackTrace(
+        private int GetContextStackTrace(
             IntPtr self,
             IntPtr startContext,
             uint startContextSize,
@@ -142,7 +142,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        int GetValueByName(
+        private int GetValueByName(
             IntPtr self,
             string name,
             out UIntPtr value)
@@ -152,11 +152,11 @@ namespace SOS.Hosting
             return hr;
         }
 
-        #endregion 
+        #endregion
 
         #region ILLDBServices2
 
-        int LoadNativeSymbols2(
+        private int LoadNativeSymbols2(
             IntPtr self,
             bool runtimeOnly,
             ModuleLoadCallback callback)
@@ -177,7 +177,7 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        int AddModuleSymbol(
+        private int AddModuleSymbol(
             IntPtr self,
             IntPtr parameter,
             string symbolFilename)
@@ -185,11 +185,11 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
-        unsafe int GetModuleInfo(
+        private unsafe int GetModuleInfo(
             IntPtr self,
             uint index,
-            ulong *moduleBase,
-            ulong *moduleSize,
+            ulong* moduleBase,
+            ulong* moduleSize,
             uint* timestamp,
             uint* checksum)
         {

@@ -15,8 +15,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private long _sessionId;
         private IpcEndpoint _endpoint;
-        private bool _disposedValue = false; // To detect redundant calls
-        private bool _stopped = false; // To detect redundant calls
+        private bool _disposedValue; // To detect redundant calls
+        private bool _stopped; // To detect redundant calls
         private readonly IpcResponse _response;
 
         private EventPipeSession(IpcEndpoint endpoint, IpcResponse response, long sessionId)
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static IpcMessage CreateStartMessage(IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
         {
-            var config = new EventPipeSessionConfiguration(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
+            EventPipeSessionConfiguration config = new(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
             return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
         }
 
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 long sessionId = BinaryPrimitives.ReadInt64LittleEndian(new ReadOnlySpan<byte>(response.Value.Message.Payload, 0, 8));
 
-                var session = new EventPipeSession(endpoint, response.Value, sessionId);
+                EventPipeSession session = new(endpoint, response.Value, sessionId);
                 response = null;
                 return session;
             }
@@ -140,7 +140,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     Stop();
                 }
-                catch {} // swallow any exceptions that may be thrown from Stop.
+                catch { } // swallow any exceptions that may be thrown from Stop.
             }
 
             if (!_disposedValue)

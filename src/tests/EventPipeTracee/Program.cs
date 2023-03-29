@@ -1,18 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace EventPipeTracee
 {
-    class Program
+    internal static class Program
     {
         private const string AppLoggerCategoryName = "AppLoggerCategory";
 
@@ -20,13 +19,13 @@ namespace EventPipeTracee
         {
             int pid = Process.GetCurrentProcess().Id;
             string pipeServerName = args.Length > 0 ? args[0] : null;
-            if (pipeServerName == null) 
+            if (pipeServerName == null)
             {
                 Console.Error.WriteLine($"{pid} EventPipeTracee: no pipe name");
                 Console.Error.Flush();
                 return -1;
             }
-            using var pipeStream = new NamedPipeClientStream(pipeServerName);
+            using NamedPipeClientStream pipeStream = new(pipeServerName);
             bool spinWait10 = args.Length > 2 && "SpinWait10".Equals(args[2], StringComparison.Ordinal);
             string loggerCategory = args[1];
 
@@ -40,18 +39,17 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
             Console.Out.Flush();
 
-            ServiceCollection serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging(builder =>
-            {
+            ServiceCollection serviceCollection = new();
+            serviceCollection.AddLogging(builder => {
                 builder.AddEventSourceLogger();
                 // Set application defined levels
                 builder.AddFilter(null, LogLevel.Error); // Default
                 builder.AddFilter(AppLoggerCategoryName, LogLevel.Warning);
             });
 
-            using var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-            var customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
-            var appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
+            using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+            ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
+            ILogger appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
 
             Console.WriteLine($"{pid} EventPipeTracee: {DateTime.UtcNow} Awaiting start");
             Console.Out.Flush();
@@ -76,7 +74,7 @@ namespace EventPipeTracee
                 while (DateTime.UtcNow < targetDateTime)
                 {
                     acc++;
-                    if (acc % 1_000_000 == 0)
+                    if (acc % 10_000_000 == 0)
                     {
                         Console.WriteLine($"{pid} Spin waiting...");
                     }
@@ -97,12 +95,12 @@ namespace EventPipeTracee
         private static void TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
         {
             //Json data is always converted to strings for ActivityStart events.
-            using (var scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
+            using (IDisposable scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
                     { "IntValue", "5" },
                     { "BoolValue", "true" },
                     { "StringValue", "test" } }.ToList()))
             {
-                customCategoryLogger.LogInformation("Some warning message with {arg}", 6);
+                customCategoryLogger.LogInformation("Some warning message with {Arg}", 6);
             }
 
             customCategoryLogger.LogWarning(new EventId(7, "AnotherEventId"), "Another message");

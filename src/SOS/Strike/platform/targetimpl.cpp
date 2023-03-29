@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 #include "strike.h"
 #include "util.h"
@@ -284,7 +283,9 @@ void Target::Flush()
     if (m_netcore != nullptr) {
         m_netcore->Flush();
     }
-#ifndef FEATURE_PAL
+#ifdef FEATURE_PAL
+    FlushMetadataRegions();
+#else
     if (m_desktop != nullptr) {
         m_desktop->Flush();
     }
