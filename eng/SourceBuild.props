@@ -3,6 +3,7 @@
   <PropertyGroup>
     <GitHubRepositoryName>diagnostics</GitHubRepositoryName>
     <SourceBuildManagedOnly>true</SourceBuildManagedOnly>
+    <SourceBuildTrimNetFrameworkTargets>true</SourceBuildTrimNetFrameworkTargets>
   </PropertyGroup>
 
   <ItemGroup>
