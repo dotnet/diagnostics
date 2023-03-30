@@ -589,9 +589,9 @@ namespace Microsoft.Diagnostics.Repl
 
         bool IConsoleService.SupportsDml => false;
 
-        void IConsoleService.WriteDml(string text) => throw new NotSupportedException();
+        void IConsoleService.WriteDml(string text) => WriteOutput(OutputType.Normal, text);
 
-        void IConsoleService.WriteDmlExec(string text, string _) => throw new NotSupportedException();
+        void IConsoleService.WriteDmlExec(string text, string _) => WriteOutput(OutputType.Normal, text);
 
         CancellationToken IConsoleService.CancellationToken { get; set; }
 
