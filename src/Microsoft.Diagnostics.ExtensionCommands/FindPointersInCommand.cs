@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {
-            DescribedRegion[] allRegions = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false).ToArray();
+            DescribedRegion[] allRegions = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false, includeHandleTableIfSlow: false).ToArray();
 
             WriteLine("Scanning for pinned objects...");
             MemoryWalkContext ctx = CreateMemoryWalkContext();

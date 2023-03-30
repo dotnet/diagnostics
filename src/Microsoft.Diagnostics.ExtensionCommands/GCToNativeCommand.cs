@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            IEnumerable<DescribedRegion> rangeEnum = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
+            IEnumerable<DescribedRegion> rangeEnum = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false, includeHandleTableIfSlow: false);
             rangeEnum = rangeEnum.Where(r => memoryTypes.Any(memType => r.Name.Equals(memType, StringComparison.OrdinalIgnoreCase)));
             rangeEnum = rangeEnum.OrderBy(r => r.Start);
 

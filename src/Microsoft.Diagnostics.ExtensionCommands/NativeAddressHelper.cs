@@ -52,10 +52,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// a MEM_COMMIT region is next to an unrelated MEM_RESERVE region.
         ///
         /// This is a heuristic, so use it accordingly.</param>
+        /// <param name="includeHandleTableIfSlow">If we cannot efficiently enumerate the handle table, we may have to
+        /// resort to find the memory regions associated with the HandleTable.  When a lot of handles are present, this
+        /// can take a very long time.</param>
         /// <exception cref="InvalidOperationException">If !address fails we will throw InvalidOperationException.  This is usually
         /// because symbols for ntdll couldn't be found.</exception>
         /// <returns>An enumerable of memory ranges.</returns>
-        internal IEnumerable<DescribedRegion> EnumerateAddressSpace(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically)
+        internal IEnumerable<DescribedRegion> EnumerateAddressSpace(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically, bool includeHandleTableIfSlow)
         {
             bool printedTruncatedWarning = false;
 
@@ -74,9 +77,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
                     ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
+                    RootCacheService rootCache = runtime.Services.GetService<RootCacheService>();
                     if (clrRuntime is not null)
                     {
-                        foreach ((ulong Address, ulong? Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime))
+                        foreach ((ulong Address, ulong? Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime, rootCache, includeHandleTableIfSlow))
                         {
                             DescribedRegion[] found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
 
@@ -240,27 +244,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <summary>
         /// Enumerates pointers to various CLR heaps in memory.
         /// </summary>
-        private static IEnumerable<(ulong Address, ulong? Size, ClrMemoryKind Kind)> EnumerateClrMemoryAddresses(ClrRuntime runtime)
+        private static IEnumerable<(ulong Address, ulong? Size, ClrMemoryKind Kind)> EnumerateClrMemoryAddresses(ClrRuntime runtime, RootCacheService rootCache, bool includeHandleTableIfSlow)
         {
             foreach (ClrNativeHeapInfo nativeHeap in runtime.EnumerateClrNativeHeaps())
             {
                 yield return (nativeHeap.Address, nativeHeap.Size, nativeHeap.Kind == NativeHeapKind.Unknown ? ClrMemoryKind.None : (ClrMemoryKind)nativeHeap.Kind);
             }
 
-            ulong prevHandle = 0;
-            ulong granularity = 0x100;
-            foreach (ClrHandle handle in runtime.EnumerateHandles())
+            if (includeHandleTableIfSlow)
             {
-                // There can be a very large number of HandleTable entries.  We don't need to enumerate every
-                // single one of them to find proper regions of memory.  Instead, we'll skip handles that are
-                // "nearby" the previous handles we enumerated, but we will ensure that we always enumerate the
-                // next handle along an allocation granularity.  We need to ensure that 'granularity' is less
-                // than the size of a handle table chunk, and is a power of 2.
-
-                if (handle.Address < prevHandle || handle.Address >= (prevHandle | (granularity - 1)))
+                ulong prevHandle = 0;
+                ulong granularity = 0x100;
+                foreach (ClrHandle handle in rootCache.GetHandleRoots())
                 {
-                    yield return (handle.Address, null, ClrMemoryKind.HandleTable);
-                    prevHandle = handle.Address;
+                    // There can be a very large number of HandleTable entries.  We don't need to enumerate every
+                    // single one of them to find proper regions of memory.  Instead, we'll skip handles that are
+                    // "nearby" the previous handles we enumerated, but we will ensure that we always enumerate the
+                    // next handle along an allocation granularity.  We need to ensure that 'granularity' is less
+                    // than the size of a handle table chunk, and is a power of 2.
+
+                    if (handle.Address < prevHandle || handle.Address >= (prevHandle | (granularity - 1)))
+                    {
+                        yield return (handle.Address, null, ClrMemoryKind.HandleTable);
+                        prevHandle = handle.Address;
+                    }
                 }
             }
 
