@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -10,7 +9,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "FindReferencesToEphemeral", Help = "Finds older generation objects which reference objects in the ephemeral segment.")]
+    [Command(Name = "ephrefs", Help = "Finds older generation objects which reference objects in the ephemeral segment.")]
     public class FindReferencesToEphemeralCommand : CommandBase
     {
         [ServiceImport]
@@ -37,6 +36,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             (Generation, Generation) last = default;
             foreach (var item in generationGroup)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 string objGen = item.ObjectGeneration.ToString().ToLowerInvariant();
                 string refGen = item.ReferenceGeneration.ToString().ToLowerInvariant();
 
@@ -58,6 +59,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (EphemeralRefCount erc in item.Objects)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     objCount++;
                     output.WriteRow(new DmlDumpObj(erc.Object), erc.Object.Type.MethodTable, erc.Object.Size, erc.ObjectGeneration, erc.ReferenceGeneration, erc.Count, erc.Size, erc.Object.Type.Name);
                 }
@@ -72,23 +75,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             foreach (ClrSegment seg in Runtime.Heap.Segments)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 // Only skip Gen0 and Frozen regions entirely
                 if (seg.Kind is GCSegmentKind.Generation0 or GCSegmentKind.Frozen)
                 {
                     continue;
                 }
 
-                foreach (ClrObject obj in seg.EnumerateObjects())
+                foreach (ClrObject obj in seg.EnumerateObjects().Where(obj => obj.IsValid && obj.ContainsPointers))
                 {
-                    if (!obj.IsValid || obj.IsFree)
-                    {
-                        continue;
-                    }
-
-                    if (!obj.Type.ContainsPointers)
-                    {
-                        continue;
-                    }
+                    Console.CancellationToken.ThrowIfCancellationRequested();
 
                     // Skip this object if it's gen0 or we hit an error
                     Generation objGen = obj.GetGeneration(seg);
@@ -102,6 +99,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     EphemeralRefCount gen1 = null;
                     foreach (ClrObject objRef in obj.EnumerateReferences(considerDependantHandles: false))
                     {
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
                         if (!objRef.IsValid || objRef.IsFree)
                         {
                             continue;

@@ -10,7 +10,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "FindEphemeralReferencesToLOH", Help = "Finds ephemeral objects which reference the large object heap.")]
+    [Command(Name = "ephtoloh", Help = "Finds ephemeral objects which reference the large object heap.")]
     public class FindEphemeralReferencesToLOHCommand : CommandBase
     {
         // IComparer for binary search
@@ -118,13 +118,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             foreach (ClrSegment seg in Runtime.Heap.Segments)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (seg.Kind is GCSegmentKind.Frozen or GCSegmentKind.Large or GCSegmentKind.Generation2 or GCSegmentKind.Pinned)
                 {
                     continue;
                 }
 
-                foreach (ClrObject obj in seg.EnumerateObjects())
+                foreach (ClrObject obj in seg.EnumerateObjects().Where(obj => obj.IsValid && obj.ContainsPointers))
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     // This handles both regions and segments
                     Generation gen = obj.GetGeneration(seg);
                     if (gen is not Generation.Gen0 or Generation.Gen1)
@@ -134,6 +138,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     foreach (ClrObject objRef in obj.EnumerateReferences(carefully: true, considerDependantHandles: false))
                     {
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
                         if (!objRef.IsValid || objRef.IsFree) // heap corruption
                         {
                             continue;
@@ -153,10 +159,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             foreach (ClrSegment seg in Runtime.Heap.Segments.Where(seg => seg.Kind == GCSegmentKind.Large))
             {
-                foreach (ClrObject obj in seg.EnumerateObjects())
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
+                foreach (ClrObject obj in seg.EnumerateObjects().Where(obj => obj.IsValid && obj.ContainsPointers))
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     foreach (ClrObject objRef in obj.EnumerateReferences(carefully: true, considerDependantHandles: false))
                     {
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
                         if (!objRef.IsValid || objRef.IsFree) // heap corruption
                         {
                             continue;

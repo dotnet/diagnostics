@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "SizeStats", Help = "Size statistics for the GC heap.")]
+    [Command(Name = "sizestats", Help = "Size statistics for the GC heap.")]
     public sealed class SizeStatsCommand : CommandBase
     {
         [ServiceImport]
@@ -48,8 +48,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Dictionary<ulong, ulong> stats = new();
             foreach (ClrSegment seg in Runtime.Heap.Segments.Where(seg => FilterByGeneration(seg, requestedGen)))
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 foreach (ClrObject obj in seg.EnumerateObjects())
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     if (!obj.IsValid || obj.IsFree != isFree)
                     {
                         continue;
@@ -86,6 +90,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong cumulativeCount = 0;
             foreach ((ulong size, ulong count) in sorted)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 cumulativeSize += size * count;
                 cumulativeCount += count;
                 output.WriteRow(size, count, cumulativeSize, cumulativeCount);
