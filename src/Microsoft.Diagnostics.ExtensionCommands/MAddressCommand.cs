@@ -12,17 +12,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "maddress", Help = "Displays a breakdown of the virtual address space.")]
     public sealed class MAddressCommand : CommandBase
     {
-        [Option(Name = "--list", Aliases = new string[] { "-l", "--all", }, Help = "Prints the full list of annotated memory regions.")]
-        public bool ListAll { get; set; }
+        private const string ImagesFlag = "-images";
+        private const string SummaryFlag = "-summary";
+        private const string ReserveFlag = "-reserve";
+        private const string ReserveHeuristicFlag = "-reserveHeuristic";
+        private const string ForceHandleTableFlag = "-forceHandleTable";
 
-        [Option(Name = "--images", Aliases = new string[] { "-i", "-image", "-img", "--img" }, Help = "Prints the table of image memory usage.")]
+        [Option(Name = SummaryFlag, Aliases = new string[] { "-stat", }, Help = "Only print summary table.")]
+        public bool Summary { get; set; }
+
+        [Option(Name = ImagesFlag, Aliases = new string[] { "-i" }, Help = "Prints a summary table of image memory usage.")]
         public bool ShowImageTable { get; set; }
 
-        [Option(Name = "--includeReserve", Help = "Include MEM_RESERVE regions in the output.")]
+        [Option(Name = ReserveFlag, Help = "Include MEM_RESERVE regions in the output.")]
         public bool IncludeReserveMemory { get; set; }
 
-        [Option(Name = "--tagReserve", Help = "Heuristically tag MEM_RESERVE regions based on adjacent memory regions.")]
+        [Option(Name = ReserveHeuristicFlag, Help = "Heuristically tag MEM_RESERVE regions based on adjacent memory regions.")]
         public bool TagReserveMemoryHeuristically { get; set; }
+
+        [Option(Name = ForceHandleTableFlag, Help = "We only tag the HandleTable if we can do so efficiently on newer runtimes.  This option ensures we always tag HandleTable memory, even if it will take a long time.")]
+        public bool IncludeHandleTableIfSlow { get; set; }
 
         [ServiceImport]
         public NativeAddressHelper AddressHelper { get; set; }
@@ -31,16 +40,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             if (TagReserveMemoryHeuristically && !IncludeReserveMemory)
             {
-                throw new DiagnosticsException("Cannot use --tagReserve without --includeReserve");
+                throw new DiagnosticsException($"Cannot use {ReserveHeuristicFlag} without {ReserveFlag}");
             }
 
-            PrintMemorySummary(ListAll, ShowImageTable, IncludeReserveMemory, TagReserveMemoryHeuristically);
-        }
-
-        public void PrintMemorySummary(bool printAllMemory, bool showImageTable, bool includeReserveMemory, bool tagReserveMemoryHeuristically)
-        {
-            IEnumerable<DescribedRegion> memoryRanges = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory, tagReserveMemoryHeuristically);
-            if (!includeReserveMemory)
+            IEnumerable<DescribedRegion> memoryRanges = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, IncludeReserveMemory, TagReserveMemoryHeuristically, IncludeHandleTableIfSlow);
+            if (!IncludeReserveMemory)
             {
                 memoryRanges = memoryRanges.Where(m => m.State != MemoryRegionState.MEM_RESERVE);
             }
@@ -50,12 +54,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int nameSizeMax = ranges.Max(r => r.Name.Length);
 
             // Tag reserved memory based on what's adjacent.
-            if (tagReserveMemoryHeuristically)
+            if (TagReserveMemoryHeuristically)
             {
                 CollapseReserveRegions(ranges);
             }
 
-            if (printAllMemory)
+            if (!Summary)
             {
                 int kindSize = ranges.Max(r => r.Type.ToString().Length);
                 int stateSize = ranges.Max(r => r.State.ToString().Length);
@@ -70,13 +74,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 output.WriteRowWithSpacing('-', "Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
                 foreach (DescribedRegion mem in ranges)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     output.WriteRow(mem.Name, mem.Start, mem.End, mem.Size.ConvertToHumanReadable(), mem.Type, mem.State, mem.Protection, mem.Image);
                 }
 
                 output.WriteSpacer('-');
             }
 
-            if (showImageTable)
+            if (ShowImageTable)
             {
                 var imageGroups = from mem in ranges.Where(r => r.State != MemoryRegionState.MEM_RESERVE && r.Image != null)
                                   group mem by mem.Image into g
@@ -101,6 +107,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 long size = 0;
                 foreach (var item in imageGroups)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     output.WriteRow(item.Image, item.Count, item.Size.ConvertToHumanReadable(), item.Size);
                     count += item.Count;
                     size += item.Size;
@@ -137,6 +145,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 long size = 0;
                 foreach (var item in grouped)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     output.WriteRow(item.Name, item.Count, item.Size.ConvertToHumanReadable(), item.Size);
                     count += item.Count;
                     size += item.Size;
@@ -152,26 +162,31 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public void HelpInvoke()
         {
             WriteLine(
-@"-------------------------------------------------------------------------------
-!maddress is a managed version of !address, which attempts to annotate all memory
+$@"-------------------------------------------------------------------------------
+maddress is a managed version of !address, which attempts to annotate all memory
 with information about CLR's heaps.
 
-usage: !maddress [--list] [--images] [--includeReserve [--tagReserve]]
+usage: !sos maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{ReserveFlag} [{ReserveHeuristicFlag}]]
 
 Flags:
-    --list
-        Shows the full list of annotated memory regions and not just the statistics
-        table.
+    {SummaryFlag}
+        Show only a summary table of memory regions and not the list of every address region.
 
-    --images
+    {ImagesFlag}
         Summarizes the memory ranges consumed by images in the process.
+
+    {ForceHandleTableFlag}
+        Ensures that we will always tag HandleTable memory.
+        On older versions of CLR, we did not have an efficient way to tag HandleTable
+        memory.  As a result, we have to fully enumerate the HandleTable to find
+        which regions of memory contain 
         
-    --includeReserve
+    {ReserveFlag}
         Include reserved memory (MEM_RESERVE) in the output.  This is usually only
         useful if there is virtual address exhaustion.
 
-    --tagReserve
-        If this flag is set, then !maddress will attempt to ""blame"" reserve segments
+    {ReserveHeuristicFlag}
+        If this flag is set, then maddress will attempt to ""blame"" reserve segments
         on the region that immediately proceeded it.  For example, if a ""Heap""
         memory segment is immediately followed by a MEM_RESERVE region, we will call
         that reserve region HeapReserve.  Note that this is a heuristic and NOT
