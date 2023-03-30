@@ -90,6 +90,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     HandleCounterRate(traceEvent, filter, sessionId, out payload);
                 }
+                else if (traceEvent.EventName == "UpDownCounterRateValuePublished")
+                {
+                    HandleUpDownCounterRate(traceEvent, filter, sessionId, out payload);
+                }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
                     HandleTimeSeriesLimitReached(traceEvent, sessionId, out payload);
@@ -179,6 +183,41 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
                 payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.DefaultIntervalSeconds, traceEvent.TimeStamp);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the ObservableCounter callback function throws an exception.
+                payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
+            }
+        }
+
+        private static void HandleUpDownCounterRate(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)traceEvent.PayloadValue(0);
+
+            if (payloadSessionId != sessionId)
+            {
+                return;
+            }
+
+            string meterName = (string)traceEvent.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)traceEvent.PayloadValue(3);
+            string unit = (string)traceEvent.PayloadValue(4);
+            string tags = (string)traceEvent.PayloadValue(5);
+            string rateText = (string)traceEvent.PayloadValue(6);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
+            {
+                payload = new UpDownCounterRatePayload(meterName, instrumentName, null, unit, tags, rate, filter.DefaultIntervalSeconds, traceEvent.TimeStamp);
             }
             else
             {

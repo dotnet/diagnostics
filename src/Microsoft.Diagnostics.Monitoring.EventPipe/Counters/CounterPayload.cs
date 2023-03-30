@@ -108,6 +108,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
+    internal class UpDownCounterRatePayload : CounterPayload
+    {
+        public UpDownCounterRatePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, double intervalSecs, DateTime timestamp) :
+            base(providerName, name, metadata, value, timestamp, "Rate", EventType.UpDownCounter)
+        {
+            // In case these properties are not provided, set them to appropriate values.
+            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            string unitsName = string.IsNullOrEmpty(displayUnits) ? "Count" : displayUnits;
+            string intervalName = intervalSecs.ToString() + " sec";
+            DisplayName = $"{counterName} ({unitsName} / {intervalName})";
+        }
+    }
+
     internal class PercentilePayload : CounterPayload
     {
         public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
@@ -144,6 +157,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         Rate,
         Gauge,
         Histogram,
+        UpDownCounter,
         Error,
         CounterEnded
     }

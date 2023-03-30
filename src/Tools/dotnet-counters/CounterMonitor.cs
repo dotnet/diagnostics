@@ -72,6 +72,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                 if (obj.ProviderName == "System.Diagnostics.Metrics")
                 {
+                    if (obj.EventName == "UpDownCounterRateValuePublished")
+                    {
+                        HandleCounterRate(obj);
+                    }
                     if (obj.EventName == "BeginInstrumentReporting")
                     {
                         HandleBeginInstrumentReporting(obj);
