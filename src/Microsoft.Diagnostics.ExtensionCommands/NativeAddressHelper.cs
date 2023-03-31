@@ -15,6 +15,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [ServiceExport(Scope = ServiceScope.Target)]
     public sealed class NativeAddressHelper
     {
+        private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
+
         [ServiceImport]
         public ITarget Target { get; set; }
 
@@ -58,8 +60,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <exception cref="InvalidOperationException">If !address fails we will throw InvalidOperationException.  This is usually
         /// because symbols for ntdll couldn't be found.</exception>
         /// <returns>An enumerable of memory ranges.</returns>
-        internal IEnumerable<DescribedRegion> EnumerateAddressSpace(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically, bool includeHandleTableIfSlow)
+        public IEnumerable<DescribedRegion> EnumerateAddressSpace(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically, bool includeHandleTableIfSlow)
         {
+            (bool, bool, bool, bool) key = (tagClrMemoryRanges, includeReserveMemory, tagReserveMemoryHeuristically, includeHandleTableIfSlow);
+
+            if (_previous.Result is not null && _previous.Key == key)
+            {
+                return _previous.Result;
+            }
+
+            DescribedRegion[] result = EnumerateAddressSpaceWorker(tagClrMemoryRanges, includeReserveMemory, tagReserveMemoryHeuristically, includeHandleTableIfSlow);
+            _previous = (key, result);
+
+            // Use AsReadOnly to ensure no modifications to the cached value
+            return Array.AsReadOnly(result);
+        }
+
+        private DescribedRegion[] EnumerateAddressSpaceWorker(bool tagClrMemoryRanges, bool includeReserveMemory, bool tagReserveMemoryHeuristically, bool includeHandleTableIfSlow)
+        {
+            Console.WriteLineWarning("Enumerating and tagging the entire address space and caching the result...");
+            Console.WriteLineWarning("Subsequent runs of this command should be faster.");
+
             bool printedTruncatedWarning = false;
 
             IEnumerable<DescribedRegion> addressResult = from region in MemoryRegionService.EnumerateRegions()
@@ -90,9 +111,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                 if (!printedTruncatedWarning)
                                 {
-                                    Console.WriteLine($"Warning:  Could not find a memory range for {mem.Address:x} - {mem.Kind}.");
-                                    Console.WriteLine($"This crash dump may not be a full dump!");
-                                    Console.WriteLine("");
+                                    Console.WriteLineWarning($"Warning:  Could not find a memory range for {mem.Address:x} - {mem.Kind}.");
+                                    Console.WriteLineWarning($"This crash dump may not be a full dump!");
+                                    Console.WriteLineWarning("");
 
                                     printedTruncatedWarning = true;
                                 }
@@ -477,7 +498,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             HandleTable,
         }
 
-        internal sealed class DescribedRegion : IMemoryRegion
+        public sealed class DescribedRegion : IMemoryRegion
         {
             public DescribedRegion()
             {
