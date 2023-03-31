@@ -15,15 +15,17 @@
 
      $(MicrosoftDotnetSdkInternalVersion) - .NET SDK to use for testing
 
-     $(VSRedistCommonNetCoreSharedFrameworkx6470Version)        - latest dotnet runtime package version (the version to install)
+     $(VSRedistCommonNetCoreSharedFrameworkx6480Version)        - latest dotnet runtime package version (the version to install)
      $(MicrosoftNETCoreAppRuntimewinx64Version)                 - latest dotnet runtime stable version (the version that actually is installed)
 
      $(MicrosoftAspNetCoreAppRefInternalVersion)                - latest dotnet aspnetcore package version (the version to install)
      $(MicrosoftAspNetCoreAppRefVersion)                        - latest dotnet aspnetcore stable version (the version that actually is installed)
 
+     $(MicrosoftNETCoreApp70Version) $(MicrosoftAspNetCoreApp70Version) - 7.0 version
      $(MicrosoftNETCoreApp60Version) $(MicrosoftAspNetCoreApp60Version) - 6.0 version
 
      $(SingleFileRuntimeLatestVersion)  - The latest version of the runtime used to build single-file apps
+     $(SingleFileRuntime70Version)      - The 7.0.x version of the runtime used to build single-file apps
      $(SingleFileRuntime60Version)      - The 6.0.x version of the runtime used to build single-file apps
 
      From Arcade:
@@ -63,11 +65,6 @@
     <RegeditCommand>regedit.exe</RegeditCommand>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <Enable31Testing>true</Enable31Testing>
-    <Enable31Testing Condition="'$(BuildArch)' == 'arm64' and $([MSBuild]::IsOsPlatform(OSX))">false</Enable31Testing>
-  </PropertyGroup>
-
   <Choose>
     <When Condition="$([MSBuild]::IsOsPlatform(Windows))">
       <PropertyGroup>
@@ -83,13 +80,16 @@
   </Choose>
 
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6470Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6480Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="70" RuntimeVersion="$(MicrosoftNETCoreApp70Version)" AspNetVersion="$(MicrosoftAspNetCoreApp70Version)" />
+    <TestVersions Include="SingleFile70" RuntimeVersion="$(SingleFileRuntime70Version)" />
     <TestVersions Include="60" RuntimeVersion="$(MicrosoftNETCoreApp60Version)" AspNetVersion="$(MicrosoftAspNetCoreApp60Version)" />
+    <TestVersions Include="SingleFile60" RuntimeVersion="$(SingleFileRuntime60Version)" />
   </ItemGroup>
 
   <!-- Local private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
-    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6470Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6480Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
   </ItemGroup>
 
   <!-- Internal service release testing -->
@@ -153,7 +153,8 @@
     <PropertyGroup Condition="'$(PrivateBuildTesting)' != 'true' AND '$(InternalReleaseTesting)' != 'true'">
       <RuntimeVersion60>$(MicrosoftNETCoreApp60Version)</RuntimeVersion60>
       <AspNetCoreVersion60>$(MicrosoftAspNetCoreApp60Version)</AspNetCoreVersion60>
-      <!-- TODO: Add others -->
+      <RuntimeVersion70>$(MicrosoftNETCoreApp70Version)</RuntimeVersion70>
+      <AspNetCoreVersion70>$(MicrosoftAspNetCoreApp70Version)</AspNetCoreVersion70>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -169,17 +170,18 @@
   <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
   <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
 
-  <RuntimeVersion31>$(RuntimeVersion31)</RuntimeVersion31>
-  <AspNetCoreVersion31>$(AspNetCoreVersion31)</AspNetCoreVersion31>
-
   <RuntimeVersion60>$(RuntimeVersion60)</RuntimeVersion60>
   <AspNetCoreVersion60>$(AspNetCoreVersion60)</AspNetCoreVersion60>
+
+  <RuntimeVersion70>$(RuntimeVersion70)</RuntimeVersion70>
+  <AspNetCoreVersion70>$(AspNetCoreVersion70)</AspNetCoreVersion70>
 
   <RuntimeVersionLatest>$(RuntimeVersionLatest)</RuntimeVersionLatest>
   <AspNetCoreVersionLatest>$(AspNetCoreVersionLatest)</AspNetCoreVersionLatest>
 
   <SingleFileRuntimeLatestVersion>$(SingleFileRuntimeLatestVersion)</SingleFileRuntimeLatestVersion>
   <SingleFileRuntime60Version>$(SingleFileRuntime60Version)</SingleFileRuntime60Version>
+  <SingleFileRuntime70Version>$(SingleFileRuntime70Version)</SingleFileRuntime70Version>
 </Configuration>
 ]]>
       </TestConfigFileLines>

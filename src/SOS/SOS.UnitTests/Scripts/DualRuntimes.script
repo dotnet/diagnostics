@@ -54,7 +54,7 @@ SOSCOMMAND:DumpHeap -stat
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 !VERIFY:.*UNKNOWN.*
 
 #
@@ -62,7 +62,7 @@ VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 #
 
 SOSCOMMAND:SOSStatus
-VERIFY:.*\.NET Core .*runtime at.*\s+
+VERIFY:.*\.NET Core .*runtime.*at.*\s+
 
 IFDEF:TRIAGE_DUMP
 SOSCOMMAND:setclrpath %DESKTOP_RUNTIME_PATH%
@@ -77,10 +77,10 @@ SOSCOMMAND:runtimes
 SOSCOMMAND:ClrStack -all
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestDll\.TestClass\.Foo7\(System\.String\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ (33)\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo6\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 21\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo5\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 16\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.ThrowException\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 10\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestDll\.TestClass\.Foo7\(System\.String\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ (36)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo6\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 24\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo5\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 19\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.ThrowException\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 13\]\s*
 
 SOSCOMMAND:clrthreads
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
@@ -96,5 +96,5 @@ SOSCOMMAND:DumpHeap
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 !VERIFY:.*UNKNOWN.*

@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
-using Microsoft.Diagnostics.NETCore.Client;
+
 using System;
-using Xunit;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics.Tracing;
+using System.Linq;
+using Microsoft.Diagnostics.NETCore.Client;
+using Xunit;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -18,22 +18,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("gc-collect", "Microsoft-Windows-DotNETRuntime")]
         public void DuplicateProvider_CorrectlyOverrides(string profileName, string providerToParse)
         {
-            Dictionary<string, string> enabledBy = new Dictionary<string, string>();
+            Dictionary<string, string> enabledBy = new();
 
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);
 
-            foreach (var provider in parsedProviders)
+            foreach (EventPipeProvider provider in parsedProviders)
             {
                 enabledBy[provider.Name] = "--providers";
             }
 
-            var selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+            Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
                 .FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(selectedProfile);
 
             Profile.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
 
-            var enabledProvider = parsedProviders.SingleOrDefault(p => p.Name == "Microsoft-Windows-DotNETRuntime");
+            EventPipeProvider enabledProvider = parsedProviders.SingleOrDefault(p => p.Name == "Microsoft-Windows-DotNETRuntime");
 
             // Assert that our specified provider overrides the version in the profile
             Assert.True(enabledProvider.Keywords == (long)(-1));

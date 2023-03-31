@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Tools.Common;
-using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.Binding;
@@ -11,12 +8,14 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Graphs;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -55,12 +54,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     Console.Out.WriteLine("-p|--process-id is required");
                     return -1;
                 }
-                
+
                 output = string.IsNullOrEmpty(output)
                     ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
 
-                FileInfo outputFileInfo = new FileInfo(output);
+                FileInfo outputFileInfo = new(output);
 
                 if (outputFileInfo.Exists)
                 {
@@ -71,12 +70,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 {
                     outputFileInfo = new FileInfo(outputFileInfo.FullName + ".gcdump");
                 }
-                
+
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
-                var dumpTask = Task.Run(() => 
-                {
-                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out var memoryGraph))
+                Task<bool> dumpTask = Task.Run(() => {
+                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                         return true;
@@ -85,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return false;
                 });
 
-                var fDumpSuccess = await dumpTask;
+                bool fDumpSuccess = await dumpTask.ConfigureAwait(false);
 
                 if (fDumpSuccess)
                 {
@@ -106,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex}");
                 return -1;
             }
         }
@@ -114,9 +112,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, int timeout, bool verbose,
             out MemoryGraph memoryGraph)
         {
-            var heapInfo = new DotNetHeapInfo();
-            var log = verbose ? Console.Out : TextWriter.Null; 
-            
+            DotNetHeapInfo heapInfo = new();
+            TextWriter log = verbose ? Console.Out : TextWriter.Null;
+
             memoryGraph = new MemoryGraph(50_000);
 
             if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, log, timeout, heapInfo))
@@ -129,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         }
 
         public static Command CollectCommand() =>
-            new Command(
+            new(
                 name: "collect",
                 description: "Collects a diagnostic trace from a currently running process")
             {
@@ -140,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect the gcdump from.")
             {
@@ -148,7 +146,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to collect the gcdump from.")
             {
@@ -156,7 +154,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option OutputPathOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
                 description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
             {
@@ -164,16 +162,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         private static Option VerboseOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-v", "--verbose" },
-                description: "Output the log while collecting the gcdump.") 
+                description: "Output the log while collecting the gcdump.")
             {
                 Argument = new Argument<bool>(name: "verbose")
             };
 
         public static int DefaultTimeout = 30;
         private static Option TimeoutOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-t", "--timeout" },
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
             {

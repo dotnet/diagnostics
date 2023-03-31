@@ -1,19 +1,18 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace Microsoft.Diagnostics
 {
     public class DbgShimAPI
     {
-        private static bool _initialized = false;
+        private static bool _initialized;
 
         private static CreateProcessForLaunchDelegate _createProcessForLaunch;
         private static CloseResumeHandleDelegate _closeResumeHandle;
@@ -51,7 +50,7 @@ namespace Microsoft.Diagnostics
             {
                 throw new ArgumentException($"Dbgshim path not set or the dbgshim at '{dbgshimPath}' does not exists");
             }
-            _dbgshimModuleHandle = DataTarget.PlatformFunctions.LoadLibrary(dbgshimPath); 
+            _dbgshimModuleHandle = DataTarget.PlatformFunctions.LoadLibrary(dbgshimPath);
             _createProcessForLaunch = GetDelegateFunction<CreateProcessForLaunchDelegate>("CreateProcessForLaunch");
             _resumeProcess = GetDelegateFunction<ResumeProcessDelegate>("ResumeProcess");
             _closeResumeHandle = GetDelegateFunction<CloseResumeHandleDelegate>("CloseResumeHandle");
@@ -234,7 +233,7 @@ namespace Microsoft.Diagnostics
             HResult hr = _createDebuggingInterfaceFromVersion3(debuggerVersion, versionString, applicationGroupId, libraryProvider, out IntPtr punk);
             cordbg = ICorDebug.Create(punk);
             return hr;
-         }
+        }
 
         public static HResult CLRCreateInstance(out ICLRDebugging clrDebugging)
         {
@@ -247,7 +246,8 @@ namespace Microsoft.Diagnostics
             where T : Delegate
         {
             IntPtr functionAddress = DataTarget.PlatformFunctions.GetLibraryExport(_dbgshimModuleHandle, functionName);
-            if (functionAddress == IntPtr.Zero) {
+            if (functionAddress == IntPtr.Zero)
+            {
                 if (optional)
                 {
                     return default;
@@ -275,7 +275,7 @@ namespace Microsoft.Diagnostics
         [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true)]
         private delegate int CloseResumeHandleDelegate(
             IntPtr handle);
-            
+
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate int RegisterForRuntimeStartupDelegate(
             uint processId,

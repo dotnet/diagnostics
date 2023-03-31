@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -16,14 +15,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class EventPipeSessionConfiguration
     {
-        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown=true)
+        public EventPipeSessionConfiguration(int circularBufferSizeMB, EventPipeSerializationFormat format, IEnumerable<EventPipeProvider> providers, bool requestRundown = true)
         {
             if (circularBufferSizeMB == 0)
+            {
                 throw new ArgumentException($"Buffer size cannot be zero.");
-            if (format != EventPipeSerializationFormat.NetPerf && format != EventPipeSerializationFormat.NetTrace)
+            }
+
+            if (format is not EventPipeSerializationFormat.NetPerf and not EventPipeSerializationFormat.NetTrace)
+            {
                 throw new ArgumentException("Unrecognized format");
-            if (providers == null)
+            }
+
+            if (providers is null)
+            {
                 throw new ArgumentNullException(nameof(providers));
+            };
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
@@ -42,15 +49,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public byte[] SerializeV2()
         {
             byte[] serializedData = null;
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
             {
                 writer.Write(CircularBufferSizeInMB);
                 writer.Write((uint)Format);
                 writer.Write(RequestRundown);
 
                 writer.Write(Providers.Count);
-                foreach (var provider in Providers)
+                foreach (EventPipeProvider provider in Providers)
                 {
                     writer.Write(provider.Keywords);
                     writer.Write((uint)provider.EventLevel);

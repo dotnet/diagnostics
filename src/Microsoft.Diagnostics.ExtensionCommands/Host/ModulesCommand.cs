@@ -1,18 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
-using System;
-using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -31,6 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--address", Aliases = new string[] { "-a" }, Help = "Lookup address in module list.")]
         public ulong? Address { get; set; }
 
+        [ServiceImport]
         public IModuleService ModuleService { get; set; }
 
         public override void Invoke()
@@ -42,7 +40,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     DisplayModule(module);
                 }
-                else 
+                else
                 {
                     WriteLineError($"Address 0x{Address:X16} not found");
                 }
@@ -63,7 +61,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        void DisplayModule(IModule module)
+        private void DisplayModule(IModule module)
         {
             if (Verbose)
             {
@@ -97,11 +95,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        [ServiceImport]
         public ITarget Target { get; set; }
 
+        [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 
-        void DisplaySegments(IModule module)
+        private void DisplaySegments(IModule module)
         {
             try
             {
@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
             }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
+            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
             {
                 Trace.TraceError($"Exception displaying module segments: {ex}");
             }

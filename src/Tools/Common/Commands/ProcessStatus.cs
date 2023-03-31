@@ -1,55 +1,53 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Tools.Common;
 using System;
-using System.CommandLine;
-using System.CommandLine.Invocation;
-using System.CommandLine.IO;
 using System.Collections.Generic;
+using System.CommandLine;
+using System.CommandLine.Binding;
+using System.CommandLine.IO;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using Process = System.Diagnostics.Process;
-using System.IO;
-using System.ComponentModel;
-using System.Threading.Tasks;
-using System.CommandLine.Binding;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
+using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands
-{        
+{
     public class ProcessStatusCommandHandler
     {
         public static Command ProcessStatusCommand(string description) =>
-            new Command(name: "ps", description)
+            new(name: "ps", description)
             {
                 HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler()
             };
 
-        delegate void ProcessStatusDelegate(IConsole console);
-        static void MakeFixedWidth(string text, int width, StringBuilder sb, bool leftPad = false, bool truncateFront = false)
+        private delegate void ProcessStatusDelegate(IConsole console);
+
+        private static void MakeFixedWidth(string text, int width, StringBuilder sb, bool leftPad = false, bool truncateFront = false)
         {
             int textLength = text.Length;
-            sb.Append(" ");
-            if(textLength == width)
+            sb.Append(' ');
+            if (textLength == width)
             {
                 sb.Append(text);
             }
-            else if(textLength > width)
+            else if (textLength > width)
             {
-                if(truncateFront)
+                if (truncateFront)
                 {
-                    sb.Append(text.Substring(textLength - width, width));
+                    sb.Append(text.AsSpan(textLength - width, width));
                 }
                 else
                 {
-                    sb.Append(text.Substring(0, width));
+                    sb.Append(text.AsSpan(0, width));
                 }
-           }
+            }
             else
             {
                 if (leftPad)
@@ -62,18 +60,19 @@ namespace Microsoft.Internal.Common.Commands
                     sb.Append(text);
                     sb.Append(' ', width - text.Length);
                 }
-                
+
             }
-            sb.Append(" ");
+            sb.Append(' ');
         }
-        struct ProcessDetails
+
+        private struct ProcessDetails
         {
             public int ProcessId;
             public string ProcessName;
             public string FileName;
             public string CmdLineArgs;
         }
-        
+
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis, their statuses and the command line arguments that are passed to them.
         /// </summary>
@@ -84,13 +83,13 @@ namespace Microsoft.Internal.Common.Commands
                 int consoleWidth = 0;
                 if (Console.IsOutputRedirected)
                 {
-                    consoleWidth = Int32.MaxValue;
+                    consoleWidth = int.MaxValue;
                 }
                 else
                 {
                     consoleWidth = Console.WindowWidth;
                 }
-                int extra = (int)Math.Ceiling(consoleWidth*0.05);
+                int extra = (int)Math.Ceiling(consoleWidth * 0.05);
                 int largeLength = consoleWidth / 2 - 16 - extra;
                 return Math.Min(fieldWidths.Max(), largeLength);
             }
@@ -102,36 +101,36 @@ namespace Microsoft.Internal.Common.Commands
                     tableText.Append("No supported .NET processes were found");
                     return;
                 }
-                var processIDs = rows.Select(i => i.ProcessId.ToString().Length);
-                var processNames = rows.Select(i => i.ProcessName.Length);
-                var fileNames = rows.Select(i => i.FileName.Length);
-                var commandLineArgs = rows.Select(i => i.CmdLineArgs.Length);
+                IEnumerable<int> processIDs = rows.Select(i => i.ProcessId.ToString().Length);
+                IEnumerable<int> processNames = rows.Select(i => i.ProcessName.Length);
+                IEnumerable<int> fileNames = rows.Select(i => i.FileName.Length);
+                IEnumerable<int> commandLineArgs = rows.Select(i => i.CmdLineArgs.Length);
                 int iDLength = GetColumnWidth(processIDs);
                 int nameLength = GetColumnWidth(processNames);
                 int fileLength = GetColumnWidth(fileNames);
                 int cmdLength = GetColumnWidth(commandLineArgs);
 
-                foreach(var info in rows)
+                foreach (ProcessDetails info in rows)
                 {
                     MakeFixedWidth(info.ProcessId.ToString(), iDLength, tableText, true, true);
                     MakeFixedWidth(info.ProcessName, nameLength, tableText, false, true);
                     MakeFixedWidth(info.FileName, fileLength, tableText, false, true);
                     MakeFixedWidth(info.CmdLineArgs, cmdLength, tableText, false, true);
-                    tableText.Append("\n");
+                    tableText.Append('\n');
                 }
             }
             try
             {
-                StringBuilder sb = new StringBuilder();
-                var processes = DiagnosticsClient.GetPublishedProcesses()
+                StringBuilder sb = new();
+                IOrderedEnumerable<Process> processes = DiagnosticsClient.GetPublishedProcesses()
                     .Select(GetProcessById)
                     .Where(process => process != null)
                     .OrderBy(process => process.ProcessName)
                     .ThenBy(process => process.Id);
 
-                var currentPid = Process.GetCurrentProcess().Id;
-                List<Microsoft.Internal.Common.Commands.ProcessStatusCommandHandler.ProcessDetails> printInfo = new ();
-                foreach (var process in processes)
+                int currentPid = Process.GetCurrentProcess().Id;
+                List<ProcessDetails> printInfo = new();
+                foreach (Process process in processes)
                 {
                     if (process.Id == currentPid)
                     {
@@ -139,10 +138,10 @@ namespace Microsoft.Internal.Common.Commands
                     }
                     try
                     {
-                        String cmdLineArgs = GetArgs(process);
+                        string cmdLineArgs = GetArgs(process);
                         cmdLineArgs = cmdLineArgs == process.MainModule?.FileName ? string.Empty : cmdLineArgs;
                         string fileName = process.MainModule?.FileName ?? string.Empty;
-                        var commandInfo = new ProcessDetails()
+                        ProcessDetails commandInfo = new()
                         {
                             ProcessId = process.Id,
                             ProcessName = process.ProcessName,
@@ -151,11 +150,11 @@ namespace Microsoft.Internal.Common.Commands
                         };
                         printInfo.Add(commandInfo);
                     }
-                    catch (Exception ex) 
+                    catch (Exception ex)
                     {
-                        if (ex is Win32Exception || ex is InvalidOperationException)
+                        if (ex is Win32Exception or InvalidOperationException)
                         {
-                            var commandInfo = new ProcessDetails()
+                            ProcessDetails commandInfo = new()
                             {
                                 ProcessId = process.Id,
                                 ProcessName = process.ProcessName,
@@ -166,14 +165,14 @@ namespace Microsoft.Internal.Common.Commands
                         }
                         else
                         {
-                            Debug.WriteLine($"[PrintProcessStatus] {ex.ToString()}");
+                            Debug.WriteLine($"[PrintProcessStatus] {ex}");
                         }
                     }
                 }
                 FormatTableRows(printInfo, sb);
                 console.Out.WriteLine(sb.ToString());
             }
-            catch (Exception  ex)
+            catch (Exception ex)
             {
                 console.Out.WriteLine(ex.ToString());
             }
@@ -198,17 +197,17 @@ namespace Microsoft.Internal.Common.Commands
                 try
                 {
                     string commandLine = WindowsProcessExtension.GetCommandLine(process);
-                    if (!String.IsNullOrWhiteSpace(commandLine))
+                    if (!string.IsNullOrWhiteSpace(commandLine))
                     {
                         string[] commandLineSplit = commandLine.Split(' ');
                         if (commandLineSplit.FirstOrDefault() == process.ProcessName)
                         {
-                            return String.Join(" ", commandLineSplit.Skip(1));
+                            return string.Join(" ", commandLineSplit.Skip(1));
                         }
                         return commandLine;
                     }
                 }
-                catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
                 {
                     return "[Elevated process - cannot determine command line arguments]";
                 }
@@ -219,13 +218,13 @@ namespace Microsoft.Internal.Common.Commands
                 try
                 {
                     string commandLine = File.ReadAllText($"/proc/{process.Id}/cmdline");
-                    if(!String.IsNullOrWhiteSpace(commandLine))
+                    if (!string.IsNullOrWhiteSpace(commandLine))
                     {
                         //The command line may be modified and the first part of the command line may not be /path/to/exe. If that is the case, return the command line as is.Else remove the path to module as we are already displaying that.
                         string[] commandLineSplit = commandLine.Split('\0');
                         if (commandLineSplit.FirstOrDefault() == process.MainModule?.FileName)
                         {
-                            return String.Join(" ", commandLineSplit.Skip(1));
+                            return string.Join(" ", commandLineSplit.Skip(1));
                         }
                         return commandLine.Replace("\0", " ");
                     }

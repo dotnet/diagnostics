@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -10,11 +8,16 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public static class Utilities
-    { 
+    {
         /// <summary>
         /// An empty Version instance.
         /// </summary>
@@ -35,11 +38,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public static int CombineHashCodes(int hashCode0, int hashCode1)
         {
-            unchecked {
+            unchecked
+            {
                 // This specific hash function is based on the Boost C++ library's CombineHash function:
                 // http://stackoverflow.com/questions/4948780/magic-numbers-in-boosthash-combine
-                // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html 
-                return hashCode0 ^ (hashCode1 + (int) 0x9e3779b9 + (hashCode0 << 6) + (hashCode0 >> 2));
+                // http://www.boost.org/doc/libs/1_46_1/doc/html/hash/combine.html
+                return hashCode0 ^ (hashCode1 + (int)0x9e3779b9 + (hashCode0 << 6) + (hashCode0 >> 2));
             }
         }
 
@@ -47,8 +51,42 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Convert from symstore VsFixedFileInfo to DebugServices VersionData
         /// </summary>
         public static Version ToVersion(this VsFixedFileInfo fileInfo)
-        { 
+        {
             return new Version(fileInfo.FileVersionMajor, fileInfo.FileVersionMinor, fileInfo.FileVersionBuild, fileInfo.FileVersionRevision);
+        }
+
+        /// <summary>
+        /// Helper function to that parses the version out of the version string that looks something
+        /// like "8.0.23.10701 @Commit: e71a4fb10d7ea6b502dd5efe7a8fcefa2b9c1550"
+        /// </summary>
+        public static Version ParseVersionString(string versionString)
+        {
+            if (versionString != null)
+            {
+                int spaceIndex = versionString.IndexOf(' ');
+                if (spaceIndex < 0)
+                {
+                    // It is probably a private build version that doesn't end with a space (no commit id after)
+                    spaceIndex = versionString.Length;
+                }
+                if (spaceIndex > 0)
+                {
+                    if (versionString[spaceIndex - 1] == '.')
+                    {
+                        spaceIndex--;
+                    }
+                    string versionToParse = versionString.Substring(0, spaceIndex);
+                    try
+                    {
+                        return Version.Parse(versionToParse);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        Trace.TraceError($"ParseVersionString FAILURE: '{versionToParse}' '{versionString}' {ex}");
+                    }
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -71,7 +109,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    var reader = new PEReader(stream);
+                    PEReader reader = new(stream);
                     if (reader.PEHeaders == null || reader.PEHeaders.PEHeader == null)
                     {
                         Trace.TraceWarning($"OpenPEReader: PEReader invalid headers");
@@ -79,9 +117,101 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     return reader;
                 }
-                catch (Exception ex) when (ex is BadImageFormatException || ex is IOException)
+                catch (Exception ex) when (ex is BadImageFormatException or IOException)
                 {
                     Trace.TraceError($"OpenPEReader: PEReader exception {ex.Message}");
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Opens and returns an ELFFile instance from the local file path
+        /// </summary>
+        /// <param name="filePath">ELF file to open</param>
+        /// <returns>ELFFile instance or null</returns>
+        public static ELFFile OpenELFFile(string filePath)
+        {
+            Stream stream = TryOpenFile(filePath);
+            if (stream is not null)
+            {
+                try
+                {
+                    ELFFile elfFile = new(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false);
+                    if (!elfFile.IsValid())
+                    {
+                        Trace.TraceError($"OpenFile: not a valid file {filePath}");
+                        return null;
+                    }
+                    return elfFile;
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
+                {
+                    Trace.TraceError($"OpenFile: {filePath} exception {ex.Message}");
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Opens and returns an MachOFile instance from the local file path
+        /// </summary>
+        /// <param name="filePath">MachO file to open</param>
+        /// <returns>MachOFile instance or null</returns>
+        public static MachOFile OpenMachOFile(string filePath)
+        {
+            Stream stream = TryOpenFile(filePath);
+            if (stream is not null)
+            {
+                try
+                {
+                    MachOFile machoModule = new(new StreamAddressSpace(stream), position: 0, dataSourceIsVirtualAddressSpace: false);
+                    if (!machoModule.IsValid())
+                    {
+                        Trace.TraceError($"OpenMachOFile: not a valid file {filePath}");
+                        return null;
+                    }
+                    return machoModule;
+                }
+                catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException or IOException)
+                {
+                    Trace.TraceError($"OpenMachOFile: {filePath} exception {ex.Message}");
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Creates a ELFFile service instance of the module in memory.
+        /// </summary>
+        [ServiceExport(Scope = ServiceScope.Module)]
+        public static ELFFile CreateELFFile(IMemoryService memoryService, IModule module)
+        {
+            if (module.Target.OperatingSystem == OSPlatform.Linux)
+            {
+                Stream stream = memoryService.CreateMemoryStream();
+                ELFFile elfFile = new(new StreamAddressSpace(stream), module.ImageBase, true);
+                if (elfFile.IsValid())
+                {
+                    return elfFile;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Creates a MachOFile service instance of the module in memory.
+        /// </summary>
+        [ServiceExport(Scope = ServiceScope.Module)]
+        public static MachOFile CreateMachOFile(IMemoryService memoryService, IModule module)
+        {
+            if (module.Target.OperatingSystem == OSPlatform.OSX)
+            {
+                Stream stream = memoryService.CreateMemoryStream();
+                MachOFile elfFile = new(new StreamAddressSpace(stream), module.ImageBase, true);
+                if (elfFile.IsValid())
+                {
+                    return elfFile;
                 }
             }
             return null;
@@ -100,7 +230,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     return File.OpenRead(path);
                 }
-                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is NotSupportedException || ex is IOException)
+                catch (Exception ex) when (ex is UnauthorizedAccessException or NotSupportedException or IOException)
                 {
                     Trace.TraceError($"TryOpenFile: {ex.Message}");
                 }
@@ -110,17 +240,123 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Returns the .NET user directory
+        /// </summary>
+        public static string GetDotNetHomeDirectory()
+        {
+            string dotnetHome;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE") ?? throw new ArgumentNullException("USERPROFILE environment variable not found"), ".dotnet");
+            }
+            else
+            {
+                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? throw new ArgumentNullException("HOME environment variable not found"), ".dotnet");
+            }
+            return dotnetHome;
+        }
+
+        /// <summary>
+        /// Create the type instance and fill in any service imports
+        /// </summary>
+        /// <param name="type">type to create</param>
+        /// <param name="provider">service provider</param>
+        /// <returns>new instance</returns>
+        public static object CreateInstance(Type type, IServiceProvider provider)
+        {
+            object instance = InvokeConstructor(type, provider);
+            if (instance is not null)
+            {
+                ImportServices(instance, provider);
+            }
+            return instance;
+        }
+
+        /// <summary>
+        /// Call the static method (constructor) to create the instance and fill in any service imports
+        /// </summary>
+        /// <param name="method">static method (constructor) to use to create instance</param>
+        /// <param name="provider">service provider</param>
+        /// <returns>new instance</returns>
+        public static object CreateInstance(MethodBase method, IServiceProvider provider)
+        {
+            object instance = Invoke(method, null, provider);
+            if (instance is not null)
+            {
+                ImportServices(instance, provider);
+            }
+            return instance;
+        }
+
+        /// <summary>
+        /// Set any fields, property or method marked with the ServiceImportAttribute to the service requested.
+        /// </summary>
+        /// <param name="instance">object instance to process</param>
+        /// <param name="provider">service provider</param>
+        public static void ImportServices(object instance, IServiceProvider provider)
+        {
+            if (instance == null)
+            {
+                throw new ArgumentNullException(nameof(instance));
+            }
+
+            for (Type currentType = instance.GetType(); currentType is not null; currentType = currentType.BaseType)
+            {
+                if (currentType == typeof(object) || currentType == typeof(ValueType))
+                {
+                    break;
+                }
+                FieldInfo[] fields = currentType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (FieldInfo field in fields)
+                {
+                    ServiceImportAttribute attribute = field.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                    if (attribute is not null)
+                    {
+                        object serviceInstance = provider.GetService(field.FieldType);
+                        if (serviceInstance is null && !attribute.Optional)
+                        {
+                            throw new DiagnosticsException($"The {field.FieldType.Name} service is required by the {field.Name} field");
+                        }
+                        field.SetValue(instance, serviceInstance);
+                    }
+                }
+                PropertyInfo[] properties = currentType.GetProperties(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (PropertyInfo property in properties)
+                {
+                    ServiceImportAttribute attribute = property.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                    if (attribute is not null)
+                    {
+                        object serviceInstance = provider.GetService(property.PropertyType);
+                        if (serviceInstance is null && !attribute.Optional)
+                        {
+                            throw new DiagnosticsException($"The {property.PropertyType.Name} service is required by the {property.Name} property");
+                        }
+                        property.SetValue(instance, serviceInstance);
+                    }
+                }
+                MethodInfo[] methods = currentType.GetMethods(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (MethodInfo method in methods)
+                {
+                    ServiceImportAttribute attribute = method.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                    if (attribute is not null)
+                    {
+                        Utilities.Invoke(method, instance, provider);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Call the constructor of the type and return the instance binding any
         /// services in the constructor parameters.
         /// </summary>
         /// <param name="type">type to create</param>
         /// <param name="provider">services</param>
-        /// <param name="optional">if true, the service is not required</param>
         /// <returns>type instance</returns>
-        public static object InvokeConstructor(Type type, IServiceProvider provider, bool optional)
+        public static object InvokeConstructor(Type type, IServiceProvider provider)
         {
             ConstructorInfo constructor = type.GetConstructors().Single();
-            object[] arguments = BuildArguments(constructor, provider, optional);
+            object[] arguments = BuildArguments(constructor, provider);
             try
             {
                 return constructor.Invoke(arguments);
@@ -138,11 +374,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="method">method to invoke</param>
         /// <param name="instance">class instance or null if static</param>
         /// <param name="provider">services</param>
-        /// <param name="optional">if true, the service is not required</param>
         /// <returns>method return value</returns>
-        public static object Invoke(MethodBase method, object instance, IServiceProvider provider, bool optional)
+        public static object Invoke(MethodBase method, object instance, IServiceProvider provider)
         {
-            object[] arguments = BuildArguments(method, provider, optional);
+            object[] arguments = BuildArguments(method, provider);
             try
             {
                 return method.Invoke(instance, arguments);
@@ -154,14 +389,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services, bool optional)
+        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services)
         {
             ParameterInfo[] parameters = methodBase.GetParameters();
             object[] arguments = new object[parameters.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
-                // The parameter will passed as null to allow for "optional" services. The invoked 
-                // method needs to check for possible null parameters.
+                // The service import attribute isn't necessary on parameters unless Optional property needs to be changed from the default of false.
+                bool optional = false;
+                ServiceImportAttribute attribute = parameters[i].GetCustomAttribute<ServiceImportAttribute>(inherit: false);
+                if (attribute is not null)
+                {
+                    optional = attribute.Optional;
+                }
+                // The parameter will passed as null to allow for "optional" services. The invoked method needs to check for possible null parameters.
                 arguments[i] = services.GetService(parameters[i].ParameterType);
                 if (arguments[i] is null && !optional)
                 {

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Globalization;
@@ -9,13 +8,13 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class JSONExporter : ICounterRenderer
+    internal class JSONExporter : ICounterRenderer
     {
-        private object _lock = new object();
-        private string _output;
-        private string _processName;
+        private readonly object _lock = new();
+        private readonly string _output;
+        private readonly string _processName;
         private StringBuilder builder;
-        private int flushLength = 10_000; // Arbitrary length to flush
+        private readonly int flushLength = 10_000; // Arbitrary length to flush
 
         public JSONExporter(string output, string processName)
         {
@@ -95,9 +94,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Console.WriteLine("File saved to " + _output);
         }
 
-        static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
+        private static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
 
-        private string JsonEscape(string input)
+        private static string JsonEscape(string input)
         {
             if (input is null)
             {
@@ -105,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             int offset = input.IndexOfAny(s_escapeChars);
-            if(offset == -1)
+            if (offset == -1)
             {
                 // fast path
                 return input;
@@ -115,8 +114,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             // this could be written more efficiently but I expect it to be quite rare and not performance sensitive
             // so I didn't feel justified writing a complex routine or adding a few 100KB for a dependency on a
             // better performing JSON library
-            StringBuilder sb = new StringBuilder(input.Length + 10);
-            foreach(char c in input)
+            StringBuilder sb = new(input.Length + 10);
+            foreach (char c in input)
             {
                 switch (c)
                 {

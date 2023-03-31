@@ -1,12 +1,15 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.IO;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-class GCPOH
+internal class GCPOH
 {
-    static int Main()
+    private static int Main()
     {
         // Use reflection to get the API because the test is compiled against an older version of netstandard
         // that doesn't have the POH APIs

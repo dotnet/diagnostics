@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using Microsoft.Diagnostics.DebugServices;
 
@@ -18,10 +17,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
+        [ServiceImport(Optional = true)]
         public IThread CurrentThread { get; set; }
 
+        [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
+        [ServiceImport]
         public IContextService ContextService { get; set; }
 
         public override void Invoke()

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
@@ -10,7 +9,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public static class TargetExtensions
     {
         /// <summary>
-        /// Returns the decorated platform specific module name. "coreclr" becomes "coreclr.dll" 
+        /// Returns the decorated platform specific module name. "coreclr" becomes "coreclr.dll"
         /// for Windows targets, "libcoreclr.so" for Linux targets, etc.
         /// </summary>
         /// <param name="target">target instance</param>
@@ -31,17 +30,6 @@ namespace Microsoft.Diagnostics.DebugServices
                 return "lib" + moduleName + ".dylib";
             }
             throw new PlatformNotSupportedException(target.OperatingSystem.ToString());
-        }
-
-        /// <summary>
-        /// Registers an object to be disposed when target is destroyed.
-        /// </summary>
-        /// <param name="target">target instance</param>
-        /// <param name="disposable">object to be disposed or null</param>
-        /// <returns>IDisposable to unregister this event or null</returns>
-        public static IDisposable DisposeOnDestroy(this ITarget target, IDisposable disposable)
-        {
-            return disposable != null ? target.OnDestroyEvent.Register(() => disposable.Dispose()) : null;
         }
     }
 }

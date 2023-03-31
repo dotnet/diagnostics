@@ -1,16 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting.DbgEng
 {
-    internal unsafe class DebugSymbols
+    internal sealed unsafe class DebugSymbols
     {
         internal DebugSymbols(DebugClient client, SOSHost soshost)
         {
@@ -29,14 +28,14 @@ namespace SOS.Hosting.DbgEng
 
         private static void AddDebugSymbols(VTableBuilder builder, SOSHost soshost)
         {
-            builder.AddMethod(new GetSymbolOptionsDelegate(soshost.GetSymbolOptions));
+            builder.AddMethod(new GetSymbolOptionsDelegate(SOSHost.GetSymbolOptions));
             builder.AddMethod(new AddSymbolOptionsDelegate((self, options) => HResult.S_OK));
             builder.AddMethod(new RemoveSymbolOptionsDelegate((self, options) => HResult.S_OK));
             builder.AddMethod(new SetSymbolOptionsDelegate((self, options) => HResult.S_OK));
-            builder.AddMethod(new GetNameByOffsetDelegate(soshost.GetNameByOffset));
+            builder.AddMethod(new GetNameByOffsetDelegate(SOSHost.GetNameByOffset));
             builder.AddMethod(new GetOffsetByNameDelegate((self, symbol, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNearNameByOffsetDelegate((self, offset, delta, nameBuffer, nameBufferSize, nameSize, displacement) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetLineByOffsetDelegate(soshost.GetLineByOffset));
+            builder.AddMethod(new GetLineByOffsetDelegate(SOSHost.GetLineByOffset));
             builder.AddMethod(new GetOffsetByLineDelegate((self, line, file, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNumberModulesDelegate(soshost.GetNumberModules));
             builder.AddMethod(new GetModuleByIndexDelegate(soshost.GetModuleByIndex));
@@ -66,7 +65,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new GetNextSymbolMatchDelegate((self, handle, buffer, bufferSize, matchSize, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new EndSymbolMatchDelegate((self, handle) => DebugClient.NotImplemented));
             builder.AddMethod(new ReloadDelegate((self, module) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetSymbolPathDelegate(soshost.GetSymbolPath));
+            builder.AddMethod(new GetSymbolPathDelegate(SOSHost.GetSymbolPath));
             builder.AddMethod(new SetSymbolPathDelegate((self, path) => DebugClient.NotImplemented));
             builder.AddMethod(new AppendSymbolPathDelegate((self, addition) => DebugClient.NotImplemented));
             builder.AddMethod(new GetImagePathDelegate((self, buffer, bufferSize, pathSize) => DebugClient.NotImplemented));
@@ -76,7 +75,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new GetSourcePathElementDelegate((self, index, buffer, bufferSize, elementSize) => DebugClient.NotImplemented));
             builder.AddMethod(new SetSourcePathDelegate((self, path) => DebugClient.NotImplemented));
             builder.AddMethod(new AppendSourcePathDelegate((self, addition) => DebugClient.NotImplemented));
-            builder.AddMethod(new FindSourceFileDelegate(soshost.FindSourceFile));
+            builder.AddMethod(new FindSourceFileDelegate(SOSHost.FindSourceFile));
             builder.AddMethod(new GetSourceFileLineOffsetsDelegate((self, file, buffer, bufferLines, fileLines) => DebugClient.NotImplemented));
         }
 
@@ -96,7 +95,7 @@ namespace SOS.Hosting.DbgEng
         private static void AddDebugSymbols3(VTableBuilder builder, SOSHost soshost)
         {
             AddDebugSymbols2(builder, soshost);
-            builder.AddMethod(new GetNameByOffsetWideDelegate(soshost.GetNameByOffset));
+            builder.AddMethod(new GetNameByOffsetWideDelegate(SOSHost.GetNameByOffset));
             builder.AddMethod(new GetOffsetByNameWideDelegate((self, symbol, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNearNameByOffsetWideDelegate((self, offset, delta, nameBuffer, nameBufferSize, nameSize, displacement) => DebugClient.NotImplemented));
             builder.AddMethod(new GetLineByOffsetWideDelegate((self, offset, line, fileBuffer, fileBufferSize, fileSize, displacement) => DebugClient.NotImplemented));
@@ -112,7 +111,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new StartSymbolMatchWideDelegate((self, pattern, handle) => DebugClient.NotImplemented));
             builder.AddMethod(new GetNextSymbolMatchWideDelegate((self, handle, buffer, buffesSize, matchSize, offset) => DebugClient.NotImplemented));
             builder.AddMethod(new ReloadWideDelegate((self, module) => DebugClient.NotImplemented));
-            builder.AddMethod(new GetSymbolPathWideDelegate(soshost.GetSymbolPath));
+            builder.AddMethod(new GetSymbolPathWideDelegate(SOSHost.GetSymbolPath));
             builder.AddMethod(new SetSymbolPathWideDelegate((self, path) => DebugClient.NotImplemented));
             builder.AddMethod(new AppendSymbolPathWideDelegate((self, addition) => DebugClient.NotImplemented));
             builder.AddMethod(new GetImagePathWideDelegate((self, buffer, bufferSize, pathSize) => DebugClient.NotImplemented));
@@ -122,7 +121,7 @@ namespace SOS.Hosting.DbgEng
             builder.AddMethod(new GetSourcePathElementWideDelegate((self, index, buffer, bufferSize, elementSize) => DebugClient.NotImplemented));
             builder.AddMethod(new SetSourcePathWideDelegate((self, path) => DebugClient.NotImplemented));
             builder.AddMethod(new AppendSourcePathWideDelegate((self, addition) => DebugClient.NotImplemented));
-            builder.AddMethod(new FindSourceFileWideDelegate(soshost.FindSourceFile));
+            builder.AddMethod(new FindSourceFileWideDelegate(SOSHost.FindSourceFile));
             builder.AddMethod(new GetSourceFileLineOffsetsWideDelegate((self, file, buffer, bufferLines, fileLines) => DebugClient.NotImplemented));
             builder.AddMethod(new GetModuleVersionInformationWideDelegate((self, index, baseAddress, item, buffer, bufferSize, verInfoSize) => DebugClient.NotImplemented));
             builder.AddMethod(new GetModuleNameStringWideDelegate((self, which, index, baseAddress, buffer, bufferSize, nameSize) => DebugClient.NotImplemented));

@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 {
@@ -24,7 +23,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 
         // Completion source to help coordinate running and stopping the pipeline.
         private readonly TaskCompletionSource<object> _completionSource =
-            new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // The source of the trace events to monitor.
         private readonly TraceEventSource _eventSource;
@@ -61,8 +60,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
                 // Only allow events described in the mapping to be forwarded to the trigger.
                 // If a provider has no events specified, then all events from that provider are forwarded.
                 _eventSource.Dynamic.AddCallbackForProviderEvents(
-                    (string providerName, string eventName) =>
-                    {
+                    (string providerName, string eventName) => {
                         if (!providerEventMap.TryGetValue(providerName, out IEnumerable<string> eventNames))
                         {
                             return EventFilterResponse.RejectProvider;
@@ -83,7 +81,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 
         protected override async Task OnRun(CancellationToken token)
         {
-            using var _ = token.Register(() => _completionSource.TrySetCanceled(token));
+            using CancellationTokenRegistration _ = token.Register(() => _completionSource.TrySetCanceled(token));
 
             await _completionSource.Task.ConfigureAwait(false);
         }

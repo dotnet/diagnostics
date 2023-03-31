@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -29,7 +28,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (_useAsync)
             {
-                using CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
+                using CancellationTokenSource cancellation = new(timeout);
                 return await _client.GetProcessEnvironmentAsync(cancellation.Token).ConfigureAwait(false);
             }
             else
@@ -42,7 +41,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (_useAsync)
             {
-                using CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
+                using CancellationTokenSource cancellation = new(timeout);
                 return await _client.GetProcessInfoAsync(cancellation.Token).ConfigureAwait(false);
             }
             else
@@ -55,7 +54,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (_useAsync)
             {
-                using CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
+                using CancellationTokenSource cancellation = new(timeout);
                 await _client.ResumeRuntimeAsync(cancellation.Token).ConfigureAwait(false);
             }
             else
@@ -68,7 +67,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (_useAsync)
             {
-                CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
+                CancellationTokenSource cancellation = new(timeout);
                 return await _client.StartEventPipeSessionAsync(providers, true, circularBufferMB: 256, cancellation.Token).ConfigureAwait(false);
             }
             else
@@ -81,7 +80,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (_useAsync)
             {
-                CancellationTokenSource cancellation = new CancellationTokenSource(timeout);
+                CancellationTokenSource cancellation = new(timeout);
                 return await _client.StartEventPipeSessionAsync(provider, true, circularBufferMB: 256, cancellation.Token).ConfigureAwait(false);
             }
             else

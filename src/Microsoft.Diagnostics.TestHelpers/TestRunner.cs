@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -31,9 +30,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // Setup the logging from the options in the config file
                 outputHelper = ConfigureLogging(config, output, testName);
 
-                // Restore and build the debuggee. The debuggee name is lower cased because the 
+                // Restore and build the debuggee. The debuggee name is lower cased because the
                 // source directory name has been lowercased by the build system.
-                DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName.ToLowerInvariant(), outputHelper);
+                DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, debuggeeName.ToLowerInvariant(), outputHelper).ConfigureAwait(false);
 
                 outputHelper.WriteLine("Starting {0}", testName);
                 outputHelper.WriteLine("{");
@@ -47,7 +46,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                     arguments = Environment.ExpandEnvironmentVariables(string.Format("{0} {1} {2}", config.HostArgs, debuggeeConfig.BinaryExePath, debuggeeConfig.BinaryDirPath));
                 }
 
-                TestLogger testLogger = new TestLogger(outputHelper.IndentedOutput);
+                TestLogger testLogger = new(outputHelper.IndentedOutput);
                 ProcessRunner processRunner = new ProcessRunner(exePath, arguments).
                     WithLog(testLogger).
                     WithTimeout(TimeSpan.FromMinutes(5));
@@ -55,7 +54,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 processRunner.Start();
 
                 // Wait for the debuggee to finish before getting the debuggee output
-                int exitCode = await processRunner.WaitForExit();
+                int exitCode = await processRunner.WaitForExit().ConfigureAwait(false);
 
                 string debuggeeStandardOutput = testLogger.GetStandardOutput();
                 string debuggeeStandardError = testLogger.GetStandardError();
@@ -133,7 +132,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <param name="output">starting output helper</param>
         /// <param name="testName">test case name</param>
         /// <returns>new output helper</returns>
-        public static TestRunner.OutputHelper ConfigureLogging(TestConfiguration config, ITestOutputHelper output, string testName)
+        public static OutputHelper ConfigureLogging(TestConfiguration config, ITestOutputHelper output, string testName)
         {
             FileTestOutputHelper fileLogger = null;
             ConsoleTestOutputHelper consoleLogger = null;
@@ -147,14 +146,14 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 consoleLogger = new ConsoleTestOutputHelper();
             }
-            return new TestRunner.OutputHelper(output, fileLogger, consoleLogger);
+            return new OutputHelper(output, fileLogger, consoleLogger);
         }
 
         public class OutputHelper : ITestOutputHelper, IDisposable
         {
-            readonly ITestOutputHelper _output;
-            readonly FileTestOutputHelper _fileLogger;
-            readonly ConsoleTestOutputHelper _consoleLogger;
+            private readonly ITestOutputHelper _output;
+            private readonly FileTestOutputHelper _fileLogger;
+            private readonly ConsoleTestOutputHelper _consoleLogger;
 
             public readonly ITestOutputHelper IndentedOutput;
 
@@ -188,8 +187,8 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public class TestLogger : TestOutputProcessLogger
         {
-            readonly StringBuilder _standardOutput;
-            readonly StringBuilder _standardError;
+            private readonly StringBuilder _standardOutput;
+            private readonly StringBuilder _standardError;
 
             public TestLogger(ITestOutputHelper output)
                 : base(output)

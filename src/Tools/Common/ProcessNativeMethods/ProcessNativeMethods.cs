@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Runtime.InteropServices;
 
@@ -59,7 +62,7 @@ namespace Microsoft.Internal.Common.Utils
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool OpenProcessToken(
             IntPtr hProcess,
-            UInt32 dwDesiredAccess,
+            uint dwDesiredAccess,
             out IntPtr processToken);
 
         [StructLayout(LayoutKind.Sequential)]
@@ -80,7 +83,7 @@ namespace Microsoft.Internal.Common.Utils
 
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsWow64Process(IntPtr hProcess, [MarshalAs(UnmanagedType.Bool)]out bool wow64Process);
+        public static extern bool IsWow64Process(IntPtr hProcess, [MarshalAs(UnmanagedType.Bool)] out bool wow64Process);
 
         [StructLayout(LayoutKind.Sequential)]
         public struct ProcessInformation

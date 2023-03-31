@@ -1,20 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "sosstatus", Help = "Displays internal status or resets the internal cached state.")]
+    [Command(Name = "sosstatus", Help = "Displays internal status.")]
+    [Command(Name = "sosflush", DefaultOptions = "--reset", Help = "Resets the internal cached state.")]
     public class StatusCommand : CommandBase
     {
+        [ServiceImport]
         public ITarget Target { get; set; }
 
+        [ServiceImport]
         public ISymbolService SymbolService { get; set; }
 
-        [Option(Name = "-reset", Help = "Reset all the cached internal state.")]
+        [Option(Name = "--reset", Aliases = new[] { "-reset" }, Help = "Resets the internal cached state.")]
         public bool Reset { get; set; }
 
         public override void Invoke()

@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +10,7 @@ using ReleaseTool.Core;
 
 namespace DiagnosticsReleaseTool.Util
 {
-    internal class DarcHelpers
+    internal sealed class DarcHelpers
     {
         private readonly DirectoryInfo _dropPath;
 
@@ -46,11 +49,10 @@ namespace DiagnosticsReleaseTool.Util
                 JsonElement buildList = jsonDoc.RootElement.GetProperty("builds");
 
                 // This iteration is necessary due to the public/private nature repos.
-                var repoBuilds = buildList.EnumerateArray()
-                                          .Where(build => 
-                                          {
-                                            var buildUri = new Uri(build.GetProperty("repo").GetString());
-                                            return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
+                IEnumerable<JsonElement> repoBuilds = buildList.EnumerateArray()
+                                          .Where(build => {
+                                              Uri buildUri = new(build.GetProperty("repo").GetString());
+                                              return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
                                           });
 
                 if (repoBuilds.Count() != 1)
@@ -61,7 +63,7 @@ namespace DiagnosticsReleaseTool.Util
 
                 JsonElement build = repoBuilds.First();
 
-                var releaseMetadata = new ReleaseMetadata(
+                ReleaseMetadata releaseMetadata = new(
                     releaseVersion: releaseVersion,
                     repoUrl: build.GetProperty("repo").GetString(),
                     branch: build.GetProperty("branch").GetString(),
@@ -84,7 +86,7 @@ namespace DiagnosticsReleaseTool.Util
                 // pretty stable schema.
                 JsonElement productList = jsonDoc.RootElement[0].GetProperty("products");
 
-                var matchingProducts = productList.EnumerateArray()
+                IEnumerable<JsonElement> matchingProducts = productList.EnumerateArray()
                                                .Where(prod => projectNames.Contains(prod.GetProperty("name").GetString()));
 
                 if (matchingProducts.Count() != 1)

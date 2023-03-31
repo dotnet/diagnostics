@@ -64,7 +64,7 @@ Reproduce the problem and when done, hit CTRL-C to exit the perfcollect tool. Yo
 If you  are more familiar with existing performance tools on Linux, .net core is also instrumented to allow you to make use of those tools. Here, we will illustrate how you can use the 'perf' tool to generate traces that can be used on Linux to diagnose performance problems. Exit the previous instance of the webapi and set the following in the terminal:
 
 > ```bash
-> export COMPlus_PerfMapEnabled=1
+> export DOTNET_PerfMapEnabled=1
 > ```
 
 Next, re-launch the webapi. This step is required to get more legible frames in the traces. 

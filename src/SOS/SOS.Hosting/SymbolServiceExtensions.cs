@@ -1,25 +1,24 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.FileFormats;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 
 namespace SOS.Hosting
 {
     public static class SymbolServiceExtensions
     {
-        // HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) 
-        const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
+        // HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)
+        private const int E_INSUFFICIENT_BUFFER = unchecked((int)0x8007007a);
 
         /// <summary>
         /// Set the windows symbol path converting the default "srv*" to the cached public symbol server URL.
@@ -30,7 +29,7 @@ namespace SOS.Hosting
             this ISymbolService symbolService,
             string symbolPath)
         {
-            // Translate dbgeng's default .sympath to what the public version actually does. Normally "srv*" 
+            // Translate dbgeng's default .sympath to what the public version actually does. Normally "srv*"
             // means no caching and the server path depends on whether dbgeng is internal or public.
             if (symbolPath.ToLowerInvariant() == "srv*")
             {
@@ -67,7 +66,8 @@ namespace SOS.Hosting
             Debug.Assert(imageTimestamp != 0);
             Debug.Assert(imageSize != 0);
 
-            if (pMetadata == IntPtr.Zero) {
+            if (pMetadata == IntPtr.Zero)
+            {
                 return HResult.E_INVALIDARG;
             }
             int hr = HResult.S_OK;
@@ -85,7 +85,8 @@ namespace SOS.Hosting
                 hr = HResult.E_FAIL;
             }
 
-            if (pMetadataSize != IntPtr.Zero) {
+            if (pMetadataSize != IntPtr.Zero)
+            {
                 Marshal.WriteInt32(pMetadataSize, dataSize);
             }
             return hr;
@@ -136,7 +137,7 @@ namespace SOS.Hosting
                             hr = E_INSUFFICIENT_BUFFER;
                         }
                     }
-                    else 
+                    else
                     {
                         Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} download FAILED");
                         hr = HResult.E_FAIL;
@@ -149,10 +150,10 @@ namespace SOS.Hosting
                 }
             }
             catch (Exception ex) when
-                (ex is UnauthorizedAccessException ||
-                 ex is BadImageFormatException ||
-                 ex is InvalidVirtualAddressException ||
-                 ex is IOException)
+                (ex is UnauthorizedAccessException or
+                 BadImageFormatException or
+                 InvalidVirtualAddressException or
+                 IOException)
             {
                 Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} ERROR {ex.Message}");
                 hr = HResult.E_FAIL;

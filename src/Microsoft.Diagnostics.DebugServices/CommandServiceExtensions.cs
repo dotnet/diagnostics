@@ -1,9 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -16,6 +16,8 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <param name="commandService">command service instance</param>
         /// <param name="assemblies">list of assemblies to search</param>
+        /// <exception cref="FileNotFoundException">assembly or reference not found</exception>
+        /// <exception cref="NotSupportedException">not supported</exception>
         public static void AddCommands(this ICommandService commandService, IEnumerable<Assembly> assemblies)
         {
             commandService.AddCommands(assemblies.SelectMany((assembly) => assembly.GetExportedTypes()));
@@ -26,6 +28,8 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <param name="commandService">command service instance</param>
         /// <param name="assembly">assembly to search for commands</param>
+        /// <exception cref="FileNotFoundException">assembly or reference not found</exception>
+        /// <exception cref="NotSupportedException">not supported</exception>
         public static void AddCommands(this ICommandService commandService, Assembly assembly)
         {
             commandService.AddCommands(assembly.GetExportedTypes());
@@ -38,19 +42,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="types">list of types to search</param>
         public static void AddCommands(this ICommandService commandService, IEnumerable<Type> types)
         {
-            foreach (Type type in types) {
+            foreach (Type type in types)
+            {
                 commandService.AddCommands(type);
             }
-        }
-
-        /// <summary>
-        /// Add the commands and aliases attributes found in the type.
-        /// </summary>
-        /// <param name="commandService">command service instance</param>
-        /// <param name="type">Command type to search</param>
-        public static void AddCommands(this ICommandService commandService, Type type)
-        {
-            commandService.AddCommands(type, factory: null);
         }
     }
 }

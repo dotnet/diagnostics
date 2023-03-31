@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // ==++==
 //
@@ -88,6 +87,9 @@
 #include <stddef.h>
 #include <stdexcept>
 #include <deque>
+
+#include <iostream>
+#include <sstream>
 
 #include "strike.h"
 #include "sos.h"
@@ -373,6 +375,24 @@ GetContextStackTrace(ULONG osThreadId, PULONG pnumFrames)
     }
     return hr;
 }
+
+
+//
+// Executes managed extension commands
+//
+HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
+{
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
+    {
+        if (commandName != nullptr && strlen(commandName) > 0)
+        {
+            return hostServices->DispatchCommand(commandName, args);
+        }
+    }
+    return E_NOTIMPL;
+}
+
 
 /**********************************************************************\
 * Routine Description:                                                 *
@@ -3591,10 +3611,6 @@ DECLARE_API(DumpPermissionSet)
 }
 
 #endif // _DEBUG
-
-void GCPrintGenerationInfo(DacpGcHeapDetails &heap);
-void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
-
 #endif // FEATURE_PAL
 
 /**********************************************************************\
@@ -3605,200 +3621,8 @@ void GCPrintSegmentInfo(DacpGcHeapDetails &heap, DWORD_PTR &total_size);
 \**********************************************************************/
 DECLARE_API(EEHeap)
 {
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-
-    BOOL dml = FALSE;
-    BOOL showgc = FALSE;
-    BOOL showloader = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-gc", &showgc, COBOOL, FALSE},
-        {"-loader", &showloader, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    if (showloader || !showgc)
-    {
-        // Loader heap.
-        DWORD_PTR allHeapSize = 0;
-        DWORD_PTR wasted = 0;
-        DacpAppDomainStoreData adsData;
-        if ((Status=adsData.Request(g_sos))!=S_OK)
-        {
-            ExtOut("Unable to get AppDomain information\n");
-            return Status;
-        }
-
-        // The first one is the system domain.
-        ExtOut("Loader Heap:\n");
-        IfFailRet(PrintDomainHeapInfo("System Domain", adsData.systemDomain, &allHeapSize, &wasted));
-        if (adsData.sharedDomain != NULL)
-        {
-            IfFailRet(PrintDomainHeapInfo("Shared Domain", adsData.sharedDomain, &allHeapSize, &wasted));
-        }
-
-        ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[adsData.DomainCount];
-
-        if (pArray==NULL)
-        {
-            ReportOOM();
-            return Status;
-        }
-
-        if ((Status=g_sos->GetAppDomainList(adsData.DomainCount, pArray, NULL))!=S_OK)
-        {
-            ExtOut("Unable to get the array of all AppDomains.\n");
-            return Status;
-        }
-
-        for (int n=0;n<adsData.DomainCount;n++)
-        {
-            if (IsInterrupt())
-                break;
-
-            char domain[16];
-            sprintf_s(domain, ARRAY_SIZE(domain), "Domain %d", n+1);
-
-            IfFailRet(PrintDomainHeapInfo(domain, pArray[n], &allHeapSize, &wasted));
-
-        }
-
-        // Jit code heap
-        ExtOut("--------------------------------------\n");
-        ExtOut("Jit code heap:\n");
-
-        if (IsMiniDumpFile())
-        {
-            ExtOut("<no information>\n");
-        }
-        else
-        {
-            allHeapSize += JitHeapInfo();
-        }
-
-
-        // Module Data
-        {
-            int numModule;
-            ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(NULL, &numModule);
-            if (moduleList == NULL)
-            {
-                ExtOut("Failed to request module list.\n");
-            }
-            else
-            {
-                // Module Thunk Heaps
-                ExtOut("--------------------------------------\n");
-                ExtOut("Module Thunk heaps:\n");
-                allHeapSize += PrintModuleHeapInfo(moduleList, numModule, ModuleHeapType_ThunkHeap, &wasted);
-
-                // Module Lookup Table Heaps
-                ExtOut("--------------------------------------\n");
-                ExtOut("Module Lookup Table heaps:\n");
-                allHeapSize += PrintModuleHeapInfo(moduleList, numModule, ModuleHeapType_LookupTableHeap, &wasted);
-            }
-        }
-
-        ExtOut("--------------------------------------\n");
-        ExtOut("Total LoaderHeap size:   ");
-        PrintHeapSize(allHeapSize, wasted);
-        ExtOut("=======================================\n");
-    }
-
-    if (showgc || !showloader)
-    {
-        // GC Heap
-        DWORD dwNHeaps = 1;
-
-        if (!GetGcStructuresValid())
-        {
-            DisplayInvalidStructuresMessage();
-        }
-
-        DacpGcHeapData gcheap;
-        if (gcheap.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting GC Heap data\n");
-            return Status;
-        }
-
-        if (gcheap.bServerMode)
-        {
-            dwNHeaps = gcheap.HeapCount;
-        }
-
-        ExtOut("Number of GC Heaps: %d\n", dwNHeaps);
-        DWORD_PTR totalAllocatedSize = 0;
-        DWORD_PTR totalCommittedSize = 0;
-        if (!gcheap.bServerMode)
-        {
-            DacpGcHeapDetails heapDetails;
-            if (heapDetails.Request(g_sos) != S_OK)
-            {
-                ExtOut("Error requesting details\n");
-                return Status;
-            }
-
-            GCHeapInfo (heapDetails, totalAllocatedSize, totalCommittedSize);
-            ExtOut("Total Allocated Size:              ");
-            PrintHeapSize(totalAllocatedSize, 0);
-            ExtOut("Total Committed Size:              ");
-            PrintHeapSize(totalCommittedSize, 0);
-        }
-        else
-        {
-            DWORD dwAllocSize;
-            if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-            {
-                ExtOut("Failed to get GCHeaps: integer overflow\n");
-                return Status;
-            }
-
-            CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-            if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-            {
-                ExtOut("Failed to get GCHeaps\n");
-                return Status;
-            }
-
-            DWORD n;
-            for (n = 0; n < dwNHeaps; n ++)
-            {
-                DacpGcHeapDetails dacHeapDetails;
-                if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
-                {
-                    ExtOut("Error requesting details\n");
-                    return Status;
-                }
-                ExtOut("------------------------------\n");
-                ExtOut("Heap %d (%p)\n", n, SOS_PTR(heapAddrs[n]));
-                DWORD_PTR heapAllocSize = 0;
-                DWORD_PTR heapCommitSize = 0;
-                GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
-                GCHeapInfo (heapDetails, heapAllocSize, heapCommitSize);
-                totalAllocatedSize += heapAllocSize;
-                totalCommittedSize += heapCommitSize;
-                ExtOut("Allocated Heap Size:       " WIN86_8SPACES);
-                PrintHeapSize(heapAllocSize, 0);
-                ExtOut("Committed Heap Size:       " WIN86_8SPACES);
-                PrintHeapSize(heapCommitSize, 0);
-            }
-        }
-        ExtOut("------------------------------\n");
-        ExtOut("GC Allocated Heap Size:    " WIN86_8SPACES);
-        PrintHeapSize(totalAllocatedSize, 0);
-        ExtOut("GC Committed Heap Size:    " WIN86_8SPACES);
-        PrintHeapSize(totalCommittedSize, 0);
-    }
-    return Status;
+    INIT_API_EXT();
+    return ExecuteCommand("eeheap", args);
 }
 
 void PrintGCStat(HeapStat *inStat, const char* label=NULL)
@@ -4047,696 +3871,26 @@ namespace sos
     };
 }
 
-class DumpHeapImpl
-{
-public:
-    DumpHeapImpl(PCSTR args)
-        : mStart(0), mStop(0), mMT(0),  mMinSize(0), mMaxSize(~0),
-          mStat(FALSE), mStrings(FALSE), mVerify(FALSE),
-          mThinlock(FALSE), mShort(FALSE), mDML(FALSE),
-          mLive(FALSE), mDead(FALSE), mType(NULL)
-    {
-        ArrayHolder<char> type = NULL;
-
-        TADDR minTemp = 0;
-        CMDOption option[] =
-        {   // name, vptr, type, hasValue
-            {"-mt", &mMT, COHEX, TRUE},              // dump objects with a given MethodTable
-            {"-type", &type, COSTRING, TRUE},        // list objects of specified type
-            {"-stat", &mStat, COBOOL, FALSE},        // dump a summary of types and the number of instances of each
-            {"-strings", &mStrings, COBOOL, FALSE},  // dump a summary of string objects
-            {"-verify", &mVerify, COBOOL, FALSE},    // verify heap objects (heapverify)
-            {"-thinlock", &mThinlock, COBOOL, FALSE},// list only thinlocks
-            {"-short", &mShort, COBOOL, FALSE},      // list only addresses
-            {"-min", &mMinSize, COHEX, TRUE},        // min size of objects to display (hex)
-            {"-max", &mMaxSize, COHEX, TRUE},        // max size of objects to display (hex)
-            {"-live", &mLive, COHEX, FALSE},         // only print live objects
-            {"-dead", &mDead, COHEX, FALSE},         // only print dead objects
-            {"/d", &mDML, COBOOL, FALSE},            // Debugger Markup Language
-        };
-
-        CMDValue arg[] =
-        {   // vptr, type
-            {&mStart, COHEX},
-            {&mStop, COHEX}
-        };
-
-        size_t nArgs = 0;
-        if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArgs))
-            sos::Throw<sos::Exception>("Failed to parse command line arguments.");
-
-        if (mStart == 0)
-            mStart = minTemp;
-
-        if (mStop == 0)
-            mStop = sos::GCHeap::HeapEnd;
-
-        if (type && mMT)
-        {
-            sos::Throw<sos::Exception>("Cannot specify both -mt and -type");
-        }
-
-        if (mLive && mDead)
-        {
-            sos::Throw<sos::Exception>("Cannot specify both -live and -dead.");
-        }
-
-        if (mMinSize > mMaxSize)
-        {
-            sos::Throw<sos::Exception>("wrong argument");
-        }
-
-        // If the user gave us a type, convert it to unicode and clean up "type".
-        if (type && !mStrings)
-        {
-            size_t iLen = strlen(type) + 1;
-            mType = new WCHAR[iLen];
-            MultiByteToWideChar(CP_ACP, 0, type, -1, mType, (int)iLen);
-        }
-    }
-
-    ~DumpHeapImpl()
-    {
-        if (mType)
-            delete [] mType;
-    }
-
-    void Run()
-    {
-        // enable Debugger Markup Language
-        EnableDMLHolder dmlholder(mDML);
-        sos::GCHeap gcheap;
-
-        if (!gcheap.AreGCStructuresValid())
-            DisplayInvalidStructuresMessage();
-
-        if (IsMiniDumpFile())
-        {
-            ExtOut("In a minidump without full memory, most gc heap structures will not be valid.\n");
-            ExtOut("If you need this functionality, get a full memory dump with \".dump /ma mydump.dmp\"\n");
-        }
-
-        if (mLive || mDead)
-        {
-            GCRootImpl gcroot;
-            mLiveness = gcroot.GetLiveObjects();
-        }
-
-        // Some of the "specialty" versions of DumpHeap have slightly
-        // different implementations than the standard version of DumpHeap.
-        // We seperate them out to not clutter the standard DumpHeap function.
-        if (mShort)
-            DumpHeapShort(gcheap);
-        else if (mThinlock)
-            DumpHeapThinlock(gcheap);
-        else if (mStrings)
-            DumpHeapStrings(gcheap);
-        else
-            DumpHeap(gcheap);
-
-        if (mVerify)
-            ValidateSyncTable(gcheap);
-    }
-
-    static bool ValidateSyncTable(sos::GCHeap &gcheap)
-    {
-        bool succeeded = true;
-        for (sos::SyncBlkIterator itr; itr; ++itr)
-        {
-            sos::CheckInterrupt();
-
-            if (!itr->IsFree())
-            {
-                if (!sos::IsObject(itr->GetObject(), true))
-                {
-                    ExtOut("SyncBlock %d corrupted, points to invalid object %p\n",
-                            itr->GetIndex(), SOS_PTR(itr->GetObject()));
-                        succeeded = false;
-                }
-                else
-                {
-                    // Does the object header point to this syncblock index?
-                    sos::Object obj = itr->GetObject();
-                    ULONG header = 0;
-
-                    if (!obj.TryGetHeader(header))
-                    {
-                        ExtOut("Failed to get object header for object %p while inspecting syncblock at index %d.\n",
-                                SOS_PTR(itr->GetObject()), itr->GetIndex());
-                        succeeded = false;
-                    }
-                    else
-                    {
-                        bool valid = false;
-                        if ((header & BIT_SBLK_IS_HASH_OR_SYNCBLKINDEX) != 0 && (header & BIT_SBLK_IS_HASHCODE) == 0)
-                        {
-                            ULONG index = header & MASK_SYNCBLOCKINDEX;
-                            valid = (ULONG)itr->GetIndex() == index;
-                        }
-
-                        if (!valid)
-                        {
-                            ExtOut("Object header for %p should have a SyncBlock index of %d.\n",
-                                    SOS_PTR(itr->GetObject()), itr->GetIndex());
-                            succeeded = false;
-                        }
-                    }
-                }
-            }
-        }
-
-        return succeeded;
-    }
-private:
-    DumpHeapImpl(const DumpHeapImpl &);
-
-    bool Verify(const sos::ObjectIterator &itr)
-    {
-        if (mVerify)
-        {
-            char buffer[1024];
-            if (!itr.Verify(buffer, ARRAY_SIZE(buffer)))
-            {
-                ExtOut(buffer);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    bool IsCorrectType(const sos::Object &obj)
-    {
-        if (mMT != NULL)
-            return mMT == obj.GetMT();
-
-        if (mType != NULL)
-        {
-            WString name = obj.GetTypeName();
-            return _wcsstr(name.c_str(), mType) != NULL;
-        }
-
-        return true;
-    }
-
-    bool IsCorrectSize(const sos::Object &obj)
-    {
-        size_t size = obj.GetSize();
-        return size >= mMinSize && size <= mMaxSize;
-    }
-
-    bool IsCorrectLiveness(const sos::Object &obj)
-    {
-        if (mLive && mLiveness.find(obj.GetAddress()) == mLiveness.end())
-            return false;
-
-        if (mDead && (mLiveness.find(obj.GetAddress()) != mLiveness.end() || obj.IsFree()))
-            return false;
-
-        return true;
-    }
-
-    inline void PrintHeader()
-    {
-        ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %8s\n", "Address", "MT", "Size");
-    }
-
-    void DumpHeap(sos::GCHeap &gcheap)
-    {
-        HeapStat stats;
-
-        // For heap fragmentation tracking.
-        TADDR lastFreeObj = NULL;
-        size_t lastFreeSize = 0;
-
-        if (!mStat)
-            PrintHeader();
-
-        for (sos::ObjectIterator itr = gcheap.WalkHeap(mStart, mStop); itr; ++itr)
-        {
-            if (!Verify(itr))
-                return;
-
-            bool onLOH = itr.IsCurrObjectOnLOH();
-
-            // Check for free objects to report fragmentation
-            if (lastFreeObj != NULL)
-                ReportFreeObject(lastFreeObj, lastFreeSize, itr->GetAddress(), itr->GetMT());
-
-            if (!onLOH && itr->IsFree())
-            {
-                lastFreeObj = *itr;
-                lastFreeSize = itr->GetSize();
-            }
-            else
-            {
-                lastFreeObj = NULL;
-            }
-
-            if (IsCorrectType(*itr) && IsCorrectSize(*itr) && IsCorrectLiveness(*itr))
-            {
-                stats.Add((DWORD_PTR)itr->GetMT(), (DWORD)itr->GetSize());
-                if (!mStat)
-                    DMLOut("%s %s %8d%s\n", DMLObject(itr->GetAddress()), DMLDumpHeapMT(itr->GetMT()), itr->GetSize(),
-                                            itr->IsFree() ? " Free":"     ");
-            }
-        }
-
-        if (!mStat)
-            ExtOut("\n");
-
-        stats.Sort();
-        stats.Print();
-
-        PrintFragmentationReport();
-    }
-
-    struct StringSetEntry
-    {
-        StringSetEntry() : count(0), size(0)
-        {
-            str[0] = 0;
-        }
-
-        StringSetEntry(__in_ecount(64) WCHAR tmp[64], size_t _size)
-            : count(1), size(_size)
-        {
-            memcpy(str, tmp, sizeof(str));
-        }
-
-        void Add(size_t _size) const
-        {
-            count++;
-            size += _size;
-        }
-
-        mutable size_t count;
-        mutable size_t size;
-        WCHAR str[64];
-
-        bool operator<(const StringSetEntry &rhs) const
-        {
-            return _wcscmp(str, rhs.str) < 0;
-        }
-    };
-
-
-    static bool StringSetCompare(const StringSetEntry &a1, const StringSetEntry &a2)
-    {
-        return a1.size < a2.size;
-    }
-
-    void DumpHeapStrings(sos::GCHeap &gcheap)
-    {
-        const int offset = sos::Object::GetStringDataOffset();
-        typedef std::set<StringSetEntry> Set;
-        Set set;            // A set keyed off of the string's text
-
-        StringSetEntry tmp;  // Temp string used to keep track of the set
-        ULONG fetched = 0;
-
-        TableOutput out(3, POINTERSIZE_HEX, AlignRight);
-        for (sos::ObjectIterator itr = gcheap.WalkHeap(mStart, mStop); itr; ++itr)
-        {
-            if (IsInterrupt())
-                break;
-
-            if (itr->IsString() && IsCorrectSize(*itr) && IsCorrectLiveness(*itr))
-            {
-                CLRDATA_ADDRESS addr = itr->GetAddress();
-                size_t size = itr->GetSize();
-
-                if (!mStat)
-                    out.WriteRow(ObjectPtr(addr), Pointer(itr->GetMT()), Decimal(size));
-
-                // Don't bother calculating the size of the string, just read the full 64 characters of the buffer.  The null
-                // terminator we read will terminate the string.
-                HRESULT hr = g_ExtData->ReadVirtual(TO_CDADDR(addr+offset), tmp.str, sizeof(WCHAR)*(ARRAY_SIZE(tmp.str)-1), &fetched);
-                if (SUCCEEDED(hr))
-                {
-                    // Ensure we null terminate the string.  Note that this will not overrun the buffer as we only
-                    // wrote a max of 63 characters into the 64 character buffer.
-                    tmp.str[fetched/sizeof(WCHAR)] = 0;
-                    Set::iterator sitr = set.find(tmp);
-                    if (sitr == set.end())
-                    {
-                        tmp.size = size;
-                        tmp.count = 1;
-                        set.insert(tmp);
-                    }
-                    else
-                    {
-                        sitr->Add(size);
-                    }
-                }
-            }
-        }
-
-        ExtOut("\n");
-
-        // Now flatten the set into a vector.  This is much faster than keeping two sets, or using a multimap.
-        typedef std::vector<StringSetEntry> Vect;
-        Vect v(set.begin(), set.end());
-        std::sort(v.begin(), v.end(), &DumpHeapImpl::StringSetCompare);
-
-        // Now print out the data.  The call to Flatten ensures that we don't print newlines to break up the
-        // output in strange ways.
-        for (Vect::iterator vitr = v.begin(); vitr != v.end(); ++vitr)
-        {
-            if (IsInterrupt())
-                break;
-
-            Flatten(vitr->str, (unsigned int)_wcslen(vitr->str));
-            out.WriteRow(Decimal(vitr->size), Decimal(vitr->count), vitr->str);
-        }
-    }
-
-    void DumpHeapShort(sos::GCHeap &gcheap)
-    {
-        for (sos::ObjectIterator itr = gcheap.WalkHeap(mStart, mStop); itr; ++itr)
-        {
-            if (!Verify(itr))
-                return;
-
-            if (IsCorrectType(*itr) && IsCorrectSize(*itr) && IsCorrectLiveness(*itr))
-                DMLOut("%s\n", DMLObject(itr->GetAddress()));
-        }
-    }
-
-    void DumpHeapThinlock(sos::GCHeap &gcheap)
-    {
-        int count = 0;
-
-        PrintHeader();
-        for (sos::ObjectIterator itr = gcheap.WalkHeap(mStart, mStop); itr; ++itr)
-        {
-            if (!Verify(itr))
-                return;
-
-            sos::ThinLockInfo lockInfo;
-            if (IsCorrectType(*itr) && itr->GetThinLock(lockInfo))
-            {
-                DMLOut("%s %s %8d", DMLObject(itr->GetAddress()), DMLDumpHeapMT(itr->GetMT()), itr->GetSize());
-                ExtOut(" ThinLock owner %x (%p) Recursive %x\n", lockInfo.ThreadId,
-                                        SOS_PTR(lockInfo.ThreadPtr), lockInfo.Recursion);
-
-                count++;
-            }
-        }
-
-        ExtOut("Found %d objects.\n", count);
-    }
-
-private:
-    TADDR mStart,
-          mStop,
-          mMT,
-          mMinSize,
-          mMaxSize;
-
-    BOOL mStat,
-         mStrings,
-         mVerify,
-         mThinlock,
-         mShort,
-         mDML,
-         mLive,
-         mDead;
-
-
-    WCHAR *mType;
-
-private:
-    std::unordered_set<TADDR> mLiveness;
-    typedef std::list<sos::FragmentationBlock> FragmentationList;
-    FragmentationList mFrag;
-
-    void InitFragmentationList()
-    {
-        mFrag.clear();
-    }
-
-    void ReportFreeObject(TADDR addr, size_t size, TADDR next, TADDR mt)
-    {
-        if (size >= MIN_FRAGMENTATIONBLOCK_BYTES)
-            mFrag.push_back(sos::FragmentationBlock(addr, size, next, mt));
-    }
-
-    void PrintFragmentationReport()
-    {
-        if (mFrag.size() > 0)
-        {
-            ExtOut("Fragmented blocks larger than 0.5 MB:\n");
-            ExtOut("%" POINTERSIZE "s %8s %16s\n", "Addr", "Size", "Followed by");
-
-            for (FragmentationList::const_iterator itr = mFrag.begin(); itr != mFrag.end(); ++itr)
-            {
-                sos::MethodTable mt = itr->GetNextMT();
-                ExtOut("%p %6.1fMB " WIN64_8SPACES "%p %S\n",
-                            SOS_PTR(itr->GetAddress()),
-                            ((double)itr->GetSize()) / 1024.0 / 1024.0,
-                            SOS_PTR(itr->GetNextObject()),
-                            mt.GetName());
-            }
-        }
-    }
-};
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function dumps all objects on GC heap. It also displays      *
-*    statistics of objects.  If GC heap is corrupted, it will stop at
-*    the bad place.  (May not work if GC is in progress.)              *
-*                                                                      *
-\**********************************************************************/
 DECLARE_API(DumpHeap)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
-
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return E_FAIL;
-    }
-
-    try
-    {
-        DumpHeapImpl dumpHeap(args);
-        dumpHeap.Run();
-
-        return S_OK;
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
+    return ExecuteCommand("dumpheap", args);
 }
 
 DECLARE_API(VerifyHeap)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
-
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return E_FAIL;
-    }
-
-    try
-    {
-        bool succeeded = true;
-        char buffer[1024];
-        sos::GCHeap gcheap;
-        sos::ObjectIterator itr = gcheap.WalkHeap();
-
-        while (itr)
-        {
-            if (itr.Verify(buffer, ARRAY_SIZE(buffer)))
-            {
-                ++itr;
-            }
-            else
-            {
-                succeeded = false;
-                ExtOut(buffer);
-                itr.MoveToNextObjectCarefully();
-            }
-        }
-
-        if (!DumpHeapImpl::ValidateSyncTable(gcheap))
-            succeeded = false;
-
-        if (succeeded)
-            ExtOut("No heap corruption detected.\n");
-
-        return S_OK;
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-}
-
-enum failure_get_memory
-{
-    fgm_no_failure = 0,
-    fgm_reserve_segment = 1,
-    fgm_commit_segment_beg = 2,
-    fgm_commit_eph_segment = 3,
-    fgm_grow_table = 4,
-    fgm_commit_table = 5
-};
-
-enum oom_reason
-{
-    oom_no_failure = 0,
-    oom_budget = 1,
-    oom_cant_commit = 2,
-    oom_cant_reserve = 3,
-    oom_loh = 4,
-    oom_low_mem = 5,
-    oom_unproductive_full_gc = 6
-};
-
-static const char *const str_oom[] =
-{
-    "There was no managed OOM due to allocations on the GC heap", // oom_no_failure
-    "This is likely to be a bug in GC", // oom_budget
-    "Didn't have enough memory to commit", // oom_cant_commit
-    "This is likely to be a bug in GC", // oom_cant_reserve
-    "Didn't have enough memory to allocate an LOH segment", // oom_loh
-    "Low on memory during GC", // oom_low_mem
-    "Could not do a full GC" // oom_unproductive_full_gc
-};
-
-static const char *const str_fgm[] =
-{
-    "There was no failure to allocate memory", // fgm_no_failure
-    "Failed to reserve memory", // fgm_reserve_segment
-    "Didn't have enough memory to commit beginning of the segment", // fgm_commit_segment_beg
-    "Didn't have enough memory to commit the new ephemeral segment", // fgm_commit_eph_segment
-    "Didn't have enough memory to grow the internal GC data structures", // fgm_grow_table
-    "Didn't have enough memory to commit the internal GC data structures", // fgm_commit_table
-};
-
-void PrintOOMInfo(DacpOomData* oomData)
-{
-    ExtOut("Managed OOM occurred after GC #%d (Requested to allocate %d bytes)\n",
-        oomData->gc_index, oomData->alloc_size);
-
-    if ((oomData->reason == oom_budget) ||
-        (oomData->reason == oom_cant_reserve))
-    {
-        // TODO: This message needs to be updated with more precious info.
-        ExtOut("%s, please contact PSS\n", str_oom[oomData->reason]);
-    }
-    else
-    {
-        ExtOut("Reason: %s\n", str_oom[oomData->reason]);
-    }
-
-    // Now print out the more detailed memory info if any.
-    if (oomData->fgm != fgm_no_failure)
-    {
-        ExtOut("Detail: %s: %s (%d bytes)",
-            (oomData->loh_p ? "LOH" : "SOH"),
-            str_fgm[oomData->fgm],
-            oomData->size);
-
-        if ((oomData->fgm == fgm_commit_segment_beg) ||
-            (oomData->fgm == fgm_commit_eph_segment) ||
-            (oomData->fgm == fgm_grow_table) ||
-            (oomData->fgm == fgm_commit_table))
-        {
-            // If it's a commit error (fgm_grow_table can indicate a reserve
-            // or a commit error since we make one VirtualAlloc call to
-            // reserve and commit), we indicate the available commit
-            // space if we recorded it.
-            if (oomData->available_pagefile_mb)
-            {
-                ExtOut(" - on GC entry available commit space was %d MB",
-                    oomData->available_pagefile_mb);
-            }
-        }
-
-        ExtOut("\n");
-    }
+    return ExecuteCommand("verifyheap", args);
 }
 
 DECLARE_API(AnalyzeOOM)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    if (!InitializeHeapData ())
-    {
-        ExtOut("GC Heap not initialized yet.\n");
-        return S_OK;
-    }
-
-    BOOL bHasManagedOOM = FALSE;
-    DacpOomData oomData;
-    memset (&oomData, 0, sizeof(oomData));
-    if (!IsServerBuild())
-    {
-        if (oomData.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting OOM data\n");
-            return E_FAIL;
-        }
-        if (oomData.reason != oom_no_failure)
-        {
-            bHasManagedOOM = TRUE;
-            PrintOOMInfo(&oomData);
-        }
-    }
-    else
-    {
-        DWORD dwNHeaps = GetGcHeapCount();
-        DWORD dwAllocSize;
-        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-        {
-            ExtOut("Failed to get GCHeaps:  integer overflow\n");
-            return Status;
-        }
-
-        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-        {
-            ExtOut("Failed to get GCHeaps\n");
-            return Status;
-        }
-
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            if (oomData.Request(g_sos, heapAddrs[n]) != S_OK)
-            {
-                ExtOut("Heap %d: Error requesting OOM data\n", n);
-                return E_FAIL;
-            }
-            if (oomData.reason != oom_no_failure)
-            {
-                if (!bHasManagedOOM)
-                {
-                    bHasManagedOOM = TRUE;
-                }
-                ExtOut("---------Heap %#-2d---------\n", n);
-                PrintOOMInfo(&oomData);
-            }
-        }
-    }
-
-    if (!bHasManagedOOM)
-    {
-        ExtOut("%s\n", str_oom[oomData.reason]);
-    }
-
-    return S_OK;
+    return ExecuteCommand("analyzeoom", args);
 }
 
 DECLARE_API(VerifyObj)
@@ -4802,383 +3956,20 @@ Exit:
     return Status;
 }
 
-void LNODisplayOutput(LPCWSTR tag, TADDR pMT, TADDR currentObj, size_t size)
-{
-    sos::Object obj(currentObj, pMT);
-    DMLOut("%S %s %12d (0x%x)\t%S\n", tag, DMLObject(currentObj), size, size, obj.GetTypeName());
-}
-
 DECLARE_API(ListNearObj)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    TADDR taddrArg = 0;
-    TADDR taddrObj = 0;
-    BOOL dml = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {
-        // vptr, type
-        {&taddrArg, COHEX}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg) || nArg != 1)
-    {
-        ExtOut("Usage: !ListNearObj <obj_address>\n");
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return Status;
-    }
-
-    taddrObj = Align(taddrArg);
-
-    GCHeapDetails *heap = g_snapshot.GetHeap(taddrArg);
-    if (heap == NULL)
-    {
-        ExtOut("Address %p does not lie in the managed heap\n", SOS_PTR(taddrObj));
-        return Status;
-    }
-
-    TADDR_SEGINFO trngSeg  = {0, 0, 0};
-    TADDR_RANGE   allocCtx = {0, 0};
-    BOOL          bLarge;
-    int           gen;
-    if (!GCObjInHeap(taddrObj, *heap, trngSeg, gen, allocCtx, bLarge))
-    {
-        ExtOut("Failed to find the segment of the managed heap where the object %p resides\n",
-            SOS_PTR(taddrObj));
-        return Status;
-    }
-
-    TADDR  objMT = NULL;
-    size_t objSize = 0;
-    BOOL   bObj    = FALSE;
-    TADDR  taddrCur;
-    TADDR  curMT   = 0;
-    size_t curSize = 0;
-    BOOL   bCur    = FALSE;
-    TADDR  taddrNxt;
-    TADDR  nxtMT   = 0;
-    size_t nxtSize = 0;
-    BOOL   bNxt    = FALSE;
-    BOOL   bContainsPointers;
-
-    std::vector<TADDR> candidate;
-    candidate.reserve(10);
-
-    // since we'll be reading back I'll prime the read cache to a buffer before the current address
-    MOVE(taddrCur, _max(trngSeg.start, taddrObj-DT_OS_PAGE_SIZE));
-
-    // ===== Look for a good candidate preceeding taddrObj
-
-    for (taddrCur = taddrObj - sizeof(TADDR); taddrCur >= trngSeg.start; taddrCur -= sizeof(TADDR))
-    {
-        // currently we don't pay attention to allocation contexts.  if this
-        // proves to be an issue we need to reconsider the code below
-        if (SUCCEEDED(GetMTOfObject(taddrCur, &curMT)) &&
-            GetSizeEfficient(taddrCur, curMT, bLarge, curSize, bContainsPointers))
-        {
-            // remember this as one of the possible "good" objects preceeding taddrObj
-            candidate.push_back(taddrCur);
-
-            std::vector<TADDR>::iterator it =
-                std::find(candidate.begin(), candidate.end(), taddrCur+curSize);
-            if (it != candidate.end())
-            {
-                // We found a chain of two objects preceeding taddrObj.  We'll
-                // trust this is a good indication that the two objects are valid.
-                // What is not valid is possibly the object following the second
-                // one...
-                taddrCur = *it;
-                GetMTOfObject(taddrCur, &curMT);
-                GetSizeEfficient(taddrCur, curMT, bLarge, curSize, bContainsPointers);
-                bCur = TRUE;
-                break;
-            }
-        }
-    }
-
-    if (!bCur && !candidate.empty())
-    {
-        // pick the closest object to taddrObj
-        taddrCur = *(candidate.begin());
-        GetMTOfObject(taddrCur, &curMT);
-        GetSizeEfficient(taddrCur, curMT, bLarge, curSize, bContainsPointers);
-        // we have a candidate, even if not confirmed
-        bCur = TRUE;
-    }
-
-    taddrNxt = taddrObj;
-    if (taddrArg == taddrObj)
-    {
-        taddrNxt += sizeof(TADDR);
-    }
-
-    // ===== Now look at taddrObj
-    if (taddrObj == taddrArg)
-    {
-        // only look at taddrObj if it's the same as what user passed in, meaning it's aligned.
-        if (SUCCEEDED(GetMTOfObject(taddrObj, &objMT)) &&
-            GetSizeEfficient(taddrObj, objMT, bLarge, objSize, bContainsPointers))
-        {
-            bObj = TRUE;
-            taddrNxt = taddrObj+objSize;
-        }
-    }
-
-    if ((taddrCur + curSize > taddrArg) && taddrCur + curSize < trngSeg.end)
-    {
-        if (SUCCEEDED(GetMTOfObject(taddrCur + curSize, &nxtMT)) &&
-            GetSizeEfficient(taddrObj, objMT, bLarge, objSize, bContainsPointers))
-        {
-            taddrNxt = taddrCur+curSize;
-        }
-    }
-
-    // ===== And finally move on to elements following taddrObj
-
-    for (; taddrNxt < trngSeg.end; taddrNxt += sizeof(TADDR))
-    {
-        if (SUCCEEDED(GetMTOfObject(taddrNxt, &nxtMT)) &&
-            GetSizeEfficient(taddrNxt, nxtMT, bLarge, nxtSize, bContainsPointers))
-        {
-            bNxt = TRUE;
-            break;
-        }
-    }
-
-    if (bCur)
-        LNODisplayOutput(W("Before: "), curMT, taddrCur, curSize);
-    else
-        ExtOut("Before: couldn't find any object between %#p and %#p\n",
-            SOS_PTR(trngSeg.start), SOS_PTR(taddrArg));
-
-    if (bObj)
-        LNODisplayOutput(W("Current:"), objMT, taddrObj, objSize);
-
-    if (bNxt)
-        LNODisplayOutput(W("After:  "), nxtMT, taddrNxt, nxtSize);
-    else
-        ExtOut("After:  couldn't find any object between %#p and %#p\n",
-            SOS_PTR(taddrArg), SOS_PTR(trngSeg.end));
-
-    if (bCur && bNxt &&
-        (((taddrCur + curSize == taddrObj) && (taddrObj + objSize == taddrNxt)) || (taddrCur + curSize == taddrNxt)))
-    {
-        ExtOut("Heap local consistency confirmed.\n");
-    }
-    else
-    {
-        ExtOut("Heap local consistency not confirmed.\n");
-    }
-
-    return Status;
+    return ExecuteCommand("listnearobj", args);
 }
 
 DECLARE_API(GCHeapStat)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL bIncUnreachable = FALSE;
-    BOOL dml = FALSE;
-
-    CMDOption option[] = {
-        // name, vptr, type, hasValue
-        {"-inclUnrooted", &bIncUnreachable, COBOOL, FALSE},
-        {"-iu",           &bIncUnreachable, COBOOL, FALSE},
-        {"/d",            &dml, COBOOL, FALSE}
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    ExtOut("%-8s %12s %12s %12s %12s %12s\n", "Heap", "Gen0", "Gen1", "Gen2", "LOH", "POH");
-
-    if (!IsServerBuild())
-    {
-        float tempf;
-        DacpGcHeapDetails dacHeapDetails;
-        if (dacHeapDetails.Request(g_sos) != S_OK)
-        {
-            ExtErr("Error requesting gc heap details\n");
-            return Status;
-        }
-
-        HeapUsageStat hpUsage;
-        GCHeapDetails heapDetails(dacHeapDetails);
-        if (GCHeapUsageStats(heapDetails, bIncUnreachable, &hpUsage))
-        {
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
-                hpUsage.genUsage[0].allocd, hpUsage.genUsage[1].allocd,
-                hpUsage.genUsage[2].allocd, hpUsage.genUsage[3].allocd,
-                hpUsage.genUsage[4].allocd);
-            ExtOut("\nFree space:                                                               Percentage\n");
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", 0,
-                hpUsage.genUsage[0].freed, hpUsage.genUsage[1].freed,
-                hpUsage.genUsage[2].freed, hpUsage.genUsage[3].freed,
-                hpUsage.genUsage[4].freed);
-            tempf = ((float)(hpUsage.genUsage[0].freed + hpUsage.genUsage[1].freed + hpUsage.genUsage[2].freed)) /
-                (hpUsage.genUsage[0].allocd + hpUsage.genUsage[1].allocd + hpUsage.genUsage[2].allocd);
-            int pohFreeUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].freed) / (hpUsage.genUsage[4].allocd)) : 0;
-            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
-                (int)(100*((float)hpUsage.genUsage[3].freed) / (hpUsage.genUsage[3].allocd)), "%",
-                pohFreeUsage, "%");
-
-            if (bIncUnreachable)
-            {
-                ExtOut("\nUnrooted objects:                                            Percentage\n");
-                ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", 0,
-                    hpUsage.genUsage[0].unrooted, hpUsage.genUsage[1].unrooted,
-                    hpUsage.genUsage[2].unrooted, hpUsage.genUsage[3].unrooted);
-                tempf = ((float)(hpUsage.genUsage[0].unrooted+hpUsage.genUsage[1].unrooted+hpUsage.genUsage[2].unrooted)) /
-                    (hpUsage.genUsage[0].allocd+hpUsage.genUsage[1].allocd+hpUsage.genUsage[2].allocd);
-                int pohUnrootedUsage = heapDetails.has_poh ? (int)(100*((float)hpUsage.genUsage[4].unrooted) / (hpUsage.genUsage[4].allocd)) : 0;
-                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
-                    (int)(100*((float)hpUsage.genUsage[3].unrooted) / (hpUsage.genUsage[3].allocd)), "%",
-                    pohUnrootedUsage, "%");
-            }
-
-            ExtOut("\nCommitted space:\n");
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", 0,
-                hpUsage.genUsage[0].committed, hpUsage.genUsage[1].committed,
-                hpUsage.genUsage[2].committed, hpUsage.genUsage[3].committed,
-                hpUsage.genUsage[4].committed);
-        }
-    }
-    else
-    {
-        float tempf;
-        DacpGcHeapData gcheap;
-        if (gcheap.Request(g_sos) != S_OK)
-        {
-            ExtErr("Error requesting GC Heap data\n");
-            return Status;
-        }
-
-        DWORD dwAllocSize;
-        DWORD dwNHeaps = gcheap.HeapCount;
-        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-        {
-            ExtErr("Failed to get GCHeaps:  integer overflow\n");
-            return Status;
-        }
-
-        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-        {
-            ExtErr("Failed to get GCHeaps\n");
-            return Status;
-        }
-
-        ArrayHolder<HeapUsageStat> hpUsage = new NOTHROW HeapUsageStat[dwNHeaps];
-        if (hpUsage == NULL)
-        {
-            ReportOOM();
-            return Status;
-        }
-
-        // aggregate stats across heaps / generation
-        GenUsageStat genUsageStat[5];
-        memset(genUsageStat, 0, sizeof(genUsageStat));
-
-        bool hasPoh = false;
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            DacpGcHeapDetails dacHeapDetails;
-            if (dacHeapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
-            {
-                ExtErr("Error requesting gc heap details\n");
-                return Status;
-            }
-
-            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[n]);
-            hasPoh = heapDetails.has_poh;
-            if (GCHeapUsageStats(heapDetails, bIncUnreachable, &hpUsage[n]))
-            {
-                for (int i = 0; i < 5; ++i)
-                {
-                    genUsageStat[i].allocd   += hpUsage[n].genUsage[i].allocd;
-                    genUsageStat[i].freed    += hpUsage[n].genUsage[i].freed;
-                    if (bIncUnreachable)
-                    {
-                        genUsageStat[i].unrooted += hpUsage[n].genUsage[i].unrooted;
-                    }
-                }
-            }
-        }
-
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n", n,
-                hpUsage[n].genUsage[0].allocd, hpUsage[n].genUsage[1].allocd,
-                hpUsage[n].genUsage[2].allocd, hpUsage[n].genUsage[3].allocd,
-                hpUsage[n].genUsage[4].allocd);
-        }
-        ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
-            genUsageStat[0].allocd, genUsageStat[1].allocd,
-            genUsageStat[2].allocd, genUsageStat[3].allocd,
-            genUsageStat[4].allocd);
-
-        ExtOut("\nFree space:                                                               Percentage\n");
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", n,
-                hpUsage[n].genUsage[0].freed, hpUsage[n].genUsage[1].freed,
-                hpUsage[n].genUsage[2].freed, hpUsage[n].genUsage[3].freed,
-                hpUsage[n].genUsage[4].freed);
-
-            tempf = ((float)(hpUsage[n].genUsage[0].freed + hpUsage[n].genUsage[1].freed + hpUsage[n].genUsage[2].freed)) /
-                (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
-            int pohFreeUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].freed) / (hpUsage[n].genUsage[4].allocd)) : 0;
-            ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
-                (int)(100*((float)hpUsage[n].genUsage[3].freed) / (hpUsage[n].genUsage[3].allocd)), "%",
-                pohFreeUsage, "%");
-        }
-        ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
-            genUsageStat[0].freed, genUsageStat[1].freed,
-            genUsageStat[2].freed, genUsageStat[3].freed,
-            genUsageStat[4].freed);
-
-        if (bIncUnreachable)
-        {
-            ExtOut("\nUnrooted objects:                                            Percentage\n");
-            for (DWORD n = 0; n < dwNHeaps; n ++)
-            {
-                ExtOut("Heap%-4d %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u ", n,
-                    hpUsage[n].genUsage[0].unrooted, hpUsage[n].genUsage[1].unrooted,
-                    hpUsage[n].genUsage[2].unrooted, hpUsage[n].genUsage[3].unrooted,
-                    hpUsage[n].genUsage[4].unrooted);
-
-                tempf = ((float)(hpUsage[n].genUsage[0].unrooted + hpUsage[n].genUsage[1].unrooted + hpUsage[n].genUsage[2].unrooted)) /
-                    (hpUsage[n].genUsage[0].allocd + hpUsage[n].genUsage[1].allocd + hpUsage[n].genUsage[2].allocd);
-                int pohUnrootedUsage = hasPoh ? (int)(100*((float)hpUsage[n].genUsage[4].unrooted) / (hpUsage[n].genUsage[4].allocd)) : 0;
-                ExtOut("SOH:%3d%s LOH:%3d%s POH:%3d%s\n", (int)(100 * tempf), "%",
-                    (int)(100*((float)hpUsage[n].genUsage[3].unrooted) / (hpUsage[n].genUsage[3].allocd)), "%",
-                    pohUnrootedUsage, "%");
-            }
-            ExtOut("Total    %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u %12" POINTERSIZE_TYPE "u\n",
-                genUsageStat[0].unrooted, genUsageStat[1].unrooted,
-                genUsageStat[2].unrooted, genUsageStat[3].unrooted,
-                genUsageStat[4].unrooted);
-        }
-
-    }
-
-    return Status;
+    return ExecuteCommand("gcheapstat", args);
 }
 
 /**********************************************************************\
@@ -8626,7 +7417,7 @@ DECLARE_API(ThreadPool)
         ExtOut ("\n");
     }
 
-    return Status;
+    return S_OK;
 }
 
 DECLARE_API(FindAppDomain)
@@ -10417,8 +9208,12 @@ DECLARE_API(SOSStatus)
         }
         if (bReset)
         {
-            ReleaseTarget();
-            ExtOut("SOS state reset\n");
+            ITarget* target = GetTarget();
+            if (target != nullptr)
+            {
+                target->Flush();
+            }
+            ExtOut("Internal cached state reset\n");
             return S_OK;
         }
         Target::DisplayStatus();
@@ -10930,41 +9725,10 @@ DECLARE_API(Name2EE)
 
 DECLARE_API(PathTo)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR root = NULL;
-    DWORD_PTR target = NULL;
-    BOOL dml = FALSE;
-    size_t nArg;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&root, COHEX},
-        {&target, COHEX},
-    };
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    if (root == 0 || target == 0)
-    {
-        ExtOut("Invalid argument %s\n", args);
-        return Status;
-    }
-
-    GCRootImpl gcroot;
-    bool result = gcroot.PrintPathToObject(root, target);
-
-    if (!result)
-        ExtOut("Did not find a path from %p to %p.\n", SOS_PTR(root), SOS_PTR(target));
-
-    return Status;
+    return ExecuteCommand("pathto", args);
 }
 
 
@@ -10977,168 +9741,24 @@ DECLARE_API(PathTo)
 \**********************************************************************/
 DECLARE_API(GCRoot)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL bNoStacks = FALSE;
-    DWORD_PTR obj = NULL;
-    BOOL dml = FALSE;
-    BOOL all = FALSE;
-    size_t nArg;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-nostacks", &bNoStacks, COBOOL, FALSE},
-        {"-all", &all, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-
-    {   // vptr, type
-        {&obj, COHEX}
-    };
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-    if (obj == 0)
-    {
-        ExtOut("Invalid argument %s\n", args);
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    GCRootImpl gcroot;
-    int i = gcroot.PrintRootsForObject(obj, all == TRUE, bNoStacks == TRUE);
-
-    if (IsInterrupt())
-        ExtOut("Interrupted, data may be incomplete.\n");
-
-    if (all)
-        ExtOut("Found %d roots.\n", i);
-    else
-        ExtOut("Found %d unique roots (run '%sgcroot -all' to see all roots).\n", i, SOSPrefix);
-
-    return Status;
+    return ExecuteCommand("gcroot", args);
 }
 
 DECLARE_API(GCWhere)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL dml = FALSE;
-    BOOL bGetBrick;
-    BOOL bGetCard;
-    TADDR taddrObj = 0;
-    size_t nArg;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-brick", &bGetBrick, COBOOL, FALSE},
-        {"-card", &bGetCard, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&taddrObj, COHEX}
-    };
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    // Obtain allocation context for each managed thread.
-    AllocInfo allocInfo;
-    allocInfo.Init();
-
-    TADDR_SEGINFO trngSeg  = { 0, 0, 0 };
-    TADDR_RANGE   allocCtx = { 0, 0 };
-    int   gen = -1;
-    BOOL  bLarge = FALSE;
-    BOOL  bFound = FALSE;
-
-    size_t size = 0;
-    if (sos::IsObject(taddrObj))
-    {
-        TADDR taddrMT;
-        BOOL  bContainsPointers;
-        if(FAILED(GetMTOfObject(taddrObj, &taddrMT)) ||
-           !GetSizeEfficient(taddrObj, taddrMT, FALSE, size, bContainsPointers))
-        {
-            ExtWarn("Couldn't get size for object %#p: possible heap corruption.\n",
-                SOS_PTR(taddrObj));
-        }
-    }
-
-    DWORD heapIdx = 0;
-    if (!IsServerBuild())
-    {
-        DacpGcHeapDetails heapDetails;
-        if (heapDetails.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting gc heap details\n");
-            return Status;
-        }
-
-        bFound = GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge);
-    }
-    else
-    {
-        DacpGcHeapData gcheap;
-        if (gcheap.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting GC Heap data\n");
-            return Status;
-        }
-
-        DWORD dwAllocSize;
-        DWORD dwNHeaps = gcheap.HeapCount;
-        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-        {
-            ExtOut("Failed to get GCHeaps:  integer overflow\n");
-            return Status;
-        }
-
-        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-        {
-            ExtOut("Failed to get GCHeaps\n");
-            return Status;
-        }
-
-        for (heapIdx = 0; heapIdx < dwNHeaps && !bFound; heapIdx++)
-        {
-            DacpGcHeapDetails dacHeapDetails;
-            if (dacHeapDetails.Request(g_sos, heapAddrs[heapIdx]) != S_OK)
-            {
-                ExtOut("Error requesting details\n");
-                return Status;
-            }
-
-            GCHeapDetails heapDetails(dacHeapDetails, heapAddrs[heapIdx]);
-            bFound = GCObjInHeap(taddrObj, heapDetails, trngSeg, gen, allocCtx, bLarge);
-        }
-    }
-
-    if (!bFound)
-    {
-        ExtOut("Address %#p not found in the managed heap.\n", SOS_PTR(taddrObj));
-    }
-    else
-    {
-        ExtOut("Address " WIN64_8SPACES " Gen Heap segment " WIN64_8SPACES " begin   " WIN64_8SPACES " allocated" WIN64_8SPACES " size\n");
-        ExtOut("%p   %d     %2d     %p   %p   %p    0x%x(%d)\n",
-            SOS_PTR(taddrObj), gen, heapIdx, SOS_PTR(trngSeg.segAddr), SOS_PTR(trngSeg.start), SOS_PTR(trngSeg.end), size, size);
-    }
-
-    return Status;
+    return ExecuteCommand("gcwhere", args);
 }
+
 
 DECLARE_API(FindRoots)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
     if (IsDumpFile())
@@ -11238,10 +9858,10 @@ DECLARE_API(FindRoots)
             return Status;
         }
 
-        GCRootImpl gcroot;
-        int roots = gcroot.FindRoots(CNotification::GetCondemnedGen(), taObj);
+        std::stringstream argsBuilder;
+        argsBuilder << "-gcgen " << CNotification::GetCondemnedGen() << " " << std::hex << taObj;
 
-        ExtOut("Found %d roots.\n", roots);
+        return ExecuteCommand("gcroot", argsBuilder.str().c_str());
     }
 
     return Status;
@@ -11996,50 +10616,10 @@ DECLARE_API(StopOnException)
 \**********************************************************************/
 DECLARE_API(ObjSize)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL dml = FALSE;
-    StringHolder str_Object;
-
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&str_Object.data, COSTRING}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    TADDR obj = GetExpression(str_Object.data);
-
-    GCRootImpl gcroot;
-    if (obj == 0)
-    {
-        gcroot.ObjSize();
-    }
-    else
-    {
-        if(!sos::IsObject(obj))
-        {
-            ExtOut("%p is not a valid object.\n", SOS_PTR(obj));
-            return Status;
-        }
-
-        size_t size = gcroot.ObjSize(obj);
-        TADDR mt = 0;
-        MOVE(mt, obj);
-        sos::MethodTable methodTable = mt;
-        ExtOut("sizeof(%p) = %d (0x%x) bytes (%S)\n", SOS_PTR(obj), size, size, methodTable.GetName());
-    }
-    return Status;
+    return ExecuteCommand("objsize", args);
 }
 
 #ifndef FEATURE_PAL
@@ -14292,11 +12872,22 @@ DECLARE_API( VMMap )
 
 DECLARE_API(SOSFlush)
 {
-    INIT_API_EXT();
-    ITarget* target = GetTarget();
-    if (target != nullptr)
+    INIT_API_NOEE();
+
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        target->Flush();
+        Status = hostServices->DispatchCommand("sosflush", args);
+    }
+    else
+    {
+        ITarget* target = GetTarget();
+        if (target != nullptr)
+        {
+            target->Flush();
+        }
+        ExtOut("Internal cached state reset\n");
+        return S_OK;
     }
     return Status;
 }
@@ -16258,23 +14849,6 @@ DECLARE_API(runtimes)
 }
 
 #ifdef HOST_WINDOWS
-
-//
-// Executes managed extension commands
-//
-HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
-{
-    IHostServices* hostServices = GetHostServices();
-    if (hostServices != nullptr)
-    {
-        if (commandName != nullptr && strlen(commandName) > 0)
-        {
-            return hostServices->DispatchCommand(commandName, args);
-        }
-    }
-    return E_NOTIMPL;
-}
-
 //
 // Sets the symbol server path.
 //

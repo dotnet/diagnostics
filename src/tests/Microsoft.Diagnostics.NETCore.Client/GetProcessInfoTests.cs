@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.CommonTestRunner;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -15,7 +14,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825 
+#pragma warning disable CA1825
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -69,7 +68,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                DiagnosticsClientApiShim clientShim = new DiagnosticsClientApiShim(new DiagnosticsClient(runner.Pid), useAsync);
+                DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
 
                 // While suspended, the runtime will not provide entrypoint information.
                 ProcessInfo processInfoBeforeResume = null;
@@ -77,7 +76,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     processInfoBeforeResume = await clientShim.GetProcessInfo();
                     ValidateProcessInfo(runner.Pid, processInfoBeforeResume);
-                    Assert.True(string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
+                    Assert.True((config.RuntimeFrameworkVersionMajor < 8) == string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
 
                     await clientShim.ResumeRuntime();
 
@@ -89,7 +88,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ProcessInfo processInfo = await GetProcessInfoWithEntrypointAsync(clientShim);
                 ValidateProcessInfo(runner.Pid, processInfo);
 
-                // This is only true if targetFramework for the tracee app is greater than 
+                // This is only true if targetFramework for the tracee app is greater than
                 Assert.Equal("Tracee", processInfo.ManagedEntrypointAssemblyName);
 
                 if (suspend)

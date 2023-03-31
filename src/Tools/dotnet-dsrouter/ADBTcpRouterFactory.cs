@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -7,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    internal class ADBCommandExec
+    internal static class ADBCommandExec
     {
         public static bool AdbAddPortForward(int port, ILogger logger)
         {
@@ -16,7 +19,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 ownsPortForward = RunAdbCommandInternal($"forward tcp:{port} tcp:{port}", "", 0, logger);
                 if (!ownsPortForward)
+                {
                     logger?.LogError($"Failed setting up port forward for tcp:{port}.");
+                }
             }
             return ownsPortForward;
         }
@@ -28,7 +33,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 ownsPortForward = RunAdbCommandInternal($"reverse tcp:{port} tcp:{port}", "", 0, logger);
                 if (!ownsPortForward)
+                {
                     logger?.LogError($"Failed setting up port forward for tcp:{port}.");
+                }
             }
             return ownsPortForward;
         }
@@ -38,7 +45,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (ownsPortForward)
             {
                 if (!RunAdbCommandInternal($"forward --remove tcp:{port}", "", 0, logger))
+                {
                     logger?.LogError($"Failed removing port forward for tcp:{port}.");
+                }
             }
         }
 
@@ -47,21 +56,25 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (ownsPortForward)
             {
                 if (!RunAdbCommandInternal($"reverse --remove tcp:{port}", "", 0, logger))
+                {
                     logger?.LogError($"Failed removing port forward for tcp:{port}.");
+                }
             }
         }
 
         public static bool RunAdbCommandInternal(string command, string expectedOutput, int expectedExitCode, ILogger logger)
         {
-            var sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
-            var adbTool = "adb";
+            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
+            string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
+            {
                 adbTool = sdkRoot + Path.DirectorySeparatorChar + "platform-tools" + Path.DirectorySeparatorChar + adbTool;
+            }
 
             logger?.LogDebug($"Executing {adbTool} {command}.");
 
-            var process = new Process();
+            Process process = new();
             process.StartInfo.FileName = adbTool;
             process.StartInfo.Arguments = command;
 
@@ -84,17 +97,23 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             if (processStartedResult)
             {
-                var stdout = process.StandardOutput.ReadToEnd();
-                var stderr = process.StandardError.ReadToEnd();
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
 
                 if (!string.IsNullOrEmpty(expectedOutput))
+                {
                     expectedOutputResult = !string.IsNullOrEmpty(stdout) ? stdout.Contains(expectedOutput) : false;
+                }
 
                 if (!string.IsNullOrEmpty(stdout))
+                {
                     logger.LogTrace($"stdout: {stdout}");
+                }
 
                 if (!string.IsNullOrEmpty(stderr))
+                {
                     logger.LogError($"stderr: {stderr}");
+                }
             }
 
             if (processStartedResult)
@@ -107,10 +126,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         }
     }
 
-    internal class ADBTcpServerRouterFactory : TcpServerRouterFactory
+    internal sealed class ADBTcpServerRouterFactory : TcpServerRouterFactory
     {
-        readonly int _port;
-        bool _ownsPortReverse;
+        private readonly int _port;
+        private bool _ownsPortReverse;
 
         public static TcpServerRouterFactory CreateADBInstance(string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
@@ -141,10 +160,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         }
     }
 
-    internal class ADBTcpClientRouterFactory : TcpClientRouterFactory
+    internal sealed class ADBTcpClientRouterFactory : TcpClientRouterFactory
     {
-        readonly int _port;
-        bool _ownsPortForward;
+        private readonly int _port;
+        private bool _ownsPortForward;
 
         public static TcpClientRouterFactory CreateADBInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {

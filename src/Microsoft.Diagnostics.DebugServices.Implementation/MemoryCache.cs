@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -13,14 +12,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// This class represents a chunk of cached memory, more or less a page.
         /// </summary>
-        class Cluster
+        private sealed class Cluster
         {
             internal const int Size = 4096;
 
             /// <summary>
             /// Empty cluster
             /// </summary>
-            internal static Cluster Empty = new Cluster(Array.Empty<byte>());
+            internal static Cluster Empty = new(Array.Empty<byte>());
 
             /// <summary>
             /// The cached data.
@@ -37,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// If the buffer is shorter than a page, it build a validity bitmap for it.
             /// </summary>
             /// <param name="data">the data to cache</param>
-            /// 
+            ///
             internal Cluster(byte[] data)
             {
                 _data = data;
@@ -137,7 +136,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 Cluster cluster = GetCluster(address);
                 int read = cluster.ReadBlock(address, buffer.Slice(offset), bytesRequested);
-                if (read <= 0) {
+                if (read <= 0)
+                {
                     break;
                 }
                 address += (uint)read;

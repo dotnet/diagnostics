@@ -1,9 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -18,7 +17,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Memory service constructor
         /// </summary>
         /// <param name="dataReader">CLRMD data reader</param>
-        public MemoryServiceFromDataReader(IDataReader dataReader) 
+        public MemoryServiceFromDataReader(IDataReader dataReader)
         {
             _dataReader = dataReader;
         }

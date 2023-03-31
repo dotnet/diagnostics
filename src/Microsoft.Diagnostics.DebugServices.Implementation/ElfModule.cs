@@ -1,51 +1,58 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
 using System;
-using System.Diagnostics;
-using System.IO;
+using System.Runtime.InteropServices;
+using Microsoft.FileFormats.ELF;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Disposable ELFFile wrapper around the module file.
+    /// ELFModule service that provides downloaded module ELFFile wrapper.
     /// </summary>
-    public class ELFModule : ELFFile
+    public class ELFModule : IDisposable
     {
+        private readonly IModule _module;
+        private readonly ISymbolService _symbolService;
+        private readonly IDisposable _onChangeEvent;
+        private ELFFile _elfFile;
+
         /// <summary>
-        /// Opens and returns an ELFFile instance from the local file path
+        /// Creates a ELFModule service instance of the downloaded or local (if exists) module file.
         /// </summary>
-        /// <param name="filePath">ELF file to open</param>
-        /// <returns>ELFFile instance or null</returns>
-        public static ELFModule OpenFile(string filePath)
+        [ServiceExport(Scope = ServiceScope.Module)]
+        public static ELFModule CreateELFModule(IModule module, ISymbolService symbolService)
         {
-            Stream stream = Utilities.TryOpenFile(filePath);
-            if (stream is not null)
+            if (module.Target.OperatingSystem == OSPlatform.Linux)
             {
-                try
+                if (!module.BuildId.IsDefaultOrEmpty)
                 {
-                    ELFModule elfModule = new(stream);
-                    if (!elfModule.IsValid())
-                    {
-                        Trace.TraceError($"OpenELFFile: not a valid file");
-                        return null;
-                    }
-                    return elfModule;
-                }
-                catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException || ex is IOException)
-                {
-                    Trace.TraceError($"OpenELFFile: exception {ex.Message}");
+                    return new ELFModule(module, symbolService);
                 }
             }
             return null;
         }
 
-        public ELFModule(Stream stream) :
-            base(new StreamAddressSpace(stream), position: 0, isDataSourceVirtualAddressSpace: false)
+        private ELFModule(IModule module, ISymbolService symbolService)
         {
+            _module = module;
+            _symbolService = symbolService;
+            _onChangeEvent = symbolService.OnChangeEvent.Register(() => {
+                _elfFile?.Dispose();
+                _elfFile = null;
+            });
+        }
+
+        public ELFFile GetELFFile()
+        {
+            _elfFile ??= Utilities.OpenELFFile(_symbolService.DownloadModuleFile(_module));
+            return _elfFile;
+        }
+
+        public void Dispose()
+        {
+            _elfFile?.Dispose();
+            _onChangeEvent.Dispose();
         }
     }
 }

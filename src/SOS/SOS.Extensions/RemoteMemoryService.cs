@@ -1,19 +1,18 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS
 {
-    internal unsafe class RemoteMemoryService : CallableCOMWrapper, IRemoteMemoryService
+    internal sealed unsafe class RemoteMemoryService : CallableCOMWrapper, IRemoteMemoryService
     {
-        private static Guid IID_IRemoteMemoryService = new Guid("CD6A0F22-8BCF-4297-9366-F440C2D1C781");
+        private static Guid IID_IRemoteMemoryService = new("CD6A0F22-8BCF-4297-9366-F440C2D1C781");
 
         private ref readonly IRemoteMemoryServiceVTable VTable => ref Unsafe.AsRef<IRemoteMemoryServiceVTable>(_vtable);
 

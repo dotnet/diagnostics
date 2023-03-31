@@ -1,19 +1,19 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.ExtensionCommands;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
@@ -22,7 +22,7 @@ namespace SOS.Extensions
     /// </summary>
     public sealed unsafe class HostServices : COMCallableIUnknown, IHost
     {
-        private static readonly Guid IID_IHostServices = new Guid("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
+        private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
         /// <summary>
         /// This is the prototype of the native callback function.
@@ -37,21 +37,22 @@ namespace SOS.Extensions
 
         internal DebuggerServices DebuggerServices { get; private set; }
 
-        private readonly ServiceProvider _serviceProvider;
+        private readonly ServiceManager _serviceManager;
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private ServiceContainer _serviceContainer;
         private ContextServiceFromDebuggerServices _contextService;
         private int _targetIdFactory;
         private ITarget _target;
-        private TargetWrapper _targetWrapper;
 
         /// <summary>
         /// Enable the assembly resolver to get the right versions in the same directory as this assembly.
         /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
+            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
+            {
                 AssemblyResolver.Enable();
             }
             DiagnosticLoggingService.Initialize();
@@ -70,7 +71,7 @@ namespace SOS.Extensions
         /// <summary>
         /// The retry count passed to the HTTP symbol store
         /// </summary>
-        public static int DefaultRetryCount { get; set; } = 0;
+        public static int DefaultRetryCount { get; set; }
 
         /// <summary>
         /// This is the main managed entry point that the native hosting code calls. It needs to be a single function
@@ -86,7 +87,7 @@ namespace SOS.Extensions
             {
                 extensionLibrary = DataTarget.PlatformFunctions.LoadLibrary(extensionPath);
             }
-            catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+            catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
             {
                 Trace.TraceError($"LoadLibrary({extensionPath}) FAILED {ex}");
             }
@@ -94,7 +95,7 @@ namespace SOS.Extensions
             {
                 return HResult.E_FAIL;
             }
-            var initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
+            InitializeCallbackDelegate initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
             if (initialializeCallback == null)
             {
                 return HResult.E_FAIL;
@@ -106,20 +107,17 @@ namespace SOS.Extensions
 
         private HostServices()
         {
-            _serviceProvider = new ServiceProvider();
-            _serviceProvider.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
-            _symbolService = new SymbolService(this);
-            _symbolService.DefaultTimeout = DefaultTimeout;
-            _symbolService.DefaultRetryCount = DefaultRetryCount;
+            _serviceManager = new ServiceManager();
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!ext" : null);
-            _commandService.AddCommands(new Assembly[] { typeof(HostServices).Assembly });
-            _commandService.AddCommands(new Assembly[] { typeof(ClrMDHelper).Assembly });
+            _serviceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
-            _serviceProvider.AddService<IHost>(this);
-            _serviceProvider.AddService<ICommandService>(_commandService);
-            _serviceProvider.AddService<ISymbolService>(_symbolService);
+            _symbolService = new SymbolService(this)
+            {
+                DefaultTimeout = DefaultTimeout,
+                DefaultRetryCount = DefaultRetryCount
+            };
 
-            _hostWrapper = new HostWrapper(this, () => _targetWrapper);
+            _hostWrapper = new HostWrapper(this);
             _hostWrapper.ServiceWrapper.AddServiceWrapper(IID_IHostServices, this);
 
             VTableBuilder builder = AddInterface(IID_IHostServices, validate: false);
@@ -141,39 +139,20 @@ namespace SOS.Extensions
         {
             Trace.TraceInformation("HostServices.Destroy");
             _hostWrapper.ServiceWrapper.RemoveServiceWrapper(IID_IHostServices);
-            _hostWrapper.Release();
+            _hostWrapper.ReleaseWithCheck();
         }
 
         #region IHost
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
 
+        public IServiceEvent<ITarget> OnTargetCreate { get; } = new ServiceEvent<ITarget>();
+
         public HostType HostType => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb;
 
-        IServiceProvider IHost.Services => _serviceProvider;
+        public IServiceProvider Services => _serviceContainer;
 
-        IEnumerable<ITarget> IHost.EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
-
-        public void DestroyTarget(ITarget target)
-        {
-            if (target == null) {
-                throw new ArgumentNullException(nameof(target));
-            }
-            Trace.TraceInformation("IHost.DestroyTarget #{0}", target.Id);
-            if (target == _target)
-            {
-                _target = null;
-                if (_targetWrapper != null)
-                {
-                    _targetWrapper.Release();
-                    _targetWrapper = null;
-                }
-                _contextService.ClearCurrentTarget();
-                if (target is IDisposable disposable) {
-                    disposable.Dispose();
-                }
-            }
-        }
+        public IEnumerable<ITarget> EnumerateTargets() => _target != null ? new ITarget[] { _target } : Array.Empty<ITarget>();
 
         #endregion
 
@@ -193,7 +172,8 @@ namespace SOS.Extensions
             IntPtr iunk)
         {
             Trace.TraceInformation("HostServices.RegisterDebuggerServices");
-            if (iunk == IntPtr.Zero || DebuggerServices != null) {
+            if (iunk == IntPtr.Zero || DebuggerServices != null)
+            {
                 return HResult.E_FAIL;
             }
             // Create the wrapper for the host debugger services
@@ -206,31 +186,51 @@ namespace SOS.Extensions
                 Trace.TraceError(ex.Message);
                 return HResult.E_NOINTERFACE;
             }
-            try
-            {
-                var remoteMemoryService = new RemoteMemoryService(iunk);
-                _serviceProvider.AddService<IRemoteMemoryService>(remoteMemoryService);
-            }
-            catch (InvalidCastException)
-            {
-            }
             HResult hr;
             try
             {
-                var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
-                var fileLoggingConsoleService = new FileLoggingConsoleService(consoleService);
+                ConsoleServiceFromDebuggerServices consoleService = new(DebuggerServices);
+                FileLoggingConsoleService fileLoggingConsoleService = new(consoleService);
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
-                _serviceProvider.AddService<IConsoleService>(fileLoggingConsoleService);
-                _serviceProvider.AddService<IConsoleFileLoggingService>(fileLoggingConsoleService);
+
+                // Don't register everything in the SOSHost assembly; just the wrappers
+                _serviceManager.RegisterExportedServices(typeof(TargetWrapper));
+                _serviceManager.RegisterExportedServices(typeof(RuntimeWrapper));
+
+                // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
+                _serviceManager.RegisterAssembly(typeof(Target).Assembly);
+
+                // Register all the services and commands in the SOS.Extensions (this) assembly
+                _serviceManager.RegisterAssembly(typeof(HostServices).Assembly);
+
+                // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
+                _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
+
+                // Display any extension assembly loads on console
+                _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
+                _serviceManager.NotifyExtensionLoadFailure.Register((Exception ex) => fileLoggingConsoleService.WriteLine(ex.Message));
+
+                // Load any extra extensions in the search path
+                _serviceManager.LoadExtensions();
+
+                // Loading extensions or adding service factories not allowed after this point.
+                _serviceManager.FinalizeServices();
+
+                // Add all the global services to the global service container
+                _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
+                _serviceContainer.AddService<IServiceManager>(_serviceManager);
+                _serviceContainer.AddService<IHost>(this);
+                _serviceContainer.AddService<ICommandService>(_commandService);
+                _serviceContainer.AddService<ISymbolService>(_symbolService);
+                _serviceContainer.AddService<IConsoleService>(fileLoggingConsoleService);
+                _serviceContainer.AddService<IConsoleFileLoggingService>(fileLoggingConsoleService);
+                _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
 
                 _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
-                _serviceProvider.AddService<IContextService>(_contextService);
-                _serviceProvider.AddServiceFactory<IThreadUnwindService>(() => new ThreadUnwindServiceFromDebuggerServices(DebuggerServices));
+                _serviceContainer.AddService<IContextService>(_contextService);
 
-                _contextService.ServiceProvider.AddServiceFactory<ClrMDHelper>(() => {
-                    ClrRuntime clrRuntime = _contextService.Services.GetService<ClrRuntime>();
-                    return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
-                });
+                ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
+                _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandService.Commands)
@@ -241,11 +241,28 @@ namespace SOS.Extensions
                         Trace.TraceWarning($"Cannot add extension command {hr:X8} {name} - {help}");
                     }
                 }
+
+                if (DebuggerServices.DebugClient is IDebugControl5 control)
+                {
+                    MemoryRegionServiceFromDebuggerServices memRegions = new(DebuggerServices.DebugClient, control);
+                    _serviceContainer.AddService<IMemoryRegionService>(memRegions);
+                }
             }
             catch (Exception ex)
             {
                 Trace.TraceError(ex.ToString());
                 return HResult.E_FAIL;
+            }
+            try
+            {
+                RemoteMemoryService remoteMemoryService = new(iunk);
+                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
+                // disposed in Uninitialize() below by the DisposeServices call.
+                remoteMemoryService.AddRef();
+                _serviceContainer.AddService<IRemoteMemoryService>(remoteMemoryService);
+            }
+            catch (InvalidCastException)
+            {
             }
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)
@@ -266,15 +283,15 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
-            if (_target != null || DebuggerServices == null) {
+            if (_target != null || DebuggerServices == null)
+            {
                 return HResult.E_FAIL;
             }
             try
             {
-                _target = new TargetFromDebuggerServices(DebuggerServices, this, _targetIdFactory++);
-                _contextService.SetCurrentTarget(_target);
-                _targetWrapper = new TargetWrapper(_contextService.Services);
-                _targetWrapper.ServiceWrapper.AddServiceWrapper(SymbolServiceWrapper.IID_ISymbolService, () => new SymbolServiceWrapper(_symbolService, _target.Services.GetService<IMemoryService>()));
+                TargetFromDebuggerServices target = new(DebuggerServices, this, _targetIdFactory++);
+                _contextService.SetCurrentTarget(target);
+                _target = target;
             }
             catch (Exception ex)
             {
@@ -305,10 +322,7 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.FlushTarget");
-            if (_target != null)
-            {
-                _target.Flush();
-            }
+            _target?.Flush();
         }
 
         private void DestroyTarget(
@@ -317,10 +331,8 @@ namespace SOS.Extensions
             Trace.TraceInformation("HostServices.DestroyTarget #{0}", _target != null ? _target.Id : "<none>");
             try
             {
-                if (_target != null)
-                {
-                    DestroyTarget(_target);
-                }
+                _target?.Destroy();
+                _target = null;
             }
             catch (Exception ex)
             {
@@ -355,6 +367,10 @@ namespace SOS.Extensions
                     return HResult.S_OK;
                 }
             }
+            catch (CommandNotSupportedException)
+            {
+                return HResult.E_NOTIMPL;
+            }
             catch (Exception ex)
             {
                 Trace.TraceError(ex.ToString());
@@ -373,6 +389,10 @@ namespace SOS.Extensions
                     return HResult.E_INVALIDARG;
                 }
             }
+            catch (CommandNotSupportedException)
+            {
+                return HResult.E_NOTIMPL;
+            }
             catch (Exception ex)
             {
                 Trace.TraceError(ex.ToString());
@@ -389,22 +409,24 @@ namespace SOS.Extensions
             {
                 DestroyTarget(self);
 
-                if (DebuggerServices != null)
-                {
-                    // This turns off any logging to console now that debugger services will be released and the console service will no longer work.
-                    DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);
-                    DebuggerServices.Release();
-                    DebuggerServices = null;
-                }
-
                 // Send shutdown event on exit
                 OnShutdownEvent.Fire();
 
-                // Release the host services wrapper
-                Release();
+                // Dispose of the global services which RemoteMemoryService but not host services (this)
+                _serviceContainer.DisposeServices();
+
+                // This turns off any logging to console now that debugger services will be released and the console service will no longer work.
+                DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);
+
+                // Release the debugger services instance
+                DebuggerServices?.ReleaseWithCheck();
+                DebuggerServices = null;
 
                 // Clear HostService instance
                 Instance = null;
+
+                // Release the host services wrapper
+                this.ReleaseWithCheck();
             }
             catch (Exception ex)
             {
@@ -413,7 +435,7 @@ namespace SOS.Extensions
         }
 
         #endregion
-        
+
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

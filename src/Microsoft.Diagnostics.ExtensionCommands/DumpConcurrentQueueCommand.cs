@@ -1,10 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -14,6 +13,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help = "The address of a ConcurrentQueue object.")]
         public string Address { get; set; }
 
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         public override void ExtensionInvoke()
@@ -24,14 +24,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            if (!TryParseAddress(Address, out var address))
+            if (!TryParseAddress(Address, out ulong address))
             {
                 WriteLine("Hexadecimal address expected...");
                 return;
             }
 
-            var heap = Runtime.Heap;
-            var type = heap.GetObjectType(address);
+            ClrHeap heap = Runtime.Heap;
+            ClrType type = heap.GetObjectType(address);
             if (type == null)
             {
                 WriteLine($"{Address:x16} is not referencing an object...");
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             try
             {
                 int count = 0;
-                foreach (var item in Helper.EnumerateConcurrentQueue(address))
+                foreach (string item in Helper.EnumerateConcurrentQueue(address))
                 {
                     count++;
                     WriteLine($"{count,4} - {item}");
@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
     "-------------------------------------------------------------------------------" + Environment.NewLine +
     "DumpConcurrentQueue" + Environment.NewLine +
     Environment.NewLine +

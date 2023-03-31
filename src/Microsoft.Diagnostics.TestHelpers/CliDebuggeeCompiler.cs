@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,15 +14,15 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         /// <summary>
         /// Creates a new CliDebuggeeCompiler. This compiler acquires the CLI tools and uses them to build and optionally link debuggees via dotnet publish.
-		/// <param name="config">
-		///   LinkerPackageVersion   If set, this version of the linker package will be used to link the debuggee during publish.
-		/// </param>
+        /// <param name="config">
+        ///   LinkerPackageVersion   If set, this version of the linker package will be used to link the debuggee during publish.
+        /// </param>
         /// </summary>
-        public CliDebuggeeCompiler(TestConfiguration config, string debuggeeName) : base(config, debuggeeName) {}
+        public CliDebuggeeCompiler(TestConfiguration config, string debuggeeName) : base(config, debuggeeName) { }
 
-        private static Dictionary<string,string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier)
+        private static Dictionary<string, string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier)
         {
-            Dictionary<string, string> buildProperties = new Dictionary<string, string>();
+            Dictionary<string, string> buildProperties = new();
             string buildProjectMicrosoftNetCoreAppVersion = config.BuildProjectMicrosoftNetCoreAppVersion;
             if (!string.IsNullOrEmpty(buildProjectMicrosoftNetCoreAppVersion))
             {
@@ -41,11 +40,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 buildProperties.Add("SelfContained", "true");
             }
             string debugType = config.DebugType;
-            if (debugType == null)
-            {
-                // The default PDB type is portable
-                debugType = "portable";
-            }
+            // The default PDB type is portable
+            debugType ??= "portable";
             buildProperties.Add("DebugType", debugType);
             return buildProperties;
         }

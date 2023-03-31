@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
@@ -22,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         private const string ActivityDuration = "activityduration";
         private const string Activity1Start = "Activity1/Start";
         private const string Activity1Stop = "Activity1/Stop";
-        private static readonly Guid MicrosoftAspNetCoreHostingGuid = new Guid("{adb401e1-5296-51f8-c125-5fda75826144}");
+        private static readonly Guid MicrosoftAspNetCoreHostingGuid = new("{adb401e1-5296-51f8-c125-5fda75826144}");
         private static readonly Dictionary<string, IReadOnlyCollection<string>> _providerMap = new()
             {
                 { MonitoringSourceConfiguration.DiagnosticSourceEventSource, new[]{ Activity1Start, Activity1Stop } },
@@ -71,7 +70,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
                 System.Collections.IList arguments = (System.Collections.IList)traceEvent.PayloadValue(2);
 
-                foreach (var argument in arguments)
+                foreach (object argument in arguments)
                 {
                     if (argument is IEnumerable<KeyValuePair<string, object>> argumentsEnumerable)
                     {

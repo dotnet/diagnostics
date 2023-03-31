@@ -26,10 +26,10 @@ LOADSOS
 ENDIF:DESKTOP
 
 SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 16\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 19\]\s*
 SOSCOMMAND:bpmd -clearall
 
-SOSCOMMAND:bpmd SymbolTestApp.cs:29
+SOSCOMMAND:bpmd SymbolTestApp.cs:32
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Foo4
 ENDIF:DESKTOP
@@ -39,16 +39,11 @@ ENDIF:DESKTOP
 
 CONTINUE
 SOSCOMMAND:ClrStack
-IFDEF:DESKTOP
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 29\]\s*
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 28\]\s*
-ENDIF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (31|32)\]\s*
 
 CONTINUE
 SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 34\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (37|57)\]\s*
 
 ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
@@ -77,7 +72,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>.*
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 
 SOSCOMMAND:DumpDomain
 VERIFY:\s*System Domain:\s+<HEXVAL>\s+
@@ -102,7 +97,7 @@ VERIFY:\s*TypeDefToMethodTableMap:\s+<HEXVAL>\s+
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo1.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 24\s+
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\s+
 
 # Verify DumpMD
 SOSCOMMAND:DumpMD <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
@@ -120,6 +115,12 @@ SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
 VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
 ENDIF:MAJOR_RUNTIME_VERSION_GE_7
+
+IFDEF:MAJOR_RUNTIME_VERSION_GE_8
+SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
+VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
+VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
+ENDIF:MAJOR_RUNTIME_VERSION_GE_8
 
 SOSCOMMAND:FinalizeQueue
 VERIFY:\s*SyncBlocks to be cleaned up:\s+<DECVAL>\s+

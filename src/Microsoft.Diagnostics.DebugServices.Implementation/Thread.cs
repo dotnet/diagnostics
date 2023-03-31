@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -8,20 +7,27 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    public class Thread : IThread
+    public class Thread : IThread, IDisposable
     {
         private readonly ThreadService _threadService;
         private byte[] _threadContext;
         private ulong? _teb;
 
-        public readonly ServiceProvider ServiceProvider;
+        protected readonly ServiceContainer _serviceContainer;
 
         public Thread(ThreadService threadService, int index, uint id)
         {
             _threadService = threadService;
             ThreadIndex = index;
             ThreadId = id;
-            ServiceProvider = new ServiceProvider();
+            _serviceContainer = threadService.Services.GetService<IServiceManager>().CreateServiceContainer(ServiceScope.Thread, threadService.Services);
+            _serviceContainer.AddService<IThread>(this);
+        }
+
+        void IDisposable.Dispose()
+        {
+            _serviceContainer.RemoveService(typeof(IThread));
+            _serviceContainer.DisposeServices();
         }
 
         #region IThread
@@ -32,7 +38,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target => _threadService.Target;
 
-        public IServiceProvider Services => ServiceProvider;
+        public IServiceProvider Services => _serviceContainer;
 
         public bool TryGetRegisterValue(int index, out ulong value)
         {
@@ -42,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    Span<byte> threadContext = new Span<byte>(GetThreadContext(), info.RegisterOffset, info.RegisterSize);
+                    Span<byte> threadContext = new(GetThreadContext(), info.RegisterOffset, info.RegisterSize);
                     switch (info.RegisterSize)
                     {
                         case 1:
@@ -72,10 +78,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public byte[] GetThreadContext()
         {
-            if (_threadContext == null)
-            {
-                _threadContext = _threadService.GetThreadContext(this);
-            }
+            _threadContext ??= _threadService.GetThreadContext(this);
             return _threadContext;
         }
 

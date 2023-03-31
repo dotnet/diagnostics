@@ -1,18 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
     public sealed class ServiceWrapper : IDisposable
     {
-        private readonly Dictionary<Guid, Func<COMCallableIUnknown>> _factories = new Dictionary<Guid, Func<COMCallableIUnknown>>();
-        private readonly Dictionary<Guid, COMCallableIUnknown> _wrappers = new Dictionary<Guid, COMCallableIUnknown>();
+        private readonly Dictionary<Guid, Func<COMCallableIUnknown>> _factories = new();
+        private readonly Dictionary<Guid, COMCallableIUnknown> _wrappers = new();
 
         public ServiceWrapper()
         {
@@ -21,9 +20,9 @@ namespace SOS.Hosting
         public void Dispose()
         {
             Trace.TraceInformation("ServiceWrapper.Dispose");
-            foreach (var wrapper in _wrappers.Values)
+            foreach (COMCallableIUnknown wrapper in _wrappers.Values)
             {
-                wrapper.Release();
+                wrapper.ReleaseWithCheck();
             }
             _wrappers.Clear();
         }
@@ -80,7 +79,7 @@ namespace SOS.Hosting
         }
 
         /// <summary>
-        /// Returns the native service for the given interface id. There is 
+        /// Returns the native service for the given interface id. There is
         /// only a limited set of services that can be queried through this
         /// function. Adds a reference like QueryInterface.
         /// </summary>
@@ -92,10 +91,10 @@ namespace SOS.Hosting
             ptr = IntPtr.Zero;
 
             COMCallableIUnknown wrapper = GetServiceWrapper(guid);
-            if (wrapper == null) {
+            if (wrapper == null)
+            {
                 return HResult.E_NOINTERFACE;
             }
-            wrapper.AddRef();
             return COMHelper.QueryInterface(wrapper.IUnknownObject, guid, out ptr);
         }
     }

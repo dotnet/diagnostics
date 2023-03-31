@@ -1,13 +1,16 @@
-﻿using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Extensions;
 using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
@@ -16,7 +19,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         private static DbgEngController _controller;
 
         public TestDbgEng(TestConfiguration config)
-            : base (config)
+            : base(config)
         {
         }
 
@@ -25,7 +28,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             // Create/initialize dbgeng controller
             _controller ??= new DbgEngController(DbgEngPath, DumpFile, SOSPath);
 
-            var contextService = Host.Services.GetService<IContextService>();
+            IContextService contextService = Host.Services.GetService<IContextService>();
             return contextService.GetCurrentTarget();
         }
 
@@ -33,18 +36,18 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         private string DbgEngPath => TestConfiguration.MakeCanonicalPath(Config.AllSettings["DbgEngPath"]);
 
-        private string SOSPath =>TestConfiguration.MakeCanonicalPath(Config.AllSettings["SOSPath"]);
+        private string SOSPath => TestConfiguration.MakeCanonicalPath(Config.AllSettings["SOSPath"]);
 
         public override string ToString() => "DbgEng: " + DumpFile;
 
-        class DbgEngController : IDebugOutputCallbacks
+        private class DbgEngController : IDebugOutputCallbacks
         {
             [UnmanagedFunctionPointer(CallingConvention.Winapi)]
             private delegate int DebugCreateDelegate(
                 ref Guid interfaceId,
                 [MarshalAs(UnmanagedType.IUnknown)] out object iinterface);
 
-            private static readonly Guid _iidClient = new Guid("e3acb9d7-7ec2-4f0c-a0da-e81e0cbbe628");
+            private static readonly Guid _iidClient = new("e3acb9d7-7ec2-4f0c-a0da-e81e0cbbe628");
             private readonly CharToLineConverter _converter;
 
             internal readonly IDebugClient Client;
@@ -58,13 +61,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     Trace.TraceInformation(text);
                 });
                 IntPtr dbgengLibrary = DataTarget.PlatformFunctions.LoadLibrary(dbgengPath);
-                var debugCreate = SOSHost.GetDelegateFunction<DebugCreateDelegate>(dbgengLibrary, "DebugCreate");
-                if (debugCreate == null) {
+                DebugCreateDelegate debugCreate = SOSHost.GetDelegateFunction<DebugCreateDelegate>(dbgengLibrary, "DebugCreate");
+                if (debugCreate == null)
+                {
                     throw new DiagnosticsException($"DebugCreate export not found");
                 }
                 Guid iid = _iidClient;
                 HResult hr = debugCreate(ref iid, out object client);
-                if (hr != HResult.S_OK) {
+                if (hr != HResult.S_OK)
+                {
                     throw new DiagnosticsException($"DebugCreate FAILED {hr:X8}");
                 }
                 Client = (IDebugClient)client;
@@ -72,7 +77,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Symbols = (IDebugSymbols2)client;
 
                 hr = Client.SetOutputCallbacks(this);
-                if (hr != HResult.S_OK) {
+                if (hr != HResult.S_OK)
+                {
                     throw new DiagnosticsException($"SetOutputCallbacks FAILED {hr:X8}");
                 }
 
@@ -81,20 +87,23 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 string cachePath = Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA"), "dbg", "sym");
                 string sympath = $"{Path.GetDirectoryName(dumpPath)};cache*{cachePath};SRV*https://msdl.microsoft.com/download/symbols";
                 hr = Symbols.SetSymbolPath(sympath);
-                if (hr != HResult.S_OK) {
+                if (hr != HResult.S_OK)
+                {
                     Trace.TraceError($"SetSymbolPath({sympath}) FAILED {hr:X8}");
                 }
 
                 // Load dump file
                 hr = Client.OpenDumpFile(dumpPath);
-                if (hr != HResult.S_OK) {
+                if (hr != HResult.S_OK)
+                {
                     throw new DiagnosticsException($"OpenDumpFile({dumpPath} FAILED {hr:X8}");
                 }
                 ProcessEvents();
 
                 // Load the sos extensions
                 hr = Control.Execute(DEBUG_OUTCTL.ALL_CLIENTS, $".load {sosPath}", DEBUG_EXECUTE.DEFAULT);
-                if (hr != HResult.S_OK) {
+                if (hr != HResult.S_OK)
+                {
                     throw new DiagnosticsException($"Loading {sosPath} FAILED {hr:X8}");
                 }
 
@@ -104,7 +113,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
                 // Initialize the extension host
                 hr = HostServices.Initialize(sosPath);
-                if (hr != HResult.S_OK) {
+                if (hr != HResult.S_OK)
+                {
                     throw new DiagnosticsException($"HostServices.Initialize({sosPath}) FAILED {hr:X8}");
                 }
 
@@ -117,17 +127,21 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             /// </summary>
             internal void ProcessEvents()
             {
-                while (true) {
+                while (true)
+                {
                     // Wait until the target stops
                     HResult hr = Control.WaitForEvent(DEBUG_WAIT.DEFAULT, uint.MaxValue);
-                    if (hr == HResult.S_OK) {
+                    if (hr == HResult.S_OK)
+                    {
                         Trace.TraceInformation("ProcessEvents.WaitForEvent returned status {0}", ExecutionStatus);
-                        if (!IsTargetRunning()) {
+                        if (!IsTargetRunning())
+                        {
                             Trace.TraceInformation("ProcessEvents target stopped");
                             break;
                         }
                     }
-                    else {
+                    else
+                    {
                         Trace.TraceError("ProcessEvents.WaitForEvent FAILED {0:X8}", hr);
                         break;
                     }
@@ -139,7 +153,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             /// </summary>
             private bool IsTargetRunning()
             {
-                switch (ExecutionStatus) {
+                switch (ExecutionStatus)
+                {
                     case DEBUG_STATUS.GO:
                     case DEBUG_STATUS.GO_HANDLED:
                     case DEBUG_STATUS.GO_NOT_HANDLED:
@@ -153,16 +168,20 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             private DEBUG_STATUS ExecutionStatus
             {
-                get {
+                get
+                {
                     HResult hr = Control.GetExecutionStatus(out DEBUG_STATUS status);
-                    if (hr != HResult.S_OK) {
+                    if (hr != HResult.S_OK)
+                    {
                         throw new DiagnosticsException($"GetExecutionStatus FAILED {hr:X8}");
                     }
                     return status;
                 }
-                set {
+                set
+                {
                     HResult hr = Control.SetExecutionStatus(value);
-                    if (hr != HResult.S_OK) {
+                    if (hr != HResult.S_OK)
+                    {
                         throw new DiagnosticsException($"SetExecutionStatus FAILED {hr:X8}");
                     }
                 }

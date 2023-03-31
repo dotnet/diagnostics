@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -36,7 +35,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     MicrosoftExtensionsLoggingProviderName,
                     _level,
                     _keywords,
-                    arguments: new Dictionary<string,string>
+                    arguments: new Dictionary<string, string>
                         {
                             { "FilterSpecs", _filterSpecs }
                         }
@@ -48,10 +47,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             if (!useAppFilters && (filterSpecs?.Count).GetValueOrDefault(0) == 0)
             {
-                return String.Empty;
+                return string.Empty;
             }
 
-            StringBuilder filterSpecsBuilder = new StringBuilder();
+            StringBuilder filterSpecsBuilder = new();
 
             if (useAppFilters)
             {
@@ -66,12 +65,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     {
                         if (filterSpecsBuilder.Length > 0)
                         {
-                            filterSpecsBuilder.Append(";");
+                            filterSpecsBuilder.Append(';');
                         }
                         filterSpecsBuilder.Append(filterSpec.Key);
                         if (filterSpec.Value.HasValue)
                         {
-                            filterSpecsBuilder.Append(":");
+                            filterSpecsBuilder.Append(':');
                             filterSpecsBuilder.Append(filterSpec.Value.Value.ToString("G"));
                         }
                     }

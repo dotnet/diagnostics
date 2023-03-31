@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime.Utilities;
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +23,7 @@ namespace Microsoft.Diagnostics
         public int ProcessId { get; private set; }
         public IntPtr ResumeHandle { get; set; }
 
-        private readonly AutoResetEvent _createProcessEvent = new AutoResetEvent(false);
+        private readonly AutoResetEvent _createProcessEvent = new(false);
         private readonly NamedPipeServerStream _pipeServer;
         private HResult _createProcessResult = HResult.E_FAIL;
         private Process _process;
@@ -45,7 +44,7 @@ namespace Microsoft.Diagnostics
             {
                 _process = Process.GetProcessById(processId);
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
             {
                 Trace.TraceError($"DebuggeeInfo.SetProcessId({processId}): {ex}");
             }
@@ -72,12 +71,12 @@ namespace Microsoft.Diagnostics
             }
             try
             {
-                var source = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: waiting {ProcessId}");
                 await _pipeServer.WaitForConnectionAsync(source.Token);
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: after wait {ProcessId}");
             }
-            catch (Exception ex) when (ex is TaskCanceledException || ex is OperationCanceledException)
+            catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
             {
                 Trace.TraceError($"DebuggeeInfo.WaitForDebuggee: canceled {ex}");
                 return false;
@@ -120,7 +119,7 @@ namespace Microsoft.Diagnostics
                     _process.Kill();
                     _process = null;
                 }
-                catch (Exception ex) when (ex is NotSupportedException || ex is InvalidOperationException)
+                catch (Exception ex) when (ex is NotSupportedException or InvalidOperationException)
                 {
                     Trace.TraceError(ex.ToString());
                 }

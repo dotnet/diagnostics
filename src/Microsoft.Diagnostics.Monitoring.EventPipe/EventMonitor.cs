@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -74,8 +73,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         /// <returns></returns>
         public Task ProcessAsync(CancellationToken token)
         {
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 _eventSource = new EventPipeEventSource(_eventStream);
                 token.ThrowIfCancellationRequested();
                 using IDisposable registration = token.Register(() => _eventSource.Dispose());
@@ -168,7 +166,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private bool DoesPayloadMatch(TraceEvent obj)
         {
-            foreach (var (fieldIndex, expectedValue) in _payloadFilterIndexCache)
+            foreach ((int fieldIndex, string expectedValue) in _payloadFilterIndexCache)
             {
                 string fieldValue = Convert.ToString(obj.PayloadValue(fieldIndex), CultureInfo.InvariantCulture) ?? string.Empty;
                 if (!string.Equals(fieldValue, expectedValue, StringComparison.Ordinal))
@@ -185,7 +183,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _eventSource?.Dispose();
             if (!_leaveEventStreamOpen)
             {
-                await _eventStream.DisposeAsync();
+                await _eventStream.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

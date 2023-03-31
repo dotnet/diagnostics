@@ -1,11 +1,12 @@
-﻿using Microsoft.Win32.SafeHandles;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Win32.SafeHandles;
 
 namespace Microsoft.Diagnostics.Monitoring
 {
@@ -17,12 +18,11 @@ namespace Microsoft.Diagnostics.Monitoring
         internal static Task CollectDumpAsync(Process process, string outputFile, NETCore.Client.DumpType type)
         {
             // We can't do this "asynchronously" so just Task.Run it. It shouldn't be "long-running" so this is fairly safe.
-            return Task.Run(() =>
-            {
+            return Task.Run(() => {
                 // Open the file for writing
-                using (var stream = new FileStream(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+                using (FileStream stream = new(outputFile, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 {
-                    var exceptionInfo = new NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
+                    NativeMethods.MINIDUMP_EXCEPTION_INFORMATION exceptionInfo = default(NativeMethods.MINIDUMP_EXCEPTION_INFORMATION);
 
                     NativeMethods.MINIDUMP_TYPE dumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal;
                     switch (type)

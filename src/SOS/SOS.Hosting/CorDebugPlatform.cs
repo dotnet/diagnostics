@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 namespace SOS.Hosting
 {
@@ -17,9 +16,9 @@ namespace SOS.Hosting
         CORDB_PLATFORM_WINDOWS_ARM = 5, // Windows on ARM
         CORDB_PLATFORM_MAC_AMD64 = 6,
         CORDB_PLATFORM_WINDOWS_ARM64 = 7, // Windows on ARM64
-        CORDB_PLATFORM_POSIX_AMD64	= 8,
-        CORDB_PLATFORM_POSIX_X86	= 9,
-        CORDB_PLATFORM_POSIX_ARM	= 10,
-        CORDB_PLATFORM_POSIX_ARM64	= 11
+        CORDB_PLATFORM_POSIX_AMD64 = 8,
+        CORDB_PLATFORM_POSIX_X86 = 9,
+        CORDB_PLATFORM_POSIX_ARM = 10,
+        CORDB_PLATFORM_POSIX_ARM64 = 11
     }
 }

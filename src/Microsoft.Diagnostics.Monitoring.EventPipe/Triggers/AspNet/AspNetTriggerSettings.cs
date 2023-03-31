@@ -1,12 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
@@ -49,7 +46,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
         public static ValidationResult ValidatePath(string[] paths, string[] members)
         {
             //While not an error, using *** or more causes confusing and unexpected matching.
-            if (paths?.Any(p => p.IndexOf("***", StringComparison.Ordinal) >= 0) == true)
+            if (paths?.Any(p => p.Contains("***")) == true)
             {
                 return new ValidationResult("Only * or **/ wildcard chararcters are allowed.", members);
             }

@@ -1,4 +1,6 @@
-using Microsoft.Tools.Common;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -6,27 +8,29 @@ using System.CommandLine.Binding;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Tracing.Etlx;
-using Microsoft.Diagnostics.Symbols;
-using Microsoft.Diagnostics.Tracing.Stacks;
-using Microsoft.Diagnostics.Tracing;
 using Diagnostics.Tracing.StackSources;
+using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tools.Trace.CommandLine;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.Stacks;
+using Microsoft.Tools.Common;
 
-namespace Microsoft.Diagnostics.Tools.Trace 
+namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class ReportCommandHandler 
+    internal static class ReportCommandHandler
     {
-        static List<string> unwantedMethodNames = new List<string>() { "ROOT", "Process"};
+        private static List<string> unwantedMethodNames = new() { "ROOT", "Process" };
 
-        //Create an extension function to help 
-        public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree) 
+        //Create an extension function to help
+        public static List<CallTreeNodeBase> ByIDSortedInclusiveMetric(this CallTree callTree)
         {
-            var ret = new List<CallTreeNodeBase>(callTree.ByID);
+            List<CallTreeNodeBase> ret = new(callTree.ByID);
             ret.Sort((x, y) => Math.Abs(y.InclusiveMetric).CompareTo(Math.Abs(x.InclusiveMetric)));
             return ret;
         }
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
+
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
         private static Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
         {
             Console.Error.WriteLine("Error: subcommand was not provided. Available subcommands:");
@@ -34,38 +38,38 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Task.FromResult(-1);
         }
 
-        delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
-        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose) 
-        {          
-            try 
+        private delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
+        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose)
+        {
+            try
             {
                 string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(traceFile);
                 int count = 0;
                 int index = 0;
-                List<CallTreeNodeBase> nodesToReport = new List<CallTreeNodeBase>();
-                using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (var eventLog = new TraceLog(tempEtlxFilename))
+                List<CallTreeNodeBase> nodesToReport = new();
+                using (SymbolReader symbolReader = new(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                using (TraceLog eventLog = new(tempEtlxFilename))
                 {
-                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    MutableTraceEventStackSource stackSource = new(eventLog)
                     {
                         OnlyManagedCodeStacks = true
                     };
 
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog,symbolReader);
+                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
 
                     computer.GenerateThreadTimeStacks(stackSource);
 
-                    FilterParams filterParams = new FilterParams()
+                    FilterParams filterParams = new()
                     {
                         FoldRegExs = "CPU_TIME;UNMANAGED_CODE_TIME;{Thread (}",
                     };
-                    FilterStackSource filterStack = new FilterStackSource(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
+                    FilterStackSource filterStack = new(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
                     CallTree callTree = new(ScalingPolicyKind.ScaleToData);
                     callTree.StackSource = filterStack;
 
                     List<CallTreeNodeBase> callTreeNodes = null;
 
-                    if(!inclusive)
+                    if (!inclusive)
                     {
                         callTreeNodes = callTree.ByIDSortedExclusiveMetric();
                     }
@@ -75,31 +79,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
 
                     int totalElements = callTreeNodes.Count;
-                        while(count < number && index < totalElements)
+                    while (count < number && index < totalElements)
+                    {
+                        CallTreeNodeBase node = callTreeNodes[index];
+                        index++;
+                        if (!unwantedMethodNames.Any(node.Name.Contains))
                         {
-                            CallTreeNodeBase node = callTreeNodes[index];
-                            index++;
-                            if(!unwantedMethodNames.Any(node.Name.Contains))
-                            {
-                                nodesToReport.Add(node);
-                                count++;
-                            }
+                            nodesToReport.Add(node);
+                            count++;
                         }
+                    }
 
                     PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
                 }
-                return await Task.FromResult(0);
+                return await Task.FromResult(0).ConfigureAwait(false);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex}");
             }
 
-            return await Task.FromResult(0);
+            return await Task.FromResult(0).ConfigureAwait(false);
         }
 
         public static Command ReportCommand() =>
-            new Command(
+            new(
                 name: "report",
                 description: "Generates a report into stdout from a previously generated trace.")
                 {
@@ -120,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 };
 
         private static Argument<string> FileNameArgument() =>
-            new Argument<string>("trace_filename")
+            new("trace_filename")
             {
                 Name = "tracefile",
                 Description = "The file path for the trace being analyzed.",
@@ -130,27 +134,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static Option TopNOption()
         {
             return new Option(
-                aliases: new[] {"-n", "--number" },
+                aliases: new[] { "-n", "--number" },
                 description: $"Gives the top N methods on the callstack.")
-                {
-                    Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
-                };
-        }         
+            {
+                Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
+            };
+        }
 
         private static Option InclusiveOption() =>
-            new Option(
+            new(
                 aliases: new[] { "--inclusive" },
                 description: $"Output the top N methods based on inclusive time. If not specified, exclusive time is used by default.")
-                {
-                    Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
-                };
+            {
+                Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
+            };
 
         private static Option VerboseOption() =>
-            new Option(
-                aliases: new[] {"-v", "--verbose"},
+            new(
+                aliases: new[] { "-v", "--verbose" },
                 description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
-                {
-                    Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
-                };
+            {
+                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+            };
     }
 }

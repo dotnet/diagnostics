@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -14,6 +14,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help = "The address of a ConcurrentDictionary object.")]
         public string Address { get; set; }
 
+        [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
         public override void ExtensionInvoke()
@@ -24,14 +25,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            if (!TryParseAddress(Address, out var address))
+            if (!TryParseAddress(Address, out ulong address))
             {
                 WriteLine("Hexadecimal address expected...");
                 return;
             }
 
-            var heap = Runtime.Heap;
-            var type = heap.GetObjectType(address);
+            ClrHeap heap = Runtime.Heap;
+            ClrType type = heap.GetObjectType(address);
             if (type?.Name is null)
             {
                 WriteLine($"{Address:x16} is not referencing an object...");
@@ -47,8 +48,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine($"{type.Name}");
             try
             {
-                var count = 0;
-                foreach (var item in Helper.EnumerateConcurrentDictionary(address))
+                int count = 0;
+                foreach (KeyValuePair<string, string> item in Helper.EnumerateConcurrentDictionary(address))
                 {
                     count++;
                     WriteLine($"    -----");
@@ -90,10 +91,13 @@ System.Collections.Concurrent.ConcurrentDictionary<System.Int32, ForDump.DumpStr
 ";
         }
 
-        private string Truncate(string str, int nbMaxChars)
+        private static string Truncate(string str, int nbMaxChars)
         {
             if (str.Length <= nbMaxChars)
+            {
                 return str;
+            }
+
             return str.Substring(0, nbMaxChars) + "...";
         }
     }

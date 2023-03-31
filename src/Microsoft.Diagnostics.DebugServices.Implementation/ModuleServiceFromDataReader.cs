@@ -1,14 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -17,7 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ModuleServiceFromDataReader : ModuleService
     {
-        class ModuleFromDataReader : Module
+        private sealed class ModuleFromDataReader : Module
         {
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
@@ -29,7 +27,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private string _versionString;
 
             public ModuleFromDataReader(ModuleServiceFromDataReader moduleService, int moduleIndex, ModuleInfo moduleInfo, ulong imageSize)
-                : base(moduleService.Target)
+                : base(moduleService.Services)
             {
                 _moduleService = moduleService;
                 _moduleInfo = moduleInfo;
@@ -38,8 +36,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             #region IModule
-
-            public override int ModuleIndex { get; }
 
             public override string FileName => _moduleInfo.FileName;
 
@@ -75,10 +71,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        if (_moduleService.Target.OperatingSystem != OSPlatform.Windows)
-                        {
-                            _version = GetVersionInner();
-                        }
+                        _version = GetVersionInner();
                     }
                 }
                 return _version;
@@ -88,10 +81,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (InitializeValue(Module.Flags.InitializeProductVersion))
                 {
-                    if (_moduleService.Target.OperatingSystem != OSPlatform.Windows && !IsPEImage)
-                    {
-                        _versionString = _moduleService.GetVersionString(this);
-                    }
+                    _versionString = GetVersionStringInner();
                 }
                 return _versionString;
             }
@@ -114,8 +104,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IDataReader _dataReader;
 
-        public ModuleServiceFromDataReader(ITarget target, IMemoryService rawMemoryService, IDataReader dataReader)
-            : base(target, rawMemoryService)
+        public ModuleServiceFromDataReader(IServiceProvider services, IDataReader dataReader)
+            : base(services)
         {
             _dataReader = dataReader;
         }
@@ -125,7 +115,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
             int moduleIndex = 0;
 
             ModuleInfo[] moduleInfos = _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase).ToArray();
@@ -155,18 +145,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             imageSize = startNext - start;
                         }
                     }
-                    var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo, imageSize);
+                    ModuleFromDataReader module = new(this, moduleIndex, moduleInfo, imageSize);
                     try
                     {
                         modules.Add(moduleInfo.ImageBase, module);
+                        moduleIndex++;
                     }
                     catch (ArgumentException)
                     {
                         Trace.TraceError($"GetModules(): duplicate module base '{module}' dup '{modules[moduleInfo.ImageBase]}'");
                     }
                 }
-
-                moduleIndex++;
             }
             return modules;
         }

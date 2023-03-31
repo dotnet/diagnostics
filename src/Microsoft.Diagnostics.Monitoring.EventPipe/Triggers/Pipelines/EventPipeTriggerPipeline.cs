@@ -1,12 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
 {
@@ -68,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
             {
                 await _pipeline.StopAsync(token).ConfigureAwait(false);
             }
-            await base.OnStop(token);
+            await base.OnStop(token).ConfigureAwait(false);
         }
 
         protected override async Task OnCleanup()
@@ -89,7 +88,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines
                 disposableTrigger.Dispose();
             }
 
-            await base.OnCleanup();
+            await base.OnCleanup().ConfigureAwait(false);
         }
     }
 }

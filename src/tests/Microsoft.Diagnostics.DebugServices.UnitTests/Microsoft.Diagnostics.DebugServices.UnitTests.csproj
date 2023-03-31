@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <DebugServicesConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DebugServicesConfigFileName>
-    <TestAssetsVersion>1.0.257801</TestAssetsVersion>
+    <TestAssetsVersion>1.0.351101</TestAssetsVersion>
     <!-- Controls the test asset package restore and the tests that use them -->
     <RunTests>true</RunTests>
   </PropertyGroup>

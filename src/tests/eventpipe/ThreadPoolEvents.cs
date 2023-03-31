@@ -1,18 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Threading;
+using System.Threading.Tasks;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.ThreadPoolValidation
 {
@@ -28,27 +26,28 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
         [Fact]
         public async void ThreadPool_ProducesEvents()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
-            {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "Microsoft-Windows-DotNETRuntime", -1 },
                     { "Microsoft-Windows-DotNETRuntimeRundown", -1 }
                 };
 
-                var providers = new List<EventPipeProvider>()
+                List<EventPipeProvider> providers = new()
                 {
                     //ThreadingKeyword (0x10000): 0b10000_0000_0000_0000
                     new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0b10000_0000_0000_0000)
                 };
 
-                Action _eventGeneratingAction = () => 
-                {
+                Action _eventGeneratingAction = () => {
                     Task[] taskArray = new Task[1000];
                     for (int i = 0; i < 1000; i++)
                     {
                         if (i % 10 == 0)
+                        {
                             Logger.logger.Log($"Create new task {i} times...");
+                        }
+
                         taskArray[i] = Task.Run(() => TestTask());
                     }
                     Task.WaitAll(taskArray);
@@ -59,8 +58,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                     Thread.Sleep(100);
                 }
 
-                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => 
-                {
+                Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int ThreadStartEvents = 0;
                     source.Clr.ThreadPoolWorkerThreadStart += (eventData) => ThreadStartEvents += 1;
 
@@ -80,11 +78,11 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
                         Logger.logger.Log("ThreadPoolWorkerThreadAdjustmentAdjustmentEvents: " + ThreadPoolWorkerThreadAdjustmentAdjustmentEvents);
                         bool ThreadAdjustmentResult = ThreadPoolWorkerThreadAdjustmentSampleEvents >= 1 && ThreadPoolWorkerThreadAdjustmentAdjustmentEvents >= 1;
                         Logger.logger.Log("ThreadAdjustmentResult check: " + ThreadAdjustmentResult);
-                        
+
                         return ThreadStartStopResult && ThreadAdjustmentResult ? 100 : -1;
                     };
                 };
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, _DoesTraceContainEvents);
                 Assert.Equal(100, ret);
             }, output);
         }

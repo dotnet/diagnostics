@@ -1,10 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,44 +8,68 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// IRuntime instance implementation
+    /// ClrMD runtime instance implementation
     /// </summary>
-    public class Runtime : IRuntime
+    public class Runtime : IRuntime, IDisposable
     {
         private readonly ClrInfo _clrInfo;
-        private ISymbolService _symbolService;
-        private ClrRuntime _clrRuntime;
+        private readonly IDisposable _onFlushEvent;
+        private readonly ISymbolService _symbolService;
+        private Version _runtimeVersion;
         private string _dacFilePath;
         private string _dbiFilePath;
 
-        public readonly ServiceProvider ServiceProvider;
+        protected readonly ServiceContainer _serviceContainer;
 
-        public Runtime(ITarget target, int id, ClrInfo clrInfo)
+        public Runtime(IServiceProvider services, int id, ClrInfo clrInfo)
         {
-            Target = target ?? throw new ArgumentNullException(nameof(target));
+            Target = services.GetService<ITarget>() ?? throw new ArgumentNullException(nameof(Target), "Uninitialized service");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
+            _symbolService = services.GetService<ISymbolService>();
 
             RuntimeType = RuntimeType.Unknown;
-            if (clrInfo.Flavor == ClrFlavor.Core) {
+            if (clrInfo.Flavor == ClrFlavor.Core)
+            {
                 RuntimeType = RuntimeType.NetCore;
             }
-            else if (clrInfo.Flavor == ClrFlavor.Desktop) {
+            else if (clrInfo.Flavor == ClrFlavor.Desktop)
+            {
                 RuntimeType = RuntimeType.Desktop;
             }
-            RuntimeModule = target.Services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
+            RuntimeModule = services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
 
-            ServiceProvider = new ServiceProvider();
-            ServiceProvider.AddService<ClrInfo>(clrInfo);
-            ServiceProvider.AddServiceFactoryWithNoCaching<ClrRuntime>(() => CreateRuntime());
+            ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Runtime, services);
+            containerFactory.AddServiceFactory<ClrRuntime>((services) => CreateRuntime());
+            _serviceContainer = containerFactory.Build();
+            _serviceContainer.AddService<IRuntime>(this);
+            _serviceContainer.AddService(clrInfo);
 
-            target.OnFlushEvent.Register(() => _clrRuntime?.FlushCachedData());
+            _onFlushEvent = Target.OnFlushEvent.Register(Flush);
 
             Trace.TraceInformation($"Created runtime #{id} {clrInfo.Flavor} {clrInfo}");
+        }
+
+        void IDisposable.Dispose()
+        {
+            _serviceContainer.RemoveService(typeof(IRuntime));
+            _serviceContainer.DisposeServices();
+            _onFlushEvent.Dispose();
+        }
+
+        private void Flush()
+        {
+            if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
+            {
+                ((ClrRuntime)service).FlushCachedData();
+            }
         }
 
         #region IRuntime
@@ -58,7 +78,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public ITarget Target { get; }
 
-        public IServiceProvider Services => ServiceProvider;
+        public IServiceProvider Services => _serviceContainer;
 
         public RuntimeType RuntimeType { get; }
 
@@ -66,59 +86,68 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public string RuntimeModuleDirectory { get; set; }
 
+
+        public Version RuntimeVersion
+        {
+            get
+            {
+                if (_runtimeVersion is null)
+                {
+                    Version version = _clrInfo.Version;
+                    if (version is null || version.Equals(Utilities.EmptyVersion))
+                    {
+                        version = Utilities.ParseVersionString(RuntimeModule.GetVersionString());
+                    }
+                    _runtimeVersion = version;
+                }
+                return _runtimeVersion;
+            }
+        }
+
         public string GetDacFilePath()
         {
-            if (_dacFilePath is null)
-            {
-                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
-            }
+            _dacFilePath ??= GetLibraryPath(DebugLibraryKind.Dac);
             return _dacFilePath;
         }
 
         public string GetDbiFilePath()
         {
-            if (_dbiFilePath is null)
-            {
-                _dbiFilePath = GetLibraryPath(DebugLibraryKind.Dbi);
-            }
+            _dbiFilePath ??= GetLibraryPath(DebugLibraryKind.Dbi);
             return _dbiFilePath;
         }
 
         #endregion
 
         /// <summary>
-        /// Create ClrRuntime helper
+        /// Create ClrRuntime instance
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
-            if (_clrRuntime is null)
+            string dacFilePath = GetDacFilePath();
+            if (dacFilePath is not null)
             {
-                string dacFilePath = GetDacFilePath();
-                if (dacFilePath is not null)
+                Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
+                try
                 {
-                    Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
-                    try
-                    {
-                        // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader 
-                        // returns 0.0.0.0 for the runtime module that the DAC is matched against.
-                        _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
-                    }
-                    catch (Exception ex) when
-                       (ex is DllNotFoundException || 
-                        ex is FileNotFoundException || 
-                        ex is InvalidOperationException || 
-                        ex is InvalidDataException || 
-                        ex is ClrDiagnosticsException)
-                    {
-                        Trace.TraceError("CreateRuntime FAILED: {0}", ex.ToString());
-                    }
+                    // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
+                    // returns 0.0.0.0 for the runtime module that the DAC is matched against.
+                    return _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                 }
-                else
+                catch (Exception ex) when
+                   (ex is DllNotFoundException or
+                    FileNotFoundException or
+                    InvalidOperationException or
+                    InvalidDataException or
+                    ClrDiagnosticsException)
                 {
-                    Trace.TraceError($"Could not find or download matching DAC for this runtime: {RuntimeModule.FileName}");
+                    Trace.TraceError("CreateRuntime FAILED: {0}", ex.ToString());
                 }
             }
-            return _clrRuntime;
+            else
+            {
+                Trace.TraceError($"Could not find or download matching DAC for this runtime: {RuntimeModule.FileName}");
+            }
+            return null;
         }
 
         private string GetLibraryPath(DebugLibraryKind kind)
@@ -148,10 +177,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetLocalPath(string fileName)
         {
-            if (File.Exists(fileName))
-            {
-                return fileName;
-            }
             string localFilePath;
             if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
@@ -173,7 +198,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OSPlatform platform = Target.OperatingSystem;
             string filePath = null;
 
-            if (SymbolService.IsSymbolStoreEnabled)
+            if (_symbolService.IsSymbolStoreEnabled)
             {
                 SymbolStoreKey key = null;
 
@@ -234,7 +259,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (key is not null)
                 {
                     // Now download the DAC module from the symbol server
-                    filePath = SymbolService.DownloadFile(key);
+                    filePath = _symbolService.DownloadFile(key);
                 }
             }
             else
@@ -243,8 +268,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             return filePath;
         }
-
-        private ISymbolService SymbolService => _symbolService ??= Target.Services.GetService<ISymbolService>(); 
 
         public override bool Equals(object obj)
         {
@@ -258,32 +281,41 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         private static readonly string[] s_runtimeTypeNames = {
+            "Unknown",
             "Desktop .NET Framework",
             ".NET Core",
             ".NET Core (single-file)",
-            "Unknown"
+            "Other"
         };
 
         public override string ToString()
         {
-            var sb = new StringBuilder();
+            StringBuilder sb = new();
             string config = s_runtimeTypeNames[(int)RuntimeType];
             string index = _clrInfo.BuildId.IsDefaultOrEmpty ? $"{_clrInfo.IndexTimeStamp:X8} {_clrInfo.IndexFileSize:X8}" : _clrInfo.BuildId.ToHex();
-            sb.AppendLine($"#{Id} {config} runtime at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8} index {index}");
-            if (_clrInfo.IsSingleFile) {
-                sb.AppendLine($"    Single-file runtime module path: {RuntimeModule.FileName}");
+            sb.AppendLine($"#{Id} {config} runtime {_clrInfo} at {RuntimeModule.ImageBase:X16} size {RuntimeModule.ImageSize:X8} index {index}");
+            if (_clrInfo.IsSingleFile)
+            {
+                sb.Append($"    Single-file runtime module path: {RuntimeModule.FileName}");
             }
-            else {
-                sb.AppendLine($"    Runtime module path: {RuntimeModule.FileName}");
+            else
+            {
+                sb.Append($"    Runtime module path: {RuntimeModule.FileName}");
             }
-            if (RuntimeModuleDirectory is not null) {
-                sb.AppendLine($"    Runtime module directory: {RuntimeModuleDirectory}");
+            if (RuntimeModuleDirectory is not null)
+            {
+                sb.AppendLine();
+                sb.Append($"    Runtime module directory: {RuntimeModuleDirectory}");
             }
-            if (_dacFilePath is not null) {
-                sb.AppendLine($"    DAC: {_dacFilePath}");
+            if (_dacFilePath is not null)
+            {
+                sb.AppendLine();
+                sb.Append($"    DAC: {_dacFilePath}");
             }
-            if (_dbiFilePath is not null) {
-                sb.AppendLine($"    DBI: {_dbiFilePath}");
+            if (_dbiFilePath is not null)
+            {
+                sb.AppendLine();
+                sb.Append($"    DBI: {_dbiFilePath}");
             }
             return sb.ToString();
         }

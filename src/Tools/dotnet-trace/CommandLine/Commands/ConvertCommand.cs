@@ -1,12 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Tools.Common;
 using System;
 using System.CommandLine;
-using System.CommandLine.Builder;
 using System.IO;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -32,15 +30,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return ErrorCodes.ArgumentError;
             }
 
-            if (output == null)
-                output = inputFilename;
+            output ??= inputFilename;
 
             TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
             return 0;
         }
 
         public static Command ConvertCommand() =>
-            new Command(
+            new(
                 name: "convert",
                 description: "Converts traces to alternate formats for use with alternate trace analysis tools. Can only convert from the nettrace format")
             {
@@ -59,7 +56,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }.ExistingOnly();
 
         private static Option OutputOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
                 description: "Output filename. Extension of target format will be added.")
             {

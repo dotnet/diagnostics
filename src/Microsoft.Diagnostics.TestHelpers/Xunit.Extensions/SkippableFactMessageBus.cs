@@ -1,4 +1,7 @@
-﻿using System.Linq;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Linq;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -6,7 +9,7 @@ namespace Xunit.Extensions
 {
     public class SkippableFactMessageBus : IMessageBus
     {
-        readonly IMessageBus innerBus;
+        private readonly IMessageBus innerBus;
 
         public SkippableFactMessageBus(IMessageBus innerBus)
         {
@@ -19,10 +22,10 @@ namespace Xunit.Extensions
 
         public bool QueueMessage(IMessageSinkMessage message)
         {
-            var testFailed = message as ITestFailed;
+            ITestFailed testFailed = message as ITestFailed;
             if (testFailed != null)
             {
-                var exceptionType = testFailed.ExceptionTypes.FirstOrDefault();
+                string exceptionType = testFailed.ExceptionTypes.FirstOrDefault();
                 if (exceptionType == typeof(SkipTestException).FullName)
                 {
                     DynamicallySkippedTestCount++;

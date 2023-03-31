@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
@@ -63,13 +62,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            var providers = new List<EventPipeProvider>()
+            List<EventPipeProvider> providers = new()
             {
                 // Diagnostic source events
                 new EventPipeProvider(DiagnosticSourceEventSource,
                         keywords: DiagnosticSourceEventSourceEvents | DiagnosticSourceEventSourceMessages,
                         eventLevel: EventLevel.Verbose,
-                        arguments: new Dictionary<string,string>
+                        arguments: new Dictionary<string, string>
                         {
                             { "FilterAndPayloadSpecs", DiagnosticFilterString }
                         })

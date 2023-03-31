@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using SOS.Hosting;
-using System;
-using System.Linq;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -35,26 +34,30 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 commandLine = string.Concat(Arguments.Select((arg) => arg + " ")).Trim();
                 commandName = Arguments[0];
             }
-            else 
+            else
             {
                 commandLine = commandName = "help";
             }
             if (_commandService.IsCommand(commandName))
             {
-                _commandService.Execute(commandLine, _services);
+                try
+                {
+                    _commandService.Execute(commandLine, _services);
+                    return;
+                }
+                catch (CommandNotSupportedException)
+                {
+                }
             }
-            else
+            if (_sosHost is null)
             {
+                _sosHost = _services.GetService<SOSHost>();
                 if (_sosHost is null)
                 {
-                    _sosHost = _services.GetService<SOSHost>();
-                    if (_sosHost is null)
-                    {
-                        throw new DiagnosticsException($"'{commandName}' command not found");
-                    }
+                    throw new DiagnosticsException($"'{commandName}' command not found");
                 }
-                _sosHost.ExecuteCommand(commandLine);
             }
+            _sosHost.ExecuteCommand(commandLine);
         }
     }
 }

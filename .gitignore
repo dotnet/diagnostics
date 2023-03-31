@@ -52,6 +52,9 @@ launchSettings.json
 *.log
 *.scc
 
+# Visual Studio
+.vs/
+
 # Visual C++ cache files
 ipch/
 *.aps

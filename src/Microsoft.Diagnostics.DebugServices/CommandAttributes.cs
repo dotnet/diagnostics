@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -12,24 +12,24 @@ namespace Microsoft.Diagnostics.DebugServices
     [Flags]
     public enum CommandFlags : byte
     {
-        Windows     = 0x01,
-        Linux       = 0x02,
-        OSX         = 0x04,
+        Windows = 0x01,
+        Linux = 0x02,
+        OSX = 0x04,
 
         /// <summary>
         /// Command is supported when there is no target
         /// </summary>
-        Global      = 0x08,
+        Global = 0x08,
 
         /// <summary>
         /// Command is not added through reflection, but manually with command service API.
         /// </summary>
-        Manual      = 0x10,
+        Manual = 0x10,
 
         /// <summary>
         /// Default. All operating system, but target is required
         /// </summary>
-        Default     = Windows | Linux | OSX
+        Default = Windows | Linux | OSX
     }
 
     /// <summary>
@@ -62,6 +62,15 @@ namespace Microsoft.Diagnostics.DebugServices
         /// A string of options that are parsed before the command line options
         /// </summary>
         public string DefaultOptions;
+    }
+
+    /// <summary>
+    /// Marks a class as a Debug-Only command.  These commands are only available for debug versions
+    /// of SOS, but does not appear in shipping builds.
+    /// </summary>
+    [Conditional("DEBUG")]
+    public class DebugCommandAttribute : CommandAttribute
+    {
     }
 
     /// <summary>

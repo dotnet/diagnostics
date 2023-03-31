@@ -1,8 +1,11 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
-using System.Text;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Microsoft.Internal.Common.Utils
 
@@ -13,14 +16,14 @@ namespace Microsoft.Internal.Common.Utils
         //https://github.com/projectkudu/kudu/blob/787c893a9336beb498252bb2f90a06a95763f9e9/Kudu.Core/Infrastructure/ProcessExtensions.cs
         //The error handling was modified to return a string instead of throw.
 
-        static public string GetCommandLine(Process process)
+        public static string GetCommandLine(Process process)
         {
             IntPtr processHandle;
-            try 
+            try
             {
                 processHandle = process.Handle;
             }
-            catch (Exception ex) when (ex is InvalidOperationException || ex is NotSupportedException)
+            catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException)
             {
                 return "[cannot determine command line arguments]";
             }
@@ -49,20 +52,19 @@ namespace Microsoft.Internal.Common.Utils
 
                 int unicodeStringOffset = processBitness == 64 ? 0x70 : 0x40;
 
-                IntPtr ptr;
 
-                if (!ReadIntPtr(processHandle, pPeb + offset, out ptr))
+                if (!ReadIntPtr(processHandle, pPeb + offset, out IntPtr ptr))
                 {
                     return "[cannot determine command line arguments]";
                 }
 
-                if ((processBitness == 64 && System.Environment.Is64BitProcess)||
+                if ((processBitness == 64 && System.Environment.Is64BitProcess) ||
                     (processBitness == 32 && !System.Environment.Is64BitProcess))
                 {
                     //System and Process are both the same bitness.
 
-                    ProcessNativeMethods.UNICODE_STRING unicodeString = new ProcessNativeMethods.UNICODE_STRING();
-                    if(!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr+unicodeStringOffset, ref unicodeString, new IntPtr(Marshal.SizeOf(unicodeString)), IntPtr.Zero))
+                    ProcessNativeMethods.UNICODE_STRING unicodeString = default(ProcessNativeMethods.UNICODE_STRING);
+                    if (!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr + unicodeStringOffset, ref unicodeString, new IntPtr(Marshal.SizeOf(unicodeString)), IntPtr.Zero))
                     {
                         return "[cannot determine command line arguments]";
                     }
@@ -72,13 +74,13 @@ namespace Microsoft.Internal.Common.Utils
                     commandLineBuffer = unicodeString.Buffer;
                 }
 
-                else 
+                else
                 {
                     //System is 64 bit and the process is 32 bit
 
-                    ProcessNativeMethods.UNICODE_STRING_32 unicodeString32 = new ProcessNativeMethods.UNICODE_STRING_32();
+                    ProcessNativeMethods.UNICODE_STRING_32 unicodeString32 = default(ProcessNativeMethods.UNICODE_STRING_32);
 
-                    if(!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr+unicodeStringOffset, ref unicodeString32, new IntPtr(Marshal.SizeOf(unicodeString32)), IntPtr.Zero))
+                    if (!ProcessNativeMethods.ReadProcessMemory(processHandle, ptr + unicodeStringOffset, ref unicodeString32, new IntPtr(Marshal.SizeOf(unicodeString32)), IntPtr.Zero))
                     {
                         return "[cannot determine command line arguments]";
                     }
@@ -97,7 +99,7 @@ namespace Microsoft.Internal.Common.Utils
                 return Encoding.Unicode.GetString(commandLine);
             }
 
-            catch(Win32Exception)
+            catch (Win32Exception)
             {
                 return "[cannot determine command line arguments]";
             }
@@ -106,8 +108,8 @@ namespace Microsoft.Internal.Common.Utils
 
         private static bool ReadIntPtr(IntPtr hProcess, IntPtr ptr, out IntPtr readPtr)
         {
-            var dataSize = new IntPtr(IntPtr.Size);
-            var res_len = IntPtr.Zero;
+            IntPtr dataSize = new(IntPtr.Size);
+            IntPtr res_len = IntPtr.Zero;
             if (!ProcessNativeMethods.ReadProcessMemory(
                 hProcess,
                 ptr,
@@ -115,7 +117,7 @@ namespace Microsoft.Internal.Common.Utils
                 dataSize,
                 ref res_len))
             {
-                throw new Win32Exception("Reading of the pointer failed. Error: "+Marshal.GetLastWin32Error());
+                throw new Win32Exception("Reading of the pointer failed. Error: " + Marshal.GetLastWin32Error());
             }
 
             // This is more like an assert
@@ -125,19 +127,18 @@ namespace Microsoft.Internal.Common.Utils
 
         private static IntPtr GetPebNative(IntPtr hProcess)
         {
-            var pbi = new ProcessNativeMethods.ProcessInformation();
-            int res_len = 0;
+            ProcessNativeMethods.ProcessInformation pbi = default(ProcessNativeMethods.ProcessInformation);
             int pbiSize = Marshal.SizeOf(pbi);
             ProcessNativeMethods.NtQueryInformationProcess(
                 hProcess,
                 ProcessNativeMethods.ProcessBasicInformation,
                 ref pbi,
                 pbiSize,
-                out res_len);
+                out int res_len);
 
             if (res_len != pbiSize)
             {
-                throw new Win32Exception("Query Information Process failed. Error: "+ Marshal.GetLastWin32Error());
+                throw new Win32Exception("Query Information Process failed. Error: " + Marshal.GetLastWin32Error());
             }
 
             return pbi.PebBaseAddress;
@@ -152,7 +153,7 @@ namespace Microsoft.Internal.Common.Utils
         {
             if (System.Environment.Is64BitProcess)
             {
-                var ptr = IntPtr.Zero;
+                IntPtr ptr = IntPtr.Zero;
                 int res_len = 0;
                 int pbiSize = IntPtr.Size;
                 ProcessNativeMethods.NtQueryInformationProcess(
@@ -175,12 +176,11 @@ namespace Microsoft.Internal.Common.Utils
             }
         }
 
-        static private int GetProcessBitness(IntPtr hProcess)
+        private static int GetProcessBitness(IntPtr hProcess)
         {
             if (System.Environment.Is64BitOperatingSystem)
             {
-                bool wow64;
-                if (!ProcessNativeMethods.IsWow64Process(hProcess, out wow64))
+                if (!ProcessNativeMethods.IsWow64Process(hProcess, out bool wow64))
                 {
                     return 32;
                 }

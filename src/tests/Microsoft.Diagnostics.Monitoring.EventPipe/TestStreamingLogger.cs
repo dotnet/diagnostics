@@ -1,11 +1,12 @@
-﻿using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Extensions.Logging;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
@@ -31,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
     internal sealed class ScopeState : IEnumerable<IReadOnlyList<KeyValuePair<string, object>>>
     {
-        private readonly Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes = new Stack<IReadOnlyList<KeyValuePair<string, object>>>();
+        private readonly Stack<IReadOnlyList<KeyValuePair<string, object>>> _scopes = new();
 
         private sealed class ScopeEntry : IDisposable
         {
@@ -55,7 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
     internal sealed class TestStreamingLogger : ILogger
     {
-        private readonly ScopeState _scopes = new ScopeState();
+        private readonly ScopeState _scopes = new();
         private readonly Stream _outputStream;
         private readonly string _categoryName;
         private readonly LogLevel _logLevel;
@@ -82,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             Stream outputStream = _outputStream;
 
-            using (var jsonWriter = new Utf8JsonWriter(outputStream, new JsonWriterOptions { Indented = false }))
+            using (Utf8JsonWriter jsonWriter = new(outputStream, new JsonWriterOptions { Indented = false }))
             {
                 jsonWriter.WriteStartObject();
                 jsonWriter.WriteString("LogLevel", logLevel.ToString());

@@ -13,10 +13,10 @@ fi
 host="$project_root/.dotnet/dotnet --fx-version $host_version"
 
 # Turn on stress logging so the dumplog and histinit commands pass
-export COMPlus_LogFacility=0xffffffbf
-export COMPlus_LogLevel=6
-export COMPlus_StressLog=1
-export COMPlus_StressLogSize=65536
+export DOTNET_LogFacility=0xffffffbf
+export DOTNET_LogLevel=6
+export DOTNET_StressLog=1
+export DOTNET_StressLogSize=65536
 
 if [[ ! -x "$LLDB_PATH" ]]; then
     echo "LLDB_PATH doesn't exist or not executable"
@@ -29,4 +29,3 @@ mkdir -p $log_dir
 cd $project_root/src/SOS/lldbplugin.tests/
 rm -f StressLog.txt
 python $project_root/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host "$host" --plugin $plugin --logfiledir $log_dir --assembly $test_program
-

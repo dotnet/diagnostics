@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -106,7 +109,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <summary>
         /// Version 1.0.0 constant
         /// </summary>
-        public static readonly Version Version100 = new Version("1.0.0");
+        public static readonly Version Version100 = new("1.0.0");
 
         /// <summary>
         /// Test data file version
@@ -161,18 +164,18 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private static ImmutableDictionary<string, Value> Build(XElement node)
         {
-            var members = new Dictionary<string, Value>();
+            Dictionary<string, Value> members = new();
             foreach (XElement dataNode in node.Elements())
             {
                 string name = dataNode.Name.LocalName;
                 if (dataNode.HasElements)
                 {
-                    var items = new List<ImmutableDictionary<string, Value>>();
+                    List<ImmutableDictionary<string, Value>> items = new();
                     foreach (XElement subValue in dataNode.Elements())
                     {
                         if (subValue.HasElements)
                         {
-                            // Has multiple elements (i.e. Modules, Threads, Runtimes, 
+                            // Has multiple elements (i.e. Modules, Threads, Runtimes,
                             // etc). Assumes the same name for each entry.
                             items.Add(Build(subValue));
                         }
@@ -199,9 +202,9 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         /// <param name="values">test data for the item</param>
         /// <param name="instance">object to compare</param>
-        public void CompareMembers(ImmutableDictionary<string, TestDataReader.Value> values, object instance)
+        public void CompareMembers(ImmutableDictionary<string, Value> values, object instance)
         {
-            foreach (KeyValuePair<string, TestDataReader.Value> testData in values)
+            foreach (KeyValuePair<string, Value> testData in values)
             {
                 string testDataKey = testData.Key;
                 if (Version <= Version100 && testDataKey == "VersionData")
@@ -285,8 +288,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                             }
                         }
                     }
-                    else 
-                    { 
+                    else
+                    {
                         Trace.TraceWarning($"CompareMembers {testDataKey} member not found");
                         return;
                     }
@@ -302,7 +305,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     public static class TestDataExtensions
     {
         /// <summary>
-        /// Helper function to get a test data value 
+        /// Helper function to get a test data value
         /// </summary>
         /// <typeparam name="T">type to convert test data value</typeparam>
         /// <param name="values">values collection to lookup name</param>
@@ -333,7 +336,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             this ImmutableArray<ImmutableDictionary<string, TestDataReader.Value>> items, string propety, T propertyValue)
             where T : IComparable
         {
-            foreach (var item in items)
+            foreach (ImmutableDictionary<string, TestDataReader.Value> item in items)
             {
                 TestDataReader.Value value = item[propety];
                 if (propertyValue.CompareTo(value.GetValue<T>()) == 0)

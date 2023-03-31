@@ -1,24 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using Xunit;
-using System.IO;
-using System.Runtime.Loader;
-using System.Reflection;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.CustomEventsValidation
 {
     public class MyEventSource : EventSource
     {
-        public static MyEventSource Log = new MyEventSource();
+        public static MyEventSource Log = new();
 
         public void Event1() { WriteEvent(1); }
         public void Event2(string fileName) { WriteEvent(2, fileName); }
@@ -37,15 +32,13 @@ namespace EventPipe.UnitTests.CustomEventsValidation
         [Fact]
         public async void CustomEventProducesEventsWithNoKeywords()
         {
-            await RemoteTestExecutorHelper.RunTestCaseAsync(() => 
-            {
-                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new Dictionary<string, ExpectedEventCount>()
+            await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
+                Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
                 {
                     { "MyEventSource", -1 },
                 };
 
-                Action _eventGeneratingAction = () => 
-                {
+                Action _eventGeneratingAction = () => {
                     for (int i = 0; i < 1000; i++)
                     {
                         MyEventSource.Log.Event1();
@@ -53,13 +46,13 @@ namespace EventPipe.UnitTests.CustomEventsValidation
                         MyEventSource.Log.Event3();
                     }
                 };
- 
-                var providers = new List<EventPipeProvider>()
+
+                List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("MyEventSource", EventLevel.Informational)
                 };
 
-                var ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, null);
+                int ret = IpcTraceTest.RunAndValidateEventCounts(_expectedEventCounts, _eventGeneratingAction, providers, 1024, null);
                 Assert.Equal(100, ret);
             }, output);
         }
