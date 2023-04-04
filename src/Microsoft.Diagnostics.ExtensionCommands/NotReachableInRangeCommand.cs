@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong curr = start;
 
             IEnumerable<ClrObject> liveObjs = EnumerateLiveObjectsInRange(end, curr);
-            DumpHeap.PrintHeap(liveObjs, Short ? DumpHeapService.DisplayKind.Short : DumpHeapService.DisplayKind.Normal, statsOnly: false);
+            DumpHeap.PrintHeap(liveObjs, Short ? DumpHeapService.DisplayKind.Short : DumpHeapService.DisplayKind.Normal, statsOnly: false, printFragmentation: false);
         }
 
         private IEnumerable<ClrObject> EnumerateLiveObjectsInRange(ulong end, ulong curr)

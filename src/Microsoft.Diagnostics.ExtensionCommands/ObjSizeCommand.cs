@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine();
 
             DumpHeapService.DisplayKind displayKind = Strings ? DumpHeapService.DisplayKind.Strings : DumpHeapService.DisplayKind.Normal;
-            DumpHeap.PrintHeap(GetTransitiveClosure(obj), displayKind, Stat);
+            DumpHeap.PrintHeap(GetTransitiveClosure(obj), displayKind, Stat, printFragmentation: false);
         }
 
         private static IEnumerable<ClrObject> GetTransitiveClosure(ClrObject obj)
