@@ -56,6 +56,10 @@ namespace SOS.Extensions
                 else
                 {
                     string[] parts = ((line[0] == '+') ? line.Substring(1) : line).Split(new char[] { ' ' }, 6, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < 2)
+                    {
+                        continue;
+                    }
 
                     if (!ulong.TryParse(parts[0].Replace("`", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong start))
                     {
