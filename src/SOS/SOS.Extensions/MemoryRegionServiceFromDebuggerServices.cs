@@ -115,7 +115,7 @@ namespace SOS.Extensions
                         index++;
                     }
 
-                    string description = parts[index++].Trim();
+                    string description = index < parts.Length ? parts[index++].Trim() : "";
 
                     // On Linux, !address is reporting this as MEM_PRIVATE or MEM_UNKNOWN
                     if (description == "Image")
