@@ -16,9 +16,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            SizeStats(Generation.Gen0, isFree: false);
-            SizeStats(Generation.Gen1, isFree: false);
-            SizeStats(Generation.Gen2, isFree: false);
+            SizeStats(Generation.Generation0, isFree: false);
+            SizeStats(Generation.Generation1, isFree: false);
+            SizeStats(Generation.Generation2, isFree: false);
             SizeStats(Generation.Large, isFree: false);
 
             bool hasPinned = Runtime.Heap.Segments.Any(seg => seg.Kind == GCSegmentKind.Pinned);
@@ -32,9 +32,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 SizeStats(Generation.Frozen, isFree: false);
             }
 
-            SizeStats(Generation.Gen0, isFree: true);
-            SizeStats(Generation.Gen1, isFree: true);
-            SizeStats(Generation.Gen2, isFree: true);
+            SizeStats(Generation.Generation0, isFree: true);
+            SizeStats(Generation.Generation1, isFree: true);
+            SizeStats(Generation.Generation2, isFree: true);
             SizeStats(Generation.Large, isFree: true);
 
             if (hasPinned)
@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // If Kind == Ephemeral, we have to further filter by object generation
                     if (seg.Kind == GCSegmentKind.Ephemeral)
                     {
-                        if (obj.GetGeneration(seg) != requestedGen)
+                        if (seg.GetGeneration(obj) != requestedGen)
                         {
                             continue;
                         }
@@ -104,10 +104,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             return seg.Kind switch
             {
-                GCSegmentKind.Ephemeral => gen <= Generation.Gen2,
-                GCSegmentKind.Generation0 => gen == Generation.Gen0,
-                GCSegmentKind.Generation1 => gen == Generation.Gen1,
-                GCSegmentKind.Generation2 => gen == Generation.Gen2,
+                GCSegmentKind.Ephemeral => gen <= Generation.Generation2,
+                GCSegmentKind.Generation0 => gen == Generation.Generation0,
+                GCSegmentKind.Generation1 => gen == Generation.Generation1,
+                GCSegmentKind.Generation2 => gen == Generation.Generation2,
                 GCSegmentKind.Frozen => gen == Generation.Frozen,
                 GCSegmentKind.Pinned => gen == Generation.Pinned,
                 GCSegmentKind.Large => gen == Generation.Large,

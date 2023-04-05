@@ -130,8 +130,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
                     // This handles both regions and segments
-                    Generation gen = obj.GetGeneration(seg);
-                    if (gen is not Generation.Gen0 or Generation.Gen1)
+                    Generation gen = seg.GetGeneration(obj);
+                    if (gen is not Generation.Generation0 or Generation.Generation1)
                     {
                         continue;
                     }
@@ -145,8 +145,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             continue;
                         }
 
-                        Generation refGen = objRef.GetGeneration(null);
-                        if (refGen == Generation.Large)
+                        if (GetGenerationWithoutSegment(objRef) == Generation.Large)
                         {
                             yield return (obj, objRef);
                         }
@@ -174,14 +173,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             continue;
                         }
 
-                        Generation refGen = objRef.GetGeneration(null);
-                        if (refGen is Generation.Gen0 or Generation.Gen1)
+                        if (GetGenerationWithoutSegment(objRef) is Generation.Generation0 or Generation.Generation1)
                         {
                             yield return (obj, objRef);
                         }
                     }
                 }
             }
+        }
+
+        private Generation GetGenerationWithoutSegment(ClrObject obj)
+        {
+            ClrSegment seg = Runtime.Heap.GetSegmentByAddress(obj);
+            if (seg is not null)
+            {
+                return seg.GetGeneration(obj);
+            }
+
+            return Generation.Unknown;
         }
     }
 }
