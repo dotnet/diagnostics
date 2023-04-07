@@ -54,22 +54,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     generation = "reserve";
                 }
-                else if (segment.Kind == GCSegmentKind.Frozen)
-                {
-                    generation = "frozen";
-                }
-                else if (segment.Kind == GCSegmentKind.Pinned)
-                {
-                    generation = "pinned";
-                }
-                else if (segment.Kind == GCSegmentKind.Large)
-                {
-                    generation = "large";
-                }
                 else
                 {
-                    int gen = segment.GetGeneration(address);
-                    generation = gen != -1 ? gen.ToString() : "???";
+                    generation = segment.GetGeneration(address) switch
+                    {
+                        Generation.Generation0 => "0",
+                        Generation.Generation1 => "1",
+                        Generation.Generation2 => "2",
+                        Generation.Frozen => "frozen",
+                        Generation.Pinned => "pinned",
+                        Generation.Large => "large",
+                        _ => "???",
+                    };
                 }
 
                 object addressColumn = segment.ObjectRange.Contains(address) ? new DmlListNearObj(address) : address;
