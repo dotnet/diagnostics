@@ -217,25 +217,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             continue;
                         }
 
-                        GenerationInfo gen = seg.GetGeneration(obj) switch
+                        GenerationInfo genInfo = result.GetInfoByGeneration(seg.GetGeneration(obj));
+                        if (genInfo is not null)
                         {
-                            0 => result.Gen0,
-                            1 => result.Gen1,
-                            _ => result.Gen2,
-                        };
-
-                        if (obj.IsFree)
-                        {
-                            result.Ephemeral.Free += obj.Size;
-                            gen.Free += obj.Size;
-                        }
-                        else
-                        {
-                            gen.Allocated += obj.Size;
-
-                            if (IncludeUnreachable && !LiveObjects.IsLive(obj))
+                            if (obj.IsFree)
                             {
-                                gen.Unrooted += obj.Size;
+                                result.Ephemeral.Free += obj.Size;
+                                genInfo.Free += obj.Size;
+                            }
+                            else
+                            {
+                                genInfo.Allocated += obj.Size;
+
+                                if (IncludeUnreachable && !LiveObjects.IsLive(obj))
+                                {
+                                    genInfo.Unrooted += obj.Size;
+                                }
                             }
                         }
                     }
@@ -305,6 +302,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     LoH = left.LoH + right.LoH,
                     PoH = left.PoH + right.PoH,
                     Frozen = left.Frozen + right.Frozen,
+                };
+            }
+
+            public GenerationInfo GetInfoByGeneration(Generation gen)
+            {
+                return gen switch
+                {
+                    Generation.Generation0 => Gen0,
+                    Generation.Generation1 => Gen1,
+                    Generation.Generation2 => Gen2,
+                    Generation.Large => LoH,
+                    Generation.Pinned => PoH,
+                    Generation.Frozen => Frozen,
+                    _ => null
                 };
             }
         }
