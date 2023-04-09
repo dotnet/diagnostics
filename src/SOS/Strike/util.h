@@ -2891,65 +2891,6 @@ private:
     int mMisses, mReads, mMisaligned;
 };
 
-//
-// Helper class used for type-safe bitflags
-//   T - the enum type specifying the individual bit flags
-//   U - the underlying/storage type
-// Requirement:
-//   sizeof(T) <= sizeof(U)
-//
-template <typename T, typename U>
-struct Flags
-{
-    typedef T UnderlyingType;
-    typedef U BitFlagEnumType;
-
-    static_assert_no_msg(sizeof(BitFlagEnumType) <= sizeof(UnderlyingType));
-
-    Flags(UnderlyingType v)
-        : m_val(v)
-    { }
-
-    Flags(BitFlagEnumType v)
-        : m_val(v)
-    { }
-
-    Flags(const Flags& other)
-        : m_val(other.m_val)
-    { }
-
-    Flags& operator = (const Flags& other)
-    { m_val = other.m_val; return *this; }
-
-    Flags operator | (Flags other) const
-    { return Flags<T, U>(m_val | other._val); }
-
-    void operator |= (Flags other)
-    { m_val |= other.m_val; }
-
-    Flags operator & (Flags other) const
-    { return Flags<T, U>(m_val & other.m_val); }
-
-    void operator &= (Flags other)
-    { m_val &= other.m_val; }
-
-    Flags operator ^ (Flags other) const
-    { return Flags<T, U>(m_val ^ other._val); }
-
-    void operator ^= (Flags other)
-    { m_val ^= other.m_val; }
-
-    BOOL operator == (Flags other) const
-    { return m_val == other.m_val; }
-
-    BOOL operator != (Flags other) const
-    { return m_val != other.m_val; }
-
-
-private:
-    UnderlyingType m_val;
-};
-
 // Helper class used in ClrStackFromPublicInterface() to keep track of explicit EE Frames
 // (i.e., "internal frames") on the stack.  Call Init() with the appropriate
 // ICorDebugThread3, and this class will initialize itself with the set of internal
