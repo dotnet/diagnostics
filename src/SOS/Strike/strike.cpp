@@ -3652,114 +3652,11 @@ DECLARE_API(TraverseHeap)
     return ExecuteCommand("traverseheap", args);
 }
 
-struct PrintRuntimeTypeArgs
-{
-    DWORD_PTR mtOfRuntimeType;
-    int handleFieldOffset;
-    DacpAppDomainStoreData adstore;
-};
-
-void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOID token)
-{
-    PrintRuntimeTypeArgs *pArgs = (PrintRuntimeTypeArgs *)token;
-
-    if (pArgs->mtOfRuntimeType == NULL)
-    {
-        NameForMT_s(methodTable, g_mdName, mdNameLen);
-
-        if (_wcscmp(g_mdName, W("System.RuntimeType")) == 0)
-        {
-            pArgs->mtOfRuntimeType = methodTable;
-            pArgs->handleFieldOffset = GetObjFieldOffset(TO_CDADDR(objAddr), TO_CDADDR(methodTable), W("m_handle"));
-            if (pArgs->handleFieldOffset <= 0)
-                ExtOut("Error getting System.RuntimeType.m_handle offset\n");
-
-            pArgs->adstore.Request(g_sos);
-        }
-    }
-
-    if ((methodTable == pArgs->mtOfRuntimeType) && (pArgs->handleFieldOffset > 0))
-    {
-        // Get the method table and display the information.
-        DWORD_PTR mtPtr;
-        if (MOVE(mtPtr, objAddr + pArgs->handleFieldOffset) == S_OK)
-        {
-            DMLOut(DMLObject(objAddr));
-
-            // Check if TypeDesc
-            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
-            {
-                ExtOut(" %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
-            }
-            else
-            {
-                CLRDATA_ADDRESS appDomain = GetAppDomainForMT(mtPtr);
-                if (appDomain != NULL)
-                {
-                    if (appDomain == pArgs->adstore.sharedDomain)
-                        ExtOut(" %" POINTERSIZE "s", "Shared");
-
-                    else if (appDomain == pArgs->adstore.systemDomain)
-                        ExtOut(" %" POINTERSIZE "s", "System");
-                    else
-                        DMLOut(" %s", DMLDomain(appDomain));
-                }
-                else
-                {
-                    ExtOut(" %" POINTERSIZE "s", "?");
-                }
-
-                if (NameForMT_s(mtPtr, g_mdName, mdNameLen))
-                {
-                    DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
-                }
-            }
-        }
-    }
-}
-
-
 DECLARE_API(DumpRuntimeTypes)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
-
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-        return Status;
-
-    EnableDMLHolder dmlHolder(dml);
-
-    ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s Type Name              \n",
-           "Address", "Domain", "MT");
-    ExtOut("------------------------------------------------------------------------------\n");
-
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return E_FAIL;
-    }
-
-    PrintRuntimeTypeArgs pargs;
-    ZeroMemory(&pargs, sizeof(PrintRuntimeTypeArgs));
-
-    try
-    {
-        GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-
-    return Status;
+    return ExecuteCommand("dumpruntimetypes", args);
 }
 
 namespace sos
@@ -3823,65 +3720,10 @@ DECLARE_API(AnalyzeOOM)
 
 DECLARE_API(VerifyObj)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    TADDR  taddrObj = 0;
-    TADDR  taddrMT;
-    size_t objSize;
-
-    BOOL bValid = FALSE;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&taddrObj, COHEX}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    BOOL bContainsPointers;
-
-    if (FAILED(GetMTOfObject(taddrObj, &taddrMT)) ||
-        !GetSizeEfficient(taddrObj, taddrMT, FALSE, objSize, bContainsPointers))
-    {
-        ExtOut("object %#p does not have valid method table\n", SOS_PTR(taddrObj));
-        goto Exit;
-    }
-
-    // we need to build g_snapshot as it is later used in GetGeneration
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        goto Exit;
-    }
-
-    try
-    {
-        GCHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
-        bValid = VerifyObject(*pheapDetails, taddrObj, taddrMT, objSize, TRUE);
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-
-Exit:
-    if (bValid)
-    {
-        ExtOut("object %#p is a valid object\n", SOS_PTR(taddrObj));
-    }
-
-    return Status;
+    return ExecuteCommand("verifyobj", args);
 }
 
 DECLARE_API(ListNearObj)
