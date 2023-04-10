@@ -452,77 +452,6 @@ namespace sos
         mutable WCHAR *mTypeName;
     };
 
-    /* Enumerates all the GC references (objects) contained in an object.  This uses the GCDesc
-     * map exactly as the GC does.
-     */
-    class RefIterator
-    {
-    public:
-        RefIterator(TADDR obj, LinearReadCache *cache = NULL);
-        RefIterator(TADDR obj, CGCDesc *desc, bool arrayOfVC, LinearReadCache *cache = NULL);
-        ~RefIterator();
-
-        /* Moves to the next reference in the object.
-         */
-        const RefIterator &operator++();
-
-        /* Returns the address of the current reference.
-         */
-        TADDR operator*() const;
-
-        /* Gets the offset into the object where the current reference comes from.
-         */
-        TADDR GetOffset() const;
-
-        /* Returns true if there are more objects in the iteration, false otherwise.
-         * Used as:
-         *     if (itr)
-         *        ...
-         */
-        inline operator void *() const
-        {
-            return (void*)!mDone;
-        }
-
-        bool IsLoaderAllocator() const
-        {
-            return mLoaderAllocatorObjectHandle == mCurr;
-        }
-
-    private:
-        void Init();
-        inline TADDR ReadPointer(TADDR addr) const
-        {
-            if (mCache)
-            {
-                if (!mCache->Read(addr, &addr, false))
-                    Throw<DataRead>("Could not read address %p.", addr);
-            }
-            else
-            {
-                MOVE(addr, addr);
-            }
-
-            return addr;
-        }
-
-    private:
-        LinearReadCache *mCache;
-        CGCDesc *mGCDesc;
-        bool mArrayOfVC, mDone;
-
-        TADDR *mBuffer;
-        CGCDescSeries *mCurrSeries;
-
-        TADDR mLoaderAllocatorObjectHandle;
-
-        int i, mCount;
-
-        TADDR mCurr, mStop, mObject;
-        size_t mObjSize;
-    };
-
-
     /* The Iterator used to walk the managed objects on the GC heap.
      * The general usage pattern for this class is:
      *   for (ObjectIterator itr = gcheap.WalkHeap(); itr; ++itr)
@@ -600,8 +529,6 @@ namespace sos
 
     private:
         ObjectIterator(const GCHeapDetails *heap, int numHeaps, TADDR start, TADDR stop);
-
-        bool VerifyObjectMembers(__out_ecount(size) char *buffer, size_t size) const;
 
         void AssertSanity() const;
 
