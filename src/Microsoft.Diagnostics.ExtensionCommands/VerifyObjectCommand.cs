@@ -9,8 +9,8 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "verifyobj", DefaultOptions = "VerifyObj", Help = "Checks the given object for signs of corruption.")]
-    public class VerifyObjectCommand : CommandBase
+    [Command(Name = "verifyobj", Help = "Checks the given object for signs of corruption.")]
+    public sealed class VerifyObjectCommand : CommandBase
     {
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
