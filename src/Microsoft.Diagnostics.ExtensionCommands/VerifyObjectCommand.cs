@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             ObjectCorruption[] corruption = corruptionEnum.OrderBy(r => r.Offset).ToArray();
-            int offsetColWidth = Math.Max(6, corruption.Max(r => FormatOffset(r.Offset).Length));
+            int offsetColWidth = Math.Max(6, corruption.Max(r => r.Offset.ToSignedHexString().Length));
             int kindColWidth = Math.Max(5, corruption.Max(ce => ce.Kind.ToString().Length));
 
             TableOutput output = new(Console, (offsetColWidth, ""), (kindColWidth, ""))
@@ -47,13 +47,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             output.WriteRow("Offset", "Issue", "Description");
             foreach (ObjectCorruption oc in corruption)
             {
-                output.WriteRow(FormatOffset(oc.Offset), oc.Kind, VerifyHeapCommand.GetObjectCorruptionMessage(Memory, Runtime.Heap, oc));
+                output.WriteRow(oc.Offset.ToSignedHexString(), oc.Kind, VerifyHeapCommand.GetObjectCorruptionMessage(Memory, Runtime.Heap, oc));
             }
 
             Console.WriteLine();
             Console.WriteLine($"{corruption.Length:n0} error{(corruption.Length == 1 ? "" : "s")}  detected.");
         }
-
-        private static string FormatOffset(int offset) => offset < 0 ? $"-{Math.Abs(offset):x}" : offset.ToString("x");
     }
 }

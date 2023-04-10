@@ -2192,11 +2192,9 @@ DECLARE_API(DumpObj)
 
         if (SUCCEEDED(Status) && bRefs)
         {
-            ExtOut("GC Refs:\n");
-            TableOutput out(2, POINTERSIZE_HEX, AlignRight, 4);
-            out.WriteRow("offset", "object");
-            for (sos::RefIterator itr(TO_TADDR(p_Object)); itr; ++itr)
-                out.WriteRow(Hex(itr.GetOffset()), ObjectPtr(*itr));
+            std::stringstream argsBuilder;
+            argsBuilder << std::hex << p_Object << " ";
+            return ExecuteCommand("dumpobjgcrefs", argsBuilder.str().c_str());
         }
     }
     catch(const sos::Exception &e)
