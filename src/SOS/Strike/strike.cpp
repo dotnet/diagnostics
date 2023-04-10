@@ -3647,80 +3647,9 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 
 DECLARE_API(TraverseHeap)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-    BOOL bXmlFormat = FALSE;
-    BOOL bVerify = FALSE;
-    StringHolder Filename;
-
-    CMDOption option[] =
-    {   // name, vptr,        type, hasValue
-        {"-xml", &bXmlFormat, COBOOL, FALSE},
-        {"-verify", &bVerify, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&Filename.data, COSTRING},
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    if (nArg != 1)
-    {
-        ExtOut("usage: %straverseheap [-xml] filename\n", SOSPrefix);
-        return Status;
-    }
-
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return Status;
-    }
-
-    FILE* file = fopen(Filename.data, "w");
-    if (file == nullptr) {
-        ExtOut("Unable to open file %s (%d)\n", strerror(errno), errno);
-        return Status;
-    }
-
-    if (!bVerify)
-        ExtOut("Assuming a uncorrupted GC heap.  If this is a crash dump consider -verify option\n");
-
-    HeapTraverser traverser(bVerify != FALSE);
-
-    ExtOut("Writing %s format to file %s\n", bXmlFormat ? "Xml" : "CLRProfiler", Filename.data);
-    ExtOut("Gathering types...\n");
-
-    // TODO: there may be a canonical list of methodtables in the runtime that we can
-    // traverse instead of exploring the gc heap for that list. We could then simplify the
-    // tree structure to a sorted list of methodtables, and the index is the ID.
-
-    // TODO: "Traversing object members" code should be generalized and shared between
-    // gcroot and traverseheap. Also dumpheap can begin using GCHeapsTraverse.
-
-    if (!traverser.Initialize())
-    {
-        ExtOut("Error initializing heap traversal\n");
-        fclose(file);
-        return Status;
-    }
-
-    if (!traverser.CreateReport (file, bXmlFormat ? FORMAT_XML : FORMAT_CLRPROFILER))
-    {
-        ExtOut("Unable to write heap report\n");
-        fclose(file);
-        return Status;
-    }
-
-    fclose(file);
-    ExtOut("\nfile %s saved\n", Filename.data);
-
-    return Status;
+    return ExecuteCommand("traverseheap", args);
 }
 
 struct PrintRuntimeTypeArgs
