@@ -177,7 +177,6 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpmodule", new sosCommand("DumpModule"), "Displays information about a EE module structure at the specified address.");
     g_services->AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
     g_services->AddCommand("dumpobj", new sosCommand("DumpObj"), "Displays info about an object at the specified address.");
-    g_services->AddCommand("dumpruntimetypes", new sosCommand("DumpRuntimeTypes"), "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.");
     g_services->AddCommand("dumpsig", new sosCommand("DumpSig"), "Dumps the signature of a method or field specified by '<sigaddr> <moduleaddr>'.");
     g_services->AddCommand("dumpsigelem", new sosCommand("DumpSigElem"), "Dumps a single element of a signature object.");
     g_services->AddCommand("dumpstack", new sosCommand("DumpStack"), "Displays a native and managed stack trace.");

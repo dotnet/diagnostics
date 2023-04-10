@@ -25,7 +25,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpmodule",        DefaultOptions = "DumpModule",          Help = "Displays information about a EE module structure at the specified address.")]
     [Command(Name = "dumpmt",            DefaultOptions = "DumpMT",              Help = "Displays information about a method table at the specified address.")]
     [Command(Name = "dumpobj",           DefaultOptions = "DumpObj",             Aliases = new string[] { "do" }, Help = "Displays info about an object at the specified address.")]
-    [Command(Name = "dumpruntimetypes",  DefaultOptions = "DumpRuntimeTypes",    Help = "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.")]
     [Command(Name = "dumpsig",           DefaultOptions = "DumpSig",             Help = "Dumps the signature of a method or field specified by <sigaddr> <moduleaddr>.")]
     [Command(Name = "dumpsigelem",       DefaultOptions = "DumpSigElem",         Help = "Dumps a single element of a signature object.")]
     [Command(Name = "dumpstackobjects",  DefaultOptions = "DumpStackObjects",    Aliases = new string[] { "dso" }, Help = "Displays all managed objects found within the bounds of the current stack.")]
