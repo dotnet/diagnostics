@@ -2186,11 +2186,6 @@ RegisterForRuntimeStartupRemotePort(
     _In_ LPCSTR assemblyBasePath,
     _Out_ IUnknown ** ppCordb)
 {
-    while (!::IsDebuggerPresent())
-        ::Sleep(100);
-    if (pCordb != NULL)
-        return S_OK;
-
     HRESULT hr = S_OK;
     HMODULE hMod = NULL;
 
@@ -2205,7 +2200,6 @@ RegisterForRuntimeStartupRemotePort(
         return hr;
     }
 
-    hr = CreateCoreDbgRemotePort(hMod, dwRemotePortId, assemblyBasePath, &pCordb);
-    *ppCordb = pCordb;
+    hr = CreateCoreDbgRemotePort(hMod, dwRemotePortId, assemblyBasePath, ppCordb);
     return S_OK;
 }
