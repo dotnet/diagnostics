@@ -28,14 +28,7 @@
 #ifdef TARGET_WINDOWS
 #define PSAPI_VERSION 2
 #include <psapi.h>
-#else
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#include <mach-o/loader.h>
-#else
-#include <link.h>
-#endif // __APPLE__
-#endif // TARGET_WINDOWS
+#endif
 
 #include "dbgshim.h"
 #include "debugshim.h"
@@ -2168,13 +2161,8 @@ HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCSTR assembl
 {
     HRESULT hr = S_OK;
 
-#if defined(TARGET_WINDOWS)
     FPCoreCLRCreateCordbObjectRemotePort fpCreate =
         (FPCoreCLRCreateCordbObjectRemotePort)GetProcAddress(hDBIModule, "CoreCLRCreateCordbObject");
-#else
-    FPCoreCLRCreateCordbObjectRemotePort fpCreate = (FPCoreCLRCreateCordbObjectRemotePort)dlsym (hDBIModule, "CoreCLRCreateCordbObject");
-#endif
-
     if (fpCreate == NULL)
     {
         return CORDBG_E_INCOMPATIBLE_PROTOCOL;
@@ -2196,11 +2184,7 @@ RegisterForRuntimeStartupRemotePort(
     HRESULT hr = S_OK;
     HMODULE hMod = NULL;
 
-#ifdef TARGET_WINDOWS
     hMod = LoadLibraryA(mscordbiPath);
-#else
-    hMod = dlopen(mscordbiPath, 0x00001/*RTLD_LAZY*/);
-#endif
     if (hMod == NULL)
     {
         hr = CORDBG_E_DEBUG_COMPONENT_MISSING;
