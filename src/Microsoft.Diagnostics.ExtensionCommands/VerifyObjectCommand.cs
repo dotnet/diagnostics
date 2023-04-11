@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             bool isNotCorrupt = Runtime.Heap.FullyVerifyObject(objAddress, out IEnumerable<ObjectCorruption> corruptionEnum);
             if (isNotCorrupt)
             {
-                Console.WriteLine($"object {objAddress:x} is a valid object");
+                Console.WriteLine($"object 0x{objAddress:x} is a valid object");
                 return;
             }
 
