@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return $"{updated:0.00}gb";
         }
 
-        public static string ToSignedHexString(this int offset) => offset < 0 ? $"-{Math.Abs(offset):x}" : offset.ToString("x");
+        public static string ToSignedHexString(this int offset) => offset < 0 ? $"-{Math.Abs(offset):x2}" : offset.ToString("x2");
 
         internal static ulong FindMostCommonPointer(this IEnumerable<ulong> enumerable)
             => (from ptr in enumerable
