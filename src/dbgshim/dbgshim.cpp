@@ -28,7 +28,14 @@
 #ifdef TARGET_WINDOWS
 #define PSAPI_VERSION 2
 #include <psapi.h>
-#endif
+#else
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#include <mach-o/loader.h>
+#else
+#include <link.h>
+#endif // __APPLE__
+#endif // TARGET_WINDOWS
 
 #include "dbgshim.h"
 #include "debugshim.h"
