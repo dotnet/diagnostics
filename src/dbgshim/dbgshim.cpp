@@ -30,6 +30,8 @@
 #include <psapi.h>
 #endif
 
+#include <dlfcn.h>
+
 #include "dbgshim.h"
 #include "debugshim.h"
 
