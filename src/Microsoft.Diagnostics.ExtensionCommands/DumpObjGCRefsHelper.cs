@@ -40,6 +40,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
+            Console.WriteLine("GC Refs:");
+
             int fieldNameLen = Math.Max(refs.Max(r => GetFieldName(r)?.Length ?? 0), 5);
             int offsetLen = Math.Max(refs.Max(r => r.Offset.ToSignedHexString().Length), 6);
 
