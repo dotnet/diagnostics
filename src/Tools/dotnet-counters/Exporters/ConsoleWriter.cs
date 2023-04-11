@@ -150,17 +150,29 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 Console.WriteLine($"[{provider.Name}]"); row++;
 
+                foreach (var counter in provider.Counters.Values)
+                {
+                    counter.Row = -1;
+                    if (counter.RenderValueInline)
+                    {
+                        foreach (var tagSet in counter.TagSets.Values)
+                        {
+                            tagSet.Row = -1;
+                        }
+                    }
+                }
+
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
 
                     string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
+                    if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
+                    {
+                        break;
+                    }
                     counter.Row = row++;
                     if (counter.RenderValueInline)
                     {
-                        if (row >= _consoleHeight) // prevents from displaying more counters than vertical space available
-                        {
-                            break;
-                        }
                         Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
                     }
                     else
@@ -168,13 +180,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         Console.WriteLine(name);
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
-                            if (row >= _consoleHeight)
+                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
+                            Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
+
+                            if (row >= _consoleHeight + _topRow - 1)
                             {
                                 break;
                             }
-
-                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
-                            Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                             tagSet.Row = row++;
                         }
                     }
@@ -253,6 +265,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
 
                 int row = counter.RenderValueInline ? counter.Row : tagSet.Row;
+                if (row < 0)
+                {
+                    return;
+                }
                 SetCursorPosition(Indent + _maxNameLength + 1, row);
                 Console.Write(FormatValue(payload.Value));
             }
