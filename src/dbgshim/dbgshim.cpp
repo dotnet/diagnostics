@@ -30,8 +30,6 @@
 #include <psapi.h>
 #endif
 
-#include <dlfcn.h>
-
 #include "dbgshim.h"
 #include "debugshim.h"
 
@@ -2194,7 +2192,7 @@ RegisterForRuntimeStartupRemotePort(
 #ifdef TARGET_WINDOWS
     hMod = LoadLibraryA(mscordbiPath);
 #else
-    hMod = dlopen(mscordbiPath, RTLD_LAZY);
+    hMod = dlopen(mscordbiPath, 0x00001/*RTLD_LAZY*/);
 #endif
     if (hMod == NULL)
     {
