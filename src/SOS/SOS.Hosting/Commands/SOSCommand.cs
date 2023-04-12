@@ -47,7 +47,6 @@ namespace SOS.Hosting
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [Command(Name = "soshelp",           DefaultOptions = "Help",                Help = "Displays help for a specific SOS command.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
-    [Command(Name = "threadpool",        DefaultOptions = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
     [Command(Name = "threadstate",       DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
     [Command(Name = "comstate",          DefaultOptions = "COMState",            Flags = CommandFlags.Windows, Help = "Lists the COM apartment model for each thread.")]
     [Command(Name = "dumprcw",           DefaultOptions = "DumpRCW",             Flags = CommandFlags.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
