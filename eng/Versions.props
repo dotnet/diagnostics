@@ -48,7 +48,6 @@
     <MicrosoftDiagnosticsRuntimeVersion>3.0.0-beta.23205.1</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativePackageVersion>16.9.0-beta1.21055.5</MicrosoftDiaSymReaderNativePackageVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <!-- dotnet-dsrouter needs a net6.0 version of logging -->
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
