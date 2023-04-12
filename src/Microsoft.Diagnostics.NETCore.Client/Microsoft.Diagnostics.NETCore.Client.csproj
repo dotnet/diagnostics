@@ -22,8 +22,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'" Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingPinnedVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'" >
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
+    <PackageReference Include="System.Buffers" Version="$(SystemBuffersVersion)" />
   </ItemGroup>
 
   <ItemGroup>

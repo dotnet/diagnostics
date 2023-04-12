@@ -31,13 +31,13 @@
       <Uri>https://github.com/dotnet/installer</Uri>
       <Sha>51e06f6931e859f56564556fa6ba519761fa7141</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="8.0.0-preview.4.23206.4">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="8.0.0-preview.4.23212.2">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>5d65ee05af31b5a6a0e4faec09e7501b474a997a</Sha>
+      <Sha>7d0c27344d193cb6ad263732d1fef6d3e0fd1f71</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="8.0.0-preview.4.23206.4">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="8.0.0-preview.4.23212.2">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>5d65ee05af31b5a6a0e4faec09e7501b474a997a</Sha>
+      <Sha>7d0c27344d193cb6ad263732d1fef6d3e0fd1f71</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-preview.3.23155.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
@@ -47,9 +47,9 @@
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>a64420c79cb63c485138f4f1352b8730f27d7b19</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23205.5">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23212.2">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>09c4d8e93c5b78897bccb4f27e0c373647fb3985</Sha>
+      <Sha>02ee87c8a232a9786b56cd2102cf318559e72210</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.SourceLink.GitHub" Version="1.2.0-beta-23165-02" CoherentParentDependency="Microsoft.DotNet.Arcade.Sdk">
