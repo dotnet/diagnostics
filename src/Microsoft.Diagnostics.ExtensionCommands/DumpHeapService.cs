@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [ServiceExport(Scope = ServiceScope.Runtime)]
     public class DumpHeapService
     {
+        private const ulong FragmentationBlockMinSize = 512 * 1024;
         private const char StringReplacementCharacter = '.';
 
         [ServiceImport]
@@ -34,8 +35,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Strings
         }
 
-        public void PrintHeap(IEnumerable<ClrObject> objects, DisplayKind displayKind, bool statsOnly)
+        public void PrintHeap(IEnumerable<ClrObject> objects, DisplayKind displayKind, bool statsOnly, bool printFragmentation)
         {
+            List<(ClrObject Free, ClrObject Next)> fragmentation = null;
+            Dictionary<(string String, ulong Size), uint> stringTable = null;
+            Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
+
             TableOutput thinLockOutput = null;
             TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
             if (!statsOnly && (displayKind is DisplayKind.Normal or DisplayKind.Strings))
@@ -43,9 +48,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 objectTable.WriteRow("Address", "MT", "Size");
             }
 
-            Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
-            Dictionary<(string String, ulong Size), uint> stringTable = null;
-
+            ClrObject lastFreeObject = default;
             foreach (ClrObject obj in objects)
             {
                 if (displayKind == DisplayKind.ThinLock)
@@ -75,6 +78,35 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (!statsOnly)
                 {
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeap(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
+                }
+
+                if (printFragmentation)
+                {
+                    if (lastFreeObject.IsFree && obj.IsValid && !obj.IsFree)
+                    {
+                        // Check to see if the previous object lands directly before this one.  We don't want
+                        // to print fragmentation after changing segments, or after an allocation context.
+                        if (lastFreeObject.Address + lastFreeObject.Size == obj.Address)
+                        {
+                            // Also, don't report fragmentation for Large/Pinned/Frozen segments.  This check
+                            // is a little slow, so we do this last.
+                            ClrSegment seg = obj.Type.Heap.GetSegmentByAddress(obj);
+                            if (seg is not null && seg.Kind is not GCSegmentKind.Large or GCSegmentKind.Pinned or GCSegmentKind.Frozen)
+                            {
+                                fragmentation ??= new();
+                                fragmentation.Add((lastFreeObject, obj));
+                            }
+                        }
+                    }
+
+                    if (obj.IsFree && size >= FragmentationBlockMinSize)
+                    {
+                        lastFreeObject = obj;
+                    }
+                    else
+                    {
+                        lastFreeObject = default;
+                    }
                 }
 
                 if (displayKind == DisplayKind.Strings)
@@ -197,6 +229,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
                 }
+            }
+
+            // Print fragmentation if we calculated it
+            PrintFragmentation(fragmentation);
+        }
+
+        private void PrintFragmentation(List<(ClrObject Free, ClrObject Next)> fragmentation)
+        {
+            if (fragmentation is null || fragmentation.Count == 0)
+            {
+                return;
+            }
+
+            TableOutput output = new(Console, (16, "x12"), (12, "n0"), (16, "x12"));
+
+            Console.WriteLine();
+            Console.WriteLine("Fragmented blocks larger than 0.5 MB:");
+            output.WriteRow("Address", "Size", "Followed By");
+
+            foreach ((ClrObject free, ClrObject next) in fragmentation)
+            {
+                output.WriteRow(free.Address, free.Size, new DmlDumpObj(next.Address), next.Type?.Name ?? "<unknown_type>");
             }
         }
 

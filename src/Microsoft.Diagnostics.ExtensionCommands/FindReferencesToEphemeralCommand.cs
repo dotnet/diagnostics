@@ -88,8 +88,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
                     // Skip this object if it's gen0 or we hit an error
-                    Generation objGen = obj.GetGeneration(seg);
-                    if (objGen is Generation.Gen0 or Generation.Error)
+                    Generation objGen = seg.GetGeneration(obj);
+                    if (objGen is Generation.Generation0 or Generation.Unknown)
                     {
                         continue;
                     }
@@ -108,10 +108,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         ulong refObjSize = objRef.Size;
 
-                        Generation refGen = objRef.GetGeneration(null);
+                        ClrSegment refSeg = Runtime.Heap.GetSegmentByAddress(objRef);
+                        Generation refGen = refSeg?.GetGeneration(objRef) ?? Generation.Unknown;
                         switch (refGen)
                         {
-                            case Generation.Gen0:
+                            case Generation.Generation0:
                                 gen0 ??= new EphemeralRefCount()
                                 {
                                     Object = obj,
@@ -128,8 +129,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                                 break;
 
-                            case Generation.Gen1:
-                                if (objGen > Generation.Gen1)
+                            case Generation.Generation1:
+                                if (objGen > Generation.Generation1)
                                 {
                                     gen1 ??= new EphemeralRefCount()
                                     {

@@ -56,16 +56,28 @@ namespace SOS.Extensions
                 else
                 {
                     string[] parts = ((line[0] == '+') ? line.Substring(1) : line).Split(new char[] { ' ' }, 6, StringSplitOptions.RemoveEmptyEntries);
-                    ulong start = ulong.Parse(parts[0].Replace("`", ""), System.Globalization.NumberStyles.HexNumber);
-                    ulong end = ulong.Parse(parts[1].Replace("`", ""), System.Globalization.NumberStyles.HexNumber);
+                    if (parts.Length < 2)
+                    {
+                        continue;
+                    }
+
+                    if (!ulong.TryParse(parts[0].Replace("`", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong start))
+                    {
+                        continue;
+                    }
+
+                    if (!ulong.TryParse(parts[1].Replace("`", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong end))
+                    {
+                        continue;
+                    }
 
                     int index = 3;
-                    if (Enum.TryParse(parts[index], ignoreCase: true, out MemoryRegionType type))
+                    if (GetEnumValue(parts, index, out MemoryRegionType type))
                     {
                         index++;
                     }
 
-                    if (Enum.TryParse(parts[index], ignoreCase: true, out MemoryRegionState state))
+                    if (GetEnumValue(parts, index, out MemoryRegionState state))
                     {
                         index++;
                     }
@@ -103,7 +115,7 @@ namespace SOS.Extensions
                         index++;
                     }
 
-                    string description = parts[index++].Trim();
+                    string description = index < parts.Length ? parts[index++].Trim() : "";
 
                     // On Linux, !address is reporting this as MEM_PRIVATE or MEM_UNKNOWN
                     if (description == "Image")
@@ -119,7 +131,7 @@ namespace SOS.Extensions
                     }
 
                     string image = null;
-                    if (type == MemoryRegionType.MEM_IMAGE)
+                    if (type == MemoryRegionType.MEM_IMAGE && index < parts.Length)
                     {
                         image = parts[index].Substring(1, parts[index].Length - 2);
                         index++;
@@ -185,6 +197,18 @@ namespace SOS.Extensions
             {
                 throw new InvalidOperationException($"!address did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run !address and make sure the output looks correct.");
             }
+        }
+
+        private static bool GetEnumValue<T>(string[] parts, int index, out T type)
+            where T : struct
+        {
+            if (index < parts.Length)
+            {
+                return Enum.TryParse(parts[index], ignoreCase: true, out type);
+            }
+
+            type = default;
+            return false;
         }
 
         private (int hresult, string output) RunCommandWithOutput(string command)

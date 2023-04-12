@@ -3833,7 +3833,6 @@ DECLARE_API(DumpRuntimeTypes)
     return Status;
 }
 
-#define MIN_FRAGMENTATIONBLOCK_BYTES (1024*512)
 namespace sos
 {
     class FragmentationBlock

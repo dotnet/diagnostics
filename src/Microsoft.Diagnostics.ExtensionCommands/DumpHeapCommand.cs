@@ -128,6 +128,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 });
             }
 
+            bool printFragmentation = false;
             DumpHeapService.DisplayKind displayKind = DumpHeapService.DisplayKind.Normal;
             if (ThinLock)
             {
@@ -141,8 +142,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 displayKind = DumpHeapService.DisplayKind.Short;
             }
+            else
+            {
+                printFragmentation = true;
+            }
 
-            DumpHeap.PrintHeap(objectsToPrint, displayKind, StatOnly);
+            DumpHeap.PrintHeap(objectsToPrint, displayKind, StatOnly, printFragmentation);
         }
 
         private void ParseArguments()
