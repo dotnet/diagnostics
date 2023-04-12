@@ -87,8 +87,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     HillClimbingLogEntry[] hcl = threadPool.EnumerateHillClimbingLog().ToArray();
                     if (hcl.Length > 0)
                     {
-                        Console.CancellationToken.ThrowIfCancellationRequested();
-
                         output = new(Console, (10, ""), (19, ""), (12, "n0"), (12, "n0"));
 
                         Console.WriteLine("Hill Climbing Log:");
@@ -97,6 +95,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         int end = hcl.Last().TickCount;
                         foreach (HillClimbingLogEntry entry in hcl)
                         {
+                            Console.CancellationToken.ThrowIfCancellationRequested();
                             output.WriteRow($"{(entry.TickCount - end)/1000.0:0.00}", entry.StateOrTransition, entry.NewControlSetting, entry.LastHistoryCount, $"{entry.LastHistoryMean:0.00}");
                         }
 
