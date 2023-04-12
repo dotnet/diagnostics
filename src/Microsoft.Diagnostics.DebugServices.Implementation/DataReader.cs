@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         bool IMemoryReader.Read<T>(ulong address, out T value)
         {
-            Span<byte> buffer = stackalloc byte[Marshal.SizeOf<T>()];
+            Span<byte> buffer = stackalloc byte[Unsafe.SizeOf<T>()];
             if (((IMemoryReader)this).Read(address, buffer) == buffer.Length)
             {
                 value = Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(buffer));
