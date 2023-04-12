@@ -17,6 +17,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private const string ReserveFlag = "-reserve";
         private const string ReserveHeuristicFlag = "-reserveHeuristic";
         private const string ForceHandleTableFlag = "-forceHandleTable";
+        private const string ListFlag = "-list";
+        private const string BySizeFlag = "-orderBySize";
 
         [Option(Name = SummaryFlag, Aliases = new string[] { "-stat", }, Help = "Only print summary table.")]
         public bool Summary { get; set; }
@@ -32,6 +34,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = ForceHandleTableFlag, Help = "We only tag the HandleTable if we can do so efficiently on newer runtimes.  This option ensures we always tag HandleTable memory, even if it will take a long time.")]
         public bool IncludeHandleTableIfSlow { get; set; }
+
+        [Option(Name = BySizeFlag, Help = "List the raw addresses by size, not by base address.")]
+        public bool BySize { get; set; }
+
+        [Option(Name = ListFlag, Help = "A separated list of memory regions to list allocations for.")]
+        public string List { get; set; }
 
         [ServiceImport]
         public NativeAddressHelper AddressHelper { get; set; }
@@ -59,7 +67,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 CollapseReserveRegions(ranges);
             }
 
-            if (!Summary)
+            if (!Summary && List is null)
             {
                 int kindSize = ranges.Max(r => r.Type.ToString().Length);
                 int stateSize = ranges.Max(r => r.State.ToString().Length);
@@ -72,7 +80,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 };
 
                 output.WriteRowWithSpacing('-', "Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
-                foreach (DescribedRegion mem in ranges)
+                IOrderedEnumerable<DescribedRegion> ordered = BySize ? ranges.OrderByDescending(r => r.Size).ThenBy(r => r.Start) : ranges.OrderBy(r => r.Start);
+                foreach (DescribedRegion mem in ordered)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
@@ -101,7 +110,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Divider = " | "
                 };
 
-                output.WriteRowWithSpacing('-', "Image", "Regions", "Size", "Size (bytes)");
+                output.WriteRowWithSpacing('-', "Image", "Count", "Size", "Size (bytes)");
 
                 int count = 0;
                 long size = 0;
@@ -120,8 +129,46 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
 
-            // Print summary table unconditionally
+            if (List is not null)
             {
+                // Print a list of the specified memory kind, ordered by size descending.
+
+                string[] requested = List.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string kind in requested)
+                {
+                    if (!ranges.Any(r => r.Name.Equals(kind, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Console.WriteLineError($"No memory regions match '{kind}'.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"{kind} Memory Regions:");
+
+                        TableOutput output = new(Console, (16, "x12"), (16, "n0"), (8, ""), (12, ""), (12, ""));
+                        output.WriteRow("Base Address", "Size (bytes)", "Size", "Mem State", "Mem Type", "Mem Protect");
+
+                        ulong totalSize = 0;
+                        int count = 0;
+
+                        IEnumerable<DescribedRegion> matching = ranges.Where(r => r.Name.Equals(kind, StringComparison.OrdinalIgnoreCase)).OrderByDescending(s => s.Size);
+                        foreach (DescribedRegion region in matching)
+                        {
+                            output.WriteRow(region.Start, region.Size, region.Size.ConvertToHumanReadable(), region.State, region.Type, region.Protection);
+
+                            count++;
+                            totalSize += region.Size;
+                        }
+
+                        Console.WriteLine($"{totalSize:n0} bytes ({totalSize.ConvertToHumanReadable()}) in {count:n0} memory regions");
+                        Console.WriteLine();
+                    }
+                }
+            }
+
+            if (List is null || Summary)
+            {
+                // Show the summary table in almost every case, unless the user specified -list without -summary.
+
                 var grouped = from mem in ranges
                               let name = mem.Name
                               group mem by name into g
@@ -139,7 +186,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Divider = " | "
                 };
 
-                output.WriteRowWithSpacing('-', "Region Type", "Count", "Size", "Size (bytes)");
+                output.WriteRowWithSpacing('-', "Memory Type", "Count", "Size", "Size (bytes)");
 
                 int count = 0;
                 long size = 0;
@@ -170,7 +217,7 @@ usage: !sos maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{R
 
 Flags:
     {SummaryFlag}
-        Show only a summary table of memory regions and not the list of every address region.
+        Show only a summary table of memory regions and not the list of every memory region.
 
     {ImagesFlag}
         Summarizes the memory ranges consumed by images in the process.
@@ -192,6 +239,14 @@ Flags:
         that reserve region HeapReserve.  Note that this is a heuristic and NOT
         intended to be completely accurate.  This can be useful to try to figure out
         what is creating large amount of MEM_RESERVE regions.
+
+    {ListFlag}
+        A separated list of memory region types (as maddress defines them) to print the base
+        addresses and sizes of.  This list may be separated by , or ""in quotes"".
+
+    {BySizeFlag}
+        Order the list of memory blocks by size (descending) when printing the list
+        of all memory blocks instead of by address.
 ");
         }
     }

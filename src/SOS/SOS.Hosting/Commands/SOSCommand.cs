@@ -50,7 +50,6 @@ namespace SOS.Hosting
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
     [Command(Name = "threadpool",        DefaultOptions = "ThreadPool",          Help = "Lists basic information about the thread pool.")]
     [Command(Name = "threadstate",       DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
-    [Command(Name = "traverseheap",      DefaultOptions = "TraverseHeap",        Help = "Writes out heap information to a file in a format understood by the CLR Profiler.")]
     [Command(Name = "verifyobj",         DefaultOptions = "VerifyObj",           Help = "Checks the object for signs of corruption.")]
     [Command(Name = "comstate",          DefaultOptions = "COMState",            Flags = CommandFlags.Windows, Help = "Lists the COM apartment model for each thread.")]
     [Command(Name = "dumprcw",           DefaultOptions = "DumpRCW",             Flags = CommandFlags.Windows, Help = "Displays information about a Runtime Callable Wrapper.")]
