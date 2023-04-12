@@ -452,77 +452,6 @@ namespace sos
         mutable WCHAR *mTypeName;
     };
 
-    /* Enumerates all the GC references (objects) contained in an object.  This uses the GCDesc
-     * map exactly as the GC does.
-     */
-    class RefIterator
-    {
-    public:
-        RefIterator(TADDR obj, LinearReadCache *cache = NULL);
-        RefIterator(TADDR obj, CGCDesc *desc, bool arrayOfVC, LinearReadCache *cache = NULL);
-        ~RefIterator();
-
-        /* Moves to the next reference in the object.
-         */
-        const RefIterator &operator++();
-
-        /* Returns the address of the current reference.
-         */
-        TADDR operator*() const;
-
-        /* Gets the offset into the object where the current reference comes from.
-         */
-        TADDR GetOffset() const;
-
-        /* Returns true if there are more objects in the iteration, false otherwise.
-         * Used as:
-         *     if (itr)
-         *        ...
-         */
-        inline operator void *() const
-        {
-            return (void*)!mDone;
-        }
-
-        bool IsLoaderAllocator() const
-        {
-            return mLoaderAllocatorObjectHandle == mCurr;
-        }
-
-    private:
-        void Init();
-        inline TADDR ReadPointer(TADDR addr) const
-        {
-            if (mCache)
-            {
-                if (!mCache->Read(addr, &addr, false))
-                    Throw<DataRead>("Could not read address %p.", addr);
-            }
-            else
-            {
-                MOVE(addr, addr);
-            }
-
-            return addr;
-        }
-
-    private:
-        LinearReadCache *mCache;
-        CGCDesc *mGCDesc;
-        bool mArrayOfVC, mDone;
-
-        TADDR *mBuffer;
-        CGCDescSeries *mCurrSeries;
-
-        TADDR mLoaderAllocatorObjectHandle;
-
-        int i, mCount;
-
-        TADDR mCurr, mStop, mObject;
-        size_t mObjSize;
-    };
-
-
     /* The Iterator used to walk the managed objects on the GC heap.
      * The general usage pattern for this class is:
      *   for (ObjectIterator itr = gcheap.WalkHeap(); itr; ++itr)
@@ -580,27 +509,6 @@ namespace sos
             return bLarge;
         }
 
-        /* Verifies the current object.  Returns true if the current object is valid.
-         * Returns false and fills 'buffer' with the reason the object is corrupted.
-         * This is a deeper validation than Object::IsValid as it checks the card
-         * table entires for the object in addition to the rest of the references.
-         * This function does not throw exceptions.
-         * Params:
-         *   buffer - out buffer that is filled if and only if this function returns
-         *            false.
-         *   size - the total size of the buffer
-         * Returns:
-         *   True if the object is valid, false otherwise.
-         */
-        bool Verify(__out_ecount(size) char *buffer, size_t size) const;
-
-        /* The same as Verify(char*, size_t), except it does not write out the failure
-         * reason to a provided buffer.
-         * See:
-         *   ObjectIterator::Verify(char *, size_t)
-         */
-        bool Verify() const;
-
         /* Attempts to move to the next object (similar to ObjectIterator++), but
          * attempts to recover from any heap corruption by skipping to the next
          * segment.  If Verify returns false, meaning it detected heap corruption
@@ -621,9 +529,6 @@ namespace sos
 
     private:
         ObjectIterator(const GCHeapDetails *heap, int numHeaps, TADDR start, TADDR stop);
-
-        bool VerifyObjectMembers(__out_ecount(size) char *buffer, size_t size) const;
-        void BuildError(__out_ecount(count) char *out, size_t count, const char *format, ...) const;
 
         void AssertSanity() const;
 

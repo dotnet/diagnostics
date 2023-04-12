@@ -177,7 +177,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpmodule", new sosCommand("DumpModule"), "Displays information about a EE module structure at the specified address.");
     g_services->AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
     g_services->AddCommand("dumpobj", new sosCommand("DumpObj"), "Displays info about an object at the specified address.");
-    g_services->AddCommand("dumpruntimetypes", new sosCommand("DumpRuntimeTypes"), "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.");
+    g_services->AddManagedCommand("dumpruntimetypes", "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.");
     g_services->AddCommand("dumpsig", new sosCommand("DumpSig"), "Dumps the signature of a method or field specified by '<sigaddr> <moduleaddr>'.");
     g_services->AddCommand("dumpsigelem", new sosCommand("DumpSigElem"), "Dumps a single element of a signature object.");
     g_services->AddCommand("dumpstack", new sosCommand("DumpStack"), "Displays a native and managed stack trace.");
@@ -223,6 +223,6 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");
     g_services->AddCommand("token2ee", new sosCommand("token2ee"), "Displays the MethodTable structure and MethodDesc structure for the specified token and module.");
     g_services->AddManagedCommand("verifyheap", "Checks the GC heap for signs of corruption.");
-    g_services->AddCommand("verifyobj", new sosCommand("VerifyObj"), "Checks the object that is passed as an argument for signs of corruption.");
+    g_services->AddManagedCommand("verifyobj", "Checks the object that is passed as an argument for signs of corruption.");
     return true;
 }

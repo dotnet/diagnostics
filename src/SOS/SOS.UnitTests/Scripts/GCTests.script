@@ -71,8 +71,8 @@ VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 VERIFY:\s+GC Refs:\s+
-VERIFY:\s+offset\s+object\s+
-VERIFY:\s+<DECVAL>\s+<HEXVAL>\s+
+VERIFY:\s+Field\s+Offset\s+Object\s+Type\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*
 
 SOSCOMMAND:DumpHeap
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+
@@ -141,8 +141,8 @@ VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 VERIFY:\s+GC Refs:\s+
-VERIFY:\s+offset\s+object\s+
-VERIFY:\s+<DECVAL>\s+<HEXVAL>\s+
+VERIFY:\s+Field\s+Offset\s+Object\s+Type\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*
 
 # Continue to the next DebugBreak
 CONTINUE

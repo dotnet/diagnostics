@@ -152,7 +152,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ObjectCorruptionKind.SyncBlockZero => GetSyncBlockFailureMessage(corruption),
 
                 // Object reference failures
-                ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj.Address:x} has an unaligned member at {corruption.Offset:x}: is not pointer aligned",
+                ObjectCorruptionKind.ObjectReferenceNotPointerAligned => $"Object {obj.Address:x} has an unaligned member at offset {corruption.Offset:x}: is not pointer aligned",
                 ObjectCorruptionKind.InvalidObjectReference => $"Object {obj.Address:x} has a bad member at offset {corruption.Offset:x}: {ReadPointerWithError(memory, obj + (uint)corruption.Offset)}",
                 ObjectCorruptionKind.FreeObjectReference => $"Object {obj.Address:x} contains free object at offset {corruption.Offset:x}: {ReadPointerWithError(memory, obj + (uint)corruption.Offset)}",
 

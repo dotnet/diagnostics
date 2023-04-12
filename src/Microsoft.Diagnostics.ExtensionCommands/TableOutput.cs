@@ -219,6 +219,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 long l => l.ToString(format),
                 uint ui => ui.ToString(format),
                 int i => i.ToString(format),
+                nuint uni => ((ulong)uni).ToString(format),
                 StringBuilder sb => sb.ToString(),
                 IEnumerable<byte> bytes => string.Join("", bytes.Select(b => b.ToString("x2"))),
                 string s => s,
@@ -242,6 +243,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             public DmlDumpObj(ulong address)
                 : base(address, address != 0 ? $"!dumpobj /d {address:x}" : "")
+            {
+            }
+        }
+
+        public sealed class DmlDumpMT : DmlExec
+        {
+            public DmlDumpMT(ulong address)
+                : base(address, address != 0 ? $"!dumpmt /d {address:x}" : "")
+            {
+            }
+        }
+
+        public sealed class DmlDumpDomain : DmlExec
+        {
+            public DmlDumpDomain(ulong address)
+                : base(address, address != 0 ? $"!dumpdomain /d {address:x}" : "")
             {
             }
         }
