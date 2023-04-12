@@ -16,18 +16,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
-        [ServiceImport]
-        public LiveObjectService LiveObjects { get; set; }
-
         [Option(Name = "-wi", Help = "Print all work items that are queued.")]
         public bool WorkItems { get; set; }
 
-        [Option(Name = "-live", Help = "Only print live work items.")]
-        public bool Live { get; set; }
-
         public override void Invoke()
         {
-            if (!WorkItems && Live)
+            if (!WorkItems)
             {
                 throw new ArgumentException($"-live is only applicable to -wi");
             }
@@ -40,7 +34,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void DumpWorkItems()
         {
-            LiveObjects.PrintWarning = false;
             TableOutput output = null;
 
             ClrType workQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
@@ -73,7 +66,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         }
                     }
                 }
-                else if (obj.Type == workStealingQueueType && (!Live || LiveObjects.IsLive(obj)))
+                else if (obj.Type == workStealingQueueType)
                 {
                     ClrObject m_array = obj.ReadObjectField("m_array");
                     if (m_array.IsValid && !m_array.IsNull)
