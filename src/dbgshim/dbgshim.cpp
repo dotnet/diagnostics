@@ -157,7 +157,7 @@ typedef HRESULT (STDAPICALLTYPE *FPCoreCLRCreateCordbObject3)(
     HMODULE hmodTargetCLR,
     IUnknown **ppCordb);
 
-typedef HRESULT (STDAPICALLTYPE *FPCoreCLRCreateCordbObjectRemotePort)(
+typedef HRESULT (STDAPICALLTYPE *FPCreateRemoteCordbObject)(
     DWORD port,
     LPCSTR assemblyBasePath,
     IUnknown **ppCordb);
@@ -2161,8 +2161,8 @@ HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCSTR assembl
 {
     HRESULT hr = S_OK;
 
-    FPCoreCLRCreateCordbObjectRemotePort fpCreate =
-        (FPCoreCLRCreateCordbObjectRemotePort)GetProcAddress(hDBIModule, "CoreCLRCreateCordbObject");
+    FPCreateRemoteCordbObject fpCreate =
+        (FPCreateRemoteCordbObject)GetProcAddress(hDBIModule, "CreateRemoteCordbObject");
     if (fpCreate == NULL)
     {
         return CORDBG_E_INCOMPATIBLE_PROTOCOL;
