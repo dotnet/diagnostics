@@ -219,7 +219,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("sosstatus", new sosCommand("SOSStatus"), "Displays the global SOS status.");
     g_services->AddCommand("sosflush", new sosCommand("SOSFlush"), "Resets the internal cached state.");
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
-    g_services->AddCommand("threadpool", new sosCommand("ThreadPool"), "Displays info about the runtime thread pool.");
+    g_services->AddManagedCommand("threadpool", "Displays info about the runtime thread pool.");
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");
     g_services->AddCommand("token2ee", new sosCommand("token2ee"), "Displays the MethodTable structure and MethodDesc structure for the specified token and module.");
     g_services->AddManagedCommand("verifyheap", "Checks the GC heap for signs of corruption.");
