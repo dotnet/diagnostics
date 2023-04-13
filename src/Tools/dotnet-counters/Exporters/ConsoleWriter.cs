@@ -150,12 +150,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 Console.WriteLine($"[{provider.Name}]"); row++;
 
-                foreach (var counter in provider.Counters.Values)
+                foreach (ObservedCounter counter in provider.Counters.Values)
                 {
                     counter.Row = -1;
                     if (counter.RenderValueInline)
                     {
-                        foreach (var tagSet in counter.TagSets.Values)
+                        foreach (ObservedTagSet tagSet in counter.TagSets.Values)
                         {
                             tagSet.Row = -1;
                         }
