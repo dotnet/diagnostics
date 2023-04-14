@@ -123,27 +123,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private string GetStatus() => !_initialized ? "Waiting for initial payload..." : (_paused ? "Paused" : "Running");
 
-        private bool RenderRow(ref int row, string lineOutput, Action rowAssignment = null)
-        {
-            if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
-            {
-                return false;
-            }
-
-            Console.Write(lineOutput);
-
-            if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
-            {
-                Console.WriteLine();
-            }
-
-            rowAssignment?.Invoke();
-
-            row++;
-
-            return true;
-        }
-
         /// <summary>Clears display and writes out category and counter name layout.</summary>
         public void AssignRowsAndInitializeDisplay()
         {
@@ -178,37 +157,63 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 Console.WriteLine(_errorText);
                 row += GetLineWrappedLines(_errorText);
             }
-            Console.WriteLine(); row++; // Blank line.
 
-            foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
+            bool RenderRow(ref int row, string lineOutput = null, Action rowAssignment = null)
             {
-                if (!RenderRow(ref row, $"[{provider.Name}]"))
+                if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
                 {
-                    break;
+                    return false;
                 }
 
-                foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
+                if (lineOutput != null)
                 {
-                    string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
-                    if (counter.RenderValueInline)
+                    Console.Write(lineOutput);
+                }
+
+                if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
+                {
+                    Console.WriteLine();
+                }
+
+                rowAssignment?.Invoke();
+
+                row++;
+
+                return true;
+            }
+
+            if (RenderRow(ref row)) // Blank line.
+            {
+                foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
+                {
+                    if (!RenderRow(ref row, $"[{provider.Name}]"))
                     {
-                        if (!RenderRow(ref row, $"{name} {FormatValue(counter.LastValue)}", () => { counter.Row = row; }))
-                        {
-                            break;
-                        }
+                        break;
                     }
-                    else
+
+                    foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                     {
-                        if (!RenderRow(ref row, name, () => { counter.Row = row; }))
+                        string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
+                        if (counter.RenderValueInline)
                         {
-                            break;
-                        }
-                        foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
-                        {
-                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
-                            if (!RenderRow(ref row, $"{tagName} {FormatValue(tagSet.LastValue)}", () => { tagSet.Row = row; }))
+                            if (!RenderRow(ref row, $"{name} {FormatValue(counter.LastValue)}", () => { counter.Row = row; }))
                             {
                                 break;
+                            }
+                        }
+                        else
+                        {
+                            if (!RenderRow(ref row, name, () => { counter.Row = row; }))
+                            {
+                                break;
+                            }
+                            foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+                            {
+                                string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
+                                if (!RenderRow(ref row, $"{tagName} {FormatValue(tagSet.LastValue)}", () => { tagSet.Row = row; }))
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
