@@ -67,8 +67,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                             break;
                     }
 
+                    int loopEnd = 10;
                     // Retry the write dump on ERROR_PARTIAL_COPY
-                    for (int i = 0; i < 5; i++)
+                    for (int i = 0; i <= loopEnd; i++)
                     {
                         // Dump the process!
                         if (NativeMethods.MiniDumpWriteDump(processHandle.DangerousGetHandle(), (uint)processId, stream.SafeFileHandle, dumpType, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
@@ -78,9 +79,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         else
                         {
                             int err = Marshal.GetHRForLastWin32Error();
-                            if (err != NativeMethods.HR_ERROR_PARTIAL_COPY)
+                            if (err != NativeMethods.HR_ERROR_PARTIAL_COPY || i == loopEnd)
                             {
                                 Marshal.ThrowExceptionForHR(err);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"retrying due to PARTIAL_COPY #{i}");
                             }
                         }
                     }
