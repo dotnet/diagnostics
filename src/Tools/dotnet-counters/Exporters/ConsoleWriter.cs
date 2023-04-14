@@ -128,6 +128,19 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             Clear();
 
+            // clear row data on all counters
+            foreach (ObservedProvider provider in _providers.Values)
+            {
+                foreach (ObservedCounter counter in provider.Counters.Values)
+                {
+                    counter.Row = -1;
+                    foreach (ObservedTagSet tagSet in counter.TagSets.Values)
+                    {
+                        tagSet.Row = -1;
+                    }
+                }
+            }
+
             _consoleWidth = Console.WindowWidth;
             _consoleHeight = Console.WindowHeight;
             _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0); // Truncate the name to prevent line wrapping as long as the console width is >= CounterValueLength + Indent + 1 characters
@@ -148,29 +161,21 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
             foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
-                Console.WriteLine($"[{provider.Name}]"); row++;
-
-                foreach (ObservedCounter counter in provider.Counters.Values)
+                if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
                 {
-                    counter.Row = -1;
-                    if (counter.RenderValueInline)
-                    {
-                        foreach (ObservedTagSet tagSet in counter.TagSets.Values)
-                        {
-                            tagSet.Row = -1;
-                        }
-                    }
+                    break;
                 }
+                Console.WriteLine($"[{provider.Name}]"); row++;
 
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
-
-                    string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
                     {
                         break;
                     }
                     counter.Row = row++;
+
+                    string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     if (counter.RenderValueInline)
                     {
                         Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
@@ -180,14 +185,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         Console.WriteLine(name);
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
-                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
-                            Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
-
-                            if (row >= _consoleHeight + _topRow - 1)
+                            if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
                             {
                                 break;
                             }
                             tagSet.Row = row++;
+
+                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
+                            Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                         }
                     }
                 }
