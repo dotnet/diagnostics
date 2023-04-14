@@ -280,7 +280,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     _ => ClrMemoryKind.Unknown
                 };
 
-                yield return (nativeHeap.Address, nativeHeap.Size, kind);
+                yield return (nativeHeap.Address, nativeHeap.Size ?? 0, kind);
             }
 
             // .Net 8 and beyond has accurate HandleTable memory info.
@@ -299,7 +299,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     if (handle.Address < prevHandle || handle.Address >= (prevHandle | (granularity - 1)))
                     {
-                        yield return (handle.Address, null, ClrMemoryKind.HandleTable);
+                        yield return (handle.Address, 0, ClrMemoryKind.HandleTable);
                         prevHandle = handle.Address;
                     }
                 }
