@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         foreach (HillClimbingLogEntry entry in hcl)
                         {
                             Console.CancellationToken.ThrowIfCancellationRequested();
-                            output.WriteRow($"{(entry.TickCount - end)/1000.0:0.00}", entry.StateOrTransition, entry.NewControlSetting, entry.LastHistoryCount, $"{entry.LastHistoryMean:0.00}");
+                            output.WriteRow($"{(entry.TickCount - end)/1000.0:0.00}", entry.StateOrTransition, entry.NewThreadCount, entry.SampleCount, $"{entry.Throughput:0.00}");
                         }
 
                         Console.WriteLine();

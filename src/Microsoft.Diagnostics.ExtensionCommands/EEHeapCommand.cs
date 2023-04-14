@@ -312,7 +312,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 sb.Append(')');
 
                 ulong wasted = 0;
-                if (actualSize < size && !heap.IsCurrentBlock)
+                if (actualSize < size && heap.State != ClrNativeHeapState.Active)
                 {
                     wasted = size - actualSize;
                 }
