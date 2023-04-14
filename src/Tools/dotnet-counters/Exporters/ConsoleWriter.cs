@@ -123,6 +123,27 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private string GetStatus() => !_initialized ? "Waiting for initial payload..." : (_paused ? "Paused" : "Running");
 
+        private bool RenderRow(ref int row, string lineOutput, Action rowAssignment = null)
+        {
+            if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
+            {
+                return false;
+            }
+
+            Console.Write(lineOutput);
+
+            if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
+            {
+                Console.WriteLine();
+            }
+
+            rowAssignment?.Invoke();
+
+            row++;
+
+            return true;
+        }
+
         /// <summary>Clears display and writes out category and counter name layout.</summary>
         public void AssignRowsAndInitializeDisplay()
         {
@@ -161,38 +182,34 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
             foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
             {
-                if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
+                if (!RenderRow(ref row, $"[{provider.Name}]"))
                 {
                     break;
                 }
-                Console.WriteLine($"[{provider.Name}]"); row++;
 
                 foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                 {
-                    if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
-                    {
-                        break;
-                    }
-                    counter.Row = row++;
-
                     string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                     if (counter.RenderValueInline)
                     {
-                        Console.WriteLine($"{name} {FormatValue(counter.LastValue)}");
+                        if (!RenderRow(ref row, $"{name} {FormatValue(counter.LastValue)}", () => { counter.Row = row; }))
+                        {
+                            break;
+                        }
                     }
                     else
                     {
-                        Console.WriteLine(name);
+                        if (!RenderRow(ref row, name, () => { counter.Row = row; }))
+                        {
+                            break;
+                        }
                         foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                         {
-                            if (row >= _consoleHeight + _topRow - 1) // prevents from displaying more counters than vertical space available
+                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
+                            if (!RenderRow(ref row, $"{tagName} {FormatValue(tagSet.LastValue)}", () => { tagSet.Row = row; }))
                             {
                                 break;
                             }
-                            tagSet.Row = row++;
-
-                            string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
-                            Console.WriteLine($"{tagName} {FormatValue(tagSet.LastValue)}");
                         }
                     }
                 }
