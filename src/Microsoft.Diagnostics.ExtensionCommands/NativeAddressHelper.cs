@@ -270,11 +270,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             foreach (ClrNativeHeapInfo nativeHeap in runtime.EnumerateClrNativeHeaps())
             {
-                Debug.Assert((int)NativeHeapKind.Unknown == ClrMemoryKind.Unknown);
                 Debug.Assert((int)NativeHeapKind.GCBookkeeping == (int)ClrMemoryKind.GCBookkeeping);
 
                 ClrMemoryKind kind = nativeHeap.Kind switch
                 {
+                    NativeHeapKind.Unknown => ClrMemoryKind.Unknown,
                     > NativeHeapKind.Unknown and <= NativeHeapKind.GCBookkeeping => (ClrMemoryKind)nativeHeap.Kind, // enums match for these ranges
                     >= NativeHeapKind.GCFreeRegion and <= NativeHeapKind.GCFreeUohSegment => ClrMemoryKind.GCHeapToBeFreed,
                     _ => ClrMemoryKind.Unknown
