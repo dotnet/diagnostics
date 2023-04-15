@@ -103,9 +103,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         foreach ((ulong Address, ulong Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime, rootCache, includeHandleTableIfSlow))
                         {
+                            // The GCBookkeeping range is a large region of memory that the GC reserved.  We'll simply mark every
+                            // region within it as bookkeeping.
+                            if (mem.Kind == ClrMemoryKind.GCBookkeeping)
+                            {
+                                MemoryRange bookkeepingRange = MemoryRange.CreateFromLength(mem.Address, mem.Size);
+                                foreach (DescribedRegion region in rangeList)
+                                {
+                                    if (bookkeepingRange.Contains(region.Start))
+                                    {
+                                        if (region.State == MemoryRegionState.MEM_RESERVE)
+                                        {
+                                            region.ClrMemoryKind = ClrMemoryKind.GCBookkeepingReserve;
+                                        }
+                                        else
+                                        {
+                                            region.ClrMemoryKind = ClrMemoryKind.GCBookkeeping;
+                                        }
+                                    }
+                                }
+
+                                continue;
+                            }
+
                             DescribedRegion[] found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
-
-
                             if (found.Length == 0 && mem.Kind != ClrMemoryKind.GCHeapReserve)
                             {
                                 Trace.WriteLine($"Warning:  Could not find a memory range for {mem.Address:x} - {mem.Kind}.");
@@ -319,7 +340,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private static void SetRegionKindWithWarning((ulong Address, ulong? Size, ClrMemoryKind Kind) mem, DescribedRegion region)
+        private static void SetRegionKindWithWarning((ulong Address, ulong Size, ClrMemoryKind Kind) mem, DescribedRegion region)
         {
             if (region.ClrMemoryKind != mem.Kind)
             {
@@ -329,12 +350,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (region.ClrMemoryKind is not ClrMemoryKind.None
                     and not ClrMemoryKind.HighFrequencyHeap)
                 {
-                    if (mem.Size is not ulong size)
-                    {
-                        size = 0;
-                    }
-
-                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + size:x}] {mem.Kind}.");
+                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + mem.Size:x}] {mem.Kind}.");
                 }
 
                 region.ClrMemoryKind = mem.Kind;
@@ -513,6 +529,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             GCHeap,
             GCHeapToBeFreed,
             GCHeapReserve,
+            GCBookkeepingReserve,
         }
 
         public sealed class DescribedRegion : IMemoryRegion
