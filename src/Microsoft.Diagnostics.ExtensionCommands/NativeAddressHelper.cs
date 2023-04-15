@@ -101,10 +101,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     RootCacheService rootCache = runtime.Services.GetService<RootCacheService>();
                     if (clrRuntime is not null)
                     {
-                        foreach ((ulong Address, ulong? Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime, rootCache, includeHandleTableIfSlow))
+                        foreach ((ulong Address, ulong Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime, rootCache, includeHandleTableIfSlow))
                         {
-                            DescribedRegion[] found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
+                            // The GCBookkeeping range is a large region of memory that the GC reserved.  We'll simply mark every
+                            // region within it as bookkeeping.
+                            if (mem.Kind == ClrMemoryKind.GCBookkeeping)
+                            {
+                                MemoryRange bookkeepingRange = MemoryRange.CreateFromLength(mem.Address, mem.Size);
+                                foreach (DescribedRegion region in rangeList)
+                                {
+                                    if (bookkeepingRange.Contains(region.Start))
+                                    {
+                                        if (region.State == MemoryRegionState.MEM_RESERVE)
+                                        {
+                                            region.ClrMemoryKind = ClrMemoryKind.GCBookkeepingReserve;
+                                        }
+                                        else
+                                        {
+                                            region.ClrMemoryKind = ClrMemoryKind.GCBookkeeping;
+                                        }
+                                    }
+                                }
 
+                                continue;
+                            }
+
+                            DescribedRegion[] found = rangeList.Where(r => r.Start <= mem.Address && mem.Address < r.End).ToArray();
                             if (found.Length == 0 && mem.Kind != ClrMemoryKind.GCHeapReserve)
                             {
                                 Trace.WriteLine($"Warning:  Could not find a memory range for {mem.Address:x} - {mem.Kind}.");
@@ -119,13 +141,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 }
 
                                 // Add the memory range if we know its size.
-                                if (mem.Size is ulong size && size > 0)
+                                if (mem.Size > 0)
                                 {
                                     IModule module = ModuleService.GetModuleFromAddress(mem.Address);
                                     rangeList.Add(new DescribedRegion()
                                     {
                                         Start = mem.Address,
-                                        End = mem.Address + size,
+                                        End = mem.Address + mem.Size,
                                         ClrMemoryKind = mem.Kind,
                                         State = mem.Kind == ClrMemoryKind.GCHeapReserve ? MemoryRegionState.MEM_RESERVE : MemoryRegionState.MEM_COMMIT,
                                         Module = module,
@@ -143,7 +165,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                             foreach (DescribedRegion region in found)
                             {
-                                if (!mem.Size.HasValue || mem.Size.Value == 0)
+                                if (mem.Size == 0)
                                 {
                                     // If we don't know the length of memory, just mark the Region with this tag.
                                     SetRegionKindWithWarning(mem, region);
@@ -167,7 +189,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         DescribedRegion middleRegion = new(region)
                                         {
                                             Start = mem.Address,
-                                            End = mem.Address + mem.Size.Value,
+                                            End = mem.Address + mem.Size,
                                             ClrMemoryKind = mem.Kind,
                                             Usage = MemoryRegionUsage.CLR,
                                         };
@@ -194,7 +216,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // Region is now the starting region of this set.
                                         region.End = middleRegion.Start;
                                     }
-                                    else if (region.Size < mem.Size.Value)
+                                    else if (region.Size < mem.Size)
                                     {
                                         SetRegionKindWithWarning(mem, region);
 
@@ -213,15 +235,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // If we found no matching regions, expand the current region to be the right length.
                                         if (!foundNext)
                                         {
-                                            region.End = mem.Address + mem.Size.Value;
+                                            region.End = mem.Address + mem.Size;
                                         }
                                     }
-                                    else if (region.Size > mem.Size.Value)
+                                    else if (region.Size > mem.Size)
                                     {
                                         // The CLR memory segment is at the beginning of this region.
                                         DescribedRegion newRange = new(region)
                                         {
-                                            End = mem.Address + mem.Size.Value,
+                                            End = mem.Address + mem.Size,
                                             ClrMemoryKind = mem.Kind
                                         };
 
@@ -265,14 +287,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <summary>
         /// Enumerates pointers to various CLR heaps in memory.
         /// </summary>
-        private static IEnumerable<(ulong Address, ulong? Size, ClrMemoryKind Kind)> EnumerateClrMemoryAddresses(ClrRuntime runtime, RootCacheService rootCache, bool includeHandleTableIfSlow)
+        private static IEnumerable<(ulong Address, ulong Size, ClrMemoryKind Kind)> EnumerateClrMemoryAddresses(ClrRuntime runtime, RootCacheService rootCache, bool includeHandleTableIfSlow)
         {
             foreach (ClrNativeHeapInfo nativeHeap in runtime.EnumerateClrNativeHeaps())
             {
-                yield return (nativeHeap.Address, nativeHeap.Size, nativeHeap.Kind == NativeHeapKind.Unknown ? ClrMemoryKind.None : (ClrMemoryKind)nativeHeap.Kind);
+                Debug.Assert((int)NativeHeapKind.GCBookkeeping == (int)ClrMemoryKind.GCBookkeeping);
+
+                ClrMemoryKind kind = nativeHeap.Kind switch
+                {
+                    NativeHeapKind.Unknown => ClrMemoryKind.Unknown,
+                    > NativeHeapKind.Unknown and <= NativeHeapKind.GCBookkeeping => (ClrMemoryKind)nativeHeap.Kind, // enums match for these ranges
+                    >= NativeHeapKind.GCFreeRegion and <= NativeHeapKind.GCFreeUohSegment => ClrMemoryKind.GCHeapToBeFreed,
+                    _ => ClrMemoryKind.Unknown
+                };
+
+                yield return (nativeHeap.Address, nativeHeap.Size ?? 0, kind);
             }
 
-            if (includeHandleTableIfSlow)
+            // .Net 8 and beyond has accurate HandleTable memory info.
+            bool haveAccurateHandleInfo = runtime.ClrInfo.Flavor == ClrFlavor.Core && runtime.ClrInfo.Version.Major >= 8;
+            if (includeHandleTableIfSlow && !haveAccurateHandleInfo)
             {
                 ulong prevHandle = 0;
                 ulong granularity = 0x100;
@@ -286,29 +320,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     if (handle.Address < prevHandle || handle.Address >= (prevHandle | (granularity - 1)))
                     {
-                        yield return (handle.Address, null, ClrMemoryKind.HandleTable);
+                        yield return (handle.Address, 0, ClrMemoryKind.HandleTable);
                         prevHandle = handle.Address;
                     }
                 }
             }
 
-            // We don't really have the true bounds of the committed or reserved segments.
-            // Return null for the size so that we will mark the entire region with this type.
             foreach (ClrSegment seg in runtime.Heap.Segments)
             {
                 if (seg.CommittedMemory.Length > 0)
                 {
-                    yield return (seg.CommittedMemory.Start, null, ClrMemoryKind.GCHeap);
+                    yield return (seg.CommittedMemory.Start, seg.CommittedMemory.Length, ClrMemoryKind.GCHeap);
                 }
 
                 if (seg.ReservedMemory.Length > 0)
                 {
-                    yield return (seg.ReservedMemory.Start, null, ClrMemoryKind.GCHeapReserve);
+                    yield return (seg.ReservedMemory.Start, seg.ReservedMemory.Length, ClrMemoryKind.GCHeapReserve);
                 }
             }
         }
 
-        private static void SetRegionKindWithWarning((ulong Address, ulong? Size, ClrMemoryKind Kind) mem, DescribedRegion region)
+        private static void SetRegionKindWithWarning((ulong Address, ulong Size, ClrMemoryKind Kind) mem, DescribedRegion region)
         {
             if (region.ClrMemoryKind != mem.Kind)
             {
@@ -318,12 +350,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (region.ClrMemoryKind is not ClrMemoryKind.None
                     and not ClrMemoryKind.HighFrequencyHeap)
                 {
-                    if (mem.Size is not ulong size)
-                    {
-                        size = 0;
-                    }
-
-                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + size:x}] {mem.Kind}.");
+                    Trace.WriteLine($"Warning:  Overwriting range [{region.Start:x},{region.End:x}] {region.ClrMemoryKind} -> [{mem.Address:x},{mem.Address + mem.Size:x}] {mem.Kind}.");
                 }
 
                 region.ClrMemoryKind = mem.Kind;
@@ -490,12 +517,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             StubHeap,
             HighFrequencyHeap,
             LowFrequencyHeap,
+            ExecutableHeap,
+            FixupPrecodeHeap,
+            NewStubPrecodeHeap,
+            ThunkHeap,
+            HandleTable,
+            GCBookkeeping,
 
             // Skip ahead so new ClrMD NativeHeapKind values don't break the enum.
             Unknown = 100,
             GCHeap,
+            GCHeapToBeFreed,
             GCHeapReserve,
-            HandleTable,
+            GCBookkeepingReserve,
         }
 
         public sealed class DescribedRegion : IMemoryRegion
