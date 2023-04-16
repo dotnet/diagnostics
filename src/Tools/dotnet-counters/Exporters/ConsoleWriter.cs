@@ -28,8 +28,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public readonly CounterProvider KnownProvider;
         }
 
+        private interface ICounterRow
+        {
+            int Row { get; set; }
+        }
+
         /// <summary>Information about an observed counter.</summary>
-        private class ObservedCounter
+        private class ObservedCounter : ICounterRow
         {
             public ObservedCounter(string displayName) => DisplayName = displayName;
             public string DisplayName { get; } // Display name for this counter.
@@ -41,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public double LastValue { get; set; }
         }
 
-        private class ObservedTagSet
+        private class ObservedTagSet : ICounterRow
         {
             public ObservedTagSet(string tags)
             {
@@ -158,7 +163,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 row += GetLineWrappedLines(_errorText);
             }
 
-            bool RenderRow(ref int row, string lineOutput = null, Action rowAssignment = null)
+            bool RenderRow(ref int row, string lineOutput = null, ICounterRow counterRow = null)
             {
                 if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
                 {
@@ -175,7 +180,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     Console.WriteLine();
                 }
 
-                rowAssignment?.Invoke();
+                if (counterRow != null)
+                {
+                    counterRow.Row = row;
+                }
 
                 row++;
 
@@ -196,21 +204,21 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
                         if (counter.RenderValueInline)
                         {
-                            if (!RenderRow(ref row, $"{name} {FormatValue(counter.LastValue)}", () => { counter.Row = row; }))
+                            if (!RenderRow(ref row, $"{name} {FormatValue(counter.LastValue)}", counter))
                             {
                                 break;
                             }
                         }
                         else
                         {
-                            if (!RenderRow(ref row, name, () => { counter.Row = row; }))
+                            if (!RenderRow(ref row, name, counter))
                             {
                                 break;
                             }
                             foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                             {
                                 string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
-                                if (!RenderRow(ref row, $"{tagName} {FormatValue(tagSet.LastValue)}", () => { tagSet.Row = row; }))
+                                if (!RenderRow(ref row, $"{tagName} {FormatValue(tagSet.LastValue)}", tagSet))
                                 {
                                     break;
                                 }
