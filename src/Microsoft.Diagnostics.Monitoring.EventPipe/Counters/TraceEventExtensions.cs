@@ -92,7 +92,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "UpDownCounterRateValuePublished")
                 {
-                    HandleUpDownCounterRate(traceEvent, filter, sessionId, out payload);
+                    HandleUpDownCounterValue(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleUpDownCounterRate(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -209,7 +209,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string instrumentName = (string)traceEvent.PayloadValue(3);
             string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
-            _ = (string)traceEvent.PayloadValue(6); // Not currently using rate for Counters.
+            _ = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)traceEvent.PayloadValue(7);
 
             if (!filter.IsIncluded(meterName, instrumentName))
@@ -221,7 +221,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
                 //payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, filter.DefaultIntervalSeconds, traceEvent.TimeStamp);
-                payload = new GaugePayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
+                payload = new UpDownCounterPayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
 
             }
             else

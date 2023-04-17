@@ -18,6 +18,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
+using static System.Net.WebRequestMethods;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -87,6 +88,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else if (obj.EventName == "CounterRateValuePublished")
                     {
                         HandleCounterRate(obj);
+                    }
+                    else if (obj.EventName == "UpDownCounterRateValuePublished")
+                    {
+                        HandleUpDownCounterValue(obj);
                     }
                     else if (obj.EventName == "TimeSeriesLimitReached")
                     {
@@ -188,6 +193,36 @@ namespace Microsoft.Diagnostics.Tools.Counters
             if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
                 CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, 0, _interval, obj.TimeStamp);
+                _renderer.CounterStopped(payload);
+            }
+        }
+
+        private void HandleUpDownCounterValue(TraceEvent obj)
+        {
+            string sessionId = (string)obj.PayloadValue(0);
+            string meterName = (string)obj.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)obj.PayloadValue(3);
+            string unit = (string)obj.PayloadValue(4);
+            string tags = (string)obj.PayloadValue(5);
+            _ = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
+            string valueText = (string)obj.PayloadValue(7);
+            if (sessionId != _metricsEventSourceSessionId)
+            {
+                return;
+            }
+            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
+
+            // the value might be an empty string indicating no measurement was provided this collection interval
+            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, value, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
             else
