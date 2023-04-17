@@ -301,7 +301,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     _ => ClrMemoryKind.Unknown
                 };
 
-                yield return (nativeHeap.Address, nativeHeap.Size ?? 0, kind);
+                yield return (nativeHeap.MemoryRange.Start, nativeHeap.MemoryRange.Length, kind);
             }
 
             // .Net 8 and beyond has accurate HandleTable memory info.
