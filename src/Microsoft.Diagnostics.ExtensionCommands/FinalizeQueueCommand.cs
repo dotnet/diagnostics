@@ -135,8 +135,81 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private void PrintSyncBlockCleanupData() { Console.WriteLine(); }
-        private void PrintRcwCleanupData() { Console.WriteLine(); }
-        private void PrintGenerationalRanges() { Console.WriteLine(); }
+        private void PrintSyncBlockCleanupData()
+        {
+            TableOutput output = null;
+            int total = 0;
+            foreach (ClrSyncBlockCleanupData cleanup in Runtime.EnumerateSyncBlockCleanupData())
+            {
+                if (output is null)
+                {
+                    output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
+                    output.WriteRow("SyncBlock", "RCW", "CCW", "ComClassFactory");
+                }
+
+                output.WriteRow(cleanup.SyncBlock, cleanup.Rcw, cleanup.Ccw, cleanup.ClassFactory);
+                total++;
+            }
+
+            Console.WriteLine($"SyncBlocks to be cleaned up: {total:n0}");
+        }
+
+        private void PrintRcwCleanupData()
+        {
+            TableOutput output = null;
+            int freeThreadedCount = 0;
+            int mtaCount = 0;
+            int staCount = 0;
+
+            foreach (ClrRcwCleanupData cleanup in Runtime.EnumerateRcwCleanupData())
+            {
+                if (output is null)
+                {
+                    output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
+                    output.WriteRow("RCW", "Context", "Thread", "Apartment");
+                }
+
+                string apartment;
+                if (cleanup.IsFreeThreaded)
+                {
+                    freeThreadedCount++;
+                    apartment = "(FreeThreaded)";
+                }
+                else if (cleanup.Thread == 0)
+                {
+                    mtaCount++;
+                    apartment = "(MTA)";
+                }
+                else
+                {
+                    staCount++;
+                    apartment = "(STA)";
+                }
+
+                output.WriteRow(cleanup.Rcw, cleanup.Context, cleanup.Thread, apartment);
+            }
+        }
+
+        private void PrintGenerationalRanges()
+        {
+            foreach (ClrSubHeap heap in Runtime.Heap.SubHeaps)
+            {
+                Console.WriteLine($"Heap {heap.Index}");
+
+                WriteGeneration(heap, 0);
+                WriteGeneration(heap, 1);
+                WriteGeneration(heap, 2);
+
+                Console.WriteLine($"Ready for finalization {heap.FinalizerQueueRoots.Length / (uint)IntPtr.Size:n0} objects ({heap.FinalizerQueueRoots.Start:x}->{heap.FinalizerQueueRoots.End:x})");
+
+                Console.WriteLine("------------------------------");
+            }
+        }
+
+        private void WriteGeneration(ClrSubHeap heap, int gen)
+        {
+            MemoryRange range = heap.GenerationalFinalizableObjects[gen];
+            Console.WriteLine($"generation {gen} has {range.Length / (uint)IntPtr.Size:n0} objects ({range.Start:x}->{range.End:x})");
+        }
     }
 }
