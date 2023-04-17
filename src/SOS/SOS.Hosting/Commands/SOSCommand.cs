@@ -32,7 +32,6 @@ namespace SOS.Hosting
     [Command(Name = "eeversion",         DefaultOptions = "EEVersion",           Help = "Displays information about the runtime version.")]
     [Command(Name = "ehinfo",            DefaultOptions = "EHInfo",              Help = "Displays the exception handling blocks in a JIT-ed method.")]
     [Command(Name = "enummem",           DefaultOptions = "enummem",             Help = "ICLRDataEnumMemoryRegions.EnumMemoryRegions test command.")]
-    [Command(Name = "finalizequeue",     DefaultOptions = "FinalizeQueue",       Help = "Displays all objects registered for finalization.")]
     [Command(Name = "findappdomain",     DefaultOptions = "FindAppDomain",       Help = "Attempts to resolve the AppDomain of a GC object.")]
     [Command(Name = "gchandles",         DefaultOptions = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]
     [Command(Name = "gcinfo",            DefaultOptions = "GCInfo",              Help = "Displays JIT GC encoding for a method.")]

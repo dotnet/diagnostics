@@ -188,7 +188,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
     g_services->AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime and SOS versions.");
     g_services->AddCommand("ehinfo", new sosCommand("EHInfo"), "Displays the exception handling blocks in a JIT-ed method.");
-    g_services->AddCommand("finalizequeue", new sosCommand("FinalizeQueue"), "Displays all objects registered for finalization.");
+    g_services->AddManagedCommand("finalizequeue", "Displays all objects registered for finalization.");
     g_services->AddCommand("findappdomain", new sosCommand("FindAppDomain"), "Attempts to resolve the AppDomain of a GC object.");
     g_services->AddCommand("findroots", new sosCommand("FindRoots"), "Finds and displays object roots across GC collections.");
     g_services->AddCommand("gchandles", new sosCommand("GCHandles"), "Displays statistics about garbage collector handles in the process.");
