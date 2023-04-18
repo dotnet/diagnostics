@@ -126,7 +126,7 @@ SOSCOMMAND:FinalizeQueue
 VERIFY:\s*SyncBlocks to be cleaned up:\s+<DECVAL>\s+
 VERIFY:(\s*Free-Threaded Interfaces to be released:\s+<DECVAL>\s+)?
 VERIFY:\s*Statistics for all finalizable objects.*:\s+
-VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s+Address\s+MT\s+Size\s+
 VERIFY:(\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*)?
 VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
 
