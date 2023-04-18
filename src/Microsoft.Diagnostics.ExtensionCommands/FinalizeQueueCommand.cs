@@ -191,6 +191,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 output.WriteRow(cleanup.Rcw, cleanup.Context, cleanup.Thread, apartment);
             }
+
+            Console.WriteLine($"Free-Threaded Interfaces to be released: {freeThreadedCount:n0}");
+            Console.WriteLine($"MTA Interfaces to be released: {mtaCount:n0}");
+            Console.WriteLine($"STA Interfaces to be released: {staCount:n0}");
         }
 
         private void PrintGenerationalRanges()
