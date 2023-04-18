@@ -16,9 +16,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     public sealed class NativeAddressHelper
     {
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
+        private ITarget _target;
 
         [ServiceImport]
-        public ITarget Target { get; set; }
+        public ITarget Target
+        {
+            get => _target;
+            set
+            {
+                value?.OnFlushEvent.Register(() => _previous = default);
+                _target = value;
+            }
+        }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }

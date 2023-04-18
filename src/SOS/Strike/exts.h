@@ -192,6 +192,7 @@ public:
 };
 
 extern HRESULT GetRuntime(IRuntime** ppRuntime);
+extern void FlushCheck();
 
 #ifndef MINIDUMP
  
@@ -322,7 +323,8 @@ inline void DACMessage(HRESULT Status)
     ControlC = FALSE;                                           \
     g_bDacBroken = TRUE;                                        \
     g_clrData = NULL;                                           \
-    g_sos = NULL;                                        
+    g_sos = NULL;                                               \
+    FlushCheck();
 
 // Also initializes the target machine
 #define INIT_API_NOEE()                                         \
