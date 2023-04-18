@@ -1915,33 +1915,6 @@ struct DumpArrayFlags
 
 HRESULT GetMTOfObject(TADDR obj, TADDR *mt);
 
-struct needed_alloc_context
-{
-    BYTE*   alloc_ptr;   // starting point for next allocation
-    BYTE*   alloc_limit; // ending point for allocation region/quantum
-};
-
-struct AllocInfo
-{
-    needed_alloc_context *array;
-    int num;                     // number of allocation contexts in array
-
-    AllocInfo()
-        : array(NULL)
-        , num(0)
-    {}
-    void Init()
-    {
-        extern void GetAllocContextPtrs(AllocInfo *pallocInfo);
-        GetAllocContextPtrs(this);
-    }
-    ~AllocInfo()
-    {
-        if (array != NULL)
-            delete[] array;
-    }
-};
-
 struct GCHandleStatistics
 {
     HeapStat hs;
@@ -2050,7 +2023,6 @@ struct strobjInfo
     DWORD   m_StringLength;
 };
 
-
 CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
 
@@ -2080,7 +2052,6 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, BOOL fSt
 void GetDomainList(DWORD_PTR *&domainList, int &numDomain);
 HRESULT GetThreadList(DWORD_PTR **threadList, int *numThread);
 CLRDATA_ADDRESS GetCurrentManagedThread(); // returns current managed thread if any
-void GetAllocContextPtrs(AllocInfo *pallocInfo);
 
 void ReloadSymbolWithLineInfo();
 
