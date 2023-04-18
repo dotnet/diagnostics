@@ -701,32 +701,10 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
 \**********************************************************************/
 DECLARE_API(DumpStackObjects)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
-    StringHolder exprTop, exprBottom;
 
-    BOOL bVerify = FALSE;
-    BOOL dml = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-verify", &bVerify, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE}
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&exprTop.data, COSTRING},
-        {&exprBottom.data, COSTRING}
-    };
-    size_t nArg;
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder enableDML(dml);
-
-    return DumpStackObjectsRaw(nArg, exprBottom.data, exprTop.data, bVerify);
+    return ExecuteCommand("dumpstackobjects", args);
 }
 
 /**********************************************************************\
@@ -4027,138 +4005,10 @@ DECLARE_API(RCWCleanupList)
 \**********************************************************************/
 DECLARE_API(FinalizeQueue)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL bDetail = FALSE;
-    BOOL bAllReady = FALSE;
-    BOOL bShort    = FALSE;
-    BOOL dml = FALSE;
-    TADDR taddrMT  = 0;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-detail",   &bDetail,   COBOOL, FALSE},
-        {"-allReady", &bAllReady, COBOOL, FALSE},
-        {"-short",    &bShort,    COBOOL, FALSE},
-        {"/d",        &dml,       COBOOL, FALSE},
-        {"-mt",       &taddrMT,   COHEX,  TRUE},
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    if (!bShort)
-    {
-        DacpSyncBlockCleanupData dsbcd;
-        CLRDATA_ADDRESS sbCurrent = NULL;
-        ULONG cleanCount = 0;
-        while ((dsbcd.Request(g_sos,sbCurrent) == S_OK) && dsbcd.SyncBlockPointer)
-        {
-            if (bDetail)
-            {
-                if (cleanCount == 0) // print first time only
-                {
-                    ExtOut("SyncBlocks to be cleaned by the finalizer thread:\n");
-                    ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                        "SyncBlock", "RCW", "CCW", "ComClassFactory");
-                }
-
-                ExtOut("%" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p\n",
-                    (ULONG64) dsbcd.SyncBlockPointer,
-                    (ULONG64) dsbcd.blockRCW,
-                    (ULONG64) dsbcd.blockCCW,
-                    (ULONG64) dsbcd.blockClassFactory);
-            }
-
-            cleanCount++;
-            sbCurrent = dsbcd.nextSyncBlock;
-            if (sbCurrent == NULL)
-            {
-                break;
-            }
-        }
-
-        ExtOut("SyncBlocks to be cleaned up: %d\n", cleanCount);
-
-#ifdef FEATURE_COMINTEROP
-        VisitRcwArgs travArgs;
-        ZeroMemory(&travArgs,sizeof(VisitRcwArgs));
-        travArgs.bDetail = bDetail;
-        g_sos->TraverseRCWCleanupList(0, (VISITRCWFORCLEANUP) VisitRcw, &travArgs);
-        ExtOut("Free-Threaded Interfaces to be released: %d\n", travArgs.FTMCount);
-        ExtOut("MTA Interfaces to be released: %d\n", travArgs.MTACount);
-        ExtOut("STA Interfaces to be released: %d\n", travArgs.STACount);
-#endif // FEATURE_COMINTEROP
-
-// noRCW:
-        ExtOut("----------------------------------\n");
-    }
-
-    // GC Heap
-    DWORD dwNHeaps = GetGcHeapCount();
-
-    HeapStat hpStat;
-
-    if (!IsServerBuild())
-    {
-        DacpGcHeapDetails heapDetails;
-        if (heapDetails.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting details\n");
-            return Status;
-        }
-
-        GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
-    }
-    else
-    {
-        DWORD dwAllocSize;
-        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-        {
-            ExtOut("Failed to get GCHeaps:  integer overflow\n");
-            return Status;
-        }
-
-        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-        {
-            ExtOut("Failed to get GCHeaps\n");
-            return Status;
-        }
-
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            DacpGcHeapDetails heapDetails;
-            if (heapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
-            {
-                ExtOut("Error requesting details\n");
-                return Status;
-            }
-
-            ExtOut("------------------------------\n");
-            ExtOut("Heap %d\n", n);
-
-            GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
-        }
-    }
-
-    if (!bShort)
-    {
-        if (bAllReady)
-        {
-            PrintGCStat(&hpStat, "Statistics for all finalizable objects that are no longer rooted:\n");
-        }
-        else
-        {
-            PrintGCStat(&hpStat, "Statistics for all finalizable objects (including all objects ready for finalization):\n");
-        }
-    }
-
-    return Status;
+    return ExecuteCommand("finalizequeue", args);
 }
 
 enum {

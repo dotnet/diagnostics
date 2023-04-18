@@ -2050,33 +2050,11 @@ struct strobjInfo
     DWORD   m_StringLength;
 };
 
-// Just to make figuring out which fill pointer element matches a generation
-// a bit less confusing. This gen_segment function is ported from gc.cpp.
-inline unsigned int gen_segment (int gen)
-{
-    return (DAC_NUMBERGENERATIONS - gen - 1);
-}
-
-inline CLRDATA_ADDRESS SegQueue(DacpGcHeapDetails& heapDetails, int seg)
-{
-    return heapDetails.finalization_fill_pointers[seg - 1];
-}
-
-inline CLRDATA_ADDRESS SegQueueLimit(DacpGcHeapDetails& heapDetails, int seg)
-{
-    return heapDetails.finalization_fill_pointers[seg];
-}
-
-#define FinalizerListSeg (DAC_NUMBERGENERATIONS+1)
-#define CriticalFinalizerListSeg (DAC_NUMBERGENERATIONS)
-
-void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, BOOL bAllReady, BOOL bShort);
 
 CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
 
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
-void DumpStackObjectsHelper (TADDR StackTop, TADDR StackBottom, BOOL verifyFields);
 
 HRESULT ExecuteCommand(PCSTR commandName, PCSTR args);
 
@@ -2905,16 +2883,5 @@ private:
     HRESULT PrintCurrentInternalFrame();
 };
 #include "sigparser.h"
-
-///////////////////////////////////////////////////////////////////////////////////////////
-//
-// Miscellaneous helper methods
-//
-
-#define THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "17"
-void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
-    DWORD_PTR workItemsConcurrentQueuePtr,
-    const char *queueName,
-    HeapStat *stats);
 
 #endif // __util_h__
