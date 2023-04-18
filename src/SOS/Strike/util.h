@@ -2071,10 +2071,6 @@ BOOL GetSizeEfficient(DWORD_PTR dwAddrCurrObj,
 
 BOOL GetCollectibleDataEfficient(DWORD_PTR dwAddrMethTable, BOOL& bCollectible, TADDR& loaderAllocatorObjectHandle);
 
-// ObjSize now uses the methodtable cache for its work too.
-size_t ObjectSize (DWORD_PTR obj, BOOL fIsLargeObject=FALSE);
-size_t ObjectSize(DWORD_PTR obj, DWORD_PTR mt, BOOL fIsValueClass, BOOL fIsLargeObject=FALSE);
-
 void CharArrayContent(TADDR pos, ULONG num, bool widechar);
 void StringObjectContent (size_t obj, BOOL fLiteral=FALSE, const int length=-1);  // length=-1: dump everything in the string object.
 

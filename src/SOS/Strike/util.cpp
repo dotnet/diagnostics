@@ -3334,24 +3334,6 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
 
 #endif // !FEATURE_PAL
 
-size_t ObjectSize(DWORD_PTR obj,BOOL fIsLargeObject)
-{
-    DWORD_PTR dwMT;
-    MOVE(dwMT, obj);
-    return ObjectSize(obj, dwMT, FALSE, fIsLargeObject);
-}
-
-size_t ObjectSize(DWORD_PTR obj, DWORD_PTR mt, BOOL fIsValueClass, BOOL fIsLargeObject)
-{
-    BOOL bContainsPointers;
-    size_t size = 0;
-    if (!GetSizeEfficient(obj, mt, fIsLargeObject, size, bContainsPointers))
-    {
-        return 0;
-    }
-    return size;
-}
-
 // This takes an array of values and sets every non-printable character
 // to be a period.
 void Flatten(__out_ecount(len) char *data, unsigned int len)
