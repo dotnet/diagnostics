@@ -235,41 +235,50 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong minAddress = heap.Segments[0].ObjectRange.Start;
             ulong maxAddress = heap.Segments[heap.Segments.Length - 1].ObjectRange.End - pointerSize;
 
-            // Don't read more than 1mb at a time
-            int chunkSize = (int)Math.Min(1024ul * 1024ul, stack.Length);
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
-
-            ulong address = stack.Start;
-            while (stack.Contains(address))
+            // Read in 64k chunks
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+            try
             {
-                Console.CancellationToken.ThrowIfCancellationRequested();
-
-                if (!MemoryService.ReadMemory(address, buffer, out int read))
-                {
-                    break;
-                }
-
-                read = AlignDown(read);
-                if (read < pointerSize)
-                {
-                    break;
-                }
-
-                for (int i = 0; i < read; i += (int)pointerSize)
+                ulong address = stack.Start;
+                while (stack.Contains(address))
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
-                    ulong potentialObj = GetIndex(buffer, i);
-                    if (minAddress <= potentialObj && potentialObj < maxAddress)
+                    if (!MemoryService.ReadMemory(address, buffer, out int read))
                     {
-                        yield return (address + (uint)i, potentialObj);
+                        break;
                     }
+
+                    read = AlignDown(read);
+                    if (read < pointerSize)
+                    {
+                        break;
+                    }
+
+                    for (int i = 0; i < read; i += (int)pointerSize)
+                    {
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
+                        ulong stackAddress = address + (uint)i;
+                        if (!stack.Contains(stackAddress))
+                        {
+                            yield break;
+                        }
+
+                        ulong potentialObj = GetIndex(buffer, i);
+                        if (minAddress <= potentialObj && potentialObj < maxAddress)
+                        {
+                            yield return (stackAddress, potentialObj);
+                        }
+                    }
+
+                    address += (uint)read;
                 }
-
-                address += (uint)read;
             }
-
-            ArrayPool<byte>.Shared.Return(buffer);
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         private static ulong GetIndex(Span<byte> buffer, int i) => Unsafe.As<byte, nuint>(ref buffer[i]);
