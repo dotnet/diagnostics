@@ -42,11 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
 
             TableOutput thinLockOutput = null;
-            TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
-            if (!statsOnly && (displayKind is DisplayKind.Normal or DisplayKind.Strings))
-            {
-                objectTable.WriteRow("Address", "MT", "Size");
-            }
+            TableOutput objectTable = null;
 
             ClrObject lastFreeObject = default;
             foreach (ClrObject obj in objects)
@@ -77,6 +73,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong size = obj.IsValid ? obj.Size : 0;
                 if (!statsOnly)
                 {
+                    if (objectTable is null)
+                    {
+                        objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
+                        if (displayKind is DisplayKind.Normal or DisplayKind.Strings)
+                        {
+                            objectTable.WriteRow("Address", "MT", "Size");
+                        }
+                    }
+
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeap(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
                 }
 
@@ -193,48 +198,43 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else if (displayKind == DisplayKind.Normal)
             {
                 // Print statistics table
-                if (!statsOnly)
+                if (stats.Count != 0)
                 {
-                    Console.WriteLine();
+                    // Print statistics table
+                    if (!statsOnly)
+                    {
+                        Console.WriteLine();
+                    }
+
+                    int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
+                    countLen = Math.Max(countLen, "Count".Length);
+
+                    int sizeLen = stats.Values.Max(ts => ts.Size).ToString("n0").Length;
+                    sizeLen = Math.Max(sizeLen, "TotalSize".Length);
+
+                    TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
+
+                    Console.WriteLine("Statistics:");
+                    statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
+
+                    var statsSorted = from item in stats
+                                      let MethodTable = item.Key
+                                      let Size = item.Value.Size
+                                      orderby Size
+                                      select new {
+                                          MethodTable = item.Key,
+                                          item.Value.Count,
+                                          Size,
+                                          item.Value.TypeName
+                                      };
+
+                    foreach (var item in statsSorted)
+                    {
+                        statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
+                    }
+
+                    Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
                 }
-
-                int countLen = stats.Values.Count > 0 ? stats.Values.Max(ts => ts.Count).ToString("n0").Length : 0;
-                countLen = Math.Max(countLen, "Count".Length);
-
-                int sizeLen = stats.Values.Count > 0 ? stats.Values.Max(ts => ts.Size).ToString("n0").Length : 0;
-                sizeLen = Math.Max(sizeLen, "TotalSize".Length);
-
-                TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
-
-                Console.WriteLine("Statistics:");
-                statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
-
-                var statsSorted = from item in stats
-                                  let MethodTable = item.Key
-                                  let Size = item.Value.Size
-                                  orderby Size
-                                  select new {
-                                      MethodTable = item.Key,
-                                      item.Value.Count,
-                                      Size,
-                                      item.Value.TypeName
-                                  };
-
-                foreach (var item in statsSorted)
-                {
-                    statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
-                }
-
-                int totalObjects = 0;
-                long totalBytes = 0;
-
-                if (stats.Values.Count > 0)
-                {
-                    totalObjects = stats.Values.Sum(r => r.Count);
-                    totalBytes = stats.Values.Sum(r => (long)r.Size);
-                }
-
-                Console.WriteLine($"Total {totalObjects:n0} objects, {totalBytes:n0} bytes");
             }
 
             // Print fragmentation if we calculated it
