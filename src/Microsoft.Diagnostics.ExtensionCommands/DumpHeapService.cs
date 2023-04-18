@@ -210,22 +210,31 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
 
                 var statsSorted = from item in stats
-                                    let MethodTable = item.Key
-                                    let Size = item.Value.Size
-                                    orderby Size
-                                    select new {
-                                        MethodTable = item.Key,
-                                        item.Value.Count,
-                                        Size,
-                                        item.Value.TypeName
-                                    };
+                                  let MethodTable = item.Key
+                                  let Size = item.Value.Size
+                                  orderby Size
+                                  select new {
+                                      MethodTable = item.Key,
+                                      item.Value.Count,
+                                      Size,
+                                      item.Value.TypeName
+                                  };
 
                 foreach (var item in statsSorted)
                 {
                     statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
                 }
 
-                Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
+                int totalObjects = 0;
+                long totalBytes = 0;
+
+                if (stats.Values.Count > 0)
+                {
+                    totalObjects = stats.Values.Sum(r => r.Count);
+                    totalBytes = stats.Values.Sum(r => (long)r.Size);
+                }
+
+                Console.WriteLine($"Total {totalObjects:n0} objects, {totalBytes:n0} bytes");
             }
 
             // Print fragmentation if we calculated it
