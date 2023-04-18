@@ -137,7 +137,7 @@ ENDIF:NETCORE_OR_DOTNETDUMP
 # 7) Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
+VERIFY:\s*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
@@ -145,7 +145,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 # 8) Verify DumpStackObjects -verify works
 SOSCOMMAND:DumpStackObjects -verify
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
+VERIFY:\s*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.FormatException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.InvalidOperationException\s+
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*

@@ -18,7 +18,7 @@ ENDIF:CDB
 LOADSOS
 
 SOSCOMMAND:DumpStackObjects
-VERIFY:<HEXVAL>\s+<HEXVAL>\s+System.Byte\[\]\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+System.Byte\[\]\s+
 
 SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.Byte\[\]!\$0_)*System.Byte\[\]\s+<POUT>
 VERIFY:\s+Name:        System.Byte\[\]\s+

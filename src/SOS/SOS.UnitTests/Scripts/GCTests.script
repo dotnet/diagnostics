@@ -24,7 +24,7 @@ ENDIF:CDB
 LOADSOS
 
 SOSCOMMAND:DumpStackObjects
-VERIFY:<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
 
 SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.IO.StringWriter!\$0_)*System.IO.StringWriter\s+<POUT>
 IFDEF:MAJOR_RUNTIME_VERSION_2
@@ -36,7 +36,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+st
 ENDIF:MAJOR_RUNTIME_VERSION_GE_3
 
 SOSCOMMAND:DumpStackObjects
-VERIFY:<HEXVAL>\s<HEXVAL>\s([Gg][Cc]where!\$0_)*GCWhere\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+([Gg][Cc]where!\$0_)*GCWhere\s+
 
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 0

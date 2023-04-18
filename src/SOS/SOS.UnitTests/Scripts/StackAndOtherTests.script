@@ -183,16 +183,16 @@ VERIFY:.*\s+Stack walk complete.\s+
 # Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
+VERIFY:\s*SP/REG\s+Object\s+Name\s+
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String.*
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 
 # Verify DumpStackObjects -verify works
 SOSCOMMAND:DumpStackObjects -verify
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
+VERIFY:\s*SP/REG\s+Object\s+Name\s+
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String.*
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 
 ENDIF:NETCORE_OR_DOTNETDUMP
 
