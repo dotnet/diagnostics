@@ -192,43 +192,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else if (displayKind == DisplayKind.Normal)
             {
-                if (stats.Count != 0)
+                // Print statistics table
+                if (!statsOnly)
                 {
-                    // Print statistics table
-                    if (!statsOnly)
-                    {
-                        Console.WriteLine();
-                    }
-
-                    int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
-                    countLen = Math.Max(countLen, "Count".Length);
-
-                    int sizeLen = stats.Values.Max(ts => ts.Size).ToString("n0").Length;
-                    sizeLen = Math.Max(sizeLen, "TotalSize".Length);
-
-                    TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
-
-                    Console.WriteLine("Statistics:");
-                    statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
-
-                    var statsSorted = from item in stats
-                                      let MethodTable = item.Key
-                                      let Size = item.Value.Size
-                                      orderby Size
-                                      select new {
-                                          MethodTable = item.Key,
-                                          item.Value.Count,
-                                          Size,
-                                          item.Value.TypeName
-                                      };
-
-                    foreach (var item in statsSorted)
-                    {
-                        statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
-                    }
-
-                    Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
+                    Console.WriteLine();
                 }
+
+                int countLen = stats.Values.Count > 0 ? stats.Values.Max(ts => ts.Count).ToString("n0").Length : 0;
+                countLen = Math.Max(countLen, "Count".Length);
+
+                int sizeLen = stats.Values.Count > 0 ? stats.Values.Max(ts => ts.Size).ToString("n0").Length : 0;
+                sizeLen = Math.Max(sizeLen, "TotalSize".Length);
+
+                TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
+
+                Console.WriteLine("Statistics:");
+                statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
+
+                var statsSorted = from item in stats
+                                    let MethodTable = item.Key
+                                    let Size = item.Value.Size
+                                    orderby Size
+                                    select new {
+                                        MethodTable = item.Key,
+                                        item.Value.Count,
+                                        Size,
+                                        item.Value.TypeName
+                                    };
+
+                foreach (var item in statsSorted)
+                {
+                    statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
+                }
+
+                Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
             }
 
             // Print fragmentation if we calculated it
