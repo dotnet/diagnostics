@@ -128,7 +128,7 @@ VERIFY:(\s*Free-Threaded Interfaces to be released:\s+<DECVAL>\s+)?
 VERIFY:\s*Statistics for all finalizable objects.*:\s+
 VERIFY:\s+Address\s+MT\s+Size\s+
 VERIFY:(\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*)?
-VERIFY:\s*Total\s+<DECVAL>\s+objects\s+
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 
 EXTCOMMAND:logopen %LOG_PATH%/%TEST_NAME%.%LOG_SUFFIX%.consolelog
 EXTCOMMAND:logging %LOG_PATH%/%TEST_NAME%.%LOG_SUFFIX%.diaglog
