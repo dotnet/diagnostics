@@ -27,7 +27,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpobj",           DefaultOptions = "DumpObj",             Aliases = new string[] { "do" }, Help = "Displays info about an object at the specified address.")]
     [Command(Name = "dumpsig",           DefaultOptions = "DumpSig",             Help = "Dumps the signature of a method or field specified by <sigaddr> <moduleaddr>.")]
     [Command(Name = "dumpsigelem",       DefaultOptions = "DumpSigElem",         Help = "Dumps a single element of a signature object.")]
-    [Command(Name = "dumpstackobjects",  DefaultOptions = "DumpStackObjects",    Aliases = new string[] { "dso" }, Help = "Displays all managed objects found within the bounds of the current stack.")]
     [Command(Name = "dumpvc",            DefaultOptions = "DumpVC",              Help = "Displays info about the fields of a value class.")]
     [Command(Name = "eeversion",         DefaultOptions = "EEVersion",           Help = "Displays information about the runtime version.")]
     [Command(Name = "ehinfo",            DefaultOptions = "EHInfo",              Help = "Displays the exception handling blocks in a JIT-ed method.")]

@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
@@ -121,6 +119,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             foreach (ClrObject obj in Runtime.Heap.EnumerateFinalizableObjects())
             {
                 Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (!obj.IsValid)
                 {
                     continue;
@@ -141,6 +140,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int total = 0;
             foreach (ClrSyncBlockCleanupData cleanup in Runtime.EnumerateSyncBlockCleanupData())
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (output is null)
                 {
                     output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
@@ -163,6 +164,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (ClrRcwCleanupData cleanup in Runtime.EnumerateRcwCleanupData())
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (output is null)
                 {
                     output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
@@ -194,6 +197,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             foreach (ClrSubHeap heap in Runtime.Heap.SubHeaps)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 Console.WriteLine($"Heap {heap.Index}");
 
                 WriteGeneration(heap, 0);

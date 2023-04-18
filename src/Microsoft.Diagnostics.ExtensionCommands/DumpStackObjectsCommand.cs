@@ -3,14 +3,11 @@
 
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Transactions;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
@@ -77,6 +74,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             foreach ((ulong address, ClrObject obj) in EnumerateValidObjectsWithinRange(stack).OrderBy(r => r.StackAddress))
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 Console.WriteLine($"{address:x} {obj.Address:x} {obj.Type?.Name}");
             }
         }
@@ -102,6 +101,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int segmentIndex = 0;
             foreach ((ulong _, ulong PotentialObject) entry in potentialObjects)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 // Find the segment of the current potential object, or null if it doesn't live
                 // within a segment.
                 ClrSegment segment = GetSegment(entry.PotentialObject, ref segmentIndex);
@@ -158,6 +159,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             MemoryRange range = new(withinCurrSegment[0].PotentialObject, withinCurrSegment[withinCurrSegment.Count - 1].PotentialObject + 1);
             foreach (ClrObject obj in segment.EnumerateObjects(range, carefully: true))
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (index >= withinCurrSegment.Count)
                 {
                     yield break;
@@ -165,11 +168,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 while (index < withinCurrSegment.Count && withinCurrSegment[index].PotentialObject < obj)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     index++;
                 }
 
                 while (index < withinCurrSegment.Count && obj == withinCurrSegment[index].PotentialObject)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     if (Verify)
                     {
                         if (!Runtime.Heap.IsObjectCorrupted(obj, out _))
@@ -235,6 +242,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong address = stack.Start;
             while (stack.Contains(address))
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (!MemoryService.ReadMemory(address, buffer, out int read))
                 {
                     break;
@@ -248,6 +257,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 for (int i = 0; i < read; i += (int)pointerSize)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     ulong potentialObj = GetIndex(buffer, i);
                     if (minAddress <= potentialObj && potentialObj < maxAddress)
                     {
