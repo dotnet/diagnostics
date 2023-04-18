@@ -72,11 +72,34 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintStackObjects(MemoryRange stack)
         {
+            Console.WriteLine($"OS Thread Id: 0x{CurrentThread.ThreadId:x} ({CurrentThread.ThreadIndex})");
+
+            TableOutput output = new(Console, (16, "x12"), (16, "x12"));
+            output.WriteRow("SP/REG", "Object", "Name");
+
+            int regCount = ThreadService.Registers.Count();
             foreach ((ulong address, ClrObject obj) in EnumerateValidObjectsWithinRange(stack).OrderBy(r => r.StackAddress))
             {
                 Console.CancellationToken.ThrowIfCancellationRequested();
 
-                Console.WriteLine($"{address:x} {obj.Address:x} {obj.Type?.Name}");
+                if (address < (ulong)regCount)
+                {
+                    string registerName;
+                    if (ThreadService.TryGetRegisterInfo((int)address, out RegisterInfo regInfo))
+                    {
+                        registerName = regInfo.RegisterName;
+                    }
+                    else
+                    {
+                        registerName = $"reg{address}";
+                    }
+
+                    output.WriteRow(registerName, obj.Address, obj.Type?.Name);
+                }
+                else
+                {
+                    output.WriteRow(address, obj.Address, obj.Type?.Name);
+                }
             }
         }
 
@@ -94,6 +117,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // Sort the list of potential objects so that we can go through each in segment order.
             // Sorting this array saves us a lot of time by not searching for segments.
             IEnumerable<(ulong StackAddress, ulong PotentialObject)> potentialObjects = EnumeratePointersWithinHeapBounds(range);
+            potentialObjects = potentialObjects.Concat(EnumerateRegistersWithinHeapBounds());
             potentialObjects = potentialObjects.OrderBy(r => r.PotentialObject);
 
             ClrSegment currSegment = null;
@@ -221,6 +245,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // Unreachable.
             Debug.Fail("Reached the end of the segment array.");
             return null;
+        }
+
+        private IEnumerable<(ulong RegisterIndex, ulong PotentialObject)> EnumerateRegistersWithinHeapBounds()
+        {
+            ClrHeap heap = Runtime.Heap;
+
+            // Segments are always sorted by address
+            ulong minAddress = heap.Segments[0].ObjectRange.Start;
+            ulong maxAddress = heap.Segments[heap.Segments.Length - 1].ObjectRange.End - (uint)MemoryService.PointerSize;
+
+            int regCount = ThreadService.Registers.Count();
+            for (int i = 0; i < regCount; i++)
+            {
+                if (CurrentThread.TryGetRegisterValue(i, out ulong value))
+                {
+                    if (minAddress <= value && value < maxAddress)
+                    {
+                        yield return ((ulong)i, value);
+                    }
+                }
+            }
         }
 
         private IEnumerable<(ulong StackAddress, ulong PotentialObject)> EnumeratePointersWithinHeapBounds(MemoryRange stack)
