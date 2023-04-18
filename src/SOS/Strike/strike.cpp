@@ -792,13 +792,7 @@ DECLARE_API(DumpIL)
         return DecodeILFromAddress(NULL, dwStartAddr);
     }
 
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return Status;
-    }
-
-    if (g_snapshot.GetHeap(dwStartAddr) != NULL)
+    if (sos::IsObject(dwStartAddr))
     {
         dwDynamicMethodObj = dwStartAddr;
     }
@@ -8792,26 +8786,6 @@ DECLARE_API(FindRoots)
         {
             ExtOut("The command %sfindroots can only be used after the debugger stopped on a CLRN GC notification.\n", SOSPrefix);
             ExtOut("At this time %sgcroot should be used instead.\n", SOSPrefix);
-            return Status;
-        }
-        // validate argument
-        if (!g_snapshot.Build())
-        {
-            ExtOut("Unable to build snapshot of the garbage collector state\n");
-            return Status;
-        }
-
-        if (g_snapshot.GetHeap(taObj) == NULL)
-        {
-            ExtOut("Address %#p is not in the managed heap.\n", SOS_PTR(taObj));
-            return Status;
-        }
-
-        int ogen = g_snapshot.GetGeneration(taObj);
-        if (ogen > CNotification::GetCondemnedGen())
-        {
-            DMLOut("Object %s will survive this collection:\n\tgen(%#p) = %d > %d = condemned generation.\n",
-                DMLObject(taObj), SOS_PTR(taObj), ogen, CNotification::GetCondemnedGen());
             return Status;
         }
 
