@@ -13,21 +13,21 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [ServiceExport(Scope = ServiceScope.Target)]
-    public sealed class NativeAddressHelper
+    public sealed class NativeAddressHelper : IDisposable
     {
+        private readonly IDisposable _onFlushEvent;
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
-        private ITarget _target;
+
+        public NativeAddressHelper(ITarget target)
+        {
+            Target = target;
+            _onFlushEvent = target.OnFlushEvent.Register(() => _previous = default);
+        }
+
+        public void Dispose() => _onFlushEvent.Dispose();
 
         [ServiceImport]
-        public ITarget Target
-        {
-            get => _target;
-            set
-            {
-                value?.OnFlushEvent.Register(() => _previous = default);
-                _target = value;
-            }
-        }
+        public ITarget Target { get; set; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
