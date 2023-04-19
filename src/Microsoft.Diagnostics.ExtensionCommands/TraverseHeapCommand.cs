@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // create file early in case it throws
             using StreamWriter output = File.CreateText(Filename);
-            using (XmlWriter xml = Xml ? XmlWriter.Create(output, new XmlWriterSettings() { Indent = true, OmitXmlDeclaration = true }) : null)
+            using (XmlWriter xml = Xml ? XmlWriter.Create(output, new XmlWriterSettings() { Encoding = new UTF8Encoding(true), Indent = true, OmitXmlDeclaration = true }) : null)
             {
                 using StreamWriter text = Xml ? null : output;
 
@@ -81,6 +81,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             using StreamWriter text = Xml ? null : new StreamWriter(rootObjectStream, Encoding.Default, 4096, leaveOpen: true);
             using XmlWriter xml = Xml ? XmlWriter.Create(rootObjectStream, new XmlWriterSettings()
             {
+                Encoding = new UTF8Encoding(false),
                 CloseOutput = false,
                 Indent = true,
                 OmitXmlDeclaration = true,
