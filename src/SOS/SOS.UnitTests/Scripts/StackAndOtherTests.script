@@ -180,7 +180,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 
-SOSCOMMAND: !runtimes
+SOSCOMMAND: runtimes
 
 # Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
