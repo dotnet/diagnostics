@@ -18,7 +18,6 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
-using static System.Net.WebRequestMethods;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -222,6 +221,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
+                // UpDownCounter reports the value, not the rate - this is different than how Counter behaves, and is thus treated as a gauge.
                 CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, value, obj.TimeStamp);
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
