@@ -36,6 +36,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
+            Console.WriteLine("Entered DumpStackObjectsCommand::Invoke");
             if (Runtime.Heap.Segments.Length == 0)
             {
                 throw new DiagnosticsException("Cannot walk heap.");
@@ -44,10 +45,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             MemoryRange range;
             if (Bounds is null || Bounds.Length == 0)
             {
+                Console.WriteLine("In DumpStackObjectsCommand::Invoke, GetStackRange");
                 range = GetStackRange();
             }
             else if (Bounds.Length == 2)
             {
+                Console.WriteLine("In DumpStackObjectsCommand::Invoke, parsing range");
                 ulong start = ParseAddress(Bounds[0]) ?? throw new ArgumentException($"Failed to parse start address '{Bounds[0]}'.");
                 ulong end = ParseAddress(Bounds[1]) ?? throw new ArgumentException($"Failed to parse end address '{Bounds[1]}'.");
                 if (start > end)
@@ -59,11 +62,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
+                Console.WriteLine("In DumpStackObjectsCommand::Invoke, invalid arguments");
                 throw new ArgumentException("Invalid arguments.");
             }
 
             if (range.Start == 0 || range.End == 0)
             {
+                Console.WriteLine("In DumpStackObjectsCommand::Invoke, throwing bad range");
                 throw new ArgumentException($"Invalid range {range.Start:x} - {range.End:x}");
             }
 
@@ -330,6 +335,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private MemoryRange GetStackRange()
         {
+            Console.WriteLine("In DumpStackObjectsCommand::GetStackRange");
             ulong end = 0;
 
             int spIndex = ThreadService.StackPointerIndex;
@@ -351,6 +357,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 end = stackPointer + 0xFFFF;
             }
 
+            Console.WriteLine("Returning DumpStackObjectsCommand::GetStackRange");
             return new(AlignDown(stackPointer), AlignUp(end));
         }
 

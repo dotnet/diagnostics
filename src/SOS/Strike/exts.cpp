@@ -414,6 +414,7 @@ void FlushCheck()
 {
 #ifndef FEATURE_PAL
     SOSExtensions* extensions = (SOSExtensions*)Extensions::GetInstance();
-    extensions->FlushCheck();
+    if (extensions)
+        extensions->FlushCheck();
 #endif // !FEATURE_PAL
 }
