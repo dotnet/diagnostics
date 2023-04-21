@@ -145,6 +145,8 @@ public class SOSRunner : IDisposable
 
         public string DumpNameSuffix { get; set; }
 
+        public bool EnableSOSLogging { get; set; } = true;
+
         public bool TestCrashReport
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows && TestConfiguration.RuntimeFrameworkVersionMajor >= 6; }
@@ -457,6 +459,7 @@ public class SOSRunner : IDisposable
         {
             // Setup the logging from the options in the config file
             outputHelper = TestRunner.ConfigureLogging(config, information.OutputHelper, information.TestName);
+            string sosLogFile = information.EnableSOSLogging ? Path.Combine(config.LogDirPath, $"{information.TestName}.{config.LogSuffix}.soslog") : null;
 
             // Figure out which native debugger to use
             NativeDebugger debugger = GetNativeDebuggerToUse(config, action);
@@ -669,6 +672,7 @@ public class SOSRunner : IDisposable
                     break;
             }
 
+
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
@@ -680,6 +684,11 @@ public class SOSRunner : IDisposable
             if (OS.Kind == OSKind.Windows)
             {
                 processRunner.WithExpectedExitCode(0);
+            }
+
+            if (sosLogFile != null)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_ENABLED_SOS_LOGGING", sosLogFile);
             }
 
             // Disable W^E so that the bpmd command and the tests pass
@@ -1419,6 +1428,11 @@ public class SOSRunner : IDisposable
             {
                 defines.Add("UNIX_SINGLE_FILE_APP");
             }
+        }
+        string setHostRuntime = _config.SetHostRuntime();
+        if (!string.IsNullOrEmpty(setHostRuntime) && setHostRuntime == "-none")
+        {
+            defines.Add("HOST_RUNTIME_NONE");
         }
         return defines;
     }

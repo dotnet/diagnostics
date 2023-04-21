@@ -182,6 +182,8 @@ VERIFY:.*\s+Stack walk complete.\s+
 
 SOSCOMMAND: runtimes
 
+!IFDEF:HOST_RUNTIME_NONE
+
 # Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
@@ -195,6 +197,8 @@ VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s*SP/REG\s+Object\s+Name\s+
 VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String.*
 VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
+
+ENDIF:HOST_RUNTIME_NONE
 
 ENDIF:NETCORE_OR_DOTNETDUMP
 

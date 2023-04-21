@@ -390,6 +390,7 @@ HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
             return hostServices->DispatchCommand(commandName, args);
         }
     }
+    ExtErr("Unrecognized command %s\n", commandName);
     return E_NOTIMPL;
 }
 

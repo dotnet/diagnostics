@@ -22,9 +22,9 @@ namespace SOS.Extensions
 
         public void Write(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
 
-        public void WriteWarning(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
+        public void WriteWarning(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.WARNING, text);
 
-        public void WriteError(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
+        public void WriteError(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
 
         public void WriteDml(string text) => _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);
 
