@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -36,18 +38,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             ObjectCorruption[] corruption = corruptionEnum.OrderBy(r => r.Offset).ToArray();
-            int offsetColWidth = Math.Max(6, corruption.Max(r => r.Offset.ToSignedHexString().Length));
-            int kindColWidth = Math.Max(5, corruption.Max(ce => ce.Kind.ToString().Length));
 
-            TableOutput output = new(Console, (offsetColWidth, ""), (kindColWidth, ""))
-            {
-                AlignLeft = true,
-            };
+            Column offsetColumn = HexOffset.WithAlignment(Align.Left);
+            offsetColumn = offsetColumn.GetAppropriateSize(corruption.Select(r => (object)r.Offset));
 
-            output.WriteRow("Offset", "Issue", "Description");
+            Table output = new(Console, offsetColumn, Column.ForEnum<ObjectCorruptionKind>(), Text);
+            output.WriteHeader("Offset", "Issue", "Description");
             foreach (ObjectCorruption oc in corruption)
             {
-                output.WriteRow(oc.Offset.ToSignedHexString(), oc.Kind, VerifyHeapCommand.GetObjectCorruptionMessage(Memory, Runtime.Heap, oc));
+                output.WriteRow(oc.Offset, oc.Kind, VerifyHeapCommand.GetObjectCorruptionMessage(Memory, Runtime.Heap, oc));
             }
 
             Console.WriteLine();

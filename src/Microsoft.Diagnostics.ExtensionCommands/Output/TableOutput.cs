@@ -8,7 +8,7 @@ using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
-namespace Microsoft.Diagnostics.ExtensionCommands
+namespace Microsoft.Diagnostics.ExtensionCommands.Output
 {
     internal sealed class TableOutput
     {
@@ -287,7 +287,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             public DmlDumpHeap(ulong methodTable)
-                : base (methodTable, methodTable != 0 ? $"!dumpheap -mt {methodTable:x}" : "")
+                : base(methodTable, methodTable != 0 ? $"!dumpheap -mt {methodTable:x}" : "")
             {
             }
         }

@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -202,7 +203,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             columns[i++] = ValueWithError(segment?.Address, format: "x12", error: "");
-            columns[i++] = new DmlExec(corruption.Object.Address, $"!ListNearObj {corruption.Object.Address:x}");
+            columns[i++] = new TableOutput.DmlExec(corruption.Object.Address, $"!ListNearObj {corruption.Object.Address:x}");
             columns[i++] = corruption.Kind;
             columns[i++] = message;
 

@@ -5,8 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
