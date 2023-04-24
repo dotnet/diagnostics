@@ -42,11 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
 
             TableOutput thinLockOutput = null;
-            TableOutput objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
-            if (!statsOnly && (displayKind is DisplayKind.Normal or DisplayKind.Strings))
-            {
-                objectTable.WriteRow("Address", "MT", "Size");
-            }
+            TableOutput objectTable = null;
 
             ClrObject lastFreeObject = default;
             foreach (ClrObject obj in objects)
@@ -77,6 +73,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong size = obj.IsValid ? obj.Size : 0;
                 if (!statsOnly)
                 {
+                    if (objectTable is null)
+                    {
+                        objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
+                        if (displayKind is DisplayKind.Normal or DisplayKind.Strings)
+                        {
+                            objectTable.WriteRow("Address", "MT", "Size");
+                        }
+                    }
+
                     objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeap(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
                 }
 
@@ -192,6 +197,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else if (displayKind == DisplayKind.Normal)
             {
+                // Print statistics table
                 if (stats.Count != 0)
                 {
                     // Print statistics table

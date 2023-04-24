@@ -340,8 +340,7 @@ public class SOS
 
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
             await SOSTestHelpers.RunTest(
-                scriptName: "StackAndOtherTests.script",
-                new SOSRunner.TestInformation
+                scriptName: "StackAndOtherTests.script", new SOSRunner.TestInformation
                 {
                     TestConfiguration = currentConfig,
                     TestName = "SOS.StackAndOtherTests",

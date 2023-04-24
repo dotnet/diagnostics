@@ -151,7 +151,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> filteredHeapsByKind = from heap in appDomain.EnumerateLoaderAllocatorHeaps()
                                                                                                    where IsIncludedInFilter(heap)
-                                                                                                   where loaderAllocatorsSeen.Add(heap.Address)
+                                                                                                   where loaderAllocatorsSeen.Add(heap.MemoryRange.Start)
                                                                                                    group heap by heap.Kind into g
                                                                                                    orderby GetSortOrder(g.Key)
                                                                                                    select g;
@@ -244,7 +244,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 output.WriteRow("JIT Manager:", jitManager.Address);
 
-                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().Where(IsIncludedInFilter).OrderBy(r => r.Kind).ThenBy(r => r.Address);
+                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().Where(IsIncludedInFilter).OrderBy(r => r.Kind).ThenBy(r => r.MemoryRange.Start);
 
                 ulong jitMgrSize = 0, jitMgrWasted = 0;
                 foreach (ClrNativeHeapInfo heap in heaps)
@@ -284,15 +284,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return true;
             }
 
-            if (filterRange.Contains(info.Address))
+            if (filterRange.Contains(info.MemoryRange.Start))
             {
                 return true;
             }
 
-            if (info.Size is ulong size && size > 0)
+            if (info.MemoryRange.Length > 0)
             {
                 // Check for the last valid address in the range
-                return filterRange.Contains(info.Address + size - 1);
+                return filterRange.Contains(info.MemoryRange.End - 1);
             }
 
             return false;
@@ -300,14 +300,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private (ulong Size, ulong Wasted) CalculateSizeAndWasted(StringBuilder sb, ClrNativeHeapInfo heap)
         {
-            sb.Append(heap.Address.ToString("x12"));
+            sb.Append(heap.MemoryRange.Start.ToString("x12"));
 
-            if (heap.Size is ulong size)
+            ulong size = heap.MemoryRange.Length;
+            if (size > 0)
             {
                 sb.Append('(');
                 sb.Append(size.ToString("x"));
                 sb.Append(':');
-                ulong actualSize = GetActualSize(heap.Address, size);
+                ulong actualSize = GetActualSize(heap.MemoryRange.Start, size);
                 sb.Append(actualSize.ToString("x"));
                 sb.Append(')');
 

@@ -13,9 +13,18 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [ServiceExport(Scope = ServiceScope.Target)]
-    public sealed class NativeAddressHelper
+    public sealed class NativeAddressHelper : IDisposable
     {
+        private readonly IDisposable _onFlushEvent;
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
+
+        public NativeAddressHelper(ITarget target)
+        {
+            Target = target;
+            _onFlushEvent = target.OnFlushEvent.Register(() => _previous = default);
+        }
+
+        public void Dispose() => _onFlushEvent.Dispose();
 
         [ServiceImport]
         public ITarget Target { get; set; }
@@ -301,7 +310,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     _ => ClrMemoryKind.Unknown
                 };
 
-                yield return (nativeHeap.Address, nativeHeap.Size ?? 0, kind);
+                yield return (nativeHeap.MemoryRange.Start, nativeHeap.MemoryRange.Length, kind);
             }
 
             // .Net 8 and beyond has accurate HandleTable memory info.

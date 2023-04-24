@@ -61,6 +61,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (AsGCGeneration.HasValue)
             {
                 int gen = AsGCGeneration.Value;
+
+                ClrSegment seg = Runtime.Heap.GetSegmentByAddress(address);
+                if (seg is null)
+                {
+                    Console.WriteLineError($"Address {address:x} is not in the managed heap.");
+                    return;
+                }
+
+                Generation objectGen = seg.GetGeneration(address);
+                if (gen < (int)objectGen)
+                {
+                    Console.WriteLine($"Object {address:x} will survive this collection:");
+                    Console.WriteLine($"    gen({address:x}) = {objectGen} > {gen} = condemned generation.");
+                    return;
+                }
+
                 if (gen < 0 || gen > 1)
                 {
                     // If not gen0 or gen1, treat it as a normal !gcroot

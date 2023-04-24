@@ -390,6 +390,7 @@ HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
             return hostServices->DispatchCommand(commandName, args);
         }
     }
+    ExtErr("Unrecognized command %s\n", commandName);
     return E_NOTIMPL;
 }
 
@@ -616,82 +617,6 @@ DECLARE_API (EEStack)
     return Status;
 }
 
-HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR exprTop, BOOL bVerify)
-{
-    size_t StackTop = 0;
-    size_t StackBottom = 0;
-    if (nArg==0)
-    {
-        ULONG64 StackOffset;
-        g_ExtRegisters->GetStackOffset(&StackOffset);
-
-        StackTop = TO_TADDR(StackOffset);
-    }
-    else
-    {
-        StackTop = GetExpression(exprTop);
-        if (StackTop == 0)
-        {
-            ExtOut("wrong option: %s\n", exprTop);
-            return E_FAIL;
-        }
-
-        if (nArg==2)
-        {
-            StackBottom = GetExpression(exprBottom);
-            if (StackBottom == 0)
-            {
-                ExtOut("wrong option: %s\n", exprBottom);
-                return E_FAIL;
-            }
-        }
-    }
-
-#ifndef FEATURE_PAL
-    if (IsWindowsTarget())
-    {
-        NT_TIB teb;
-        ULONG64 dwTebAddr = 0;
-        HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
-        if (SUCCEEDED(hr) && SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
-        {
-            if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
-            {
-                if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
-                    StackBottom = TO_TADDR(teb.StackBase);
-            }
-        }
-    }
-#endif
-
-    if (StackBottom == 0)
-        StackBottom = StackTop + 0xFFFF;
-
-    if (StackBottom < StackTop)
-    {
-        ExtOut("Wrong option: stack selection wrong\n");
-        return E_FAIL;
-    }
-
-    // We can use the gc snapshot to eliminate object addresses that are
-    // not on the gc heap.
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to determine bounds of gc heap\n");
-        return E_FAIL;
-    }
-
-    // Print thread ID.
-    ULONG id = 0;
-    g_ExtSystem->GetCurrentThreadSystemId (&id);
-    ExtOut("OS Thread Id: 0x%x ", id);
-    g_ExtSystem->GetCurrentThreadId (&id);
-    ExtOut("(%d)\n", id);
-
-    DumpStackObjectsHelper(StackTop, StackBottom, bVerify);
-    return S_OK;
-}
-
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -701,32 +626,10 @@ HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR e
 \**********************************************************************/
 DECLARE_API(DumpStackObjects)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
-    StringHolder exprTop, exprBottom;
 
-    BOOL bVerify = FALSE;
-    BOOL dml = FALSE;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-verify", &bVerify, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE}
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&exprTop.data, COSTRING},
-        {&exprBottom.data, COSTRING}
-    };
-    size_t nArg;
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder enableDML(dml);
-
-    return DumpStackObjectsRaw(nArg, exprBottom.data, exprTop.data, bVerify);
+    return ExecuteCommand("dumpstackobjects", args);
 }
 
 /**********************************************************************\
@@ -890,13 +793,7 @@ DECLARE_API(DumpIL)
         return DecodeILFromAddress(NULL, dwStartAddr);
     }
 
-    if (!g_snapshot.Build())
-    {
-        ExtOut("Unable to build snapshot of the garbage collector state\n");
-        return Status;
-    }
-
-    if (g_snapshot.GetHeap(dwStartAddr) != NULL)
+    if (sos::IsObject(dwStartAddr))
     {
         dwDynamicMethodObj = dwStartAddr;
     }
@@ -4027,138 +3924,10 @@ DECLARE_API(RCWCleanupList)
 \**********************************************************************/
 DECLARE_API(FinalizeQueue)
 {
-    INIT_API();
+    INIT_API_EXT();
     MINIDUMP_NOT_SUPPORTED();
 
-    BOOL bDetail = FALSE;
-    BOOL bAllReady = FALSE;
-    BOOL bShort    = FALSE;
-    BOOL dml = FALSE;
-    TADDR taddrMT  = 0;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-detail",   &bDetail,   COBOOL, FALSE},
-        {"-allReady", &bAllReady, COBOOL, FALSE},
-        {"-short",    &bShort,    COBOOL, FALSE},
-        {"/d",        &dml,       COBOOL, FALSE},
-        {"-mt",       &taddrMT,   COHEX,  TRUE},
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-    {
-        return Status;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    if (!bShort)
-    {
-        DacpSyncBlockCleanupData dsbcd;
-        CLRDATA_ADDRESS sbCurrent = NULL;
-        ULONG cleanCount = 0;
-        while ((dsbcd.Request(g_sos,sbCurrent) == S_OK) && dsbcd.SyncBlockPointer)
-        {
-            if (bDetail)
-            {
-                if (cleanCount == 0) // print first time only
-                {
-                    ExtOut("SyncBlocks to be cleaned by the finalizer thread:\n");
-                    ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
-                        "SyncBlock", "RCW", "CCW", "ComClassFactory");
-                }
-
-                ExtOut("%" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p\n",
-                    (ULONG64) dsbcd.SyncBlockPointer,
-                    (ULONG64) dsbcd.blockRCW,
-                    (ULONG64) dsbcd.blockCCW,
-                    (ULONG64) dsbcd.blockClassFactory);
-            }
-
-            cleanCount++;
-            sbCurrent = dsbcd.nextSyncBlock;
-            if (sbCurrent == NULL)
-            {
-                break;
-            }
-        }
-
-        ExtOut("SyncBlocks to be cleaned up: %d\n", cleanCount);
-
-#ifdef FEATURE_COMINTEROP
-        VisitRcwArgs travArgs;
-        ZeroMemory(&travArgs,sizeof(VisitRcwArgs));
-        travArgs.bDetail = bDetail;
-        g_sos->TraverseRCWCleanupList(0, (VISITRCWFORCLEANUP) VisitRcw, &travArgs);
-        ExtOut("Free-Threaded Interfaces to be released: %d\n", travArgs.FTMCount);
-        ExtOut("MTA Interfaces to be released: %d\n", travArgs.MTACount);
-        ExtOut("STA Interfaces to be released: %d\n", travArgs.STACount);
-#endif // FEATURE_COMINTEROP
-
-// noRCW:
-        ExtOut("----------------------------------\n");
-    }
-
-    // GC Heap
-    DWORD dwNHeaps = GetGcHeapCount();
-
-    HeapStat hpStat;
-
-    if (!IsServerBuild())
-    {
-        DacpGcHeapDetails heapDetails;
-        if (heapDetails.Request(g_sos) != S_OK)
-        {
-            ExtOut("Error requesting details\n");
-            return Status;
-        }
-
-        GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
-    }
-    else
-    {
-        DWORD dwAllocSize;
-        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
-        {
-            ExtOut("Failed to get GCHeaps:  integer overflow\n");
-            return Status;
-        }
-
-        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
-        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
-        {
-            ExtOut("Failed to get GCHeaps\n");
-            return Status;
-        }
-
-        for (DWORD n = 0; n < dwNHeaps; n ++)
-        {
-            DacpGcHeapDetails heapDetails;
-            if (heapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
-            {
-                ExtOut("Error requesting details\n");
-                return Status;
-            }
-
-            ExtOut("------------------------------\n");
-            ExtOut("Heap %d\n", n);
-
-            GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
-        }
-    }
-
-    if (!bShort)
-    {
-        if (bAllReady)
-        {
-            PrintGCStat(&hpStat, "Statistics for all finalizable objects that are no longer rooted:\n");
-        }
-        else
-        {
-            PrintGCStat(&hpStat, "Statistics for all finalizable objects (including all objects ready for finalization):\n");
-        }
-    }
-
-    return Status;
+    return ExecuteCommand("finalizequeue", args);
 }
 
 enum {
@@ -9018,26 +8787,6 @@ DECLARE_API(FindRoots)
         {
             ExtOut("The command %sfindroots can only be used after the debugger stopped on a CLRN GC notification.\n", SOSPrefix);
             ExtOut("At this time %sgcroot should be used instead.\n", SOSPrefix);
-            return Status;
-        }
-        // validate argument
-        if (!g_snapshot.Build())
-        {
-            ExtOut("Unable to build snapshot of the garbage collector state\n");
-            return Status;
-        }
-
-        if (g_snapshot.GetHeap(taObj) == NULL)
-        {
-            ExtOut("Address %#p is not in the managed heap.\n", SOS_PTR(taObj));
-            return Status;
-        }
-
-        int ogen = g_snapshot.GetGeneration(taObj);
-        if (ogen > CNotification::GetCondemnedGen())
-        {
-            DMLOut("Object %s will survive this collection:\n\tgen(%#p) = %d > %d = condemned generation.\n",
-                DMLObject(taObj), SOS_PTR(taObj), ogen, CNotification::GetCondemnedGen());
             return Status;
         }
 
