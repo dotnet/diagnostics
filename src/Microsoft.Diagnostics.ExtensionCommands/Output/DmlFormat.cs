@@ -23,6 +23,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
         public abstract void FormatValue(StringBuilder sb, string outputText, object value);
 
-        protected static string DmlEscape(string text) => new XText(text).ToString();
+        protected static string DmlEscape(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+
+            return new XText(text).ToString();
+        }
     }
 }

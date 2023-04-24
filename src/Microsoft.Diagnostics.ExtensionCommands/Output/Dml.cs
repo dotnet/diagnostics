@@ -9,11 +9,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
     internal static class Dml
     {
         private static DmlDumpObject s_dumpObj;
+        private static DmlDumpHeapMT s_dumpHeapMT;
         private static DmlBold s_bold;
+        private static DmlListNearObj s_listNearObj;
 
-        public static DmlFormat DumpObj { get => s_dumpObj ??= new DmlDumpObject(); }
-
-        public static DmlFormat Bold { get => s_bold ??= new DmlBold(); }
+        public static DmlFormat DumpObj => s_dumpObj ??= new();
+        public static DmlFormat Bold => s_bold ??= new();
+        public static DmlFormat DumpHeapMT => s_dumpHeapMT ??= new();
+        public static DmlFormat ListNearObj => s_listNearObj ??= new();
 
         private sealed class DmlBold : DmlFormat
         {
@@ -29,14 +32,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         {
             public override void FormatValue(StringBuilder sb, string outputText, object value)
             {
+                string command = GetCommand(outputText, value);
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    return;
+                }
+
                 sb.Append("<exec cmd=\"");
-                AppendCommand(sb, outputText, value);
+                sb.Append(DmlEscape(command));
                 sb.Append('\"');
 
                 string altText = GetAltText(outputText, value);
                 if (altText is not null)
                 {
-                    sb.Append("alt=\"");
+                    sb.Append(" alt=\"");
                     sb.Append(altText);
                     sb.Append('"');
                 }
@@ -46,24 +55,81 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 sb.Append("</exec>");
             }
 
-            protected abstract void AppendCommand(StringBuilder sb, string outputText, object value);
+            protected abstract string GetCommand(string outputText, object value);
             protected virtual string GetAltText(string outputText, object value) => null;
         }
 
-        private sealed class DmlDumpObject : DmlExec
+        private class DmlDumpObject : DmlExec
         {
-            protected override void AppendCommand(StringBuilder sb, string outputText, object value)
+            protected override string GetCommand(string outputText, object value)
             {
+                bool isValid = true;
+                if (value is ClrObject obj)
+                {
+                    isValid = obj.IsValid;
+                }
+
                 value = Format.Unwrap(value);
-                sb.Append("!dumpobj /d ");
-                sb.AppendFormat("{0:x}", value);
+                if (value is null)
+                {
+                    return null;
+                }
+                else if (value is ulong ul && ul == 0ul)
+                {
+                    return "0";
+                }
+
+                return isValid ? $"!dumpobj /d {value:x}" : $"!verifyobj {value:x}";
             }
 
             protected override string GetAltText(string outputText, object value)
             {
                 if (value is ClrObject obj)
                 {
-                    return obj.Type?.Name;
+                    if (obj.IsValid)
+                    {
+                        return obj.Type?.Name;
+                    }
+
+                    return "Invalid Object";
+                }
+
+                return null;
+            }
+        }
+
+        private sealed class DmlListNearObj : DmlDumpObject
+        {
+            protected override string GetCommand(string outputText, object value)
+            {
+                value = Format.Unwrap(value);
+                if (value is null || (value is ulong ul && ul == 0ul))
+                {
+                    return null;
+                }
+
+                return $"!listnearobj {value:x}";
+            }
+        }
+
+        private sealed class DmlDumpHeapMT : DmlExec
+        {
+            protected override string GetCommand(string outputText, object value)
+            {
+                value = Format.Unwrap(value);
+                if (value is null || (value is ulong ul && ul == 0ul))
+                {
+                    return null;
+                }
+
+                return $"!dumpheap -mt {value:x}";
+            }
+
+            protected override string GetAltText(string outputText, object value)
+            {
+                if (value is ClrType type)
+                {
+                    return type.Name;
                 }
 
                 return null;

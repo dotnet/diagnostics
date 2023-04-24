@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ObjectCorruption[] corruption = corruptionEnum.OrderBy(r => r.Offset).ToArray();
 
             Column offsetColumn = HexOffset.WithAlignment(Align.Left);
-            offsetColumn = offsetColumn.GetAppropriateSize(corruption.Select(r => (object)r.Offset));
+            offsetColumn = offsetColumn.GetAppropriateWidth(corruption.Select(r => r.Offset));
 
             Table output = new(Console, offsetColumn, Column.ForEnum<ObjectCorruptionKind>(), Text);
             output.WriteHeader("Offset", "Issue", "Description");

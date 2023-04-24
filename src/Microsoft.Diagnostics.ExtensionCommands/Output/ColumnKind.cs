@@ -11,23 +11,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static Column? s_hexOffset;
         private static Column? s_hexValue;
         private static Column? s_dumpObj;
+        private static Column? s_integer;
+        private static Column? s_dumpHeapMT;
+        private static Column? s_listNearObj;
 
-        private static int PointerLength { get; }
+        private static int PointerLength => IntPtr.Size * 2;
 
         public static Column Pointer { get; } = new(Align.Right, PointerLength, Formats.Pointer);
         public static Column Text => s_text ??= new(Align.Left, -1, Formats.Text);
-        public static Column DumpObj => s_dumpObj ??= new(Align.Left, PointerLength, Formats.Pointer, Dml.DumpObj);
         public static Column HexValue => s_hexValue ??= new(Align.Right, PointerLength + 2, Formats.HexValue);
         public static Column HexOffset => s_hexOffset ??= new(Align.Right, 10, Formats.HexOffset);
+        public static Column Integer => s_integer ??= new(Align.Right, 14, Formats.IntegerWithCommas);
+        public static Column ByteCount => Integer;
+        public static Column DumpObj => s_dumpObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpObj);
+        public static Column DumpHeapMT => s_dumpHeapMT ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeapMT);
+        public static Column ListNearObj => s_listNearObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.ListNearObj);
 
-        static ColumnKind()
-        {
-            int pointerSize = IntPtr.Size;
-
-            // On Windows, a pointer will generally not be larger than 12 characters,
-            // but on Linux we do not have that helpful constraint.  We set the length
-            // of a pointer to be 16 to be sure we never truncate a pointer, but
-            PointerLength = pointerSize == 4 ? 8 : 16;
-        }
+        public static Column TypeName => s_text ??= new(Align.Left, -1, Formats.TypeName);
     }
 }

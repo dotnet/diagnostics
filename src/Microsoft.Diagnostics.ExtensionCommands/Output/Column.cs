@@ -29,13 +29,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         internal Column WithDml(DmlFormat dml) => new(Alignment, Width, Format, dml);
         internal Column WithAlignment(Align align) => new(align, Width, Format, Dml);
 
-        public Column GetAppropriateSize(IEnumerable<object> values)
+        public Column GetAppropriateWidth<T>(IEnumerable<T> values)
         {
             int len = 0;
 
             StringBuilder sb = s_stringBuilderPool.Rent();
 
-            foreach (object value in values)
+            foreach (T value in values)
             {
                 sb.Clear();
                 Format.FormatValue(sb, value, -1, false);

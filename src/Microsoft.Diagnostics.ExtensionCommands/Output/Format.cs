@@ -29,6 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             {
                 ClrObject obj => obj.Address,
                 ClrAppDomain domain => domain.Address,
+                ClrType type => type.MethodTable,
                 _ => value
             };
         }

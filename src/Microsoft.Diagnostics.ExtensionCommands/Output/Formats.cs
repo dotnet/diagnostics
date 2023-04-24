@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace Microsoft.Diagnostics.ExtensionCommands.Output
 {
@@ -13,6 +15,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static HexValueFormat s_hexOffsetFormat;
         private static HexValueFormat s_hexValueFormat;
         private static Format s_text;
+        private static IntegerFormat s_integerFormat;
+        private static TypeNameFormat s_typeNameFormat;
 
         static Formats()
         {
@@ -24,8 +28,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
         public static Format HexOffset => s_hexOffsetFormat ??= new(printPrefix: true, signed: true);
         public static Format HexValue => s_hexValueFormat ??= new(printPrefix: true, signed: false);
-
+        public static Format IntegerWithCommas => s_integerFormat ??= new("n0");
         public static Format Text => s_text ??= new(true);
+        public static Format TypeName => s_typeNameFormat ??= new();
 
         private sealed class IntegerFormat : Format
         {
@@ -53,6 +58,60 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
                 TruncateStringBuilder(result, maxLength, result.Length - startLength, truncateBegin);
                 return result.Length - startLength;
+            }
+        }
+
+        private sealed class TypeNameFormat : Format
+        {
+            private const string UnknownTypeName = "Unknown";
+
+            public override int FormatValue(StringBuilder sb, object value, int maxLength, bool truncateBegin)
+            {
+                int startLength = sb.Length;
+
+                if (value is null)
+                {
+                    sb.Append(UnknownTypeName);
+                }
+                else if (value is ClrType type)
+                {
+                    string typeName = type.Name;
+                    if (!string.IsNullOrWhiteSpace(typeName))
+                    {
+                        sb.Append(typeName);
+                    }
+                    else
+                    {
+                        string module = type.Module?.Name;
+                        if (!string.IsNullOrWhiteSpace(module))
+                        {
+                            try
+                            {
+                                module = System.IO.Path.GetFileNameWithoutExtension(module);
+                                sb.Append(module);
+                                sb.Append('!');
+                            }
+                            catch (ArgumentException)
+                            {
+                            }
+                        }
+
+                        sb.Append(UnknownTypeName);
+                        if (type.MethodTable != 0)
+                        {
+                            sb.Append($" (MethodTable: ");
+                            sb.AppendFormat("{0:x12}", type.MethodTable);
+                            sb.Append(')');
+                        }
+                    }
+                }
+                else
+                {
+                    sb.Append(value);
+                }
+
+                TruncateStringBuilder(sb, maxLength, sb.Length - startLength, truncateBegin);
+                return sb.Length - startLength;
             }
         }
 
