@@ -208,7 +208,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string instrumentName = (string)traceEvent.PayloadValue(3);
             string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
-            _ = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
+            //string rateText = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)traceEvent.PayloadValue(7);
 
             if (!filter.IsIncluded(meterName, instrumentName))

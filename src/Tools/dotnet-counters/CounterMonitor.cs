@@ -215,7 +215,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string instrumentName = (string)obj.PayloadValue(3);
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
-            _ = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
+            //string rateText = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)obj.PayloadValue(7);
             if (sessionId != _metricsEventSourceSessionId)
             {
