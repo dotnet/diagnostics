@@ -174,7 +174,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
-            _ = (string)traceEvent.PayloadValue(7); // Not currently using value for Counters.
 
             if (!filter.IsIncluded(meterName, instrumentName))
             {
@@ -199,7 +198,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
 
-            if (payloadSessionId != sessionId)
+            if (payloadSessionId != sessionId || traceEvent.Version < 1) // Version 1 added the value field.
             {
                 return;
             }

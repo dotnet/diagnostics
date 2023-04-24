@@ -204,6 +204,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void HandleUpDownCounterValue(TraceEvent obj)
         {
+            if (obj.Version < 1) // Version 1 added the value field.
+            {
+                return;
+            }
+
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
             //string meterVersion = (string)obj.PayloadValue(2);
