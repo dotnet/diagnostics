@@ -201,6 +201,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 return value switch
                 {
                     null => "",
+                    string s => s,
                     nint ni => GetStringValue(ni),
                     nuint nui => PrintPrefix ? $"0x{nui:x2}" : "{nui:x2}",
                     ulong ul => PrintPrefix ? $"0x{ul:x2}" : ul.ToString("x2"),

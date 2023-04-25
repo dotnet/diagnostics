@@ -29,11 +29,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             Console = console;
         }
 
-        public void SetAlignment(Align left)
+        public void SetAlignment(Align align)
         {
             for (int i = 0; i < Columns.Length; i++)
             {
-                Columns[i] = Columns[i].WithAlignment(left);
+                Columns[i] = Columns[i].WithAlignment(align);
             }
         }
 
