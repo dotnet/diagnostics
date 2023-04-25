@@ -21,30 +21,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
         public bool AlignLeft { get; set; }
 
-        public int ColumnCount => _columns.Length;
-
         public IConsoleService Console { get; }
 
-        public int TotalWidth => 1 * (_columns.Length - 1) + _columns.Sum(c => Math.Abs(c.Width));
+        public int TotalWidth => 1 * (Columns.Length - 1) + Columns.Sum(c => Math.Abs(c.Width));
 
-        private readonly Column[] _columns;
+        public Column[] Columns { get; set; }
 
         public Table(IConsoleService console, params Column[] columns)
         {
-            _columns = columns.ToArray();
+            Columns = columns.ToArray();
             Console = console;
         }
 
         public void WriteHeader(params string[] values)
         {
             // Increase column width if too small
-            for (int i = 0; i < _columns.Length && i < values.Length; i++)
+            for (int i = 0; i < Columns.Length && i < values.Length; i++)
             {
-                if (_columns.Length >= 0 && values[i].Length > _columns.Length)
+                if (Columns.Length >= 0 && values[i].Length > Columns.Length)
                 {
-                    if (_columns[i].Width != -1 && _columns[i].Width < values[i].Length)
+                    if (Columns[i].Width != -1 && Columns[i].Width < values[i].Length)
                     {
-                        _columns[i] = _columns[i].WithWidth(values[i].Length);
+                        Columns[i] = Columns[i].WithWidth(values[i].Length);
                     }
                 }
             }
@@ -65,8 +63,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     rowBuilder.Append(_spacing);
                 }
 
-                int width = i < _columns.Length ? _columns[i].Width : -1;
-                Align align = i < _columns.Length ? _columns[i].Alignment : Align.Left;
+                int width = i < Columns.Length ? Columns[i].Width : -1;
+                Align align = i < Columns.Length ? Columns[i].Alignment : Align.Left;
                 Append(headerCol.WithWidth(width).WithAlignment(align), rowBuilder, values[i]);
             }
 
@@ -97,7 +95,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     rowBuilder.Append(_spacing);
                 }
 
-                Column column = i < _columns.Length ? _columns[i] : ColumnKind.Text;
+                Column column = i < Columns.Length ? Columns[i] : ColumnKind.Text;
 
                 bool isColumnDml = Console.SupportsDml && column.Dml is not null;
                 if (isRowBuilderDml != isColumnDml)
