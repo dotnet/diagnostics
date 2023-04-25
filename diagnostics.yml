@@ -131,10 +131,12 @@ stages:
         strategy:
           matrix:
             Build_Debug:
+              _BuildOnly: true
               _BuildConfig: Debug
               _BuildArch: x64
               _PublishArtifacts: bin/Linux.x64.Debug
             Build_Release:
+              _BuildOnly: true
               _BuildConfig: Release
               _BuildArch: x64
               _PublishArtifacts: bin/Linux.x64.Release
