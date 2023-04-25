@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static Column? s_dumpDomain;
         private static Column? s_thread;
         private static Column? s_integerWithoutComma;
+        private static Column? s_humanReadable;
 
         private static int PointerLength => IntPtr.Size * 2;
 
@@ -28,6 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Column Integer => s_integer ??= new(Align.Right, 14, Formats.Integer);
         public static Column IntegerWithoutCommas => s_integerWithoutComma ??= new(Align.Right, 10, Formats.IntegerWithoutCommas);
         public static Column ByteCount => Integer;
+        public static Column HumanReadableSize => s_humanReadable ??= new(Align.Right, 12, Formats.HumanReadableSize);
         public static Column DumpObj => s_dumpObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpObj);
         public static Column DumpHeapMT => s_dumpHeapMT ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeapMT);
         public static Column DumpHeapSegment => s_dumpHeapSegment ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeapSegment);

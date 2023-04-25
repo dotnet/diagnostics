@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         internal Column WithDml(DmlFormat dml) => new(Alignment, Width, Format, dml);
         internal Column WithAlignment(Align align) => new(align, Width, Format, Dml);
 
-        public Column GetAppropriateWidth<T>(IEnumerable<T> values)
+        public Column GetAppropriateWidth<T>(IEnumerable<T> values, int min = -1)
         {
             int len = 0;
 
@@ -43,6 +43,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
 
             s_stringBuilderPool.Return(sb);
+
+            if (len < min)
+            {
+                len = min;
+            }
 
             return WithWidth(len);
         }

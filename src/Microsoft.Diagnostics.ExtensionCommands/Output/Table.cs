@@ -197,12 +197,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 rowBuilder.Append(_spacing);
             }
 
-            Column headerCol = s_headerColumn;
-            if (!Console.SupportsDml)
-            {
-                headerCol = headerCol.WithDml(null);
-            }
-
             for (int i = 0; i < values.Length; i++)
             {
                 if (i != 0)
@@ -210,9 +204,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     rowBuilder.Append(_spacing);
                 }
 
-                int width = i < Columns.Length ? Columns[i].Width : -1;
-                Align align = i < Columns.Length ? Columns[i].Alignment : Align.Left;
-                Append(headerCol.WithWidth(width).WithAlignment(align), rowBuilder, values[i]);
+                Column curr = i < Columns.Length ? Columns[i] : s_headerColumn;
+                if (Console.SupportsDml)
+                {
+                    curr = curr.WithDml(Dml.Bold);
+                }
+                else
+                {
+                    curr = curr.WithDml(null);
+                }
+
+                Append(curr, rowBuilder, values[i]);
             }
 
             if (writeSides)

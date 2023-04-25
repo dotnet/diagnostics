@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static IntegerFormat s_integerFormat;
         private static TypeNameFormat s_typeNameFormat;
         private static IntegerFormat s_integerWithoutCommaFormat;
+        private static HumanReadableFormat s_humanReadableFormat;
 
         static Formats()
         {
@@ -33,6 +34,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Format IntegerWithoutCommas => s_integerWithoutCommaFormat ??= new("");
         public static Format Text => s_text ??= new(true);
         public static Format TypeName => s_typeNameFormat ??= new();
+        public static Format HumanReadableSize => s_humanReadableFormat ??= new();
 
         private sealed class IntegerFormat : Format
         {
@@ -119,6 +121,34 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
                 TruncateStringBuilder(sb, maxLength, sb.Length - startLength, truncateBegin: true);
                 return sb.Length - startLength;
+            }
+        }
+
+        private sealed class HumanReadableFormat : Format
+        {
+            public override int FormatValue(StringBuilder sb, object value, int maxLength, bool truncateBegin)
+            {
+                string humanReadable = value switch
+                {
+                    null => null,
+                    int i => ((long)i).ConvertToHumanReadable(),
+                    uint ui => ((ulong)ui).ConvertToHumanReadable(),
+                    long l => l.ConvertToHumanReadable(),
+                    ulong ul => ul.ConvertToHumanReadable(),
+                    float f => ((double)f).ConvertToHumanReadable(),
+                    double d => d.ConvertToHumanReadable(),
+                    nuint nu => ((ulong)nu).ConvertToHumanReadable(),
+                    nint ni => ((long)ni).ConvertToHumanReadable(),
+                    string s => s,
+                    _ => throw new NotSupportedException($"Cannot convert '{value.GetType().FullName}' to a human readable size.")
+                };
+
+                if (!string.IsNullOrWhiteSpace(humanReadable))
+                {
+                    return base.FormatValue(sb, humanReadable, maxLength, truncateBegin);
+                }
+
+                return 0;
             }
         }
 
