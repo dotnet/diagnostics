@@ -31,6 +31,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             Console = console;
         }
 
+        public void SetAlignment(Align left)
+        {
+            for (int i = 0; i < Columns.Length; i++)
+            {
+                Columns[i] = Columns[i].WithAlignment(left);
+            }
+        }
+
         public virtual void WriteHeader(params string[] values)
         {
             IncreaseColumnWidth(values);

@@ -46,12 +46,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 formats.Insert(1, IntegerWithoutCommas);
             }
 
-            for (int i = 0; i < formats.Count; i++)
-            {
-                formats[i] = formats[i].WithAlignment(Align.Left);
-            }
-
             Table output = new(Console, formats.ToArray());
+            output.SetAlignment(Align.Left);
 
             // Write allocated
             WriteHeader(output, heaps, printFrozen);

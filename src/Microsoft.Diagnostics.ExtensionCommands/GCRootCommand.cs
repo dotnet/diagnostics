@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.Output.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -223,11 +222,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public static void PrintPath(IConsoleService console, RootCacheService rootCache, ClrHeap heap, GCRoot.ChainLink link)
         {
-            TableOutput objectOutput = new(console, (2, ""), (16, "x16"))
+            Table objectOutput = new(console, Text.WithWidth(2), DumpObj, TypeName, Text)
             {
-                AlignLeft = true,
                 Indent = new(' ', 10)
             };
+
+            objectOutput.SetAlignment(Align.Left);
 
             ulong prevObj = 0;
             while (link != null)
@@ -235,7 +235,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 bool isDependentHandleLink = rootCache.IsDependentHandleLink(prevObj, link.Object);
                 ClrObject obj = heap.GetObject(link.Object);
 
-                objectOutput.WriteRow("->", obj.IsValid ? new DmlDumpObj(obj) : obj.Address, obj.Type?.Name ?? "<unknown type>", (isDependentHandleLink ? " (dependent handle)" : ""));
+                objectOutput.WriteRow("->", obj, obj.Type, (isDependentHandleLink ? " (dependent handle)" : ""));
 
                 prevObj = link.Object;
                 link = link.Next;
