@@ -13,7 +13,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static Column? s_dumpObj;
         private static Column? s_integer;
         private static Column? s_dumpHeapMT;
-        private static Column? s_dumpHeapSegment;
         private static Column? s_listNearObj;
         private static Column? s_dumpDomain;
         private static Column? s_thread;
@@ -33,7 +32,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Column HumanReadableSize => s_humanReadable ??= new(Align.Right, 12, Formats.HumanReadableSize);
         public static Column DumpObj => s_dumpObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpObj);
         public static Column DumpHeap => s_dumpHeapMT ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeap);
-        public static Column DumpHeapSegment => s_dumpHeapSegment ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeapSegment);
         public static Column DumpDomain => s_dumpDomain ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpDomain);
         public static Column Thread => s_thread ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.Thread);
         public static Column ListNearObj => s_listNearObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.ListNearObj);

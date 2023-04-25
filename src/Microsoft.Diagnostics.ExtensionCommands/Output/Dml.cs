@@ -12,18 +12,42 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
     {
         private static DmlDumpObject s_dumpObj;
         private static DmlDumpHeap s_dumpHeap;
-        private static DmlDumpHeapSegment s_dumpHeapSegment;
         private static DmlBold s_bold;
         private static DmlListNearObj s_listNearObj;
         private static DmlDumpDomain s_dumpDomain;
         private static DmlThread s_thread;
 
+        /// <summary>
+        /// Runs !dumpobj on the given pointer or ClrObject.  If a ClrObject is invalid,
+        /// this will instead link to !verifyobj.
+        /// </summary>
         public static DmlFormat DumpObj => s_dumpObj ??= new();
+
+        /// <summary>
+        /// Marks the output in bold.
+        /// </summary>
         public static DmlFormat Bold => s_bold ??= new();
+
+        /// <summary>
+        /// Dumps the heap.  If given a ClrSegment, ClrSubHeap, or MemoryRange it will
+        /// just dump that particular section of the heap.
+        /// </summary>
         public static DmlFormat DumpHeap => s_dumpHeap ??= new();
-        public static DmlFormat DumpHeapSegment => s_dumpHeapSegment ??= new();
+
+        /// <summary>
+        /// Runs ListNearObj on the given address or ClrObject.
+        /// </summary>
         public static DmlFormat ListNearObj => s_listNearObj ??= new();
+
+        /// <summary>
+        /// Runs !dumpdomain on the given doman, additionally it will put the domain
+        /// name as the hover text.
+        /// </summary>
         public static DmlFormat DumpDomain => s_dumpDomain ??= new();
+
+        /// <summary>
+        /// Changes the debugger to the given thread.
+        /// </summary>
         public static DmlFormat Thread => s_thread ??= new();
 
         private sealed class DmlBold : DmlFormat
@@ -174,20 +198,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 }
 
                 return $"!listnearobj {value:x}";
-            }
-        }
-
-        private sealed class DmlDumpHeapSegment : DmlExec
-        {
-            protected override string GetCommand(string outputText, object value)
-            {
-                value = Format.Unwrap(value);
-                if (IsNullOrZeroValue(value, out string result))
-                {
-                    return result;
-                }
-
-                return $"!dumpheap -segment {value:x}";
             }
         }
 

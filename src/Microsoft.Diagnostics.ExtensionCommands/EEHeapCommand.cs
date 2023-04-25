@@ -448,10 +448,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine();
             ClrHeap heap = clrRuntime.Heap;
 
-            int sizeWidth = Math.Max(15, heap.Segments.Max(seg => FormatMemorySize(seg.CommittedMemory.Length).Length));
-            Column sizeColumn = Text.WithWidth(sizeWidth);
-
-            Table gcOutput = new(Console, DumpHeapSegment, Pointer, Pointer, Pointer, sizeColumn, sizeColumn);
+            Column sizeColumn = Text.GetAppropriateWidth(heap.Segments.Select(seg => FormatMemorySize(seg.CommittedMemory.Length)), max: 32);
+            Table gcOutput = new(Console, DumpHeap, Pointer, Pointer, Pointer, sizeColumn, sizeColumn);
 
             WriteDivider('=');
             Console.WriteLine($"Number of GC Heaps: {heap.SubHeaps.Length}");
