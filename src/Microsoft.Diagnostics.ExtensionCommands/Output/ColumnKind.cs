@@ -17,6 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static Column? s_listNearObj;
         private static Column? s_dumpDomain;
         private static Column? s_thread;
+        private static Column? s_integerWithoutComma;
 
         private static int PointerLength => IntPtr.Size * 2;
 
@@ -24,7 +25,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Column Text => s_text ??= new(Align.Left, -1, Formats.Text);
         public static Column HexValue => s_hexValue ??= new(Align.Right, PointerLength + 2, Formats.HexValue);
         public static Column HexOffset => s_hexOffset ??= new(Align.Right, 10, Formats.HexOffset);
-        public static Column Integer => s_integer ??= new(Align.Right, 14, Formats.IntegerWithCommas);
+        public static Column Integer => s_integer ??= new(Align.Right, 14, Formats.Integer);
+        public static Column IntegerWithoutCommas => s_integerWithoutComma ??= new(Align.Right, 10, Formats.IntegerWithoutCommas);
         public static Column ByteCount => Integer;
         public static Column DumpObj => s_dumpObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpObj);
         public static Column DumpHeapMT => s_dumpHeapMT ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeapMT);
