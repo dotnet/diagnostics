@@ -15,8 +15,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private readonly char _spacing = ' ';
         private static readonly Column s_headerColumn = new(Align.Center, -1, Formats.Text, Dml.Bold);
 
-        public string Divider { get; set; } = " ";
-
         public string Indent { get; set; } = "";
 
         public bool AlignLeft { get; set; }
@@ -26,6 +24,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public int TotalWidth => 1 * (Columns.Length - 1) + Columns.Sum(c => Math.Abs(c.Width));
 
         public Column[] Columns { get; set; }
+        public bool Border { get; internal set; }
 
         public Table(IConsoleService console, params Column[] columns)
         {
@@ -35,18 +34,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
         public void WriteHeader(params string[] values)
         {
-            // Increase column width if too small
-            for (int i = 0; i < Columns.Length && i < values.Length; i++)
-            {
-                if (Columns.Length >= 0 && values[i].Length > Columns.Length)
-                {
-                    if (Columns[i].Width != -1 && Columns[i].Width < values[i].Length)
-                    {
-                        Columns[i] = Columns[i].WithWidth(values[i].Length);
-                    }
-                }
-            }
+            IncreaseColumnWidth(values);
+            WriteFooter(values);
+        }
 
+        public void WriteFooter(params object[] values)
+        {
             StringBuilder rowBuilder = _stringBuilderPool.Rent();
             rowBuilder.Append(Indent);
 
@@ -79,6 +72,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
 
             _stringBuilderPool.Return(rowBuilder);
+        }
+
+        private void IncreaseColumnWidth(string[] values)
+        {
+            // Increase column width if too small
+            for (int i = 0; i < Columns.Length && i < values.Length; i++)
+            {
+                if (Columns.Length >= 0 && values[i].Length > Columns.Length)
+                {
+                    if (Columns[i].Width != -1 && Columns[i].Width < values[i].Length)
+                    {
+                        Columns[i] = Columns[i].WithWidth(values[i].Length);
+                    }
+                }
+            }
         }
 
         public void WriteRow(params object[] values)

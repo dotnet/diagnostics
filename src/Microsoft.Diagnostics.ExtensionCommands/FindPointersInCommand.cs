@@ -8,8 +8,8 @@ using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Interfaces;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -240,9 +240,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int nameLen = Math.Min(80, maxNameLen);
             nameLen = Math.Max(nameLen, truncatedName.Length);
 
-            TableOutput table = new(Console, (nameLen, ""), (12, "n0"), (12, "n0"), (12, "x"));
-            table.Divider = "   ";
-            table.WriteRowWithSpacing('-', nameColumn, "Unique", "Count", "RndPtr");
+            Table table = new(Console, TypeName.WithWidth(nameLen), Integer, Integer, Pointer)
+            {
+                Border = true
+            };
+
+            table.Columns[0] = table.Columns[0].WithAlignment(Align.Center);
+            table.WriteHeader(nameColumn, "Unique", "Count", "RndPtr");
+            table.Columns[0] = table.Columns[0].WithAlignment(Align.Left);
 
             IEnumerable<(string Name, int Count, int Unique, IEnumerable<ulong> Pointers)> items = truncate ? resolved.Take(multi) : resolved;
             foreach ((string Name, int Count, int Unique, IEnumerable<ulong> Pointers) in items)
@@ -255,7 +260,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 table.WriteRow(truncatedName, single, single);
             }
 
-            table.WriteRowWithSpacing('-', " [ TOTALS ] ", resolved.Sum(r => r.Unique), resolved.Sum(r => r.Count), "");
+            table.Columns[0] = table.Columns[0].WithAlignment(Align.Center);
+            table.WriteFooter("TOTALS", resolved.Sum(r => r.Unique), resolved.Sum(r => r.Count));
         }
 
         private static string FixTypeName(string typeName, HashSet<int> offsets)
