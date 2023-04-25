@@ -65,6 +65,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         {
             private const string UnknownTypeName = "Unknown";
 
+            public TypeNameFormat()
+                : base(canTruncate: true)
+            {
+            }
+
             public override int FormatValue(StringBuilder sb, object value, int maxLength, bool truncateBegin)
             {
                 int startLength = sb.Length;
@@ -110,7 +115,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     sb.Append(value);
                 }
 
-                TruncateStringBuilder(sb, maxLength, sb.Length - startLength, truncateBegin);
+                TruncateStringBuilder(sb, maxLength, sb.Length - startLength, truncateBegin: true);
                 return sb.Length - startLength;
             }
         }
