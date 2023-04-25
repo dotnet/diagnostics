@@ -108,6 +108,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     rowBuilder.Append(center, _spacing.Length);
                 }
 
+                if (Columns[i].Width < 0)
+                {
+                    break;
+                }
+
                 rowBuilder.Append(center, Columns[i].Width);
             }
 

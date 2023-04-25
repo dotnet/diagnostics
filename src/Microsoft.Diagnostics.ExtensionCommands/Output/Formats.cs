@@ -15,7 +15,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static HexValueFormat s_hexValueFormat;
         private static Format s_text;
         private static IntegerFormat s_integerFormat;
-        private static TypeNameFormat s_typeNameFormat;
+        private static TypeOrImageFormat s_typeNameFormat;
+        private static TypeOrImageFormat s_imageFormat;
         private static IntegerFormat s_integerWithoutCommaFormat;
         private static HumanReadableFormat s_humanReadableFormat;
         private static RangeFormat s_range;
@@ -33,7 +34,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Format Integer => s_integerFormat ??= new("n0");
         public static Format IntegerWithoutCommas => s_integerWithoutCommaFormat ??= new("");
         public static Format Text => s_text ??= new(true);
-        public static Format TypeName => s_typeNameFormat ??= new();
+        public static Format TypeName => s_typeNameFormat ??= new(type: true);
+        public static Format Image => s_imageFormat ??= new(type: false);
         public static Format HumanReadableSize => s_humanReadableFormat ??= new();
         public static Format Range => s_range ??= new();
 
@@ -66,58 +68,71 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
         }
 
-        private sealed class TypeNameFormat : Format
+        /// <summary>
+        /// Unlike plain text, this Format always truncates the beginning of the type name or image path,
+        /// as the most important part is at the end.
+        /// </summary>
+        private sealed class TypeOrImageFormat : Format
         {
             private const string UnknownTypeName = "Unknown";
+            private readonly bool _type;
 
-            public TypeNameFormat()
+            public TypeOrImageFormat(bool type)
                 : base(canTruncate: true)
             {
+                _type = type;
             }
 
             public override int FormatValue(StringBuilder sb, object value, int maxLength, bool truncateBegin)
             {
                 int startLength = sb.Length;
 
-                if (value is null)
+                if (!_type)
                 {
-                    sb.Append(UnknownTypeName);
-                }
-                else if (value is ClrType type)
-                {
-                    string typeName = type.Name;
-                    if (!string.IsNullOrWhiteSpace(typeName))
-                    {
-                        sb.Append(typeName);
-                    }
-                    else
-                    {
-                        string module = type.Module?.Name;
-                        if (!string.IsNullOrWhiteSpace(module))
-                        {
-                            try
-                            {
-                                module = System.IO.Path.GetFileNameWithoutExtension(module);
-                                sb.Append(module);
-                                sb.Append('!');
-                            }
-                            catch (ArgumentException)
-                            {
-                            }
-                        }
-
-                        sb.Append(UnknownTypeName);
-                        if (type.MethodTable != 0)
-                        {
-                            sb.Append($" (MethodTable: ");
-                            sb.AppendFormat("{0:x12}", type.MethodTable);
-                            sb.Append(')');
-                        }
-                    }
+                    sb.Append(value);
                 }
                 else
                 {
-                    sb.Append(value);
+                    if (value is null)
+                    {
+                        sb.Append(UnknownTypeName);
+                    }
+                    else if (value is ClrType type)
+                    {
+                        string typeName = type.Name;
+                        if (!string.IsNullOrWhiteSpace(typeName))
+                        {
+                            sb.Append(typeName);
+                        }
+                        else
+                        {
+                            string module = type.Module?.Name;
+                            if (!string.IsNullOrWhiteSpace(module))
+                            {
+                                try
+                                {
+                                    module = System.IO.Path.GetFileNameWithoutExtension(module);
+                                    sb.Append(module);
+                                    sb.Append('!');
+                                }
+                                catch (ArgumentException)
+                                {
+                                }
+                            }
+
+                            sb.Append(UnknownTypeName);
+                            if (type.MethodTable != 0)
+                            {
+                                sb.Append($" (MethodTable: ");
+                                sb.AppendFormat("{0:x12}", type.MethodTable);
+                                sb.Append(')');
+                            }
+                        }
+                    }
+                    else
+                    {
+                        sb.Append(value);
+                    }
                 }
 
                 TruncateStringBuilder(sb, maxLength, sb.Length - startLength, truncateBegin: true);

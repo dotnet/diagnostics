@@ -38,6 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Column Thread => s_thread ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.Thread);
         public static Column ListNearObj => s_listNearObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.ListNearObj);
         public static Column TypeName => s_text ??= new(Align.Left, -1, Formats.TypeName);
+        public static Column Image => s_text ??= new(Align.Left, -1, Formats.Image);
         public static Column Range => s_range ??= new(Align.Left, PointerLength * 2 + 1, Formats.Range);
     }
 }

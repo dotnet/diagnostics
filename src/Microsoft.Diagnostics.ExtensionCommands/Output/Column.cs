@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         internal Column WithDml(DmlFormat dml) => new(Alignment, Width, Format, dml);
         internal Column WithAlignment(Align align) => new(align, Width, Format, Dml);
 
-        public Column GetAppropriateWidth<T>(IEnumerable<T> values, int min = -1)
+        public Column GetAppropriateWidth<T>(IEnumerable<T> values, int min = -1, int max = -1)
         {
             int len = 0;
 
@@ -47,6 +47,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             if (len < min)
             {
                 len = min;
+            }
+
+            if (max > 0 && len > max)
+            {
+                len = max;
             }
 
             return WithWidth(len);
