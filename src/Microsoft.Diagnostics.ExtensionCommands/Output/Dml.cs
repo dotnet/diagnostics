@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 if (altText is not null)
                 {
                     sb.Append(" alt=\"");
-                    sb.Append(altText);
+                    sb.Append(DmlEscape(altText));
                     sb.Append('"');
                 }
 
