@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -75,8 +76,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             Console.WriteLine($"OS Thread Id: 0x{CurrentThread.ThreadId:x} ({CurrentThread.ThreadIndex})");
 
-            TableOutput output = new(Console, (16, "x12"), (16, "x12"));
-            output.WriteRow("SP/REG", "Object", "Name");
+            Table output = new(Console, Pointer, DumpObj, TypeName);
+            output.WriteHeader("SP/REG", "Object", "Name");
 
             int regCount = ThreadService.Registers.Count();
             foreach ((ulong address, ClrObject obj) in EnumerateValidObjectsWithinRange(stack).OrderBy(r => r.StackAddress))
@@ -95,11 +96,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         registerName = $"reg{address}";
                     }
 
-                    output.WriteRow(registerName, obj.Address, obj.Type?.Name);
+                    output.WriteRow(registerName, obj, obj.Type);
                 }
                 else
                 {
-                    output.WriteRow(address, obj.Address, obj.Type?.Name);
+                    output.WriteRow(address, obj, obj.Type);
                 }
             }
         }
