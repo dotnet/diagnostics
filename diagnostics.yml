@@ -112,12 +112,10 @@ stages:
               _PublishArtifacts: bin/Windows_NT.x86.Release
             ${{ if ne(variables['System.TeamProject'], 'public') }}:
               Build_Release_arm:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm
                 _PublishArtifacts: bin/Windows_NT.arm.Release
               Build_Release_arm64:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Windows_NT.arm64.Release
@@ -128,15 +126,14 @@ stages:
         osGroup: Linux
         dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
         requiresCapPtraceContainer: true
+        buildAndSkipTest: true
         strategy:
           matrix:
             Build_Debug:
-              _BuildOnly: true
               _BuildConfig: Debug
               _BuildArch: x64
               _PublishArtifacts: bin/Linux.x64.Debug
             Build_Release:
-              _BuildOnly: true
               _BuildConfig: Release
               _BuildArch: x64
               _PublishArtifacts: bin/Linux.x64.Release
