@@ -7,7 +7,7 @@ using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.Output.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                TableOutput output = new(Console, (17, ""));
+                Table output = new(Console, Text.WithWidth(17), Text);
                 output.WriteRow("CPU utilization:", $"{threadPool.CpuUtilization}%");
                 output.WriteRow("Workers Total:", threadPool.ActiveWorkerThreads + threadPool.IdleWorkerThreads + threadPool.RetiredWorkerThreads);
                 output.WriteRow("Workers Running:", threadPool.ActiveWorkerThreads);
@@ -73,10 +73,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 bool usingPortableCompletionPorts = threadPool.Portable && (usePortableIOField is null || usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
                 if (!usingPortableCompletionPorts)
                 {
-                    output = new(Console, (17, ""));
+                    output.Columns[0] = output.Columns[0].WithWidth(19);
                     output.WriteRow("Completion Total:", threadPool.TotalCompletionPorts);
                     output.WriteRow("Completion Free:", threadPool.FreeCompletionPorts);
                     output.WriteRow("Completion MaxFree:", threadPool.MaxFreeCompletionPorts);
+
+                    output.Columns[0] = output.Columns[0].WithWidth(25);
                     output.WriteRow("Completion Current Limit:", threadPool.CompletionPortCurrentLimit);
                     output.WriteRow("Completion Min Limit:", threadPool.MinCompletionPorts);
                     output.WriteRow("Completion Max Limit:", threadPool.MaxCompletionPorts);
@@ -88,10 +90,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     HillClimbingLogEntry[] hcl = threadPool.EnumerateHillClimbingLog().ToArray();
                     if (hcl.Length > 0)
                     {
-                        output = new(Console, (10, ""), (19, ""), (12, "n0"), (12, "n0"));
+                        output = new(Console, Text.WithWidth(10).WithAlignment(Align.Right), Column.ForEnum<HillClimbingTransition>(), Integer, Integer, Text.WithAlignment(Align.Right));
 
                         Console.WriteLine("Hill Climbing Log:");
-                        output.WriteRow("Time", "Transition", "#New Threads", "#Samples", "Throughput");
+                        output.WriteHeader("Time", "Transition", "#New Threads", "#Samples", "Throughput");
 
                         int end = hcl.Last().TickCount;
                         foreach (HillClimbingLogEntry entry in hcl)
@@ -114,7 +116,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void DumpWorkItems()
         {
-            TableOutput output = null;
+            Table output = null;
 
             ClrType workQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
             ClrType workStealingQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue+WorkStealingQueue");
@@ -179,19 +181,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private void WriteEntry(ref TableOutput output, ClrObject entry, bool isHighPri)
+        private void WriteEntry(ref Table output, ClrObject entry, bool isHighPri)
         {
             if (output is null)
             {
-                output = new(Console, (17, ""), (16, "x12"))
-                {
-                    AlignLeft = true,
-                };
-
-                output.WriteRow("Queue", "Object", "Type");
+                output = new(Console, Text.WithWidth(17), DumpObj, TypeName);
+                output.SetAlignment(Align.Left);
+                output.WriteHeader("Queue", "Object", "Type");
             }
 
-            output.WriteRow(isHighPri ? "[Global high-pri]" : "[Global]", new DmlDumpObj(entry), entry.Type?.Name);
+            output.WriteRow(isHighPri ? "[Global high-pri]" : "[Global]", entry, entry.Type);
             if (entry.IsDelegate)
             {
                 ClrDelegate del = entry.AsDelegate();
@@ -231,11 +230,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         }
                     }
 
-                    if (!curr.TryReadObjectField("_nextSegment", out curr))
+                    if (!curr.TryReadObjectField("_nextSegment", out ClrObject next))
                     {
-                        Console.WriteLineError($"Error:  Type '{slots.Type?.Name}' does not contain a '_nextSegment' field.");
+                        if (curr.Type is not null && curr.Type.GetFieldByName("_nextSegment") == null)
+                        {
+                            Console.WriteLineError($"Error:  Type '{curr.Type?.Name}' does not contain a '_nextSegment' field.");
+                        }
+
                         break;
                     }
+
+                    curr = next;
                 }
             }
         }

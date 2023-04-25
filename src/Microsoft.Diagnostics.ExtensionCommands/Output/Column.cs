@@ -25,11 +25,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             Dml = dml;
         }
 
-        public Column WithWidth(int width) => new(Alignment, width, Format, Dml);
-        internal Column WithDml(DmlFormat dml) => new(Alignment, Width, Format, dml);
-        internal Column WithAlignment(Align align) => new(align, Width, Format, Dml);
+        public readonly Column WithWidth(int width) => new(Alignment, width, Format, Dml);
+        internal readonly Column WithDml(DmlFormat dml) => new(Alignment, Width, Format, dml);
+        internal readonly Column WithAlignment(Align align) => new(align, Width, Format, Dml);
 
-        public Column GetAppropriateWidth<T>(IEnumerable<T> values, int min = -1, int max = -1)
+        public readonly Column GetAppropriateWidth<T>(IEnumerable<T> values, int min = -1, int max = -1)
         {
             int len = 0;
 
