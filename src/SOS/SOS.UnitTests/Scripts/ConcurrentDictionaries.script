@@ -21,7 +21,7 @@ VERIFY: is not referencing an object
 # Checks on ConcurrentDictionary<int, string[]>
 SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
 SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, System.String\[\]>[^+]<POUT>
-EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+EXTCOMMAND: dcd <POUT>^.*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 2 items
 VERIFY: Key: 2
 EXTCOMMAND: dumparray <POUT>Key: 1\s+Value: dumparray (<HEXVAL>)<POUT>
@@ -49,7 +49,7 @@ VERIFY: Key: "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
 # Checks on ConcurrentDictionary<DumpSampleStruct, DumpSampleClass>
 SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
 SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<DotnetDumpCommands\.Program\+DumpSampleStruct, DotnetDumpCommands\.Program\+DumpSampleClass>[^+]<POUT>
-EXTCOMMAND: dcd <POUT>^(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+EXTCOMMAND: dcd <POUT>^.*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 2 items
 VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: null
 VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: dumpobj <HEXVAL>
