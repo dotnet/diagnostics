@@ -11,6 +11,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
     {
         private static DmlDumpObject s_dumpObj;
         private static DmlDumpHeapMT s_dumpHeapMT;
+        private static DmlDumpHeapSegment s_dumpHeapSegment;
         private static DmlBold s_bold;
         private static DmlListNearObj s_listNearObj;
         private static DmlDumpDomain s_dumpDomain;
@@ -18,6 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static DmlFormat DumpObj => s_dumpObj ??= new();
         public static DmlFormat Bold => s_bold ??= new();
         public static DmlFormat DumpHeapMT => s_dumpHeapMT ??= new();
+        public static DmlFormat DumpHeapSegment => s_dumpHeapSegment ??= new();
         public static DmlFormat ListNearObj => s_listNearObj ??= new();
         public static DmlFormat DumpDomain => s_dumpDomain ??= new();
 
@@ -62,7 +64,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             protected abstract string GetCommand(string outputText, object value);
             protected virtual string GetAltText(string outputText, object value) => null;
 
-            protected static bool HandleNullOrZeroCommand(object obj, out string value)
+            protected static bool IsNullOrZeroValue(object obj, out string value)
             {
                 if (obj is null)
                 {
@@ -117,7 +119,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 }
 
                 value = Format.Unwrap(value);
-                if (HandleNullOrZeroCommand(value, out string result))
+                if (IsNullOrZeroValue(value, out string result))
                 {
                     return result;
                 }
@@ -146,7 +148,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             protected override string GetCommand(string outputText, object value)
             {
                 value = Format.Unwrap(value);
-                if (HandleNullOrZeroCommand(value, out string result))
+                if (IsNullOrZeroValue(value, out string result))
                 {
                     return result;
                 }
@@ -155,12 +157,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
         }
 
+        private sealed class DmlDumpHeapSegment : DmlExec
+        {
+            protected override string GetCommand(string outputText, object value)
+            {
+                value = Format.Unwrap(value);
+                if (IsNullOrZeroValue(value, out string result))
+                {
+                    return result;
+                }
+
+                return $"!dumpheap -segment {value:x}";
+            }
+        }
+
         private sealed class DmlDumpHeapMT : DmlExec
         {
             protected override string GetCommand(string outputText, object value)
             {
                 value = Format.Unwrap(value);
-                if (HandleNullOrZeroCommand(value, out string result))
+                if (IsNullOrZeroValue(value, out string result))
                 {
                     return result;
                 }
@@ -199,7 +215,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             protected override string GetCommand(string outputText, object value)
             {
                 value = Format.Unwrap(value);
-                if (HandleNullOrZeroCommand(value, out string result))
+                if (IsNullOrZeroValue(value, out string result))
                 {
                     return result;
                 }
