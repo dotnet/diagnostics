@@ -344,7 +344,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 output.WriteRow(which, obj, size, obj.Type);
 
                 Console.Write($"Error Detected: {VerifyHeapCommand.GetObjectCorruptionMessage(MemoryService, heap, corruption)} ");
-                Console.WriteDmlExec("[verify heap]", $"!verifyheap -segment {segment.Address:X}");
+                if (Console.SupportsDml)
+                {
+                    Console.WriteDmlExec("[verify heap]", $"!verifyheap -segment {segment.Address:X}");
+                }
+
                 Console.WriteLine();
             }
 
