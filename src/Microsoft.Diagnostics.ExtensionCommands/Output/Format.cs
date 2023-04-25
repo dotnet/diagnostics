@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 ClrAppDomain domain => domain.Address,
                 ClrType type => type.MethodTable,
                 ClrSegment seg => seg.Address,
+                ClrThread thread => thread.Address,
                 _ => value
             };
         }

@@ -15,6 +15,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static DmlBold s_bold;
         private static DmlListNearObj s_listNearObj;
         private static DmlDumpDomain s_dumpDomain;
+        private static DmlThread s_thread;
 
         public static DmlFormat DumpObj => s_dumpObj ??= new();
         public static DmlFormat Bold => s_bold ??= new();
@@ -22,6 +23,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static DmlFormat DumpHeapSegment => s_dumpHeapSegment ??= new();
         public static DmlFormat ListNearObj => s_listNearObj ??= new();
         public static DmlFormat DumpDomain => s_dumpDomain ??= new();
+        public static DmlFormat Thread => s_thread ??= new();
 
         private sealed class DmlBold : DmlFormat
         {
@@ -105,7 +107,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 ulVal = 0;
                 return false;
             }
+        }
 
+        private sealed class DmlThread : DmlExec
+        {
+            protected override string GetCommand(string outputText, object value)
+            {
+                if (value is uint id)
+                {
+                    return $"~~[{id:x}]s";
+                }
+
+                if (value is ClrThread thread)
+                {
+                    return $"~~[{thread.OSThreadId:x}]s";
+                }
+
+                return null;
+            }
         }
 
         private class DmlDumpObject : DmlExec

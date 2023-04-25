@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             thinLockOutput.WriteHeader("Object", "Thread", "OSId", "Recursion");
                         }
 
-                        thinLockOutput.WriteRow(obj, thinLock.Thread?.Address ?? 0, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
+                        thinLockOutput.WriteRow(obj, thinLock.Thread, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
                     }
 
                     continue;
