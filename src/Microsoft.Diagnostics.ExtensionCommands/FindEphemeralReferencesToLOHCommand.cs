@@ -105,14 +105,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.WriteLine();
                 }
             }
-
-            foreach ((ClrObject From, ClrObject To) item in ephToLoh)
-            {
-                if (lohToEph.Any(r => item.To.Address == r.From.Address))
-                {
-                    Console.WriteLine("error!");
-                }
-            }
         }
 
         private IEnumerable<(ClrObject From, ClrObject To)> FindEphemeralToLOH()
