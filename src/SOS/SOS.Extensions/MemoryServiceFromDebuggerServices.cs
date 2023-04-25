@@ -59,6 +59,8 @@ namespace SOS.Extensions
             HResult hr = _debuggerServices.ReadVirtual(address, buffer, out bytesRead);
             if (hr != HResult.S_OK)
             {
+                CheckCancellation(hr);
+
                 bytesRead = 0;
             }
             return bytesRead > 0;
@@ -76,11 +78,24 @@ namespace SOS.Extensions
             HResult hr = _debuggerServices.WriteVirtual(address, buffer, out bytesWritten);
             if (hr != HResult.S_OK)
             {
+                CheckCancellation(hr);
+
                 bytesWritten = 0;
             }
             return bytesWritten > 0;
         }
 
         #endregion
+
+        private static void CheckCancellation(HResult hr)
+        {
+            unchecked
+            {
+                if (hr == (int)0xd000013a)
+                {
+                    throw new OperationCanceledException();
+                }
+            }
+        }
     }
 }
