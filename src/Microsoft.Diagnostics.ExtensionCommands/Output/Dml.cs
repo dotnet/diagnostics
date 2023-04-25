@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.Diagnostics.Runtime;
 
@@ -10,7 +11,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
     internal static class Dml
     {
         private static DmlDumpObject s_dumpObj;
-        private static DmlDumpHeapMT s_dumpHeapMT;
+        private static DmlDumpHeap s_dumpHeap;
         private static DmlDumpHeapSegment s_dumpHeapSegment;
         private static DmlBold s_bold;
         private static DmlListNearObj s_listNearObj;
@@ -19,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
         public static DmlFormat DumpObj => s_dumpObj ??= new();
         public static DmlFormat Bold => s_bold ??= new();
-        public static DmlFormat DumpHeapMT => s_dumpHeapMT ??= new();
+        public static DmlFormat DumpHeap => s_dumpHeap ??= new();
         public static DmlFormat DumpHeapSegment => s_dumpHeapSegment ??= new();
         public static DmlFormat ListNearObj => s_listNearObj ??= new();
         public static DmlFormat DumpDomain => s_dumpDomain ??= new();
@@ -190,17 +191,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
         }
 
-        private sealed class DmlDumpHeapMT : DmlExec
+        private sealed class DmlDumpHeap : DmlExec
         {
             protected override string GetCommand(string outputText, object value)
             {
-                value = Format.Unwrap(value);
-                if (IsNullOrZeroValue(value, out string result))
+                if (value is null)
                 {
-                    return result;
+                    return null;
                 }
 
-                if (TryGetPointerValue(value, out ulong mtOrTh))
+                if (TryGetMethodTableOrTypeHandle(value, out ulong mtOrTh))
                 {
                     // !dumpheap will only work on a method table
                     if ((mtOrTh & 2) == 2)
@@ -213,9 +213,49 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                         // Clear mark bit
                         value = mtOrTh & ~1ul;
                     }
+
+                    if (mtOrTh == 0)
+                    {
+                        return null;
+                    }
+
+                    return $"!dumpheap -mt {value:x}";
                 }
 
-                return $"!dumpheap -mt {value:x}";
+                if (value is ClrSegment seg)
+                {
+                    return $"!dumpheap -segment {seg.Address:x}";
+                }
+
+                if (value is MemoryRange range)
+                {
+                    return $"!dumpheap {range.Start:x} {range.End:x}";
+                }
+
+                if (value is ClrSubHeap subHeap)
+                {
+                    return $"!dumpheap -heap {subHeap.Index}";
+                }
+
+                Debug.Fail($"Unknown cannot use type {value.GetType().FullName} with DumpObj");
+                return null;
+            }
+
+            private static bool TryGetMethodTableOrTypeHandle(object value, out ulong mtOrTh)
+            {
+                if (TryGetPointerValue(value, out mtOrTh))
+                {
+                    return true;
+                }
+
+                if (value is ClrType type)
+                {
+                    mtOrTh = type.MethodTable;
+                    return true;
+                }
+
+                mtOrTh = 0;
+                return false;
             }
 
             protected override string GetAltText(string outputText, object value)

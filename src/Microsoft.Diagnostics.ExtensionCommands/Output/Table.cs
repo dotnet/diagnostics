@@ -17,8 +17,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
         public string Indent { get; set; } = "";
 
-        public bool AlignLeft { get; set; }
-
         public IConsoleService Console { get; }
 
         public int TotalWidth => 1 * (Columns.Length - 1) + Columns.Sum(c => Math.Abs(c.Width));

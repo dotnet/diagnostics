@@ -32,6 +32,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 ClrType type => type.MethodTable,
                 ClrSegment seg => seg.Address,
                 ClrThread thread => thread.Address,
+                ClrSubHeap subHeap => subHeap.Index,
                 _ => value
             };
         }

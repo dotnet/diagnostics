@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            Table output = new(Console, DumpObj, DumpHeapMT, ByteCount, Column.ForEnum<Generation>(), Column.ForEnum<Generation>(), ByteCount, Integer, TypeName);
+            Table output = new(Console, DumpObj, DumpHeap, ByteCount, Column.ForEnum<Generation>(), Column.ForEnum<Generation>(), ByteCount, Integer, TypeName);
 
             var generationGroup = from item in FindObjectsWithEphemeralReferences()
                                   group item by (item.ObjectGeneration, item.ReferenceGeneration) into g

@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace Microsoft.Diagnostics.ExtensionCommands.Output
 {
@@ -19,6 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static TypeNameFormat s_typeNameFormat;
         private static IntegerFormat s_integerWithoutCommaFormat;
         private static HumanReadableFormat s_humanReadableFormat;
+        private static RangeFormat s_range;
 
         static Formats()
         {
@@ -35,6 +35,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Format Text => s_text ??= new(true);
         public static Format TypeName => s_typeNameFormat ??= new();
         public static Format HumanReadableSize => s_humanReadableFormat ??= new();
+        public static Format Range => s_range ??= new();
 
         private sealed class IntegerFormat : Format
         {
@@ -203,6 +204,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 TruncateStringBuilder(sb, maxLength, sb.Length - startLength, truncateBegin);
 
                 return sb.Length - startLength;
+            }
+        }
+
+        private sealed class RangeFormat : Format
+        {
+            public override int FormatValue(StringBuilder sb, object value, int maxLength, bool truncateBegin)
+            {
+                int startLength = sb.Length;
+                if (value is MemoryRange range)
+                {
+                    sb.AppendFormat("{0:x}", range.Start);
+                    sb.Append('-');
+                    sb.AppendFormat("{0:x}", range.End);
+
+                    return sb.Length - startLength;
+                }
+
+                return base.FormatValue(sb, value, maxLength, truncateBegin);
             }
         }
     }

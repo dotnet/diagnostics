@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (output is null)
                 {
-                    output = new(Console, DumpObj, DumpDomain, DumpHeapMT, TypeName);
+                    output = new(Console, DumpObj, DumpDomain, DumpHeap, TypeName);
                     output.WriteHeader("Address", "Domain", "MT", "Type Name");
                 }
 

@@ -73,10 +73,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ulong PrintOneRuntime(ClrRuntime clrRuntime)
         {
             StringBuilder stringBuilder = null;
-            Table output = new(Console, Text.WithWidth(21), Pointer.WithWidth(-1))
-            {
-                AlignLeft = true
-            };
+            Table output = new(Console, Text.WithWidth(21), Pointer.WithWidth(-1));
+            output.SetAlignment(Align.Left);
 
             HashSet<ulong> seen = new();
 

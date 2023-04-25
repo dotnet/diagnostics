@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     if (objectTable is null)
                     {
-                        objectTable = new(Console, ColumnKind.DumpObj, ColumnKind.DumpHeapMT, ColumnKind.ByteCount, ColumnKind.Text);
+                        objectTable = new(Console, ColumnKind.DumpObj, ColumnKind.DumpHeap, ColumnKind.ByteCount, ColumnKind.Text);
                         if (displayKind is DisplayKind.Normal or DisplayKind.Strings)
                         {
                             objectTable.WriteHeader("Address", "MT", "Size");
@@ -216,7 +216,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Column sizeColumn = ColumnKind.ByteCount;
                     sizeColumn = sizeColumn.GetAppropriateWidth(stats.Values.Select(ts => ts.Size));
 
-                    Table statsTable = new(Console, ColumnKind.DumpHeapMT, countColumn, sizeColumn, ColumnKind.TypeName);
+                    Table statsTable = new(Console, ColumnKind.DumpHeap, countColumn, sizeColumn, ColumnKind.TypeName);
 
                     Console.WriteLine("Statistics:");
                     statsTable.WriteHeader("MT", "Count", "TotalSize", "Class Name");
