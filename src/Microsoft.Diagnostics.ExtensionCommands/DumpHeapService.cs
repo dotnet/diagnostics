@@ -210,15 +210,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         Console.WriteLine();
                     }
 
+                    Console.WriteLine("Statistics:");
+
                     Column countColumn = ColumnKind.Integer;
                     countColumn = countColumn.GetAppropriateWidth(stats.Values.Select(ts => ts.Count));
 
                     Column sizeColumn = ColumnKind.ByteCount;
                     sizeColumn = sizeColumn.GetAppropriateWidth(stats.Values.Select(ts => ts.Size));
 
-                    Table statsTable = new(Console, ColumnKind.DumpHeap, countColumn, sizeColumn, ColumnKind.TypeName);
-
-                    Console.WriteLine("Statistics:");
+                    Column methodTableColumn = ColumnKind.DumpHeap.GetAppropriateWidth(stats.Keys);
+                    Table statsTable = new(Console, methodTableColumn, countColumn, sizeColumn, ColumnKind.TypeName);
                     statsTable.WriteHeader("MT", "Count", "TotalSize", "Class Name");
 
                     var statsSorted = from item in stats
