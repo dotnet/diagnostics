@@ -6,7 +6,7 @@ using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.Output.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            TableOutput output = new(Console, (16, "x12"), (16, "x12"), (10, "n0"), (8, ""), (8, ""), (12, "n0"), (12, "n0"));
+            Table output = new(Console, DumpObj, DumpHeapMT, ByteCount, Column.ForEnum<Generation>(), Column.ForEnum<Generation>(), ByteCount, Integer, TypeName);
 
             var generationGroup = from item in FindObjectsWithEphemeralReferences()
                                   group item by (item.ObjectGeneration, item.ReferenceGeneration) into g
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     Console.WriteLine($"References from {objGen} to {refGen}:");
                     Console.WriteLine();
-                    output.WriteRow("Object", "MethodTable", "Size", "Obj Gen", "Ref Gen", "Obj Count", "Obj Size", "Type");
+                    output.WriteHeader("Object", "MethodTable", "Size", "Obj Gen", "Ref Gen", "Obj Count", "Obj Size", "Type");
                 }
 
                 foreach (EphemeralRefCount erc in item.Objects)
@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
                     objCount++;
-                    output.WriteRow(new DmlDumpObj(erc.Object), erc.Object.Type.MethodTable, erc.Object.Size, erc.ObjectGeneration, erc.ReferenceGeneration, erc.Count, erc.Size, erc.Object.Type.Name);
+                    output.WriteRow(erc.Object, erc.Object.Type, erc.Object.Size, erc.ObjectGeneration, erc.ReferenceGeneration, erc.Count, erc.Size, erc.Object.Type);
                 }
             }
 
