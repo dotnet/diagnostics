@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Text;
 using Microsoft.Diagnostics.Runtime;
 
@@ -12,11 +13,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static DmlDumpHeapMT s_dumpHeapMT;
         private static DmlBold s_bold;
         private static DmlListNearObj s_listNearObj;
+        private static DmlDumpDomain s_dumpDomain;
 
         public static DmlFormat DumpObj => s_dumpObj ??= new();
         public static DmlFormat Bold => s_bold ??= new();
         public static DmlFormat DumpHeapMT => s_dumpHeapMT ??= new();
         public static DmlFormat ListNearObj => s_listNearObj ??= new();
+        public static DmlFormat DumpDomain => s_dumpDomain ??= new();
 
         private sealed class DmlBold : DmlFormat
         {
@@ -35,6 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 string command = GetCommand(outputText, value);
                 if (string.IsNullOrWhiteSpace(command))
                 {
+                    sb.Append(DmlEscape(outputText));
                     return;
                 }
 
@@ -57,6 +61,49 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 
             protected abstract string GetCommand(string outputText, object value);
             protected virtual string GetAltText(string outputText, object value) => null;
+
+            protected static bool HandleNullOrZeroCommand(object obj, out string value)
+            {
+                if (obj is null)
+                {
+                    value = null;
+                    return true;
+                }
+                else if (TryGetPointerValue(obj, out ulong ul) && ul == 0)
+                {
+                    value = "0";
+                    return true;
+                }
+
+                value = null;
+                return false;
+            }
+
+            protected static bool TryGetPointerValue(object value, out ulong ulVal)
+            {
+                if (value is ulong ul)
+                {
+                    ulVal = ul;
+                    return true;
+                }
+                else if (value is nint ni)
+                {
+                    unchecked
+                    {
+                        ulVal = (ulong)ni;
+                    }
+                    return true;
+                }
+                else if (value is nuint nuint)
+                {
+                    ulVal = nuint;
+                    return true;
+                }
+
+                ulVal = 0;
+                return false;
+            }
+
         }
 
         private class DmlDumpObject : DmlExec
@@ -70,13 +117,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 }
 
                 value = Format.Unwrap(value);
-                if (value is null)
+                if (HandleNullOrZeroCommand(value, out string result))
                 {
-                    return null;
-                }
-                else if (value is ulong ul && ul == 0ul)
-                {
-                    return "0";
+                    return result;
                 }
 
                 return isValid ? $"!dumpobj /d {value:x}" : $"!verifyobj {value:x}";
@@ -103,9 +146,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             protected override string GetCommand(string outputText, object value)
             {
                 value = Format.Unwrap(value);
-                if (value is null || (value is ulong ul && ul == 0ul))
+                if (HandleNullOrZeroCommand(value, out string result))
                 {
-                    return null;
+                    return result;
                 }
 
                 return $"!listnearobj {value:x}";
@@ -117,9 +160,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             protected override string GetCommand(string outputText, object value)
             {
                 value = Format.Unwrap(value);
-                if (value is null || (value is ulong ul && ul == 0ul))
+                if (HandleNullOrZeroCommand(value, out string result))
                 {
-                    return null;
+                    return result;
+                }
+
+                if (TryGetPointerValue(value, out ulong mtOrTh))
+                {
+                    // !dumpheap will only work on a method table
+                    if ((mtOrTh & 2) == 2)
+                    {
+                        // Can't use typehandles
+                        return null;
+                    }
+                    else if ((mtOrTh & 1) == 1)
+                    {
+                        // Clear mark bit
+                        value = mtOrTh & ~1ul;
+                    }
                 }
 
                 return $"!dumpheap -mt {value:x}";
@@ -130,6 +188,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 if (value is ClrType type)
                 {
                     return type.Name;
+                }
+
+                return null;
+            }
+        }
+
+        private sealed class DmlDumpDomain : DmlExec
+        {
+            protected override string GetCommand(string outputText, object value)
+            {
+                value = Format.Unwrap(value);
+                if (HandleNullOrZeroCommand(value, out string result))
+                {
+                    return result;
+                }
+
+                return $"!dumpdomain /d {value:x}";
+            }
+
+            protected override string GetAltText(string outputText, object value)
+            {
+                if (value is ClrAppDomain domain)
+                {
+                    return domain.Name;
                 }
 
                 return null;

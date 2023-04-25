@@ -14,6 +14,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static Column? s_integer;
         private static Column? s_dumpHeapMT;
         private static Column? s_listNearObj;
+        private static Column? s_dumpDomain;
 
         private static int PointerLength => IntPtr.Size * 2;
 
@@ -25,6 +26,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public static Column ByteCount => Integer;
         public static Column DumpObj => s_dumpObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpObj);
         public static Column DumpHeapMT => s_dumpHeapMT ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpHeapMT);
+        public static Column DumpDomain => s_dumpDomain ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.DumpDomain);
         public static Column ListNearObj => s_listNearObj ??= new(Align.Right, PointerLength, Formats.Pointer, Dml.ListNearObj);
 
         public static Column TypeName => s_text ??= new(Align.Left, -1, Formats.TypeName);
