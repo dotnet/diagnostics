@@ -175,14 +175,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     output = new(Console, IntegerWithoutCommas.WithWidth(4), Pointer, ListNearObj, Column.ForEnum<ObjectCorruptionKind>(), Text);
                     output.SetAlignment(Align.Left);
 
-                    output.WriteHeader("Heap", "Segment", "Object", "Failure", "");
+                    output.WriteHeader("Heap", "Segment", "Object", "Failure", "Reason");
                 }
                 else
                 {
                     output = new(Console, Pointer, ListNearObj, Column.ForEnum<ObjectCorruptionKind>(), Text);
                     output.SetAlignment(Align.Left);
 
-                    output.WriteHeader("Segment", "Object", "Failure", "");
+                    output.WriteHeader("Segment", "Object", "Failure", "Reason");
                 }
             }
 
