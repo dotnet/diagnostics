@@ -105,10 +105,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                         int gap = lengthWritten - maxLength;
                         for (; wrote < maxLength; wrote++)
                         {
-                            result[wrote] = result[wrote + gap];
+                            result[start + wrote] = result[start + wrote + gap];
                         }
 
-                        result.Length = maxLength;
+                        result.Length = start + maxLength;
                     }
                     else
                     {

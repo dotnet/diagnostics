@@ -240,11 +240,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int nameLen = Math.Min(80, maxNameLen);
             nameLen = Math.Max(nameLen, truncatedName.Length);
 
-            Table table = new(Console, TypeName.WithWidth(nameLen), Integer, Integer, Pointer)
-            {
-                Border = true
-            };
-
+            using BorderedTable table = new(Console, TypeName.WithWidth(nameLen), Integer, Integer, Pointer);
             table.Columns[0] = table.Columns[0].WithAlignment(Align.Center);
             table.WriteHeader(nameColumn, "Unique", "Count", "RndPtr");
             table.Columns[0] = table.Columns[0].WithAlignment(Align.Left);

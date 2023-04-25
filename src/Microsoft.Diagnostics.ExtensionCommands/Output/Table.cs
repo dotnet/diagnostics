@@ -9,11 +9,11 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands.Output
 {
-    internal sealed class Table
+    internal class Table
     {
-        private readonly StringBuilderPool _stringBuilderPool = new();
-        private readonly char _spacing = ' ';
-        private static readonly Column s_headerColumn = new(Align.Center, -1, Formats.Text, Dml.Bold);
+        protected readonly StringBuilderPool _stringBuilderPool = new();
+        protected string _spacing = " ";
+        protected static readonly Column s_headerColumn = new(Align.Center, -1, Formats.Text, Dml.Bold);
 
         public string Indent { get; set; } = "";
 
@@ -24,7 +24,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         public int TotalWidth => 1 * (Columns.Length - 1) + Columns.Sum(c => Math.Abs(c.Width));
 
         public Column[] Columns { get; set; }
-        public bool Border { get; internal set; }
 
         public Table(IConsoleService console, params Column[] columns)
         {
@@ -32,49 +31,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             Console = console;
         }
 
-        public void WriteHeader(params string[] values)
+        public virtual void WriteHeader(params string[] values)
         {
             IncreaseColumnWidth(values);
-            WriteFooter(values);
+            WriteHeaderFooter(values);
         }
 
-        public void WriteFooter(params object[] values)
+        public virtual void WriteFooter(params object[] values)
         {
-            StringBuilder rowBuilder = _stringBuilderPool.Rent();
-            rowBuilder.Append(Indent);
-
-            Column headerCol = s_headerColumn;
-            if (!Console.SupportsDml)
-            {
-                headerCol = headerCol.WithDml(null);
-            }
-
-            for (int i = 0; i < values.Length; i++)
-            {
-                if (i != 0)
-                {
-                    rowBuilder.Append(_spacing);
-                }
-
-                int width = i < Columns.Length ? Columns[i].Width : -1;
-                Align align = i < Columns.Length ? Columns[i].Alignment : Align.Left;
-                Append(headerCol.WithWidth(width).WithAlignment(align), rowBuilder, values[i]);
-            }
-
-            rowBuilder.Append('\n');
-            if (Console.SupportsDml)
-            {
-                Console.WriteDml(rowBuilder.ToString());
-            }
-            else
-            {
-                Console.Write(rowBuilder.ToString());
-            }
-
-            _stringBuilderPool.Return(rowBuilder);
+            WriteHeaderFooter(values);
         }
 
-        private void IncreaseColumnWidth(string[] values)
+        protected void IncreaseColumnWidth(string[] values)
         {
             // Increase column width if too small
             for (int i = 0; i < Columns.Length && i < values.Length; i++)
@@ -89,18 +57,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
         }
 
-        public void WriteRow(params object[] values)
+        public virtual void WriteRow(params object[] values)
         {
             StringBuilder rowBuilder = _stringBuilderPool.Rent();
             rowBuilder.Append(Indent);
 
+            WriteRowWorker(values, rowBuilder, _spacing);
+
+            _stringBuilderPool.Return(rowBuilder);
+        }
+
+        protected void WriteRowWorker(object[] values, StringBuilder rowBuilder, string spacing, bool writeLine = true)
+        {
             bool isRowBuilderDml = false;
 
             for (int i = 0; i < values.Length; i++)
             {
                 if (i != 0)
                 {
-                    rowBuilder.Append(_spacing);
+                    rowBuilder.Append(spacing);
                 }
 
                 Column column = i < Columns.Length ? Columns[i] : ColumnKind.Text;
@@ -115,9 +90,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                 Append(column, rowBuilder, values[i]);
             }
 
-            rowBuilder.Append('\n');
+            if (writeLine)
+            {
+                rowBuilder.AppendLine();
+            }
+
             WriteAndClearRowBuilder(rowBuilder, isRowBuilderDml);
-            _stringBuilderPool.Return(rowBuilder);
         }
 
         private void WriteAndClearRowBuilder(StringBuilder rowBuilder, bool dml)
@@ -137,7 +115,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             }
         }
 
-        public void Append(Column column, StringBuilder sb, object value)
+        private void Append(Column column, StringBuilder sb, object value)
         {
             DmlFormat dml = null;
             if (Console.SupportsDml)
@@ -199,6 +177,56 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     sb.Append(' ', right);
                 }
             }
+        }
+
+        protected virtual void WriteHeaderFooter(object[] values, bool writeSides = false, bool writeNewline = true)
+        {
+            StringBuilder rowBuilder = _stringBuilderPool.Rent();
+            rowBuilder.Append(Indent);
+
+            if (writeSides)
+            {
+                rowBuilder.Append(_spacing);
+            }
+
+            Column headerCol = s_headerColumn;
+            if (!Console.SupportsDml)
+            {
+                headerCol = headerCol.WithDml(null);
+            }
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (i != 0)
+                {
+                    rowBuilder.Append(_spacing);
+                }
+
+                int width = i < Columns.Length ? Columns[i].Width : -1;
+                Align align = i < Columns.Length ? Columns[i].Alignment : Align.Left;
+                Append(headerCol.WithWidth(width).WithAlignment(align), rowBuilder, values[i]);
+            }
+
+            if (writeSides)
+            {
+                rowBuilder.Append(_spacing);
+            }
+
+            if (writeNewline)
+            {
+                rowBuilder.AppendLine();
+            }
+
+            if (Console.SupportsDml)
+            {
+                Console.WriteDml(rowBuilder.ToString());
+            }
+            else
+            {
+                Console.Write(rowBuilder.ToString());
+            }
+
+            _stringBuilderPool.Return(rowBuilder);
         }
     }
 }
