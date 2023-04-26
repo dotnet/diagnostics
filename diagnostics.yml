@@ -112,12 +112,10 @@ stages:
               _PublishArtifacts: bin/Windows_NT.x86.Release
             ${{ if ne(variables['System.TeamProject'], 'public') }}:
               Build_Release_arm:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm
                 _PublishArtifacts: bin/Windows_NT.arm.Release
               Build_Release_arm64:
-                _BuildOnly: true
                 _BuildConfig: Release
                 _BuildArch: arm64
                 _PublishArtifacts: bin/Windows_NT.arm64.Release
@@ -126,7 +124,9 @@ stages:
       parameters:
         name: CentOS_7
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
+        requiresCapPtraceContainer: true
+        buildAndSkipTest: true
         strategy:
           matrix:
             Build_Debug:
@@ -142,7 +142,7 @@ stages:
       parameters:
         name: Alpine3_13
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210910135845-c401c85
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
         artifactsTargetPath: bin/Linux-musl.x64.Release
         requiresCapPtraceContainer: true
         strategy:
@@ -193,7 +193,7 @@ stages:
         parameters:
           name: Linux_arm
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-20210719121212-8a8d3be
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross
           crossrootfsDir: '/crossrootfs/arm'
           buildAndSkipTest: true
           strategy:
@@ -207,7 +207,7 @@ stages:
         parameters:
           name: Linux_arm64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm64
           crossrootfsDir: '/crossrootfs/arm64'
           buildAndSkipTest: true
           strategy:
@@ -221,7 +221,7 @@ stages:
         parameters:
           name: Linux_musl_arm
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm-alpine-20210923140502-78f7860
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm-alpine
           crossrootfsDir: '/crossrootfs/arm'
           artifactsTargetPath: bin/Linux-musl.arm.Release
           buildAndSkipTest: true
@@ -236,7 +236,7 @@ stages:
         parameters:
           name: Linux_musl_arm64
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210923140502-78f7860
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm64-alpine
           crossrootfsDir: '/crossrootfs/arm64'
           artifactsTargetPath: bin/Linux-musl.arm64.Release
           buildAndSkipTest: true
@@ -255,9 +255,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Debian_Stretch
+          name: Debian_Bullseye
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-stretch-3e800f1-20190521154431
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-11-amd64
           dependsOn: CentOS_7
           testOnly: true
           strategy:
@@ -270,7 +270,7 @@ stages:
 #         parameters:
 #           name: Fedora_34
 #           osGroup: Linux
-#           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-34-helix-20220331150839-4f64125
+#           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-34-helix
 #           dependsOn: CentOS_7
 #           testOnly: true
 #           requiresCapPtraceContainer: true
@@ -284,7 +284,7 @@ stages:
 #         parameters:
 #           name: OpenSuse_15_2
 #           osGroup: Linux
-#           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-15.2-helix-amd64-20211018152525-9cc02fe
+#           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-15.2-helix-amd64
 #           dependsOn: CentOS_7
 #           testOnly: true
 #           strategy:
@@ -295,22 +295,9 @@ stages:
 
       - template: /eng/build.yml
         parameters:
-          name: Ubuntu_16_04
-          osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-09ca40b-20190520220842
-          dependsOn: CentOS_7
-          testOnly: true
-          strategy:
-            matrix:
-              Build_Debug:
-                _BuildConfig: Debug
-                _BuildArch: x64
-
-      - template: /eng/build.yml
-        parameters:
           name: Ubuntu_18_04
           osGroup: Linux
-          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-3e800f1-20190508143252
+          dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04
           dependsOn: CentOS_7
           testOnly: true
           strategy:

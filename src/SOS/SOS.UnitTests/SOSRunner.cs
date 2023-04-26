@@ -564,7 +564,8 @@ public class SOSRunner : IDisposable
                     {
                         throw new ArgumentException("LLDB helper script path not set or does not exist: " + lldbHelperScript);
                     }
-                    arguments.AppendFormat(@"--no-lldbinit -o ""settings set interpreter.prompt-on-quit false"" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
+                    arguments.Append(@"--no-lldbinit -o ""settings set target.disable-aslr false"" -o ""settings set interpreter.prompt-on-quit false""");
+                    arguments.AppendFormat(@" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
 
                     string debuggeeTarget = config.HostExe;
                     if (string.IsNullOrWhiteSpace(debuggeeTarget))
