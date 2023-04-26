@@ -251,19 +251,35 @@ fi
 if [[ "$__Test" == 1 ]]; then
    if [[ "$__CrossBuild" == 0 ]]; then
       if [[ -z "$LLDB_PATH" ]]; then
-          export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
-          if [[ -z "$LLDB_PATH" ]]; then
-              export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
-              if [[ -z "$LLDB_PATH" ]]; then
-                  export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
-                  if [[ -z "$LLDB_PATH" ]]; then
-                      export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
-                      if [[ -z "$LLDB_PATH" ]]; then
-                          export LLDB_PATH="$(which lldb 2> /dev/null)"
-                      fi
-                  fi
-              fi
+        check_version_exists() {
+          desired_version=-1
+
+          # Set up the environment to be used for building with the desired debugger.
+          if command -v "lldb-$1.$2" > /dev/null; then
+            desired_version="-$1.$2"
+          elif command -v "lldb$1$2" > /dev/null; then
+            desired_version="$1$2"
+          elif command -v "lldb-$1$2" > /dev/null; then
+            desired_version="-$1$2"
           fi
+
+          echo "$desired_version"
+        }
+
+        # note: clang versions higher than 6 do not have minor version in file name, if it is zero.
+        versions="16 15 14 13 12 11 10 9 8 7 6.0 5.0 4.0 3.9"
+        for version in $versions; do
+          _major="${version%%.*}"
+          [ -z "${version##*.*}" ] && _minor="${version#*.}"
+          desired_version="$(check_version_exists "$_major" "$_minor")"
+          if [ "$desired_version" != "-1" ]; then majorVersion="$_major"; break; fi
+        done
+
+        if [ -z "$majorVersion" ]; then
+          export LLDB_PATH="$(command -v "lldb")"
+        else
+          export LLDB_PATH="$(command -v "lldb$desired_version")"
+        fi
       fi
 
       if [[ -z "$GDB_PATH" ]]; then
