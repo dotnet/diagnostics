@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -23,7 +25,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = SummaryFlag, Aliases = new string[] { "-stat", }, Help = "Only print summary table.")]
         public bool Summary { get; set; }
 
-        [Option(Name = ImagesFlag, Aliases = new string[] { "-i" }, Help = "Prints a summary table of image memory usage.")]
+        [Option(Name = ImagesFlag, Help = "Prints a summary table of image memory usage.")]
         public bool ShowImageTable { get; set; }
 
         [Option(Name = ReserveFlag, Help = "Include MEM_RESERVE regions in the output.")]
@@ -59,8 +61,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             DescribedRegion[] ranges = memoryRanges.ToArray();
 
-            int nameSizeMax = ranges.Max(r => r.Name.Length);
-
             // Tag reserved memory based on what's adjacent.
             if (TagReserveMemoryHeuristically)
             {
@@ -69,26 +69,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             if (!Summary && List is null)
             {
-                int kindSize = ranges.Max(r => r.Type.ToString().Length);
-                int stateSize = ranges.Max(r => r.State.ToString().Length);
-                int protectSize = ranges.Max(r => r.Protection.ToString().Length);
+                Column nameColumn = Text.GetAppropriateWidth(ranges.Select(r => r.Name));
+                Column kindColumn = Column.ForEnum<MemoryRegionType>();
+                Column stateColumn = Column.ForEnum<MemoryRegionState>();
 
-                TableOutput output = new(Console, (nameSizeMax, ""), (12, "x"), (12, "x"), (12, ""), (kindSize, ""), (stateSize, ""), (protectSize, ""))
-                {
-                    AlignLeft = true,
-                    Divider = " | "
-                };
+                // These are flags, so we need a column wide enough for that output instead of ForEnum
+                Column protectionColumn = Text.GetAppropriateWidth(ranges.Select(r => r.Protection));
+                Column imageColumn = Image.GetAppropriateWidth(ranges.Select(r => r.Image));
+                using BorderedTable output = new(Console, nameColumn, Pointer, Pointer, HumanReadableSize, kindColumn, stateColumn, protectionColumn, imageColumn);
 
-                output.WriteRowWithSpacing('-', "Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
+                output.WriteHeader("Memory Kind", "StartAddr", "EndAddr-1", "Size", "Type", "State", "Protect", "Image");
                 IOrderedEnumerable<DescribedRegion> ordered = BySize ? ranges.OrderByDescending(r => r.Size).ThenBy(r => r.Start) : ranges.OrderBy(r => r.Start);
                 foreach (DescribedRegion mem in ordered)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
-                    output.WriteRow(mem.Name, mem.Start, mem.End, mem.Size.ConvertToHumanReadable(), mem.Type, mem.State, mem.Protection, mem.Image);
+                    output.WriteRow(mem.Name, mem.Start, mem.End, mem.Size, mem.Type, mem.State, mem.Protection, mem.Image);
                 }
-
-                output.WriteSpacer('-');
             }
 
             if (ShowImageTable)
@@ -103,29 +100,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                       Size
                                   };
 
-                int moduleLen = Math.Max(80, ranges.Max(r => r.Image?.Length ?? 0));
-
-                TableOutput output = new(Console, (moduleLen, ""), (8, "n0"), (12, ""), (24, "n0"))
-                {
-                    Divider = " | "
-                };
-
-                output.WriteRowWithSpacing('-', "Image", "Count", "Size", "Size (bytes)");
-
-                int count = 0;
-                long size = 0;
-                foreach (var item in imageGroups)
+                using (BorderedTable output = new(Console, Image.GetAppropriateWidth(ranges.Select(r => r.Image), max: 80), Integer, HumanReadableSize, ByteCount))
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
-                    output.WriteRow(item.Image, item.Count, item.Size.ConvertToHumanReadable(), item.Size);
-                    count += item.Count;
-                    size += item.Size;
+                    output.WriteHeader("Image", "Count", "Size", "Size (bytes)");
+
+                    int count = 0;
+                    long size = 0;
+                    foreach (var item in imageGroups)
+                    {
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
+                        output.WriteRow(item.Image, item.Count, item.Size, item.Size);
+                        count += item.Count;
+                        size += item.Size;
+                    }
+
+                    output.WriteFooter("[TOTAL]", count, size, size);
                 }
 
-                output.WriteSpacer('-');
-                output.WriteRow("[TOTAL]", count, size.ConvertToHumanReadable(), size);
-                WriteLine("");
+                Console.WriteLine();
             }
 
 
@@ -144,8 +139,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         Console.WriteLine($"{kind} Memory Regions:");
 
-                        TableOutput output = new(Console, (16, "x12"), (16, "n0"), (8, ""), (12, ""), (12, ""));
-                        output.WriteRow("Base Address", "Size (bytes)", "Size", "Mem State", "Mem Type", "Mem Protect");
+                        Table output = new(Console, Pointer, ByteCount, HumanReadableSize, Column.ForEnum<MemoryRegionState>(), Column.ForEnum<MemoryRegionType>(), Column.ForEnum<MemoryRegionProtection>().WithWidth(-1));
+                        output.WriteHeader("Base Address", "Size (bytes)", "Size", "Mem State", "Mem Type", "Mem Protect");
 
                         ulong totalSize = 0;
                         int count = 0;
@@ -153,7 +148,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         IEnumerable<DescribedRegion> matching = ranges.Where(r => r.Name.Equals(kind, StringComparison.OrdinalIgnoreCase)).OrderByDescending(s => s.Size);
                         foreach (DescribedRegion region in matching)
                         {
-                            output.WriteRow(region.Start, region.Size, region.Size.ConvertToHumanReadable(), region.State, region.Type, region.Protection);
+                            output.WriteRow(region.Start, region.Size, region.Size, region.State, region.Type, region.Protection);
 
                             count++;
                             totalSize += region.Size;
@@ -181,12 +176,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                   Size
                               };
 
-                TableOutput output = new(Console, (-nameSizeMax, ""), (8, "n0"), (12, ""), (24, "n0"))
-                {
-                    Divider = " | "
-                };
-
-                output.WriteRowWithSpacing('-', "Memory Type", "Count", "Size", "Size (bytes)");
+                Column nameColumn = Text.GetAppropriateWidth(ranges.Select(r => r.Name));
+                using BorderedTable output = new(Console, nameColumn, Integer, HumanReadableSize, ByteCount);
+                output.WriteHeader("Memory Type", "Count", "Size", "Size (bytes)");
 
                 int count = 0;
                 long size = 0;
@@ -194,16 +186,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
-                    output.WriteRow(item.Name, item.Count, item.Size.ConvertToHumanReadable(), item.Size);
+                    output.WriteRow(item.Name, item.Count, item.Size, item.Size);
+
                     count += item.Count;
                     size += item.Size;
                 }
 
-                output.WriteSpacer('-');
-                output.WriteRow("[TOTAL]", count, size.ConvertToHumanReadable(), size);
+                output.WriteFooter("[TOTAL]", count, size, size);
             }
         }
-
 
         [HelpInvoke]
         public void HelpInvoke()

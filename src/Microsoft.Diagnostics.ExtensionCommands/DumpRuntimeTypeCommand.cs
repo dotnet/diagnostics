@@ -2,8 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -15,11 +16,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            TableOutput output = null;
+            Table output = null;
 
             foreach (ClrObject runtimeType in Runtime.Heap.EnumerateObjects())
             {
                 Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (!runtimeType.IsValid || !runtimeType.IsRuntimeType)
                 {
                     continue;
@@ -31,14 +33,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 ClrAppDomain domain = null;
-                string typeName;
+                object typeName = m_handle;
                 bool isMethodTable = (m_handle & 2) == 0;
                 if (isMethodTable)
                 {
                     // Only lookup the type if we have a MethodTable.
                     ClrType type = Runtime.GetTypeByMethodTable(m_handle);
-                    typeName = type?.Name ?? $"methodtable: {m_handle:x}";
-                    domain = type?.Module?.AppDomain;
+                    if (type is not null)
+                    {
+                        typeName = type;
+                        domain = type.Module?.AppDomain;
+                    }
                 }
                 else
                 {
@@ -47,14 +52,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (output is null)
                 {
-                    output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
-                    output.WriteRow("Address", "Domain", "MT", "Type Name");
+                    output = new(Console, DumpObj, DumpDomain, DumpHeap, TypeName);
+                    output.WriteHeader("Address", "Domain", "MT", "Type Name");
                 }
 
-                output.WriteRow(new DmlDumpObj(runtimeType.Address),
-                                domain is not null ? new DmlDumpDomain(domain.Address) : null,
-                                isMethodTable ? new DmlDumpMT(m_handle) : m_handle,
-                                typeName);
+                // We pass .Address here instead of the ClrObject because every type is a RuntimeType, we don't need
+                // or want the alt-text.
+                output.WriteRow(runtimeType.Address, domain, m_handle, typeName);
             }
 
             if (output is null)

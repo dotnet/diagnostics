@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -136,7 +138,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintSyncBlockCleanupData()
         {
-            TableOutput output = null;
+            Table output = null;
             int total = 0;
             foreach (ClrSyncBlockCleanupData cleanup in Runtime.EnumerateSyncBlockCleanupData())
             {
@@ -144,8 +146,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (output is null)
                 {
-                    output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
-                    output.WriteRow("SyncBlock", "RCW", "CCW", "ComClassFactory");
+                    output = new(Console, Pointer, Pointer, Pointer, Pointer);
+                    output.WriteHeader("SyncBlock", "RCW", "CCW", "ComClassFactory");
                 }
 
                 output.WriteRow(cleanup.SyncBlock, cleanup.Rcw, cleanup.Ccw, cleanup.ClassFactory);
@@ -157,7 +159,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintRcwCleanupData()
         {
-            TableOutput output = null;
+            Table output = null;
             int freeThreadedCount = 0;
             int mtaCount = 0;
             int staCount = 0;
@@ -168,8 +170,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (output is null)
                 {
-                    output = new(Console, (16, "x12"), (16, "x12"), (16, "x12"));
-                    output.WriteRow("RCW", "Context", "Thread", "Apartment");
+                    output = new(Console, Pointer, Pointer, Thread, Text);
+                    output.WriteHeader("RCW", "Context", "Thread", "Apartment");
                 }
 
                 string apartment;

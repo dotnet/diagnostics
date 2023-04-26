@@ -30,8 +30,15 @@ namespace SOS.Extensions
 
         public void WriteDmlExec(string text, string cmd)
         {
-            string dml = $"<exec cmd=\"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
-            WriteDml(dml);
+            if (!SupportsDml || string.IsNullOrWhiteSpace(cmd))
+            {
+                Write(text);
+            }
+            else
+            {
+                string dml = $"<exec cmd=\"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
+                WriteDml(dml);
+            }
         }
 
         public bool SupportsDml => _supportsDml ??= _debuggerServices.SupportsDml;
@@ -42,6 +49,6 @@ namespace SOS.Extensions
 
         #endregion
 
-        private static string DmlEscape(string text) => new XText(text).ToString();
+        private static string DmlEscape(string text) => string.IsNullOrWhiteSpace(text) ? text : new XText(text).ToString();
     }
 }

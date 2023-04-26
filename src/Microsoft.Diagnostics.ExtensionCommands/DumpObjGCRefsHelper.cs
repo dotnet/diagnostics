@@ -5,14 +5,16 @@ using System;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "dumpobjgcrefs", Help = "A helper command to implement !dumpobj -refs")]
     public sealed class DumpObjGCRefsHelper : CommandBase
     {
+        private readonly StringBuilderPool _stringBuilderPool = new(260);
+
         [ServiceImport]
         public ClrRuntime Runtime { get; set; }
 
@@ -34,7 +36,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             ClrReference[] refs = obj.EnumerateReferencesWithFields(carefully: false, considerDependantHandles: false).ToArray();
-            if (refs.Length == 0 )
+            if (refs.Length == 0)
             {
                 Console.WriteLine("GC Refs: none");
                 return;
@@ -42,19 +44,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             Console.WriteLine("GC Refs:");
 
-            int fieldNameLen = Math.Max(refs.Max(r => GetFieldName(r)?.Length ?? 0), 5);
-            int offsetLen = Math.Max(refs.Max(r => r.Offset.ToSignedHexString().Length), 6);
+            Column fieldNameColumn = ColumnKind.Text.GetAppropriateWidth(refs.Select(r => GetFieldName(r)));
+            Column offsetName = ColumnKind.HexOffset.GetAppropriateWidth(refs.Select(r => r.Offset));
 
-            TableOutput output = new(Console, (fieldNameLen, ""), (offsetLen, ""), (16, "x12"));
-            output.WriteRow("Field", "Offset", "Object", "Type");
+            Table output = new(Console, fieldNameColumn, offsetName, ColumnKind.DumpObj, ColumnKind.TypeName);
+            output.WriteHeader("Field", "Offset", "Object", "Type");
             foreach (ClrReference objRef in refs)
             {
-                output.WriteRow(GetFieldName(objRef), objRef.Offset, new DmlDumpObj(objRef.Object), objRef.Object.Type?.Name);
+                output.WriteRow(GetFieldName(objRef), objRef.Offset, objRef.Object, objRef.Object.Type);
             }
         }
 
-        private static string GetFieldName(ClrReference objRef)
+        private string GetFieldName(ClrReference objRef)
         {
+            Console.CancellationToken.ThrowIfCancellationRequested();
+
             if (objRef.Field is null)
             {
                 return null;
@@ -65,7 +69,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return objRef.Field?.Name;
             }
 
-            StringBuilder sb = new(260);
+            StringBuilder sb = _stringBuilderPool.Rent();
             bool foundOneFieldName = false;
 
             for (ClrReference? curr = objRef; curr.HasValue; curr = curr.Value.InnerField)
@@ -88,7 +92,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // Make sure we don't just return "???.???.???"
-            return foundOneFieldName ? sb.ToString() : null;
+            string result = foundOneFieldName ? sb.ToString() : null;
+            _stringBuilderPool.Return(sb);
+            return result;
         }
     }
 }

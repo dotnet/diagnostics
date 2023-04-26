@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -41,12 +41,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Dictionary<(string String, ulong Size), uint> stringTable = null;
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
 
-            TableOutput thinLockOutput = null;
-            TableOutput objectTable = null;
+            Table thinLockOutput = null;
+            Table objectTable = null;
 
             ClrObject lastFreeObject = default;
             foreach (ClrObject obj in objects)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (displayKind == DisplayKind.ThinLock)
                 {
                     ClrThinLock thinLock = obj.GetThinLock();
@@ -54,11 +56,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         if (thinLockOutput is null)
                         {
-                            thinLockOutput = new(Console, (12, "x"), (16, "x"), (16, "x"), (10, "n0"));
-                            thinLockOutput.WriteRow("Object", "Thread", "OSId", "Recursion");
+                            thinLockOutput = new(Console, ColumnKind.DumpObj, ColumnKind.Pointer, ColumnKind.HexValue, ColumnKind.Integer);
+                            thinLockOutput.WriteHeader("Object", "Thread", "OSId", "Recursion");
                         }
 
-                        thinLockOutput.WriteRow(new DmlDumpObj(obj), thinLock.Thread?.Address ?? 0, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
+                        thinLockOutput.WriteRow(obj, thinLock.Thread, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
                     }
 
                     continue;
@@ -75,14 +77,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     if (objectTable is null)
                     {
-                        objectTable = new(Console, (12, "x12"), (12, "x12"), (12, ""), (0, ""));
+                        objectTable = new(Console, ColumnKind.DumpObj, ColumnKind.DumpHeap, ColumnKind.ByteCount, ColumnKind.Text);
                         if (displayKind is DisplayKind.Normal or DisplayKind.Strings)
                         {
-                            objectTable.WriteRow("Address", "MT", "Size");
+                            objectTable.WriteHeader("Address", "MT", "Size");
                         }
                     }
 
-                    objectTable.WriteRow(new DmlDumpObj(obj), new DmlDumpHeap(obj.Type?.MethodTable ?? 0), size, obj.IsFree ? "Free" : "");
+                    objectTable.WriteRow(obj, obj.Type, obj.IsValid ? size : null, obj.IsFree ? "Free" : "");
                 }
 
                 if (printFragmentation)
@@ -175,7 +177,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
 
                     Console.WriteLine("Statistics:");
-                    TableOutput statsTable = new(Console, (countLen, "n0"), (sizeLen, "n0"), (0, ""));
+                    Table statsTable = new(Console, ColumnKind.Integer, ColumnKind.ByteCount, ColumnKind.Text);
 
                     var stringsSorted = from item in stringTable
                                         let Count = item.Value
@@ -191,6 +193,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     foreach (var item in stringsSorted)
                     {
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
                         statsTable.WriteRow(item.Count, item.TotalSize, item.String);
                     }
                 }
@@ -206,16 +210,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         Console.WriteLine();
                     }
 
-                    int countLen = stats.Values.Max(ts => ts.Count).ToString("n0").Length;
-                    countLen = Math.Max(countLen, "Count".Length);
-
-                    int sizeLen = stats.Values.Max(ts => ts.Size).ToString("n0").Length;
-                    sizeLen = Math.Max(sizeLen, "TotalSize".Length);
-
-                    TableOutput statsTable = new(Console, (12, "x12"), (countLen, "n0"), (sizeLen, "n0"), (0, ""));
-
                     Console.WriteLine("Statistics:");
-                    statsTable.WriteRow("MT", "Count", "TotalSize", "Class Name");
+
+                    Column countColumn = ColumnKind.Integer;
+                    countColumn = countColumn.GetAppropriateWidth(stats.Values.Select(ts => ts.Count));
+
+                    Column sizeColumn = ColumnKind.ByteCount;
+                    sizeColumn = sizeColumn.GetAppropriateWidth(stats.Values.Select(ts => ts.Size));
+
+                    Column methodTableColumn = ColumnKind.DumpHeap.GetAppropriateWidth(stats.Keys);
+                    Table statsTable = new(Console, methodTableColumn, countColumn, sizeColumn, ColumnKind.TypeName);
+                    statsTable.WriteHeader("MT", "Count", "TotalSize", "Class Name");
 
                     var statsSorted = from item in stats
                                       let MethodTable = item.Key
@@ -230,7 +235,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     foreach (var item in statsSorted)
                     {
-                        statsTable.WriteRow(new DmlDumpHeap(item.MethodTable), item.Count, item.Size, item.TypeName);
+                        Console.CancellationToken.ThrowIfCancellationRequested();
+
+                        statsTable.WriteRow(item.MethodTable, item.Count, item.Size, item.TypeName);
                     }
 
                     Console.WriteLine($"Total {stats.Values.Sum(r => r.Count):n0} objects, {stats.Values.Sum(r => (long)r.Size):n0} bytes");
@@ -248,15 +255,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            TableOutput output = new(Console, (16, "x12"), (12, "n0"), (16, "x12"));
-
             Console.WriteLine();
             Console.WriteLine("Fragmented blocks larger than 0.5 MB:");
-            output.WriteRow("Address", "Size", "Followed By");
+
+            Table output = new(Console, ColumnKind.ListNearObj, ColumnKind.ByteCount, ColumnKind.DumpObj, ColumnKind.TypeName);
+            output.WriteHeader("Address", "Size", "Followed By");
 
             foreach ((ClrObject free, ClrObject next) in fragmentation)
             {
-                output.WriteRow(free.Address, free.Size, new DmlDumpObj(next.Address), next.Type?.Name ?? "<unknown_type>");
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
+                output.WriteRow(free.Address, free.Size, next.Address, next.Type);
             }
         }
 
