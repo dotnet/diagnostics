@@ -7,6 +7,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
 {
     internal static class ColumnKind
     {
+        private static Column? s_pointer;
         private static Column? s_text;
         private static Column? s_hexOffset;
         private static Column? s_hexValue;
@@ -20,12 +21,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         private static Column? s_humanReadable;
         private static Column? s_range;
 
+        // NOTE/BUGBUG: This assumes IntPtr.Size matches the target process, which it should not do
         private static int PointerLength => IntPtr.Size * 2;
 
         /// <summary>
         /// A pointer, displayed as hex.
         /// </summary>
-        public static Column Pointer { get; } = new(Align.Right, PointerLength, Formats.Pointer);
+        public static Column Pointer => s_pointer ??= new(Align.Right, PointerLength, Formats.Pointer);
 
         /// <summary>
         /// Raw text which will not be truncated by default.
