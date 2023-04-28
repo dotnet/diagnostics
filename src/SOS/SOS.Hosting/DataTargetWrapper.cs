@@ -231,7 +231,7 @@ namespace SOS.Hosting
             }
             try
             {
-                Marshal.Copy(registerContext, 0, context, contextSize);
+                Marshal.Copy(registerContext, 0, context, Math.Min(registerContext.Length, contextSize));
             }
             catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
             {
