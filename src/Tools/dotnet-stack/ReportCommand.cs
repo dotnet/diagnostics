@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                         // we are looking for the first index of ) because
                         // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
-                        int firstIndex = threadFrame.IndexOf(")");
+                        int firstIndex = threadFrame.IndexOf(')');
                         int threadId = int.Parse(threadFrame.Substring(template.Length, firstIndex - template.Length));
 
                         if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
