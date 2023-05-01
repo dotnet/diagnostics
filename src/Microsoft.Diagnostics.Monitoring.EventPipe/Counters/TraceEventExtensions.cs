@@ -187,7 +187,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                // this happens when the ObservableCounter callback function throws an exception.
+                // this happens when the ObservableCounter callback function throws an exception
+                // or when the ObservableCounter doesn't include a measurement for a particular set of tag values.
                 payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
             }
         }
@@ -225,7 +226,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                // this happens when the ObservableUpDownCounter callback function throws an exception.
+                // this happens when the ObservableUpDownCounter callback function throws an exception
+                // or when the ObservableUpDownCounter doesn't include a measurement for a particular set of tag values.
                 payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
             }
         }
