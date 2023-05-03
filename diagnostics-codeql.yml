@@ -28,125 +28,128 @@ variables:
   - name: skipComponentGovernanceDetection
     value: true
 
-stages:
-- stage: build
-  displayName: Build and Test Diagnostics
-  jobs:
-  - template: /eng/build.yml
-    parameters:
-      name: Windows
-      osGroup: Windows_NT
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: x64
-          Build_Release_x86:
-            _BuildConfig: Release
-            _BuildArch: x86
-          Build_Release_arm:
-            _BuildConfig: Release
-            _BuildArch: arm
-          Build_Release_arm64:
-            _BuildConfig: Release
-            _BuildArch: arm64
+extends:
+  template:  /eng/pipelines/pipeline-resources.yml
+  parameters:
+    stages:
+      - stage: build
+        displayName: Build and Test Diagnostics
+        jobs:
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Windows
+            osGroup: Windows_NT
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
+                Build_Release_x86:
+                  _BuildConfig: Release
+                  _BuildArch: x86
+                Build_Release_arm:
+                  _BuildConfig: Release
+                  _BuildArch: arm
+                Build_Release_arm64:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
 
-  - template: /eng/build.yml
-    parameters:
-      name: CentOS_7
-      osGroup: Linux
-      dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: x64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_x64
+            osGroup: Linux
+            nativeBuildContainer: linux_x64
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
 
-  - template: /eng/build.yml
-    parameters:
-      name: Alpine3_13
-      osGroup: Linux
-      dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode-20210910135845-c401c85
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: x64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_musl
+            osGroup: Linux
+            nativeBuildContainer: linux_musl_x64
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
 
-  - template: /eng/build.yml
-    parameters:
-      name: MacOS
-      osGroup: MacOS
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: x64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: MacOS
+            osGroup: MacOS
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
 
-  - template: /eng/build.yml
-    parameters:
-      name: MacOS_arm64
-      osGroup: MacOS_cross
-      crossbuild: true
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: arm64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: MacOS_arm64
+            osGroup: MacOS_cross
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
 
-  - template: /eng/build.yml
-    parameters:
-      name: Linux_arm
-      osGroup: Linux
-      dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-20210719121212-8a8d3be
-      crossrootfsDir: '/crossrootfs/arm'
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: arm
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_arm
+            osGroup: Linux
+            nativeBuildContainer: linux_arm
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm
 
-  - template: /eng/build.yml
-    parameters:
-      name: Linux_arm64
-      osGroup: Linux
-      dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-20210719121212-8a8d3be
-      crossrootfsDir: '/crossrootfs/arm64'
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: arm64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_arm64
+            osGroup: Linux
+            nativeBuildContainer: linux_arm64
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
 
-  - template: /eng/build.yml
-    parameters:
-      name: Linux_musl_arm
-      osGroup: Linux
-      dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm-alpine-20210923140502-78f7860
-      crossrootfsDir: '/crossrootfs/arm'
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: arm
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_musl_arm
+            osGroup: Linux
+            nativeBuildContainer: linux_musl_arm
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm
 
-  - template: /eng/build.yml
-    parameters:
-      name: Linux_musl_arm64
-      osGroup: Linux
-      dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-cross-arm64-alpine-20210923140502-78f7860
-      crossrootfsDir: '/crossrootfs/arm64'
-      isCodeQLRun: true
-      strategy:
-        matrix:
-          Build_Release:
-            _BuildConfig: Release
-            _BuildArch: arm64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_musl_arm64
+            osGroup: Linux
+            nativeBuildContainer: linux_musl_arm64
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
