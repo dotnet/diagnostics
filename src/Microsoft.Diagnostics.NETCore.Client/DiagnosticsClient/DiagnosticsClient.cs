@@ -313,6 +313,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
+        ///
+        /// </summary>
+        /// <param name="type"></param>
+        public void EnablePerfMap(PerfMapType type)
+        {
+            IpcMessage request = CreateEnablePerfMapMessage(type);
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, nameof(EnablePerfMap));
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        public void DisablePerfMap()
+        {
+            IpcMessage request = CreateDisablePerfMapMessage();
+            IpcMessage response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, nameof(DisablePerfMap));
+        }
+
+        /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>
         /// <returns>
@@ -600,6 +621,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] serializedConfiguration = SerializePayload(startupHookPath);
 
             return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ApplyStartupHook, serializedConfiguration);
+        }
+
+        private static IpcMessage CreateEnablePerfMapMessage(PerfMapType type)
+        {
+            byte[] payload = SerializePayload((uint)type);
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.EnablePerfMap, payload);
+        }
+
+        private static IpcMessage CreateDisablePerfMapMessage()
+        {
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.DisablePerfMap);
         }
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)
