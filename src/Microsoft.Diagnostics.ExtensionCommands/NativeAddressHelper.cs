@@ -262,8 +262,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                             region.ClrMemoryKind = mem.Kind;
                                         }
                                     }
+                                    else
+                                    {
+                                        SetRegionKindWithWarning(mem, region);
+                                    }
                                 }
-
                             }
                         }
                     }
