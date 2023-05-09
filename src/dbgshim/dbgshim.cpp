@@ -2159,6 +2159,7 @@ CLRCreateInstance(
 
 HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCSTR assemblyBasePath, IUnknown **ppCordb)
 {
+    PUBLIC_CONTRACT;
     HRESULT hr = S_OK;
 
     FPCreateRemoteCordbObject fpCreate =
@@ -2181,6 +2182,7 @@ RegisterForRuntimeStartupRemotePort(
     _In_ LPCSTR assemblyBasePath,
     _Out_ IUnknown ** ppCordb)
 {
+    PUBLIC_CONTRACT;
     HRESULT hr = S_OK;
     HMODULE hMod = NULL;
 
