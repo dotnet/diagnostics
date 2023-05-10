@@ -53,7 +53,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public CounterMonitor()
         {
             _pauseCmdSet = false;
-            _metricsEventSourceSessionId = Guid.NewGuid().ToString();
+            //_metricsEventSourceSessionId = Guid.NewGuid().ToString();
+            _metricsEventSourceSessionId = "SHARED";
             _shouldExit = new TaskCompletionSource<int>();
         }
 
@@ -158,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string rateText = (string)obj.PayloadValue(6);
-            if (sessionId != _metricsEventSourceSessionId)
+            if (sessionId != _metricsEventSourceSessionId || !FilterCheck(meterName, instrumentName))
             {
                 return;
             }
@@ -182,7 +183,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string lastValueText = (string)obj.PayloadValue(6);
-            if (sessionId != _metricsEventSourceSessionId)
+            if (sessionId != _metricsEventSourceSessionId || !FilterCheck(meterName, instrumentName))
             {
                 return;
             }
@@ -217,7 +218,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string tags = (string)obj.PayloadValue(5);
             //string rateText = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)obj.PayloadValue(7);
-            if (sessionId != _metricsEventSourceSessionId)
+            if (sessionId != _metricsEventSourceSessionId || !FilterCheck(meterName, instrumentName))
             {
                 return;
             }
@@ -247,7 +248,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
-            if (sessionId != _metricsEventSourceSessionId)
+            if (sessionId != _metricsEventSourceSessionId || !FilterCheck(meterName, instrumentName))
             {
                 return;
             }
@@ -853,6 +854,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 );
 
             return eventCounterProviders.Append(metricsEventSourceProvider).ToArray();
+        }
+
+        private bool FilterCheck(string meterName, string instrumentName)
+        {
+            return _counterList.GetCounters(meterName).Contains(instrumentName) || _counterList.IncludesAllCounters(meterName);
         }
 
         private Task<int> Start()

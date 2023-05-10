@@ -65,7 +65,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 const long TimeSeriesValuesEventKeyword = 0x2;
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
-                SessionId = Guid.NewGuid().ToString();
+                //SessionId = Guid.NewGuid().ToString();
+                SessionId = "SHARED";
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
