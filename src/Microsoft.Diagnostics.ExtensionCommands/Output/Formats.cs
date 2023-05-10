@@ -58,6 +58,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
                     case null:
                         break;
 
+                    case nuint:
+                        result.AppendFormat(_format, (ulong)value);
+                        break;
+
+                    case nint:
+                        unchecked
+                        {
+                            result.AppendFormat(_format, (ulong)value);
+                        }
+                        break;
+
                     default:
                         result.AppendFormat(_format, value);
                         break;
