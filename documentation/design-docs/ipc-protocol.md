@@ -4,10 +4,10 @@
 
 This spec describes the IPC Protocol to be used for communicating with the dotnet core runtime's Diagnostics Server from an external client over a platform-specific transport, e.g., Unix Domain Sockets.
 
-
 ### Terminology
 
 The protocol will use the following names for various constructs and behaviors defined in this spec:
+
 * *Diagnostic IPC Protocol*: The protocol defined in this spec
 * *Diagnostic Server*: The server in the runtime that receives/sends Diagnostic IPC Procotol communication.
 * *Commands*: The functionality being invoked in the runtime that communicates over the Diagnostic IPC Protocol, e.g., "Start an EventPipe stream".  These are encoded as a `command_set` and a `command_id`.
@@ -20,7 +20,7 @@ The protocol will use the following names for various constructs and behaviors d
 
 ## General Flow
 
-All communication with the Diagnostic Server will begin with a Diagnostic IPC Message sent from the client to the server.  The server will respond with a Diagnostic IPC Message.  After this, the client and runtime _may_ reuse the Pipe for any Command specific communication which is referred to as an Optional Continuation.
+All communication with the Diagnostic Server will begin with a Diagnostic IPC Message sent from the client to the server.  The server will respond with a Diagnostic IPC Message.  After this, the client and runtime *may* reuse the Pipe for any Command specific communication which is referred to as an Optional Continuation.
 
 ![Generic Flow](ipc-protocol-genericflow.svg)
 
@@ -33,6 +33,7 @@ connection closed
 ```
 
 Example flow for EventPipe:
+
 ```
 runtime <- client : [ magic; size; EventPipe CollectTracing ][ stream config struct  ] <- Diagnostic IPC Message
 runtime -> client : [ magic; size; Server OK                ][ sessionId             ] <- Diagnostic IPC Message
@@ -47,11 +48,12 @@ connection closed
 
 The protocol will be communicated over a platform-specific transport.  On Unix/Linux based platforms, a Unix Domain Socket will be used, and on Windows, a Named Pipe will be used.
 
-#### Naming and Location Conventions
+### Naming and Location Conventions
 
 Unix Domain Sockets (MacOS and *nix):
 
 The socket is placed in one of two places:
+
 1. The directory specified in `$TMPDIR`
 2. `/tmp` if `$TMPDIR` is undefined/empty
 
@@ -60,11 +62,13 @@ In order to ensure filename uniqueness, a `disambiguation key` is generated.  On
 > NOTE: If the target application is running inside an application sandbox on MacOS, the transport will be placed in the Application Group container directory.  This is a convention for all sandboxed applications on MacOS.
 
 socket name:
+
 ```c
 dotnet-diagnostic-{%d:PID}-{%llu:disambiguation key}-socket
 ```
 
 Named Pipes (Windows):
+
 ```
 \\.\pipe\dotnet-diagnostic-{%d:PID}
 ```
@@ -162,6 +166,7 @@ For example, this IPC Message is the generic OK message which has an empty Paylo
 ### Headers
 
 Every Diagnostic IPC Message will start with a header and every header will:
+
 * start with a magic version number and a size
 * `sizeof(IpcHeader) == 20`
 * encode numbers little-endian
@@ -181,12 +186,11 @@ struct IpcHeader
 
 The `reserved` field is reserved for future use.  It is unused in `DOTNET_IPC_V1` and must be 0x0000.
 
-
 ### Payloads
 
-Payloads are Command specific data encoded into a Diagnostic IPC Message.  The size of the payload is implicitly encoded in the Header's `size` field as `PayloadSize = header.size - sizeof(struct IpcHeader)`.  A Payload _may_ be 0 bytes long if it empty.  The encoding of data in the Payload is Command specific.
+Payloads are Command specific data encoded into a Diagnostic IPC Message.  The size of the payload is implicitly encoded in the Header's `size` field as `PayloadSize = header.size - sizeof(struct IpcHeader)`.  A Payload *may* be 0 bytes long if it empty.  The encoding of data in the Payload is Command specific.
 
-Payloads are either encoded as fixed size structures that can be `memcpy`'ed , _or_:
+Payloads are either encoded as fixed size structures that can be `memcpy`'ed , *or*:
 
 * `X, Y, Z` means encode bytes for `X` followed by bytes for `Y` followed by bytes for `Z`
 * `uint` = 4 little endian bytes
@@ -351,17 +355,22 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
 }
 ```
-See: [EventPipe Commands](#EventPipe-Commands)
+
+See: [EventPipe Commands](#eventpipe-commands)
 
 ```c++
 enum class DumpCommandId : uint8_t
 {
     // reserved     = 0x00,
     CreateCoreDump  = 0x01,
+    CreateCoreDump2  = 0x02,
+    CreateCoreDump3  = 0x03,
+    CreateCoreDump4  = 0x04,
     // future
 }
 ```
-See: [Dump Commands](#Dump-Commands)
+
+See: [Dump Commands](#dump-commands)
 
 ```c++
 enum class ProfilerCommandId : uint8_t
@@ -370,8 +379,9 @@ enum class ProfilerCommandId : uint8_t
     AttachProfiler  = 0x01,
     // future
 }
-``` 
-See: [Profiler Commands](#Profiler-Commands)
+```
+
+See: [Profiler Commands](#profiler-commands)
 
 ```c++
 enum class ProcessCommandId : uint8_t
@@ -383,7 +393,8 @@ enum class ProcessCommandId : uint8_t
     // future
 }
 ```
-See: [Process Commands](#Process-Commands)
+
+See: [Process Commands](#process-commands)
 
 Commands may use the generic `{ magic="DOTNET_IPC_V1"; size=20; command_set=0xFF (Server); command_id=0x00 (OK); reserved = 0x0000; }` to indicate success rather than having a command specific success `command_id`.
 
@@ -400,6 +411,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
 }
 ```
+
 EventPipe Payloads are encoded with the following rules:
 
 * `X, Y, Z` means encode bytes for `X` followed by bytes for `Y` followed by bytes for `Z`
@@ -416,13 +428,13 @@ Command Code: `0x0202`
 
 The `CollectTracing` Command is used to start a streaming session of event data.  The runtime will attempt to start a session and respond with a success message with a payload of the `sessionId`.  The event data is streamed in the `nettrace` format.  The stream begins after the response Message from the runtime to the client.  The client is expected to continue to listen on the transport until the connection is closed.
 
-In the event there is an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event there is an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-The client is expected to send a [`StopTracing`](#StopTracing) command to the runtime in order to stop the stream, as there is a "run down" at the end of a stream session that transmits additional metadata.
+The client is expected to send a [`StopTracing`](#stoptracing) command to the runtime in order to stop the stream, as there is a "run down" at the end of a stream session that transmits additional metadata.
 
 If the stream is stopped prematurely due to a client or server error, the `nettrace` file generated will be incomplete and should be considered corrupted.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0202; 0x0000 }`
 
@@ -431,6 +443,7 @@ Header: `{ Magic; Size; 0x0202; 0x0000 }`
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
+
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
@@ -438,16 +451,18 @@ A `provider_config` is composed of the following data:
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 
-#### Returns (as an IPC Message Payload):
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
 `CollectTracing` returns:
+
 * `ulong sessionId`: the ID for the stream session starting on the current connection
 
-##### Details:
+##### Details
 
 Input:
+
 ```
 Payload
 {
@@ -456,7 +471,7 @@ Payload
     array<provider_config> providers
 }
 
-provider_config 
+provider_config
 {
     ulong keywords,
     uint logLevel,
@@ -466,12 +481,14 @@ provider_config
 ```
 
 Returns:
+
 ```c
 Payload
 {
     ulong sessionId
 }
 ```
+
 Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 ### `CollectTracing2`
@@ -480,7 +497,7 @@ Command Code: `0x0203`
 
 The `CollectTracing2` Command is an extension of the `CollectTracing` command - its behavior is the same as `CollectTracing` command, except that it has another field that lets you specify whether rundown events should be fired by the runtime.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0203; 0x0000 }`
 
@@ -490,23 +507,26 @@ Header: `{ Magic; Size; 0x0203; 0x0000 }`
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
+
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
 * `string filter_data` (optional): Filter information
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
-> 
-#### Returns (as an IPC Message Payload):
+>
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
 `CollectTracing2` returns:
+
 * `ulong sessionId`: the ID for the stream session starting on the current connection
 
-##### Details:
+##### Details
 
 Input:
+
 ```
 Payload
 {
@@ -516,7 +536,7 @@ Payload
     array<provider_config> providers
 }
 
-provider_config 
+provider_config
 {
     ulong keywords,
     uint logLevel,
@@ -526,36 +546,38 @@ provider_config
 ```
 
 Returns:
+
 ```c
 Payload
 {
     ulong sessionId
 }
 ```
+
 Followed by an Optional Continuation of a `nettrace` format stream of events.
 
-### `StopTracing` 
+### `StopTracing`
 
 Command Code: `0x0201`
 
-The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectStreaming`](#CollectStreaming).
+The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectTracing`](#collecttracing) or [`CollectTracing2`](#collecttracing2).
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; 28; 0x0201; 0x0000 }`
 
 * `ulong sessionId`: The ID for the streaming session to stop
 
-#### Returns:
+#### Returns
 
 Header: `{ Magic; 28; 0xFF00; 0x0000 }`
 
 * `ulong sessionId`: the ID for the streaming session that was stopped
 
-
-##### Details:
+##### Details
 
 Inputs:
+
 ```c
 Payload
 {
@@ -564,6 +586,7 @@ Payload
 ```
 
 Returns:
+
 ```c
 Payload
 {
@@ -579,9 +602,9 @@ Command Code: `0x0101`
 
 The `CreateCoreDump` command is used to instruct the runtime to generate a core dump of the process.  The command will keep the connection open while the dump is generated and then respond with a message containing an `HRESULT` indicating success or failure.
 
-In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0101; 0x0000 }`
 
@@ -594,16 +617,18 @@ Header: `{ Magic; Size; 0x0101; 0x0000 }`
 * `uint diagnostics`: If set to 1, log to console the dump generation diagnostics
   * `0` or `1` for on or off
 
-#### Returns (as an IPC Message Payload):
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
 `CreateCoreDump` returns:
+
 * `int32 hresult`: The result of creating the core dump (`0` indicates success)
 
-##### Details:
+##### Details
 
 Input:
+
 ```
 Payload
 {
@@ -614,10 +639,107 @@ Payload
 ```
 
 Returns:
+
 ```c
 Payload
 {
     int32 hresult
+}
+```
+
+### `CreateCoreDump2`
+
+Command Code: `0x0102`
+
+The `CreateCoreDump2` command is used to instruct the runtime to generate a core dump of the process, much like `CreateCoreDump`. The main difference is the the v2 command accepts a set of flags instead of the boolean diagnostics field used in *v1* to describe additional diagnostic artifacts.
+
+#### Inputs
+
+Header: `{ Magic; Size; 0x0102; 0x0000 }`
+
+* `string dumpName`: As described in [`CreateCoreDump`](#createcoredump).
+* `uint dumpType`: As described in [`CreateCoreDump`](#createcoredump).
+* `uint flags`: Flags as defined by the following:
+
+  * `GenerateDumpFlagsNone = 0x00`: No diagnostics assets are created.
+  * `GenerateDumpFlagsLoggingEnabled = 0x01`: General logging enabled - streamed to the console of the target process.
+  * `GenerateDumpFlagsVerboseLoggingEnabled = 0x02`: Verbose logging enabled - streamed to the console of the target process.
+  * `GenerateDumpFlagsCrashReportEnabled = 0x04`: Generate crashdump report next to the generated dump.
+
+#### Returns (as an IPC Message Payload)
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CreateCoreDump2` returns:
+
+* `int32 hresult`: The result of creating the core dump (`0` indicates success)
+
+##### Details
+
+Input:
+
+```
+Payload
+{
+    string dumpName,
+    uint dumpType,
+    uint flags
+}
+```
+
+Returns:
+
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
+### `CreateCoreDump3`
+
+Command Code: `0x0103`
+
+The `CreateCoreDump3` command is used to instruct the runtime to generate a core dump of the process, with inputs identical to `CreateCoreDump2`. The main difference is the response stream may contain an error string that can be propagated to clients.
+
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs
+
+Header: `{ Magic; Size; 0x0103; 0x0000 }`
+
+All payload fields are identical to `CreateCoreDump2`
+
+#### Returns (as an IPC Message Payload)
+
+Header: `{ Magic; Size; 0xFF00; 0x0000; }`
+
+`CreateCoreDump3` returns:
+
+* `int32 hresult`: The result of creating the core dump (`0` indicates success).
+* `string error`: Optionally the payload may have an error describing the collection issues.
+
+##### Details
+
+
+Input:
+
+```
+Payload
+{
+    string dumpName,
+    uint dumpType,
+    uint flags
+}
+```
+
+Returns:
+
+```c
+Payload
+{
+    int32 hresult
+    string errorString
 }
 ```
 
@@ -629,9 +751,9 @@ Command Code: `0x0301`
 
 The `AttachProfiler` command is used to attach a profiler to the runtime.  The command will keep the connection open while the profiler is being attached and then respond with a message containing an `HRESULT` indicating success or failure.
 
-In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0301; 0x0000 }`
 
@@ -641,21 +763,24 @@ Header: `{ Magic; Size; 0x0301; 0x0000 }`
 * `array<byte> clientData`: The data being provided to the profiler
 
 Where a `CLSID` is a fixed size struct consisting of:
+
 * `uint x`
 * `byte s1`
 * `byte s2`
 * `byte[8] c`
 
-#### Returns (as an IPC Message Payload):
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
 `AttachProfiler` returns:
+
 * `int32 hresult`: The result of attaching the profiler (`0` indicates success)
 
-##### Details:
+##### Details
 
 Input:
+
 ```
 Payload
 {
@@ -668,6 +793,7 @@ Payload
 ```
 
 Returns:
+
 ```c
 Payload
 {
@@ -685,19 +811,20 @@ Command Code: `0x0400`
 
 The `ProcessInfo` command queries the runtime for some basic information about the process.
 
-In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0400; 0x0000 }`
 
 There is no payload.
 
-#### Returns (as an IPC Message Payload):
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
 Payload:
+
 * `int64 processId`: the process id in the process's PID-space
 * `GUID runtimeCookie`: a 128-bit GUID that should be unique across PID-spaces
 * `string commandLine`: the command line that invoked the process
@@ -715,9 +842,10 @@ Payload:
   * ARM64 => `"arm64"`
   * Other => `"Unknown"`
 
-##### Details:
+##### Details
 
 Returns:
+
 ```c++
 struct Payload
 {
@@ -735,17 +863,17 @@ Command Code: `0x0401`
 
 If the target .NET application has been configured Diagnostic Ports configured to suspend with `DOTNET_DiagnosticPorts` or `DOTNET_DefaultDiagnosticPortSuspend` has been set to `1` (`0` is the default value), then the runtime will pause during `EEStartupHelper` in `ceemain.cpp` and wait for an event to be set.  (See [Diagnostic Ports](#diagnostic-ports) for more details)
 
-The `ResumeRuntime` command sets the necessary event to resume runtime startup.  If the .NET application _has not_ been configured to with Diagnostics Monitor Address or the runtime has _already_ been resumed, this command is a no-op.
+The `ResumeRuntime` command sets the necessary event to resume runtime startup.  If the .NET application *has not* been configured to with Diagnostics Monitor Address or the runtime has *already* been resumed, this command is a no-op.
 
-In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0401; 0x0000 }`
 
 There is no payload.
 
-#### Returns (as an IPC Message Payload):
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
@@ -757,30 +885,33 @@ Command Code: `0x0402`
 
 The `ProcessEnvironment` command queries the runtime for its environment block.
 
-In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0402; 0x0000 }`
 
 There is no payload.
 
-#### Returns (as an IPC Message Payload + continuation):
+#### Returns (as an IPC Message Payload + continuation)
 
 Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
 Payload:
+
 * `uint32_t nIncomingBytes`: the number of bytes to expect in the continuation stream
 * `uint16_t future`: unused
 
 Continuation:
+
 * `Array<Array<WCHAR>> environmentBlock`: The environment block written as a length prefixed array of length prefixed arrays of `WCHAR`.
 
 Note: it is valid for `nIncomingBytes` to be `4` and the continuation to simply contain the value `0`.
 
-##### Details:
+##### Details
 
 Returns:
+
 ```c++
 struct Payload
 {
@@ -797,19 +928,20 @@ Command Code: `0x0404`
 
 The `ProcessInfo2` command queries the runtime for some basic information about the process. The returned payload has the same information as that of the `ProcessInfo` command in addition to the managed entrypoint assembly name and CLR product version.
 
-In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
 
-#### Inputs:
+#### Inputs
 
 Header: `{ Magic; Size; 0x0402; 0x0000 }`
 
 There is no payload.
 
-#### Returns (as an IPC Message Payload):
+#### Returns (as an IPC Message Payload)
 
 Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
 Payload:
+
 * `int64 processId`: the process id in the process's PID-space
 * `GUID runtimeCookie`: a 128-bit GUID that should be unique across PID-spaces
 * `string commandLine`: the command line that invoked the process
@@ -829,9 +961,10 @@ Payload:
 * `string managedEntrypointAssemblyName`: the assembly name from the assembly identity of the entrypoint assembly of the process. This is the same value that is returned from executing `System.Reflection.Assembly.GetEntryAssembly().GetName().Name` in the target process.
 * `string clrProductVersion`: the product version of the CLR of the process; may contain prerelease label information e.g. `6.0.0-preview.6.#####`
 
-##### Details:
+##### Details
 
 Returns:
+
 ```c++
 struct Payload
 {
@@ -850,6 +983,7 @@ struct Payload
 In the event an error occurs in the handling of an Ipc Message, the Diagnostic Server will attempt to send an Ipc Message encoding the error and subsequently close the connection.  The connection will be closed **regardless** of the success of sending the error message.  The Client is expected to be resilient in the event of a connection being abruptly closed.
 
 Errors are `HRESULTS` encoded as `int32_t` when sent back to the client.  There are a few Diagnostics IPC specific `HRESULT`s:
+
 ```c
 #define CORDIAGIPC_E_BAD_ENCODING    = 0x80131384
 #define CORDIAGIPC_E_UNKNOWN_COMMAND = 0x80131385
@@ -858,6 +992,7 @@ Errors are `HRESULTS` encoded as `int32_t` when sent back to the client.  There 
 ```
 
 Diagnostic Server errors are sent as a Diagnostic IPC Message with:
+
 * a `command_set` of `0xFF`
 * a `command_id` of `0xFF`
 * a Payload consisting of a `int32_t` representing the error encountered (described above)
@@ -865,6 +1000,7 @@ Diagnostic Server errors are sent as a Diagnostic IPC Message with:
 All errors will result in the Server closing the connection.
 
 Error response Messages will be sent when:
+
 * the client sends an improperly encoded Diagnostic IPC Message
 * the client uses an unknown `command`
 * the client uses an unknown `magic` version string
@@ -927,7 +1063,7 @@ For example, if the Diagnostic Server finds incorrectly encoded data while parsi
   </tr>
 </table>
 
-# Diagnostic Ports
+## Diagnostic Ports
 
 > Available since .NET 5.0
 
@@ -935,7 +1071,7 @@ A Diagnostic Port is a mechanism for communicating the Diagnostics IPC Protocol 
 
 .NET applications can configure Diagnostic Ports with the following environment variables:
 
- * `DOTNET_DiagnosticPorts=<port address>[,tag[...]][;<port address>[,tag[...]][...]]`
+> `DOTNET_DiagnosticPorts=<port address>[,tag[...]][;<port address>[,tag[...]][...]]`
 
 where:
 
@@ -947,7 +1083,7 @@ where:
 Example usage:
 
 ```shell
-$ export DOTNET_DiagnosticPorts=$DOTNET_DiagnosticPorts;~/mydiagport.sock,nosuspend;
+export DOTNET_DiagnosticPorts=$DOTNET_DiagnosticPorts;~/mydiagport.sock,nosuspend;
 ```
 
 Any diagnostic ports specified in this configuration will be created in addition to the default port (`dotnet-diagnostic-<pid>-<epoch>`). The suspend mode of the default port is set via the new environment variable `DOTNET_DefaultDiagnosticPortSuspend` which defaults to `0` for `nosuspend`.
@@ -962,14 +1098,14 @@ The runtime will make a best effort attempt to generate a port from a port confi
 
 When a Diagnostic Port is configured, the runtime will attempt to connect to the provided address in a retry loop while also listening on the traditional server. The retry loop has an initial timeout of 10ms with a falloff factor of 1.25x and a max timeout of 500 ms.  A successful connection will result in an infinite timeout.  The runtime is resilient to the remote end of the Diagnostic Port failing, e.g., closing, not `Accepting`, etc.
 
-## Advertise Protocol
+### Advertise Protocol
 
 Upon successful connection, the runtime will send a fixed-size, 34 byte buffer containing the following information:
 
- * `char[8] magic`: (8 bytes) `"ADVR_V1\0"` (ASCII chars + null byte)
- * `GUID runtimeCookie`: (16 bytes) CLR Instance Cookie (little-endian)
- * `uint64_t processId`: (8 bytes) PID (little-endian)
- * `uint16_t future`: (2 bytes) unused for future-proofing
+* `char[8] magic`: (8 bytes) `"ADVR_V1\0"` (ASCII chars + null byte)
+* `GUID runtimeCookie`: (16 bytes) CLR Instance Cookie (little-endian)
+* `uint64_t processId`: (8 bytes) PID (little-endian)
+* `uint16_t future`: (2 bytes) unused for future-proofing
 
 With the following layout:
 
@@ -1026,11 +1162,12 @@ With the following layout:
 
 This is a one-way transmission with no expectation of an ACK.  The tool owning the Diagnostic Port is expected to consume this message and then hold on to the now active connection until it chooses to send a Diagnostics IPC command.
 
-## Dataflow
+### Dataflow
 
-Due to the potential for an *optional continuation* in the Diagnostics IPC Protocol, each successful connection between the runtime and a Diagnostic Port is only usable **once**.  As a result, a .NET process will attempt to _reconnect_ to the diagnostic port immediately after every command that is sent across an active connection.
+Due to the potential for an *optional continuation* in the Diagnostics IPC Protocol, each successful connection between the runtime and a Diagnostic Port is only usable **once**.  As a result, a .NET process will attempt to *reconnect* to the diagnostic port immediately after every command that is sent across an active connection.
 
 A typical dataflow has 2 actors, the Target application, `T` and the Diagnostics Monitor Application, `M`, and communicates like so:
+
 ```
 T ->   : Target attempts to connect to M, which may not exist yet
 // M comes into existence
@@ -1040,4 +1177,4 @@ T <- M : [ Diagnostics IPC Protocol ] - Monitor sends a Diagnostics IPC Protocol
 T -> M : [ Advertise ] - Target reconnects to Monitor with a _new_ connection and re-sends the advertise message
 ```
 
-It is important to emphasize that a connection **_should not_** be reused for multiple Diagnostic IPC Protocol commands.
+It is important to emphasize that a connection ***should not*** be reused for multiple Diagnostic IPC Protocol commands.
