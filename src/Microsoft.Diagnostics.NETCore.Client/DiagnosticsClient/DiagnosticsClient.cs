@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public sealed class DiagnosticsClient
     {
+        private const string DumpOperationName = "Write dump";
         private readonly IpcEndpoint _endpoint;
 
         public DiagnosticsClient(int processId) :
@@ -129,27 +130,59 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Trigger a core dump generation.
         /// </summary>
         /// <param name="dumpType">Type of the dump to be generated</param>
-        /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
+        /// <param name="dumpPath">Full path to the dump to be generated.</param>
         /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
         public void WriteDump(DumpType dumpType, string dumpPath, WriteDumpFlags flags)
         {
-            IpcMessage request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
+            WriteDump(dumpType, dumpPath, flags, logPath: null);
+        }
+
+        /// <summary>
+        /// Trigger a core dump generation.
+        /// </summary>
+        /// <param name="dumpType">Type of the dump to be generated</param>
+        /// <param name="dumpPath">Full path to the dump to be generated.</param>
+        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
+        /// <param name="logPath">Full path to the log to be generated. If null or empty and flags requests logging - the default behavior is... </param>
+        public void WriteDump(DumpType dumpType, string dumpPath, WriteDumpFlags flags, string logPath)
+        {
+            IpcMessage request = CreateWriteDumpMessageV4(dumpType, dumpPath, flags, logPath);
             IpcMessage response = IpcClient.SendMessage(_endpoint, request);
-            if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
+
+            if (ValidateResponseMessage(response, DumpOperationName, ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
             {
-                request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
-                response = IpcClient.SendMessage(_endpoint, request);
-                if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse))
-                {
-                    if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
-                    {
-                        throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
-                    }
-                    request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
-                    response = IpcClient.SendMessage(_endpoint, request);
-                    ValidateResponseMessage(response, "Write dump");
-                }
+                return;
             }
+
+            if ((flags & (WriteDumpFlags.LogToFile | WriteDumpFlags.VerboseLoggingEnabled)) != 0)
+            {
+                throw new ArgumentException($"{nameof(WriteDumpFlags.LogToFile)} and {nameof(WriteDumpFlags.VerboseLoggingEnabled)} flags are not supported by the current runtime.", nameof(flags));
+            }
+
+            request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
+            response = IpcClient.SendMessage(_endpoint, request);
+
+            if (ValidateResponseMessage(response, DumpOperationName, ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
+            {
+                return;
+            }
+
+            request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
+            response = IpcClient.SendMessage(_endpoint, request);
+
+            if (ValidateResponseMessage(response, DumpOperationName, ValidateResponseOptions.UnknownCommandReturnsFalse))
+            {
+                return;
+            }
+
+            if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+            {
+                throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+            }
+
+            request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
+            response = IpcClient.SendMessage(_endpoint, request);
+            ValidateResponseMessage(response, DumpOperationName);
         }
 
         /// <summary>
@@ -171,25 +204,54 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
         /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
-        public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, WriteDumpFlags flags, CancellationToken token)
+        public Task WriteDumpAsync(DumpType dumpType, string dumpPath, WriteDumpFlags flags, CancellationToken token)
         {
-            IpcMessage request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
+            return WriteDumpAsync(dumpType, dumpPath, flags, logPath: null, token);
+        }
+
+        /// <summary>
+        /// Trigger a core dump generation.
+        /// </summary>
+        /// <param name="dumpType">Type of the dump to be generated</param>
+        /// <param name="dumpPath">Full path to the dump to be generated. By default it is /tmp/coredump.{pid}</param>
+        /// <param name="flags">logging and crash report flags. On runtimes less than 6.0, only LoggingEnabled is supported.</param>
+        /// <param name="logPath">Full path to the log to be generated. If null or empty and flags requests logging - the default behavior is... </param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        public async Task WriteDumpAsync(DumpType dumpType, string dumpPath, WriteDumpFlags flags, string logPath, CancellationToken token)
+        {
+            IpcMessage request = CreateWriteDumpMessageV4(dumpType, dumpPath, flags, logPath);
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-            if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
+            if (ValidateResponseMessage(response, DumpOperationName, ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
             {
-                request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
-                response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-                if (!ValidateResponseMessage(response, "Write dump", ValidateResponseOptions.UnknownCommandReturnsFalse))
-                {
-                    if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
-                    {
-                        throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
-                    }
-                    request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
-                    response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
-                    ValidateResponseMessage(response, "Write dump");
-                }
+                return;
             }
+
+            if ((flags & (WriteDumpFlags.LogToFile | WriteDumpFlags.VerboseLoggingEnabled)) != 0)
+            {
+                throw new ArgumentException($"{nameof(WriteDumpFlags.LogToFile)} and {nameof(WriteDumpFlags.VerboseLoggingEnabled)} flags are not supported by the current runtime.", nameof(flags));
+            }
+
+            request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump3, dumpType, dumpPath, flags);
+            response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            if (ValidateResponseMessage(response, DumpOperationName, ValidateResponseOptions.UnknownCommandReturnsFalse | ValidateResponseOptions.ErrorMessageReturned))
+            {
+                return;
+            }
+
+            request = CreateWriteDumpMessage(DumpCommandId.GenerateCoreDump2, dumpType, dumpPath, flags);
+            response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            if (ValidateResponseMessage(response, DumpOperationName, ValidateResponseOptions.UnknownCommandReturnsFalse))
+            {
+                return;
+            }
+
+            if ((flags & ~WriteDumpFlags.LoggingEnabled) != 0)
+            {
+                throw new ArgumentException($"Only {nameof(WriteDumpFlags.LoggingEnabled)} flag is supported by this runtime version", nameof(flags));
+            }
+            request = CreateWriteDumpMessage(dumpType, dumpPath, logDumpGeneration: (flags & WriteDumpFlags.LoggingEnabled) != 0);
+            response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
+            ValidateResponseMessage(response, DumpOperationName);
         }
 
         /// <summary>
@@ -564,6 +626,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);
+        }
+
+        private static IpcMessage CreateWriteDumpMessageV4(DumpType dumpType, string dumpPath, WriteDumpFlags flags,  string logPath)
+        {
+            if (string.IsNullOrEmpty(dumpPath))
+            {
+                throw new ArgumentNullException($"{nameof(dumpPath)} required");
+            }
+
+            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags, logPath);
+            return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump4, payload);
         }
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)
