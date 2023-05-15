@@ -1,14 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Parsers.Clr;
-using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Runtime;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -21,11 +17,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public CounterFilter CounterFilter { get; }
 
-        public string SessionId { get; set; } = null;
+        public string SessionId { get; set; }
 
-        public int MaxHistograms { get; set; } = 0;
+        public int MaxHistograms { get; set; }
 
-        public int MaxTimeseries { get; set; } = 0;
+        public int MaxTimeseries { get; set; }
     }
 
     internal static class TraceEventExtensions
@@ -87,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     counterType,
                     intervalSec,
                     seriesValue / 1000,
-                    metadata));
+                    metadata);
 
                 return true;
             }
@@ -96,7 +92,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
-                    HandleBeginInstrumentReporting(traceEvent, counterConfiguration, out individualPayload);
+                    HandleBeginInstrumentReporting(traceEvent, counterConfiguration, out payload);
                 }
                 if (traceEvent.EventName == "HistogramValuePublished")
                 {
@@ -174,8 +170,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the Gauge callback function throws an exception.
-                payload = new CounterEndedPayload(meterName, instrumentName, null, obj.TimeStamp);
-                
+                payload = new CounterEndedPayload(meterName, instrumentName, obj.TimeStamp);
             }
         }
 
@@ -214,16 +209,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
 
-            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
-            {
-                return;
-            }
-
-            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
                 // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
                 payload = new UpDownCounterPayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
-
             }
             else
             {
@@ -234,13 +223,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterConfiguration configuration, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
 
-            if (payloadSessionId != sessionId || traceEvent.Version < 1) // Version 1 added the value field.
+            if (payloadSessionId != configuration.SessionId || traceEvent.Version < 1) // Version 1 added the value field.
             {
                 return;
             }
@@ -253,7 +242,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string rateText = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)traceEvent.PayloadValue(7);
 
-            if (!filter.IsIncluded(meterName, instrumentName)) {
+            if (!configuration.CounterFilter.IsIncluded(meterName, instrumentName)) {
                 return;
             }
 
@@ -270,7 +259,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out List<ICounterPayload> payload)
+        private static void HandleHistogram(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
         {
             payload = null;
 

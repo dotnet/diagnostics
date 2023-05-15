@@ -107,10 +107,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    internal class UpDownCounterPayload : CounterPayload
+    internal class UpDownCounterPayload : MeterPayload
     {
         public UpDownCounterPayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, DateTime timestamp) :
-            base(providerName, name, metadata, value, timestamp, "Metric", EventType.UpDownCounter)
+            base(timestamp, providerName, name, displayName, displayUnits, value, CounterType.Metric, metadata, EventType.UpDownCounter)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
@@ -128,12 +128,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal sealed class CounterEndedPayload : MeterPayload
     {
-        public CounterEndedPayload(string providerName, string name, string displayName, DateTime timestamp)
+        public CounterEndedPayload(string providerName, string name, DateTime timestamp)
             : base(timestamp, providerName, name, string.Empty, string.Empty, 0.0, CounterType.Metric, null, EventType.CounterEnded)
         {
         }
     }
-
 
     internal sealed class RatePayload : MeterPayload
     {
@@ -152,8 +151,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal sealed class PercentilePayload : MeterPayload
     {
-        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double val, DateTime timestamp) :
-            base(timestamp, providerName, name, displayName, displayUnits, val, CounterType.Metric, metadata, EventType.Histogram)
+        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
+            base(timestamp, providerName, name, displayName, displayUnits, 0.0, CounterType.Metric, metadata, EventType.Histogram)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;

@@ -7,20 +7,14 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
-using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
-using System.Runtime.InteropServices;
-using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.Monitoring;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -35,10 +29,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private ICounterRenderer _renderer;
         private string _output;
         private bool _pauseCmdSet;
-        private readonly TaskCompletionSource<int> _shouldExit;
+        private readonly TaskCompletionSource<ReturnCode> _shouldExit;
         private DiagnosticsClient _diagnosticsClient;
         private string _metricsEventSourceSessionId;
-        private EventPipeCounterPipelineSettings _settings;
+        private MetricsPipelineSettings _settings;
 
         private class ProviderEventState
         {
@@ -52,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             _pauseCmdSet = false;
             _metricsEventSourceSessionId = Guid.NewGuid().ToString();
-            _shouldExit = new TaskCompletionSource<int>();
+            _shouldExit = new TaskCompletionSource<ReturnCode>();
         }
 
         private void DynamicAllMonitor(ICounterPayload obj)
@@ -70,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 if (obj is ErrorPayload errorPayload)
                 {
                     _renderer.SetErrorText(errorPayload.ErrorMessage);
-                    switch(errorPayload.ErrorType)
+                    switch (errorPayload.ErrorType)
                     {
                         case ErrorType.SessionStartupError:
                             _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
@@ -86,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 else if (obj.IsMeter)
                 {
-                    MeterInstrumentEventObserved(obj.Provider, obj.Name, obj.Timestamp);
+                    MeterInstrumentEventObserved(obj.Provider, obj.Timestamp);
                     if (obj is not InstrumentationStartedPayload)
                     {
                         _renderer.CounterPayloadReceived((CounterPayload)obj, _pauseCmdSet);
@@ -143,7 +137,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // intervals, or counters that stop reporting.
             // I'm gambling this is good enough that the behavior will never be seen in practice, but if it is we could
             // either adjust the time delay or try to improve how the renderers handle it.
-            if(providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= payload.Timestamp)
+            if (providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= payload.Timestamp)
             {
                 _bufferedEvents.Enqueue((CounterPayload)payload);
             }
@@ -186,7 +180,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        public async Task<int> Monitor(
+        public async Task<ReturnCode> Monitor(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -210,7 +204,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    return ReturnCode.ArgumentError;
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
@@ -221,7 +215,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {
-                        return (int)ReturnCode.Ok;
+                        return ReturnCode.Ok;
                     }
                     try
                     {
@@ -232,7 +226,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _ct = ct;
                         _renderer = new ConsoleWriter(useAnsi);
                         _diagnosticsClient = holder.Client;
-                        _settings = new EventPipeCounterPipelineSettings();
+                        _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
                         _settings.MaxHistograms = maxHistograms;
                         _settings.MaxTimeSeries = maxTimeSeries;
@@ -240,8 +234,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.ResumeRuntime = resumeRuntime;
                         _settings.CounterGroups = GetEventPipeProviders();
 
-                        await using EventCounterPipeline eventCounterPipeline = new EventCounterPipeline(holder.Client, _settings, new[] { this });
-                        int ret = await Start(eventCounterPipeline, ct);
+                        await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+                        ReturnCode ret = await Start(eventCounterPipeline, ct).ConfigureAwait(false);
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
                     }
@@ -250,17 +244,17 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         //Cancellation token should automatically stop the session
 
                         console.Out.WriteLine($"Complete");
-                        return (int)ReturnCode.Ok;
+                        return ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return (int)ReturnCode.ArgumentError;
+                return ReturnCode.ArgumentError;
             }
         }
-        public async Task<int> Collect(
+        public async Task<ReturnCode> Collect(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -286,7 +280,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    return ReturnCode.ArgumentError;
                 }
 
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
@@ -306,7 +300,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
                         _ct = ct;
-                        _settings = new EventPipeCounterPipelineSettings();
+                        _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
                         _settings.MaxHistograms = maxHistograms;
                         _settings.MaxTimeSeries = maxTimeSeries;
@@ -318,7 +312,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         if (_output.Length == 0)
                         {
                             _console.Error.WriteLine("Output cannot be an empty string");
-                            return (int)ReturnCode.ArgumentError;
+                            return ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
                         {
@@ -342,11 +336,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         else
                         {
                             _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                            return (int)ReturnCode.ArgumentError;
+                            return ReturnCode.ArgumentError;
                         }
-                        await using EventCounterPipeline eventCounterPipeline = new EventCounterPipeline(holder.Client, _settings, new[] { this });
+                        await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
 
-                        int ret = await Start(pipeline: eventCounterPipeline, ct);
+                        ReturnCode ret = await Start(pipeline: eventCounterPipeline, ct).ConfigureAwait(false);
                         return ret;
                     }
                     catch (OperationCanceledException)
@@ -359,7 +353,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return (int)ReturnCode.ArgumentError;
+                return ReturnCode.ArgumentError;
             }
         }
 
@@ -516,13 +510,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 CounterNames = _counterList.GetCounters(provider).ToArray()
             }).ToArray();
 
-        private async Task<int> Start(EventCounterPipeline pipeline, CancellationToken token)
+        private async Task<ReturnCode> Start(MetricsPipeline pipeline, CancellationToken token)
         {
             _renderer.Initialize();
-            Task monitorTask = new Task(async () => {
+            Task monitorTask = new(async () => {
                 try
                 {
-                    await await pipeline.StartAsync(token);
+                    await (await pipeline.StartAsync(token).ConfigureAwait(false)).ConfigureAwait(false);
                 }
                 catch (DiagnosticsClientException ex)
                 {
@@ -539,8 +533,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
- 
-            while(!_shouldExit.Task.Wait(250))
+
+            while (!_shouldExit.Task.Wait(250, token))
             {
                 HandleBufferedEvents();
                 if (!Console.IsInputRedirected && Console.KeyAvailable)
@@ -563,7 +557,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             try
             {
-                await pipeline.StopAsync(token);
+                await pipeline.StopAsync(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -571,8 +565,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (PipelineException)
             {
             }
-            
-            return await _shouldExit.Task;
+
+            return await _shouldExit.Task.ConfigureAwait(false);
         }
 
         public void Log(ICounterPayload counter)

@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     try
                     {
-                        await client.ResumeRuntimeAsync(cancellationToken);
+                        await client.ResumeRuntimeAsync(cancellationToken).ConfigureAwait(false);
                     }
                     catch (UnsupportedCommandException)
                     {
