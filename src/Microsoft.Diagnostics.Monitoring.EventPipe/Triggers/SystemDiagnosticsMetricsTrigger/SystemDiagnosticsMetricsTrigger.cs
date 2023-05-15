@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(new CounterConfiguration(_filter) { SessionId = _sessionId }, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }

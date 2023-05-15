@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Xunit;
 
 namespace DotnetCounters.UnitTests
@@ -25,7 +26,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", "", "", i, 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", string.Empty, string.Empty, i, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -67,7 +68,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", "", "", i, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", string.Empty, null, i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -110,7 +111,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", "", "", i, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", string.Empty, null, i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -152,7 +153,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", "", i, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", string.Empty, i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
