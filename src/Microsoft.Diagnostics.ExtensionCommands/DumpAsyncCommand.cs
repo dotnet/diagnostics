@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         /// <summary>Gets whether to only show stacks that include the object with the specified address.</summary>
         [Option(Name = "--address", Aliases = new string[] { "-addr" }, Help = "Only show stacks that include the object with the specified address.")]
-        public string ObjectAddress
+        public string? ObjectAddress
         {
             get => _objectAddress?.ToString();
             set => _objectAddress = ParseAddress(value);
