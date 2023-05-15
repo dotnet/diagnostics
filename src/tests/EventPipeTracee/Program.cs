@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +30,10 @@ namespace EventPipeTracee
             using NamedPipeClientStream pipeStream = new(pipeServerName);
             bool spinWait10 = args.Length > 2 && "SpinWait10".Equals(args[2], StringComparison.Ordinal);
             string loggerCategory = args[1];
+
+            bool diagMetrics = args.Any("DiagMetrics".Equals);
+
+            Console.WriteLine($"{pid} EventPipeTracee: DiagMetrics {diagMetrics}");
 
             Console.WriteLine($"{pid} EventPipeTracee: start process");
             Console.Out.Flush();
@@ -54,11 +60,23 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: {DateTime.UtcNow} Awaiting start");
             Console.Out.Flush();
 
+            using CustomMetrics metrics = diagMetrics ? new CustomMetrics(): null;
+
             // Wait for server to send something
             int input = pipeStream.ReadByte();
 
             Console.WriteLine($"{pid} {DateTime.UtcNow} Starting test body '{input}'");
             Console.Out.Flush();
+
+            if (diagMetrics)
+            {
+                _ = Task.Run(async () => {
+                    metrics.IncrementCounter();
+                    metrics.RecordHistogram(10.0f);
+                    await Task.Delay(10).ConfigureAwait(true);
+                }).ConfigureAwait(true);
+
+            }
 
             TestBodyCore(customCategoryLogger, appCategoryLogger);
 
@@ -90,6 +108,7 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee {DateTime.UtcNow} Ending remote test process '{input}'");
             return 0;
         }
+
 
         // TODO At some point we may want parameters to choose different test bodies.
         private static void TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
