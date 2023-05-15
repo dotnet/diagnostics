@@ -30,6 +30,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
+        //private const string sharedPrefix = "SHARED_";
+
         private readonly IList<EventPipeProvider> _eventPipeProviders;
         public string SessionId { get; private set; }
 
@@ -66,17 +68,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
                 //SessionId = Guid.NewGuid().ToString();
-                SessionId = "SHARED";
+                SessionId = Guid.NewGuid().ToString(); // still need this for identification - use prefix to denote following SHARED protocol
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
                         new Dictionary<string, string>()
                         {
-                            { "SessionId", SessionId },
+                            { "SessionId", "SHARED" },
                             { "Metrics", metrics },
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
-                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) }
+                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
+                            { "SharedIdentifier", SessionId  }
                         }
                     );
 
