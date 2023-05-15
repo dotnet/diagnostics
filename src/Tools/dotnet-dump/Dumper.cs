@@ -6,8 +6,6 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 
@@ -30,9 +28,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
             Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PII removed.
         }
 
+        public enum LogLevelOption
+        {
+            None,       // No logging.
+            Diag,       // Diagnostic logging, useful for first level.
+            Verbose,    // Verbose loggging, useful to debug unwinding but also slows down target process.
+        }
+
         internal static int Collect(DumpCollectionConfig config, IConsole console)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(config.ProcessId, config.ProcessName, config.DiagnosticPort, out int targetPprocessId))
+            if (!CommandUtils.ValidateArgumentsForAttach(config.ProcessId, config.ProcessName, config.DiagnosticPort, out int targetProcessId))
             {
                 return -1;
             }
@@ -71,13 +76,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         return -1;
                     }
 
-                    if (config.EnableDiagnosticOutput)
+                    if (config.LogLevel != LogLevelOption.None)
                     {
-                        console.Error.WriteLine("Verbose diagnostics not supported on Windows.");
+                        console.Error.WriteLine("Diagnostic logging not supported on Windows.");
                         return -1;
                     }
 
-                    Windows.CollectDump(targetPprocessId, config.DumpOutputPath, config.DumpType);
+                    Windows.CollectDump(targetProcessId, config.DumpOutputPath, config.DumpType);
                 }
                 else
                 {
@@ -104,22 +109,35 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     }
                     else
                     {
-                        client = new DiagnosticsClient(targetPprocessId);
+                        client = new DiagnosticsClient(targetProcessId);
                     }
 
                     WriteDumpFlags flags = WriteDumpFlags.None;
-                    if (config.EnableDiagnosticOutput)
+
+                    flags |= config.LogLevel switch
+                    {
+                        LogLevelOption.None => WriteDumpFlags.None,
+                        LogLevelOption.Diag => WriteDumpFlags.LoggingEnabled,
+                        LogLevelOption.Verbose => WriteDumpFlags.VerboseLoggingEnabled,
+                        _ => throw new ArgumentException($"Invalid log level supplied: {config.LogLevel}")
+                    };
+
+                    if (config.LogToFile || config.DiagnosticLogPath is not null)
+                    {
+                        flags |= WriteDumpFlags.LogToFile;
+                    }
+                    else if (flags != WriteDumpFlags.None)
                     {
                         console.Out.WriteLine("Diagnostic output requested. Logging will appear in the console of the target process.");
-                        flags |= WriteDumpFlags.LoggingEnabled;
                     }
+
                     if (config.GenerateCrashReport)
                     {
                         flags |= WriteDumpFlags.CrashReportEnabled;
                     }
 
                     // Send the command to the runtime to initiate the core dump
-                    client.WriteDump(dumpType, config.DumpOutputPath, flags);
+                    client.WriteDump(dumpType, config.DumpOutputPath, flags, config.DiagnosticLogPath);
                 }
             }
             catch (Exception ex) when
@@ -135,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
-                if (!config.EnableDiagnosticOutput)
+                if (config.LogLevel == LogLevelOption.None)
                 {
                     console.Error.WriteLine($"Consider rerunning the command with diagnostic output enabled.");
                 }

@@ -7,20 +7,21 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    // Make sure the name of the fields match the option names.
+    // Make sure the name of the fields match the option's argument names.
     internal record struct DumpCollectionConfig(
             int ProcessId,
             string ProcessName,
             string DiagnosticPort,
             string DumpOutputPath,
-            bool EnableDiagnosticOutput,
+            Dumper.LogLevelOption LogLevel,
+            bool LogToFile,
+            string DiagnosticLogPath,
             bool GenerateCrashReport,
             Dumper.DumpTypeOption DumpType);
 
@@ -44,7 +45,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Handler
                 CommandHandler.Create<DumpCollectionConfig, IConsole>(Dumper.Collect),
                 // Options
-                ProcessIdOption(), ProcessNameOption(), DiagnosticPortOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption()
+                ProcessIdOption(), ProcessNameOption(), DiagnosticPortOption(),
+                OutputOption(), DiagnosticLoggingOption(), FileLoggingOption(), LoggingPathOption(), CrashReportOption(), TypeOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -86,11 +88,36 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
 
         private static Option DiagnosticLoggingOption() =>
             new(
-                alias: "--diag",
+                alias: "--log",
                 description: "Enable dump collection diagnostic logging.")
             {
-                Name = nameof(DumpCollectionConfig.EnableDiagnosticOutput),
-                Argument = new Argument<bool>(name: "diag")
+                Name = nameof(DumpCollectionConfig.LogLevel),
+                Argument = new Argument<Dumper.LogLevelOption>(name: "log", getDefaultValue: static () => Dumper.LogLevelOption.None)
+            };
+
+        // Until we update system.commandline to a newer version, the semmantics of this are... not ideal:
+        // if the user wants the log to go to file they either have to use logToFile for the default value,
+        // or they have to use logFilePath.
+        // See https://github.com/dotnet/command-line-api/pull/1462
+        private static Option<bool> FileLoggingOption() =>
+            new(
+                alias: "--log-to-file",
+                description: "Route diagnostic logging to a file.",
+                getDefaultValue: static () => false)
+            {
+                Name = nameof(DumpCollectionConfig.LogToFile),
+                Argument = new Argument<bool>(name: nameof(DumpCollectionConfig.LogToFile)),
+                IsRequired = false
+            };
+
+        private static Option<string> LoggingPathOption() =>
+            new(
+                alias: "--log-file-path",
+                description: "Route diagnostic logging to a specific file.")
+            {
+                Name = nameof(DumpCollectionConfig.DiagnosticLogPath),
+                Argument = new Argument<string>(name: nameof(DumpCollectionConfig.DiagnosticLogPath)),
+                IsRequired = false
             };
 
         private static Option CrashReportOption() =>
