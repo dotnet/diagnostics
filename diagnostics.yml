@@ -131,14 +131,15 @@ extends:
             buildOnly: true
             strategy:
               matrix:
-                Build_Debug:
-                  _BuildConfig: Debug
-                  _BuildArch: x64
-                  _PublishArtifacts: bin/Linux.x64.Debug
                 Build_Release:
                   _BuildConfig: Release
                   _BuildArch: x64
                   _PublishArtifacts: bin/Linux.x64.Release
+                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                  Build_Debug:
+                    _BuildConfig: Debug
+                    _BuildArch: x64
+                    _PublishArtifacts: bin/Linux.x64.Debug
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -262,6 +263,23 @@ extends:
 
         - template: /eng/pipelines/build.yml
           parameters:
+            name: Ubuntu_20_04
+            osGroup: Linux
+            container: test_ubuntu_20_04
+            dependsOn: Linux_x64
+            testOnly: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
+                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                  Build_Debug:
+                    _BuildConfig: Debug
+                    _BuildArch: x64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
             name: Alpine3_13
             osGroup: Linux
             osSuffix: -musl
@@ -278,83 +296,91 @@ extends:
                     _BuildConfig: Debug
                     _BuildArch: x64
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: Debian_Bullseye
-            osGroup: Linux
-            container: test_debian_11_amd64
-            dependsOn: Linux_x64
-            testOnly: true
-            strategy:
-              matrix:
-                Build_Debug:
-                  _BuildConfig: Debug
-                  _BuildArch: x64
+        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              name: Debian_Bullseye
+              osGroup: Linux
+              container: test_debian_11_amd64
+              dependsOn: Linux_x64
+              testOnly: true
+              strategy:
+                matrix:
+                  Build_Release:
+                    _BuildConfig: Release
+                    _BuildArch: x64
+                  ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                    Build_Debug:
+                      _BuildConfig: Debug
+                      _BuildArch: x64
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: Fedora_36
-            osGroup: Linux
-            container: test_fedora_36
-            dependsOn: Linux_x64
-            testOnly: true
-            strategy:
-              matrix:
-                Build_Debug:
-                  _BuildConfig: Debug
-                  _BuildArch: x64
+          - template: /eng/pipelines/build.yml
+            parameters:
+              name: Fedora_36
+              osGroup: Linux
+              container: test_fedora_36
+              dependsOn: Linux_x64
+              testOnly: true
+              strategy:
+                matrix:
+                  Build_Release:
+                    _BuildConfig: Release
+                    _BuildArch: x64
+                  ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                    Build_Debug:
+                      _BuildConfig: Debug
+                      _BuildArch: x64
 
-        #- template: /eng/pipelines/build.yml
-        #  parameters:
-        #    name: OpenSuse_15_2
-        #    osGroup: Linux
-        #    container: test_opensuse_15_2
-        #    dependsOn: Linux_x64
-        #    testOnly: true
-        #    strategy:
-        #      matrix:
-        #        Build_Debug:
-        #          _BuildConfig: Debug
-        #          _BuildArch: x64
+          #- template: /eng/pipelines/build.yml
+          #  parameters:
+          #    name: OpenSuse_15_2
+          #    osGroup: Linux
+          #    container: test_opensuse_15_2
+          #    dependsOn: Linux_x64
+          #    testOnly: true
+          #    strategy:
+          #      matrix:
+          #        Build_Release:
+          #          _BuildConfig: Release
+          #          _BuildArch: x64
+          #        ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          #          Build_Debug:
+          #            _BuildConfig: Debug
+          #            _BuildArch: x64
 
-        #- template: /eng/pipelines/build.yml
-        #  parameters:
-        #    name: Ubuntu_18_04
-        #    osGroup: Linux
-        #    container: test_ubuntu_18_04
-        #    dependsOn: Linux_x64
-        #    testOnly: true
-        #    strategy:
-        #      matrix:
-        #        Build_Debug:
-        #          _BuildConfig: Debug
-        #          _BuildArch: x64
+          #- template: /eng/pipelines/build.yml
+          #  parameters:
+          #    name: Ubuntu_18_04
+          #    osGroup: Linux
+          #    container: test_ubuntu_18_04
+          #    dependsOn: Linux_x64
+          #    testOnly: true
+          #    strategy:
+          #      matrix:
+          #        Build_Release:
+          #          _BuildConfig: Release
+          #          _BuildArch: x64
+          #        ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          #          Build_Debug:
+          #            _BuildConfig: Debug
+          #            _BuildArch: x64
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: Ubuntu_20_04
-            osGroup: Linux
-            container: test_ubuntu_20_04
-            dependsOn: Linux_x64
-            testOnly: true
-            strategy:
-              matrix:
-                Build_Debug:
-                  _BuildConfig: Debug
-                  _BuildArch: x64
-
-        #- template: /eng/pipelines/build.yml
-        #  parameters:
-        #    name: Ubuntu_22_04
-        #    osGroup: Linux
-        #    container: test_ubuntu_22_04
-        #    dependsOn: Linux_x64
-        #    testOnly: true
-        #    strategy:
-        #      matrix:
-        #        Build_Debug:
-        #          _BuildConfig: Debug
-        #          _BuildArch: x64
+          #- template: /eng/pipelines/build.yml
+          #  parameters:
+          #    name: Ubuntu_22_04
+          #    osGroup: Linux
+          #    container: test_ubuntu_22_04
+          #    dependsOn: Linux_x64
+          #    testOnly: true
+          #    strategy:
+          #      matrix:
+          #        Build_Release:
+          #          _BuildConfig: Release
+          #          _BuildArch: x64
+          #        ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          #          Build_Debug:
+          #            _BuildConfig: Debug
+          #            _BuildArch: x64
 
         # Download, sign, package and publish
         - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:

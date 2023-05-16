@@ -188,27 +188,28 @@ jobs:
       - task: CodeQL3000Finalize@0
         displayName: CodeQL Finalize
 
-    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-      - task: CopyFiles@2
-        displayName: Gather binaries for publish to artifacts
-        inputs:
-          SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-          Contents: '**'
-          TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_ArtifactsTargetPath)
-        condition: and(ne(variables['_PublishArtifacts'], ''), ne(variables['_ArtifactsTargetPath'], ''))
-      - task: CopyFiles@2
-        displayName: Gather binaries for publish to artifacts
-        inputs:
-          SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-          Contents: '**'
-          TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_PublishArtifacts)
-        condition: and(ne(variables['_PublishArtifacts'], ''), eq(variables['_ArtifactsTargetPath'], ''))
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Build Artifacts
-        inputs:
-          pathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
-          artifactName: Build_$(_BuildConfig)
-        condition: ne(variables['_PublishArtifacts'], '')
+    - task: CopyFiles@2
+      displayName: Gather binaries for publish to special artifacts path
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+        Contents: '**'
+        TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_ArtifactsTargetPath)
+      condition: and(ne(variables['_PublishArtifacts'], ''), ne(variables['_ArtifactsTargetPath'], ''))
+
+    - task: CopyFiles@2
+      displayName: Gather binaries for publish to artifacts
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+        Contents: '**'
+        TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_PublishArtifacts)
+      condition: and(ne(variables['_PublishArtifacts'], ''), eq(variables['_ArtifactsTargetPath'], ''))
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Build Artifacts
+      inputs:
+        pathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
+        artifactName: Build_$(_BuildConfig)
+      condition: ne(variables['_PublishArtifacts'], '')
 
     - task: PublishBuildArtifacts@1
       displayName: Publish Artifacts on failure
