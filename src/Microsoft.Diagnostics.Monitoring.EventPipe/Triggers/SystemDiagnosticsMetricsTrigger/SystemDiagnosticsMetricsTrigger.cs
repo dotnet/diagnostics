@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
                 MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter),
                 settings.MaxHistograms,
                 settings.MaxTimeSeries);
-            settings.SessionId = config.SessionId;
+            settings.SessionId = config.UniqueSessionId;
 
             return config;
         }

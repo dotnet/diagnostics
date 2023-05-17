@@ -4,13 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static class TraceEventExtensions
     {
-        private const string shared = "SHARED";
         private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
 
         public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }
@@ -170,7 +170,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
 
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }
@@ -206,7 +206,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
 
-            if (payloadSessionId != shared || traceEvent.Version < 1) // Version 1 added the value field.
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId || traceEvent.Version < 1) // Version 1 added the value field.
             {
                 return;
             }
@@ -244,7 +244,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }
@@ -274,7 +274,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }
@@ -290,7 +290,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }
@@ -306,7 +306,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }
@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-            if (payloadSessionId == sessionId) // todo what to do here
+            if (payloadSessionId == sessionId) // STILL NEED TO TEST THIS BY SETTING DIAGNOSTICS TO STILL USE GUID, THEN START THIS
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -356,28 +356,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string expectedRefreshInterval = (string)obj.PayloadValue(5);
             string actualRefreshInterval = (string)obj.PayloadValue(6);
 
-            // NOTE: This is going to display even for the session that is already running - might need to figure out a workaround.
-
-            string mismatchedValues = string.Empty;
+            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+            "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
 
             if (expectedMaxHistograms != actualMaxHistograms)
             {
-                mismatchedValues += $"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine;
+                errorMessage.Append($"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine);
             }
             if (expectedMaxTimeSeries != actualMaxTimeSeries)
             {
-                mismatchedValues += $"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine;
+                errorMessage.Append($"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine);
             }
             if (expectedRefreshInterval != actualRefreshInterval)
             {
-                mismatchedValues += $"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine;
+                errorMessage.Append($"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine);
             }
 
-            string errorMessage = "Error: Another shared metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
-            "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine +
-            mismatchedValues;
-
-            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+            payload = new ErrorPayload(errorMessage.ToString(), obj.TimeStamp);
 
             inactiveSharedSessions.Add(payloadSessionId, true);
         }
@@ -389,7 +384,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string payloadSessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
 
-            if (payloadSessionId != shared)
+            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
             {
                 return;
             }

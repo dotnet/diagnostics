@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     public class CounterMonitor
     {
         private const int BufferDelaySecs = 1;
-        private const string shared = "SHARED";
+        private const string SharedSessionId = "SHARED"; // This should be identical to the one used by dotnet-monitor in MetricSourceConfiguration.cs
         private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
 
         private int _processId;
@@ -55,8 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public CounterMonitor()
         {
             _pauseCmdSet = false;
-            //_metricsEventSourceSessionId = Guid.NewGuid().ToString();
-            _metricsEventSourceSessionId = Guid.NewGuid().ToString(); // still need this for identification - use prefix to denote following SHARED protocol
+            _metricsEventSourceSessionId = Guid.NewGuid().ToString();
 
             _shouldExit = new TaskCompletionSource<int>();
         }
@@ -74,6 +73,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
                 _renderer.ToggleStatus(_pauseCmdSet);
 
+                // If a session received a MultipleSessionsConfiguredIncorrectlyError, ignore future shared events
                 if (obj.ProviderName == "System.Diagnostics.Metrics" && !inactiveSharedSessions.ContainsKey(_metricsEventSourceSessionId))
                 {
                     if (obj.EventName == "BeginInstrumentReporting")
@@ -118,9 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     else if (obj.EventName == "MultipleSessionsConfiguredIncorrectlyError")
                     {
-                        // --refresh-interval 5
                         HandleMultipleSessionsConfiguredIncorrectlyError(obj);
-
                     }
                 }
                 else if (obj.EventName == "EventCounters")
@@ -152,7 +150,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
             // string instrumentName = (string)obj.PayloadValue(3);
-            if (sessionId != shared)
+            if (sessionId != SharedSessionId)
             {
                 return;
             }
@@ -168,7 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string rateText = (string)obj.PayloadValue(6);
-            if (sessionId != shared || !FilterCheck(meterName, instrumentName))
+            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -192,7 +190,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string lastValueText = (string)obj.PayloadValue(6);
-            if (sessionId != shared || !FilterCheck(meterName, instrumentName))
+            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -227,7 +225,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string tags = (string)obj.PayloadValue(5);
             //string rateText = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)obj.PayloadValue(7);
-            if (sessionId != shared || !FilterCheck(meterName, instrumentName))
+            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -257,7 +255,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
-            if (sessionId != shared || !FilterCheck(meterName, instrumentName))
+            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -286,7 +284,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleTimeSeriesLimitReached(TraceEvent obj)
         {
             string sessionId = (string)obj.PayloadValue(0);
-            if (sessionId != shared)
+            if (sessionId != SharedSessionId)
             {
                 return;
             }
@@ -300,7 +298,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             string sessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (sessionId != shared)
+            if (sessionId != SharedSessionId)
             {
                 return;
             }
@@ -315,7 +313,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             string sessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (sessionId != shared)
+            if (sessionId != SharedSessionId)
             {
                 return;
             }
@@ -328,7 +326,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleMultipleSessionsNotSupportedError(TraceEvent obj)
         {
             string runningSessionId = (string)obj.PayloadValue(0);
-            if (runningSessionId == _metricsEventSourceSessionId) // todo what to do here
+            if (runningSessionId == _metricsEventSourceSessionId) // same as DM - want to test this, but in theory doesn't need to change.
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -358,30 +356,25 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string expectedRefreshInterval = (string)obj.PayloadValue(5);
             string actualRefreshInterval = (string)obj.PayloadValue(6);
 
-            // NOTE: This is going to display even for the session that is already running - might need to figure out a workaround.
-
-            string mismatchedValues = string.Empty;
+            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+                "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
 
             if (expectedMaxHistograms != actualMaxHistograms)
             {
-                mismatchedValues += $"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine;
+                errorMessage.Append($"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine);
             }
             if (expectedMaxTimeSeries != actualMaxTimeSeries)
             {
-                mismatchedValues += $"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine;
+                errorMessage.Append($"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine);
             }
             if (expectedRefreshInterval != actualRefreshInterval)
             {
-                mismatchedValues += $"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine;
+                errorMessage.Append($"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine);
             }
 
-            string errorMessage = "Error: Another shared metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
-            "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine +
-            mismatchedValues;
-
-            _renderer.SetErrorText(errorMessage);
+            _renderer.SetErrorText(errorMessage.ToString());
             inactiveSharedSessions.Add(payloadSessionId, true);
-            //_shouldExit.TrySetResult((int)ReturnCode.SessionCreationError); // make sure things can't come in after this
+            _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
         }
 
         private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
@@ -898,7 +891,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 new("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
                     new Dictionary<string, string>()
                     {
-                        { "SessionId", shared },
+                        { "SessionId", SharedSessionId },
                         { "Metrics", metrics.ToString() },
                         { "RefreshInterval", _interval.ToString() },
                         { "MaxTimeSeries", _maxTimeSeries.ToString() },
@@ -910,7 +903,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return eventCounterProviders.Append(metricsEventSourceProvider).ToArray();
         }
 
-        private bool FilterCheck(string meterName, string instrumentName)
+        private bool Filter(string meterName, string instrumentName)
         {
             return _counterList.GetCounters(meterName).Contains(instrumentName) || _counterList.IncludesAllCounters(meterName);
         }

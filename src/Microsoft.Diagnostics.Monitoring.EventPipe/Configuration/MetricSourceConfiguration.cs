@@ -30,10 +30,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
-        //private const string sharedPrefix = "SHARED_";
+        public const string SharedSessionId = "SHARED";
 
         private readonly IList<EventPipeProvider> _eventPipeProviders;
-        public string SessionId { get; private set; }
+        public string UniqueSessionId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> eventCounterProviderNames)
             : this(metricIntervalSeconds, CreateProviders(eventCounterProviderNames?.Any() == true ? eventCounterProviderNames : DefaultMetricProviders))
@@ -67,19 +67,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 const long TimeSeriesValuesEventKeyword = 0x2;
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
-                //SessionId = Guid.NewGuid().ToString();
-                SessionId = Guid.NewGuid().ToString(); // still need this for identification - use prefix to denote following SHARED protocol
+                UniqueSessionId = Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
                         new Dictionary<string, string>()
                         {
-                            { "SessionId", "SHARED" },
+                            { "SessionId", SharedSessionId },
                             { "Metrics", metrics },
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
                             { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
-                            { "SharedIdentifier", SessionId  }
+                            { "SharedIdentifier", UniqueSessionId  }
                         }
                     );
 
