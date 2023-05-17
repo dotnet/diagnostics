@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
@@ -108,6 +109,30 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             Console.WriteLine($"Found {count:n0} unique roots.");
+
+            // BEGIN TEST CODE
+
+            Console.WriteLine();
+            Console.WriteLine("Cached roots in RootCacheService:");
+            foreach (ClrStackRoot root in RootCache.EnumerateRoots().OfType<ClrStackRoot>().OrderBy(r => r.Address))
+            {
+                uint? osThreadId = root.StackFrame?.Thread?.OSThreadId;
+                string regOffset = (root.RegisterOffset < 0 ? "-" : "") + Math.Abs(root.RegisterOffset).ToString("x");
+                Console.WriteLine($"thread:{osThreadId:x8} reg:{root.RegisterName} regoffs:{regOffset} address:{root.Address:x} obj:{root.Object.Address:x} type:{root.Object.Type?.Name}");
+            }
+
+            // Make sure we get the same roots from a live enumeration:
+            Console.WriteLine();
+            Console.WriteLine("Roots from ClrMD:");
+            foreach (ClrStackRoot root in Runtime.Threads.SelectMany(r => r.EnumerateStackRoots()).OrderBy(r => r.Address))
+            {
+                uint? osThreadId = root.StackFrame?.Thread?.OSThreadId;
+                string regOffset = (root.RegisterOffset < 0 ? "-" : "") + Math.Abs(root.RegisterOffset).ToString("x");
+                Console.WriteLine($"thread:{osThreadId:x8} reg:{root.RegisterName} regoffs:{regOffset} address:{root.Address:x} obj:{root.Object.Address:x} type:{root.Object.Type?.Name}");
+            }
+
+            Console.WriteLine();
+            // END TEST CODE
         }
 
         private int PrintOlderGenerationRoots(GCRoot gcroot, int gen)
