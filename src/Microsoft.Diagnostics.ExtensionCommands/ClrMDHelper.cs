@@ -851,37 +851,51 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             switch (generation)
             {
                 case GCGeneration.Generation0:
-                    start = segment.Generation0.Start;
-                    end = segment.Generation0.End;
-                    return start != end;
+                    if (segment.Kind == GCSegmentKind.Generation0 || segment.Kind == GCSegmentKind.Ephemeral)
+                    {
+                        start = segment.Generation0.Start;
+                        end = segment.Generation0.End;
+                    }
+                    break;
                 case GCGeneration.Generation1:
-                    start = segment.Generation1.Start;
-                    end = segment.Generation1.End;
-                    return start != end;
+                    if (segment.Kind == GCSegmentKind.Generation1 || segment.Kind == GCSegmentKind.Ephemeral)
+                    {
+                        start = segment.Generation1.Start;
+                        end = segment.Generation1.End;
+                    }
+                    break;
                 case GCGeneration.Generation2:
-                    if (segment.Kind != GCSegmentKind.Large && segment.Kind != GCSegmentKind.Large && segment.Kind != GCSegmentKind.Frozen)
+                    if (segment.Kind == GCSegmentKind.Generation2 || segment.Kind == GCSegmentKind.Ephemeral)
                     {
                         start = segment.Generation2.Start;
                         end = segment.Generation2.End;
                     }
-                    return start != end;
+                    break;
                 case GCGeneration.LargeObjectHeap:
                     if (segment.Kind == GCSegmentKind.Large)
                     {
                         start = segment.Start;
                         end = segment.End;
                     }
-                    return start != end;
+                    break;
                 case GCGeneration.PinnedObjectHeap:
-                    if (segment.Kind == GCSegmentKind.Pinned || segment.Kind == GCSegmentKind.Frozen)
+                    if (segment.Kind == GCSegmentKind.Pinned)
                     {
                         start = segment.Start;
                         end = segment.End;
                     }
-                    return start != end;
+                    break;
+                case GCGeneration.FrozenObjectHeap:
+                    if (segment.Kind == GCSegmentKind.Frozen)
+                    {
+                        start = segment.Start;
+                        end = segment.End;
+                    }
+                    break;
                 default:
                     return false;
             }
+            return start != end;
         }
 
         public IEnumerable<string> EnumerateConcurrentQueue(ulong address)

@@ -228,7 +228,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // and that all objects passed to it are within the given
             // range of segment bounds.
             Debug.Assert(segmentIndex >= 0 && segmentIndex <= segments.Length);
-            Debug.Assert(segments[0].ObjectRange.Start < potentialObject);
+            Debug.Assert(segments[0].ObjectRange.Start <= potentialObject);
             Debug.Assert(potentialObject < segments[segments.Length - 1].ObjectRange.End);
 
             for (; segmentIndex < segments.Length; segmentIndex++)
