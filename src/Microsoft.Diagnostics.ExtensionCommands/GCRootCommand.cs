@@ -131,6 +131,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console.WriteLine($"thread:{osThreadId:x8} reg:{root.RegisterName} regoffs:{regOffset} address:{root.Address:x} obj:{root.Object.Address:x} type:{root.Object.Type?.Name}");
             }
 
+            foreach (ClrThread thread in Runtime.Threads)
+            {
+                Console.WriteLine($"{thread.OSThreadId:x}:");
+                foreach (ClrStackFrame frame in thread.EnumerateStackTrace())
+                {
+                    Console.WriteLine("    " + frame.ToString());
+                }
+            }
+
             Console.WriteLine();
             // END TEST CODE
         }
