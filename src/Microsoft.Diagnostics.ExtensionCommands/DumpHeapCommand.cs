@@ -72,6 +72,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ParseArguments();
 
             IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken);
+
+            bool? liveObjectWarning = null;
+            if ((Live || Dead) && Short)
+            {
+                liveObjectWarning = LiveObjects.PrintWarning;
+                LiveObjects.PrintWarning = false;
+            }
+
             if (Live)
             {
                 objectsToPrint = objectsToPrint.Where(LiveObjects.IsLive);
@@ -148,6 +156,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             DumpHeap.PrintHeap(objectsToPrint, displayKind, StatOnly, printFragmentation);
+
+            if (liveObjectWarning is bool original)
+            {
+                LiveObjects.PrintWarning = original;
+            }
         }
 
         private void ParseArguments()

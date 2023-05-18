@@ -483,9 +483,13 @@ public class SOS
             }
             else
             {
-                // We should verify what python version this is. 2.7 is out of
-                // support for a while now, but we have old OS's.
-                program = "/usr/bin/python";
+                program = Environment.GetEnvironmentVariable("PYTHONPATH");
+                if (program == null)
+                {
+                    // We should verify what python version this is. 2.7 is out of
+                    // support for a while now, but we have old OS's.
+                    program = "/usr/bin/python";
+                }
                 if (!File.Exists(program))
                 {
                     throw new ArgumentException($"{program} does not exists");

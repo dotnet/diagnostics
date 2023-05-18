@@ -41,14 +41,14 @@ usage_list+=("-test: run xunit tests")
 
 handle_arguments() {
 
-    lowerI="$(echo "$1" | tr "[:upper:]" "[:lower:]")"
+    lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
     case "$lowerI" in
         architecture|-architecture|-a)
             __BuildArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
             __ShiftArgs=1
             ;;
 
-        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign|-sb)
+        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-build|-restore|-sign|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
@@ -61,10 +61,6 @@ handle_arguments() {
             fi
 
             __ShiftArgs=1
-            ;;
-
-        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine|-sb)
-            __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
         -dotnetruntimeversion)
@@ -148,9 +144,30 @@ fi
 #
 
 if [[ "$__ManagedBuild" == 1 ]]; then
+
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
-    "$__RepoRootDir/eng/common/build.sh" --build --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
+    "$__RepoRootDir/eng/common/build.sh" --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
+
     if [ "$?" != 0 ]; then
+        exit 1
+    fi
+
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
+
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/CreateVersionFile.proj \
+        /bl:$__GenerateVersionLog \
+        /t:GenerateVersionFiles \
+        /restore \
+        /p:GenerateVersionSourceFile=true \
+        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
+        /p:Configuration="$__BuildType" \
+        /p:Platform="$__BuildArch" \
+        $__UnprocessedBuildArgs
+
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
         exit 1
     fi
 fi
@@ -198,25 +215,6 @@ fi
 # Build native components
 #
 if [[ "$__NativeBuild" == 1 ]]; then
-    echo "Generating Version Source File"
-    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
-
-    "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.proj \
-        /bl:$__GenerateVersionLog \
-        /t:GenerateVersionFiles \
-        /restore \
-        /p:GenerateVersionSourceFile=true \
-        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
-        /p:Configuration="$__BuildType" \
-        /p:Platform="$__BuildArch" \
-        $__UnprocessedBuildArgs
-
-    if [ $? != 0 ]; then
-        echo "Generating Version Source File FAILED"
-        exit 1
-    fi
-
     build_native "$__TargetOS" "$__BuildArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "$?" != 0 ]; then
