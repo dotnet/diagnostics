@@ -743,6 +743,58 @@ Payload
 }
 ```
 
+### `CreateCoreDump4`
+
+Command Code: `0x0104`
+
+The `CreateCoreDump4` command is used to instruct the runtime to generate a core dump of the process. It augments `CreateCoreDump3` with the ability to collect verbose logs and to redirect them to any given file.
+
+In the event of an [error](#errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs
+
+Header: `{ Magic; Size; 0x0104; 0x0000 }`
+
+* `string dumpName`: As described in [`CreateCoreDump`](#createcoredump).
+* `uint dumpType`: As described in [`CreateCoreDump`](#createcoredump).
+* `uint flags`: Flags as defined by [`CreateCoreDump3`](#createcoredump3), with the following addition:
+  * `GenerateDumpFlagsLogToFile = 0x8`: Generate crashdump report next to the generated dump.
+* `string logPath`: The path to use for logging. In case this is null or empty, the runtime will log to a file adjacent to the dump.
+
+#### Returns (as an IPC Message Payload)
+
+Header: `{ Magic; Size; 0xFF00; 0x0000; }`
+
+`CreateCoreDump4` returns:
+
+* `int32 hresult`: The result of creating the core dump (`0` indicates success).
+* `string error`: Optionally the payload may have an error describing the collection issues.
+
+##### Details
+
+
+Input:
+
+```
+Payload
+{
+    string dumpName,
+    uint dumpType,
+    uint flags
+    string logPath
+}
+```
+
+Returns:
+
+```c
+Payload
+{
+    int32 hresult
+    string errorString
+}
+```
+
 ## Profiler Commands
 
 ### `AttachProfiler`
