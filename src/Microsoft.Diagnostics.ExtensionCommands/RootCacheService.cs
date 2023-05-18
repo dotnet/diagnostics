@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -159,17 +160,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 _printedStackWarning = true;
             }
 
+            Trace.TraceInformation("STACKREF - BEGIN");
             List<ClrRoot> stackRoots = new();
-            foreach (ClrThread thread in Runtime.Threads.Where(thread => thread.IsAlive))
+            foreach (ClrThread thread in Runtime.Threads)
             {
+                if (!thread.IsAlive)
+                {
+                    Trace.TraceInformation($"STACKREF - thread:{thread.OSThreadId:x} is DEAD");
+                    continue;
+                }
+
+                Trace.TraceInformation($"STACKREF - thread:{thread.OSThreadId:x}");
                 Console.CancellationToken.ThrowIfCancellationRequested();
 
                 foreach (ClrRoot root in thread.EnumerateStackRoots())
                 {
+                    Trace.TraceInformation($"STACKREF - thread:{thread.OSThreadId:x} root:{root.Address:x}, obj:{root.Object:x}");
                     Console.CancellationToken.ThrowIfCancellationRequested();
                     stackRoots.Add(root);
                 }
             }
+
+
+            Trace.TraceInformation("STACKREF - END");
 
             _stackRoots = stackRoots.AsReadOnly();
             return _stackRoots;
