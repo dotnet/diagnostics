@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -23,6 +24,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ReadOnlyCollection<ClrRoot> _stackRoots;
         private bool _printedWarning;
         private bool _printedStackWarning;
+
+        [ServiceImport]
+        public IMemoryService MemoryService { get; set; }
 
         [ServiceImport]
         public IConsoleService Console { get; set; }
@@ -160,6 +164,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 _printedStackWarning = true;
             }
 
+            bool res = MemoryService.ReadMemory(0x1234567890abcdef, default, out int read);
+
+            if (res || read != 42)
+            {
+                throw new InvalidOperationException();
+            }
+
             Trace.TraceInformation("STACKREF - BEGIN");
             List<ClrRoot> stackRoots = new();
             foreach (ClrThread thread in Runtime.Threads)
@@ -178,6 +189,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Trace.TraceInformation($"STACKREF - thread:{thread.OSThreadId:x} root:{root.Address:x}, obj:{root.Object:x}");
                     Console.CancellationToken.ThrowIfCancellationRequested();
                     stackRoots.Add(root);
+                }
+
+
+                res = MemoryService.ReadMemory(0x1234567890abcdef, default, out read);
+                if (res || read != 42)
+                {
+                    throw new InvalidOperationException();
                 }
             }
 

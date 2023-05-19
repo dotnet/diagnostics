@@ -47,6 +47,8 @@ namespace SOS.Extensions
         /// </summary>
         public int PointerSize { get; }
 
+        private bool _trace;
+
         /// <summary>
         /// Read memory out of the target process.
         /// </summary>
@@ -56,11 +58,24 @@ namespace SOS.Extensions
         /// <returns>true if any bytes were read at all, false if the read failed (and no bytes were read)</returns>
         public bool ReadMemory(ulong address, Span<byte> buffer, out int bytesRead)
         {
+            if (address == 0x1234567890abcdef)
+            {
+                _trace = !_trace;
+                bytesRead = 42;
+                return false;
+            }
+
             HResult hr = _debuggerServices.ReadVirtual(address, buffer, out bytesRead);
             if (hr != HResult.S_OK)
             {
                 bytesRead = 0;
             }
+
+            if (_trace)
+            {
+                Trace.TraceInformation($"MemoryServiceFromDebuggerServices::ReadMemory: {address:x} req:{buffer.Length:x} read:{bytesRead:x} hr={hr}");
+            }
+
             return bytesRead > 0;
         }
 
