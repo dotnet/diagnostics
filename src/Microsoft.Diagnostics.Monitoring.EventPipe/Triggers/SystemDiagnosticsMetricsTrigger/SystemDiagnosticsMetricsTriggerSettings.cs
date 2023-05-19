@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         public int MaxTimeSeries { get; set; }
 
-        public string SessionId { get; set; }
+        public string UniqueSessionId { get; set; }
 
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {

@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
 
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string uniqueSessionId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
-            if (sessionId != null && !inactiveSharedSessions.ContainsKey(sessionId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
+            if (uniqueSessionId != null && !inactiveSharedSessions.ContainsKey(uniqueSessionId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
@@ -115,11 +115,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                 {
-                    HandleMultipleSessionsNotSupportedError(traceEvent, sessionId, out payload);
+                    HandleMultipleSessionsNotSupportedError(traceEvent, uniqueSessionId, out payload);
                 }
                 else if (traceEvent.EventName == "MultipleSessionsConfiguredIncorrectlyError")
                 {
-                    HandleMultipleSessionsConfiguredIncorrectlyError(traceEvent, sessionId, out payload);
+                    HandleMultipleSessionsConfiguredIncorrectlyError(traceEvent, uniqueSessionId, out payload);
                 }
 
                 return payload != null;
@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-            if (payloadSessionId == sessionId) // STILL NEED TO TEST THIS BY SETTING DIAGNOSTICS TO STILL USE GUID, THEN START THIS
+            if (payloadSessionId == sessionId)
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
