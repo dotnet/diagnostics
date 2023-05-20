@@ -28,6 +28,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="startingRuntimeId">The starting runtime id for this provider</param>
         public IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId)
         {
+            // The DataTarget isn't cached here because there is no way to flush it. It currently caches
+            // ClrInfos, modules and PE images. It also isn't disposed because the DataTarget instance
+            // needs to be around as long as the ClrInfos wrapped by the Runtime instances created below
+            // which the life time is determined by the RuntimeService.
             DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>()))
             {
                 FileLocator = null

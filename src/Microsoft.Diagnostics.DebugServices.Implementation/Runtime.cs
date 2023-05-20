@@ -62,10 +62,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
             _onFlushEvent.Dispose();
+            Flush();
         }
 
         private void Flush()
         {
+            _runtimeVersion = null;
+            _dacFilePath = null;
+            _dbiFilePath = null;
             if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
             {
                 ((ClrRuntime)service).FlushCachedData();
