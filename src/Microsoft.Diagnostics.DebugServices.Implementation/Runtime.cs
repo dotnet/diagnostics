@@ -20,7 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class Runtime : IRuntime, IDisposable
     {
         private readonly ClrInfo _clrInfo;
-        private readonly IDisposable _onFlushEvent;
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
         private string _dacFilePath;
@@ -52,28 +51,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainer.AddService<IRuntime>(this);
             _serviceContainer.AddService(clrInfo);
 
-            _onFlushEvent = Target.OnFlushEvent.Register(Flush);
-
             Trace.TraceInformation($"Created runtime #{id} {clrInfo.Flavor} {clrInfo}");
         }
 
         void IDisposable.Dispose()
         {
-            Flush();
-            _serviceContainer.RemoveService(typeof(IRuntime));
-            _serviceContainer.DisposeServices();
-            _onFlushEvent.Dispose();
-        }
-
-        private void Flush()
-        {
-            _runtimeVersion = null;
-            _dacFilePath = null;
-            _dbiFilePath = null;
             if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
             {
-                ((ClrRuntime)service).FlushCachedData();
+                ClrRuntime clrRuntime = (ClrRuntime)service;
+                clrRuntime.Dispose();
+                clrRuntime.DataTarget.Dispose();
             }
+            _serviceContainer.RemoveService(typeof(IRuntime));
+            _serviceContainer.DisposeServices();
         }
 
         #region IRuntime
