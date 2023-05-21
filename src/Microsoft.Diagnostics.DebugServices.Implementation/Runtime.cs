@@ -58,9 +58,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
             {
-                ClrRuntime clrRuntime = (ClrRuntime)service;
-                clrRuntime.Dispose();
-                clrRuntime.DataTarget.Dispose();
+                // The DataTarget created in the RuntimeProvider is disposed here. The ClrRuntime
+                // instance is disposed below in DisposeServices().
+                ((ClrRuntime)service).DataTarget.Dispose();
             }
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
