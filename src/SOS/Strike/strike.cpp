@@ -8693,7 +8693,7 @@ DECLARE_API(PathTo)
 \**********************************************************************/
 DECLARE_API(GCRoot)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     return ExecuteCommand("gcroot", args);
