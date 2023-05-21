@@ -59,10 +59,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         void IDisposable.Dispose()
         {
+            Flush();
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
             _onFlushEvent.Dispose();
-            Flush();
         }
 
         private void Flush()
