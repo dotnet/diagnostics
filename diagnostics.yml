@@ -383,7 +383,7 @@ extends:
           #            _BuildArch: x64
 
         # Download, sign, package and publish
-        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+        - ${{ if ne(variables['System.TeamProject'], 'public') }}:  
           - template: /eng/common/templates/job/job.yml
             parameters:
               name: Sign_Package_Publish
