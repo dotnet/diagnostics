@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         void IDisposable.Dispose()
         {
-            Trace.TraceInformation($"Disposing runtime #{id}");
+            Trace.TraceInformation($"Disposing runtime #{Id}");
             if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
             {
                 // The DataTarget created in the RuntimeProvider is disposed here. The ClrRuntime
