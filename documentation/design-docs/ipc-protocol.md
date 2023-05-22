@@ -376,10 +376,11 @@ See: [Profiler Commands](#Profiler-Commands)
 ```c++
 enum class ProcessCommandId : uint8_t
 {
-    ProcessInfo        = 0x00,
-    ResumeRuntime      = 0x01,
-    ProcessEnvironment = 0x02,
-    ProcessInfo2       = 0x04,
+    ProcessInfo             = 0x00,
+    ResumeRuntime           = 0x01,
+    ProcessEnvironment      = 0x02,
+    ProcessInfo2            = 0x04,
+    GetAppContextProperties = 0x07
     // future
 }
 ```
@@ -844,6 +845,46 @@ struct Payload
     LPCWSTR ClrProductVersion;
 }
 ```
+
+### `GetAppContextProperties`
+
+Command Code: `0x0407`
+
+The `GetAppContextProperties` command queries the runtime for its [AppContext](https://learn.microsoft.com/en-us/dotnet/api/system.appcontext) properties.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0407; 0x0000 }`
+
+There is no payload.
+
+#### Returns (as an IPC Message Payload + continuation):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+Payload:
+* `uint32_t nIncomingBytes`: the number of bytes to expect in the continuation stream
+* `uint16_t future`: unused
+
+Continuation:
+* `Array<Array<WCHAR>> properties`: The properties written as a length prefixed array of length prefixed arrays of `WCHAR`.
+
+Note: it is valid for `nIncomingBytes` to be `4` and the continuation to simply contain the value `0`.
+
+##### Details:
+
+Returns:
+```c++
+struct Payload
+{
+    uint32_t nIncomingBytes;
+    uint16_t future;
+}
+```
+
+> Available since .NET 8.0
 
 ## Errors
 

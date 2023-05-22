@@ -298,6 +298,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return await helper.ReadEnvironmentAsync(response.Continuation, token).ConfigureAwait(false);
         }
 
+        internal Dictionary<string, string> GetAppContextProperties()
+        {
+            IpcMessage message = CreateGetAppContextPropertiesMessage();
+            using IpcResponse response = IpcClient.SendMessageGetContinuation(_endpoint, message);
+            ValidateResponseMessage(response.Message, nameof(GetAppContextProperties));
+
+            ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
+            return helper.ReadEnvironment(response.Continuation);
+        }
+
+        internal async Task<Dictionary<string, string>> GetAppContextPropertiesAsync(CancellationToken token)
+        {
+            IpcMessage message = CreateGetAppContextPropertiesMessage();
+            using IpcResponse response = await IpcClient.SendMessageGetContinuationAsync(_endpoint, message, token).ConfigureAwait(false);
+            ValidateResponseMessage(response.Message, nameof(GetAppContextPropertiesAsync));
+
+            // TODO: GetEnvironmentVariables and GetAppContextProperties responses have the same structure
+            // Can these be unified or reused?
+            ProcessEnvironmentHelper helper = ProcessEnvironmentHelper.Parse(response.Message.Payload);
+            return await helper.ReadEnvironmentAsync(response.Continuation, token).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Get all the active processes that can be attached to.
         /// </summary>
@@ -574,6 +596,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);
+        }
+
+        private static IpcMessage CreateGetAppContextPropertiesMessage()
+        {
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetAppContextProperties);
         }
 
         private static ProcessInfo GetProcessInfoFromResponse(IpcResponse response, string operationName)
