@@ -7,6 +7,7 @@ using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DotnetCounters.UnitTests;
 
 namespace EventPipeTracee
 {
@@ -19,8 +20,8 @@ namespace EventPipeTracee
         public CustomMetrics()
         {
             _meter = new("TestMeter");
-            _counter = _meter.CreateCounter<int>("TestCounter", "dollars");
-            _histogram = _meter.CreateHistogram<float>("TestHistogram", "feet");
+            _counter = _meter.CreateCounter<int>(CounterMonitorPayloadTestsConstants.TestCounter, "dollars");
+            _histogram = _meter.CreateHistogram<float>(CounterMonitorPayloadTestsConstants.TestHistogram, "feet");
 
             //IncrementCounter();
             //RecordHistogram();

@@ -13,11 +13,11 @@ using System.Threading.Tasks;
 using CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tools.Counters;
-//using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
+using Constants = DotnetCounters.UnitTests.CounterMonitorPayloadTestsConstants;
 
 namespace DotnetCounters.UnitTests
 {
@@ -52,7 +52,7 @@ namespace DotnetCounters.UnitTests
                 await using var testRunner = await TestRunnerUtilities.StartProcess(configuration, "TestCounterMonitor DiagMetrics", _outputHelper);
 
                 DateTime startTime = DateTime.Now.ToLocalTime();
-                DateTime endTime = DateTime.Now.ToLocalTime() + DefaultTimeout; // is this safe?
+                DateTime endTime = DateTime.Now.ToLocalTime() + DefaultTimeout;
 
                 await TestRunnerUtilities.ExecuteCollection((ct) => {
                     return Task.Run(async () =>
@@ -75,15 +75,13 @@ namespace DotnetCounters.UnitTests
 
                 using FileStream metricsFile = File.OpenRead(path);
 
-
-
                 JSONCounterTrace trace = JsonSerializer.Deserialize<JSONCounterTrace>(metricsFile, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
 
                 Assert.NotEmpty(trace.events);
-                string[] ExpectedNames = { "TestHistogram (feet)", "TestCounter (dollars / 1 sec)" }; // assemble from constants
+                string[] ExpectedNames = { Constants.TestHistogramName, Constants.TestCounterName }; // assemble from constants
                 Assert.Equal(ExpectedNames, trace.events.Select(e => e.name).Distinct());
 
                 string[] ExpectedProviders = { "TestMeter" }; // push to constant
@@ -97,35 +95,17 @@ namespace DotnetCounters.UnitTests
                 Assert.Equal(ExpectedCounterTypes, trace.events.Select(e => e.counterType).Distinct());
 
                 string[] ExpectedTags = { "tag=5,Percentile=50", "tag=5,Percentile=95", "tag=5,Percentile=99" }; // might be dangerous - do we know they'll be in order?
-                Assert.Equal(ExpectedTags, trace.events.Where(e => e.name.Equals("TestHistogram (feet)")).Select(e => e.tags));
+                Assert.Equal(ExpectedTags, trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.tags));
 
-                Assert.Single(trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.tags).Distinct());
-                Assert.Equal(string.Empty, trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.tags).Distinct().First());
+                Assert.Single(trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct());
+                Assert.Equal(string.Empty, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct().First());
 
-                Assert.Equal(2, trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.value).Distinct().Count());
-                Assert.Equal(1, trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.value).First());
+                Assert.Equal(2, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).Distinct().Count());
+                Assert.Equal(1, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).First());
+                Assert.Equal(0, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).Last());
 
                 var events = trace.events;
                 var ev = events[0];
-
-                string name = ev.name;
-                double value = ev.value;
-                string tags = ev.tags;
-                string provider = ev.provider;
-                string counterType = ev.counterType;
-                string timestamp = ev.timestamp;
-                
-
-
-                /*CounterMonitor monitor = new();
-                CounterSet counters = CounterMonitor.ParseProviderList("MySource[counter1,counter2,counter3]");
-                Assert.Single(counters.Providers);
-                Assert.Equal("MySource", counters.Providers.First());
-                Assert.False(counters.IncludesAllCounters("MySource"));
-                Assert.True(Enumerable.SequenceEqual(counters.GetCounters("MySource"), new string[] { "counter1", "counter2", "counter3" }));
-                */
-
-                // monitor --counters "HatCo.HatStore" --name CustomMetricsTest --refresh-interval 5
 
                 return;
             }
@@ -190,16 +170,6 @@ namespace DotnetCounters.UnitTests
                 string provider = ev.provider;
                 string counterType = ev.counterType;
                 string timestamp = ev.timestamp;
-
-
-
-                /*CounterMonitor monitor = new();
-                CounterSet counters = CounterMonitor.ParseProviderList("MySource[counter1,counter2,counter3]");
-                Assert.Single(counters.Providers);
-                Assert.Equal("MySource", counters.Providers.First());
-                Assert.False(counters.IncludesAllCounters("MySource"));
-                Assert.True(Enumerable.SequenceEqual(counters.GetCounters("MySource"), new string[] { "counter1", "counter2", "counter3" }));
-                */
 
                 return;
             }
