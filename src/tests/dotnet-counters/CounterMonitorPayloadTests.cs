@@ -11,18 +11,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CommonTestRunner;
-using Microsoft.Diagnostics.CommonTestRunner;
-using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Counters;
-using Microsoft.Diagnostics.Tools.Counters.Exporters;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsTCPIP;
+//using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
-using Xunit.Sdk;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace DotnetCounters.UnitTests
@@ -41,7 +35,112 @@ namespace DotnetCounters.UnitTests
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestCounterMonitor(TestConfiguration configuration)
+        public async Task TestCounterMonitorCustomMetrics(TestConfiguration configuration)
+        {
+            if (configuration.BuildProjectFramework != "net8.0")
+            {
+                throw new SkipTestException("Inapplicable framework");
+            }
+
+            CounterMonitor monitor = new CounterMonitor();
+            string path = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), "json");
+
+            try
+            {
+                using CancellationTokenSource source = new CancellationTokenSource(DefaultTimeout);
+
+                await using var testRunner = await TestRunnerUtilities.StartProcess(configuration, "TestCounterMonitor DiagMetrics", _outputHelper);
+
+                DateTime startTime = DateTime.Now.ToLocalTime();
+                DateTime endTime = DateTime.Now.ToLocalTime() + DefaultTimeout; // is this safe?
+
+                await TestRunnerUtilities.ExecuteCollection((ct) => {
+                    return Task.Run(async () =>
+                        await monitor.Collect(
+                            ct: ct,
+                            counter_list: new List<string> { "TestMeter" },
+                            counters: null,
+                            console: new TestConsole(),
+                            processId: testRunner.Pid,
+                            refreshInterval: 1,
+                            format: CountersExportFormat.json,
+                            output: path,
+                            name: null,
+                            diagnosticPort: null,
+                            resumeRuntime: false,
+                            maxHistograms: 10,
+                            maxTimeSeries: 10,
+                            duration: TimeSpan.FromSeconds(10)));
+                }, testRunner, source.Token);
+
+                using FileStream metricsFile = File.OpenRead(path);
+
+
+
+                JSONCounterTrace trace = JsonSerializer.Deserialize<JSONCounterTrace>(metricsFile, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                Assert.NotEmpty(trace.events);
+                string[] ExpectedNames = { "TestHistogram (feet)", "TestCounter (dollars / 1 sec)" }; // assemble from constants
+                Assert.Equal(ExpectedNames, trace.events.Select(e => e.name).Distinct());
+
+                string[] ExpectedProviders = { "TestMeter" }; // push to constant
+                Assert.Equal(ExpectedProviders, trace.events.Select(e => e.provider).Distinct());
+
+                // Disabled temporarily due to https://github.com/dotnet/diagnostics/issues/3905
+                //var eventTimestamp = DateTime.Parse(trace.events[0].timestamp);
+                //Assert.True(startTime < eventTimestamp && eventTimestamp < endTime); // need to make sure that's safe
+
+                string[] ExpectedCounterTypes = { "Metric", "Rate" }; // assemble from constants
+                Assert.Equal(ExpectedCounterTypes, trace.events.Select(e => e.counterType).Distinct());
+
+                string[] ExpectedTags = { "tag=5,Percentile=50", "tag=5,Percentile=95", "tag=5,Percentile=99" }; // might be dangerous - do we know they'll be in order?
+                Assert.Equal(ExpectedTags, trace.events.Where(e => e.name.Equals("TestHistogram (feet)")).Select(e => e.tags));
+
+                Assert.Single(trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.tags).Distinct());
+                Assert.Equal(string.Empty, trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.tags).Distinct().First());
+
+                Assert.Equal(2, trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.value).Distinct().Count());
+                Assert.Equal(1, trace.events.Where(e => e.name.Equals("TestCounter (dollars / 1 sec)")).Select(e => e.value).First());
+
+                var events = trace.events;
+                var ev = events[0];
+
+                string name = ev.name;
+                double value = ev.value;
+                string tags = ev.tags;
+                string provider = ev.provider;
+                string counterType = ev.counterType;
+                string timestamp = ev.timestamp;
+                
+
+
+                /*CounterMonitor monitor = new();
+                CounterSet counters = CounterMonitor.ParseProviderList("MySource[counter1,counter2,counter3]");
+                Assert.Single(counters.Providers);
+                Assert.Equal("MySource", counters.Providers.First());
+                Assert.False(counters.IncludesAllCounters("MySource"));
+                Assert.True(Enumerable.SequenceEqual(counters.GetCounters("MySource"), new string[] { "counter1", "counter2", "counter3" }));
+                */
+
+                // monitor --counters "HatCo.HatStore" --name CustomMetricsTest --refresh-interval 5
+
+                return;
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch { }
+            }
+        }
+
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task TestCounterMonitorSystemRuntime(TestConfiguration configuration)
         {
             if (configuration.BuildProjectFramework != "net8.0")
             {
@@ -78,7 +177,29 @@ namespace DotnetCounters.UnitTests
 
                 using FileStream metricsFile = File.OpenRead(path);
 
-                JSONCounterTrace trace = JsonSerializer.Deserialize<JSONCounterTrace>(metricsFile, new JsonSerializerOptions { PropertyNameCaseInsensitive = true});
+                JSONCounterTrace trace = JsonSerializer.Deserialize<JSONCounterTrace>(metricsFile, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Assert.NotEmpty(trace.events);
+
+                var events = trace.events;
+                var ev = events[0];
+
+                string name = ev.name;
+                double value = ev.value;
+                string tags = ev.tags;
+                string provider = ev.provider;
+                string counterType = ev.counterType;
+                string timestamp = ev.timestamp;
+
+
+
+                /*CounterMonitor monitor = new();
+                CounterSet counters = CounterMonitor.ParseProviderList("MySource[counter1,counter2,counter3]");
+                Assert.Single(counters.Providers);
+                Assert.Equal("MySource", counters.Providers.First());
+                Assert.False(counters.IncludesAllCounters("MySource"));
+                Assert.True(Enumerable.SequenceEqual(counters.GetCounters("MySource"), new string[] { "counter1", "counter2", "counter3" }));
+                */
 
                 return;
             }
