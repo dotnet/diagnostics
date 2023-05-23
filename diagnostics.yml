@@ -365,22 +365,22 @@ extends:
           #            _BuildConfig: Debug
           #            _BuildArch: x64
 
-          #- template: /eng/pipelines/build.yml
-          #  parameters:
-          #    name: Ubuntu_22_04
-          #    osGroup: Linux
-          #    container: test_ubuntu_22_04
-          #    dependsOn: Linux_x64
-          #    testOnly: true
-          #    strategy:
-          #      matrix:
-          #        Build_Release:
-          #          _BuildConfig: Release
-          #          _BuildArch: x64
-          #        ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          #          Build_Debug:
-          #            _BuildConfig: Debug
-          #            _BuildArch: x64
+          - template: /eng/pipelines/build.yml
+            parameters:
+              name: Ubuntu_22_04
+              osGroup: Linux
+              container: test_ubuntu_22_04
+              dependsOn: Linux_x64
+              testOnly: true
+              strategy:
+                matrix:
+                  Build_Release:
+                    _BuildConfig: Release
+                    _BuildArch: x64
+                  ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                    Build_Debug:
+                      _BuildConfig: Debug
+                      _BuildArch: x64
 
         # Download, sign, package and publish
         - ${{ if ne(variables['System.TeamProject'], 'public') }}:  
