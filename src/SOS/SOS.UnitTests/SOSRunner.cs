@@ -851,6 +851,7 @@ public class SOSRunner : IDisposable
                 try
                 {
                     _scriptLogger.FlushCurrentOutputAsError(_processRunner);
+                    await RunCommand(".dump /o /ma %DUMP_NAME%");
                     await RunSosCommand("SOSStatus");
                 }
                 catch (Exception ex)

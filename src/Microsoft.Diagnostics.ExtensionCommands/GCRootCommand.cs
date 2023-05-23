@@ -141,6 +141,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             Console.WriteLine();
+
+            if (count == 0)
+            {
+                System.Console.WriteLine("Waiting to attach to {0}", System.Diagnostics.Process.GetCurrentProcess().Id);
+                //System.Console.ReadLine();
+            }
             // END TEST CODE
         }
 

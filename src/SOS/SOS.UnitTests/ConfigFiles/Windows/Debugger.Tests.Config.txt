@@ -65,7 +65,6 @@
       <Options>
         <!--
             Single file (debuggees cli built)
-         -->
         <Option Condition="'$(SingleFileRuntimeLatestVersion)' != ''">
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
@@ -90,6 +89,7 @@
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
         </Option>
+         -->
         <!--
             Default (prebuilt)
           -->
@@ -98,6 +98,7 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
         </Option>
+        <!--
         <Option Condition="'$(RuntimeVersion70)' != ''">
           <BuildProjectFramework>net7.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion70)</RuntimeFrameworkVersion>
@@ -107,6 +108,7 @@
           <BuildProjectFramework>net6.0</BuildProjectFramework>
           <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
         </Option>
+          -->
         <!--
             SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
           -->
@@ -206,7 +208,6 @@
     </Option>
     <!--
         Desktop Runtime (debuggees cli built)
-     -->
     <Option Condition="'$(TestDesktop)' == 'true'">
       <Options>
         <Option>
@@ -227,6 +228,7 @@
       <RuntimeSymbolsPath>$(DesktopFrameworkPath)</RuntimeSymbolsPath>
       <SetHostRuntime>-netfx</SetHostRuntime>
     </Option>
+     -->
   </Options>
 
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
