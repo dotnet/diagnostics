@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -30,6 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_runtimes is not null)
             {
+                Trace.TraceInformation("RuntimeService.Flush");
                 foreach (IRuntime runtime in _runtimes)
                 {
                     if (runtime is IDisposable disposable)

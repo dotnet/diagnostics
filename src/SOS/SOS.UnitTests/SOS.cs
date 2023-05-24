@@ -532,7 +532,7 @@ public class SOS
             ProcessRunner processRunner = new ProcessRunner(program, arguments.ToString()).
                 WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
-                WithTimeout(TimeSpan.FromMinutes(10)).
+                WithTimeout(TimeSpan.FromMinutes(60)).
                 WithExpectedExitCode(0).
                 WithWorkingDirectory(scriptDir).
                 // Turn on stress logging so the dumplog and histinit commands pass

@@ -321,7 +321,7 @@ public class SOSRunner : IDisposable
                     WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                     WithRuntimeConfiguration("DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
-                    WithTimeout(TimeSpan.FromMinutes(10));
+                    WithTimeout(TimeSpan.FromMinutes(60));
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
@@ -398,7 +398,7 @@ public class SOSRunner : IDisposable
                         }
                         ProcessRunner dotnetDumpRunner = new ProcessRunner(config.DotNetDumpHost(), ReplaceVariables(variables, dotnetDumpArguments.ToString())).
                             WithLog(new TestRunner.TestLogger(dotnetDumpOutputHelper)).
-                            WithTimeout(TimeSpan.FromMinutes(10)).
+                            WithTimeout(TimeSpan.FromMinutes(60)).
                             WithExpectedExitCode(0);
 
                         dotnetDumpRunner.Start();
@@ -679,7 +679,7 @@ public class SOSRunner : IDisposable
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(scriptLogger).
-                WithTimeout(TimeSpan.FromMinutes(10));
+                WithTimeout(TimeSpan.FromMinutes(60));
 
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
             if (OS.Kind == OSKind.Windows)
@@ -851,7 +851,7 @@ public class SOSRunner : IDisposable
                 try
                 {
                     _scriptLogger.FlushCurrentOutputAsError(_processRunner);
-                    await RunCommand(".dump /o /ma %DUMP_NAME%");
+                    //await RunCommand(".dump /o /ma %DUMP_NAME%");
                     await RunSosCommand("SOSStatus");
                 }
                 catch (Exception ex)

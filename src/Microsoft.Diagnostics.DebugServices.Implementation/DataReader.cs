@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public DataReader(ITarget target)
         {
             _target = target;
-            target.OnFlushEvent.Register(() => _modules = null);
+            target.OnFlushEvent.Register(() => { _modules = null; Trace.TraceInformation("DataReader Flushed"); });
         }
 
         #region IDataReader

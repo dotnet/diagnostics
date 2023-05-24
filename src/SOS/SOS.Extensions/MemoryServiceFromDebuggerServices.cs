@@ -71,7 +71,7 @@ namespace SOS.Extensions
                 bytesRead = 0;
             }
 
-            if (_trace)
+            if (_trace && !hr.IsOK)
             {
                 Trace.TraceInformation($"MemoryServiceFromDebuggerServices::ReadMemory: {address:x} req:{buffer.Length:x} read:{bytesRead:x} hr={hr}");
             }

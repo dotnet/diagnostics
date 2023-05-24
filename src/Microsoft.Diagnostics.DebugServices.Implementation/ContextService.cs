@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -126,6 +127,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _currentTarget = target;
                 _currentThread = null;
                 _currentRuntime = null;
+                if (_currentRuntime != null)
+                {
+                    Trace.TraceInformation($"SetCurrentTarget - clearing current runtime #{_currentRuntime.Id}");
+                }
+                else
+                {
+                    Trace.TraceInformation("SetCurrentTarget - clearing current runtime");
+                }
                 _serviceContainer.DisposeServices();
                 OnContextChange.Fire();
             }
@@ -165,6 +174,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if (runtime.RuntimeType is RuntimeType.NetCore or RuntimeType.SingleFile)
                         {
+                            Trace.TraceInformation($"GetCurrentTarget - found current runtime #{runtime.Id}");
                             _currentRuntime = runtime;
                             break;
                         }
