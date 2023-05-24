@@ -57,5 +57,6 @@ resources:
 
       - container: test_ubuntu_22_04
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04
+        options: '--env PYTHONPATH=/usr/bin/python3.10'
 
 stages: ${{ parameters.stages }}
