@@ -24,6 +24,18 @@ ENDIF:CDB
 LOADSOS
 
 SOSCOMMAND:DumpStackObjects
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
+
+SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.IO.StringWriter!\$0_)*System.IO.StringWriter\s+<POUT>
+IFDEF:MAJOR_RUNTIME_VERSION_2
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+shared\s+static\s+Null\s+
+VERIFY:\s+>>\s+Domain:Value\s+<HEXVAL>:(<HEXVAL>|NotInit)\s+<<\s+
+ENDIF:MAJOR_RUNTIME_VERSION_2
+IFDEF:MAJOR_RUNTIME_VERSION_GE_3
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+static\s+<HEXVAL>\s+Null\s+
+ENDIF:MAJOR_RUNTIME_VERSION_GE_3
+
+SOSCOMMAND:DumpStackObjects
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+([Gg][Cc]where!\$0_)*GCWhere\s+
 
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
@@ -33,6 +45,61 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+0.*
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
+
+SOSCOMMAND:GCRoot <PREVPOUT>
+VERIFY:.*Thread <HEXVAL>:
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
+
+SOSCOMMAND:DumpObj <PREVPOUT>
+VERIFY:\s*Name:\s+GCWhere\s+
+VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
+VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+Fields:\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
+
+SOSCOMMAND:DumpObj -nofields <PREVPOUT>
+VERIFY:\s*Name:\s+GCWhere\s+
+VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
+VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+
+SOSCOMMAND:DumpObj -refs <PREVPOUT>
+VERIFY:\s*Name:\s+GCWhere\s+
+VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
+VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+Fields:\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
+VERIFY:\s+GC Refs:\s+
+VERIFY:\s+Field\s+Offset\s+Object\s+Type\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*
+
+SOSCOMMAND:DumpHeap
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+
+
+SOSCOMMAND:DumpHeap -stat
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
+VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+GCWhere\s+
+
+IFDEF:WINDOWS
+SOSCOMMAND:DumpHeap -strings
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+
+ENDIF:WINDOWS
+
+SOSCOMMAND:EEHeap
+VERIFY:\s*Loader Heap:\s+
+VERIFY:\s+System Domain:\s+<HEXVAL>\s+
+VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
+VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
+VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
+VERIFY:\s+JIT Manager:\s+<HEXVAL>
+VERIFY:\s+(LoaderCodeHeap|HostCodeHeap):\s+<HEXVAL>.*bytes.*
+VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
+VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
+VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+
+VERIFY:\s+Large object heap.*
 
 # Continue to the next DebugBreak
 CONTINUE

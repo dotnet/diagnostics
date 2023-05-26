@@ -39,11 +39,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name="-nostacks", Help ="Do not use stack roots.")]
         public bool NoStacks { get; set; }
 
+        [Option(Name="-sleep", Help ="Sleep for 1 sec.")]
+        public bool Sleep { get; set; }
+
         [Argument(Name = "target")]
         public string TargetAddress { get; set; }
 
         public override void Invoke()
         {
+            if (Sleep)
+            {
+                WriteLine("Sleeping for 5 sec");
+                System.Threading.Thread.Sleep(5000);
+            }
+
             if (!TryParseAddress(TargetAddress, out ulong address))
             {
                 throw new ArgumentException($"Could not parse target object address: {TargetAddress:x}");
