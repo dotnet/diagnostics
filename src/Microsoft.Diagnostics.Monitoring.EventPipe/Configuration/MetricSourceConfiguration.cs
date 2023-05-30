@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public const string SharedSessionId = "SHARED";
 
         private readonly IList<EventPipeProvider> _eventPipeProviders;
-        public string UniqueSessionId { get; private set; }
+        public string ClientId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> eventCounterProviderNames)
             : this(metricIntervalSeconds, CreateProviders(eventCounterProviderNames?.Any() == true ? eventCounterProviderNames : DefaultMetricProviders))
@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 const long TimeSeriesValuesEventKeyword = 0x2;
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
-                UniqueSessionId = Guid.NewGuid().ToString();
+                ClientId = Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
@@ -78,7 +78,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
                             { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
-                            { "UniqueIdentifier", UniqueSessionId  }
+                            { "ClientId", ClientId  }
                         }
                     );
 

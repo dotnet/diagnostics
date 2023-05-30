@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }),
                 Settings.MaxHistograms, Settings.MaxTimeSeries);
 
-            _uniqueSessionId = config.UniqueSessionId;
+            _uniqueSessionId = config.ClientId;
 
             return config;
         }

@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private bool _resumeRuntime;
         private DiagnosticsClient _diagnosticsClient;
         private EventPipeSession _session;
-        private readonly string _uniqueIdentifier;
+        private readonly string _clientId;
         private int _maxTimeSeries;
         private int _maxHistograms;
         private TimeSpan _duration;
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public CounterMonitor()
         {
             _pauseCmdSet = false;
-            _uniqueIdentifier = Guid.NewGuid().ToString();
+            _clientId = Guid.NewGuid().ToString();
 
             _shouldExit = new TaskCompletionSource<int>();
         }
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _renderer.ToggleStatus(_pauseCmdSet);
 
                 // If a session received a MultipleSessionsConfiguredIncorrectlyError, ignore future shared events
-                if (obj.ProviderName == "System.Diagnostics.Metrics" && !inactiveSharedSessions.ContainsKey(_uniqueIdentifier))
+                if (obj.ProviderName == "System.Diagnostics.Metrics" && !inactiveSharedSessions.ContainsKey(_clientId))
                 {
                     if (obj.EventName == "BeginInstrumentReporting")
                     {
@@ -271,7 +271,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleHistogramLimitReached(TraceEvent obj)
         {
             string sessionId = (string)obj.PayloadValue(0);
-            if (sessionId != _uniqueIdentifier)
+            if (sessionId != _clientId)
             {
                 return;
             }
@@ -326,7 +326,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleMultipleSessionsNotSupportedError(TraceEvent obj)
         {
             string runningSessionId = (string)obj.PayloadValue(0);
-            if (runningSessionId == _uniqueIdentifier)
+            if (runningSessionId == _clientId)
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -342,7 +342,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != _uniqueIdentifier)
+            if (payloadSessionId != _clientId)
             {
                 // If our session is not the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -896,7 +896,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         { "RefreshInterval", _interval.ToString() },
                         { "MaxTimeSeries", _maxTimeSeries.ToString() },
                         { "MaxHistograms", _maxHistograms.ToString() },
-                        { "UniqueIdentifier", _uniqueIdentifier  }
+                        { "ClientId", _clientId  }
                     }
                 );
 
