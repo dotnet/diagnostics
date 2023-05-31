@@ -88,5 +88,31 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return _client.StartEventPipeSession(provider);
             }
         }
+
+        public async Task EnablePerfMap(PerfMapType type, TimeSpan timeout)
+        {
+            if (_useAsync)
+            {
+                using CancellationTokenSource cancellation = new(timeout);
+                await _client.EnablePerfMapAsync(type, cancellation.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                _client.EnablePerfMap(type);
+            }
+        }
+
+        public async Task DisablePerfMap(TimeSpan timeout)
+        {
+            if (_useAsync)
+            {
+                using CancellationTokenSource cancellation = new(timeout);
+                await _client.DisablePerfMapAsync(cancellation.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                _client.DisablePerfMap();
+            }
+        }
     }
 }
