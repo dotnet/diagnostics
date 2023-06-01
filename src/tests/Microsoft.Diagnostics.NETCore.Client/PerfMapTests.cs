@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Array.Fill(sawNames, false);
 
                 string expectedJitDumpFile = GetJitDumpFileName(pid);
-                using (JitDumpParser parser = new JitDumpParser(expectedJitDumpFile))
+                using (JitDumpParser parser = new JitDumpParser(expectedJitDumpFile, pid))
                 {
                     string methodName;
                     while ((methodName = parser.NextMethodName()) != null)
