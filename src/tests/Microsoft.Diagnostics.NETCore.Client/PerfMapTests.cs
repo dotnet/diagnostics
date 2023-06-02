@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return tmpDir;
         }
 
-        private static string GetJitDumpFileName(int pid) => Path.Combine(GetTmpDir(), $"jit-{pid}.map");
+        private static string GetJitDumpFileName(int pid) => Path.Combine(GetTmpDir(), $"jit-{pid}.dump");
 
         private static string GetPerfInfoFileName(int pid) => Path.Combine(GetTmpDir(), $"perfinfo-{pid}.map");
 
