@@ -340,8 +340,7 @@ public class SOS
 
             // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
             await SOSTestHelpers.RunTest(
-                scriptName: "StackAndOtherTests.script",
-                new SOSRunner.TestInformation
+                scriptName: "StackAndOtherTests.script", new SOSRunner.TestInformation
                 {
                     TestConfiguration = currentConfig,
                     TestName = "SOS.StackAndOtherTests",
@@ -484,9 +483,13 @@ public class SOS
             }
             else
             {
-                // We should verify what python version this is. 2.7 is out of
-                // support for a while now, but we have old OS's.
-                program = "/usr/bin/python";
+                program = Environment.GetEnvironmentVariable("PYTHONPATH");
+                if (program == null)
+                {
+                    // We should verify what python version this is. 2.7 is out of
+                    // support for a while now, but we have old OS's.
+                    program = "/usr/bin/python";
+                }
                 if (!File.Exists(program))
                 {
                     throw new ArgumentException($"{program} does not exists");

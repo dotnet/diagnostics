@@ -443,7 +443,7 @@ namespace SOS.Hosting
             IntPtr self,
             uint threadId,
             uint contextFlags,
-            uint contextSize,
+            int contextSize,
             IntPtr context);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

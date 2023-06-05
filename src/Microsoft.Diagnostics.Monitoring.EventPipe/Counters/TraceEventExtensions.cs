@@ -90,6 +90,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     HandleCounterRate(traceEvent, filter, sessionId, out payload);
                 }
+                else if (traceEvent.EventName == "UpDownCounterRateValuePublished")
+                {
+                    HandleUpDownCounterValue(traceEvent, filter, sessionId, out payload);
+                }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
                     HandleTimeSeriesLimitReached(traceEvent, sessionId, out payload);
@@ -183,7 +187,47 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                // this happens when the ObservableCounter callback function throws an exception.
+                // this happens when the ObservableCounter callback function throws an exception
+                // or when the ObservableCounter doesn't include a measurement for a particular set of tag values.
+                payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
+            }
+        }
+
+        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)traceEvent.PayloadValue(0);
+
+            if (payloadSessionId != sessionId || traceEvent.Version < 1) // Version 1 added the value field.
+            {
+                return;
+            }
+
+            string meterName = (string)traceEvent.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)traceEvent.PayloadValue(3);
+            string unit = (string)traceEvent.PayloadValue(4);
+            string tags = (string)traceEvent.PayloadValue(5);
+            //string rateText = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
+            string valueText = (string)traceEvent.PayloadValue(7);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
+            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
+                payload = new UpDownCounterPayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
+
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the ObservableUpDownCounter callback function throws an exception
+                // or when the ObservableUpDownCounter doesn't include a measurement for a particular set of tag values.
                 payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
             }
         }
