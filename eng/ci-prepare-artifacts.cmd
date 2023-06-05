@@ -9,7 +9,7 @@ powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0common\Build.p
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithCode
 
 echo Creating bundles
-powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0Build.ps1""" %_commonArgs% -build -bundletools %*"
+powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0Build.ps1""" %_commonArgs% -bundletools %*"
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithCode
 
 echo Creating dbgshim packages

@@ -18,4 +18,3 @@ EXPORTS
     CreateDebuggingInterfaceFromVersion2
     CreateDebuggingInterfaceFromVersion3
     CLRCreateInstance
-    RegisterForRuntimeStartupRemotePort

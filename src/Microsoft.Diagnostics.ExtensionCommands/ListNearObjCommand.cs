@@ -5,9 +5,8 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
+using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -72,9 +71,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             MemoryRange[] segAllocContexts = heap.EnumerateAllocationContexts().Where(context => segment.ObjectRange.Contains(context.Start)).ToArray();
             int pointerColumnWidth = segAllocContexts.Length > 0 ? Math.Max(segAllocContexts.Max(r => FormatRange(r).Length), 16) : 16;
 
-            Column kindColumn = Text.WithWidth("Expected:".Length).WithAlignment(Align.Left);
-
-            Table output = new(Console, kindColumn, DumpObj.WithWidth(pointerColumnWidth), Text.WithWidth(32), TypeName);
+            TableOutput output = new(Console, (-"Expected:".Length, ""), (pointerColumnWidth, "x16"), (20, ""), (0, ""));
 
             // Get current object, but objAddress may not point to an object.
             ClrObject curr = heap.GetObject(objAddress);
@@ -102,7 +99,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (prev.IsValid)
                 {
-                    expectedNextObject = AlignObj(prev + prev.Size, segment);
+                    expectedNextObject = Align(prev + prev.Size, segment);
                 }
                 else
                 {
@@ -196,7 +193,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     localConsistency = VerifyAndPrintObject(output, "Current:", heap, segment, curr) && localConsistency;
 
                     // If curr is valid, we need to print and skip the allocation context
-                    expectedNextObject = AlignObj(curr + curr.Size, segment);
+                    expectedNextObject = Align(curr + curr.Size, segment);
                     MemoryRange allocContextPlusGap = PrintGapIfExists(output, segment, segAllocContexts, new(curr, expectedNextObject));
                     if (allocContextPlusGap.End != 0)
                     {
@@ -281,13 +278,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private MemoryRange PrintGapIfExists(Table output, ClrSegment segment, MemoryRange[] segAllocContexts, MemoryRange objectDistance)
+        private MemoryRange PrintGapIfExists(TableOutput output, ClrSegment segment, MemoryRange[] segAllocContexts, MemoryRange objectDistance)
         {
             // Print information about allocation context gaps between objects
             MemoryRange range = segAllocContexts.FirstOrDefault(ctx => objectDistance.Overlaps(ctx) || ctx.Contains(objectDistance.End));
             if (range.Start != 0)
             {
-                output.Columns[1] = output.Columns[1].WithDml(null);
                 output.WriteRow("Gap:", FormatRange(range), FormatSize(range.Length), "GC Allocation Context (expected gap in the heap)");
             }
 
@@ -300,12 +296,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             uint minObjectSize = (uint)MemoryService.PointerSize * 3;
-            return new(range.Start, range.End + AlignObj(minObjectSize, segment));
+            return new(range.Start, range.End + Align(minObjectSize, segment));
         }
 
         private static string FormatRange(MemoryRange range) => $"{range.Start:x}-{range.End:x}";
 
-        private ulong AlignObj(ulong size, ClrSegment seg)
+        private ulong Align(ulong size, ClrSegment seg)
         {
             ulong AlignConst;
             ulong AlignLargeConst = 7;
@@ -327,28 +323,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return (size + AlignConst) & ~AlignConst;
         }
 
-        private bool VerifyAndPrintObject(Table output, string which, ClrHeap heap, ClrSegment segment, ClrObject obj)
+        private bool VerifyAndPrintObject(TableOutput output, string which, ClrHeap heap, ClrSegment segment, ClrObject obj)
         {
             bool isObjectValid = !heap.IsObjectCorrupted(obj, out ObjectCorruption corruption) && obj.IsValid;
+
+            // Here, isCorrupted may still be true, but it might not interfere with getting the type of the object.
+            // Since we know the information, we will print that out.
+            string typeName = obj.Type?.Name ?? GetErrorTypeName(obj);
 
             // ClrObject.Size is not available if IsValid returns false
             string size = FormatSize(obj.IsValid ? obj.Size : 0);
             if (corruption is null)
             {
-                output.Columns[1] = output.Columns[1].WithDml(Dml.DumpObj);
-                output.WriteRow(which, obj, size, obj.Type);
+                output.WriteRow(which, new DmlDumpObj(obj), size, typeName);
             }
             else
             {
-                output.Columns[1] = output.Columns[1].WithDml(Dml.ListNearObj);
-                output.WriteRow(which, obj, size, obj.Type);
-
+                output.WriteRow(which, new DmlListNearObj(obj), size, typeName);
                 Console.Write($"Error Detected: {VerifyHeapCommand.GetObjectCorruptionMessage(MemoryService, heap, corruption)} ");
-                if (Console.SupportsDml)
-                {
-                    Console.WriteDmlExec("[verify heap]", $"!verifyheap -segment {segment.Address:X}");
-                }
-
+                Console.WriteDmlExec("[verify heap]", $"!verifyheap -s {segment.Address:X}");
                 Console.WriteLine();
             }
 
@@ -356,5 +349,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         private static string FormatSize(ulong size) => size > 0 ? $"{size:n0} (0x{size:x})" : "";
+
+        private string GetErrorTypeName(ClrObject obj)
+        {
+            if (!MemoryService.ReadPointer(obj.Address, out _))
+            {
+                return $"[error reading mt at: {obj.Address:x}]";
+            }
+            else
+            {
+                return $"Unknown";
+            }
+        }
     }
 }

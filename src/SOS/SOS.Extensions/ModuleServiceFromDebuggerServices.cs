@@ -86,7 +86,7 @@ namespace SOS.Extensions
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;
-                FileName = imageName ?? string.Empty;
+                FileName = imageName;
                 ImageBase = imageBase;
                 ImageSize = imageSize;
                 IndexFileSize = indexTimeStamp == InvalidTimeStamp ? null : indexFileSize;

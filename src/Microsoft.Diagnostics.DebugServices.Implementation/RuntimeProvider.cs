@@ -28,9 +28,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="startingRuntimeId">The starting runtime id for this provider</param>
         public IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId)
         {
-            // The ClrInfo and DataTarget instances are disposed when Runtime instance is disposed. Runtime instances are
-            // not flushed when the Target/RuntimeService is flushed; they are all disposed and the list cleared. They are
-            // all re-created the next time the IRuntime or ClrRuntime instance is queried.
             DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>()))
             {
                 FileLocator = null

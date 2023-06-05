@@ -35,11 +35,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return _liveObjs.Contains(obj);
         }
 
-        public void Initialize()
-        {
-            _liveObjs ??= CreateObjectSet();
-        }
-
         private HashSet<ulong> CreateObjectSet()
         {
             ClrHeap heap = Runtime.Heap;

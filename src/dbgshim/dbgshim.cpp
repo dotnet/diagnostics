@@ -157,11 +157,6 @@ typedef HRESULT (STDAPICALLTYPE *FPCoreCLRCreateCordbObject3)(
     HMODULE hmodTargetCLR,
     IUnknown **ppCordb);
 
-typedef HRESULT (STDAPICALLTYPE *FPCreateRemoteCordbObject)(
-    DWORD port,
-    LPCSTR assemblyBasePath,
-    IUnknown **ppCordb);
-
 HRESULT CreateCoreDbg(
     HMODULE hCLRModule,
     DWORD processId,
@@ -2155,44 +2150,4 @@ CLRCreateInstance(
         return E_OUTOFMEMORY;
 
     return pDebuggingImpl->QueryInterface(riid, ppInterface);
-}
-
-HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCSTR assemblyBasePath, IUnknown **ppCordb)
-{
-    PUBLIC_CONTRACT;
-    HRESULT hr = S_OK;
-
-    FPCreateRemoteCordbObject fpCreate =
-        (FPCreateRemoteCordbObject)GetProcAddress(hDBIModule, "CreateRemoteCordbObject");
-    if (fpCreate == NULL)
-    {
-        return CORDBG_E_INCOMPATIBLE_PROTOCOL;
-    }
-
-    return fpCreate(portId, assemblyBasePath, ppCordb);
-
-    return hr;
-}
-
-DLLEXPORT
-HRESULT
-RegisterForRuntimeStartupRemotePort(
-    _In_ DWORD dwRemotePortId,
-    _In_ LPCSTR mscordbiPath,
-    _In_ LPCSTR assemblyBasePath,
-    _Out_ IUnknown ** ppCordb)
-{
-    PUBLIC_CONTRACT;
-    HRESULT hr = S_OK;
-    HMODULE hMod = NULL;
-
-    hMod = LoadLibraryA(mscordbiPath);
-    if (hMod == NULL)
-    {
-        hr = CORDBG_E_DEBUG_COMPONENT_MISSING;
-        return hr;
-    }
-
-    hr = CreateCoreDbgRemotePort(hMod, dwRemotePortId, assemblyBasePath, ppCordb);
-    return S_OK;
 }

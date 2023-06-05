@@ -143,7 +143,7 @@ namespace SOS.Hosting
             IntPtr self,
             uint threadId,
             uint contextFlags,
-            int contextSize,
+            uint contextSize,
             IntPtr context)
         {
             byte[] registerContext;
@@ -157,7 +157,7 @@ namespace SOS.Hosting
             }
             try
             {
-                Marshal.Copy(registerContext, 0, context, Math.Min(registerContext.Length, contextSize));
+                Marshal.Copy(registerContext, 0, context, (int)contextSize);
             }
             catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
             {
@@ -246,7 +246,7 @@ namespace SOS.Hosting
             [In] IntPtr self,
             [In] uint threadId,
             [In] uint contextFlags,
-            [In] int contextSize,
+            [In] uint contextSize,
             [Out] IntPtr context);
 
         #endregion

@@ -192,7 +192,6 @@ public:
 };
 
 extern HRESULT GetRuntime(IRuntime** ppRuntime);
-extern void FlushCheck();
 
 #ifndef MINIDUMP
  
@@ -323,8 +322,7 @@ inline void DACMessage(HRESULT Status)
     ControlC = FALSE;                                           \
     g_bDacBroken = TRUE;                                        \
     g_clrData = NULL;                                           \
-    g_sos = NULL;                                               \
-    FlushCheck();
+    g_sos = NULL;                                        
 
 // Also initializes the target machine
 #define INIT_API_NOEE()                                         \
@@ -466,6 +464,7 @@ public:
 
     // Retrieve some target specific output strings
     virtual LPCSTR GetDumpStackHeading() const = 0;
+    virtual LPCSTR GetDumpStackObjectsHeading() const = 0;
     virtual LPCSTR GetSPName() const = 0;
     // Retrieves the non-volatile registers reported to the GC
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const = 0;

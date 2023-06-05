@@ -409,14 +409,3 @@ HRESULT GetRuntime(IRuntime** ppRuntime)
 #endif
     return target->GetRuntime(ppRuntime);
 }
-
-void FlushCheck()
-{
-#ifndef FEATURE_PAL
-    SOSExtensions* extensions = (SOSExtensions*)Extensions::GetInstance();
-    if (extensions != nullptr)
-    {
-        extensions->FlushCheck();
-    }
-#endif // !FEATURE_PAL
-}

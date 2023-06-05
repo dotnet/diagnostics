@@ -32,6 +32,8 @@ class CGCDescSeries;
 
 namespace sos
 {
+    class GCHeap;
+
     /* The base SOS Exception.  Note that most commands should not attempt to be
      * resilient to exceptions thrown by most functions here.  Instead a top level
      * try/catch at the beginning of the command which prints out the exception's
@@ -450,6 +452,216 @@ namespace sos
         mutable WCHAR *mTypeName;
     };
 
+    /* Enumerates all the GC references (objects) contained in an object.  This uses the GCDesc
+     * map exactly as the GC does.
+     */
+    class RefIterator
+    {
+    public:
+        RefIterator(TADDR obj, LinearReadCache *cache = NULL);
+        RefIterator(TADDR obj, CGCDesc *desc, bool arrayOfVC, LinearReadCache *cache = NULL);
+        ~RefIterator();
+
+        /* Moves to the next reference in the object.
+         */
+        const RefIterator &operator++();
+
+        /* Returns the address of the current reference.
+         */
+        TADDR operator*() const;
+
+        /* Gets the offset into the object where the current reference comes from.
+         */
+        TADDR GetOffset() const;
+
+        /* Returns true if there are more objects in the iteration, false otherwise.
+         * Used as:
+         *     if (itr)
+         *        ...
+         */
+        inline operator void *() const
+        {
+            return (void*)!mDone;
+        }
+
+        bool IsLoaderAllocator() const
+        {
+            return mLoaderAllocatorObjectHandle == mCurr;
+        }
+
+    private:
+        void Init();
+        inline TADDR ReadPointer(TADDR addr) const
+        {
+            if (mCache)
+            {
+                if (!mCache->Read(addr, &addr, false))
+                    Throw<DataRead>("Could not read address %p.", addr);
+            }
+            else
+            {
+                MOVE(addr, addr);
+            }
+
+            return addr;
+        }
+
+    private:
+        LinearReadCache *mCache;
+        CGCDesc *mGCDesc;
+        bool mArrayOfVC, mDone;
+
+        TADDR *mBuffer;
+        CGCDescSeries *mCurrSeries;
+
+        TADDR mLoaderAllocatorObjectHandle;
+
+        int i, mCount;
+
+        TADDR mCurr, mStop, mObject;
+        size_t mObjSize;
+    };
+
+
+    /* The Iterator used to walk the managed objects on the GC heap.
+     * The general usage pattern for this class is:
+     *   for (ObjectIterator itr = gcheap.WalkHeap(); itr; ++itr)
+     *     itr->SomeObjectMethod();
+     */
+    class ObjectIterator
+    {
+        friend class GCHeap;
+    public:
+
+        /* Returns the next object in the GCHeap.  Note that you must ensure
+         * that there are more objects to walk before calling this function by
+         * checking "if (iterator)".  If this function throws an exception,
+         * the the iterator is invalid, and should no longer be used to walk
+         * the heap.  This should generally only happen if we cannot read the
+         * MethodTable of the object to move to the next object.
+         * Throws:
+         *   DataRead
+         */
+        const ObjectIterator &operator++();
+
+        /* Dereference operator.  This allows you to take a reference to the
+         * current object.  Note the lifetime of this reference is valid for
+         * either the lifetime of the iterator or until you call operator++,
+         * whichever is shorter.  For example.
+         *   void Foo(const Object &param);
+         *   void Bar(const ObjectIterator &itr)
+         *   {
+         *      Foo(*itr);
+         *   }
+         */
+        const Object &operator*() const;
+
+        /* Returns a pointer to the current Object to call members on it.
+         * The usage pattern for the iterator is to simply use operator->
+         * to call methods on the Object it points to without taking a
+         * direct reference to the underlying Object if at all possible.
+         */
+        const Object *operator->() const;
+
+        /* Returns false when the iterator has reached the end of the managed
+         * heap.
+         */
+        inline operator void *() const
+        {
+            return (void*)(SIZE_T)(mCurrHeap == mNumHeaps ? 0 : 1);
+        }
+
+        /* Do not use.
+         * TODO: Replace this functionality with int Object::GetGeneration().
+         */
+        bool IsCurrObjectOnLOH() const
+        {
+            SOS_Assert(*this);
+            return bLarge;
+        }
+
+        /* Verifies the current object.  Returns true if the current object is valid.
+         * Returns false and fills 'buffer' with the reason the object is corrupted.
+         * This is a deeper validation than Object::IsValid as it checks the card
+         * table entires for the object in addition to the rest of the references.
+         * This function does not throw exceptions.
+         * Params:
+         *   buffer - out buffer that is filled if and only if this function returns
+         *            false.
+         *   size - the total size of the buffer
+         * Returns:
+         *   True if the object is valid, false otherwise.
+         */
+        bool Verify(__out_ecount(size) char *buffer, size_t size) const;
+
+        /* The same as Verify(char*, size_t), except it does not write out the failure
+         * reason to a provided buffer.
+         * See:
+         *   ObjectIterator::Verify(char *, size_t)
+         */
+        bool Verify() const;
+
+        /* Attempts to move to the next object (similar to ObjectIterator++), but
+         * attempts to recover from any heap corruption by skipping to the next
+         * segment.  If Verify returns false, meaning it detected heap corruption
+         * at the current object, you can use MoveToNextObjectCarefully instead of
+         * ObjectIterator++ to attempt to keep reading from the heap.  If possible,
+         * this function attempts to move to the next object in the same segment,
+         * but if that's not possible then it skips to the next segment and
+         * continues from there.
+         * Note:
+         *   This function can throw, and if it does then the iterator is no longer
+         *   in a valid state.  No further attempts to move to the next object will
+         *   be possible.
+         * Throws:
+         *   DataRead - if the heap is corrupted and it's not possible to continue
+         *              walking the heap
+         */
+        void MoveToNextObjectCarefully();
+
+    private:
+        ObjectIterator(const GCHeapDetails *heap, int numHeaps, TADDR start, TADDR stop);
+
+        bool VerifyObjectMembers(__out_ecount(size) char *buffer, size_t size) const;
+        void BuildError(__out_ecount(count) char *out, size_t count, const char *format, ...) const;
+
+        void AssertSanity() const;
+
+        /*
+            This function moves to the next segment/region without checking any restrictions
+            on the range. Returns true if it was able to move to a new segment/region.
+        */
+        bool TryMoveNextSegment();
+
+        /*
+            Aligns the iterator to the object that falls in the requested range, moving to 
+            the next segment/region as necessary. The iterator state doesn't change if the
+            current object already lies in the requested range. Returns true if aligning
+            to such an object was possible.
+        */
+        bool TryAlignToObjectInRange();
+
+        /*
+            Moves to the next segment/region that contains an object in the requested
+            range and align it to such object. This operation always moves the iterator.
+            Returns false if no such move was possible.
+        */
+        bool TryMoveToObjectInNextSegmentInRange();
+        void MoveToNextObject();
+
+    private:
+        DacpHeapSegmentData mSegment;
+        bool bLarge;
+        bool bPinned;
+        Object mCurrObj;
+        TADDR mLastObj, mStart, mEnd, mSegmentEnd;
+        AllocInfo mAllocInfo;
+        const GCHeapDetails *mHeaps;
+        int mNumHeaps;
+        int mCurrHeap;
+        unsigned mCurrRegionGen;
+    };
+
     /* Reprensents an entry in the sync block table.
      */
     class SyncBlk
@@ -552,6 +764,53 @@ namespace sos
     private:
         int mCurr, mTotal;
         SyncBlk mSyncBlk;
+    };
+
+    /* An class which contains information about the GCHeap.
+     */
+    class GCHeap
+    {
+    public:
+        static const TADDR HeapStart;  // A constant signifying the start of the GC heap.
+        static const TADDR HeapEnd;    // A constant signifying the end of the GC heap.
+
+    public:
+        /* Constructor.
+         * Throws:
+         *   DataRead
+         */
+        GCHeap();
+
+        ~GCHeap();
+
+        /* Returns an ObjectIterator which allows you to walk the objects on the managed heap.
+         * This ObjectIterator is valid for the duration of the GCHeap's lifetime.  Note that
+         * if you specify an address at which you wish to start walking the heap it need
+         * not point directly to a managed object.  However, if it does not, WalkHeap
+         * will need to walk the segment that address resides in to find the first object
+         * after that address, and if it encounters any heap corruption along the way,
+         * it may be impossible to walk the heap from the address specified.
+         *
+         * Params:
+         *   start - The starting address at which you want to start walking the heap.
+         *           This need not point directly to an object on the heap.
+         *   end - The ending address at which you want to stop walking the heap.  This
+         *         need not point directly to an object on the heap.
+         *   validate - Whether or not you wish to validate the GC heap as you walk it.
+         * Throws:
+         *   DataRead
+         */
+        ObjectIterator WalkHeap(TADDR start = HeapStart, TADDR stop = HeapEnd) const;
+
+        /* Returns true if the GC Heap structures are in a valid state for traversal.
+         * Returns false if not (e.g. if we are in the middle of a relocation).
+         */
+        bool AreGCStructuresValid() const;
+
+    private:
+        GCHeapDetails *mHeaps;
+        DacpGcHeapData mHeapData;
+        int mNumHeaps;
     };
 
     // convenience functions
