@@ -28,6 +28,10 @@ namespace DotnetCounters.UnitTests
     {
         private ITestOutputHelper _outputHelper;
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(2);
+        private static readonly string TestMeterName = "TestMeter";
+        private static readonly string SystemRuntimeName = "System.Runtime";
+        private static readonly string Metric = "Metric";
+        private static readonly string Rate = "Rate";
 
         public CounterMonitorPayloadTests(ITestOutputHelper outputHelper)
         {
@@ -42,91 +46,51 @@ namespace DotnetCounters.UnitTests
                 throw new SkipTestException("Inapplicable framework");
             }
 
-            CounterMonitor monitor = new CounterMonitor();
-            string path = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), "json");
+            JSONCounterTrace trace = await GetCounterTrace(configuration, new List<string> { TestMeterName });
 
-            try
-            {
-                using CancellationTokenSource source = new CancellationTokenSource(DefaultTimeout);
+            Assert.NotEmpty(trace.events);
+            string[] ExpectedNames = { Constants.TestHistogramName, Constants.TestCounterName };
+            Assert.Equal(ExpectedNames, trace.events.Select(e => e.name).Distinct());
 
-                await using var testRunner = await TestRunnerUtilities.StartProcess(configuration, "TestCounterMonitor DiagMetrics", _outputHelper);
+            string[] ExpectedProviders = { TestMeterName };
+            Assert.Equal(ExpectedProviders, trace.events.Select(e => e.provider).Distinct());
 
-                DateTime startTime = DateTime.Now.ToLocalTime();
-                DateTime endTime = DateTime.Now.ToLocalTime() + DefaultTimeout;
+            // Disabled temporarily due to https://github.com/dotnet/diagnostics/issues/3905
+            //var eventTimestamp = DateTime.Parse(trace.events[0].timestamp);
+            //Assert.True(startTime < eventTimestamp && eventTimestamp < endTime); // need to make sure that's safe
 
-                await TestRunnerUtilities.ExecuteCollection((ct) => {
-                    return Task.Run(async () =>
-                        await monitor.Collect(
-                            ct: ct,
-                            counter_list: new List<string> { "TestMeter" },
-                            counters: null,
-                            console: new TestConsole(),
-                            processId: testRunner.Pid,
-                            refreshInterval: 1,
-                            format: CountersExportFormat.json,
-                            output: path,
-                            name: null,
-                            diagnosticPort: null,
-                            resumeRuntime: false,
-                            maxHistograms: 10,
-                            maxTimeSeries: 10,
-                            duration: TimeSpan.FromSeconds(10)));
-                }, testRunner, source.Token);
+            string[] ExpectedCounterTypes = { Metric, Rate };
+            Assert.Equal(ExpectedCounterTypes, trace.events.Select(e => e.counterType).Distinct());
 
-                using FileStream metricsFile = File.OpenRead(path);
+            HashSet<string> ExpectedTags = new(){ "tag=5,Percentile=50", "tag=5,Percentile=95", "tag=5,Percentile=99" };
+            Assert.Equal(ExpectedTags, trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.tags).ToHashSet());
 
-                JSONCounterTrace trace = JsonSerializer.Deserialize<JSONCounterTrace>(metricsFile, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+            Assert.Single(trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct());
+            Assert.Equal(string.Empty, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct().First());
 
-                Assert.NotEmpty(trace.events);
-                string[] ExpectedNames = { Constants.TestHistogramName, Constants.TestCounterName }; // assemble from constants
-                Assert.Equal(ExpectedNames, trace.events.Select(e => e.name).Distinct());
+            Assert.Equal(2, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).Distinct().Count());
+            Assert.Equal(1, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).First());
+            Assert.Equal(0, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).Last());
 
-                string[] ExpectedProviders = { "TestMeter" }; // push to constant
-                Assert.Equal(ExpectedProviders, trace.events.Select(e => e.provider).Distinct());
-
-                // Disabled temporarily due to https://github.com/dotnet/diagnostics/issues/3905
-                //var eventTimestamp = DateTime.Parse(trace.events[0].timestamp);
-                //Assert.True(startTime < eventTimestamp && eventTimestamp < endTime); // need to make sure that's safe
-
-                string[] ExpectedCounterTypes = { "Metric", "Rate" }; // assemble from constants
-                Assert.Equal(ExpectedCounterTypes, trace.events.Select(e => e.counterType).Distinct());
-
-                string[] ExpectedTags = { "tag=5,Percentile=50", "tag=5,Percentile=95", "tag=5,Percentile=99" }; // might be dangerous - do we know they'll be in order?
-                Assert.Equal(ExpectedTags, trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.tags));
-
-                Assert.Single(trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct());
-                Assert.Equal(string.Empty, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct().First());
-
-                Assert.Equal(2, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).Distinct().Count());
-                Assert.Equal(1, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).First());
-                Assert.Equal(0, trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).Last());
-
-                var events = trace.events;
-                var ev = events[0];
-
-                return;
-            }
-            finally
-            {
-                try
-                {
-                    File.Delete(path);
-                }
-                catch { }
-            }
+            return;
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
-        public async Task TestCounterMonitorSystemRuntime(TestConfiguration configuration)
-        {
-            if (configuration.BuildProjectFramework != "net8.0")
-            {
-                throw new SkipTestException("Inapplicable framework");
-            }
+        public async Task TestCounterMonitorSystemRuntimeMetrics(TestConfiguration configuration)
+    {
+            JSONCounterTrace trace = await GetCounterTrace(configuration, new List<string> { SystemRuntimeName });
 
+            Assert.NotEmpty(trace.events);
+            Assert.Equal(25, trace.events.Select(e => e.name).Distinct().Count());
+
+            string[] ExpectedCounterTypes = { Metric, Rate };
+            Assert.Equal(ExpectedCounterTypes, trace.events.Select(e => e.counterType).Distinct());
+
+            return;
+        }
+
+        private async Task<JSONCounterTrace> GetCounterTrace(TestConfiguration configuration, List<string> counterList)
+        {
             CounterMonitor monitor = new CounterMonitor();
             string path = Path.ChangeExtension(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()), "json");
 
@@ -140,7 +104,7 @@ namespace DotnetCounters.UnitTests
                     return Task.Run(async () =>
                         await monitor.Collect(
                             ct: ct,
-                            counter_list: new List<string> { "System.Runtime", "TestMeter" },
+                            counter_list: counterList,
                             counters: null,
                             console: new TestConsole(),
                             processId: testRunner.Pid,
@@ -159,19 +123,7 @@ namespace DotnetCounters.UnitTests
 
                 JSONCounterTrace trace = JsonSerializer.Deserialize<JSONCounterTrace>(metricsFile, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                Assert.NotEmpty(trace.events);
-
-                var events = trace.events;
-                var ev = events[0];
-
-                string name = ev.name;
-                double value = ev.value;
-                string tags = ev.tags;
-                string provider = ev.provider;
-                string counterType = ev.counterType;
-                string timestamp = ev.timestamp;
-
-                return;
+                return trace;
             }
             finally
             {
