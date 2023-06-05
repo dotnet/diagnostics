@@ -4,6 +4,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -318,6 +319,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                     string group = match.Groups[1].Value;
                     if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out int processId))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        Process.GetProcessById(processId);
+                    }
+                    catch (ArgumentException)
                     {
                         continue;
                     }

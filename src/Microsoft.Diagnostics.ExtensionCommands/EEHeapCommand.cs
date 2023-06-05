@@ -7,8 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -72,10 +73,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ulong PrintOneRuntime(ClrRuntime clrRuntime)
         {
             StringBuilder stringBuilder = null;
-            TableOutput output = new(Console, (21, "x12"), (0, "x12"))
-            {
-                AlignLeft = true
-            };
+            Table output = new(Console, Text.WithWidth(21), Pointer.WithWidth(-1));
+            output.SetAlignment(Align.Left);
 
             HashSet<ulong> seen = new();
 
@@ -105,7 +104,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return totalSize;
         }
 
-        private ulong PrintAppDomains(TableOutput output, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
+        private ulong PrintAppDomains(Table output, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
         {
             Console.WriteLine("Loader Heap:");
             WriteDivider();
@@ -117,6 +116,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             for (int i = 0; i < clrRuntime.AppDomains.Length; i++)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 ClrAppDomain appDomain = clrRuntime.AppDomains[i];
                 totalBytes += PrintAppDomain(output, appDomain, $"Domain {i + 1}:", loaderAllocatorsSeen);
             }
@@ -124,7 +125,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return totalBytes;
         }
 
-        private ulong PrintAppDomain(TableOutput output, ClrAppDomain appDomain, string name, HashSet<ulong> loaderAllocatorsSeen)
+        private ulong PrintAppDomain(Table output, ClrAppDomain appDomain, string name, HashSet<ulong> loaderAllocatorsSeen)
         {
             if (appDomain is null)
             {
@@ -151,7 +152,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> filteredHeapsByKind = from heap in appDomain.EnumerateLoaderAllocatorHeaps()
                                                                                                    where IsIncludedInFilter(heap)
-                                                                                                   where loaderAllocatorsSeen.Add(heap.Address)
+                                                                                                   where loaderAllocatorsSeen.Add(heap.MemoryRange.Start)
                                                                                                    group heap by heap.Kind into g
                                                                                                    orderby GetSortOrder(g.Key)
                                                                                                    select g;
@@ -182,7 +183,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             };
         }
 
-        private ulong PrintAppDomainHeapsByKind(TableOutput output, IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> filteredHeapsByKind)
+        private ulong PrintAppDomainHeapsByKind(Table output, IOrderedEnumerable<IGrouping<NativeHeapKind, ClrNativeHeapInfo>> filteredHeapsByKind)
         {
             // Just build and print the table.
             ulong totalSize = 0;
@@ -191,6 +192,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (IGrouping<NativeHeapKind, ClrNativeHeapInfo> item in filteredHeapsByKind)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 text.Clear();
                 NativeHeapKind kind = item.Key;
                 ulong heapSize = 0;
@@ -236,15 +239,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return totalSize;
         }
 
-        private ulong PrintCodeHeaps(TableOutput output, ClrRuntime clrRuntime)
+        private ulong PrintCodeHeaps(Table output, ClrRuntime clrRuntime)
         {
             ulong totalSize = 0;
             StringBuilder text = new(512);
             foreach (ClrJitManager jitManager in clrRuntime.EnumerateJitManagers())
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 output.WriteRow("JIT Manager:", jitManager.Address);
 
-                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().Where(IsIncludedInFilter).OrderBy(r => r.Kind).ThenBy(r => r.Address);
+                IEnumerable<ClrNativeHeapInfo> heaps = jitManager.EnumerateNativeHeaps().Where(IsIncludedInFilter).OrderBy(r => r.Kind).ThenBy(r => r.MemoryRange.Start);
 
                 ulong jitMgrSize = 0, jitMgrWasted = 0;
                 foreach (ClrNativeHeapInfo heap in heaps)
@@ -284,15 +289,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return true;
             }
 
-            if (filterRange.Contains(info.Address))
+            if (filterRange.Contains(info.MemoryRange.Start))
             {
                 return true;
             }
 
-            if (info.Size is ulong size && size > 0)
+            if (info.MemoryRange.Length > 0)
             {
                 // Check for the last valid address in the range
-                return filterRange.Contains(info.Address + size - 1);
+                return filterRange.Contains(info.MemoryRange.End - 1);
             }
 
             return false;
@@ -300,19 +305,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private (ulong Size, ulong Wasted) CalculateSizeAndWasted(StringBuilder sb, ClrNativeHeapInfo heap)
         {
-            sb.Append(heap.Address.ToString("x12"));
+            sb.Append(heap.MemoryRange.Start.ToString("x12"));
 
-            if (heap.Size is ulong size)
+            ulong size = heap.MemoryRange.Length;
+            if (size > 0)
             {
                 sb.Append('(');
                 sb.Append(size.ToString("x"));
                 sb.Append(':');
-                ulong actualSize = GetActualSize(heap.Address, size);
+                ulong actualSize = GetActualSize(heap.MemoryRange.Start, size);
                 sb.Append(actualSize.ToString("x"));
                 sb.Append(')');
 
                 ulong wasted = 0;
-                if (actualSize < size && !heap.IsCurrentBlock)
+                if (actualSize < size && heap.State != ClrNativeHeapState.Active)
                 {
                     wasted = size - actualSize;
                 }
@@ -323,7 +329,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return (0, 0);
         }
 
-        private ulong PrintModuleThunkTable(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime)
+        private ulong PrintModuleThunkTable(Table output, ref StringBuilder text, ClrRuntime clrRuntime)
         {
             IEnumerable<ClrModule> modulesWithThunks = clrRuntime.EnumerateModules().Where(r => r.ThunkHeap != 0);
             if (!modulesWithThunks.Any())
@@ -337,7 +343,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return PrintModules(output, ref text, modulesWithThunks);
         }
 
-        private ulong PrintModuleLoaderAllocators(TableOutput output, ref StringBuilder text, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
+        private ulong PrintModuleLoaderAllocators(Table output, ref StringBuilder text, ClrRuntime clrRuntime, HashSet<ulong> loaderAllocatorsSeen)
         {
             // On .Net Core, modules share their LoaderAllocator with their AppDomain (and AppDomain shares theirs
             // with SystemDomain).  Only collectable assemblies have unique loader allocators, and that's what we
@@ -358,17 +364,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return PrintModules(output, ref text, collectable);
         }
 
-        private ulong PrintModules(TableOutput output, ref StringBuilder text, IEnumerable<ClrModule> modules)
+        private ulong PrintModules(Table output, ref StringBuilder text, IEnumerable<ClrModule> modules)
         {
             text ??= new(128);
             ulong totalSize = 0, totalWasted = 0;
             foreach (ClrModule module in modules)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 ulong moduleSize = 0, moduleWasted = 0;
 
                 text.Clear();
                 foreach (ClrNativeHeapInfo info in module.EnumerateThunkHeap().Where(IsIncludedInFilter))
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     if (text.Length > 0)
                     {
                         text.Append(' ');
@@ -438,14 +448,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine();
             ClrHeap heap = clrRuntime.Heap;
 
-            int pointerWidth = 16;
-            string pointerToStringFormat = "x16";
-            (int pointerWidth, string pointerToStringFormat) pointerFormat = (pointerWidth, pointerToStringFormat);
-
-            int sizeWidth = Math.Max(15, heap.Segments.Max(seg => FormatMemorySize(seg.CommittedMemory.Length).Length));
-            (int sizeWidth, string) sizeFormat = (sizeWidth, "");
-
-            TableOutput gcOutput = new(Console, pointerFormat, pointerFormat, pointerFormat, pointerFormat, sizeFormat, sizeFormat);
+            Column sizeColumn = Text.GetAppropriateWidth(heap.Segments.Select(seg => FormatMemorySize(seg.CommittedMemory.Length)), max: 32);
+            Table gcOutput = new(Console, DumpHeap, Pointer, Pointer, Pointer, sizeColumn, sizeColumn);
 
             WriteDivider('=');
             Console.WriteLine($"Number of GC Heaps: {heap.SubHeaps.Length}");
@@ -453,6 +457,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (ClrSubHeap gc_heap in HeapWithFilters.EnumerateFilteredSubHeaps())
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (heap.IsServer)
                 {
                     Console.Write("Heap ");
@@ -595,15 +601,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return totalCommitted;
         }
 
-        private static void WriteSegmentHeader(TableOutput gcOutput)
+        private static void WriteSegmentHeader(Table gcOutput)
         {
-            gcOutput.WriteRow("segment", "begin", "allocated", "committed", "allocated size", "committed size");
+            gcOutput.WriteHeader("segment", "begin", "allocated", "committed", "allocated size", "committed size");
         }
 
-        private static void WriteSegment(TableOutput gcOutput, ClrSegment segment)
+        private static void WriteSegment(Table gcOutput, ClrSegment segment)
         {
-            gcOutput.WriteRow(new DmlDumpHeapSegment(segment),
-                segment.ObjectRange.Start, segment.ObjectRange.End, segment.CommittedMemory.End,
+            gcOutput.WriteRow(segment, segment.ObjectRange.Start, segment.ObjectRange.End, segment.CommittedMemory.End,
                 FormatMemorySize(segment.ObjectRange.Length), FormatMemorySize(segment.CommittedMemory.Length));
         }
 

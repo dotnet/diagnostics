@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -23,25 +25,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-
             HeapInfo[] heaps = Runtime.Heap.SubHeaps.Select(h => GetHeapInfo(h)).ToArray();
             bool printFrozen = heaps.Any(h => h.Frozen.Committed != 0);
 
-
-            List<(int, string)> formats = new()
+            List<Column> formats = new()
             {
-                (8, "x"), (12, ""), (12, ""), (12, ""), (12, ""), (12, ""), (8, ""), (8, ""), (8, "")
+                Text.WithWidth(8),
+                IntegerWithoutCommas,
+                IntegerWithoutCommas,
+                IntegerWithoutCommas,
+                IntegerWithoutCommas,
+                IntegerWithoutCommas,
+                Text.WithWidth(8),
+                Text.WithWidth(8),
+                Text.WithWidth(8)
             };
 
             if (printFrozen)
             {
-                formats.Insert(1, (12, ""));
+                formats.Insert(1, IntegerWithoutCommas);
             }
 
-            TableOutput output = new(Console, formats.ToArray())
-            {
-                AlignLeft = true,
-            };
+            Table output = new(Console, formats.ToArray());
+            output.SetAlignment(Align.Left);
 
             // Write allocated
             WriteHeader(output, heaps, printFrozen);
@@ -91,13 +97,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             total = GetTotal(heaps);
-            WriteRow(output, total, (info) => info.Committed, printFrozen);
+            WriteRow(output, total, (info) => info.Committed, printFrozen, printPercentage: false, footer: true);
             Console.WriteLine();
         }
 
-        private static void WriteHeader(TableOutput output, HeapInfo[] heaps, bool printFrozen)
+        private static void WriteHeader(Table output, HeapInfo[] heaps, bool printFrozen)
         {
-            List<object> row = new(8) { "Heap", "Gen0", "Gen1", "Gen2", "LOH", "POH" };
+            List<string> row = new(8) { "Heap", "Gen0", "Gen1", "Gen2", "LOH", "POH" };
 
             if (printFrozen)
             {
@@ -110,10 +116,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 row.Insert(1, "EPH");
             }
 
-            output.WriteRow(row.ToArray());
+            output.WriteHeader(row.ToArray());
         }
 
-        private static void WriteRow(TableOutput output, HeapInfo heapInfo, Func<GenerationInfo, object> select, bool printFrozen, bool printPercentage = false)
+        private static void WriteRow(Table output, HeapInfo heapInfo, Func<GenerationInfo, object> select, bool printFrozen, bool printPercentage = false, bool footer = false)
         {
             List<object> row = new(11)
             {
@@ -171,7 +177,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            output.WriteRow(row.ToArray());
+            if (footer)
+            {
+                output.WriteFooter(row.ToArray());
+            }
+            else
+            {
+                output.WriteRow(row.ToArray());
+            }
         }
 
         private static ulong GetValue(object value)

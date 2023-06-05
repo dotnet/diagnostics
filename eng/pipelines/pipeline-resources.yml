@@ -1,0 +1,62 @@
+parameters:
+  - name: stages
+    type: stageList
+
+resources:
+  containers:
+      - container: linux_x64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
+
+      - container: linux_arm
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross
+        env:
+          ROOTFS_DIR: /crossrootfs/arm
+
+      - container: linux_arm64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm64
+        env:
+          ROOTFS_DIR: /crossrootfs/arm64
+
+      - container: linux_musl_x64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
+
+      - container: linux_musl_arm
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm-alpine
+        env:
+          ROOTFS_DIR: /crossrootfs/arm
+
+      - container: linux_musl_arm64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm64-alpine
+        env:
+          ROOTFS_DIR: /crossrootfs/arm64
+
+      - container: test_linux_x64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
+
+      - container: test_linux_musl_x64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
+        options: --cap-add=SYS_PTRACE
+
+      - container: test_debian_11_amd64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-11-amd64
+        options: '--env PYTHONPATH=/usr/bin/python3.9'
+
+      - container: test_fedora_36
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-36
+        options: --cap-add=SYS_PTRACE
+
+      - container: test_opensuse_15_2
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-15.2-helix-amd64
+
+      - container: test_ubuntu_18_04
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04
+
+      - container: test_ubuntu_20_04
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-20.04
+        options: '--env PYTHONPATH=/usr/bin/python3.8'
+
+      - container: test_ubuntu_22_04
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04
+        options: '--env PYTHONPATH=/usr/bin/python3.10'
+
+stages: ${{ parameters.stages }}
