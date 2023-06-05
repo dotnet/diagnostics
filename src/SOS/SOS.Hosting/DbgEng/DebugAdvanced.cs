@@ -24,13 +24,13 @@ namespace SOS.Hosting.DbgEng
         private delegate int GetThreadContextDelegate(
             [In] IntPtr self,
             [In] IntPtr context,
-            [In] int contextSize);
+            [In] uint contextSize);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetThreadContextDelegate(
             [In] IntPtr self,
             [In] IntPtr context,
-            [In] int contextSize);
+            [In] uint contextSize);
 
         #endregion
     }

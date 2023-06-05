@@ -145,8 +145,6 @@ public class SOSRunner : IDisposable
 
         public string DumpNameSuffix { get; set; }
 
-        public bool EnableSOSLogging { get; set; } = true;
-
         public bool TestCrashReport
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows && TestConfiguration.RuntimeFrameworkVersionMajor >= 6; }
@@ -459,7 +457,6 @@ public class SOSRunner : IDisposable
         {
             // Setup the logging from the options in the config file
             outputHelper = TestRunner.ConfigureLogging(config, information.OutputHelper, information.TestName);
-            string sosLogFile = information.EnableSOSLogging ? Path.Combine(config.LogDirPath, $"{information.TestName}.{config.LogSuffix}.soslog") : null;
 
             // Figure out which native debugger to use
             NativeDebugger debugger = GetNativeDebuggerToUse(config, action);
@@ -564,8 +561,7 @@ public class SOSRunner : IDisposable
                     {
                         throw new ArgumentException("LLDB helper script path not set or does not exist: " + lldbHelperScript);
                     }
-                    arguments.Append(@"--no-lldbinit -o ""settings set target.disable-aslr false"" -o ""settings set interpreter.prompt-on-quit false""");
-                    arguments.AppendFormat(@" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
+                    arguments.AppendFormat(@"--no-lldbinit -o ""settings set interpreter.prompt-on-quit false"" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
 
                     string debuggeeTarget = config.HostExe;
                     if (string.IsNullOrWhiteSpace(debuggeeTarget))
@@ -673,7 +669,6 @@ public class SOSRunner : IDisposable
                     break;
             }
 
-
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
                 WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
@@ -685,11 +680,6 @@ public class SOSRunner : IDisposable
             if (OS.Kind == OSKind.Windows)
             {
                 processRunner.WithExpectedExitCode(0);
-            }
-
-            if (sosLogFile != null)
-            {
-                processRunner.WithEnvironmentVariable("DOTNET_ENABLED_SOS_LOGGING", sosLogFile);
             }
 
             // Disable W^E so that the bpmd command and the tests pass
@@ -1377,10 +1367,6 @@ public class SOSRunner : IDisposable
             {
                 defines.Add("MAJOR_RUNTIME_VERSION_GE_7");
             }
-            if (major >= 8)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_8");
-            }
         }
         catch (SkipTestException)
         {
@@ -1433,11 +1419,6 @@ public class SOSRunner : IDisposable
             {
                 defines.Add("UNIX_SINGLE_FILE_APP");
             }
-        }
-        string setHostRuntime = _config.SetHostRuntime();
-        if (!string.IsNullOrEmpty(setHostRuntime) && setHostRuntime == "-none")
-        {
-            defines.Add("HOST_RUNTIME_NONE");
         }
         return defines;
     }

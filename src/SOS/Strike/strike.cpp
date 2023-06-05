@@ -390,7 +390,6 @@ HRESULT ExecuteCommand(PCSTR commandName, PCSTR args)
             return hostServices->DispatchCommand(commandName, args);
         }
     }
-    ExtErr("Unrecognized command %s\n", commandName);
     return E_NOTIMPL;
 }
 
@@ -617,6 +616,82 @@ DECLARE_API (EEStack)
     return Status;
 }
 
+HRESULT DumpStackObjectsRaw(size_t nArg, __in_z LPSTR exprBottom, __in_z LPSTR exprTop, BOOL bVerify)
+{
+    size_t StackTop = 0;
+    size_t StackBottom = 0;
+    if (nArg==0)
+    {
+        ULONG64 StackOffset;
+        g_ExtRegisters->GetStackOffset(&StackOffset);
+
+        StackTop = TO_TADDR(StackOffset);
+    }
+    else
+    {
+        StackTop = GetExpression(exprTop);
+        if (StackTop == 0)
+        {
+            ExtOut("wrong option: %s\n", exprTop);
+            return E_FAIL;
+        }
+
+        if (nArg==2)
+        {
+            StackBottom = GetExpression(exprBottom);
+            if (StackBottom == 0)
+            {
+                ExtOut("wrong option: %s\n", exprBottom);
+                return E_FAIL;
+            }
+        }
+    }
+
+#ifndef FEATURE_PAL
+    if (IsWindowsTarget())
+    {
+        NT_TIB teb;
+        ULONG64 dwTebAddr = 0;
+        HRESULT hr = g_ExtSystem->GetCurrentThreadTeb(&dwTebAddr);
+        if (SUCCEEDED(hr) && SafeReadMemory(TO_TADDR(dwTebAddr), &teb, sizeof(NT_TIB), NULL))
+        {
+            if (StackTop > TO_TADDR(teb.StackLimit) && StackTop <= TO_TADDR(teb.StackBase))
+            {
+                if (StackBottom == 0 || StackBottom > TO_TADDR(teb.StackBase))
+                    StackBottom = TO_TADDR(teb.StackBase);
+            }
+        }
+    }
+#endif
+
+    if (StackBottom == 0)
+        StackBottom = StackTop + 0xFFFF;
+
+    if (StackBottom < StackTop)
+    {
+        ExtOut("Wrong option: stack selection wrong\n");
+        return E_FAIL;
+    }
+
+    // We can use the gc snapshot to eliminate object addresses that are
+    // not on the gc heap.
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to determine bounds of gc heap\n");
+        return E_FAIL;
+    }
+
+    // Print thread ID.
+    ULONG id = 0;
+    g_ExtSystem->GetCurrentThreadSystemId (&id);
+    ExtOut("OS Thread Id: 0x%x ", id);
+    g_ExtSystem->GetCurrentThreadId (&id);
+    ExtOut("(%d)\n", id);
+
+    DumpStackObjectsHelper(StackTop, StackBottom, bVerify);
+    return S_OK;
+}
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -626,10 +701,32 @@ DECLARE_API (EEStack)
 \**********************************************************************/
 DECLARE_API(DumpStackObjects)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
+    StringHolder exprTop, exprBottom;
 
-    return ExecuteCommand("dumpstackobjects", args);
+    BOOL bVerify = FALSE;
+    BOOL dml = FALSE;
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-verify", &bVerify, COBOOL, FALSE},
+        {"/d", &dml, COBOOL, FALSE}
+    };
+    CMDValue arg[] =
+    {   // vptr, type
+        {&exprTop.data, COSTRING},
+        {&exprBottom.data, COSTRING}
+    };
+    size_t nArg;
+
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
+    {
+        return Status;
+    }
+
+    EnableDMLHolder enableDML(dml);
+
+    return DumpStackObjectsRaw(nArg, exprBottom.data, exprTop.data, bVerify);
 }
 
 /**********************************************************************\
@@ -793,7 +890,13 @@ DECLARE_API(DumpIL)
         return DecodeILFromAddress(NULL, dwStartAddr);
     }
 
-    if (sos::IsObject(dwStartAddr))
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to build snapshot of the garbage collector state\n");
+        return Status;
+    }
+
+    if (g_snapshot.GetHeap(dwStartAddr) != NULL)
     {
         dwDynamicMethodObj = dwStartAddr;
     }
@@ -2089,9 +2192,11 @@ DECLARE_API(DumpObj)
 
         if (SUCCEEDED(Status) && bRefs)
         {
-            std::stringstream argsBuilder;
-            argsBuilder << std::hex << p_Object << " ";
-            return ExecuteCommand("dumpobjgcrefs", argsBuilder.str().c_str());
+            ExtOut("GC Refs:\n");
+            TableOutput out(2, POINTERSIZE_HEX, AlignRight, 4);
+            out.WriteRow("offset", "object");
+            for (sos::RefIterator itr(TO_TADDR(p_Object)); itr; ++itr)
+                out.WriteRow(Hex(itr.GetOffset()), ObjectPtr(*itr));
         }
     }
     catch(const sos::Exception &e)
@@ -3542,16 +3647,190 @@ void PrintGCStat(HeapStat *inStat, const char* label=NULL)
 
 DECLARE_API(TraverseHeap)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    return ExecuteCommand("traverseheap", args);
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
+
+    BOOL bXmlFormat = FALSE;
+    BOOL bVerify = FALSE;
+    StringHolder Filename;
+
+    CMDOption option[] =
+    {   // name, vptr,        type, hasValue
+        {"-xml", &bXmlFormat, COBOOL, FALSE},
+        {"-verify", &bVerify, COBOOL, FALSE},
+    };
+    CMDValue arg[] =
+    {   // vptr, type
+        {&Filename.data, COSTRING},
+    };
+    size_t nArg;
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
+    {
+        return Status;
+    }
+
+    if (nArg != 1)
+    {
+        ExtOut("usage: %straverseheap [-xml] filename\n", SOSPrefix);
+        return Status;
+    }
+
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to build snapshot of the garbage collector state\n");
+        return Status;
+    }
+
+    FILE* file = fopen(Filename.data, "w");
+    if (file == nullptr) {
+        ExtOut("Unable to open file %s (%d)\n", strerror(errno), errno);
+        return Status;
+    }
+
+    if (!bVerify)
+        ExtOut("Assuming a uncorrupted GC heap.  If this is a crash dump consider -verify option\n");
+
+    HeapTraverser traverser(bVerify != FALSE);
+
+    ExtOut("Writing %s format to file %s\n", bXmlFormat ? "Xml" : "CLRProfiler", Filename.data);
+    ExtOut("Gathering types...\n");
+
+    // TODO: there may be a canonical list of methodtables in the runtime that we can
+    // traverse instead of exploring the gc heap for that list. We could then simplify the
+    // tree structure to a sorted list of methodtables, and the index is the ID.
+
+    // TODO: "Traversing object members" code should be generalized and shared between
+    // gcroot and traverseheap. Also dumpheap can begin using GCHeapsTraverse.
+
+    if (!traverser.Initialize())
+    {
+        ExtOut("Error initializing heap traversal\n");
+        fclose(file);
+        return Status;
+    }
+
+    if (!traverser.CreateReport (file, bXmlFormat ? FORMAT_XML : FORMAT_CLRPROFILER))
+    {
+        ExtOut("Unable to write heap report\n");
+        fclose(file);
+        return Status;
+    }
+
+    fclose(file);
+    ExtOut("\nfile %s saved\n", Filename.data);
+
+    return Status;
 }
+
+struct PrintRuntimeTypeArgs
+{
+    DWORD_PTR mtOfRuntimeType;
+    int handleFieldOffset;
+    DacpAppDomainStoreData adstore;
+};
+
+void PrintRuntimeTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOID token)
+{
+    PrintRuntimeTypeArgs *pArgs = (PrintRuntimeTypeArgs *)token;
+
+    if (pArgs->mtOfRuntimeType == NULL)
+    {
+        NameForMT_s(methodTable, g_mdName, mdNameLen);
+
+        if (_wcscmp(g_mdName, W("System.RuntimeType")) == 0)
+        {
+            pArgs->mtOfRuntimeType = methodTable;
+            pArgs->handleFieldOffset = GetObjFieldOffset(TO_CDADDR(objAddr), TO_CDADDR(methodTable), W("m_handle"));
+            if (pArgs->handleFieldOffset <= 0)
+                ExtOut("Error getting System.RuntimeType.m_handle offset\n");
+
+            pArgs->adstore.Request(g_sos);
+        }
+    }
+
+    if ((methodTable == pArgs->mtOfRuntimeType) && (pArgs->handleFieldOffset > 0))
+    {
+        // Get the method table and display the information.
+        DWORD_PTR mtPtr;
+        if (MOVE(mtPtr, objAddr + pArgs->handleFieldOffset) == S_OK)
+        {
+            DMLOut(DMLObject(objAddr));
+
+            // Check if TypeDesc
+            if ((mtPtr & RUNTIMETYPE_HANDLE_IS_TYPEDESC) != 0)
+            {
+                ExtOut(" %p\n", mtPtr & ~RUNTIMETYPE_HANDLE_IS_TYPEDESC);
+            }
+            else
+            {
+                CLRDATA_ADDRESS appDomain = GetAppDomainForMT(mtPtr);
+                if (appDomain != NULL)
+                {
+                    if (appDomain == pArgs->adstore.sharedDomain)
+                        ExtOut(" %" POINTERSIZE "s", "Shared");
+
+                    else if (appDomain == pArgs->adstore.systemDomain)
+                        ExtOut(" %" POINTERSIZE "s", "System");
+                    else
+                        DMLOut(" %s", DMLDomain(appDomain));
+                }
+                else
+                {
+                    ExtOut(" %" POINTERSIZE "s", "?");
+                }
+
+                if (NameForMT_s(mtPtr, g_mdName, mdNameLen))
+                {
+                    DMLOut(" %s %S\n", DMLMethodTable(mtPtr), g_mdName);
+                }
+            }
+        }
+    }
+}
+
 
 DECLARE_API(DumpRuntimeTypes)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
-    return ExecuteCommand("dumpruntimetypes", args);
+
+    BOOL dml = FALSE;
+
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"/d", &dml, COBOOL, FALSE},
+    };
+
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
+        return Status;
+
+    EnableDMLHolder dmlHolder(dml);
+
+    ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s Type Name              \n",
+           "Address", "Domain", "MT");
+    ExtOut("------------------------------------------------------------------------------\n");
+
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to build snapshot of the garbage collector state\n");
+        return E_FAIL;
+    }
+
+    PrintRuntimeTypeArgs pargs;
+    ZeroMemory(&pargs, sizeof(PrintRuntimeTypeArgs));
+
+    try
+    {
+        GCHeapsTraverse(PrintRuntimeTypes, (LPVOID)&pargs);
+    }
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
+    }
+
+    return Status;
 }
 
 namespace sos
@@ -3615,10 +3894,65 @@ DECLARE_API(AnalyzeOOM)
 
 DECLARE_API(VerifyObj)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    return ExecuteCommand("verifyobj", args);
+    TADDR  taddrObj = 0;
+    TADDR  taddrMT;
+    size_t objSize;
+
+    BOOL bValid = FALSE;
+    BOOL dml = FALSE;
+
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"/d", &dml, COBOOL, FALSE},
+    };
+    CMDValue arg[] =
+    {   // vptr, type
+        {&taddrObj, COHEX}
+    };
+    size_t nArg;
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
+    {
+        return Status;
+    }
+
+    EnableDMLHolder dmlHolder(dml);
+    BOOL bContainsPointers;
+
+    if (FAILED(GetMTOfObject(taddrObj, &taddrMT)) ||
+        !GetSizeEfficient(taddrObj, taddrMT, FALSE, objSize, bContainsPointers))
+    {
+        ExtOut("object %#p does not have valid method table\n", SOS_PTR(taddrObj));
+        goto Exit;
+    }
+
+    // we need to build g_snapshot as it is later used in GetGeneration
+    if (!g_snapshot.Build())
+    {
+        ExtOut("Unable to build snapshot of the garbage collector state\n");
+        goto Exit;
+    }
+
+    try
+    {
+        GCHeapDetails *pheapDetails = g_snapshot.GetHeap(taddrObj);
+        bValid = VerifyObject(*pheapDetails, taddrObj, taddrMT, objSize, TRUE);
+    }
+    catch(const sos::Exception &e)
+    {
+        ExtOut("%s\n", e.what());
+        return E_FAIL;
+    }
+
+Exit:
+    if (bValid)
+    {
+        ExtOut("object %#p is a valid object\n", SOS_PTR(taddrObj));
+    }
+
+    return Status;
 }
 
 DECLARE_API(ListNearObj)
@@ -3924,10 +4258,138 @@ DECLARE_API(RCWCleanupList)
 \**********************************************************************/
 DECLARE_API(FinalizeQueue)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    return ExecuteCommand("finalizequeue", args);
+    BOOL bDetail = FALSE;
+    BOOL bAllReady = FALSE;
+    BOOL bShort    = FALSE;
+    BOOL dml = FALSE;
+    TADDR taddrMT  = 0;
+
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-detail",   &bDetail,   COBOOL, FALSE},
+        {"-allReady", &bAllReady, COBOOL, FALSE},
+        {"-short",    &bShort,    COBOOL, FALSE},
+        {"/d",        &dml,       COBOOL, FALSE},
+        {"-mt",       &taddrMT,   COHEX,  TRUE},
+    };
+
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
+    {
+        return Status;
+    }
+
+    EnableDMLHolder dmlHolder(dml);
+    if (!bShort)
+    {
+        DacpSyncBlockCleanupData dsbcd;
+        CLRDATA_ADDRESS sbCurrent = NULL;
+        ULONG cleanCount = 0;
+        while ((dsbcd.Request(g_sos,sbCurrent) == S_OK) && dsbcd.SyncBlockPointer)
+        {
+            if (bDetail)
+            {
+                if (cleanCount == 0) // print first time only
+                {
+                    ExtOut("SyncBlocks to be cleaned by the finalizer thread:\n");
+                    ExtOut("%" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s %" POINTERSIZE "s\n",
+                        "SyncBlock", "RCW", "CCW", "ComClassFactory");
+                }
+
+                ExtOut("%" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p %" POINTERSIZE "p\n",
+                    (ULONG64) dsbcd.SyncBlockPointer,
+                    (ULONG64) dsbcd.blockRCW,
+                    (ULONG64) dsbcd.blockCCW,
+                    (ULONG64) dsbcd.blockClassFactory);
+            }
+
+            cleanCount++;
+            sbCurrent = dsbcd.nextSyncBlock;
+            if (sbCurrent == NULL)
+            {
+                break;
+            }
+        }
+
+        ExtOut("SyncBlocks to be cleaned up: %d\n", cleanCount);
+
+#ifdef FEATURE_COMINTEROP
+        VisitRcwArgs travArgs;
+        ZeroMemory(&travArgs,sizeof(VisitRcwArgs));
+        travArgs.bDetail = bDetail;
+        g_sos->TraverseRCWCleanupList(0, (VISITRCWFORCLEANUP) VisitRcw, &travArgs);
+        ExtOut("Free-Threaded Interfaces to be released: %d\n", travArgs.FTMCount);
+        ExtOut("MTA Interfaces to be released: %d\n", travArgs.MTACount);
+        ExtOut("STA Interfaces to be released: %d\n", travArgs.STACount);
+#endif // FEATURE_COMINTEROP
+
+// noRCW:
+        ExtOut("----------------------------------\n");
+    }
+
+    // GC Heap
+    DWORD dwNHeaps = GetGcHeapCount();
+
+    HeapStat hpStat;
+
+    if (!IsServerBuild())
+    {
+        DacpGcHeapDetails heapDetails;
+        if (heapDetails.Request(g_sos) != S_OK)
+        {
+            ExtOut("Error requesting details\n");
+            return Status;
+        }
+
+        GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
+    }
+    else
+    {
+        DWORD dwAllocSize;
+        if (!ClrSafeInt<DWORD>::multiply(sizeof(CLRDATA_ADDRESS), dwNHeaps, dwAllocSize))
+        {
+            ExtOut("Failed to get GCHeaps:  integer overflow\n");
+            return Status;
+        }
+
+        CLRDATA_ADDRESS *heapAddrs = (CLRDATA_ADDRESS*)alloca(dwAllocSize);
+        if (g_sos->GetGCHeapList(dwNHeaps, heapAddrs, NULL) != S_OK)
+        {
+            ExtOut("Failed to get GCHeaps\n");
+            return Status;
+        }
+
+        for (DWORD n = 0; n < dwNHeaps; n ++)
+        {
+            DacpGcHeapDetails heapDetails;
+            if (heapDetails.Request(g_sos, heapAddrs[n]) != S_OK)
+            {
+                ExtOut("Error requesting details\n");
+                return Status;
+            }
+
+            ExtOut("------------------------------\n");
+            ExtOut("Heap %d\n", n);
+
+            GatherOneHeapFinalization(heapDetails, &hpStat, bAllReady, bShort);
+        }
+    }
+
+    if (!bShort)
+    {
+        if (bAllReady)
+        {
+            PrintGCStat(&hpStat, "Statistics for all finalizable objects that are no longer rooted:\n");
+        }
+        else
+        {
+            PrintGCStat(&hpStat, "Statistics for all finalizable objects (including all objects ready for finalization):\n");
+        }
+    }
+
+    return Status;
 }
 
 enum {
@@ -6366,10 +6828,595 @@ DECLARE_API(bpmd)
 \**********************************************************************/
 DECLARE_API(ThreadPool)
 {
-    INIT_API_EXT();
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    return ExecuteCommand("threadpool", args);
+    BOOL doHCDump = FALSE, doWorkItemDump = FALSE, dml = FALSE;
+    BOOL mustBePortableThreadPool = FALSE;
+
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-ti", &doHCDump, COBOOL, FALSE},
+        {"-wi", &doWorkItemDump, COBOOL, FALSE},
+        {"/d", &dml, COBOOL, FALSE},
+    };
+
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
+    {
+        return E_FAIL;
+    }
+
+    EnableDMLHolder dmlHolder(dml);
+
+    DacpThreadpoolData threadpool;
+    Status = threadpool.Request(g_sos);
+    if (Status == E_NOTIMPL)
+    {
+        mustBePortableThreadPool = TRUE;
+    }
+    else if (Status != S_OK)
+    {
+        ExtOut("    %s\n", "Failed to request ThreadpoolMgr information");
+        return FAILED(Status) ? Status : E_FAIL;
+    }
+
+    DWORD_PTR corelibModule;
+    {
+        int numModule;
+        ArrayHolder<DWORD_PTR> moduleList = ModuleFromName(const_cast<LPSTR>("System.Private.CoreLib.dll"), &numModule);
+        if (moduleList == NULL || numModule != 1)
+        {
+            ExtOut("    %s\n", "Failed to find System.Private.CoreLib.dll");
+            return E_FAIL;
+        }
+        corelibModule = moduleList[0];
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Check whether the portable thread pool is being used and fill in the thread pool data
+
+    UINT64 ui64Value = 0;
+    DacpObjectData vPortableTpHcLogArray;
+    int portableTpHcLogEntry_tickCountOffset = 0;
+    int portableTpHcLogEntry_stateOrTransitionOffset = 0;
+    int portableTpHcLogEntry_newControlSettingOffset = 0;
+    int portableTpHcLogEntry_lastHistoryCountOffset = 0;
+    int portableTpHcLogEntry_lastHistoryMeanOffset = 0;
+    do // while (false)
+    {
+        if (!mustBePortableThreadPool)
+        {
+            // Determine if the portable thread pool is enabled
+            if (FAILED(
+                GetNonSharedStaticFieldValueFromName(
+                    &ui64Value,
+                    corelibModule,
+                    "System.Threading.ThreadPool",
+                    W("UsePortableThreadPool"),
+                    ELEMENT_TYPE_BOOLEAN)) ||
+                ui64Value == 0)
+            {
+                // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+                // is not being used.
+                break;
+            }
+        }
+
+        // Get the thread pool instance
+        if (FAILED(
+                GetNonSharedStaticFieldValueFromName(
+                    &ui64Value,
+                    corelibModule,
+                    "System.Threading.PortableThreadPool",
+                    W("ThreadPoolInstance"),
+                    ELEMENT_TYPE_CLASS)) ||
+            ui64Value == 0)
+        {
+            // The type was not loaded yet, or the static field was not found, etc. For now assume that the portable thread pool
+            // is not being used.
+            break;
+        }
+        CLRDATA_ADDRESS cdaTpInstance = TO_CDADDR(ui64Value);
+
+        // Get the thread pool method table
+        CLRDATA_ADDRESS cdaTpMethodTable;
+        {
+            TADDR tpMethodTableAddr = NULL;
+            if (FAILED(GetMTOfObject(TO_TADDR(cdaTpInstance), &tpMethodTableAddr)))
+            {
+                break;
+            }
+            cdaTpMethodTable = TO_CDADDR(tpMethodTableAddr);
+        }
+
+        DWORD_PTR ptrValue = 0;
+        INT32 i32Value = 0;
+        INT16 i16Value = 0;
+        int offset = 0;
+
+        // Populate fields of the thread pool with simple types
+        {
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_cpuUtilization"));
+            if (offset <= 0 || FAILED(MOVE(i32Value, cdaTpInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._cpuUtilization");
+                break;
+            }
+            threadpool.cpuUtilization = i32Value;
+
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_minThreads"));
+            if (offset <= 0 || FAILED(MOVE(i16Value, cdaTpInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._minThreads");
+                break;
+            }
+            threadpool.MinLimitTotalWorkerThreads = i16Value;
+
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_maxThreads"));
+            if (offset <= 0 || FAILED(MOVE(i16Value, cdaTpInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._maxThreads");
+                break;
+            }
+            threadpool.MaxLimitTotalWorkerThreads = i16Value;
+        }
+
+        // Populate thread counts
+        {
+            DacpFieldDescData vSeparatedField;
+            offset = GetObjFieldOffset(cdaTpInstance, cdaTpMethodTable, W("_separated"), TRUE, &vSeparatedField);
+            if (offset <= 0)
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._separated");
+                break;
+            }
+            int accumulatedOffset = offset;
+
+            DacpFieldDescData vCountsField;
+            offset = GetValueFieldOffset(vSeparatedField.MTOfType, W("counts"), &vCountsField);
+            if (offset < 0)
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._separated.counts");
+                break;
+            }
+            accumulatedOffset += offset;
+
+            offset = GetValueFieldOffset(vCountsField.MTOfType, W("_data"));
+            if (offset < 0 || FAILED(MOVE(ui64Value, cdaTpInstance + accumulatedOffset + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool._separated.counts._data");
+                break;
+            }
+            UINT64 data = ui64Value;
+
+            const UINT8 NumProcessingWorkShift = 0;
+            const UINT8 NumExistingThreadsShift = 16;
+
+            INT16 numProcessingWork = (INT16)(data >> NumProcessingWorkShift);
+            INT16 numExistingThreads = (INT16)(data >> NumExistingThreadsShift);
+
+            threadpool.NumIdleWorkerThreads = numExistingThreads - numProcessingWork;
+            threadpool.NumWorkingWorkerThreads = numProcessingWork;
+            threadpool.NumRetiredWorkerThreads = 0;
+        }
+
+        // Populate hill climbing log info
+        {
+            threadpool.HillClimbingLog = 0; // this indicates that the portable thread pool's hill climbing data should be used
+            threadpool.HillClimbingLogFirstIndex = 0;
+            threadpool.HillClimbingLogSize = 0;
+
+            // Get the hill climbing instance
+            if (FAILED(
+                    GetNonSharedStaticFieldValueFromName(
+                        &ui64Value,
+                        corelibModule,
+                        "System.Threading.PortableThreadPool+HillClimbing",
+                        W("ThreadPoolHillClimber"),
+                        ELEMENT_TYPE_CLASS)) ||
+                ui64Value == 0)
+            {
+                // The type was not loaded yet, or the static field was not found, etc. For now assume that the hill climber has
+                // not been used yet.
+                break;
+            }
+            CLRDATA_ADDRESS cdaTpHcInstance = TO_CDADDR(ui64Value);
+
+            // Get the thread pool method table
+            CLRDATA_ADDRESS cdaTpHcMethodTable;
+            {
+                TADDR tpHcMethodTableAddr = NULL;
+                if (FAILED(GetMTOfObject(TO_TADDR(cdaTpHcInstance), &tpHcMethodTableAddr)))
+                {
+                    ExtOut("    %s\n", "Failed to get method table for PortableThreadPool.HillClimbing");
+                    break;
+                }
+                cdaTpHcMethodTable = TO_CDADDR(tpHcMethodTableAddr);
+            }
+
+            offset = GetObjFieldOffset(cdaTpHcInstance, cdaTpHcMethodTable, W("_logStart"));
+            if (offset <= 0 || FAILED(MOVE(i32Value, cdaTpHcInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool.HillClimbing._logStart");
+                break;
+            }
+            int logStart = i32Value;
+
+            offset = GetObjFieldOffset(cdaTpHcInstance, cdaTpHcMethodTable, W("_logSize"));
+            if (offset <= 0 || FAILED(MOVE(i32Value, cdaTpHcInstance + offset)))
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool.HillClimbing._logSize");
+                break;
+            }
+            int logSize = i32Value;
+
+            offset = GetObjFieldOffset(cdaTpHcInstance, cdaTpHcMethodTable, W("_log"));
+            if (offset <= 0 || FAILED(MOVE(ptrValue, cdaTpHcInstance + offset)) || ptrValue == 0)
+            {
+                ExtOut("    %s\n", "Failed to read PortableThreadPool.HillClimbing._log");
+                break;
+            }
+            CLRDATA_ADDRESS cdaTpHcLog = TO_CDADDR(ptrValue);
+
+            // Validate the log array
+            if (!sos::IsObject(cdaTpHcLog, false) ||
+                vPortableTpHcLogArray.Request(g_sos, cdaTpHcLog) != S_OK ||
+                vPortableTpHcLogArray.ObjectType != OBJ_ARRAY ||
+                vPortableTpHcLogArray.ArrayDataPtr == 0 ||
+                vPortableTpHcLogArray.dwComponentSize != sizeof(HillClimbingLogEntry) ||
+                vPortableTpHcLogArray.ElementTypeHandle == 0)
+            {
+                ExtOut("    %s\n", "Failed to validate PortableThreadPool.HillClimbing._log");
+                break;
+            }
+
+            // Get the log entry field offsets
+            portableTpHcLogEntry_tickCountOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("tickCount"));
+            portableTpHcLogEntry_stateOrTransitionOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("stateOrTransition"));
+            portableTpHcLogEntry_newControlSettingOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("newControlSetting"));
+            portableTpHcLogEntry_lastHistoryCountOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("lastHistoryCount"));
+            portableTpHcLogEntry_lastHistoryMeanOffset =
+                GetValueFieldOffset(vPortableTpHcLogArray.ElementTypeHandle, W("lastHistoryMean"));
+            if (portableTpHcLogEntry_tickCountOffset < 0 ||
+                portableTpHcLogEntry_stateOrTransitionOffset < 0 ||
+                portableTpHcLogEntry_newControlSettingOffset < 0 ||
+                portableTpHcLogEntry_lastHistoryCountOffset < 0 ||
+                portableTpHcLogEntry_lastHistoryMeanOffset < 0)
+            {
+                ExtOut("    %s\n", "Failed to get a field offset in PortableThreadPool.HillClimbing.LogEntry");
+                break;
+            }
+
+            ExtOut("logStart: %d\n", logStart);
+            ExtOut("logSize: %d\n", logSize);
+            threadpool.HillClimbingLogFirstIndex = logStart;
+            threadpool.HillClimbingLogSize = logSize;
+        }
+    } while (false);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    ExtOut ("CPU utilization: %d %s\n", threadpool.cpuUtilization, "%");
+    ExtOut ("Worker Thread:");
+    ExtOut (" Total: %d", threadpool.NumWorkingWorkerThreads + threadpool.NumIdleWorkerThreads + threadpool.NumRetiredWorkerThreads);
+    ExtOut (" Running: %d", threadpool.NumWorkingWorkerThreads);
+    ExtOut (" Idle: %d", threadpool.NumIdleWorkerThreads);
+    ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalWorkerThreads);
+    ExtOut (" MinLimit: %d", threadpool.MinLimitTotalWorkerThreads);
+    ExtOut ("\n");
+
+    int numWorkRequests = 0;
+    CLRDATA_ADDRESS workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
+    DacpWorkRequestData workRequestData;
+    while (workRequestPtr)
+    {
+        if ((Status = workRequestData.Request(g_sos,workRequestPtr))!=S_OK)
+        {
+            ExtOut("    Failed to examine a WorkRequest\n");
+            return Status;
+        }
+        numWorkRequests++;
+        workRequestPtr = workRequestData.NextWorkRequest;
+    }
+
+    ExtOut ("Work Request in Queue: %d\n", numWorkRequests);
+    workRequestPtr = threadpool.FirstUnmanagedWorkRequest;
+    while (workRequestPtr)
+    {
+        if ((Status = workRequestData.Request(g_sos,workRequestPtr))!=S_OK)
+        {
+            ExtOut("    Failed to examine a WorkRequest\n");
+            return Status;
+        }
+
+        if (workRequestData.Function == threadpool.AsyncTimerCallbackCompletionFPtr)
+            ExtOut ("    AsyncTimerCallbackCompletion TimerInfo@%p\n", SOS_PTR(workRequestData.Context));
+        else
+            ExtOut ("    Unknown Function: %p  Context: %p\n", SOS_PTR(workRequestData.Function),
+                SOS_PTR(workRequestData.Context));
+
+        workRequestPtr = workRequestData.NextWorkRequest;
+    }
+
+    if (doWorkItemDump && g_snapshot.Build())
+    {
+        // Display a message if the heap isn't verified.
+        sos::GCHeap gcheap;
+        if (!gcheap.AreGCStructuresValid())
+        {
+            DisplayInvalidStructuresMessage();
+        }
+
+        mdTypeDef threadPoolWorkQueueMd, threadPoolWorkStealingQueueMd;
+        GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue", &threadPoolWorkQueueMd);
+        GetInfoFromName(corelibModule, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue", &threadPoolWorkStealingQueueMd);
+
+        // Walk every heap item looking for the global queue and local queues.
+        ExtOut("\nQueued work items:\n%" THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "s %" POINTERSIZE "s %s\n", "Queue", "Address", "Work Item");
+        HeapStat stats;
+        for (sos::ObjectIterator itr = gcheap.WalkHeap(); !IsInterrupt() && itr != NULL; ++itr)
+        {
+            DacpMethodTableData mtdata;
+            if (mtdata.Request(g_sos, TO_TADDR(itr->GetMT())) != S_OK ||
+                mtdata.Module != corelibModule)
+            {
+                continue;
+            }
+
+            if (mtdata.cl == threadPoolWorkQueueMd)
+            {
+                // We found a ThreadPoolWorkQueue (there should be only one, given one AppDomain).
+
+                // Enumerate high-priority work items.
+                int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("highPriorityWorkItems"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueuePtr;
+                    MOVE(workItemsConcurrentQueuePtr, itr->GetAddress() + offset);
+                    if (sos::IsObject(workItemsConcurrentQueuePtr, false))
+                    {
+                        // We got the ConcurrentQueue.  Enumerate it.
+                        EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global high-pri]", &stats);
+                    }
+                }
+
+                // Enumerate assignable normal-priority work items.
+                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("_assignableWorkItemQueues"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueueArrayPtr;
+                    MOVE(workItemsConcurrentQueueArrayPtr, itr->GetAddress() + offset);
+                    DacpObjectData workItemsConcurrentQueueArray;
+                    if (workItemsConcurrentQueueArray.Request(g_sos, TO_CDADDR(workItemsConcurrentQueueArrayPtr)) == S_OK &&
+                        workItemsConcurrentQueueArray.ObjectType == OBJ_ARRAY)
+                    {
+                        for (int i = 0; i < workItemsConcurrentQueueArray.dwNumComponents; i++)
+                        {
+                            DWORD_PTR workItemsConcurrentQueuePtr;
+                            MOVE(workItemsConcurrentQueuePtr, workItemsConcurrentQueueArray.ArrayDataPtr + (i * workItemsConcurrentQueueArray.dwComponentSize));
+                            if (workItemsConcurrentQueuePtr != NULL && sos::IsObject(TO_CDADDR(workItemsConcurrentQueuePtr), false))
+                            {
+                                // We got the ConcurrentQueue.  Enumerate it.
+                                EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
+                            }
+                        }
+                    }
+                }
+
+                // Enumerate normal-priority work items.
+                offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("workItems"));
+                if (offset > 0)
+                {
+                    DWORD_PTR workItemsConcurrentQueuePtr;
+                    MOVE(workItemsConcurrentQueuePtr, itr->GetAddress() + offset);
+                    if (sos::IsObject(workItemsConcurrentQueuePtr, false))
+                    {
+                        // We got the ConcurrentQueue.  Enumerate it.
+                        EnumerateThreadPoolGlobalWorkItemConcurrentQueue(workItemsConcurrentQueuePtr, "[Global]", &stats);
+                    }
+                }
+            }
+            else if (mtdata.cl == threadPoolWorkStealingQueueMd)
+            {
+                // We found a local queue.  Get its work items array.
+                int offset = GetObjFieldOffset(itr->GetAddress(), itr->GetMT(), W("m_array"));
+                if (offset > 0)
+                {
+                    // Walk every element in the array, outputting details on non-null work items.
+                    DWORD_PTR workItemArrayPtr;
+                    MOVE(workItemArrayPtr, itr->GetAddress() + offset);
+                    DacpObjectData workItemArray;
+                    if (workItemArray.Request(g_sos, TO_CDADDR(workItemArrayPtr)) == S_OK && workItemArray.ObjectType == OBJ_ARRAY)
+                    {
+                        for (int i = 0; i < workItemArray.dwNumComponents; i++)
+                        {
+                            DWORD_PTR workItemPtr;
+                            MOVE(workItemPtr, workItemArray.ArrayDataPtr + (i * workItemArray.dwComponentSize));
+                            if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
+                            {
+                                sos::Object workItem = TO_TADDR(workItemPtr);
+                                stats.Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
+                                DMLOut("%" THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "s %s %S", DMLObject(itr->GetAddress()), DMLObject(workItem.GetAddress()), workItem.GetTypeName());
+                                if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
+                                    (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
+                                {
+                                    DWORD_PTR delegatePtr;
+                                    MOVE(delegatePtr, workItem.GetAddress() + offset);
+                                    CLRDATA_ADDRESS md;
+                                    if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
+                                    {
+                                        NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
+                                        ExtOut(" => %S", g_mdName);
+                                    }
+                                }
+                                ExtOut("\n");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Output a summary.
+        stats.Sort();
+        stats.Print();
+        ExtOut("\n");
+    }
+
+    if (doHCDump)
+    {
+        ExtOut ("--------------------------------------\n");
+        ExtOut ("\nThread Injection History\n");
+        if (threadpool.HillClimbingLogSize > 0)
+        {
+            static char const * const TransitionNames[] =
+            {
+                "Warmup",
+                "Initializing",
+                "RandomMove",
+                "ClimbingMove",
+                "ChangePoint",
+                "Stabilizing",
+                "Starvation",
+                "ThreadTimedOut",
+                "CooperativeBlocking",
+                "Undefined"
+            };
+
+            bool usePortableThreadPoolHillClimbingData = threadpool.HillClimbingLog == 0;
+            int logCapacity =
+                usePortableThreadPoolHillClimbingData
+                    ? (int)vPortableTpHcLogArray.dwNumComponents
+                    : HillClimbingLogCapacity;
+
+            ExtOut("\n    Time Transition     New #Threads      #Samples   Throughput\n");
+            DacpHillClimbingLogEntry entry;
+
+            // Get the most recent entry first, so we can calculate time offsets
+            DWORD endTime;
+            int index = (threadpool.HillClimbingLogFirstIndex + threadpool.HillClimbingLogSize - 1) % logCapacity;
+            if (usePortableThreadPoolHillClimbingData)
+            {
+                CLRDATA_ADDRESS entryPtr =
+                    TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + index * sizeof(HillClimbingLogEntry));
+                INT32 i32Value = 0;
+
+                if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
+                {
+                    ExtOut("    Failed to examine a HillClimbing log entry\n");
+                    return Status;
+                }
+
+                endTime = i32Value;
+            }
+            else
+            {
+                CLRDATA_ADDRESS entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
+                if ((Status = entry.Request(g_sos, entryPtr)) != S_OK)
+                {
+                    ExtOut("    Failed to examine a HillClimbing log entry\n");
+                    return Status;
+                }
+
+                endTime = entry.TickCount;
+            }
+
+            for (int i = 0; i < threadpool.HillClimbingLogSize; i++)
+            {
+                index = (i + threadpool.HillClimbingLogFirstIndex) % logCapacity;
+                if (usePortableThreadPoolHillClimbingData)
+                {
+                    CLRDATA_ADDRESS entryPtr =
+                        TO_CDADDR(vPortableTpHcLogArray.ArrayDataPtr + (index * sizeof(HillClimbingLogEntry)));
+                    INT32 i32Value = 0;
+                    float f32Value = 0;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_tickCountOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.TickCount = i32Value;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_stateOrTransitionOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.Transition = i32Value;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_newControlSettingOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.NewControlSetting = i32Value;
+
+                    if (FAILED(Status = MOVE(i32Value, entryPtr + portableTpHcLogEntry_lastHistoryCountOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.LastHistoryCount = i32Value;
+
+                    if (FAILED(Status = MOVE(f32Value, entryPtr + portableTpHcLogEntry_lastHistoryMeanOffset)))
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                    entry.LastHistoryMean = f32Value;
+                }
+                else
+                {
+                    CLRDATA_ADDRESS entryPtr = threadpool.HillClimbingLog + (index * sizeof(HillClimbingLogEntry));
+
+                    if ((Status = entry.Request(g_sos, entryPtr)) != S_OK)
+                    {
+                        ExtOut("    Failed to examine a HillClimbing log entry\n");
+                        return Status;
+                    }
+                }
+
+                ExtOut("%8.2lf %-14s %12d  %12d  %11.2lf\n",
+                    (double)(int)(entry.TickCount - endTime) / 1000.0,
+                    TransitionNames[entry.Transition],
+                    entry.NewControlSetting,
+                    entry.LastHistoryCount,
+                    entry.LastHistoryMean);
+            }
+        }
+    }
+
+    ExtOut ("--------------------------------------\n");
+    ExtOut ("Number of Timers: %d\n", threadpool.NumTimers);
+    ExtOut ("--------------------------------------\n");
+
+    // Determine if the portable thread pool is being used for IO. The portable thread pool does not use a separate set of
+    // threads for processing IO completions.
+    if (FAILED(
+            GetNonSharedStaticFieldValueFromName(
+                &ui64Value,
+                corelibModule,
+                "System.Threading.ThreadPool",
+                W("UsePortableThreadPoolForIO"),
+                ELEMENT_TYPE_BOOLEAN)) ||
+        ui64Value == 0)
+    {
+        ExtOut ("Completion Port Thread:");
+        ExtOut ("Total: %d", threadpool.NumCPThreads);
+        ExtOut (" Free: %d", threadpool.NumFreeCPThreads);
+        ExtOut (" MaxFree: %d", threadpool.MaxFreeCPThreads);
+        ExtOut (" CurrentLimit: %d", threadpool.CurrentLimitTotalCPThreads);
+        ExtOut (" MaxLimit: %d", threadpool.MaxLimitTotalCPThreads);
+        ExtOut (" MinLimit: %d", threadpool.MinLimitTotalCPThreads);
+        ExtOut ("\n");
+    }
+
+    return S_OK;
 }
 
 DECLARE_API(FindAppDomain)
@@ -8787,6 +9834,26 @@ DECLARE_API(FindRoots)
         {
             ExtOut("The command %sfindroots can only be used after the debugger stopped on a CLRN GC notification.\n", SOSPrefix);
             ExtOut("At this time %sgcroot should be used instead.\n", SOSPrefix);
+            return Status;
+        }
+        // validate argument
+        if (!g_snapshot.Build())
+        {
+            ExtOut("Unable to build snapshot of the garbage collector state\n");
+            return Status;
+        }
+
+        if (g_snapshot.GetHeap(taObj) == NULL)
+        {
+            ExtOut("Address %#p is not in the managed heap.\n", SOS_PTR(taObj));
+            return Status;
+        }
+
+        int ogen = g_snapshot.GetGeneration(taObj);
+        if (ogen > CNotification::GetCondemnedGen())
+        {
+            DMLOut("Object %s will survive this collection:\n\tgen(%#p) = %d > %d = condemned generation.\n",
+                DMLObject(taObj), SOS_PTR(taObj), ogen, CNotification::GetCondemnedGen());
             return Status;
         }
 

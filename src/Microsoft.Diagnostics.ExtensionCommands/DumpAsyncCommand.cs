@@ -52,24 +52,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport(Optional = true)]
         public ClrRuntime? Runtime { get; set; }
 
-
         /// <summary>Gets whether to only show stacks that include the object with the specified address.</summary>
         [Option(Name = "--address", Aliases = new string[] { "-addr" }, Help = "Only show stacks that include the object with the specified address.")]
-        public string? ObjectAddress
-        {
-            get => _objectAddress?.ToString();
-            set => _objectAddress = ParseAddress(value);
-        }
-        private ulong? _objectAddress;
+        public ulong? ObjectAddress { get; set; }
 
         /// <summary>Gets whether to only show stacks that include objects with the specified method table.</summary>
         [Option(Name = "--methodtable", Aliases = new string[] { "-mt" }, Help = "Only show stacks that include objects with the specified method table.")]
-        public string? MethodTableAddress
-        {
-            get => _methodTableAddress?.ToString();
-            set => _methodTableAddress = ParseAddress(value);
-        }
-        private ulong? _methodTableAddress;
+        public ulong? MethodTableAddress { get; set; }
 
         /// <summary>Gets whether to only show stacks that include objects whose type includes the specified name in its name.</summary>
         [Option(Name = "--type", Help = "Only show stacks that include objects whose type includes the specified name in its name.")]
@@ -543,14 +532,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Determines whether the specified object is of interest to the user based on their criteria provided as command arguments.</summary>
             bool IncludeInOutput(ClrObject obj)
             {
-                if (_objectAddress is ulong addr && obj.Address != addr)
+                if (ObjectAddress is ulong addr && obj.Address != addr)
                 {
                     return false;
                 }
 
                 if (obj.Type is not null)
                 {
-                    if (_methodTableAddress is ulong mt && obj.Type.MethodTable != mt)
+                    if (MethodTableAddress is ulong mt && obj.Type.MethodTable != mt)
                     {
                         return false;
                     }

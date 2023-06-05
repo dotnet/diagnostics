@@ -121,11 +121,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         // Thread id is in the frame name as "Thread (<ID>)"
                         string template = "Thread (";
                         string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
-
-                        // we are looking for the first index of ) because
-                        // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
-                        int firstIndex = threadFrame.IndexOf(')');
-                        int threadId = int.Parse(threadFrame.AsSpan(template.Length, firstIndex - template.Length));
+                        int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
 
                         if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
                         {

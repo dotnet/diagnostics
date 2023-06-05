@@ -171,6 +171,7 @@ public:
     virtual void  FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx = 0) const;
 
     virtual LPCSTR GetDumpStackHeading() const          { return s_DumpStackHeading; }
+    virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs); }
@@ -187,6 +188,7 @@ private:
 
 private:
     static LPCSTR     s_DumpStackHeading;
+    static LPCSTR     s_DSOHeading;
     static LPCSTR     s_GCRegs[7];
     static LPCSTR     s_SPName;
 }; // class X86Machine
@@ -241,6 +243,7 @@ public:
     virtual void  FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx = 0) const;
 
     virtual LPCSTR GetDumpStackHeading() const          { return s_DumpStackHeading; }
+    virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs); }
@@ -257,6 +260,7 @@ private:
 
 private:
     static LPCSTR     s_DumpStackHeading;
+    static LPCSTR     s_DSOHeading;
     static LPCSTR     s_GCRegs[14];
     static LPCSTR     s_SPName;
     static ARMMachine s_ARMMachineInstance;
@@ -312,6 +316,7 @@ public:
     virtual void  FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx = 0) const;
 
     virtual LPCSTR GetDumpStackHeading() const          { return s_DumpStackHeading; }
+    virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs); }
@@ -328,6 +333,7 @@ private:
 
 private:
     static LPCSTR       s_DumpStackHeading;
+    static LPCSTR       s_DSOHeading;
     static LPCSTR       s_GCRegs[15];
     static LPCSTR       s_SPName;
 }; // class AMD64Machine
@@ -380,6 +386,7 @@ public:
     virtual void  FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx = 0) const;
     
     virtual LPCSTR GetDumpStackHeading() const          { return s_DumpStackHeading; }
+    virtual LPCSTR GetDumpStackObjectsHeading() const   { return s_DSOHeading; }
     virtual LPCSTR GetSPName() const                    { return s_SPName; }
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
     { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs);}
@@ -395,6 +402,7 @@ private:
     ARM64Machine & operator=(const ARM64Machine&);  // undefined
 
     static LPCSTR     s_DumpStackHeading;
+    static LPCSTR     s_DSOHeading;
     static LPCSTR     s_GCRegs[28];
     static LPCSTR     s_SPName;
 

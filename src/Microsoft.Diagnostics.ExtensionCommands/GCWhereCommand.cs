@@ -5,9 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
-using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
+using static Microsoft.Diagnostics.ExtensionCommands.TableOutput;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -41,13 +40,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            Column objectRangeColumn = Range.WithDml(Dml.DumpHeap).GetAppropriateWidth(segments.Select(r => r.ObjectRange));
-            Column committedColumn = Range.GetAppropriateWidth(segments.Select(r => r.CommittedMemory));
-            Column reservedColumn = Range.GetAppropriateWidth(segments.Select(r => r.ReservedMemory));
-            Table output = new(Console, Pointer, IntegerWithoutCommas.WithWidth(6).WithDml(Dml.DumpHeap), DumpHeap, Text.WithWidth(6), objectRangeColumn, committedColumn, reservedColumn);
-            output.SetAlignment(Align.Left);
-            output.WriteHeader("Address", "Heap", "Segment", "Generation", "Allocated", "Committed", "Reserved");
+            (int, string) RangeFormat = (segments.Max(seg => RangeSizeForSegment(seg)), "");
+            TableOutput output = new(Console, (16, "x"), (4, ""), (16, "x"), (10, ""), RangeFormat, RangeFormat, RangeFormat)
+            {
+                AlignLeft = true,
+            };
 
+            output.WriteRow("Address", "Heap", "Segment", "Generation", "Allocated", "Committed", "Reserved");
             foreach (ClrSegment segment in segments)
             {
                 string generation;
@@ -69,16 +68,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     };
                 }
 
-                if (segment.ObjectRange.Contains(address))
-                {
-                    output.Columns[0] = output.Columns[0].WithDml(Dml.ListNearObj);
-                }
-                else
-                {
-                    output.Columns[0] = output.Columns[0].WithDml(null);
-                }
+                object addressColumn = segment.ObjectRange.Contains(address) ? new DmlListNearObj(address) : address;
+                output.WriteRow(addressColumn, segment.SubHeap.Index, segment.Address, generation, new DmlDumpHeap(FormatRange(segment.ObjectRange), segment.ObjectRange), FormatRange(segment.CommittedMemory), FormatRange(segment.ReservedMemory));
+            }
+        }
 
-                output.WriteRow(address, segment.SubHeap, segment, generation, segment.ObjectRange, segment.CommittedMemory, segment.ReservedMemory);
+        private static string FormatRange(MemoryRange range) => $"{range.Start:x}-{range.End:x}";
+
+        private static int RangeSizeForSegment(ClrSegment segment)
+        {
+            // segment.ObjectRange should always be less length than CommittedMemory
+            if (segment.CommittedMemory.Length > segment.ReservedMemory.Length)
+            {
+                return FormatRange(segment.CommittedMemory).Length;
+            }
+            else
+            {
+                return FormatRange(segment.ReservedMemory).Length;
             }
         }
 

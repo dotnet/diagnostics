@@ -55,10 +55,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 byte[] registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
-                registerContext.AsSpan().Slice(0, context.Length).CopyTo(context);
+                context = new Span<byte>(registerContext);
                 return true;
             }
-            catch (Exception ex) when (ex is DiagnosticsException or ArgumentException)
+            catch (DiagnosticsException ex)
             {
                 Trace.TraceError($"GetThreadContext: {threadId} exception {ex.Message}");
             }
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         bool IMemoryReader.Read<T>(ulong address, out T value)
         {
-            Span<byte> buffer = stackalloc byte[Unsafe.SizeOf<T>()];
+            Span<byte> buffer = stackalloc byte[Marshal.SizeOf<T>()];
             if (((IMemoryReader)this).Read(address, buffer) == buffer.Length)
             {
                 value = Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(buffer));

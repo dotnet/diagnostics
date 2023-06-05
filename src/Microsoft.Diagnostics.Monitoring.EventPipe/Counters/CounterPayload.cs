@@ -86,17 +86,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    internal class UpDownCounterPayload : CounterPayload
-    {
-        public UpDownCounterPayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, DateTime timestamp) :
-            base(providerName, name, metadata, value, timestamp, "Metric", EventType.UpDownCounter)
-        {
-            // In case these properties are not provided, set them to appropriate values.
-            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
-            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
-        }
-    }
-
     internal class CounterEndedPayload : CounterPayload
     {
         public CounterEndedPayload(string providerName, string name, DateTime timestamp)
@@ -155,7 +144,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         Rate,
         Gauge,
         Histogram,
-        UpDownCounter,
         Error,
         CounterEnded
     }

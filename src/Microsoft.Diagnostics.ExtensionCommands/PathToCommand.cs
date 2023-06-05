@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             GCRoot.ChainLink path = gcroot.FindPathFrom(sourceObj);
             if (path is not null)
             {
-                GCRootCommand.PrintPath(Console, RootCache, null, heap, path);
+                GCRootCommand.PrintPath(Console, RootCache, heap, path);
             }
             else
             {

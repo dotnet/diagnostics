@@ -262,6 +262,215 @@ private:
     static StaticData<char, 4, 1024> cache;
 };
 
+class GCHeapDetails
+{
+private:
+    void GetGenerationTableSize(CLRDATA_ADDRESS svrHeapAddr, unsigned int *count)
+    {
+        HRESULT hr = S_OK;
+        bool success = false;
+        ReleaseHolder<ISOSDacInterface8> sos8;
+        if (!SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8))
+            || !SUCCEEDED(hr = sos8->GetNumberGenerations(count)))
+        {
+            // The runtime will either have the original 4 generations or implement ISOSDacInterface8
+            // if the call succeeded, count is already populated.
+            *count = DAC_NUMBERGENERATIONS;
+        }
+    }
+
+    // Fill the target array with either the details from heap or if this is a newer runtime that supports
+    // the pinned object heap (or potentially future GC generations), get that data too. This abstraction is
+    // necessary because the original GC heap APIs are hardcoded to 4 generations.
+    void FillGenerationTable(CLRDATA_ADDRESS svrHeapAddr, const DacpGcHeapDetails &heap, unsigned int count, DacpGenerationData *data)
+    {
+        HRESULT hr = S_OK;
+        bool success = false;
+        unsigned int generationCount;
+        ReleaseHolder<ISOSDacInterface8> sos8;
+        if (SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+        {
+            if (svrHeapAddr == NULL)
+            {
+                if (SUCCEEDED(hr = sos8->GetGenerationTable(count, data, &generationCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+            else
+            {
+                if (SUCCEEDED(hr = sos8->GetGenerationTableSvr(svrHeapAddr, count, data, &generationCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+
+            _ASSERTE(generationCount == count || !success);
+        }
+
+        if (!success)
+        {
+            // This would mean that there are additional, unaccounted for, generations
+            _ASSERTE(hr != S_FALSE);
+
+            // We couldn't get any data from the newer APIs, so fall back to the original data
+            memcpy(data, &(heap.generation_table), sizeof(DacpGenerationData) * DAC_NUMBERGENERATIONS);
+        }
+    }
+
+    // Fill the target array with either the details from heap or if this is a newer runtime that supports
+    // the pinned object heap (or potentially future GC generations), get that data too. This abstraction is
+    // necessary because the original GC heap APIs are hardcoded to 4 generations.
+    void FillFinalizationPointers(CLRDATA_ADDRESS svrHeapAddr, const DacpGcHeapDetails &heap, unsigned int count, CLRDATA_ADDRESS *data)
+    {
+        HRESULT hr = S_OK;
+        bool success = false;
+        unsigned int fillPointersCount;
+        ReleaseHolder<ISOSDacInterface8> sos8;
+        if (SUCCEEDED(hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
+        {
+            if (svrHeapAddr == NULL)
+            {
+                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointers(count, data, &fillPointersCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+            else
+            {
+                if (SUCCEEDED(hr = sos8->GetFinalizationFillPointersSvr(svrHeapAddr, count, data, &fillPointersCount))
+                    && hr != S_FALSE)
+                {
+                    success = true;
+                    // Nothing else to do, data is already populated
+                }
+            }
+
+            _ASSERTE(fillPointersCount == count);
+        }
+
+        if (!success)
+        {
+            // This would mean that there are additional, unaccounted for, generations
+            _ASSERTE(hr != S_FALSE);
+
+            // We couldn't get any data from the newer APIs, so fall back to the original data
+            memcpy(data, &(heap.finalization_fill_pointers), sizeof(CLRDATA_ADDRESS) * (DAC_NUMBERGENERATIONS + 2));
+        }
+    }
+
+public:
+    GCHeapDetails()
+    {
+        generation_table = NULL;
+        finalization_fill_pointers = NULL;
+    }
+
+    GCHeapDetails(const DacpGcHeapDetails  &dacGCDetails, CLRDATA_ADDRESS svrHeapAddr = NULL)
+    {
+        generation_table = NULL;
+        finalization_fill_pointers = NULL;
+
+        Set(dacGCDetails, svrHeapAddr);
+    }
+
+    ~GCHeapDetails()
+    {
+        if (generation_table != NULL)
+        {
+            delete[] generation_table;
+            generation_table = NULL;
+        }
+
+        if (finalization_fill_pointers != NULL)
+        {
+            delete[] finalization_fill_pointers;
+            finalization_fill_pointers = NULL;
+        }
+    }
+
+    // Due to the raw pointers, we are not a POD and have to be careful about lifetime
+    GCHeapDetails(const GCHeapDetails& other) = delete;
+    GCHeapDetails(GCHeapDetails&& other) = delete;
+    GCHeapDetails& operator=(const GCHeapDetails& other) = delete;
+    GCHeapDetails& operator=(GCHeapDetails&& other) = delete;
+
+    void Set(const DacpGcHeapDetails dacGCDetails, CLRDATA_ADDRESS svrHeapAddr = NULL)
+    {
+        original_heap_details = dacGCDetails;
+
+        GetGenerationTableSize(svrHeapAddr, &num_generations);
+        // Either we're pre POH and have 4, or post and have 5. If there's a different
+        // number it's either a bug or we need to update SOS.
+        _ASSERTE(num_generations == 4 || num_generations == 5);
+        has_poh = num_generations > 4;
+
+        if (generation_table != NULL)
+        {
+            delete[] generation_table;
+        }
+        generation_table = new DacpGenerationData[num_generations];
+        FillGenerationTable(svrHeapAddr, dacGCDetails, num_generations, generation_table);
+
+        if (finalization_fill_pointers != NULL)
+        {
+            delete[] finalization_fill_pointers;
+        }
+
+        unsigned int num_fill_pointers = num_generations + 2;
+        finalization_fill_pointers = new CLRDATA_ADDRESS[num_fill_pointers];
+        FillFinalizationPointers(svrHeapAddr, dacGCDetails, num_fill_pointers, finalization_fill_pointers);
+
+        heapAddr = svrHeapAddr;
+        alloc_allocated = dacGCDetails.alloc_allocated;
+        mark_array = dacGCDetails.mark_array;
+        current_c_gc_state = dacGCDetails.current_c_gc_state;
+        next_sweep_obj = dacGCDetails.next_sweep_obj;
+        saved_sweep_ephemeral_seg = dacGCDetails.saved_sweep_ephemeral_seg;
+        saved_sweep_ephemeral_start = dacGCDetails.saved_sweep_ephemeral_start;
+        background_saved_lowest_address = dacGCDetails.background_saved_lowest_address;
+        background_saved_highest_address = dacGCDetails.background_saved_highest_address;
+        ephemeral_heap_segment = dacGCDetails.ephemeral_heap_segment;
+        lowest_address = dacGCDetails.lowest_address;
+        highest_address = dacGCDetails.highest_address;
+        card_table = dacGCDetails.card_table;
+        has_regions = generation_table[0].start_segment != generation_table[1].start_segment;
+        has_background_gc = dacGCDetails.mark_array != -1;
+    }
+
+    DacpGcHeapDetails original_heap_details;
+    bool has_poh;
+    bool has_regions;
+    bool has_background_gc;
+    CLRDATA_ADDRESS heapAddr; // Only filled in in server mode, otherwise NULL
+    CLRDATA_ADDRESS alloc_allocated;
+
+    CLRDATA_ADDRESS mark_array;
+    CLRDATA_ADDRESS current_c_gc_state;
+    CLRDATA_ADDRESS next_sweep_obj;
+    CLRDATA_ADDRESS saved_sweep_ephemeral_seg;
+    CLRDATA_ADDRESS saved_sweep_ephemeral_start;
+    CLRDATA_ADDRESS background_saved_lowest_address;
+    CLRDATA_ADDRESS background_saved_highest_address;
+
+    // There are num_generations entries in generation_table and num_generations + 3 entries
+    // in finalization_fill_pointers
+    unsigned int num_generations;
+    DacpGenerationData *generation_table;
+    CLRDATA_ADDRESS ephemeral_heap_segment;
+    CLRDATA_ADDRESS *finalization_fill_pointers;
+    CLRDATA_ADDRESS lowest_address;
+    CLRDATA_ADDRESS highest_address;
+    CLRDATA_ADDRESS card_table;
+
+};
+
 // Things in this namespace should not be directly accessed/called outside of
 // the output-related functions.
 namespace Output
@@ -1375,6 +1584,7 @@ void IP2MethodDesc (DWORD_PTR IP, DWORD_PTR &methodDesc, JITTypes &jitType,
 const char *ElementTypeName (unsigned type);
 void DisplayFields (CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodTableFieldData *pMTFD,
                     DWORD_PTR dwStartAddr = 0, BOOL bFirst=TRUE, BOOL bValueClass=FALSE);
+HRESULT GetNonSharedStaticFieldValueFromName(UINT64* pValue, DWORD_PTR moduleAddr, const char *typeName, __in_z LPCWSTR wszFieldName, CorElementType fieldType);
 int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, __in_z LPCWSTR wszFieldName, BOOL bFirst=TRUE);
 int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, BOOL bFirst=TRUE, DacpFieldDescData* pDacpFieldDescData=NULL);
 int GetValueFieldOffset(CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, DacpFieldDescData* pDacpFieldDescData=NULL);
@@ -1706,6 +1916,33 @@ struct DumpArrayFlags
 
 HRESULT GetMTOfObject(TADDR obj, TADDR *mt);
 
+struct needed_alloc_context
+{
+    BYTE*   alloc_ptr;   // starting point for next allocation
+    BYTE*   alloc_limit; // ending point for allocation region/quantum
+};
+
+struct AllocInfo
+{
+    needed_alloc_context *array;
+    int num;                     // number of allocation contexts in array
+
+    AllocInfo()
+        : array(NULL)
+        , num(0)
+    {}
+    void Init()
+    {
+        extern void GetAllocContextPtrs(AllocInfo *pallocInfo);
+        GetAllocContextPtrs(this);
+    }
+    ~AllocInfo()
+    {
+        if (array != NULL)
+            delete[] array;
+    }
+};
+
 struct GCHandleStatistics
 {
     HeapStat hs;
@@ -1731,6 +1968,47 @@ struct GCHandleStatistics
         hs.Delete();
     }
 };
+
+struct SegmentLookup
+{
+    DacpHeapSegmentData *m_segments;
+    int m_iSegmentsSize;
+    int m_iSegmentCount;
+
+    SegmentLookup();
+    ~SegmentLookup();
+
+    void Clear();
+    BOOL AddSegment(DacpHeapSegmentData *pData);
+    CLRDATA_ADDRESS GetHeap(CLRDATA_ADDRESS object, BOOL& bFound);
+};
+
+class GCHeapSnapshot
+{
+private:
+    BOOL m_isBuilt;
+    GCHeapDetails *m_heapDetails;
+    DacpGcHeapData m_gcheap;
+    SegmentLookup m_segments;
+
+    BOOL AddSegments(const GCHeapDetails& details);
+public:
+    GCHeapSnapshot();
+
+    BOOL Build();
+    void Clear();
+    BOOL IsBuilt() { return m_isBuilt; }
+
+    DacpGcHeapData *GetHeapData() { return &m_gcheap; }
+
+    int GetHeapCount() { return m_gcheap.HeapCount; }
+
+    GCHeapDetails *GetHeap(CLRDATA_ADDRESS objectPointer);
+    int GetGeneration(CLRDATA_ADDRESS objectPointer);
+
+
+};
+extern GCHeapSnapshot g_snapshot;
 
 BOOL IsSameModuleName (const char *str1, const char *str2);
 BOOL IsModule (DWORD_PTR moduleAddr);
@@ -1765,6 +2043,10 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
 void GetInfoFromName(DWORD_PTR ModuleAddr, const char* name, mdTypeDef* retMdTypeDef=NULL);
 void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret=NULL);
 
+
+typedef void (*VISITGCHEAPFUNC)(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable,LPVOID token);
+BOOL GCHeapsTraverse(VISITGCHEAPFUNC pFunc, LPVOID token, BOOL verify=true);
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct strobjInfo
@@ -1773,10 +2055,38 @@ struct strobjInfo
     DWORD   m_StringLength;
 };
 
+// Just to make figuring out which fill pointer element matches a generation
+// a bit less confusing. This gen_segment function is ported from gc.cpp.
+inline unsigned int gen_segment (int gen)
+{
+    return (DAC_NUMBERGENERATIONS - gen - 1);
+}
+
+inline CLRDATA_ADDRESS SegQueue(DacpGcHeapDetails& heapDetails, int seg)
+{
+    return heapDetails.finalization_fill_pointers[seg - 1];
+}
+
+inline CLRDATA_ADDRESS SegQueueLimit(DacpGcHeapDetails& heapDetails, int seg)
+{
+    return heapDetails.finalization_fill_pointers[seg];
+}
+
+#define FinalizerListSeg (DAC_NUMBERGENERATIONS+1)
+#define CriticalFinalizerListSeg (DAC_NUMBERGENERATIONS)
+
+void GatherOneHeapFinalization(DacpGcHeapDetails& heapDetails, HeapStat *stat, BOOL bAllReady, BOOL bShort);
+
 CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
 
+BOOL VerifyObject(const GCHeapDetails &heap, const DacpHeapSegmentData &seg, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize,
+    BOOL bVerifyMember);
+BOOL VerifyObject(const GCHeapDetails &heap, DWORD_PTR objAddr, DWORD_PTR MTAddr, size_t objSize,
+    BOOL bVerifyMember);
+
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
+void DumpStackObjectsHelper (TADDR StackTop, TADDR StackBottom, BOOL verifyFields);
 
 HRESULT ExecuteCommand(PCSTR commandName, PCSTR args);
 
@@ -1802,6 +2112,7 @@ void DumpMDInfoFromMethodDescData(DacpMethodDescData * pMethodDescData, BOOL fSt
 void GetDomainList(DWORD_PTR *&domainList, int &numDomain);
 HRESULT GetThreadList(DWORD_PTR **threadList, int *numThread);
 CLRDATA_ADDRESS GetCurrentManagedThread(); // returns current managed thread if any
+void GetAllocContextPtrs(AllocInfo *pallocInfo);
 
 void ReloadSymbolWithLineInfo();
 
@@ -1820,6 +2131,10 @@ BOOL GetSizeEfficient(DWORD_PTR dwAddrCurrObj,
     DWORD_PTR dwAddrMethTable, BOOL bLarge, size_t& s, BOOL& bContainsPointers);
 
 BOOL GetCollectibleDataEfficient(DWORD_PTR dwAddrMethTable, BOOL& bCollectible, TADDR& loaderAllocatorObjectHandle);
+
+// ObjSize now uses the methodtable cache for its work too.
+size_t ObjectSize (DWORD_PTR obj, BOOL fIsLargeObject=FALSE);
+size_t ObjectSize(DWORD_PTR obj, DWORD_PTR mt, BOOL fIsValueClass, BOOL fIsLargeObject=FALSE);
 
 void CharArrayContent(TADDR pos, ULONG num, bool widechar);
 void StringObjectContent (size_t obj, BOOL fLiteral=FALSE, const int length=-1);  // length=-1: dump everything in the string object.
@@ -2576,6 +2891,130 @@ private:
     int mMisses, mReads, mMisaligned;
 };
 
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//
+// Methods for creating a database out of the gc heap and it's roots in xml format or CLRProfiler format
+//
+
+#include <unordered_map>
+#include <unordered_set>
+#include <list>
+
+class TypeTree;
+enum { FORMAT_XML=0, FORMAT_CLRPROFILER=1 };
+enum { TYPE_START=0,TYPE_TYPES=1,TYPE_ROOTS=2,TYPE_OBJECTS=3,TYPE_HIGHEST=4};
+class HeapTraverser
+{
+private:
+    TypeTree *m_pTypeTree;
+    size_t m_curNID;
+    FILE *m_file;
+    int m_format; // from the enum above
+    size_t m_objVisited; // for UI updates
+    bool m_verify;
+    LinearReadCache mCache;
+
+    std::unordered_map<TADDR, std::list<TADDR>> mDependentHandleMap;
+
+public:
+    HeapTraverser(bool verify);
+    ~HeapTraverser();
+
+    FILE *getFile() { return m_file; }
+
+    BOOL Initialize();
+    BOOL CreateReport (FILE *fp, int format);
+
+private:
+    // First all types are added to a tree
+    void insert(size_t mTable);
+    size_t getID(size_t mTable);
+
+    // Functions for writing to the output file.
+    void PrintType(size_t ID,LPCWSTR name);
+
+    void PrintObjectHead(size_t objAddr,size_t typeID,size_t Size);
+    void PrintObjectMember(size_t memberValue, bool dependentHandle);
+    void PrintLoaderAllocator(size_t memberValue);
+    void PrintObjectTail();
+
+    void PrintRootHead();
+    void PrintRoot(LPCWSTR kind,size_t Value);
+    void PrintRootTail();
+
+    void PrintSection(int Type,BOOL bOpening);
+
+    // Root and object member helper functions
+    void FindGCRootOnStacks();
+    void PrintRefs(size_t obj, size_t methodTable, size_t size);
+
+    // Callback functions used during traversals
+    static void GatherTypes(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable, LPVOID token);
+    static void PrintHeap(DWORD_PTR objAddr,size_t Size,DWORD_PTR methodTable, LPVOID token);
+    static void PrintOutTree(size_t methodTable, size_t ID, LPVOID token);
+    void TraceHandles();
+};
+
+//
+// Helper class used for type-safe bitflags
+//   T - the enum type specifying the individual bit flags
+//   U - the underlying/storage type
+// Requirement:
+//   sizeof(T) <= sizeof(U)
+//
+template <typename T, typename U>
+struct Flags
+{
+    typedef T UnderlyingType;
+    typedef U BitFlagEnumType;
+
+    static_assert_no_msg(sizeof(BitFlagEnumType) <= sizeof(UnderlyingType));
+
+    Flags(UnderlyingType v)
+        : m_val(v)
+    { }
+
+    Flags(BitFlagEnumType v)
+        : m_val(v)
+    { }
+
+    Flags(const Flags& other)
+        : m_val(other.m_val)
+    { }
+
+    Flags& operator = (const Flags& other)
+    { m_val = other.m_val; return *this; }
+
+    Flags operator | (Flags other) const
+    { return Flags<T, U>(m_val | other._val); }
+
+    void operator |= (Flags other)
+    { m_val |= other.m_val; }
+
+    Flags operator & (Flags other) const
+    { return Flags<T, U>(m_val & other.m_val); }
+
+    void operator &= (Flags other)
+    { m_val &= other.m_val; }
+
+    Flags operator ^ (Flags other) const
+    { return Flags<T, U>(m_val ^ other._val); }
+
+    void operator ^= (Flags other)
+    { m_val ^= other.m_val; }
+
+    BOOL operator == (Flags other) const
+    { return m_val == other.m_val; }
+
+    BOOL operator != (Flags other) const
+    { return m_val != other.m_val; }
+
+
+private:
+    UnderlyingType m_val;
+};
+
 // Helper class used in ClrStackFromPublicInterface() to keep track of explicit EE Frames
 // (i.e., "internal frames") on the stack.  Call Init() with the appropriate
 // ICorDebugThread3, and this class will initialize itself with the set of internal
@@ -2600,5 +3039,16 @@ private:
     HRESULT PrintCurrentInternalFrame();
 };
 #include "sigparser.h"
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//
+// Miscellaneous helper methods
+//
+
+#define THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "17"
+void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
+    DWORD_PTR workItemsConcurrentQueuePtr,
+    const char *queueName,
+    HeapStat *stats);
 
 #endif // __util_h__

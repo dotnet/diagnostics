@@ -22,9 +22,6 @@
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
 
-  <SetHostExe>true</SetHostExe>
-  <SetFxVersion>true</SetFxVersion>
-
   <TestWebApp3>true</TestWebApp3>
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
@@ -177,8 +174,6 @@
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <BuildProjectFramework>$(BuildProjectFrameworkLatest)</BuildProjectFramework>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-              <!-- This turns off the -fx-version to the dotnet host allowing it use the correct runtime version -->
-              <SetFxVersion>false</SetFxVersion>
             </Option>
             <Option Condition="'$(AspNetCoreVersion70)' != ''">
               <BuildProjectFramework>net7.0</BuildProjectFramework>
@@ -196,13 +191,10 @@
 
       <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
       <RuntimeSymbolsPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
-
+      
       <!-- Single-file debuggees don't need the host -->
-      <SetHostExe Condition="'$(PublishSingleFile)' == 'true'">false</SetHostExe>
-      <SetFxVersion Condition="'$(PublishSingleFile)' == 'true'">false</SetFxVersion>
-
-      <HostExe Condition="'$(SetHostExe)' == 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
-      <HostArgs Condition="'$(SetFxVersion)' == 'true'">--fx-version $(FrameworkVersion)</HostArgs>
+      <HostExe Condition="'$(PublishSingleFile)' != 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
+      <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
     <!--
         Desktop Runtime (debuggees cli built)
