@@ -17,7 +17,16 @@
         "enforceDMPAsStatus": true,
         "removeLabelOnPush": true,
         "usePrDescriptionAsCommitMessage": false,
-        "conditionalMergeTypes": [],
+        "conditionalMergeTypes": [
+          {
+            "mergeType": "merge",
+            "condition": {
+              "placeholder": "branch",
+              "operator": "equals",
+              "value": "release/stable"
+            }
+          }
+        ],
         "requireAllStatuses": true,
         "requireSpecificCheckRuns": true,
         "requireSpecificCheckRunsList": [
@@ -31,15 +40,13 @@
           "DotNet Maestro",
           "DotNet Maestro - Int"
         ]
-      },
-      "id": "9xknvk-BFN"
+      }
     },
     {
       "taskType": "trigger",
       "capabilityId": "IssueResponder",
       "subCapability": "PullRequestResponder",
       "version": "1.0",
-      "id": "DGPtO9UQd",
       "config": {
         "conditions": {
           "operator": "and",
