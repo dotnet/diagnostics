@@ -41,14 +41,14 @@ usage_list+=("-test: run xunit tests")
 
 handle_arguments() {
 
-    lowerI="$(echo "$1" | tr "[:upper:]" "[:lower:]")"
+    lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
     case "$lowerI" in
         architecture|-architecture|-a)
             __BuildArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
             __ShiftArgs=1
             ;;
 
-        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign|-sb)
+        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-build|-restore|-sign|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
@@ -61,10 +61,6 @@ handle_arguments() {
             fi
 
             __ShiftArgs=1
-            ;;
-
-        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine|-sb)
-            __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
         -dotnetruntimeversion)
@@ -148,9 +144,30 @@ fi
 #
 
 if [[ "$__ManagedBuild" == 1 ]]; then
+
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
-    "$__RepoRootDir/eng/common/build.sh" --build --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
+    "$__RepoRootDir/eng/common/build.sh" --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
+
     if [ "$?" != 0 ]; then
+        exit 1
+    fi
+
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
+
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/CreateVersionFile.proj \
+        /bl:$__GenerateVersionLog \
+        /t:GenerateVersionFiles \
+        /restore \
+        /p:GenerateVersionSourceFile=true \
+        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
+        /p:Configuration="$__BuildType" \
+        /p:Platform="$__BuildArch" \
+        $__UnprocessedBuildArgs
+
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
         exit 1
     fi
 fi
@@ -198,25 +215,6 @@ fi
 # Build native components
 #
 if [[ "$__NativeBuild" == 1 ]]; then
-    echo "Generating Version Source File"
-    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
-
-    "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.proj \
-        /bl:$__GenerateVersionLog \
-        /t:GenerateVersionFiles \
-        /restore \
-        /p:GenerateVersionSourceFile=true \
-        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
-        /p:Configuration="$__BuildType" \
-        /p:Platform="$__BuildArch" \
-        $__UnprocessedBuildArgs
-
-    if [ $? != 0 ]; then
-        echo "Generating Version Source File FAILED"
-        exit 1
-    fi
-
     build_native "$__TargetOS" "$__BuildArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "$?" != 0 ]; then
@@ -251,19 +249,35 @@ fi
 if [[ "$__Test" == 1 ]]; then
    if [[ "$__CrossBuild" == 0 ]]; then
       if [[ -z "$LLDB_PATH" ]]; then
-          export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
-          if [[ -z "$LLDB_PATH" ]]; then
-              export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
-              if [[ -z "$LLDB_PATH" ]]; then
-                  export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
-                  if [[ -z "$LLDB_PATH" ]]; then
-                      export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
-                      if [[ -z "$LLDB_PATH" ]]; then
-                          export LLDB_PATH="$(which lldb 2> /dev/null)"
-                      fi
-                  fi
-              fi
+        check_version_exists() {
+          desired_version=-1
+
+          # Set up the environment to be used for building with the desired debugger.
+          if command -v "lldb-$1.$2" > /dev/null; then
+            desired_version="-$1.$2"
+          elif command -v "lldb$1$2" > /dev/null; then
+            desired_version="$1$2"
+          elif command -v "lldb-$1$2" > /dev/null; then
+            desired_version="-$1$2"
           fi
+
+          echo "$desired_version"
+        }
+
+        # note: clang versions higher than 6 do not have minor version in file name, if it is zero.
+        versions="16 15 14 13 12 11 10 9 8 7 6.0 5.0 4.0 3.9"
+        for version in $versions; do
+          _major="${version%%.*}"
+          [ -z "${version##*.*}" ] && _minor="${version#*.}"
+          desired_version="$(check_version_exists "$_major" "$_minor")"
+          if [ "$desired_version" != "-1" ]; then majorVersion="$_major"; break; fi
+        done
+
+        if [ -z "$majorVersion" ]; then
+          export LLDB_PATH="$(command -v "lldb")"
+        else
+          export LLDB_PATH="$(command -v "lldb$desired_version")"
+        fi
       fi
 
       if [[ -z "$GDB_PATH" ]]; then

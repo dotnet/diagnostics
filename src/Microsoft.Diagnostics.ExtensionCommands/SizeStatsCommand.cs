@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -78,23 +79,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine($"Size Statistics for {requestedGen.ToString().ToLowerInvariant()} {freeStr}objects");
             Console.WriteLine();
 
-            TableOutput output = new(Console, (16, "n0"), (16, "n0"), (16, "n0"), (16, "n0"));
-            output.WriteRow("Size", "Count", "Cumulative Size", "Cumulative Count");
-
-
             IEnumerable<(ulong Size, ulong Count)> sorted = from i in stats
                                                             orderby i.Key ascending
                                                             select (i.Key, i.Value);
 
             ulong cumulativeSize = 0;
             ulong cumulativeCount = 0;
+            Table output = null;
             foreach ((ulong size, ulong count) in sorted)
             {
                 Console.CancellationToken.ThrowIfCancellationRequested();
 
+                if (output is null)
+                {
+                    output = new(Console, ColumnKind.ByteCount, ColumnKind.Integer, ColumnKind.Integer, ColumnKind.Integer);
+                    output.WriteHeader("Size", "Count", "Cumulative Size", "Cumulative Count");
+                }
+
+                output.WriteRow(size, count, cumulativeSize, cumulativeCount);
+
                 cumulativeSize += size * count;
                 cumulativeCount += count;
-                output.WriteRow(size, count, cumulativeSize, cumulativeCount);
+            }
+
+            if (output is null)
+            {
+                Console.WriteLine("(none)");
             }
 
             Console.WriteLine();

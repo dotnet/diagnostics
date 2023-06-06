@@ -96,22 +96,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return GCGeneration.NotSet;
             }
             string lowerString = generation.ToLowerInvariant();
-            switch (lowerString)
+            GCGeneration result = lowerString switch
             {
-                case "gen0":
-                    return GCGeneration.Generation0;
-                case "gen1":
-                    return GCGeneration.Generation1;
-                case "gen2":
-                    return GCGeneration.Generation2;
-                case "loh":
-                    return GCGeneration.LargeObjectHeap;
-                case "poh":
-                    return GCGeneration.PinnedObjectHeap;
-                default:
-                    WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh)");
-                    return GCGeneration.NotSet;
+                "gen0" => GCGeneration.Generation0,
+                "gen1" => GCGeneration.Generation1,
+                "gen2" => GCGeneration.Generation2,
+                "loh" => GCGeneration.LargeObjectHeap,
+                "poh" => GCGeneration.PinnedObjectHeap,
+                "foh" => GCGeneration.FrozenObjectHeap,
+                _ => GCGeneration.NotSet,
+            };
+            if (result == GCGeneration.NotSet)
+            {
+                WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh, foh)");
             }
+            return result;
         }
 
 
@@ -133,6 +132,7 @@ Generation number can take the following values (case insensitive):
 - gen2
 - loh
 - poh
+- foh
 
 > dumpgen gen0
 Statistics:

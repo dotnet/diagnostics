@@ -3,24 +3,26 @@ parameters:
   name: ''
   # Agent OS (Windows_NT, Linux, MacOS, FreeBSD)
   osGroup: Windows_NT
+  # Optional: OS suffix like -musl
+  osSuffix: ''
   # Additional variables
   variables: {}
   # Build strategy - matrix
   strategy: ''
   # Optional: Job timeout
   timeoutInMinutes: 180
-  # Optional: Docker image to use
-  dockerImage: ''
-  # Optional: ROOTFS_DIR to use
-  crossrootfsDir: ''
-  crossbuild: false
+  # Optional: native build container resource name
+  nativeBuildContainer: ''
+  # Optional: container resource name
+  container: ''
+  # Optional: build only job if true
+  buildOnly: false
   # Optional: test only job if true
   testOnly: false
-  buildAndSkipTest: false
-  # Depends on 
+  # Optional: architecture cross build if true
+  crossBuild: false
+  # Depends on
   dependsOn: ''
-  artifactsTargetPath: ''
-  requiresCapPtraceContainer: false
   isCodeQLRun: false
 
 jobs:
@@ -62,8 +64,8 @@ jobs:
         name: NetCore-Svc-Public
         demands: ImageOverride -equals windows.vs2022.amd64.open
 
-    ${{ if and(ne(parameters.dockerImage, ''), ne(parameters.requiresCapPtraceContainer, 'true')) }}:
-      container: ${{ parameters.dockerImage }}
+    ${{ if ne(parameters.container, '') }}:
+      container: ${{ parameters.container }}
 
     ${{ if ne(parameters.strategy, '') }}:
       strategy: ${{ parameters.strategy }}
@@ -76,27 +78,28 @@ jobs:
 
     variables: 
     - ${{ insert }}: ${{ parameters.variables }}
-    - _DockerImageName: ${{ parameters.dockerImage }}
     - _PhaseName : ${{ parameters.name }}
     - _HelixType: build/product
     - _HelixBuildConfig: $(_BuildConfig)
     - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
 
-    - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-      - _buildScript: $(Build.SourcesDirectory)\eng\cibuild.cmd
-    - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-      - _buildScript: $(Build.SourcesDirectory)/eng/cibuild.sh
-
+    - _BuildDisplayName: 'Build / Test'
+    - _ExtraBuildParams: ''
     - _TestArgs: '-test'
-    - _dockerEnv: ''
+    - _Cross: ''
+
+    - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+      - _buildScript: $(Build.SourcesDirectory)\build.cmd
+    - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+      - _buildScript: $(Build.SourcesDirectory)/build.sh
 
     - ${{ if eq(parameters.testOnly, 'true') }}:
       - _TestArgs: '-test -skipnative'
-    - ${{ if eq(parameters.requiresCapPtraceContainer, 'true') }}:
-      - _dockerEnv: $(Build.SourcesDirectory)/eng/docker-build.sh 
-            --docker-image $(_DockerImageName)
-            --source-directory $(Build.SourcesDirectory)
-            --container-name diagnostics-$(Build.BuildId)
+      - _BuildDisplayName: Test
+
+    - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
+      - _TestArgs: ''
+
     - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
       - name: Codeql.Enabled
         value: True
@@ -109,11 +112,8 @@ jobs:
       - name: Codeql.Language
         value: csharp,cpp
 
-    - ${{ if or(eq(parameters.buildAndSkipTest, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
-      - _TestArgs: ''
-
-    - _InternalInstallArgs: ''
     # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
+    - _InternalInstallArgs: ''
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.isCodeQLRun, 'false')) }}:
       - _InternalInstallArgs:
           -dotnetruntimeversion '$(DotnetRuntimeVersion)'
@@ -128,62 +128,88 @@ jobs:
       - _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
 
     # This is only required for cross builds.
-    - ${{ if and(eq(parameters.crossbuild, false), eq(parameters.crossrootfsDir, '')) }}:
-      - _Cross: ''
-    - ${{ if or(eq(parameters.crossbuild, true), ne(parameters.crossrootfsDir, '')) }}:
+    - ${{ if eq(parameters.crossBuild, true) }}:
       - _Cross: -cross
+
+    # If there is a native build container, build managed in the host vm/container and native in the nativeBuildContainer
+    - ${{ if ne(parameters.nativeBuildContainer, '') }}:
+      - _ExtraBuildParams: -skipnative
+      - _BuildDisplayName: 'Build Managed'
+
+    # Only add the cross build option if a combined build/test managed/native build (i.e. MacOS arm64)
+    - ${{ if eq(parameters.nativeBuildContainer, '') }}:
+      - _ExtraBuildParams: $(_Cross)
 
     steps:
     - ${{ if eq(parameters.osGroup, 'Linux') }}:
       - ${{ if eq(parameters.testOnly, 'true') }}:
         - task: DownloadBuildArtifacts@0
-          displayName: 'Download release builds'
+          displayName: 'Download Build Artifacts'
           inputs:
             downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
-            downloadType: specific 
+            downloadType: specific
             itemPattern: |
-              Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)/**
+              Build_$(_BuildConfig)/bin/Linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)/**
             checkDownloadedFiles: true
         - task: CopyFiles@2
           displayName: 'Binplace Product'
           inputs:
-            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux.$(_BuildArch).$(_BuildConfig)
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)
             targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
 
     - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
       - task: CodeQL3000Init@0
         displayName: CodeQL Initialize
 
-    - script: $(_dockerEnv) $(_buildScript)
-        -configuration $(_BuildConfig) 
+    - script: $(_buildScript)
+        -ci
+        -configuration $(_BuildConfig)
         -architecture $(_BuildArch)
-        $(_Cross)
+        $(_ExtraBuildParams)
         $(_TestArgs)
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         $(_InternalInstallArgs)
-      displayName: Build / Test
+      displayName: $(_BuildDisplayName)
       condition: succeeded()
-      env:
-        ROOTFS_DIR: ${{ parameters.crossrootfsDir }}
+
+    - ${{ if ne(parameters.nativeBuildContainer, '') }}:
+      - script: $(_buildScript)
+          -ci
+          -configuration $(_BuildConfig)
+          -architecture $(_BuildArch)
+          -skipmanaged
+          $(_Cross)
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_InternalInstallArgs)
+        displayName: Build Native
+        target: ${{ parameters.nativeBuildContainer }}
 
     - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
       - task: CodeQL3000Finalize@0
         displayName: CodeQL Finalize
 
-    - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-      - task: CopyFiles@2
-        displayName: Gather binaries for publish to artifacts
-        inputs:
-          SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-          Contents: '**'
-          TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/${{ coalesce(parameters.artifactsTargetPath, '$(_PublishArtifacts)') }}
-        condition:  ne(variables['_PublishArtifacts'], '')
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Build Artifacts
-        inputs:
-          pathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
-          artifactName: Build_$(_BuildConfig)
-        condition: ne(variables['_PublishArtifacts'], '')
+    - task: CopyFiles@2
+      displayName: Gather binaries for publish to special artifacts path
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+        Contents: '**'
+        TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_ArtifactsTargetPath)
+      condition: and(ne(variables['_PublishArtifacts'], ''), ne(variables['_ArtifactsTargetPath'], ''))
+
+    - task: CopyFiles@2
+      displayName: Gather binaries for publish to artifacts
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
+        Contents: '**'
+        TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_PublishArtifacts)
+      condition: and(ne(variables['_PublishArtifacts'], ''), eq(variables['_ArtifactsTargetPath'], ''))
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Build Artifacts
+      inputs:
+        pathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
+        artifactName: Build_$(_BuildConfig)
+      condition: ne(variables['_PublishArtifacts'], '')
 
     - task: PublishBuildArtifacts@1
       displayName: Publish Artifacts on failure
@@ -230,12 +256,12 @@ jobs:
       continueOnError: true
       condition: always()
 
-    - ${{ if and(eq(parameters.buildAndSkipTest, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
+    - ${{ if and(eq(parameters.buildOnly, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
       # Publish test results to Azure Pipelines
       - task: PublishTestResults@2
         inputs:
           testResultsFormat: xUnit
-          testResultsFiles: '**/*UnitTests*.xml' 
+          testResultsFiles: '**/*UnitTests*.xml'
           searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
           failTaskOnFailedTests: true
           testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
@@ -243,4 +269,4 @@ jobs:
           mergeTestResults: true
           buildConfiguration: ${{ parameters.name }}
         continueOnError: true
-        condition: ne(variables['_BuildOnly'], 'true')
+        condition: always()

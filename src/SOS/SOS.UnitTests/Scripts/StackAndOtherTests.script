@@ -180,19 +180,25 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] I4 SymbolTestApp\.Program\.Foo1\(.
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void SymbolTestApp\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
 
+SOSCOMMAND: runtimes
+
+!IFDEF:HOST_RUNTIME_NONE
+
 # Verify DumpStackObjects works
 SOSCOMMAND:DumpStackObjects
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
+VERIFY:\s*SP/REG\s+Object\s+Name\s+
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String.*
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
 
 # Verify DumpStackObjects -verify works
 SOSCOMMAND:DumpStackObjects -verify
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+([R|E])*SP/REG\s+Object\s+Name\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
+VERIFY:\s*SP/REG\s+Object\s+Name\s+
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String.*
+VERIFY:.*\s*<HEXVAL>\s+<HEXVAL>\s+System\.String\[\].*
+
+ENDIF:HOST_RUNTIME_NONE
 
 ENDIF:NETCORE_OR_DOTNETDUMP
 
