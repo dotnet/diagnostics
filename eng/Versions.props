@@ -18,8 +18,8 @@
     <!-- Latest symstore version updated by darc -->
     <MicrosoftSymbolStoreVersion>1.0.430201</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0-preview.6.23305.2</VSRedistCommonNetCoreSharedFrameworkx6480Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0-preview.6.23305.2</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0-preview.6.23307.1</VSRedistCommonNetCoreSharedFrameworkx6480Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0-preview.6.23307.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.6.23302.1</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.6.23302.1</MicrosoftAspNetCoreAppRefVersion>
