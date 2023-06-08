@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
             _meterName = settings.MeterName;
 
-            _clientId = settings.UniqueSessionId;
+            _clientId = settings.ClientId;
         }
 
         public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap()
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
                 MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter),
                 settings.MaxHistograms,
                 settings.MaxTimeSeries);
-            settings.UniqueSessionId = config.ClientId;
+            settings.ClientId = config.ClientId;
 
             return config;
         }
