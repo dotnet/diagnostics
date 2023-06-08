@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly IEnumerable<ICountersLogger> _loggers;
         private readonly CounterFilter _filter;
-        private string _uniqueSessionId;
+        private string _clientId;
 
         public MetricsPipeline(DiagnosticsClient client,
             MetricsPipelineSettings settings,
@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }),
                 Settings.MaxHistograms, Settings.MaxTimeSeries);
 
-            _uniqueSessionId = config.ClientId;
+            _clientId = config.ClientId;
 
             return config;
         }
@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             eventSource.Dynamic.All += traceEvent => {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_filter, _uniqueSessionId, out ICounterPayload counterPayload))
+                    if (traceEvent.TryGetCounterPayload(_filter, _clientId, out ICounterPayload counterPayload))
                     {
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
