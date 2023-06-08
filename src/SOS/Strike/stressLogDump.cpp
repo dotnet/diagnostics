@@ -318,17 +318,17 @@ static TADDR GetFormatAddr(StressLog& inProcLog, uint64_t formatOffset, BOOL bHa
         {
             if (inProcLog.modules[moduleIndex].baseAddress == nullptr)
                 break;
-            size_t relativeOffset = formatOffset - moduleOffset;
+            uint64_t relativeOffset = formatOffset - moduleOffset;
             if (relativeOffset < inProcLog.modules[moduleIndex].size)
             {
-                return relativeOffset + TO_TADDR(inProcLog.modules[moduleIndex].baseAddress);
+                return ((size_t)relativeOffset) + TO_TADDR(inProcLog.modules[moduleIndex].baseAddress);
             }
             moduleOffset += inProcLog.modules[moduleIndex].size;
         }
     }
     // not found or invalid module table
     // just assume it's an old style stress log
-    return formatOffset + TO_TADDR(inProcLog.moduleOffset);
+    return ((size_t)formatOffset) + TO_TADDR(inProcLog.moduleOffset);
 }
 
 /*********************************************************************************/
