@@ -331,6 +331,36 @@ static TADDR GetFormatAddr(StressLog& inProcLog, uint64_t formatOffset, BOOL bHa
     return ((size_t)formatOffset) + TO_TADDR(inProcLog.moduleOffset);
 }
 
+
+StressMsg* GetStressMsgInLatestVersion(StressMsg* rawMsg, int version)
+{
+    if (version >= 4)
+    {
+        return rawMsg;
+    }
+
+    struct StressMsgV3
+    {
+        uint32_t numberOfArgsLow  : 3;                   // at most 7 arguments here
+        uint32_t formatOffset  : 26;                     // low bits offset of format string in modules
+        uint32_t numberOfArgsHigh : 3;                   // extend number of args in a backward compat way
+        uint32_t facility;                               // facility used to log the entry
+        uint64_t timeStamp;                              // time when mssg was logged
+    };
+    static_assert(sizeof(StressMsg) == sizeof(StressMsgV3));
+
+    StressMsgV3* msgV3 = reinterpret_cast<StressMsgV3*>(rawMsg);
+    uint32_t numberOfArgs = msgV3->numberOfArgsLow | (msgV3->numberOfArgsHigh << 3);
+    uint64_t formatOffset = msgV3->formatOffset;
+    uint32_t facility = msgV3->facility;
+    uint64_t timeStamp = msgV3->timeStamp;
+    rawMsg->SetNumberOfArgs(numberOfArgs);
+    rawMsg->SetFormatOffset(formatOffset);
+    rawMsg->SetFacility(facility);
+    rawMsg->SetTimeStamp(timeStamp);
+    return rawMsg;
+}
+
 /*********************************************************************************/
 HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugDataSpaces* memCallBack)
 {
@@ -506,7 +536,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
             break;
         }
 
-        StressMsg* latestMsg = latestLog->readPtr;
+        StressMsg* latestMsg = GetStressMsgInLatestVersion(latestLog->readPtr, version);
         if (latestMsg->GetFormatOffset() != 0 && !latestLog->CompletedDump())
         {
             TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->GetFormatOffset(), bHasModuleTable);
@@ -539,7 +569,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
             msgCtr++;
         }
 
-        latestLog->readPtr = latestLog->AdvanceRead();
+        latestLog->readPtr = latestLog->AdvanceRead(latestMsg->GetNumberOfArgs());
         if (latestLog->CompletedDump())
         {
             latestLog->readPtr = NULL;
