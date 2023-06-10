@@ -64,6 +64,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public ulong MaximumObjectSize { get; set; }
 
         /// <summary>
+        /// Only enumerate object from this generation
+        /// </summary>
+        public Generation? Generation { get; set; }
+
+        /// <summary>
         /// The order in which to enumerate segments.  This also applies to object enumeration.
         /// </summary>
         public Func<IEnumerable<ClrSegment>, IOrderedEnumerable<ClrSegment>> SortSegments { get; set; }
@@ -226,6 +231,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 else
                 {
                     objs = segment.EnumerateObjects(carefully: true);
+                }
+
+                if (Generation is Generation generation)
+                {
+                    objs = objs.Where(obj => segment.GetGeneration(obj.Address) == generation);
                 }
 
                 foreach (ClrObject obj in objs)
