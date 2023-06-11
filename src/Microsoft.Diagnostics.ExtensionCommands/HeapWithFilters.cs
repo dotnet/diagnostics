@@ -235,7 +235,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (Generation is Generation generation)
                 {
-                    objs = objs.Where(obj => segment.GetGeneration(obj.Address) == generation);
+                    objs = objs.Where(obj => segment.GetGeneration(obj) == generation);
                 }
 
                 foreach (ClrObject obj in objs)
