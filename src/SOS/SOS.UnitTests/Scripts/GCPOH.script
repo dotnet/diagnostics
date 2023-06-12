@@ -52,6 +52,11 @@ VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
 VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+System.Byte\[\]\s+
 
+SOSCOMMAND:DumpHeap -stat -gen poh
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
+VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+System.Byte\[\]\s+
+
 SOSCOMMAND:EEHeap
 VERIFY:\s*Loader Heap:\s+
 VERIFY:\s+System Domain:\s+<HEXVAL>\s+
