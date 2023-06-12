@@ -4,10 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DotnetCounters.UnitTests;
+using Constants = DotnetCounters.UnitTests.CounterMonitorPayloadTestsConstants;
 
 namespace EventPipeTracee
 {
@@ -19,12 +16,9 @@ namespace EventPipeTracee
 
         public CustomMetrics()
         {
-            _meter = new("TestMeter");
-            _counter = _meter.CreateCounter<int>(CounterMonitorPayloadTestsConstants.TestCounter, "dollars");
-            _histogram = _meter.CreateHistogram<float>(CounterMonitorPayloadTestsConstants.TestHistogram, "feet");
-
-            //IncrementCounter();
-            //RecordHistogram();
+            _meter = new(Constants.TestMeterName);
+            _counter = _meter.CreateCounter<int>(Constants.TestCounter, "dollars");
+            _histogram = _meter.CreateHistogram<float>(Constants.TestHistogram, "feet");
         }
 
         public void IncrementCounter(int v = 1)
@@ -34,7 +28,7 @@ namespace EventPipeTracee
 
         public void RecordHistogram(float v = 1.0f)
         {
-            KeyValuePair<string, object> tags = new("tag", 5);
+            KeyValuePair<string, object> tags = new(Constants.TagKey, Constants.TagValue);
             _histogram.Record(v, tags);
         }
 

@@ -28,7 +28,6 @@ namespace DotnetCounters.UnitTests
     {
         private ITestOutputHelper _outputHelper;
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(2);
-        private static readonly string TestMeterName = "TestMeter";
         private static readonly string SystemRuntimeName = "System.Runtime";
         private static readonly string Metric = "Metric";
         private static readonly string Rate = "Rate";
@@ -46,13 +45,13 @@ namespace DotnetCounters.UnitTests
                 throw new SkipTestException("Inapplicable framework");
             }
 
-            JSONCounterTrace trace = await GetCounterTrace(configuration, new List<string> { TestMeterName });
+            JSONCounterTrace trace = await GetCounterTrace(configuration, new List<string> { Constants.TestMeterName });
 
             Assert.NotEmpty(trace.events);
             string[] ExpectedNames = { Constants.TestHistogramName, Constants.TestCounterName };
             Assert.Equal(ExpectedNames, trace.events.Select(e => e.name).Distinct());
 
-            string[] ExpectedProviders = { TestMeterName };
+            string[] ExpectedProviders = { Constants.TestMeterName };
             Assert.Equal(ExpectedProviders, trace.events.Select(e => e.provider).Distinct());
 
             // Disabled temporarily due to https://github.com/dotnet/diagnostics/issues/3905
@@ -62,7 +61,8 @@ namespace DotnetCounters.UnitTests
             string[] ExpectedCounterTypes = { Metric, Rate };
             Assert.Equal(ExpectedCounterTypes, trace.events.Select(e => e.counterType).Distinct());
 
-            HashSet<string> ExpectedTags = new(){ "tag=5,Percentile=50", "tag=5,Percentile=95", "tag=5,Percentile=99" };
+            string tag = Constants.TagKey + "=" + Constants.TagValue;
+            HashSet<string> ExpectedTags = new(){ $"{tag},Percentile=50", $"{tag},Percentile=95", $"{tag},Percentile=99" };
             Assert.Equal(ExpectedTags, trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.tags).ToHashSet());
 
             Assert.Single(trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Distinct());
