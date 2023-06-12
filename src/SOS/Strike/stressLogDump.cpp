@@ -64,7 +64,7 @@ ThreadStressLog* ThreadStressLog::FindLatestThreadLog() const
     for (const ThreadStressLog* ptr = this; ptr != NULL; ptr = ptr->next)
     {
         if (ptr->readPtr != NULL)
-            if (latestLog == 0 || ptr->readPtr->timeStamp > latestLog->readPtr->timeStamp)
+            if (latestLog == 0 || ptr->readPtr->GetTimeStamp() > latestLog->readPtr->GetTimeStamp())
                 latestLog = ptr;
     }
     return const_cast<ThreadStressLog*>(latestLog);
@@ -347,7 +347,7 @@ StressMsg* GetStressMsgInLatestVersion(StressMsg* rawMsg, int version)
         uint32_t facility;                               // facility used to log the entry
         uint64_t timeStamp;                              // time when mssg was logged
     };
-    static_assert(sizeof(StressMsg) == sizeof(StressMsgV3));
+    static_assert(sizeof(StressMsg) == sizeof(StressMsgV3), "StressMsgV3 should be the same size as the current StressMsg struct");
 
     StressMsgV3* msgV3 = reinterpret_cast<StressMsgV3*>(rawMsg);
     uint32_t numberOfArgs = msgV3->numberOfArgsLow | (msgV3->numberOfArgsHigh << 3);
@@ -466,9 +466,9 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
 
         // TODO: fix on 64 bit
         inProcPtr->Activate ();
-        if (inProcPtr->readPtr->timeStamp > lastTimeStamp)
+        if (inProcPtr->readPtr->GetTimeStamp() > lastTimeStamp)
         {
-            lastTimeStamp = inProcPtr->readPtr->timeStamp;
+            lastTimeStamp = inProcPtr->readPtr->GetTimeStamp();
         }
 
         outProcPtr = TO_CDADDR(inProcPtr->next);
@@ -544,7 +544,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
             if (hr != S_OK)
                 strcpy_s(format, ARRAY_SIZE(format), "Could not read address of format string");
 
-            double deltaTime = ((double) (latestMsg->timeStamp - inProcLog.startTimeStamp)) / inProcLog.tickFrequency;
+            double deltaTime = ((double) (latestMsg->GetTimeStamp() - inProcLog.startTimeStamp)) / inProcLog.tickFrequency;
             if (bDoGcHist)
             {
                 if (strcmp(format, ThreadStressLog::TaskSwitchMsg()) == 0)
@@ -563,7 +563,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
                 else
                 {
                     args = latestMsg->args;
-                    formatOutput(memCallBack, file, format, (unsigned)latestLog->threadId, deltaTime, latestMsg->facility, args);
+                    formatOutput(memCallBack, file, format, (unsigned)latestLog->threadId, deltaTime, latestMsg->GetFacility(), args);
                 }
             }
             msgCtr++;
