@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     MeterInstrumentEventObserved(obj.Provider, obj.Timestamp);
                     if (obj is not InstrumentationStartedPayload)
                     {
-                        _renderer.CounterPayloadReceived((CounterPayload)obj, _pauseCmdSet);
+                        CounterPayloadReceivedMiddleman((CounterPayload)obj);
                     }
                 }
                 else
@@ -143,7 +143,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             else
             {
-                _renderer.CounterPayloadReceived((CounterPayload)payload, _pauseCmdSet);
+                CounterPayloadReceivedMiddleman((CounterPayload)payload);
+            }
+        }
+
+        // needs a real name
+        private void CounterPayloadReceivedMiddleman(CounterPayload payload)
+        {
+            if (payload is AggregatePercentilePayload aggregatePayload)
+            {
+                foreach (PercentilePayload percentilePayload in aggregatePayload.Payloads)
+                {
+                    _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
+                }
+
+            }
+            else
+            {
+                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
 
@@ -166,7 +183,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else if (providerEventState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) < now)
                     {
                         _bufferedEvents.Dequeue();
-                        _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
+                        CounterPayloadReceivedMiddleman((CounterPayload)payload);
                     }
                     else
                     {
@@ -234,7 +251,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.ResumeRuntime = resumeRuntime;
                         _settings.CounterGroups = GetEventPipeProviders();
 
+#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
                         await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+#pragma warning restore CA2007 // Consider calling ConfigureAwait on the awaited task
                         ReturnCode ret = await Start(eventCounterPipeline, ct).ConfigureAwait(false);
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
@@ -338,7 +357,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                             _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                             return ReturnCode.ArgumentError;
                         }
+#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
                         await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+#pragma warning restore CA2007 // Consider calling ConfigureAwait on the awaited task
 
                         ReturnCode ret = await Start(pipeline: eventCounterPipeline, ct).ConfigureAwait(false);
                         return ret;

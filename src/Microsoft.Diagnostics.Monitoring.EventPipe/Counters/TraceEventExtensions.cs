@@ -242,16 +242,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string rateText = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)traceEvent.PayloadValue(7);
 
-            if (!configuration.CounterFilter.IsIncluded(meterName, instrumentName)) {
+            if (!configuration.CounterFilter.IsIncluded(meterName, instrumentName))
+            {
                 return;
             }
 
-            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value)) {
+            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
                 // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
                 payload = new UpDownCounterPayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
 
             }
-            else {
+            else
+            {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the ObservableUpDownCounter callback function throws an exception
                 // or when the ObservableUpDownCounter doesn't include a measurement for a particular set of tag values.
@@ -284,10 +287,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             //Note quantiles can be empty.
             IList<Quantile> quantiles = ParseQuantiles(quantilesText);
-            payload = new PercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
+
+            List<PercentilePayload> payloads = new();
+
+            foreach (Quantile quantile in quantiles)
+            {
+                (double key, double val) = quantile;
+                payloads.Add(new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, quantile, obj.TimeStamp));
+            }
+
+            payload = new AggregatePercentilePayload(meterName, instrumentName, null, unit, tags, payloads, obj.TimeStamp);
         }
 
-
+        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
 
         private static void HandleHistogramLimitReached(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
         {
@@ -376,7 +388,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
-        private static IList<Quantile> ParseQuantiles(string quantileList)
+        private static List<Quantile> ParseQuantiles(string quantileList)
         {
             string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
             List<Quantile> quantiles = new();

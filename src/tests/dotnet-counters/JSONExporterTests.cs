@@ -6,9 +6,9 @@ using System.IO;
 using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Newtonsoft.Json;
-using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Xunit;
+using System.Collections.Generic;
 
 #pragma warning disable CA1507 // Use nameof to express symbol names
 
@@ -212,7 +212,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new PercentilePayload("myProvider", "counterOne", "Counter One", "", "f=abc,Percentile=50", 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new PercentilePayload("myProvider", "counterOne", "Counter One", "", "f=abc,Percentile=50", 1, new Quantile(50, 1), start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 

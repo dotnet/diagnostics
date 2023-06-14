@@ -151,16 +151,30 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal sealed class PercentilePayload : MeterPayload
     {
-        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
+        public PercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, double value, Quantile quantile, DateTime timestamp) :
+            base(timestamp, providerName, name, displayName, displayUnits, value, CounterType.Metric, metadata, EventType.Histogram)
+        {
+            // In case these properties are not provided, set them to appropriate values.
+            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+            Quantile = quantile;
+        }
+        public Quantile Quantile { get; }
+
+    }
+
+    internal sealed class AggregatePercentilePayload : MeterPayload
+    {
+        public AggregatePercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<PercentilePayload> payloads, DateTime timestamp) :
             base(timestamp, providerName, name, displayName, displayUnits, 0.0, CounterType.Metric, metadata, EventType.Histogram)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
             DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
-            Quantiles = quantiles.ToArray();
+            Payloads = payloads.ToArray();
         }
 
-        public Quantile[] Quantiles { get; }
+        public PercentilePayload[] Payloads { get; }
     }
 
     internal sealed class ErrorPayload : MeterPayload
