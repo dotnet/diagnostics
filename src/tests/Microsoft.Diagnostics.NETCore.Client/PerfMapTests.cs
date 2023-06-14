@@ -217,6 +217,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 Magic = reader.ReadUInt32();
                 Version = reader.ReadUInt32();
                 Size = reader.ReadUInt32();
+                // Skip elf_mach
+                reader.ReadUInt32();
                 // Skip padding
                 reader.ReadUInt32();
                 Pid = reader.ReadUInt32();
