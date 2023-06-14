@@ -3,11 +3,13 @@
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
-    public enum WriteDumpFlags
+    [System.Flags]
+    public enum WriteDumpFlags : uint
     {
         None = 0x00,
         LoggingEnabled = 0x01,
         VerboseLoggingEnabled = 0x02,
-        CrashReportEnabled = 0x04
+        CrashReportEnabled = 0x04,
+        LogToFile = 0x8
     }
 }

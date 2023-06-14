@@ -28,112 +28,116 @@ namespace Microsoft.Diagnostics.Tools.Dump
             Triage      // A small dump containing module lists, thread lists, exception information, all stacks and PII removed.
         }
 
-        public Dumper()
+        public enum LogLevelOption
         {
+            None,       // No logging.
+            Diag,       // Diagnostic logging, useful for first level.
+            Verbose,    // Verbose loggging, useful to debug unwinding but also slows down target process.
         }
 
-        public int Collect(IConsole console, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name)
+        internal static int Collect(DumpCollectionConfig config, IConsole console)
         {
-            Console.WriteLine(name);
-            if (name != null)
+            if (!CommandUtils.ValidateArgumentsForAttach(config.ProcessId, config.ProcessName, config.DiagnosticPort, out int targetProcessId))
             {
-                if (processId != 0)
-                {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return -1;
-                }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
-                {
-                    return -1;
-                }
-            }
-
-            if (processId == 0)
-            {
-                Console.Error.WriteLine("ProcessId is required.");
-                return -1;
-            }
-
-            if (processId < 0)
-            {
-                Console.Error.WriteLine($"The PID cannot be negative: {processId}");
                 return -1;
             }
 
             try
             {
-                if (output == null)
+                if (config.DumpOutputPath is null)
                 {
                     // Build timestamp based file path
                     string timestamp = $"{DateTime.Now:yyyyMMdd_HHmmss}";
-                    output = Path.Combine(Directory.GetCurrentDirectory(), RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"dump_{timestamp}.dmp" : $"core_{timestamp}");
-                }
-                // Make sure the dump path is NOT relative. This path could be sent to the runtime
-                // process on Linux which may have a different current directory.
-                output = Path.GetFullPath(output);
-
-                // Display the type of dump and dump path
-                string dumpTypeMessage = null;
-                switch (type)
-                {
-                    case DumpTypeOption.Full:
-                        dumpTypeMessage = "full";
-                        break;
-                    case DumpTypeOption.Heap:
-                        dumpTypeMessage = "dump with heap";
-                        break;
-                    case DumpTypeOption.Mini:
-                        dumpTypeMessage = "dump";
-                        break;
-                    case DumpTypeOption.Triage:
-                        dumpTypeMessage = "triage dump";
-                        break;
-                }
-                console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    if (crashreport)
-                    {
-                        Console.WriteLine("Crash reports not supported on Windows.");
-                        return -1;
-                    }
-
-                    Windows.CollectDump(processId, output, type);
+                    config.DumpOutputPath = Path.Combine(Directory.GetCurrentDirectory(), RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"dump_{timestamp}.dmp" : $"core_{timestamp}");
                 }
                 else
                 {
-                    DiagnosticsClient client = new(processId);
+                    // Make sure the dump path is NOT relative. This path could be sent to the runtime
+                    // process on Linux which may have a different current directory.
+                    config.DumpOutputPath = Path.GetFullPath(config.DumpOutputPath);
+                }
 
-                    DumpType dumpType = DumpType.Normal;
-                    switch (type)
+                string dumpTypeMessage = config.DumpType switch
+                {
+                    DumpTypeOption.Full => "full",
+                    DumpTypeOption.Heap => "dump with heap",
+                    DumpTypeOption.Mini => "dump",
+                    DumpTypeOption.Triage => "triage dump",
+                    _ => throw new ArgumentException("Invalid dump type.")
+                };
+
+                console.Out.WriteLine($"Writing {dumpTypeMessage} to {config.DumpOutputPath}");
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    if (config.GenerateCrashReport)
                     {
-                        case DumpTypeOption.Full:
-                            dumpType = DumpType.Full;
-                            break;
-                        case DumpTypeOption.Heap:
-                            dumpType = DumpType.WithHeap;
-                            break;
-                        case DumpTypeOption.Mini:
-                            dumpType = DumpType.Normal;
-                            break;
-                        case DumpTypeOption.Triage:
-                            dumpType = DumpType.Triage;
-                            break;
+                        console.Error.WriteLine("Crash reports not supported on Windows.");
+                        return -1;
+                    }
+
+                    if (config.LogLevel != LogLevelOption.None)
+                    {
+                        console.Error.WriteLine("Diagnostic logging not supported on Windows.");
+                        return -1;
+                    }
+
+                    Windows.CollectDump(targetProcessId, config.DumpOutputPath, config.DumpType);
+                }
+                else
+                {
+                    DumpType dumpType = config.DumpType switch
+                    {
+                        DumpTypeOption.Full => DumpType.Full,
+                        DumpTypeOption.Heap => DumpType.WithHeap,
+                        DumpTypeOption.Mini => dumpType = DumpType.Normal,
+                        DumpTypeOption.Triage => DumpType.Triage,
+                        _ => throw new ArgumentException("Invalid dump type.")
+                    };
+
+                    DiagnosticsClient client;
+                    if (!string.IsNullOrEmpty(config.DiagnosticPort))
+                    {
+                        IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(config.DiagnosticPort);
+                        if (portConfig.IsListenConfig)
+                        {
+                            console.Error.WriteLine("dotnet-dump only supports connect mode to a runtime.");
+                            return -1;
+                        }
+
+                        client = new DiagnosticsClient(portConfig);
+                    }
+                    else
+                    {
+                        client = new DiagnosticsClient(targetProcessId);
                     }
 
                     WriteDumpFlags flags = WriteDumpFlags.None;
-                    if (diag)
+
+                    flags |= config.LogLevel switch
                     {
-                        flags |= WriteDumpFlags.LoggingEnabled;
+                        LogLevelOption.None => WriteDumpFlags.None,
+                        LogLevelOption.Diag => WriteDumpFlags.LoggingEnabled,
+                        LogLevelOption.Verbose => WriteDumpFlags.VerboseLoggingEnabled,
+                        _ => throw new ArgumentException($"Invalid log level supplied: {config.LogLevel}")
+                    };
+
+                    if (config.LogToFile || config.DiagnosticLogPath is not null)
+                    {
+                        flags |= WriteDumpFlags.LogToFile;
                     }
-                    if (crashreport)
+                    else if (flags != WriteDumpFlags.None)
+                    {
+                        console.Out.WriteLine("Diagnostic output requested. Logging will appear in the console of the target process.");
+                    }
+
+                    if (config.GenerateCrashReport)
                     {
                         flags |= WriteDumpFlags.CrashReportEnabled;
                     }
+
                     // Send the command to the runtime to initiate the core dump
-                    client.WriteDump(dumpType, output, flags);
+                    client.WriteDump(dumpType, config.DumpOutputPath, flags, config.DiagnosticLogPath);
                 }
             }
             catch (Exception ex) when
@@ -149,6 +153,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
+                if (config.LogLevel == LogLevelOption.None)
+                {
+                    console.Error.WriteLine($"Consider rerunning the command with diagnostic output enabled.");
+                }
                 return -1;
             }
 

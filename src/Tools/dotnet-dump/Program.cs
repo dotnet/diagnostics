@@ -13,6 +13,18 @@ using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
+    // Make sure the name of the fields match the option's argument names.
+    internal record struct DumpCollectionConfig(
+            int ProcessId,
+            string ProcessName,
+            string DiagnosticPort,
+            string DumpOutputPath,
+            Dumper.LogLevelOption LogLevel,
+            bool LogToFile,
+            string DiagnosticLogPath,
+            bool GenerateCrashReport,
+            Dumper.DumpTypeOption DumpType);
+
     internal static class Program
     {
         public static Task<int> Main(string[] args)
@@ -31,9 +43,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             new(name: "collect", description: "Capture dumps from a process")
             {
                 // Handler
-                CommandHandler.Create<IConsole, int, string, bool, bool, Dumper.DumpTypeOption, string>(new Dumper().Collect),
+                CommandHandler.Create<DumpCollectionConfig, IConsole>(Dumper.Collect),
                 // Options
-                ProcessIdOption(), OutputOption(), DiagnosticLoggingOption(), CrashReportOption(), TypeOption(), ProcessNameOption()
+                ProcessIdOption(), ProcessNameOption(), DiagnosticPortOption(),
+                OutputOption(), DiagnosticLoggingOption(), FileLoggingOption(), LoggingPathOption(), CrashReportOption(), TypeOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -41,6 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect a memory dump.")
             {
+                Name = nameof(DumpCollectionConfig.ProcessId),
                 Argument = new Argument<int>(name: "pid")
             };
 
@@ -49,24 +63,61 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to collect a memory dump.")
             {
-                Argument = new Argument<string>(name: "name")
+                Name = nameof(DumpCollectionConfig.ProcessName),
+                Argument = new Argument<string>(name: "ProcessName")
+            };
+
+        private static Option DiagnosticPortOption() =>
+            new(
+                alias: "--diagnostic-port",
+                description: @"The path to a diagnostic port to be used.")
+            {
+                Name = nameof(DumpCollectionConfig.DiagnosticPort),
+                Argument = new Argument<string>(name: "diagnosticPort")
             };
 
         private static Option OutputOption() =>
             new(
                 aliases: new[] { "-o", "--output" },
-                description: @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS' 
+                description: @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS'
 on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
             {
+                Name = nameof(DumpCollectionConfig.DumpOutputPath),
                 Argument = new Argument<string>(name: "output_dump_path")
             };
 
         private static Option DiagnosticLoggingOption() =>
             new(
-                alias: "--diag",
+                alias: "--log",
                 description: "Enable dump collection diagnostic logging.")
             {
-                Argument = new Argument<bool>(name: "diag")
+                Name = nameof(DumpCollectionConfig.LogLevel),
+                Argument = new Argument<Dumper.LogLevelOption>(name: "log", getDefaultValue: static () => Dumper.LogLevelOption.None)
+            };
+
+        // Until we update system.commandline to a newer version, the semmantics of this are... not ideal:
+        // if the user wants the log to go to file they either have to use logToFile for the default value,
+        // or they have to use logFilePath.
+        // See https://github.com/dotnet/command-line-api/pull/1462
+        private static Option<bool> FileLoggingOption() =>
+            new(
+                alias: "--log-to-file",
+                description: "Route diagnostic logging to a file.",
+                getDefaultValue: static () => false)
+            {
+                Name = nameof(DumpCollectionConfig.LogToFile),
+                Argument = new Argument<bool>(name: nameof(DumpCollectionConfig.LogToFile)),
+                IsRequired = false
+            };
+
+        private static Option<string> LoggingPathOption() =>
+            new(
+                alias: "--log-file-path",
+                description: "Route diagnostic logging to a specific file.")
+            {
+                Name = nameof(DumpCollectionConfig.DiagnosticLogPath),
+                Argument = new Argument<string>(name: nameof(DumpCollectionConfig.DiagnosticLogPath)),
+                IsRequired = false
             };
 
         private static Option CrashReportOption() =>
@@ -74,6 +125,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 alias: "--crashreport",
                 description: "Enable crash report generation.")
             {
+                Name = nameof(DumpCollectionConfig.GenerateCrashReport),
                 Argument = new Argument<bool>(name: "crashreport")
             };
 
@@ -82,6 +134,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 alias: "--type",
                 description: @"The dump type determines the kinds of information that are collected from the process. There are several types: Full - The largest dump containing all memory including the module images. Heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped images. Mini - A small dump containing module lists, thread lists, exception information and all stacks. Triage - A small dump containing module lists, thread lists, exception information, all stacks and PII removed.")
             {
+                Name = nameof(DumpCollectionConfig.DumpType),
                 Argument = new Argument<Dumper.DumpTypeOption>(name: "dump_type", getDefaultValue: () => Dumper.DumpTypeOption.Full)
             };
 
