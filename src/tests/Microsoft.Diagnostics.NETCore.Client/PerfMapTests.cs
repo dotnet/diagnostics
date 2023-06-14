@@ -252,9 +252,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 reader.ReadUInt64();
                 Name = ReadNullTerminatedASCIIString(reader);
                 // Skip remaining bytes
-                int readSoFar = 56 + name.Length + 1;
+                int readSoFar = 56 + Name.Length + 1;
                 int remainingSize = (int)totalSize - readSoFar;
-                Debug.Assert(remainingSize >= 0);
                 reader.ReadBytes(remainingSize);
             }
 
