@@ -56,7 +56,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static string GetTmpDir()
         {
-            string tmpDir = Environment.GetEnvironmentVariable("tmpdir");
+            string tmpDir = Environment.GetEnvironmentVariable("TMPDIR");
             if (string.IsNullOrEmpty(tmpDir))
             {
                 tmpDir = "/tmp";
