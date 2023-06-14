@@ -238,10 +238,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             public Record(BinaryReader reader)
             {
                 Id = reader.ReadUInt32();
-                // skip size
-                reader.ReadUInt32();
+                uint totalSize = reader.ReadUInt32();
                 // skip timestamp
-                reader.ReadUInt32();
+                reader.ReadUInt64();
                 Pid = reader.ReadUInt32();
                 // skip tid
                 reader.ReadUInt32();
@@ -252,6 +251,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // skip code index
                 reader.ReadUInt64();
                 Name = ReadNullTerminatedASCIIString(reader);
+                // Skip remaining bytes
+                int readSoFar = 56 + name.Length + 1;
+                int remainingSize = (int)totalSize - readSoFar;
+                Debug.Assert(remainingSize >= 0);
+                reader.ReadBytes(remainingSize);
             }
 
             private string ReadNullTerminatedASCIIString(BinaryReader reader)
