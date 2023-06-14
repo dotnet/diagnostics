@@ -380,6 +380,7 @@ enum class ProcessCommandId : uint8_t
     ResumeRuntime      = 0x01,
     ProcessEnvironment = 0x02,
     ProcessInfo2       = 0x04,
+    ApplyStartupHook   = 0x07
     // future
 }
 ```
@@ -844,6 +845,47 @@ struct Payload
     LPCWSTR ClrProductVersion;
 }
 ```
+
+### `ApplyStartupHook`
+
+Command Code: `0x0407`
+
+The `ApplyStartupHook` command is used to provide a path to a managed assembly with a [startup hook](https://github.com/dotnet/runtime/blob/main/docs/design/features/host-startup-hook.md) to the runtime. During diagnostic suspension, the startup hook path will be added list of hooks that the runtime will execute once it has been resumed.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0407; 0x0000 }`
+
+* `string startupHookPath`: The path to the managed assembly that contains the startup hook implementation.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+`ApplyStartupHook` returns:
+* `int32 hresult`: The result of adding the startup hook (`0` indicates success)
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    string startupHookPath
+}
+```
+
+Returns:
+```c++
+struct Payload
+{
+    int32 hresult
+}
+```
+
+> Available since .NET 8.0
 
 ## Errors
 
