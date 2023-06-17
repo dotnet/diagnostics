@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
@@ -30,6 +31,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-gen")]
         public string? Generation { get; set; }
 
+        [Option(Name = "-type")]
+        public string? Type { get; set; }
+
         public override void Invoke()
         {
             HeapWithFilters filteredHeap = ParseArguments();
@@ -48,16 +52,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 exceptionObjects = exceptionObjects.Where(obj => !LiveObjects.IsLive(obj));
             }
 
+            if (!string.IsNullOrWhiteSpace(Type))
+            {
+                string type = Type!;
+                exceptionObjects = exceptionObjects.Where(obj => obj.Type!.Name!.IndexOf(type, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
             PrintExceptions(exceptionObjects);
         }
 
         private void PrintExceptions(IEnumerable<ClrObject> exceptionObjects)
         {
-            // TODO: CR: not sure what to do with stacktraces. PrintException can show full stacktrace but here it can take up too much space
-            const int maxCharsInMessage = 90; // this is somewhat arbitrary
-
-            Column exceptionMessage = new(Align.Left, maxCharsInMessage, Formats.Text);
-            Table output = new(Console, ColumnKind.Pointer, ColumnKind.Pointer, exceptionMessage, ColumnKind.TypeName);
+            Table output = new(Console, ColumnKind.Pointer, ColumnKind.Pointer, ColumnKind.TypeName);
             output.WriteHeader("Address", "MethodTable", "Message", "Name");
 
             int totalExceptions = 0;
@@ -66,28 +72,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 totalExceptions++;
 
                 ClrException clrException = exceptionObject.AsException()!;
-                string message = FormatMessage(clrException.Message, maxCharsInMessage);
-                output.WriteRow(exceptionObject.Address, exceptionObject.Type!.MethodTable, message, exceptionObject.Type!.Name);
+                output.WriteRow(exceptionObject.Address, exceptionObject.Type!.MethodTable, exceptionObject.Type!.Name);
+
+                Console.Write("        Message: ");
+                Console.WriteLine(clrException.Message ?? "<null>");
+
+                ImmutableArray<ClrStackFrame> stackTrace = clrException.StackTrace;
+                if (stackTrace.Length > 0)
+                {
+                    Console.Write("        StackFrame: ");
+                    Console.WriteLine(stackTrace[0].ToString());
+                }
             }
 
             Console.WriteLine();
             Console.WriteLine($"    Total: {totalExceptions} objects");
-        }
-
-        private static string FormatMessage(string? value, int charCount)
-        {
-            if (value is null)
-            {
-                return "<null>";
-            }
-
-            if (value.Length <= charCount)
-            {
-                return value;
-            }
-
-            const string endOfString = " ...";
-            return $"{value.Substring(0, charCount - endOfString.Length)}{endOfString}";
         }
 
         private HeapWithFilters ParseArguments()
