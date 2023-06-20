@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         private static Dictionary<int, double> CreatePayloadDictionary(AggregatePercentilePayload aggregatePercentilePayload)
         {
-            return aggregatePercentilePayload.Payloads.ToDictionary(keySelector: p => CounterUtilities.CreatePercentile(p.Quantile.Percentage), elementSelector: p => p.Value);
+            return aggregatePercentilePayload.Quantiles.ToDictionary(keySelector: q => CounterUtilities.CreatePercentile(q.Percentage), elementSelector: q => q.Value);
         }
     }
 }

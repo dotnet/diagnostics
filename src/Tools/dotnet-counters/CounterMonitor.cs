@@ -152,8 +152,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (payload is AggregatePercentilePayload aggregatePayload)
             {
-                foreach (PercentilePayload percentilePayload in aggregatePayload.Payloads)
+                foreach (Quantile quantile in aggregatePayload.Quantiles)
                 {
+                    (double key, double val) = quantile;
+                    PercentilePayload percentilePayload = new(payload.Provider, payload.Name, payload.DisplayName, payload.Unit, AppendQuantile(payload.Metadata, $"Percentile={key * 100}"), val, quantile, payload.Timestamp);
                     _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
                 }
 
@@ -163,6 +165,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
+
+        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
+
 
         // when receiving DiagnosticCounter events we may have buffered them to wait for
         // duplicate instrument events. If we've waited long enough then we should remove
