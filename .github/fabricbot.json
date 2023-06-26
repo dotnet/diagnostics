@@ -87,6 +87,948 @@
           }
         ]
       }
+    },
+    {
+      "taskType": "trigger",
+      "capabilityId": "IssueResponder",
+      "subCapability": "IssueCommentResponder",
+      "version": "1.0",
+      "config": {
+        "conditions": {
+          "operator": "and",
+          "operands": [
+            {
+              "operator": "not",
+              "operands": [
+                {
+                  "name": "isOpen",
+                  "parameters": {}
+                }
+              ]
+            },
+            {
+              "name": "isAction",
+              "parameters": {
+                "action": "created"
+              }
+            },
+            {
+              "name": "hasLabel",
+              "parameters": {
+                "label": "Needs: Author Feedback"
+              }
+            },
+            {
+              "operator": "not",
+              "operands": [
+                {
+                  "name": "noActivitySince",
+                  "parameters": {
+                    "days": 30
+                  }
+                }
+              ]
+            },
+            {
+              "operator": "not",
+              "operands": [
+                {
+                  "name": "isCloseAndComment",
+                  "parameters": {}
+                }
+              ]
+            },
+            {
+              "name": "isActivitySender",
+              "parameters": {
+                "user": {
+                  "type": "author"
+                }
+              }
+            },
+            {
+              "name": "activitySenderHasPermissions",
+              "parameters": {
+                "permissions": "none"
+              }
+            }
+          ]
+        },
+        "eventType": "issue",
+        "eventNames": [
+          "issue_comment"
+        ],
+        "taskName": "[Idle Issue Management] For issues closed due to inactivity, re-open an issue if issue author posts a reply within 30 days.",
+        "actions": [
+          {
+            "name": "reopenIssue",
+            "parameters": {}
+          },
+          {
+            "name": "removeLabel",
+            "parameters": {
+              "label": "Status: No Recent Activity"
+            }
+          },
+          {
+            "name": "removeLabel",
+            "parameters": {
+              "label": "Needs: Author Feedback"
+            }
+          },
+          {
+            "name": "addLabel",
+            "parameters": {
+              "label": "Needs: Attention :wave:"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "taskType": "trigger",
+      "capabilityId": "IssueResponder",
+      "subCapability": "IssueCommentResponder",
+      "version": "1.0",
+      "config": {
+        "taskName": "[Idle Issue Management] Replace needs author feedback label with needs attention label when the author comments on an issue",
+        "conditions": {
+          "operator": "and",
+          "operands": [
+            {
+              "name": "isAction",
+              "parameters": {
+                "action": "created"
+              }
+            },
+            {
+              "name": "hasLabel",
+              "parameters": {
+                "label": "Needs: Author Feedback"
+              }
+            },
+            {
+              "name": "isOpen",
+              "parameters": {}
+            },
+            {
+              "name": "isActivitySender",
+              "parameters": {
+                "user": {
+                  "type": "author"
+                }
+              }
+            }
+          ]
+        },
+        "actions": [
+          {
+            "name": "addLabel",
+            "parameters": {
+              "label": "Needs: Attention :wave:"
+            }
+          },
+          {
+            "name": "removeLabel",
+            "parameters": {
+              "label": "Needs: Author Feedback"
+            }
+          }
+        ],
+        "eventType": "issue",
+        "eventNames": [
+          "issue_comment"
+        ]
+      }
+    },
+    {
+      "taskType": "scheduled",
+      "capabilityId": "ScheduledSearch",
+      "subCapability": "ScheduledSearch",
+      "version": "1.1",
+      "config": {
+        "taskName": "[Idle Issue Management] Close stale issues",
+        "frequency": [
+          {
+            "weekDay": 1,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 2,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 3,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 4,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 5,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          }
+        ],
+        "searchTerms": [
+          {
+            "name": "isIssue",
+            "parameters": {}
+          },
+          {
+            "name": "isOpen",
+            "parameters": {}
+          },
+          {
+            "name": "hasLabel",
+            "parameters": {
+              "label": "Needs: Author Feedback"
+            }
+          },
+          {
+            "name": "hasLabel",
+            "parameters": {
+              "label": "Status: No Recent Activity"
+            }
+          },
+          {
+            "name": "noActivitySince",
+            "parameters": {
+              "days": 3
+            }
+          }
+        ],
+        "actions": [
+          {
+            "name": "addReply",
+            "parameters": {
+              "comment": "Hi @${issueAuthor}. We are closing this issue due to inactivity. If you comment within 30 days it will automatically reopen. If you are not the author of this issue and you're facing the same problem, feel free to open a new issue referencing this one."
+            }
+          },
+          {
+            "name": "closeIssue",
+            "parameters": {}
+          }
+        ]
+      }
+    },
+    {
+      "taskType": "scheduled",
+      "capabilityId": "ScheduledSearch",
+      "subCapability": "ScheduledSearch",
+      "version": "1.1",
+      "config": {
+        "taskName": "[Idle Issue Management] Add no recent activity label to issues",
+        "frequency": [
+          {
+            "weekDay": 1,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 2,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 3,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 4,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "weekDay": 5,
+            "hours": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          }
+        ],
+        "searchTerms": [
+          {
+            "name": "isIssue",
+            "parameters": {}
+          },
+          {
+            "name": "isOpen",
+            "parameters": {}
+          },
+          {
+            "name": "hasLabel",
+            "parameters": {
+              "label": "Needs: Author Feedback"
+            }
+          },
+          {
+            "name": "noActivitySince",
+            "parameters": {
+              "days": 4
+            }
+          },
+          {
+            "name": "noLabel",
+            "parameters": {
+              "label": "Status: No Recent Activity"
+            }
+          }
+        ],
+        "actions": [
+          {
+            "name": "addLabel",
+            "parameters": {
+              "label": "Status: No Recent Activity"
+            }
+          },
+          {
+            "name": "addReply",
+            "parameters": {
+              "comment": "This issue has been automatically marked as stale because it has been marked as requiring author feedback but has not had any activity for **4 days**. It will be closed if no further activity occurs **within 3 days of this comment**. If it *is* closed, feel free to comment when you are able to provide the additional information and we will re-investigate."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "taskType": "scheduled",
+      "capabilityId": "ScheduledSearch",
+      "subCapability": "ScheduledSearch",
+      "version": "1.1",
+      "config": {
+        "taskName": "[Resolved Issue Management] Close resolved issues",
+        "frequency": [
+          {
+            "weekDay": 0,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 1,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 2,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 3,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 4,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 5,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 6,
+            "hours": [
+              2,
+              5,
+              8,
+              11,
+              14,
+              17,
+              20,
+              23
+            ],
+            "timezoneOffset": -8
+          }
+        ],
+        "searchTerms": [
+          {
+            "name": "isIssue",
+            "parameters": {}
+          },
+          {
+            "name": "isOpen",
+            "parameters": {}
+          },
+          {
+            "name": "hasLabel",
+            "parameters": {
+              "label": "Status: Resolved"
+            }
+          },
+          {
+            "name": "noActivitySince",
+            "parameters": {
+              "days": 1
+            }
+          }
+        ],
+        "actions": [
+          {
+            "name": "addReply",
+            "parameters": {
+              "comment": "This issue has been resolved and has not had any activity for **1 day**. It will be closed for housekeeping purposes."
+            }
+          },
+          {
+            "name": "closeIssue",
+            "parameters": {}
+          }
+        ]
+      }
+    },
+    {
+      "taskType": "trigger",
+      "capabilityId": "IssueResponder",
+      "subCapability": "IssuesOnlyResponder",
+      "version": "1.0",
+      "config": {
+        "taskName": "[Closed Issue Management] Remove no recent activity label from issues",
+        "conditions": {
+          "operator": "and",
+          "operands": [
+            {
+              "operator": "not",
+              "operands": [
+                {
+                  "name": "isAction",
+                  "parameters": {
+                    "action": "closed"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "hasLabel",
+              "parameters": {
+                "label": "Status: No Recent Activity"
+              }
+            }
+          ]
+        },
+        "actions": [
+          {
+            "name": "removeLabel",
+            "parameters": {
+              "label": "Status: No Recent Activity"
+            }
+          }
+        ],
+        "eventType": "issue",
+        "eventNames": [
+          "issues",
+          "project_card"
+        ]
+      }
+    },
+    {
+      "taskType": "trigger",
+      "capabilityId": "IssueResponder",
+      "subCapability": "IssueCommentResponder",
+      "version": "1.0",
+      "config": {
+        "taskName": "[Idle Issue Management] Remove no recent activity label when an issue is commented on",
+        "conditions": {
+          "operator": "and",
+          "operands": [
+            {
+              "name": "hasLabel",
+              "parameters": {
+                "label": "Status: No Recent Activity"
+              }
+            }
+          ]
+        },
+        "actions": [
+          {
+            "name": "removeLabel",
+            "parameters": {
+              "label": "Status: No Recent Activity"
+            }
+          }
+        ],
+        "eventType": "issue",
+        "eventNames": [
+          "issue_comment"
+        ]
+      }
+    },
+    {
+      "taskType": "trigger",
+      "capabilityId": "IssueResponder",
+      "subCapability": "IssuesOnlyResponder",
+      "version": "1.0",
+      "config": {
+        "conditions": {
+          "operator": "and",
+          "operands": [
+            {
+              "name": "labelAdded",
+              "parameters": {
+                "label": "Needs: Author Feedback"
+              }
+            }
+          ]
+        },
+        "eventType": "issue",
+        "eventNames": [
+          "issues",
+          "project_card"
+        ],
+        "taskName": "Add comment when 'Needs Author Feedback' is applied to issue",
+        "actions": [
+          {
+            "name": "addReply",
+            "parameters": {
+              "comment": "Hi @${issueAuthor}. We have added the \"Needs: Author Feedback\" label to this issue, which indicates that we have an open question for you before we can take further action. This issue will be closed automatically in 7 days if we do not hear back from you by then - please feel free to re-open it if you come back to this issue after that time."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "taskType": "scheduled",
+      "capabilityId": "ScheduledSearch",
+      "subCapability": "ScheduledSearch",
+      "version": "1.1",
+      "config": {
+        "frequency": [
+          {
+            "weekDay": 0,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 1,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 2,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 3,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 4,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 5,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          },
+          {
+            "weekDay": 6,
+            "hours": [
+              1,
+              4,
+              7,
+              10,
+              13,
+              16,
+              19,
+              22
+            ],
+            "timezoneOffset": -8
+          }
+        ],
+        "searchTerms": [
+          {
+            "name": "isClosed",
+            "parameters": {}
+          },
+          {
+            "name": "noActivitySince",
+            "parameters": {
+              "days": 30
+            }
+          },
+          {
+            "name": "isUnlocked",
+            "parameters": {}
+          },
+          {
+            "name": "isIssue",
+            "parameters": {}
+          },
+          {
+            "name": "noLabel",
+            "parameters": {
+              "label": "Bot: Do Not Lock"
+            }
+          }
+        ],
+        "taskName": "[Closed Issue Management] Lock issues closed without activity for over 30 days",
+        "actions": [
+          {
+            "name": "lockIssue",
+            "parameters": {
+              "reason": "resolved"
+            }
+          }
+        ]
+      }
     }
   ],
   "userGroups": []
