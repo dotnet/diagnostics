@@ -471,12 +471,6 @@ LLDBServices::Execute(
     return status <= lldb::eReturnStatusSuccessContinuingResult ? S_OK : E_FAIL;
 }
 
-// PAL raise exception function and exception record pointer variable name
-// See coreclr\src\pal\src\exception\seh-unwind.cpp for the details. This
-// function depends on RtlpRaisException not being inlined or optimized.
-#define FUNCTION_NAME "RtlpRaiseException"
-#define VARIABLE_NAME "ExceptionRecord"
-
 HRESULT 
 LLDBServices::GetLastEventInformation(
     PULONG type,
@@ -489,8 +483,7 @@ LLDBServices::GetLastEventInformation(
     ULONG descriptionSize,
     PULONG descriptionUsed)
 {
-    if (extraInformationSize < sizeof(DEBUG_LAST_EVENT_INFO_EXCEPTION) || 
-        type == NULL || processId == NULL || threadId == NULL || extraInformationUsed == NULL) 
+    if (type == NULL || processId == NULL || threadId == NULL)
     {
         return E_INVALIDARG;
     }
@@ -498,10 +491,25 @@ LLDBServices::GetLastEventInformation(
     *type = DEBUG_EVENT_EXCEPTION;
     *processId = 0;
     *threadId = 0;
-    *extraInformationUsed = sizeof(DEBUG_LAST_EVENT_INFO_EXCEPTION);
+
+    if (extraInformationUsed != nullptr)
+    {
+        *extraInformationUsed = sizeof(DEBUG_LAST_EVENT_INFO_EXCEPTION);
+    }
+
+    if (extraInformation == nullptr)
+    {
+        return S_OK;
+    }
+
+    if (extraInformationSize < sizeof(DEBUG_LAST_EVENT_INFO_EXCEPTION))
+    {
+        return E_INVALIDARG;
+    }
 
     DEBUG_LAST_EVENT_INFO_EXCEPTION *pdle = (DEBUG_LAST_EVENT_INFO_EXCEPTION *)extraInformation;
     pdle->FirstChance = 1; 
+    lldb::SBError error;
 
     lldb::SBProcess process = GetCurrentProcess();
     if (!process.IsValid())
@@ -518,47 +526,31 @@ LLDBServices::GetLastEventInformation(
     *processId = GetProcessId(process);
     *threadId = GetThreadId(thread);
 
-    // Enumerate each stack frame at the special "throw"
-    // breakpoint and find the raise exception function 
-    // with the exception record parameter.
-    int numFrames = thread.GetNumFrames();
-    for (int i = 0; i < numFrames; i++)
+    SpecialDiagInfoHeader header;
+    size_t read = process.ReadMemory(SpecialDiagInfoAddress, &header, sizeof(header), error);
+    if (error.Fail() || read != sizeof(header))
     {
-        lldb::SBFrame frame = thread.GetFrameAtIndex(i);
-        if (!frame.IsValid())
-        {
-            break;
-        }
-
-        const char *functionName = frame.GetFunctionName();
-        if (functionName == NULL || strncmp(functionName, FUNCTION_NAME, sizeof(FUNCTION_NAME) - 1) != 0)
-        {
-            continue;
-        }
-
-        lldb::SBValue exValue = frame.FindVariable(VARIABLE_NAME);
-        if (!exValue.IsValid())
-        {
-            break;
-        }
-
-        lldb::SBError error;
-        ULONG64 pExceptionRecord = exValue.GetValueAsUnsigned(error);
-        if (error.Fail())
-        {
-            break;
-        }
-
-        process.ReadMemory(pExceptionRecord, &pdle->ExceptionRecord, sizeof(pdle->ExceptionRecord), error);
-        if (error.Fail())
-        {
-            break;
-        }
-
-        return S_OK;
+        Output(DEBUG_OUTPUT_WARNING, "Special diagnostics info read failed\n");
+        return E_FAIL;
+    }
+    if (strncmp(header.Signature, SPECIAL_DIAGINFO_SIGNATURE, sizeof(SPECIAL_DIAGINFO_SIGNATURE)) != 0)
+    {
+        Output(DEBUG_OUTPUT_WARNING, "Special diagnostics info signature invalid\n");
+        return E_FAIL;
+    }
+    if (header.Version < SPECIAL_DIAGINFO_VERSION || header.ExceptionRecordAddress == 0)
+    {
+        Output(DEBUG_OUTPUT_WARNING, "No exception record in special diagnostics info\n");
+        return E_FAIL;
+    }
+    read = process.ReadMemory(header.ExceptionRecordAddress, &pdle->ExceptionRecord, sizeof(pdle->ExceptionRecord), error);
+    if (error.Fail() || read != sizeof(pdle->ExceptionRecord))
+    {
+        Output(DEBUG_OUTPUT_WARNING, "Exception record in special diagnostics info read failed\n");
+        return E_FAIL;
     }
 
-    return E_FAIL;
+    return S_OK;
 }
 
 HRESULT 

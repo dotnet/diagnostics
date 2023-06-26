@@ -161,6 +161,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("clrstack", new sosCommand("ClrStack"), "Provides a stack trace of managed code only.");
     g_services->AddCommand("clrthreads", new sosCommand("Threads"), "Lists the managed threads running.");
     g_services->AddCommand("clru", new sosCommand("u"), "Displays an annotated disassembly of a managed method.");
+    g_services->AddManagedCommand("crashinfo", "Displays the Native AOT crash info.");
     g_services->AddCommand("dbgout", new sosCommand("dbgout"), "Enables/disables (-off) internal SOS logging.");
     g_services->AddCommand("dumpalc", new sosCommand("DumpALC"), "Displays details about a collectible AssemblyLoadContext to which the specified object is loaded.");
     g_services->AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");

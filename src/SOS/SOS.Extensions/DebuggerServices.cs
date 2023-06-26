@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -12,7 +13,7 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting.DbgEng.Interop;
 
-namespace SOS
+namespace SOS.Extensions
 {
     internal sealed unsafe class DebuggerServices : CallableCOMWrapper
     {
@@ -424,6 +425,41 @@ namespace SOS
             }
         }
 
+        public HResult GetLastException(out uint processId, out int threadId, out EXCEPTION_RECORD64 exceptionRecord)
+        {
+            exceptionRecord = default;
+
+            uint type;
+            HResult hr = VTable.GetLastEventInformation(Self, out type, out processId, out threadId, null, 0, null, null, 0, null);
+            if (hr.IsOK)
+            {
+                if (type != (uint)DEBUG_EVENT.EXCEPTION)
+                {
+                    return HResult.E_FAIL;
+                }
+            }
+
+            DEBUG_LAST_EVENT_INFO_EXCEPTION exceptionInfo;
+            hr = VTable.GetLastEventInformation(
+                Self,
+                out _,
+                out processId,
+                out threadId,
+                &exceptionInfo,
+                Unsafe.SizeOf<DEBUG_LAST_EVENT_INFO_EXCEPTION>(),
+                null,
+                null,
+                0,
+                null);
+
+            if (hr.IsOK)
+            {
+                exceptionRecord = exceptionInfo.ExceptionRecord;
+            }
+            Debug.Assert(hr != HResult.S_FALSE);
+            return hr;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
@@ -455,6 +491,7 @@ namespace SOS
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint*, int> SupportsDml;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputDmlString;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, byte*, int> AddModuleSymbol;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, out int, void*, int, uint*, byte*, int, uint*, int> GetLastEventInformation;
         }
     }
 }

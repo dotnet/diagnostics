@@ -21,11 +21,6 @@ namespace Microsoft.Diagnostics.DebugServices
         IModule Module { get; }
 
         /// <summary>
-        /// A list of all the fields in the type
-        /// </summary>
-        List<IField> Fields { get; }
-
-        /// <summary>
         /// Get a field by name
         /// </summary>
         /// <param name="fieldName">name of the field to find</param>
