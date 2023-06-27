@@ -380,6 +380,8 @@ enum class ProcessCommandId : uint8_t
     ResumeRuntime      = 0x01,
     ProcessEnvironment = 0x02,
     ProcessInfo2       = 0x04,
+    EnablePerfMap      = 0x05,
+    DisablePerfMap     = 0x06,
     ApplyStartupHook   = 0x07
     // future
 }
@@ -845,6 +847,89 @@ struct Payload
     LPCWSTR ClrProductVersion;
 }
 ```
+
+### `EnablePerfMap`
+
+Command Code: `0x0405`
+
+The `EnablePerfMap` command instructs the runtime to start emitting perfmap or jitdump files for the process. These files are used by the perf tool to correlate jitted code addresses in a trace.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0405; 0x0000 }`
+
+Payload:
+* `uint32_t perfMapType`: the type of generation to enable
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`EnablePerfMap` returns:
+* `int32 hresult`: The result of enabling the perfmap or jitdump files (`0` indicates success)
+
+##### Details:
+
+Inputs:
+```c++
+enum class PerfMapType
+{
+    DISABLED = 0,
+    ALL      = 1,
+    JITDUMP  = 2,
+    PERFMAP  = 3
+}
+
+struct Payload
+{
+    uint32_t perfMapType;
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
+> Available since .NET 8.0
+
+### `DisablePerfMap`
+
+Command Code: `0x0406`
+
+The `DisablePerfMap` command instructs the runtime to stop emitting perfmap or jitdump files for the process. These files are used by the perf tool to correlate jitted code addresses in a trace.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0405; 0x0000 }`
+
+Payload: There is no payload with this command.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`DisablePerfMap` returns:
+* `int32 hresult`: The result of enabling the perfmap or jitdump files (`0` indicates success)
+
+##### Details:
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
+> Available since .NET 8.0
 
 ### `ApplyStartupHook`
 

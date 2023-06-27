@@ -47,6 +47,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         GetProcessEnvironment = 0x02,
         SetEnvironmentVariable = 0x03,
         GetProcessInfo2 = 0x04,
+        EnablePerfMap = 0x05,
+        DisablePerfMap = 0x06,
         ApplyStartupHook = 0x07,
         GetProcessInfo3 = 0x08
     }
