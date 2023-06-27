@@ -271,7 +271,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
                 {
-                    string displayName = payload.DisplayName;
+                    string displayName = payload.GetDisplay(CounterPayloadExtensions.DisplayRenderingMode.DotnetCounters);
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
                     _maxNameLength = Math.Max(_maxNameLength, displayName.Length);
                     if (tags != null)

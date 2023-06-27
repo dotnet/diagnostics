@@ -168,7 +168,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
 
-
         // when receiving DiagnosticCounter events we may have buffered them to wait for
         // duplicate instrument events. If we've waited long enough then we should remove
         // them from the buffer and render them.

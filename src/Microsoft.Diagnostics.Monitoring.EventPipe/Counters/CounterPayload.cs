@@ -7,9 +7,6 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    /// <summary>
-    /// TODO This is currently a duplication of the src\Tools\dotnet-counters\CounterPayload.cs stack. The two will be unified in a separate change.
-    /// </summary>
     internal abstract class CounterPayload : ICounterPayload
     {
         protected CounterPayload(DateTime timestamp,

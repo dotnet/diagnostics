@@ -211,14 +211,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
-                // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
-                payload = new UpDownCounterPayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
+                payload = new RatePayload(meterName, instrumentName, null, unit, tags, value, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
             }
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                // this happens when the ObservableUpDownCounter callback function throws an exception
-                // or when the ObservableUpDownCounter doesn't include a measurement for a particular set of tag values.
+                // this happens when the ObservableCounter callback function throws an exception
+                // or when the ObservableCounter doesn't include a measurement for a particular set of tag values.
                 payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
             }
         }
