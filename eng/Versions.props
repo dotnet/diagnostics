@@ -24,18 +24,18 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0-preview.7.23327.20</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>8.0.0-preview.7.23327.20</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>8.0.100-preview.6.23318.1</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>8.0.100-preview.7.23325.5</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
-    <MicrosoftNETCoreApp60Version>6.0.16</MicrosoftNETCoreApp60Version>
+    <MicrosoftNETCoreApp60Version>6.0.19</MicrosoftNETCoreApp60Version>
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
-    <MicrosoftNETCoreApp70Version>7.0.5</MicrosoftNETCoreApp70Version>
+    <MicrosoftNETCoreApp70Version>7.0.8</MicrosoftNETCoreApp70Version>
     <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
-    <SingleFileRuntime70Version>$(MicrosoftNETCoreApp70Version)</SingleFileRuntime70Version>
-    <SingleFileRuntimeLatestVersion>8.0.0-preview.6.23316.3</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntime70Version>7.0.7</SingleFileRuntime70Version>
+    <SingleFileRuntimeLatestVersion>8.0.0-preview.7.23325.2</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
