@@ -404,8 +404,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal ProcessInfo GetProcessInfo()
         {
+            // Attempt to get ProcessInfo v3
+            ProcessInfo processInfo = TryGetProcessInfo3();
+            if (null != processInfo)
+            {
+                return processInfo;
+            }
+
             // Attempt to get ProcessInfo v2
-            ProcessInfo processInfo = TryGetProcessInfo2();
+            processInfo = TryGetProcessInfo2();
             if (null != processInfo)
             {
                 return processInfo;
@@ -418,8 +425,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal async Task<ProcessInfo> GetProcessInfoAsync(CancellationToken token)
         {
+            // Attempt to get ProcessInfo v3
+            ProcessInfo processInfo = await TryGetProcessInfo3Async(token).ConfigureAwait(false);
+            if (null != processInfo)
+            {
+                return processInfo;
+            }
+
             // Attempt to get ProcessInfo v2
-            ProcessInfo processInfo = await TryGetProcessInfo2Async(token).ConfigureAwait(false);
+            processInfo = await TryGetProcessInfo2Async(token).ConfigureAwait(false);
             if (null != processInfo)
             {
                 return processInfo;
@@ -442,6 +456,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
             IpcMessage request = CreateProcessInfo2Message();
             using IpcResponse response2 = await IpcClient.SendMessageGetContinuationAsync(_endpoint, request, token).ConfigureAwait(false);
             return TryGetProcessInfo2FromResponse(response2, nameof(GetProcessInfoAsync));
+        }
+
+        private ProcessInfo TryGetProcessInfo3()
+        {
+            IpcMessage request = CreateProcessInfo3Message();
+            using IpcResponse response2 = IpcClient.SendMessageGetContinuation(_endpoint, request);
+            return TryGetProcessInfo3FromResponse(response2, nameof(GetProcessInfo));
+        }
+
+        private async Task<ProcessInfo> TryGetProcessInfo3Async(CancellationToken token)
+        {
+            IpcMessage request = CreateProcessInfo3Message();
+            using IpcResponse response2 = await IpcClient.SendMessageGetContinuationAsync(_endpoint, request, token).ConfigureAwait(false);
+            return TryGetProcessInfo3FromResponse(response2, nameof(GetProcessInfoAsync));
         }
 
         private static byte[] SerializePayload<T>(T arg)
@@ -571,6 +599,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo2);
         }
 
+        private static IpcMessage CreateProcessInfo3Message()
+        {
+            return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.GetProcessInfo3);
+        }
+
         private static IpcMessage CreateResumeRuntimeMessage()
         {
             return new IpcMessage(DiagnosticsServerCommandSet.Process, (byte)ProcessCommandId.ResumeRuntime);
@@ -663,6 +696,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             return ProcessInfo.ParseV2(response.Message.Payload);
+        }
+
+        private static ProcessInfo TryGetProcessInfo3FromResponse(IpcResponse response, string operationName)
+        {
+            if (!ValidateResponseMessage(response.Message, operationName, ValidateResponseOptions.UnknownCommandReturnsFalse))
+            {
+                return null;
+            }
+
+            return ProcessInfo.ParseV3(response.Message.Payload);
         }
 
         internal static bool ValidateResponseMessage(IpcMessage responseMessage, string operationName, ValidateResponseOptions options = ValidateResponseOptions.None)
