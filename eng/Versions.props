@@ -34,8 +34,8 @@
     <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
-    <SingleFileRuntime70Version>7.0.7</SingleFileRuntime70Version>
-    <SingleFileRuntimeLatestVersion>8.0.0-preview.7.23325.2</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntime70Version>$(MicrosoftNETCoreApp70Version)</SingleFileRuntime70Version>
+    <SingleFileRuntimeLatestVersion>8.0.0-preview.7.23329.8</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
