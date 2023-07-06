@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 // The DataTarget created in the RuntimeProvider is disposed here. The ClrRuntime
                 // instance is disposed below in DisposeServices().
-                ((ClrRuntime)service).DataTarget.Dispose();
+                ((ClrRuntime)service)?.DataTarget.Dispose();
             }
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
