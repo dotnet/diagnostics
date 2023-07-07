@@ -326,7 +326,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleMultipleSessionsNotSupportedError(TraceEvent obj)
         {
             string runningSessionId = (string)obj.PayloadValue(0);
-            if (runningSessionId == _clientId)
+            if (runningSessionId == SharedSessionId)
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later

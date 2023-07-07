@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                 {
-                    HandleMultipleSessionsNotSupportedError(traceEvent, uniqueSessionId, out payload);
+                    HandleMultipleSessionsNotSupportedError(traceEvent, out payload);
                 }
                 else if (traceEvent.EventName == "MultipleSessionsConfiguredIncorrectlyError")
                 {
@@ -316,12 +316,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
-        private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-            if (payloadSessionId == sessionId)
+            if (payloadSessionId == MetricSourceConfiguration.SharedSessionId)
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
