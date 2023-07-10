@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private const int BufferDelaySecs = 1;
         private const string SharedSessionId = "SHARED"; // This should be identical to the one used by dotnet-monitor in MetricSourceConfiguration.cs
-        private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
+        private static HashSet<string> inactiveSharedSessions = new();
 
         private int _processId;
         private int _interval;
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _renderer.ToggleStatus(_pauseCmdSet);
 
                 // If a session received a MultipleSessionsConfiguredIncorrectlyError, ignore future shared events
-                if (obj.ProviderName == "System.Diagnostics.Metrics" && !inactiveSharedSessions.ContainsKey(_clientId))
+                if (obj.ProviderName == "System.Diagnostics.Metrics" && !inactiveSharedSessions.Contains(_clientId))
                 {
                     if (obj.EventName == "BeginInstrumentReporting")
                     {
@@ -373,7 +373,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
 
             _renderer.SetErrorText(errorMessage.ToString());
-            inactiveSharedSessions.Add(payloadSessionId, true);
+            inactiveSharedSessions.Add(payloadSessionId);
             _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
         }
 
