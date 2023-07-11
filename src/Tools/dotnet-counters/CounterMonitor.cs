@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private const string SharedSessionId = "SHARED"; // This should be identical to the one used by dotnet-monitor in MetricSourceConfiguration.cs
         private static HashSet<string> inactiveSharedSessions = new();
 
+        private string _sessionId;
         private int _processId;
         private int _interval;
         private CounterSet _counterList;
@@ -150,7 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string sessionId = (string)obj.PayloadValue(0);
             string meterName = (string)obj.PayloadValue(1);
             // string instrumentName = (string)obj.PayloadValue(3);
-            if (sessionId != SharedSessionId)
+            if (sessionId != _sessionId)
             {
                 return;
             }
@@ -166,7 +167,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string rateText = (string)obj.PayloadValue(6);
-            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
+            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -190,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string lastValueText = (string)obj.PayloadValue(6);
-            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
+            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -225,7 +226,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string tags = (string)obj.PayloadValue(5);
             //string rateText = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
             string valueText = (string)obj.PayloadValue(7);
-            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
+            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -255,7 +256,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
-            if (sessionId != SharedSessionId || !Filter(meterName, instrumentName))
+            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
             {
                 return;
             }
@@ -284,7 +285,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleTimeSeriesLimitReached(TraceEvent obj)
         {
             string sessionId = (string)obj.PayloadValue(0);
-            if (sessionId != SharedSessionId)
+            if (sessionId != _sessionId)
             {
                 return;
             }
@@ -298,7 +299,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             string sessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (sessionId != SharedSessionId)
+            if (sessionId != _sessionId)
             {
                 return;
             }
@@ -313,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             string sessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (sessionId != SharedSessionId)
+            if (sessionId != _sessionId)
             {
                 return;
             }
@@ -326,7 +327,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleMultipleSessionsNotSupportedError(TraceEvent obj)
         {
             string runningSessionId = (string)obj.PayloadValue(0);
-            if (runningSessionId == SharedSessionId)
+            if (runningSessionId == _sessionId)
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -887,11 +888,23 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     metrics.Append(string.Join(',', providerCounters));
                 }
             }
+
+            _sessionId = Guid.NewGuid().ToString();
+
+            ProcessInfo processInfo = _diagnosticsClient.GetProcessInfo();
+            if (TryParseVersion(processInfo.ClrProductVersionString, out Version v))
+            {
+                if (v.Major >= 8)
+                {
+                    _sessionId = SharedSessionId;
+                }
+            }
+
             EventPipeProvider metricsEventSourceProvider =
                 new("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
                     new Dictionary<string, string>()
                     {
-                        { "SessionId", SharedSessionId },
+                        { "SessionId", _sessionId },
                         { "Metrics", metrics.ToString() },
                         { "RefreshInterval", _interval.ToString() },
                         { "MaxTimeSeries", _maxTimeSeries.ToString() },
@@ -901,6 +914,34 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 );
 
             return eventCounterProviders.Append(metricsEventSourceProvider).ToArray();
+        }
+
+        private static bool TryParseVersion(string versionString, out Version version)
+        {
+            version = null;
+            if (string.IsNullOrEmpty(versionString))
+            {
+                return false;
+            }
+
+            // The version is of the SemVer2 form: <major>.<minor>.<patch>[-<prerelease>][+<metadata>]
+            // Remove the prerelease and metadata version information before parsing.
+
+            ReadOnlySpan<char> versionSpan = versionString;
+            int metadataIndex = versionSpan.IndexOf('+');
+            if (-1 == metadataIndex)
+            {
+                metadataIndex = versionSpan.Length;
+            }
+
+            ReadOnlySpan<char> noMetadataVersion = versionSpan[..metadataIndex];
+            int prereleaseIndex = noMetadataVersion.IndexOf('-');
+            if (-1 == prereleaseIndex)
+            {
+                prereleaseIndex = metadataIndex;
+            }
+
+            return Version.TryParse(noMetadataVersion[..prereleaseIndex], out version);
         }
 
         private bool Filter(string meterName, string instrumentName)

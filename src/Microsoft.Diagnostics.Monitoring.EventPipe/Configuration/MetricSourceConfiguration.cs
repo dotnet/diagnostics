@@ -34,13 +34,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         private readonly IList<EventPipeProvider> _eventPipeProviders;
         public string ClientId { get; private set; }
+        public string SessionId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> eventCounterProviderNames)
             : this(metricIntervalSeconds, CreateProviders(eventCounterProviderNames?.Any() == true ? eventCounterProviderNames : DefaultMetricProviders))
         {
         }
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000, bool useSharedSession = false)
         {
             if (providers == null)
             {
@@ -68,12 +69,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
                 ClientId = Guid.NewGuid().ToString();
+                SessionId = useSharedSession ? SharedSessionId : Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
                         new Dictionary<string, string>()
                         {
-                            { "SessionId", SharedSessionId },
+                            { "SessionId", SessionId },
                             { "Metrics", metrics },
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },

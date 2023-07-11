@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != MetricSourceConfiguration.SessionId) // not static like this, but need to use this instead of just SHARED
             {
                 return;
             }

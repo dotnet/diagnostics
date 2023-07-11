@@ -37,8 +37,46 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
+        // Don't copy this all over the place
+        private static bool TryParseVersion(string versionString, out Version version)
+        {
+            version = null;
+            if (string.IsNullOrEmpty(versionString))
+            {
+                return false;
+            }
+
+            // The version is of the SemVer2 form: <major>.<minor>.<patch>[-<prerelease>][+<metadata>]
+            // Remove the prerelease and metadata version information before parsing.
+
+            ReadOnlySpan<char> versionSpan = versionString;
+            int metadataIndex = versionSpan.IndexOf('+');
+            if (-1 == metadataIndex)
+            {
+                metadataIndex = versionSpan.Length;
+            }
+
+            ReadOnlySpan<char> noMetadataVersion = versionSpan[..metadataIndex];
+            int prereleaseIndex = noMetadataVersion.IndexOf('-');
+            if (-1 == prereleaseIndex)
+            {
+                prereleaseIndex = metadataIndex;
+            }
+
+            return Version.TryParse(noMetadataVersion[..prereleaseIndex], out version);
+        }
+
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
+            bool useSharedSession = false;
+            if (TryParseVersion(Client.GetProcessInfo().ClrProductVersionString, out Version v))
+            {
+                if (v.Major >= 8)
+                {
+                    useSharedSession = true;
+                }
+            }
+
             MetricSourceConfiguration config = new(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
             {
                 Provider = counterGroup.ProviderName,
