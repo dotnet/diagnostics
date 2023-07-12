@@ -64,6 +64,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         public string ClientId { get; set; }
 
+        public string SessionId { get; set; }
+
+        public Version RuntimeVersion { get; set; }
+
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {
             return SharedTriggerSettingsValidation.Validate(GreaterThan, LessThan);

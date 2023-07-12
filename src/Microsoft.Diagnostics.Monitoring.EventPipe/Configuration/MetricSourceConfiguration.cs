@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
-        public const string SharedSessionId = "SHARED";
+        private const string SharedSessionId = "SHARED";
 
         private readonly IList<EventPipeProvider> _eventPipeProviders;
         public string ClientId { get; private set; }

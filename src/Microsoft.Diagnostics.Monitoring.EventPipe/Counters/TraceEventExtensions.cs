@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
 
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string uniqueSessionId, out ICounterPayload payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, string uniqueSessionId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -83,39 +83,39 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 if (traceEvent.EventName == "HistogramValuePublished")
                 {
-                    HandleHistogram(traceEvent, filter, out payload);
+                    HandleHistogram(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "GaugeValuePublished")
                 {
-                    HandleGauge(traceEvent, filter, out payload);
+                    HandleGauge(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "CounterRateValuePublished")
                 {
-                    HandleCounterRate(traceEvent, filter, out payload);
+                    HandleCounterRate(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "UpDownCounterRateValuePublished")
                 {
-                    HandleUpDownCounterValue(traceEvent, filter, out payload);
+                    HandleUpDownCounterValue(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
-                    HandleTimeSeriesLimitReached(traceEvent, out payload);
+                    HandleTimeSeriesLimitReached(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "HistogramLimitReached")
                 {
-                    HandleHistogramLimitReached(traceEvent, out payload);
+                    HandleHistogramLimitReached(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "Error")
                 {
-                    HandleError(traceEvent, out payload);
+                    HandleError(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "ObservableInstrumentCallbackError")
                 {
-                    HandleObservableInstrumentCallbackError(traceEvent, out payload);
+                    HandleObservableInstrumentCallbackError(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                 {
-                    HandleMultipleSessionsNotSupportedError(traceEvent, out payload);
+                    HandleMultipleSessionsNotSupportedError(traceEvent, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "MultipleSessionsConfiguredIncorrectlyError")
                 {
@@ -128,13 +128,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return false;
         }
 
-        private static void HandleGauge(TraceEvent obj, CounterFilter filter, out ICounterPayload payload)
+        private static void HandleGauge(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != MetricSourceConfiguration.SessionId) // not static like this, but need to use this instead of just SHARED
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -164,13 +164,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleCounterRate(TraceEvent traceEvent, CounterFilter filter, out ICounterPayload payload)
+        private static void HandleCounterRate(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
 
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -200,13 +200,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterFilter filter, out ICounterPayload payload)
+        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
 
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId || traceEvent.Version < 1) // Version 1 added the value field.
+            if (payloadSessionId != sessionId || traceEvent.Version < 1) // Version 1 added the value field.
             {
                 return;
             }
@@ -239,12 +239,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, out ICounterPayload payload)
+        private static void HandleHistogram(TraceEvent obj, CounterFilter filter, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -268,13 +268,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
 
 
-        private static void HandleHistogramLimitReached(TraceEvent obj, out ICounterPayload payload)
+        private static void HandleHistogramLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -284,13 +284,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage);
         }
 
-        private static void HandleTimeSeriesLimitReached(TraceEvent obj, out ICounterPayload payload)
+        private static void HandleTimeSeriesLimitReached(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -300,13 +300,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
-        private static void HandleError(TraceEvent obj, out ICounterPayload payload)
+        private static void HandleError(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -316,12 +316,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             payload = new ErrorPayload(errorMessage, obj.TimeStamp);
         }
 
-        private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, out ICounterPayload payload)
+        private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
-            if (payloadSessionId == MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId == sessionId)
             {
                 // If our session is the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -329,20 +329,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
-                string errorMessage = "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+                string errorMessage = "Error: Another metrics collection session is already in progress for the target process." + Environment.NewLine +
                 "Concurrent sessions are not supported.";
 
                 payload = new ErrorPayload(errorMessage, obj.TimeStamp);
             }
         }
 
-        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string sessionId, out ICounterPayload payload)
+        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientSessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != sessionId)
+            if (payloadSessionId != clientSessionId)
             {
                 // If our session is not the one that is running then the error is not for us,
                 // it is for some other session that came later
@@ -356,7 +356,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string expectedRefreshInterval = (string)obj.PayloadValue(5);
             string actualRefreshInterval = (string)obj.PayloadValue(6);
 
-            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process." + Environment.NewLine +
             "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
 
             if (expectedMaxHistograms != actualMaxHistograms)
@@ -377,14 +377,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             inactiveSharedSessions.Add(payloadSessionId, true);
         }
 
-        private static void HandleObservableInstrumentCallbackError(TraceEvent obj, out ICounterPayload payload)
+        private static void HandleObservableInstrumentCallbackError(TraceEvent obj, string sessionId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
 
-            if (payloadSessionId != MetricSourceConfiguration.SharedSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }

@@ -334,7 +334,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
             _renderer.SetErrorText(
-                "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool?" + Environment.NewLine +
+                "Error: Another metrics collection session is already in progress for the target process." + Environment.NewLine +
                 "Concurrent sessions are not supported.");
             _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
         }
@@ -357,7 +357,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             string expectedRefreshInterval = (string)obj.PayloadValue(5);
             string actualRefreshInterval = (string)obj.PayloadValue(6);
 
-            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process." + Environment.NewLine +
                 "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
 
             if (expectedMaxHistograms != actualMaxHistograms)
