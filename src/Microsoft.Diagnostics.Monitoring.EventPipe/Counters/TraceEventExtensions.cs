@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
 
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, string uniqueSessionId, out ICounterPayload payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, string clientId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
-            if (uniqueSessionId != null && !inactiveSharedSessions.ContainsKey(uniqueSessionId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
+            if (clientId != null && !inactiveSharedSessions.ContainsKey(clientId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
@@ -119,7 +119,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 else if (traceEvent.EventName == "MultipleSessionsConfiguredIncorrectlyError")
                 {
-                    HandleMultipleSessionsConfiguredIncorrectlyError(traceEvent, uniqueSessionId, out payload);
+                    HandleMultipleSessionsConfiguredIncorrectlyError(traceEvent, clientId, out payload);
                 }
 
                 return payload != null;
@@ -336,13 +336,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientSessionId, out ICounterPayload payload)
+        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientId, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
-            if (payloadSessionId != clientSessionId)
+            if (payloadSessionId != clientId)
             {
                 // If our session is not the one that is running then the error is not for us,
                 // it is for some other session that came later

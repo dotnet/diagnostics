@@ -367,6 +367,36 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return GetProcessInfoFromResponse(response, nameof(GetProcessInfo));
         }
 
+        internal bool TryParseVersion(out Version version)
+        {
+            string versionString = GetProcessInfo().ClrProductVersionString;
+
+            version = null;
+            if (string.IsNullOrEmpty(versionString))
+            {
+                return false;
+            }
+
+            // The version is of the SemVer2 form: <major>.<minor>.<patch>[-<prerelease>][+<metadata>]
+            // Remove the prerelease and metadata version information before parsing.
+
+            ReadOnlySpan<char> versionSpan = versionString.ToCharArray();
+            int metadataIndex = versionSpan.IndexOf('+');
+            if (-1 == metadataIndex)
+            {
+                metadataIndex = versionSpan.Length;
+            }
+
+            ReadOnlySpan<char> noMetadataVersion = versionSpan.Slice(0, metadataIndex);
+            int prereleaseIndex = noMetadataVersion.IndexOf('-');
+            if (-1 == prereleaseIndex)
+            {
+                prereleaseIndex = metadataIndex;
+            }
+
+            return Version.TryParse(noMetadataVersion.Slice(0, prereleaseIndex).ToString(), out version);
+        }
+
         internal async Task<ProcessInfo> GetProcessInfoAsync(CancellationToken token)
         {
             // Attempt to get ProcessInfo v2

@@ -891,8 +891,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             _sessionId = Guid.NewGuid().ToString();
 
-            ProcessInfo processInfo = _diagnosticsClient.GetProcessInfo();
-            if (TryParseVersion(processInfo.ClrProductVersionString, out Version v))
+            if (_diagnosticsClient.TryParseVersion(out Version v))
             {
                 if (v.Major >= 8)
                 {
@@ -914,34 +913,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 );
 
             return eventCounterProviders.Append(metricsEventSourceProvider).ToArray();
-        }
-
-        private static bool TryParseVersion(string versionString, out Version version)
-        {
-            version = null;
-            if (string.IsNullOrEmpty(versionString))
-            {
-                return false;
-            }
-
-            // The version is of the SemVer2 form: <major>.<minor>.<patch>[-<prerelease>][+<metadata>]
-            // Remove the prerelease and metadata version information before parsing.
-
-            ReadOnlySpan<char> versionSpan = versionString;
-            int metadataIndex = versionSpan.IndexOf('+');
-            if (-1 == metadataIndex)
-            {
-                metadataIndex = versionSpan.Length;
-            }
-
-            ReadOnlySpan<char> noMetadataVersion = versionSpan[..metadataIndex];
-            int prereleaseIndex = noMetadataVersion.IndexOf('-');
-            if (-1 == prereleaseIndex)
-            {
-                prereleaseIndex = metadataIndex;
-            }
-
-            return Version.TryParse(noMetadataVersion[..prereleaseIndex], out version);
         }
 
         private bool Filter(string meterName, string instrumentName)
