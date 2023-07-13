@@ -889,14 +889,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
             }
 
+            // Shared Session Id was added in 8.0 - older runtimes will not properly support it.
             _sessionId = Guid.NewGuid().ToString();
-
-            if (_diagnosticsClient.TryParseVersion(out Version v))
+            if (_diagnosticsClient.TryParseVersion(out Version version))
             {
-                if (v.Major >= 8)
-                {
-                    _sessionId = SharedSessionId;
-                }
+                _sessionId = version.Major >= 8 ? SharedSessionId : _sessionId;
             }
 
             EventPipeProvider metricsEventSourceProvider =

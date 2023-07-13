@@ -70,18 +70,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         {
             Validate(settings);
 
-            bool useSharedSession = false;
-            if (settings.RuntimeVersion != null && settings.RuntimeVersion.Major >= 8)
-            {
-                useSharedSession = true;
-            }
-
             MetricSourceConfiguration config = new(
                 settings.CounterIntervalSeconds,
                 MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter),
                 settings.MaxHistograms,
                 settings.MaxTimeSeries,
-                useSharedSession: useSharedSession);
+                version: settings.RuntimeVersion);
             settings.ClientId = config.ClientId;
             settings.SessionId = config.SessionId;
 

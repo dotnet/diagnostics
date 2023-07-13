@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
         }
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000, bool useSharedSession = false)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000, Version version = null)
         {
             if (providers == null)
             {
@@ -69,7 +69,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
                 ClientId = Guid.NewGuid().ToString();
-                SessionId = useSharedSession ? SharedSessionId : Guid.NewGuid().ToString();
+
+                // Shared Session Id was added in 8.0 - older runtimes will not properly support it.
+                SessionId = (version != null && version.Major >= 8) ? SharedSessionId : Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,

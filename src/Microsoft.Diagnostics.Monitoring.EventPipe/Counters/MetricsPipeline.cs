@@ -40,14 +40,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            bool useSharedSession = false;
-            if (Client.TryParseVersion(out Version v))
-            {
-                if (v.Major >= 8)
-                {
-                    useSharedSession = true;
-                }
-            }
+            _ = Client.TryParseVersion(out Version version);
 
             MetricSourceConfiguration config = new(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
             {
@@ -55,7 +48,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 IntervalSeconds = counterGroup.IntervalSeconds,
                 Type = (MetricType)counterGroup.Type
             }),
-                Settings.MaxHistograms, Settings.MaxTimeSeries, useSharedSession: useSharedSession);
+                Settings.MaxHistograms, Settings.MaxTimeSeries, version: version);
 
             _clientId = config.ClientId;
             _sessionId = config.SessionId;
