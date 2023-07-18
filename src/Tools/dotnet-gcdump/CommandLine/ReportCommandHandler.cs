@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private static Task<int> ReportFromProcess(int processId, CancellationToken ct)
         {
             if (!CollectCommandHandler
-                .TryCollectMemoryGraph(ct, processId, CollectCommandHandler.DefaultTimeout, false, out Graphs.MemoryGraph mg))
+                .TryCollectMemoryGraph(ct, processId, string.Empty, CollectCommandHandler.DefaultTimeout, false, out Graphs.MemoryGraph mg))
             {
                 Console.Error.WriteLine("An error occured while collecting gcdump.");
                 return Task.FromResult(-1);

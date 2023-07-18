@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Graphs;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
 
@@ -15,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -25,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort)
         {
             if (name != null)
             {
@@ -41,6 +42,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 }
             }
 
+            if (processId != 0 && !string.IsNullOrEmpty(diagnosticPort))
+            {
+                Console.WriteLine("Can only specify either --name, --process-id or --diagnostic-port option.");
+                return -1;
+            }
+
             try
             {
                 if (processId < 0)
@@ -49,10 +56,20 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return -1;
                 }
 
-                if (processId == 0)
+                if (processId == 0 && string.IsNullOrEmpty(diagnosticPort))
                 {
-                    Console.Out.WriteLine("-p|--process-id is required");
+                    Console.Out.WriteLine("-p|--process-id or --diagnostic-port is required");
                     return -1;
+                }
+
+                if (!string.IsNullOrEmpty(diagnosticPort))
+                {
+                    IpcEndpointConfig config = IpcEndpointConfig.Parse(diagnosticPort);
+                    if (!config.IsConnectConfig)
+                    {
+                        Console.WriteLine("--diagnostic-port is only supporting connect mode.");
+                        return -1;
+                    }
                 }
 
                 output = string.IsNullOrEmpty(output)
@@ -74,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
                 Task<bool> dumpTask = Task.Run(() => {
-                    if (TryCollectMemoryGraph(ct, processId, timeout, verbose, out MemoryGraph memoryGraph))
+                    if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                         return true;
@@ -109,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, int timeout, bool verbose,
+        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose,
             out MemoryGraph memoryGraph)
         {
             DotNetHeapInfo heapInfo = new();
@@ -117,7 +134,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             memoryGraph = new MemoryGraph(50_000);
 
-            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, memoryGraph, log, timeout, heapInfo))
+            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, diagnosticPort, memoryGraph, log, timeout, heapInfo))
             {
                 return false;
             }
@@ -134,7 +151,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Handler
                 HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
                 // Options
-                ProcessIdOption(), OutputPathOption(), VerboseOption(), TimeoutOption(), NameOption()
+                ProcessIdOption(),
+                OutputPathOption(),
+                VerboseOption(),
+                TimeoutOption(),
+                NameOption(),
+                DiagnosticPortOption()
             };
 
         private static Option ProcessIdOption() =>
@@ -177,5 +199,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             {
                 Argument = new Argument<int>(name: "timeout", getDefaultValue: () => DefaultTimeout)
             };
+
+        private static Option DiagnosticPortOption() =>
+        new(
+            alias: "--diagnostic-port",
+            description: @"The path to a diagnostic port to be used.")
+        {
+            Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
+        };
     }
 }
