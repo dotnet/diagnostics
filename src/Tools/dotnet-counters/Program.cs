@@ -35,7 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration);
+            TimeSpan duration,
+            bool dsRouter);
 
         private delegate Task<int> MonitorDelegate(
             CancellationToken ct,
@@ -49,7 +50,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration);
+            TimeSpan duration,
+            bool dsRouter);
 
         private static Command MonitorCommand() =>
             new(
@@ -68,7 +70,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
                 MaxTimeSeriesOption(),
-                DurationOption()
+                DurationOption(),
+                DSRouterOption()
             };
 
         private static Command CollectCommand() =>
@@ -90,7 +93,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
                 MaxTimeSeriesOption(),
-                DurationOption()
+                DurationOption(),
+                DSRouterOption()
             };
 
         private static Option NameOption() =>
@@ -167,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Option DiagnosticPortOption() =>
             new(
-                alias: "--diagnostic-port",
+                aliases: new[] { "--dport", "--diagnostic-port" },
                 description: "The path to diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")
@@ -205,6 +209,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 description: @"When specified, will run for the given timespan and then automatically stop. Provided in the form of dd:hh:mm:ss.")
             {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
+            };
+
+        private static Option<bool> DSRouterOption() =>
+            new(
+                aliases: new[] { "--dsrouter" },
+                description: "Process identified by -p|-n|--process-id|--name is a dotnet-dsrouter process.")
+            {
+                Argument = new Argument<bool>(name: "dsrouter", getDefaultValue: () => false)
             };
 
         private static readonly string[] s_SupportedRuntimeVersions = KnownData.s_AllVersions;

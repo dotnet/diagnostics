@@ -105,6 +105,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 ILogger logger = loggerFactory.CreateLogger("dotnet-dsrouter");
 
+                logger.LogInformation($"Starting dotnet-dsrouter using pid={Process.GetCurrentProcess().Id}");
+
                 Task<int> routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
 
                 while (!linkedCancelToken.IsCancellationRequested)
@@ -127,7 +129,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         }
                     }
                 }
-                return routerTask.Result;
+
+                if (!routerTask.IsCompleted)
+                {
+                    cancelRouterTask.Cancel();
+                }
+
+                await Task.WhenAny(routerTask, Task.Delay(1000, CancellationToken.None)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
+                {
+                    return routerTask.Result;
+                }
+
+                return 0;
             }
         }
 
@@ -335,19 +349,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private static string GetDefaultIpcServerPath(ILogger logger)
         {
+            string path = string.Empty;
             int processId = Process.GetCurrentProcess().Id;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
-                if (File.Exists(path))
-                {
-                    logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
-
-                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}");
-                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
-                }
-
-                return path.Substring(PidIpcEndpoint.IpcRootPath.Length);
+                path = $"dotnet-dsrouter-{processId}";
             }
             else
             {
@@ -358,19 +365,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 #endif
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
-
-                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
-                if (Directory.GetFiles(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket").Length != 0)
-                {
-                    logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
-
-                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
-                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
-                }
-
-                return path;
+                path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
             }
 
+            logger?.LogDebug($"Using default IPC server path, {path}.");
+            logger?.LogDebug($"Attach to default IPC server using -p {processId} and --dsrouter diagnostic tooling arguments.");
+
+            return path;
         }
 
         private static TcpClientRouterFactory.CreateInstanceDelegate ChooseTcpClientRouterFactory(string forwardPort, ILogger logger)

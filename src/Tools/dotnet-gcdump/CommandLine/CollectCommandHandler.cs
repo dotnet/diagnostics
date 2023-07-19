@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, bool dsRouter);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -25,53 +25,48 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="console"></param>
         /// <param name="processId">The process to collect the gcdump from.</param>
         /// <param name="output">The output path for the collected gcdump.</param>
+        /// <param name="timeout">The timeout for the collected gcdump.</param>
+        /// <param name="verbose">Enable verbose logging.</param>
+        /// <param name="name">The process name to collect the gcdump from.</param>
+        /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
+        /// <param name="dsRouter">Process identified by processId is a dotnet-dsrouter process.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, bool dsRouter)
         {
-            if (name != null)
+            if (!CommandUtils.ValidateArgumentsForAttach (processId, name, diagnosticPort, out int resolvedProcessId))
             {
-                if (processId != 0)
-                {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return -1;
-                }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
-                {
-                    return -1;
-                }
-            }
-
-            if (processId != 0 && !string.IsNullOrEmpty(diagnosticPort))
-            {
-                Console.WriteLine("Can only specify either --name, --process-id or --diagnostic-port option.");
                 return -1;
             }
 
-            try
+            processId = resolvedProcessId;
+
+            if (processId > 0 && dsRouter)
             {
-                if (processId < 0)
-                {
-                    Console.Out.WriteLine($"The PID cannot be negative: {processId}");
-                    return -1;
-                }
+                diagnosticPort = PidIpcEndpoint.GetDefaultAddressForProcessId(processId, dsRouter) + ",connect";
+            }
 
-                if (processId == 0 && string.IsNullOrEmpty(diagnosticPort))
-                {
-                    Console.Out.WriteLine("-p|--process-id or --diagnostic-port is required");
-                    return -1;
-                }
-
-                if (!string.IsNullOrEmpty(diagnosticPort))
+            if (!string.IsNullOrEmpty(diagnosticPort))
+            {
+                try
                 {
                     IpcEndpointConfig config = IpcEndpointConfig.Parse(diagnosticPort);
                     if (!config.IsConnectConfig)
                     {
-                        Console.WriteLine("--diagnostic-port is only supporting connect mode.");
+                        Console.Error.WriteLine("--diagnostic-port is only supporting connect mode.");
                         return -1;
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"--diagnostic-port argument error: {ex.Message}");
+                    return -1;
+                }
 
+                processId = 0;
+            }
+
+            try
+            {
                 output = string.IsNullOrEmpty(output)
                     ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
@@ -126,8 +121,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose,
-            out MemoryGraph memoryGraph)
+        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose, out MemoryGraph memoryGraph)
         {
             DotNetHeapInfo heapInfo = new();
             TextWriter log = verbose ? Console.Out : TextWriter.Null;
@@ -156,10 +150,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 VerboseOption(),
                 TimeoutOption(),
                 NameOption(),
-                DiagnosticPortOption()
+                DiagnosticPortOption(),
+                DSRouterOption()
             };
 
-        private static Option ProcessIdOption() =>
+        private static Option<int> ProcessIdOption() =>
             new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to collect the gcdump from.")
@@ -167,7 +162,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<int>(name: "pid"),
             };
 
-        private static Option NameOption() =>
+        private static Option<string> NameOption() =>
             new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to collect the gcdump from.")
@@ -175,7 +170,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<string>(name: "name")
             };
 
-        private static Option OutputPathOption() =>
+        private static Option<string> OutputPathOption() =>
             new(
                 aliases: new[] { "-o", "--output" },
                 description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
@@ -183,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<string>(name: "gcdump-file-path", getDefaultValue: () => string.Empty)
             };
 
-        private static Option VerboseOption() =>
+        private static Option<bool> VerboseOption() =>
             new(
                 aliases: new[] { "-v", "--verbose" },
                 description: "Output the log while collecting the gcdump.")
@@ -192,7 +187,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             };
 
         public static int DefaultTimeout = 30;
-        private static Option TimeoutOption() =>
+        private static Option<int> TimeoutOption() =>
             new(
                 aliases: new[] { "-t", "--timeout" },
                 description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
@@ -200,12 +195,20 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Argument = new Argument<int>(name: "timeout", getDefaultValue: () => DefaultTimeout)
             };
 
-        private static Option DiagnosticPortOption() =>
+        private static Option<string> DiagnosticPortOption() =>
         new(
-            alias: "--diagnostic-port",
-            description: @"The path to a diagnostic port to be used.")
+            aliases: new[] { "--dport", "--diagnostic-port" },
+            description: "The path to a diagnostic port to collect the dump from.")
         {
-            Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
+            Argument = new Argument<string>(name: "diagnostic-port", getDefaultValue: () => string.Empty)
+        };
+
+        private static Option<bool> DSRouterOption() =>
+        new(
+            aliases: new[] { "--dsrouter" },
+            description: "Process identified by -p|-n|--process-id|--name is a dotnet-dsrouter process.")
+        {
+            Argument = new Argument<bool>(name: "dsrouter", getDefaultValue: () => false)
         };
     }
 }

@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime, bool dsRouter);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
@@ -52,8 +52,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="diagnosticPort">Path to the diagnostic port to be used.</param>
         /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <param name="resumeRuntime">Resume runtime once session has been initialized.</param>
+        /// <param name="dsRouter">Process identified by processId is a dotnet-dsrouter process.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, bool dsRouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -105,6 +106,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
                 {
                     return (int)ReturnCode.ArgumentError;
+                }
+
+                if (processId > 0 && dsRouter)
+                {
+                    diagnosticPort = PidIpcEndpoint.GetDefaultAddressForProcessId(processId, dsRouter) + ",connect";
+                    processId = -1;
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -455,7 +462,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.NameOption(),
                 DiagnosticPortOption(),
                 ShowChildIOOption(),
-                ResumeRuntimeOption()
+                ResumeRuntimeOption(),
+                DSRouterOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -526,7 +534,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
         private static Option DiagnosticPortOption() =>
             new(
-                alias: "--diagnostic-port",
+                aliases: new[] { "--dport", "--diagnostic-port" },
                 description: @"The path to a diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
@@ -545,6 +553,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
                 Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
+            };
+
+        private static Option<bool> DSRouterOption() =>
+            new(
+                aliases: new[] { "--dsrouter" },
+                description: "Process identified by -p|-n|--process-id|--name is a dotnet-dsrouter process.")
+            {
+                Argument = new Argument<bool>(name: "dsrouter", getDefaultValue: () => false)
             };
     }
 }
