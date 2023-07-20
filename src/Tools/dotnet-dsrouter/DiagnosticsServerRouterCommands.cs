@@ -354,7 +354,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                path = $"dotnet-dsrouter-{processId}";
+                path = $"dotnet-diagnostic-dsrouter-{processId}";
             }
             else
             {
@@ -365,11 +365,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 #endif
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
-                path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
+                path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
             }
 
             logger?.LogDebug($"Using default IPC server path, {path}.");
-            logger?.LogDebug($"Attach to default IPC server using -p {processId} and --dsrouter diagnostic tooling arguments.");
+            logger?.LogDebug($"Attach to default dotnet-dsrouter IPC server using -p {processId} diagnostic tooling argument.");
 
             return path;
         }

@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class ReportCommandHandler
     {
-        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat, string diagnosticPort = null, bool dsRouter = false);
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat, string diagnosticPort = null);
 
         public static Command ReportCommand() =>
             new(
@@ -30,10 +30,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 ProcessIdOption(),
                 ReportTypeOption(),
                 DiagnosticPortOption(),
-                DSRouterOption()
             };
 
-        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat, string diagnosticPort = null, bool dsRouter = false)
+        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat, string diagnosticPort = null)
         {
             //
             // Validation
@@ -72,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             return (source, type) switch
             {
-                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, dsRouter, ct),
+                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, ct),
                 (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(gcdump_filename),
                 _ => HandleUnknownParam()
             };
@@ -84,7 +83,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return Task.FromResult(-1);
         }
 
-        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, bool dsRouter, CancellationToken ct)
+        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, CancellationToken ct)
         {
             if (!CommandUtils.ValidateArgumentsForAttach(processId, string.Empty, diagnosticPort, out int resolvedProcessId))
             {
@@ -92,11 +91,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
 
             processId = resolvedProcessId;
-
-            if (processId > 0 && dsRouter)
-            {
-                diagnosticPort = PidIpcEndpoint.GetDefaultAddressForProcessId(processId, dsRouter) + ",connect";
-            }
 
             if (!string.IsNullOrEmpty(diagnosticPort))
             {
@@ -180,14 +174,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 description: "The path to a diagnostic port to collect the dump from.")
             {
                 Argument = new Argument<string>(name: "diagnostic-port", getDefaultValue: () => string.Empty)
-            };
-
-        private static Option<bool> DSRouterOption() =>
-            new(
-                aliases: new[] { "--dsrouter" },
-                description: "Process identified by -p|--process-id is a dotnet-dsrouter process.")
-            {
-                Argument = new Argument<bool>(name: "dsrouter", getDefaultValue: () => false)
             };
 
         private enum ReportSource

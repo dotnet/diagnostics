@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, bool dsRouter);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort);
 
         /// <summary>
         /// Collects a gcdump from a currently running process.
@@ -29,9 +29,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="verbose">Enable verbose logging.</param>
         /// <param name="name">The process name to collect the gcdump from.</param>
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
-        /// <param name="dsRouter">Process identified by processId is a dotnet-dsrouter process.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, bool dsRouter)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort)
         {
             if (!CommandUtils.ValidateArgumentsForAttach (processId, name, diagnosticPort, out int resolvedProcessId))
             {
@@ -39,11 +38,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
 
             processId = resolvedProcessId;
-
-            if (processId > 0 && dsRouter)
-            {
-                diagnosticPort = PidIpcEndpoint.GetDefaultAddressForProcessId(processId, dsRouter) + ",connect";
-            }
 
             if (!string.IsNullOrEmpty(diagnosticPort))
             {
@@ -150,8 +144,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 VerboseOption(),
                 TimeoutOption(),
                 NameOption(),
-                DiagnosticPortOption(),
-                DSRouterOption()
+                DiagnosticPortOption()
             };
 
         private static Option<int> ProcessIdOption() =>
@@ -201,14 +194,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             description: "The path to a diagnostic port to collect the dump from.")
         {
             Argument = new Argument<string>(name: "diagnostic-port", getDefaultValue: () => string.Empty)
-        };
-
-        private static Option<bool> DSRouterOption() =>
-        new(
-            aliases: new[] { "--dsrouter" },
-            description: "Process identified by -p|-n|--process-id|--name is a dotnet-dsrouter process.")
-        {
-            Argument = new Argument<bool>(name: "dsrouter", getDefaultValue: () => false)
         };
     }
 }

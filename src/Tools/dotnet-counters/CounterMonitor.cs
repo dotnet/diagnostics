@@ -503,8 +503,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration,
-            bool dsRouter)
+            TimeSpan duration)
         {
             try
             {
@@ -519,12 +518,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return (int)ReturnCode.ArgumentError;
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
-
-                if (_processId > 0 && dsRouter)
-                {
-                    diagnosticPort = PidIpcEndpoint.GetDefaultAddressForProcessId(_processId, dsRouter) + ",connect";
-                    _processId = -1;
-                }
 
                 DiagnosticsClientBuilder builder = new("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
@@ -586,8 +579,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration,
-            bool dsRouter)
+            TimeSpan duration)
         {
             try
             {
@@ -602,12 +594,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     return (int)ReturnCode.ArgumentError;
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
-
-                if (_processId > 0 && dsRouter)
-                {
-                    diagnosticPort = PidIpcEndpoint.GetDefaultAddressForProcessId(_processId, dsRouter) + ",connect";
-                    _processId = -1;
-                }
 
                 DiagnosticsClientBuilder builder = new("dotnet-counters", 10);
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
