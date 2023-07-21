@@ -2,14 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 // ==++==
-// 
- 
-// 
+//
+
+//
 // ==--==
 
 #include "strike.h"
 #include "util.h"
-#include <stdio.h>      
+#include <stdio.h>
 #include <ctype.h>
 
 #ifndef STRESS_LOG
@@ -24,11 +24,11 @@ void GcHistAddLog(LPCSTR msg, StressMsg* stressMsg);
 
 
 /*********************************************************************************/
-static const WCHAR* getTime(const FILETIME* time, __out_ecount (buffLen) WCHAR* buff, int buffLen) 
+static const WCHAR* getTime(const FILETIME* time, __out_ecount (buffLen) WCHAR* buff, int buffLen)
 {
     SYSTEMTIME systemTime;
     static const WCHAR badTime[] = W("BAD TIME");
-    
+
     if (!FileTimeToSystemTime(time, &systemTime))
         return badTime;
 
@@ -47,24 +47,24 @@ static const WCHAR* getTime(const FILETIME* time, __out_ecount (buffLen) WCHAR* 
     if (ret == 0)
         return badTime;
 #endif // FEATURE_PAL else
-    
+
     return buff;
 }
 
 /*********************************************************************************/
-static inline __int64& toInt64(FILETIME& t) 
+static inline __int64& toInt64(FILETIME& t)
 {
     return *((__int64 *) &t);
 }
 
 /*********************************************************************************/
-ThreadStressLog* ThreadStressLog::FindLatestThreadLog() const 
+ThreadStressLog* ThreadStressLog::FindLatestThreadLog() const
 {
     const ThreadStressLog* latestLog = 0;
-    for (const ThreadStressLog* ptr = this; ptr != NULL; ptr = ptr->next) 
+    for (const ThreadStressLog* ptr = this; ptr != NULL; ptr = ptr->next)
     {
         if (ptr->readPtr != NULL)
-            if (latestLog == 0 || ptr->readPtr->timeStamp > latestLog->readPtr->timeStamp)
+            if (latestLog == 0 || ptr->readPtr->GetTimeStamp() > latestLog->readPtr->GetTimeStamp())
                 latestLog = ptr;
     }
     return const_cast<ThreadStressLog*>(latestLog);
@@ -84,7 +84,7 @@ const char *getFacilityName(DWORD_PTR lf)
     {
         return "`ALL`";
     }
-    else 
+    else
     {
         buff[1] = '\0';
         for ( int i = 0; i < 32; ++i )
@@ -117,11 +117,11 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
     const SIZE_T capacity_buff = 2048;
     LPWSTR buff = (LPWSTR)alloca(capacity_buff * sizeof(WCHAR));
     static char formatCopy[256];
-    
+
     int iArgCount = 0;
-    
+
     strcpy_s(formatCopy, ARRAY_SIZE(formatCopy), format);
-    for(;;) 
+    for(;;)
     {
         char c = *ptr++;
         if (c == 0)
@@ -130,24 +130,24 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
             ptr[-1] = '}';
         else if (c == '}')
             ptr[-1] = '{';
-        else if (c == '%') 
+        else if (c == '%')
         {
             argsPtr++;          // This format will consume one of the args
-            if (*ptr == '%') 
+            if (*ptr == '%')
             {
                 ptr++;          // skip the whole %%
-                --argsPtr;      // except for a %% 
+                --argsPtr;      // except for a %%
             }
-            else if (*ptr == 'p') 
+            else if (*ptr == 'p')
             {   // It is a %p
                 ptr++;
-                if (isalpha(*ptr)) 
+                if (isalpha(*ptr))
                 {   // It is a special %p formatter
                         // Print the string up to that point
                     c = *ptr;
                     *ptr = 0;       // Terminate the string temporarily
                     fprintf(file, format, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-                    *ptr = c;       // Put it back  
+                    *ptr = c;       // Put it back
 
                         // move the argument pointers past the part the was printed
                     format = ptr + 1;
@@ -155,7 +155,7 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                     iArgCount = -1;
                     DWORD_PTR arg = DWORD_PTR(argsPtr[-1]);
 
-                    switch (c) 
+                    switch (c)
                     {
                         case 'M':   // format as a method Desc
                             if (g_bDacBroken)
@@ -164,12 +164,12 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                             }
                             else
                             {
-                                if (!IsMethodDesc(arg)) 
+                                if (!IsMethodDesc(arg))
                                 {
-                                    if (arg != 0) 
+                                    if (arg != 0)
                                         fprintf(file, " (BAD Method)");
                                 }
-                                else 
+                                else
                                 {
                                     DacpMethodDescData MethodDescData;
                                     MethodDescData.Request(g_sos,(CLRDATA_ADDRESS)arg);
@@ -194,16 +194,16 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                             }
                             else
                             {
-                                if (arg & 3) 
+                                if (arg & 3)
                                 {
-                                    arg &= ~3;      // GC steals the lower bits for its own use during GC.  
+                                    arg &= ~3;      // GC steals the lower bits for its own use during GC.
                                     fprintf(file, " Low Bit(s) Set");
                                 }
                                 if (!IsMethodTable(arg))
                                 {
                                     fprintf(file, " (BAD MethodTable)");
                                 }
-                                else 
+                                else
                                 {
                                     NameForMT_s (arg, g_mdName, mdNameLen);
                                     fprintf(file, " (%S)", g_mdName);
@@ -211,14 +211,14 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                             }
                             break;
 
-                        case 'V': 
-                            {   // format as a C vtable pointer 
+                        case 'V':
+                            {   // format as a C vtable pointer
                             char Symbol[1024];
                             ULONG64 Displacement;
                                 HRESULT hr = g_ExtSymbols->GetNameByOffset(TO_CDADDR(arg), Symbol, 1024, NULL, &Displacement);
-                            if (SUCCEEDED(hr) && Symbol[0] != '\0' && Displacement == 0) 
+                            if (SUCCEEDED(hr) && Symbol[0] != '\0' && Displacement == 0)
                                 fprintf(file, " (%s)", Symbol);
-                            else 
+                            else
                                 fprintf(file, " (Unknown VTable)");
                             }
                             break;
@@ -227,7 +227,7 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                                 char Symbol[1024];
                                 ULONG64 Displacement;
                                 HRESULT hr = g_ExtSymbols->GetNameByOffset (TO_CDADDR(arg), Symbol, 1024, NULL, &Displacement);
-                                if (SUCCEEDED (hr) && Symbol[0] != '\0') 
+                                if (SUCCEEDED (hr) && Symbol[0] != '\0')
                                 {
                                     fprintf (file, " (%s", Symbol);
                                     if (Displacement)
@@ -236,16 +236,16 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                                     }
                                     fprintf (file, ")");
                                 }
-                                else 
-                                    fprintf (file, " (Unknown function)");    
+                                else
+                                    fprintf (file, " (Unknown function)");
                             }
                             break;
                         default:
-                            format = ptr;   // Just print the character. 
+                            format = ptr;   // Just print the character.
                     }
                 }
             }
-            else if (*ptr == 's' || (*ptr == 'h' && *(ptr+1) == 's' && ++ptr)) 
+            else if (*ptr == 's' || (*ptr == 'h' && *(ptr+1) == 's' && ++ptr))
             {
                 HRESULT     hr;
 
@@ -253,16 +253,16 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                 // since we may have more than one %s in the format
                 ULONG cbStrBuf = 256;
                 char* strBuf = (char *)_alloca(cbStrBuf);
-                
+
                 hr = memCallBack->ReadVirtual(TO_CDADDR((char* )args[iArgCount]), strBuf, cbStrBuf, 0);
-                if (hr != S_OK) 
+                if (hr != S_OK)
                 {
-                    strcpy_s(strBuf, cbStrBuf, "(#Could not read address of string#)");           
+                    strcpy_s(strBuf, cbStrBuf, "(#Could not read address of string#)");
                 }
 
-                args[iArgCount] = strBuf;                    
+                args[iArgCount] = strBuf;
             }
-            else if (*ptr == 'S' || (*ptr == 'l' && *(ptr+1) == 's' && ++ptr)) 
+            else if (*ptr == 'S' || (*ptr == 'l' && *(ptr+1) == 's' && ++ptr))
             {
                 HRESULT     hr;
 
@@ -270,7 +270,7 @@ void formatOutput(struct IDebugDataSpaces* memCallBack, ___in FILE* file, __inou
                 // since we may have more than one %s in the format
                 ULONG cbWstrBuf = 256 * sizeof(WCHAR);
                 WCHAR* wstrBuf = (WCHAR *)_alloca(cbWstrBuf);
-                
+
                 hr = memCallBack->ReadVirtual(TO_CDADDR((char* )args[iArgCount]), wstrBuf, cbWstrBuf, 0);
                 if (hr != S_OK)
                 {
@@ -291,7 +291,7 @@ void __cdecl
 vDoOut(BOOL bToConsole, FILE* file, PCSTR Format, ...)
 {
     va_list Args;
-    
+
     va_start(Args, Format);
 
     if (bToConsole)
@@ -306,7 +306,7 @@ vDoOut(BOOL bToConsole, FILE* file, PCSTR Format, ...)
     va_end(Args);
 }
 
-static TADDR GetFormatAddr(StressLog& inProcLog, uint32_t formatOffset, BOOL bHasModuleTable)
+static TADDR GetFormatAddr(StressLog& inProcLog, uint64_t formatOffset, BOOL bHasModuleTable)
 {
     // do we have a module table, and does it look valid?
     if (bHasModuleTable && inProcLog.moduleOffset == (size_t)inProcLog.modules[0].baseAddress &&
@@ -318,34 +318,64 @@ static TADDR GetFormatAddr(StressLog& inProcLog, uint32_t formatOffset, BOOL bHa
         {
             if (inProcLog.modules[moduleIndex].baseAddress == nullptr)
                 break;
-            size_t relativeOffset = formatOffset - moduleOffset;
+            uint64_t relativeOffset = formatOffset - moduleOffset;
             if (relativeOffset < inProcLog.modules[moduleIndex].size)
             {
-                return relativeOffset + TO_TADDR(inProcLog.modules[moduleIndex].baseAddress);
+                return ((size_t)relativeOffset) + TO_TADDR(inProcLog.modules[moduleIndex].baseAddress);
             }
             moduleOffset += inProcLog.modules[moduleIndex].size;
         }
     }
     // not found or invalid module table
     // just assume it's an old style stress log
-    return formatOffset + TO_TADDR(inProcLog.moduleOffset);
+    return ((size_t)formatOffset) + TO_TADDR(inProcLog.moduleOffset);
+}
+
+
+StressMsg* GetStressMsgInLatestVersion(StressMsg* rawMsg, int version)
+{
+    if (version >= 4)
+    {
+        return rawMsg;
+    }
+
+    struct StressMsgV3
+    {
+        uint32_t numberOfArgsLow  : 3;                   // at most 7 arguments here
+        uint32_t formatOffset  : 26;                     // low bits offset of format string in modules
+        uint32_t numberOfArgsHigh : 3;                   // extend number of args in a backward compat way
+        uint32_t facility;                               // facility used to log the entry
+        uint64_t timeStamp;                              // time when mssg was logged
+    };
+    static_assert(sizeof(StressMsg) == sizeof(StressMsgV3), "StressMsgV3 should be the same size as the current StressMsg struct");
+
+    StressMsgV3* msgV3 = reinterpret_cast<StressMsgV3*>(rawMsg);
+    uint32_t numberOfArgs = msgV3->numberOfArgsLow | (msgV3->numberOfArgsHigh << 3);
+    uint64_t formatOffset = msgV3->formatOffset;
+    uint32_t facility = msgV3->facility;
+    uint64_t timeStamp = msgV3->timeStamp;
+    rawMsg->SetNumberOfArgs(numberOfArgs);
+    rawMsg->SetFormatOffset(formatOffset);
+    rawMsg->SetFacility(facility);
+    rawMsg->SetTimeStamp(timeStamp);
+    return rawMsg;
 }
 
 /*********************************************************************************/
-HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugDataSpaces* memCallBack) 
+HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugDataSpaces* memCallBack)
 {
     ULONG64 g_hThisInst;
     BOOL    bDoGcHist = (fileName == NULL);
     FILE*   file = NULL;
 
-    // Fetch the circular buffer bookkeeping data 
+    // Fetch the circular buffer bookkeeping data
     StressLog inProcLog;
     HRESULT hr = memCallBack->ReadVirtual(UL64_TO_CDA(outProcLog), &inProcLog, sizeof(StressLog), 0);
-    if (hr != S_OK) 
+    if (hr != S_OK)
     {
         return hr;
     }
-    if (inProcLog.logs.Load() == NULL || inProcLog.moduleOffset == 0) 
+    if (inProcLog.logs.Load() == NULL || inProcLog.moduleOffset == 0)
     {
         ExtOut ( "----- No thread logs in the image: The stress log was probably not initialized correctly. -----\n");
         return S_FALSE;
@@ -402,7 +432,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
                 // if this is the first time through, inProcPtr->chunkListHead may still contain
                 // the out-of-process value for the chunk pointer.  NULL it to avoid AVs
                 if (TO_CDADDR(inProcPtr->chunkListHead) == outProcListHead)
-                   inProcPtr->chunkListHead = NULL; 
+                   inProcPtr->chunkListHead = NULL;
                 delete inProcPtr;
                 goto FREE_MEM;
             }
@@ -413,7 +443,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
                 inProcPtr->curWriteChunk = inProcChunkPtr;
                 curPtrInitialized = TRUE;
             }
-            
+
             outProcChunkPtr = TO_CDADDR(inProcChunkPtr->next);
             *chunksPtr = inProcChunkPtr;
             chunksPtr = &inProcChunkPtr->next;
@@ -425,9 +455,9 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
                 inProcChunkPtr->next = inProcPtr->chunkListHead;
                 inProcPtr->chunkListHead->prev = inProcChunkPtr;
                 inProcPtr->chunkListTail = inProcChunkPtr;
-            }           
+            }
         } while (outProcChunkPtr != outProcListHead);
-        
+
         if (!curPtrInitialized)
         {
             delete inProcPtr;
@@ -436,9 +466,9 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
 
         // TODO: fix on 64 bit
         inProcPtr->Activate ();
-        if (inProcPtr->readPtr->timeStamp > lastTimeStamp)
+        if (inProcPtr->readPtr->GetTimeStamp() > lastTimeStamp)
         {
-            lastTimeStamp = inProcPtr->readPtr->timeStamp;
+            lastTimeStamp = inProcPtr->readPtr->GetTimeStamp();
         }
 
         outProcPtr = TO_CDADDR(inProcPtr->next);
@@ -495,33 +525,33 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
     {
         ThreadStressLog* latestLog = logs->FindLatestThreadLog();
 
-        if (IsInterrupt()) 
+        if (IsInterrupt())
         {
             vDoOut(bDoGcHist, file, "----- Interrupted by user -----\n");
             break;
         }
 
-        if (latestLog == 0) 
+        if (latestLog == 0)
         {
             break;
         }
 
-        StressMsg* latestMsg = latestLog->readPtr;
-        if (latestMsg->formatOffset != 0 && !latestLog->CompletedDump()) 
+        StressMsg* latestMsg = GetStressMsgInLatestVersion(latestLog->readPtr, version);
+        if (latestMsg->GetFormatOffset() != 0 && !latestLog->CompletedDump())
         {
-            TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->formatOffset, bHasModuleTable);
+            TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->GetFormatOffset(), bHasModuleTable);
             hr = memCallBack->ReadVirtual(TO_CDADDR(taFmt), format, 256, 0);
-            if (hr != S_OK) 
+            if (hr != S_OK)
                 strcpy_s(format, ARRAY_SIZE(format), "Could not read address of format string");
 
-            double deltaTime = ((double) (latestMsg->timeStamp - inProcLog.startTimeStamp)) / inProcLog.tickFrequency;
+            double deltaTime = ((double) (latestMsg->GetTimeStamp() - inProcLog.startTimeStamp)) / inProcLog.tickFrequency;
             if (bDoGcHist)
             {
                 if (strcmp(format, ThreadStressLog::TaskSwitchMsg()) == 0)
                 {
                     latestLog->threadId = (unsigned)(size_t)latestMsg->args[0];
                 }
-                GcHistAddLog(format, latestMsg);                                
+                GcHistAddLog(format, latestMsg);
             }
             else
             {
@@ -530,16 +560,16 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
                     fprintf (file, "Task was switched from %x\n", (unsigned)(size_t)latestMsg->args[0]);
                     latestLog->threadId = (unsigned)(size_t)latestMsg->args[0];
                 }
-                else 
+                else
                 {
                     args = latestMsg->args;
-                    formatOutput(memCallBack, file, format, (unsigned)latestLog->threadId, deltaTime, latestMsg->facility, args);
+                    formatOutput(memCallBack, file, format, (unsigned)latestLog->threadId, deltaTime, latestMsg->GetFacility(), args);
                 }
             }
             msgCtr++;
         }
 
-        latestLog->readPtr = latestLog->AdvanceRead();
+        latestLog->readPtr = latestLog->AdvanceRead(latestMsg->GetNumberOfArgs());
         if (latestLog->CompletedDump())
         {
             latestLog->readPtr = NULL;
@@ -549,11 +579,11 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
             }
         }
 
-        if (msgCtr % 64 == 0) 
+        if (msgCtr % 64 == 0)
         {
             ExtOut(".");        // to indicate progress
-            if (msgCtr % (64*64) == 0) 
-                ExtOut("\n");   
+            if (msgCtr % (64*64) == 0)
+                ExtOut("\n");
         }
     }
     ExtOut("\n");

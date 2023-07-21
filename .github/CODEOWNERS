@@ -7,3 +7,5 @@
 # have proper ownership.
 /src/                       @dotnet/dotnet-diag
 /documentation/             @dotnet/dotnet-diag
+/eng/SourceBuild.props      @dotnet/source-build-internal
+/eng/SourceBuildPrebuiltBaseline.xml  @dotnet/source-build-internal
