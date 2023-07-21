@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
         {
-            _ = Client.TryParseVersion(out Version version);
+            _ = Client.GetProcessInfo().TryGetProcessClrVersion(out Version version);
 
             MetricSourceConfiguration config = new(Settings.CounterIntervalSeconds, Settings.CounterGroups.Select((EventPipeCounterGroup counterGroup) => new MetricEventPipeProvider
             {
@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 IntervalSeconds = counterGroup.IntervalSeconds,
                 Type = (MetricType)counterGroup.Type
             }),
-                Settings.MaxHistograms, Settings.MaxTimeSeries, version: version);
+                Settings.MaxHistograms, Settings.MaxTimeSeries, runtimeVersion: version);
 
             _clientId = config.ClientId;
             _sessionId = config.SessionId;

@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
                 MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter),
                 settings.MaxHistograms,
                 settings.MaxTimeSeries,
-                version: settings.RuntimeVersion);
+                runtimeVersion: settings.RuntimeVersion);
             settings.ClientId = config.ClientId;
             settings.SessionId = config.SessionId;
 

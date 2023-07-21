@@ -80,6 +80,34 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return processInfo;
         }
 
+        internal bool TryGetProcessClrVersion(out Version version)
+        {
+            version = null;
+            if (string.IsNullOrEmpty(ClrProductVersionString))
+            {
+                return false;
+            }
+
+            // The version is of the SemVer2 form: <major>.<minor>.<patch>[-<prerelease>][+<metadata>]
+            // Remove the prerelease and metadata version information before parsing.
+
+            ReadOnlySpan<char> versionSpan = ClrProductVersionString.AsSpan();
+            int metadataIndex = versionSpan.IndexOf('+');
+            if (-1 == metadataIndex)
+            {
+                metadataIndex = versionSpan.Length;
+            }
+
+            ReadOnlySpan<char> noMetadataVersion = versionSpan.Slice(0, metadataIndex);
+            int prereleaseIndex = noMetadataVersion.IndexOf('-');
+            if (-1 == prereleaseIndex)
+            {
+                prereleaseIndex = metadataIndex;
+            }
+
+            return Version.TryParse(noMetadataVersion.Slice(0, prereleaseIndex).ToString(), out version);
+        }
+
         public ulong ProcessId { get; private set; }
         public Guid RuntimeInstanceCookie { get; private set; }
         public string CommandLine { get; private set; }

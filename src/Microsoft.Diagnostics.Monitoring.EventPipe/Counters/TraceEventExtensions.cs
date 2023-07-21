@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static class TraceEventExtensions
     {
-        private static IDictionary<string, bool> inactiveSharedSessions = new Dictionary<string, bool>();
+        private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
 
         public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, string clientId, out ICounterPayload payload)
         {
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
-            if (clientId != null && !inactiveSharedSessions.ContainsKey(clientId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
+            if (clientId != null && !inactiveSharedSessions.Contains(clientId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
@@ -336,9 +336,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientId, out ICounterPayload payload)
+        internal static bool TryCreateSharedSessionConfiguredIncorrectlyMessage(TraceEvent obj, string clientId, out string message)
         {
-            payload = null;
+            message = string.Empty;
 
             string payloadSessionId = (string)obj.PayloadValue(0);
 
@@ -346,7 +346,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // If our session is not the one that is running then the error is not for us,
                 // it is for some other session that came later
-                return;
+                return false;
             }
 
             string expectedMaxHistograms = (string)obj.PayloadValue(1);
@@ -372,9 +372,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 errorMessage.Append($"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine);
             }
 
-            payload = new ErrorPayload(errorMessage.ToString(), obj.TimeStamp);
+            message = errorMessage.ToString();
 
-            inactiveSharedSessions.Add(payloadSessionId, true);
+            return true;
+        }
+
+        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            if (TryCreateSharedSessionConfiguredIncorrectlyMessage(obj, clientId, out string message))
+            {
+                payload = new ErrorPayload(message.ToString(), obj.TimeStamp);
+
+                inactiveSharedSessions.Add(clientId);
+            }
         }
 
         private static void HandleObservableInstrumentCallbackError(TraceEvent obj, string sessionId, out ICounterPayload payload)

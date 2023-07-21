@@ -14,6 +14,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Tracing;
@@ -25,7 +26,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
     {
         private const int BufferDelaySecs = 1;
         private const string SharedSessionId = "SHARED"; // This should be identical to the one used by dotnet-monitor in MetricSourceConfiguration.cs
-        private static HashSet<string> inactiveSharedSessions = new();
+        private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
 
         private string _sessionId;
         private int _processId;
@@ -341,41 +342,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj)
         {
-            string payloadSessionId = (string)obj.PayloadValue(0);
-
-            if (payloadSessionId != _clientId)
+            if (TraceEventExtensions.TryCreateSharedSessionConfiguredIncorrectlyMessage(obj, _clientId, out string message))
             {
-                // If our session is not the one that is running then the error is not for us,
-                // it is for some other session that came later
-                return;
+                _renderer.SetErrorText(message);
+                inactiveSharedSessions.Add(_clientId);
+                _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
             }
-
-            string expectedMaxHistograms = (string)obj.PayloadValue(1);
-            string actualMaxHistograms = (string)obj.PayloadValue(2);
-            string expectedMaxTimeSeries = (string)obj.PayloadValue(3);
-            string actualMaxTimeSeries = (string)obj.PayloadValue(4);
-            string expectedRefreshInterval = (string)obj.PayloadValue(5);
-            string actualRefreshInterval = (string)obj.PayloadValue(6);
-
-            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process." + Environment.NewLine +
-                "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
-
-            if (expectedMaxHistograms != actualMaxHistograms)
-            {
-                errorMessage.Append($"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine);
-            }
-            if (expectedMaxTimeSeries != actualMaxTimeSeries)
-            {
-                errorMessage.Append($"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine);
-            }
-            if (expectedRefreshInterval != actualRefreshInterval)
-            {
-                errorMessage.Append($"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine);
-            }
-
-            _renderer.SetErrorText(errorMessage.ToString());
-            inactiveSharedSessions.Add(payloadSessionId);
-            _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
         }
 
         private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
@@ -891,7 +863,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             // Shared Session Id was added in 8.0 - older runtimes will not properly support it.
             _sessionId = Guid.NewGuid().ToString();
-            if (_diagnosticsClient.TryParseVersion(out Version version))
+            if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
             {
                 _sessionId = version.Major >= 8 ? SharedSessionId : _sessionId;
             }
