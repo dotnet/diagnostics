@@ -47,9 +47,9 @@
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>3c7027a58ba1b6e3a8861ae628c68293b5cb5f2b</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23368.2">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23371.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>529fbc2aad419d0c1551d6685cc68be33e62a996</Sha>
+      <Sha>c418ea641dfded915409e09387985fba7bccc781</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.SourceLink.GitHub" Version="8.0.0-beta.23361.2" CoherentParentDependency="Microsoft.DotNet.Arcade.Sdk">
