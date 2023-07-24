@@ -35,7 +35,7 @@
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
     <SingleFileRuntime70Version>$(MicrosoftNETCoreApp70Version)</SingleFileRuntime70Version>
-    <SingleFileRuntimeLatestVersion>8.0.0-preview.7.23359.1</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntimeLatestVersion>8.0.0-rc.1.23371.3</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
