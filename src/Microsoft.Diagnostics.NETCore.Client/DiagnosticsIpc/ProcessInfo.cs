@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             return Version.TryParse(noMetadataVersion.Slice(0, prereleaseIndex).ToString(), out version);
         }
-      
+
         private static ProcessInfo ParseCommon2(byte[] payload, ref int index)
         {
             ProcessInfo processInfo = ParseCommon(payload, ref index);
