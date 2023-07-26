@@ -262,25 +262,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private string GetDefaultAddress()
         {
-            try
-            {
-                Process process = Process.GetProcessById(_pid);
-            }
-            catch (ArgumentException)
-            {
-                throw new ServerNotAvailableException($"Process {_pid} is not running.");
-            }
-            catch (InvalidOperationException)
-            {
-                throw new ServerNotAvailableException($"Process {_pid} seems to be elevated.");
-            }
-
-            if (!TryGetDefaultAddress(_pid, out string transportName))
-            {
-                throw new ServerNotAvailableException($"Process {_pid} not running compatible .NET runtime.");
-            }
-
-            return transportName;
+            return GetDefaultAddress(_pid);
         }
 
         private static bool TryGetDefaultAddress(int pid, out string defaultAddress)
@@ -328,6 +310,40 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             return !string.IsNullOrEmpty(defaultAddress);
+        }
+
+        public static string GetDefaultAddress(int pid)
+        {
+            try
+            {
+                Process process = Process.GetProcessById(pid);
+            }
+            catch (ArgumentException)
+            {
+                throw new ServerNotAvailableException($"Process {pid} is not running.");
+            }
+            catch (InvalidOperationException)
+            {
+                throw new ServerNotAvailableException($"Process {pid} seems to be elevated.");
+            }
+
+            if (!TryGetDefaultAddress(pid, out string defaultAddress))
+            {
+                throw new ServerNotAvailableException($"Process {pid} not running compatible .NET runtime.");
+            }
+
+            return defaultAddress;
+        }
+
+        public static bool IsDefaultAddressDSRouter(int pid, string address)
+        {
+            if (address.StartsWith(IpcRootPath, StringComparison.OrdinalIgnoreCase))
+            {
+                address = address.Substring(IpcRootPath.Length);
+            }
+
+            string dsrouterAddress = $"dotnet-diagnostic-dsrouter-{pid}";
+            return address.StartsWith(dsrouterAddress, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)

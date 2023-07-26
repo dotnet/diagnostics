@@ -369,7 +369,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
 
             logger?.LogDebug($"Using default IPC server path, {path}.");
-            logger?.LogDebug($"Attach to default dotnet-dsrouter IPC server using -p {processId} diagnostic tooling argument.");
+            logger?.LogDebug($"Attach to default dotnet-dsrouter IPC server using --process-id {processId} diagnostic tooling argument.");
 
             return path;
         }

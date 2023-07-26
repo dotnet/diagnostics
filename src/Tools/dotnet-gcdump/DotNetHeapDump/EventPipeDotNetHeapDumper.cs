@@ -165,10 +165,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
                 {
-                    if (processId == 0)
+                    if (gcDumpSession.UseWildcardProcessId)
                     {
                         processId = data.ProcessID;
-                        log.WriteLine("Process wildcard selects process id {0}", processId);
                     }
                     if (data.ProcessID != processId)
                     {
@@ -217,7 +216,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (memoryGraph != null)
                 {
-                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processId.ToString());
+                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, gcDumpSession.UseWildcardProcessId ? null : processId.ToString());
                 }
 
                 // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded.
@@ -323,8 +322,23 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         public IReadOnlyList<EventPipeProvider> Providers => _providers.AsReadOnly();
         public EventPipeEventSource Source => _source;
 
+        public bool UseWildcardProcessId => _diagnosticPort != null;
+
         public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true)
         {
+            if (string.IsNullOrEmpty(diagnosticPort))
+            {
+                try
+                {
+                    string defaultAddress = PidIpcEndpoint.GetDefaultAddress(pid);
+                    if (!string.IsNullOrEmpty(defaultAddress) && PidIpcEndpoint.IsDefaultAddressDSRouter(pid, defaultAddress))
+                    {
+                        diagnosticPort = defaultAddress + ",connect";
+                    }
+                }
+                catch { }
+            }
+
             if (!string.IsNullOrEmpty(diagnosticPort))
             {
                 _diagnosticPort = IpcEndpointConfig.Parse(diagnosticPort);
