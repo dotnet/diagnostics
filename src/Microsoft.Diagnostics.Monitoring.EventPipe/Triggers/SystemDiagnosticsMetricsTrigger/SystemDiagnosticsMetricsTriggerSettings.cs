@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         public string SessionId { get; set; }
 
-        public Version RuntimeVersion { get; set; }
+        public bool UseSharedSession { get; set; }
 
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {
