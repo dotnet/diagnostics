@@ -445,7 +445,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 message.AppendLine($"Start an application{deviceName}with one of the following environment variables set:");
             }
 
-            string listenMode = deviceListenMode ? ",listen" : "";
+            string listenMode = deviceListenMode ? ",listen" : ",connect";
             message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend{listenMode}");
             message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend{listenMode}");
 
