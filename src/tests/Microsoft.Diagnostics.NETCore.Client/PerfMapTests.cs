@@ -88,7 +88,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void CheckWellKnownMethods(PerfMapType type, int pid)
         {
-            string[] wellKnownNames = new string[] { "Tracee.Program::Main", "System.PackedSpanHelpers::IndexOf" };
+            string[] wellKnownNames = new string[] { "Tracee.Program::Main", "System.Diagnostics.Process::GetCurrentProcess" };
 
             if (type == PerfMapType.All || type == PerfMapType.PerfMap)
             {
