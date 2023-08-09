@@ -88,7 +88,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void CheckWellKnownMethods(PerfMapType type, int pid)
         {
-            string[] wellKnownNames = new string[] { "Tracee.Program::Main", "System.MemoryExtensions::ContainsAny" };
+            string[] wellKnownNames = new string[] { "Tracee.Program::Main", "System.Text.Unicode.Utf16Utility::GetPointerToFirstInvalidChar" };
 
             if (type == PerfMapType.All || type == PerfMapType.PerfMap)
             {
