@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly IEnumerable<ICountersLogger> _loggers;
         private readonly CounterFilter _filter;
         private string _sessionId;
+        private string _clientId;
 
         public MetricsPipeline(DiagnosticsClient client,
             MetricsPipelineSettings settings,
@@ -45,9 +46,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 IntervalSeconds = counterGroup.IntervalSeconds,
                 Type = (MetricType)counterGroup.Type
             }),
-                Settings.MaxHistograms, Settings.MaxTimeSeries);
+                Settings.MaxHistograms, Settings.MaxTimeSeries, useSharedSession: Settings.UseSharedSession);
 
             _sessionId = config.SessionId;
+            _clientId = config.ClientId;
 
             return config;
         }
@@ -62,6 +64,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     if (traceEvent.TryGetCounterPayload(new CounterConfiguration(_filter)
                         {
                             SessionId = _sessionId,
+                            ClientId = _clientId,
                             MaxHistograms = Settings.MaxHistograms,
                             MaxTimeseries = Settings.MaxTimeSeries
                         }, out ICounterPayload counterPayload))

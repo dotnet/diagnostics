@@ -255,6 +255,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.ResumeRuntime = resumeRuntime;
                         _settings.CounterGroups = GetEventPipeProviders();
 
+                        bool useSharedSession = false;
+                        if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
+                        {
+                            useSharedSession = version.Major >= 8 ? true : false;
+                        }
+                        _settings.UseSharedSession = useSharedSession;
+
 #pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
                         await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
 #pragma warning restore CA2007 // Consider calling ConfigureAwait on the awaited task

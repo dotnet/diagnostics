@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
@@ -19,6 +20,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string SessionId { get; set; }
 
+        public string ClientId { get; set; }
+
         public int MaxHistograms { get; set; }
 
         public int MaxTimeseries { get; set; }
@@ -26,6 +29,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal static class TraceEventExtensions
     {
+        private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
+
         public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
@@ -88,7 +93,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
-            if (counterConfiguration.SessionId != null && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
+            if (counterConfiguration.ClientId != null && !inactiveSharedSessions.Contains(counterConfiguration.ClientId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
@@ -130,7 +135,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     HandleMultipleSessionsNotSupportedError(traceEvent, counterConfiguration, out payload);
                 }
-
+                else if (traceEvent.EventName == "MultipleSessionsConfiguredIncorrectlyError")
+                {
+                    HandleMultipleSessionsConfiguredIncorrectlyError(traceEvent, counterConfiguration.ClientId, out payload);
+                }
 
                 return payload != null;
             }
@@ -365,10 +373,63 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
-                string errorMessage = "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+                string errorMessage = "Error: Another metrics collection session is already in progress for the target process." + Environment.NewLine +
                 "Concurrent sessions are not supported.";
 
                 payload = new ErrorPayload(errorMessage, obj.TimeStamp, ErrorType.SessionStartupError);
+            }
+        }
+
+        internal static bool TryCreateSharedSessionConfiguredIncorrectlyMessage(TraceEvent obj, string clientId, out string message)
+        {
+            message = string.Empty;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+
+            if (payloadSessionId != clientId)
+            {
+                // If our session is not the one that is running then the error is not for us,
+                // it is for some other session that came later
+                return false;
+            }
+
+            string expectedMaxHistograms = (string)obj.PayloadValue(1);
+            string actualMaxHistograms = (string)obj.PayloadValue(2);
+            string expectedMaxTimeSeries = (string)obj.PayloadValue(3);
+            string actualMaxTimeSeries = (string)obj.PayloadValue(4);
+            string expectedRefreshInterval = (string)obj.PayloadValue(5);
+            string actualRefreshInterval = (string)obj.PayloadValue(6);
+
+            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process." + Environment.NewLine +
+            "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
+
+            if (expectedMaxHistograms != actualMaxHistograms)
+            {
+                errorMessage.Append($"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine);
+            }
+            if (expectedMaxTimeSeries != actualMaxTimeSeries)
+            {
+                errorMessage.Append($"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine);
+            }
+            if (expectedRefreshInterval != actualRefreshInterval)
+            {
+                errorMessage.Append($"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine);
+            }
+
+            message = errorMessage.ToString();
+
+            return true;
+        }
+
+        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            if (TryCreateSharedSessionConfiguredIncorrectlyMessage(obj, clientId, out string message))
+            {
+                payload = new ErrorPayload(message.ToString(), obj.TimeStamp);
+
+                inactiveSharedSessions.Add(clientId);
             }
         }
 
