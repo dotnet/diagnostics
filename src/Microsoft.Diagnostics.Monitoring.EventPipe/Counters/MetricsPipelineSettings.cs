@@ -16,6 +16,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public int MaxHistograms { get; set; }
 
         public int MaxTimeSeries { get; set; }
+
+        public bool UseSharedSession { get; set; }
     }
 
     [Flags]

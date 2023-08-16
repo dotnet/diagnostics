@@ -1377,6 +1377,10 @@ public class SOSRunner : IDisposable
             {
                 defines.Add("MAJOR_RUNTIME_VERSION_GE_7");
             }
+            if (major >= 8)
+            {
+                defines.Add("MAJOR_RUNTIME_VERSION_GE_8");
+            }
         }
         catch (SkipTestException)
         {
