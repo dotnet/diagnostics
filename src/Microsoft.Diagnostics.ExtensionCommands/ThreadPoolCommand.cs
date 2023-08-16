@@ -34,14 +34,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else
             {
                 Table output = new(Console, Text.WithWidth(17), Text);
-                output.WriteRow("CPU utilization:", $"{threadPool.CpuUtilization}%");
-                output.WriteRow("Workers Total:", threadPool.ActiveWorkerThreads + threadPool.IdleWorkerThreads + threadPool.RetiredWorkerThreads);
-                output.WriteRow("Workers Running:", threadPool.ActiveWorkerThreads);
-                output.WriteRow("Workers Idle:", threadPool.IdleWorkerThreads);
-                output.WriteRow("Worker Min Limit:", threadPool.MinThreads);
-                output.WriteRow("Worker Max Limit:", threadPool.MaxThreads);
-                Console.WriteLine();
+                string threadpoolType = threadPool.UsingWindowsThreadPool ? "Windows" : "Portable";
+                Console.WriteLine($"Using the {threadpoolType} thread pool.");
 
+                if (threadPool.UsingWindowsThreadPool)
+                {
+                    output.WriteRow("Number of thread pool threads:", threadPool.ThreadCount);
+                }
+                else
+                {
+                    output.WriteRow("CPU utilization:", $"{threadPool.CpuUtilization}%");
+                    output.WriteRow("Workers Total:", threadPool.ActiveWorkerThreads + threadPool.IdleWorkerThreads + threadPool.RetiredWorkerThreads);
+                    output.WriteRow("Workers Running:", threadPool.ActiveWorkerThreads);
+                    output.WriteRow("Workers Idle:", threadPool.IdleWorkerThreads);
+                    output.WriteRow("Worker Min Limit:", threadPool.MinThreads);
+                    output.WriteRow("Worker Max Limit:", threadPool.MaxThreads);
+                }
+                Console.WriteLine();
                 ClrType threadPoolType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPool");
                 ClrStaticField usePortableIOField = threadPoolType?.GetStaticFieldByName("UsePortableThreadPoolForIO");
 
