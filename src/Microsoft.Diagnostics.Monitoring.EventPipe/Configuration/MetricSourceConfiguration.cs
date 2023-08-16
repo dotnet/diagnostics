@@ -82,7 +82,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
                             { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
-                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
                             { "ClientId", ClientId  }
                         }
                     );
