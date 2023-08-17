@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 // We will assume that if UsePortableThreadPoolForIO field is deleted from ThreadPool then we are always
                 // using C# version.
-                bool usingPortableCompletionPorts = threadPool.Portable && (usePortableIOField is null || usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
+                bool usingPortableCompletionPorts = threadPool.UsingPortableThreadPool && (usePortableIOField is null || usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
                 if (!usingPortableCompletionPorts)
                 {
                     output.Columns[0] = output.Columns[0].WithWidth(19);
@@ -96,28 +96,35 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (PrintHillClimbingLog)
                 {
-                    HillClimbingLogEntry[] hcl = threadPool.EnumerateHillClimbingLog().ToArray();
-                    if (hcl.Length > 0)
+                    if (threadPool.UsingWindowsThreadPool)
                     {
-                        output = new(Console, Text.WithWidth(10).WithAlignment(Align.Right), Column.ForEnum<HillClimbingTransition>(), Integer, Integer, Text.WithAlignment(Align.Right));
-
-                        Console.WriteLine("Hill Climbing Log:");
-                        output.WriteHeader("Time", "Transition", "#New Threads", "#Samples", "Throughput");
-
-                        int end = hcl.Last().TickCount;
-                        foreach (HillClimbingLogEntry entry in hcl)
+                        Console.WriteLine("Hill Climbing Log is not supported by the Windows thread pool.");
+                    }
+                    else
+                    {
+                        HillClimbingLogEntry[] hcl = threadPool.EnumerateHillClimbingLog().ToArray();
+                        if (hcl.Length > 0)
                         {
-                            Console.CancellationToken.ThrowIfCancellationRequested();
-                            output.WriteRow($"{(entry.TickCount - end)/1000.0:0.00}", entry.StateOrTransition, entry.NewThreadCount, entry.SampleCount, $"{entry.Throughput:0.00}");
-                        }
+                            output = new(Console, Text.WithWidth(10).WithAlignment(Align.Right), Column.ForEnum<HillClimbingTransition>(), Integer, Integer, Text.WithAlignment(Align.Right));
 
-                        Console.WriteLine();
+                            Console.WriteLine("Hill Climbing Log:");
+                            output.WriteHeader("Time", "Transition", "#New Threads", "#Samples", "Throughput");
+
+                            int end = hcl.Last().TickCount;
+                            foreach (HillClimbingLogEntry entry in hcl)
+                            {
+                                Console.CancellationToken.ThrowIfCancellationRequested();
+                                output.WriteRow($"{(entry.TickCount - end) / 1000.0:0.00}", entry.StateOrTransition, entry.NewThreadCount, entry.SampleCount, $"{entry.Throughput:0.00}");
+                            }
+
+                            Console.WriteLine();
+                        }
                     }
                 }
             }
 
             // We can print managed work items even if we failed to request the ThreadPool.
-            if (PrintWorkItems && (threadPool is null || threadPool.Portable))
+            if (PrintWorkItems && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
                 DumpWorkItems();
             }
