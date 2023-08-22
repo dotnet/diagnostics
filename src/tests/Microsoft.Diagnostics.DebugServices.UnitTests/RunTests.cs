@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 Dictionary<string, string> initialConfig = new()
                 {
-                    ["OS"] = OS.Kind.ToString(),
+                    ["OS"] = OS.Kind.ToString().ToLowerInvariant(),
                     ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                     ["TestDataFile"] = TestDataPath,
                 };

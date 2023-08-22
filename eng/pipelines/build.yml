@@ -149,13 +149,13 @@ jobs:
             downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
             downloadType: specific
             itemPattern: |
-              Build_$(_BuildConfig)/bin/Linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)/**
+              Build_$(_BuildConfig)/bin/linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)/**
             checkDownloadedFiles: true
         - task: CopyFiles@2
           displayName: 'Binplace Product'
           inputs:
-            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/Linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)
-            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/Linux.$(_BuildArch).$(_BuildConfig)'
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)
+            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.$(_BuildArch).$(_BuildConfig)'
 
     - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
       - task: CodeQL3000Init@0

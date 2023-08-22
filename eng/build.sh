@@ -17,7 +17,7 @@ __DotnetRuntimeDownloadVersion="default"
 __DotnetRuntimeVersion="default"
 __ExtraCmakeArgs=
 __HostArch=x64
-__HostOS=Linux
+__HostOS=linux
 __IsMSBuildOnNETCoreSupported=0
 __ManagedBuild=1
 __ManagedBuildArgs=
@@ -30,7 +30,7 @@ __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
 __SkipConfigure=0
 __SkipGenerateVersion=0
-__TargetOS=Linux
+__TargetOS=linux
 __Test=0
 __UnprocessedBuildArgs=
 
@@ -173,18 +173,10 @@ if [[ "$__ManagedBuild" == 1 ]]; then
 fi
 
 #
-# Initialize the target distro name
-#
-
-initTargetDistroRid
-
-echo "RID: $__DistroRid"
-
-#
 # Setup LLDB paths for native build
 #
 
-if [ "$__HostOS" == "OSX" ]; then
+if [ "$__HostOS" == "osx" ]; then
     export LLDB_H="$__RepoRootDir"/src/SOS/lldbplugin/swift-4.0
     export LLDB_LIB=$(xcode-select -p)/../SharedFrameworks/LLDB.framework/LLDB
     export LLDB_PATH=$(xcode-select -p)/usr/bin/lldb
@@ -229,8 +221,8 @@ fi
 
 if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
     __targetRid=net6.0
-    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__DistroRid
-    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__DistroRid
+    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__OutputRid
+    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__OutputRid
 
     mkdir -p "$__dotnet_sos"
     mkdir -p "$__dotnet_dump"
