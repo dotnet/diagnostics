@@ -36,10 +36,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Table output = new(Console, Text.WithWidth(17), Text);
                 string threadpoolType = threadPool.UsingWindowsThreadPool ? "Windows" : "Portable";
                 Console.WriteLine($"Using the {threadpoolType} thread pool.");
+                Console.WriteLine();
 
                 if (threadPool.UsingWindowsThreadPool)
                 {
-                    output.WriteRow("Number of thread pool threads:", threadPool.ThreadCount);
+                    output.WriteRow("Thread count:", threadPool.ThreadCount);
                 }
                 else
                 {
@@ -99,6 +100,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (threadPool.UsingWindowsThreadPool)
                     {
                         Console.WriteLine("Hill Climbing Log is not supported by the Windows thread pool.");
+                        Console.WriteLine();
                     }
                     else
                     {
