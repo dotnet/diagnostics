@@ -33,11 +33,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                Table output = new(Console, Text.WithWidth(17), Text);
                 string threadpoolType = threadPool.UsingWindowsThreadPool ? "Windows" : "Portable";
                 Console.WriteLine($"Using the {threadpoolType} thread pool.");
                 Console.WriteLine();
 
+                Table output = new(Console, Text.WithWidth(17), Text);
                 if (threadPool.UsingWindowsThreadPool)
                 {
                     output.WriteRow("Thread count:", threadPool.ThreadCount);
