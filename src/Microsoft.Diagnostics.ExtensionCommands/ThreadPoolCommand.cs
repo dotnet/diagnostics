@@ -81,7 +81,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // We will assume that if UsePortableThreadPoolForIO field is deleted from ThreadPool then we are always
                 // using C# version.
                 bool usingPortableCompletionPorts = threadPool.UsingPortableThreadPool && (usePortableIOField is null || usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
-                if (!usingPortableCompletionPorts)
+                if (!usingPortableCompletionPorts && !threadPool.UsingWindowsThreadPool)
                 {
                     output.Columns[0] = output.Columns[0].WithWidth(19);
                     output.WriteRow("Completion Total:", threadPool.TotalCompletionPorts);
