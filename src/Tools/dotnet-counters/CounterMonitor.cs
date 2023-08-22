@@ -21,7 +21,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
     internal class CounterMonitor : ICountersLogger
     {
         private const int BufferDelaySecs = 1;
-
         private int _processId;
         private CounterSet _counterList;
         private CancellationToken _ct;

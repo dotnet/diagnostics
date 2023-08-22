@@ -15,8 +15,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly IEnumerable<ICountersLogger> _loggers;
         private readonly CounterFilter _filter;
-        private string _sessionId;
         private string _clientId;
+        private string _sessionId;
 
         public MetricsPipeline(DiagnosticsClient client,
             MetricsPipelineSettings settings,
@@ -48,8 +48,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }),
                 Settings.MaxHistograms, Settings.MaxTimeSeries, useSharedSession: Settings.UseSharedSession);
 
-            _sessionId = config.SessionId;
             _clientId = config.ClientId;
+            _sessionId = config.SessionId;
 
             return config;
         }

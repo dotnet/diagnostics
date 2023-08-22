@@ -20,9 +20,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class Runtime : IRuntime, IDisposable
     {
         private readonly ClrInfo _clrInfo;
-        private readonly IDisposable _onFlushEvent;
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
+        private ClrRuntime _clrRuntime;
         private string _dacFilePath;
         private string _dbiFilePath;
 
@@ -52,24 +52,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainer.AddService<IRuntime>(this);
             _serviceContainer.AddService(clrInfo);
 
-            _onFlushEvent = Target.OnFlushEvent.Register(Flush);
-
             Trace.TraceInformation($"Created runtime #{id} {clrInfo.Flavor} {clrInfo}");
         }
 
         void IDisposable.Dispose()
         {
+            // The DataTarget created in the RuntimeProvider is disposed here. The ClrRuntime
+            // instance is disposed below in DisposeServices().
+            _clrRuntime?.DataTarget.Dispose();
+            _clrRuntime = null;
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
-            _onFlushEvent.Dispose();
-        }
-
-        private void Flush()
-        {
-            if (_serviceContainer.TryGetCachedService(typeof(ClrRuntime), out object service))
-            {
-                ((ClrRuntime)service).FlushCachedData();
-            }
         }
 
         #region IRuntime
@@ -131,7 +124,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
                     // returns 0.0.0.0 for the runtime module that the DAC is matched against.
-                    return _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
+                    return _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                 }
                 catch (Exception ex) when
                    (ex is DllNotFoundException or

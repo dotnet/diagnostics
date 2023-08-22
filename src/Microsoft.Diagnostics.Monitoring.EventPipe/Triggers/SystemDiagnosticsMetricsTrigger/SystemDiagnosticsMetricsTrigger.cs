@@ -46,6 +46,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
             _meterName = settings.MeterName;
 
+            _clientId = settings.ClientId;
+
             _sessionId = settings.SessionId;
 
             _clientId = settings.ClientId;

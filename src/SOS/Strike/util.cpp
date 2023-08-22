@@ -2801,6 +2801,12 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
             case DacpTieredVersionData::OptimizationTier_ReadyToRun:
                 descriptor = "ReadyToRun";
                 break;
+            case DacpTieredVersionData::OptimizationTier_QuickJittedInstrumented:
+                descriptor = "QuickJitted + Instrumented";
+                break;
+            case DacpTieredVersionData::OptimizationTier_OptimizedTier1Instrumented:
+                descriptor = "OptimizedTier1 + Instrumented";
+                break;
             }
             DMLOut("     CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
             ExtOut("     NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
