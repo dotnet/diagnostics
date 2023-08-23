@@ -5,7 +5,6 @@
 # Obtain the location of the bash script to figure out where the root of the repo is.
 __RepoRootDir="$(cd "$(dirname "$0")"/..; pwd -P)"
 
-__BuildArch=x64
 __BuildType=Debug
 __CMakeArgs=
 __CommonMSBuildArgs=
@@ -16,8 +15,6 @@ __CrossBuild=0
 __DotnetRuntimeDownloadVersion="default"
 __DotnetRuntimeVersion="default"
 __ExtraCmakeArgs=
-__HostArch=x64
-__HostOS=linux
 __IsMSBuildOnNETCoreSupported=0
 __ManagedBuild=1
 __ManagedBuildArgs=
@@ -30,7 +27,6 @@ __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
 __SkipConfigure=0
 __SkipGenerateVersion=0
-__TargetOS=linux
 __Test=0
 __UnprocessedBuildArgs=
 
@@ -44,7 +40,7 @@ handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
     case "$lowerI" in
         architecture|-architecture|-a)
-            __BuildArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+            __TargetArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
             __ShiftArgs=1
             ;;
 
@@ -113,7 +109,7 @@ handle_arguments() {
 source "$__RepoRootDir"/eng/native/build-commons.sh
 
 __LogsDir="$__RootBinDir/log/$__BuildType"
-__ConfigTriplet="$__TargetOS.$__BuildArch.$__BuildType"
+__ConfigTriplet="$__TargetOS.$__TargetArch.$__BuildType"
 __BinDir="$__RootBinDir/bin/$__ConfigTriplet"
 __ArtifactsIntermediatesDir="$__RootBinDir/obj"
 __IntermediatesDir="$__ArtifactsIntermediatesDir/$__ConfigTriplet"
@@ -134,7 +130,7 @@ __ExtraCmakeArgs="$__CMakeArgs $__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__Roo
 export __CMakeBinDir="$__BinDir"
 
 
-if [[ "$__BuildArch" == "armel" ]]; then
+if [[ "$__TargetArch" == "armel" ]]; then
     # Armel cross build is Tizen specific and does not support Portable RID build
     __PortableBuild=0
 fi
@@ -163,7 +159,7 @@ if [[ "$__ManagedBuild" == 1 ]]; then
         /p:GenerateVersionSourceFile=true \
         /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
         /p:Configuration="$__BuildType" \
-        /p:Platform="$__BuildArch" \
+        /p:Platform="$__TargetArch" \
         $__UnprocessedBuildArgs
 
     if [ $? != 0 ]; then
@@ -193,12 +189,12 @@ if [ "$__HostOS" == "osx" ]; then
     which python
     python --version
 
-    if [[ "$__BuildArch" == x64 ]]; then
+    if [[ "$__TargetArch" == x64 ]]; then
         __ExtraCmakeArgs="-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" $__ExtraCmakeArgs"
-    elif [[ "$__BuildArch" == arm64 ]]; then
+    elif [[ "$__TargetArch" == arm64 ]]; then
         __ExtraCmakeArgs="-DCMAKE_OSX_ARCHITECTURES=\"arm64\" $__ExtraCmakeArgs"
     else
-        echo "Error: Unknown OSX architecture $__BuildArch."
+        echo "Error: Unknown OSX architecture $__TargetArch."
         exit 1
     fi
 fi
@@ -207,7 +203,7 @@ fi
 # Build native components
 #
 if [[ "$__NativeBuild" == 1 ]]; then
-    build_native "$__TargetOS" "$__BuildArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
+    build_native "$__TargetOS" "$__TargetArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "$?" != 0 ]; then
         echo "Native build FAILED"
@@ -282,7 +278,7 @@ if [[ "$__Test" == 1 ]]; then
         --test \
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
-        /p:BuildArch="$__BuildArch" \
+        /p:BuildArch="$__TargetArch" \
         /p:PrivateBuildPath="$__PrivateBuildPath" \
         /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
