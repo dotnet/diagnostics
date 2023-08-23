@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Runtime.Implementation
                 int curPos = 0;
                 int parsingNestedClassDepth = 0;
                 int parsingGenericArgListDepth = 0;
-                Stack<bool> isCurrentArgAssemblyQualified = new Stack<bool>();
+                Stack<bool> isCurrentArgAssemblyQualified = new();
 
                 // local type name parsing method that doesn't modify the currentState variable that drive the state machine. Used by a few of the typename parsing paths that need to
                 // have knowledge of their context to operate properly, but don't want to duplicate this code. Returns a non-empty string in the special case where the input string

@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.Runtime.MacOS
                 ulong imageAddress = info.imageLoadAddress;
                 string imageFilePath = ReadNullTerminatedAscii(info.imageFilePath);
 
-                MachOModule module = new MachOModule(this, imageAddress, imageFilePath);
+                MachOModule module = new(this, imageAddress, imageFilePath);
                 Version version = GetVersionInfo(info.imageLoadAddress) ?? new Version();
                 yield return new MachOModuleInfo(module, imageAddress, imageFilePath, version, 0);
             }
