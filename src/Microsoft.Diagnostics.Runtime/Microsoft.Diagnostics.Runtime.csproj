@@ -11,6 +11,12 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
+
+  <PropertyGroup>
+    <PreReleaseVersionLabel></PreReleaseVersionLabel>
+    <VersionPrefix>3.1.0</VersionPrefix>
+  </PropertyGroup>
+    
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
