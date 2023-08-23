@@ -9,6 +9,7 @@ namespace DotnetCounters.UnitTests
         public const string TestCounterName = TestCounter + " (dollars / 1 sec)";
         public const string TestHistogram = "TestHistogram";
         public const string TestHistogramName = TestHistogram + " (feet)";
+        public const string PercentileKey = "Percentile";
         public const string TagKey = "tag";
         public const string TagValue = "5";
         public const string TestMeterName = "TestMeter";
