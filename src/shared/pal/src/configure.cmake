@@ -962,34 +962,7 @@ int main() {
   exit(0);
 }" HAS_POSIX_SEMAPHORES)
 set(CMAKE_REQUIRED_LIBRARIES)
-check_cxx_source_runs("
-#include <sys/types.h>
-#include <pwd.h>
-#include <errno.h>
-#include <unistd.h>
-#include <stdlib.h>
 
-int main(void)
-{
-  struct passwd sPasswd;
-  struct passwd *pPasswd;
-  char buf[1];
-  int bufLen = sizeof(buf)/sizeof(buf[0]);
-  int euid = geteuid();
-  int ret = 0;
-
-  errno = 0; // clear errno
-  ret = getpwuid_r(euid, &sPasswd, buf, bufLen, &pPasswd);
-  if (0 != ret)
-  {
-    if (ERANGE == errno)
-    {
-      return 0;
-    }
-  }
-
-  return 1; // assume errno is NOT set for all other cases
-}" GETPWUID_R_SETS_ERRNO)
 check_cxx_source_runs("
 #include <stdio.h>
 #include <stdlib.h>
