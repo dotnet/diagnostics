@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SOS.Extensions</AssemblyName>
@@ -12,7 +12,6 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
-    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
     <PackageReference Include="System.Memory" Version="$(SystemMemoryVersion)" />
     <PackageReference Include="Microsoft.DiaSymReader.Native" Version="$(MicrosoftDiaSymReaderNativePackageVersion)" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
@@ -22,5 +21,6 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.Hosting\SOS.Hosting.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Diagnostics.Runtime\Microsoft.Diagnostics.Runtime.csproj" />
   </ItemGroup>
 </Project>
