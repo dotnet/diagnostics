@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
-using Constants = DotnetCounters.UnitTests.CounterMonitorPayloadTestsConstants;
+using Constants = DotnetCounters.UnitTests.TestConstants;
 
 namespace EventPipeTracee
 {

@@ -17,7 +17,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
-using Constants = DotnetCounters.UnitTests.CounterMonitorPayloadTestsConstants;
+using Constants = DotnetCounters.UnitTests.TestConstants;
 using System.Diagnostics;
 
 namespace DotnetCounters.UnitTests
@@ -32,6 +32,8 @@ namespace DotnetCounters.UnitTests
         private static readonly string SystemRuntimeName = "System.Runtime";
         private static readonly string Metric = "Metric";
         private static readonly string Rate = "Rate";
+
+        private string[] ExpectedCounterTypes = { Metric, Rate };
 
         public CounterMonitorPayloadTests(ITestOutputHelper outputHelper)
         {
@@ -71,12 +73,13 @@ namespace DotnetCounters.UnitTests
 
             List<string> lines = await GetCounterTraceCSV(configuration, new List<string> { Constants.TestMeterName });
 
-            ValidateCSVHeaders(lines[0]);
-            lines.RemoveAt(0); // Trim the header
+            var providers = lines.Select(l => l.Split(",")[Constants.ProviderIndex]).ToHashSet();
 
-            var countersList = lines.Select(l => l.Split(",")[2]).ToList();
+            var countersList = lines.Select(l => l.Split(",")[Constants.CounterNameIndex]).ToList();
 
             var counterNames = countersList.Select(counter => counter.Split("[")[0]).ToHashSet();
+
+            var counterTypes = lines.Select(l => l.Split(",")[Constants.CounterTypeIndex]).ToHashSet();
 
             var counterTags = countersList.Where(counter => counter.Contains(Constants.TestCounterName)).Select(counter => {
                 var split = counter.Split("[");
@@ -105,38 +108,32 @@ namespace DotnetCounters.UnitTests
             histogramTags.Remove(string.Empty);
 
             var counterValues = lines.Where(l => l.Split(",")[2].Contains(Constants.TestCounterName)).Select(l => {
-                if (double.TryParse(l.Split(",")[4], out double val))
+                if (double.TryParse(l.Split(",")[Constants.ValueIndex], out double val))
                 {
                     return val;
                 }
-                else
-                {
-                    return -1;
-                }
+                return -1;
+
             }).ToList();
 
             var histogramValues = lines.Where(l => l.Split(",")[2].Contains(Constants.TestHistogramName)).Select(l => {
-                if (double.TryParse(l.Split(",")[4], out double val))
+                if (double.TryParse(l.Split(",")[Constants.ValueIndex], out double val))
                 {
                     return val;
                 }
-                else
-                {
-                    return -1;
-                }
+                return -1;
+
                 }).ToHashSet();
 
-
             ValidateCustomMetrics(
-                lines.Select(l => l.Split(",")[1]).ToHashSet(),
+                providers,
                 counterNames,
-                lines.Select(l => l.Split(",")[3]).ToHashSet(),
+                counterTypes,
                 histogramTags,
                 counterTags,
                 histogramValues,
                 counterValues,
-                CountersExportFormat.csv
-                );
+                CountersExportFormat.csv);
         }
 
         private void ValidateCustomMetrics(ISet<string> actualProviders, ISet<string> actualCounterNames, IEnumerable<string> actualCounterTypes, ISet<string> actualHistogramTags, ISet<string> actualCounterTags, ISet<double> actualHistogramValues, List<double> actualCounterValues, CountersExportFormat format)
@@ -149,34 +146,19 @@ namespace DotnetCounters.UnitTests
             HashSet<string> expectedCounterNames = new() { Constants.TestHistogramName, Constants.TestCounterName };
             Assert.Equal(expectedCounterNames, actualCounterNames);
 
-            string[] ExpectedCounterTypes = { Metric, Rate };
             Assert.Equal(ExpectedCounterTypes, actualCounterTypes);
 
             string tagSeparator = format == CountersExportFormat.csv ? ";" : ",";
             string tag = Constants.TagKey + "=" + Constants.TagValue + tagSeparator + Constants.PercentileKey + "=";
             HashSet<string> expectedTags = new() { $"{tag}50", $"{tag}95", $"{tag}99" };
             Assert.Equal(expectedTags, actualHistogramTags);
-
-            Assert.Empty(actualCounterTags.Distinct());
-            //Assert.Equal(string.Empty, actualCounterTags.Distinct().First());
+            Assert.Empty(actualCounterTags);
 
             Assert.Equal(2, actualCounterValues.Distinct().Count());
             Assert.Equal(1, actualCounterValues.First());
             Assert.Equal(0, actualCounterValues.Last());
-
             double histogramValue = Assert.Single(actualHistogramValues);
             Assert.Equal(10, histogramValue);
-        }
-
-
-        private void ValidateCSVHeaders(string line)
-        {
-            string[] headerTokens = line.Split(',');
-            Assert.Equal("Timestamp", headerTokens[0]);
-            Assert.Equal("Provider", headerTokens[1]);
-            Assert.Equal("Counter Name", headerTokens[2]);
-            Assert.Equal("Counter Type", headerTokens[3]);
-            Assert.Equal("Mean/Increment", headerTokens[4]);
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
@@ -185,7 +167,7 @@ namespace DotnetCounters.UnitTests
             JSONCounterTrace trace = await GetCounterTraceJSON(configuration, new List<string> { SystemRuntimeName });
             Assert.NotEmpty(trace.events);
 
-            ValidateSystemRuntimeMetrics(trace.events.Select(e => e.name).Distinct().ToHashSet(), trace.events.Select(e => e.counterType).Distinct());
+            ValidateSystemRuntimeMetrics(trace.events.Select(e => e.provider).Distinct().ToHashSet(), trace.events.Select(e => e.name).Distinct().ToHashSet(), trace.events.Select(e => e.counterType).Distinct());
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
@@ -193,14 +175,18 @@ namespace DotnetCounters.UnitTests
         {
             List<string> lines = await GetCounterTraceCSV(configuration, new List<string> { SystemRuntimeName });
 
-            ValidateCSVHeaders(lines[0]);
-            lines.RemoveAt(0); // Trim the header
-
-            ValidateSystemRuntimeMetrics(lines.Select(l => l.Split(",")[2]).ToHashSet(), lines.Select(l => l.Split(",")[3]).ToHashSet());
+            ValidateSystemRuntimeMetrics(
+                lines.Select(l => l.Split(",")[1]).ToHashSet(),
+                lines.Select(l => l.Split(",")[2]).ToHashSet(),
+                lines.Select(l => l.Split(",")[3]).ToHashSet());
         }
 
-        private void ValidateSystemRuntimeMetrics(ISet<string> actualCounterNames, IEnumerable<string> actualCounterTypes)
+        private void ValidateSystemRuntimeMetrics(ISet<string> actualProviders, ISet<string> actualCounterNames, IEnumerable<string> actualCounterTypes)
         {
+            string[] ExpectedProviders = { "System.Runtime" };
+            Assert.Equal(ExpectedProviders, actualProviders);
+
+            // Could also just check the number of counter names
             HashSet<string> expectedCounterNames = new()
             {
                 "CPU Usage (%)",
@@ -265,7 +251,12 @@ namespace DotnetCounters.UnitTests
             {
                 await GetCounterTrace(configuration, counterList, path, CountersExportFormat.csv);
                 Assert.True(File.Exists(path));
-                return File.ReadLines(path).ToList();
+
+                List<string> lines = File.ReadLines(path).ToList();
+                CSVExporterTests.ValidateHeaderTokens(lines[0]);
+                lines.RemoveAt(0); // Trim the header
+
+                return lines;
             }
             finally
             {
