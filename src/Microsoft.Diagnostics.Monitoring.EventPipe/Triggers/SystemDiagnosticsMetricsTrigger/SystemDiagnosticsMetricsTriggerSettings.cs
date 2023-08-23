@@ -62,7 +62,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
         public int MaxTimeSeries { get; set; }
 
+        public string ClientId { get; set; }
+
         public string SessionId { get; set; }
+
+        public bool UseSharedSession { get; set; }
 
         IEnumerable<ValidationResult> IValidatableObject.Validate(ValidationContext validationContext)
         {

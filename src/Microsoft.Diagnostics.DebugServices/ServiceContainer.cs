@@ -73,30 +73,18 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         /// <summary>
-        /// Get the cached/instantiated service instance if one exists. Don't call the factory or parent to create.
-        /// </summary>
-        /// <param name="type">service type</param>
-        /// <param name="service">service instance (can be null)</param>
-        /// <returns>if true, found service</returns>
-        public bool TryGetCachedService(Type type, out object service)
-        {
-            Debug.Assert(type != null);
-            if (type == typeof(IServiceProvider))
-            {
-                service = this;
-                return true;
-            }
-            return _instances.TryGetValue(type, out service);
-        }
-
-        /// <summary>
         /// Returns the instance of the service or returns null if service doesn't exist
         /// </summary>
         /// <param name="type">service type</param>
         /// <returns>service instance or null</returns>
         public object GetService(Type type)
         {
-            if (TryGetCachedService(type, out object service))
+            Debug.Assert(type != null);
+            if (type == typeof(IServiceProvider))
+            {
+                return this;
+            }
+            if (_instances.TryGetValue(type, out object service))
             {
                 return service;
             }

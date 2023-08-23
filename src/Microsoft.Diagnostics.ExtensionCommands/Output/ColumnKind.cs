@@ -9,6 +9,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
     {
         private static Column? s_pointer;
         private static Column? s_text;
+        private static Column? s_image;
+        private static Column? s_typeName;
         private static Column? s_hexOffset;
         private static Column? s_hexValue;
         private static Column? s_dumpObj;
@@ -96,13 +98,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         /// name instead of truncating based on alignment.  This ensures the most important part of the name (the
         /// actual type name) is preserved instead of the namespace.
         /// </summary>
-        public static Column TypeName => s_text ??= new(Align.Left, -1, Formats.TypeName);
+        public static Column TypeName => s_typeName ??= new(Align.Left, -1, Formats.TypeName);
 
         /// <summary>
         /// A path to an image on disk.  Note that images are always truncted by removing the beginning of the image's
         /// path instead of the end, preserving the filename.
         /// </summary>
-        public static Column Image => s_text ??= new(Align.Left, -1, Formats.Image);
+        public static Column Image => s_image ??= new(Align.Left, -1, Formats.Image);
 
         /// <summary>
         /// A MemoryRange printed as "[start-end]".
