@@ -53,10 +53,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal static ProcessInfo ParseV2(byte[] payload)
         {
             int index = 0;
-            ProcessInfo processInfo = ParseCommon(payload, ref index);
+            return ParseCommon2(payload, ref index);
+        }
 
-            processInfo.ManagedEntrypointAssemblyName = IpcHelpers.ReadString(payload, ref index);
-            processInfo.ClrProductVersionString = IpcHelpers.ReadString(payload, ref index);
+        /// <summary>
+        /// Parses a ProcessInfo3 payload.
+        /// </summary>
+        internal static ProcessInfo ParseV3(byte[] payload)
+        {
+            int index = 0;
+
+            // The ProcessInfo3 command is intended to allow the addition of new fields in future versions so
+            // long as the version field is incremented; prior fields shall not be changed or removed.
+            // Read the version field, parse the common payload, and dynamically parse the remainder depending on the version.
+            uint version = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(payload, index, 4));
+            index += sizeof(uint);
+
+            ProcessInfo processInfo = ParseCommon2(payload, ref index);
+
+            if (version >= 1)
+            {
+                processInfo.PortableRuntimeIdentifier = IpcHelpers.ReadString(payload, ref index);
+            }
 
             return processInfo;
         }
@@ -80,6 +98,44 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return processInfo;
         }
 
+        internal bool TryGetProcessClrVersion(out Version version)
+        {
+            version = null;
+            if (string.IsNullOrEmpty(ClrProductVersionString))
+            {
+                return false;
+            }
+
+            // The version is of the SemVer2 form: <major>.<minor>.<patch>[-<prerelease>][+<metadata>]
+            // Remove the prerelease and metadata version information before parsing.
+
+            ReadOnlySpan<char> versionSpan = ClrProductVersionString.AsSpan();
+            int metadataIndex = versionSpan.IndexOf('+');
+            if (-1 == metadataIndex)
+            {
+                metadataIndex = versionSpan.Length;
+            }
+
+            ReadOnlySpan<char> noMetadataVersion = versionSpan.Slice(0, metadataIndex);
+            int prereleaseIndex = noMetadataVersion.IndexOf('-');
+            if (-1 == prereleaseIndex)
+            {
+                prereleaseIndex = metadataIndex;
+            }
+
+            return Version.TryParse(noMetadataVersion.Slice(0, prereleaseIndex).ToString(), out version);
+        }
+
+        private static ProcessInfo ParseCommon2(byte[] payload, ref int index)
+        {
+            ProcessInfo processInfo = ParseCommon(payload, ref index);
+
+            processInfo.ManagedEntrypointAssemblyName = IpcHelpers.ReadString(payload, ref index);
+            processInfo.ClrProductVersionString = IpcHelpers.ReadString(payload, ref index);
+
+            return processInfo;
+        }
+
         public ulong ProcessId { get; private set; }
         public Guid RuntimeInstanceCookie { get; private set; }
         public string CommandLine { get; private set; }
@@ -87,5 +143,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public string ProcessArchitecture { get; private set; }
         public string ManagedEntrypointAssemblyName { get; private set; }
         public string ClrProductVersionString { get; private set; }
+        public string PortableRuntimeIdentifier { get; private set; }
     }
 }

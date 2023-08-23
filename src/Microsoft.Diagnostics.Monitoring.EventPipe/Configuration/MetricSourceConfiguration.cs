@@ -30,7 +30,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
+        private const string SharedSessionId = "SHARED";
+
         private readonly IList<EventPipeProvider> _eventPipeProviders;
+        public string ClientId { get; private set; }
         public string SessionId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> eventCounterProviderNames)
@@ -38,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
         }
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000, bool useSharedSession = false)
         {
             if (providers == null)
             {
@@ -65,7 +68,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 const long TimeSeriesValuesEventKeyword = 0x2;
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
-                SessionId = Guid.NewGuid().ToString();
+                ClientId = Guid.NewGuid().ToString();
+
+                // Shared Session Id was added in 8.0 - older runtimes will not properly support it.
+                SessionId = useSharedSession ? SharedSessionId : Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
                     new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
@@ -75,7 +81,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             { "Metrics", metrics },
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
-                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) }
+                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
+                            { "ClientId", ClientId  }
                         }
                     );
 

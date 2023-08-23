@@ -62,6 +62,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-thinlock")]
         public bool ThinLock { get; set; }
 
+        [Option(Name = "-gen")]
+        public string Generation { get; set; }
+
         [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -225,6 +228,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (Strings)
             {
                 MethodTable = Runtime.Heap.StringType.MethodTable;
+            }
+
+            if (!string.IsNullOrWhiteSpace(Generation))
+            {
+                Generation generation = Generation.ToLowerInvariant() switch
+                {
+                    "gen0" => Diagnostics.Runtime.Generation.Generation0,
+                    "gen1" => Diagnostics.Runtime.Generation.Generation1,
+                    "gen2" => Diagnostics.Runtime.Generation.Generation2,
+                    "loh" or "large" => Diagnostics.Runtime.Generation.Large,
+                    "poh" or "pinned" => Diagnostics.Runtime.Generation.Pinned,
+                    "foh" or "frozen" => Diagnostics.Runtime.Generation.Frozen,
+                    _ => throw new ArgumentException($"Unknown generation: {Generation}. Only gen0, gen1, gen2, loh (large), poh (pinned) and foh (frozen) are supported")
+                };
+
+                FilteredHeap.Generation = generation;
             }
 
             FilteredHeap.SortSegments = (seg) => seg.OrderBy(seg => seg.Start);

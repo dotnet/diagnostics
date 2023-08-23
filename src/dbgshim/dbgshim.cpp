@@ -159,7 +159,7 @@ typedef HRESULT (STDAPICALLTYPE *FPCoreCLRCreateCordbObject3)(
 
 typedef HRESULT (STDAPICALLTYPE *FPCreateRemoteCordbObject)(
     DWORD port,
-    LPCSTR assemblyBasePath,
+    LPCWSTR assemblyBasePath,
     IUnknown **ppCordb);
 
 HRESULT CreateCoreDbg(
@@ -2157,7 +2157,7 @@ CLRCreateInstance(
     return pDebuggingImpl->QueryInterface(riid, ppInterface);
 }
 
-HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCSTR assemblyBasePath, IUnknown **ppCordb)
+HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCWSTR assemblyBasePath, IUnknown **ppCordb)
 {
     PUBLIC_CONTRACT;
     HRESULT hr = S_OK;
@@ -2178,15 +2178,15 @@ DLLEXPORT
 HRESULT
 RegisterForRuntimeStartupRemotePort(
     _In_ DWORD dwRemotePortId,
-    _In_ LPCSTR mscordbiPath,
-    _In_ LPCSTR assemblyBasePath,
+    _In_ LPCWSTR mscordbiPath,
+    _In_ LPCWSTR assemblyBasePath,
     _Out_ IUnknown ** ppCordb)
 {
     PUBLIC_CONTRACT;
     HRESULT hr = S_OK;
     HMODULE hMod = NULL;
 
-    hMod = LoadLibraryA(mscordbiPath);
+    hMod = LoadLibraryW(mscordbiPath);
     if (hMod == NULL)
     {
         hr = CORDBG_E_DEBUG_COMPONENT_MISSING;

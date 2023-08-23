@@ -1,61 +1,56 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.SymbolStore" Version="1.0.430201">
+    <Dependency Name="Microsoft.SymbolStore" Version="1.0.442101">
       <Uri>https://github.com/dotnet/symstore</Uri>
-      <Sha>00f6edae1666690960cd207fd2b7a51232af9605</Sha>
+      <Sha>df78bdccafe0dca31c9e6a1b5c3cf21c33e8f9a1</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="3.0.0-beta.23302.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="3.0.442202">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>272986369826a777686ba616a00acd48febc2546</Sha>
+      <Sha>c7ec730380da83d9dcb63a3d8928da701219db8e</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="3.0.0-beta.23302.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="3.0.442202">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>272986369826a777686ba616a00acd48febc2546</Sha>
+      <Sha>c7ec730380da83d9dcb63a3d8928da701219db8e</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.23302.3">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.23419.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>234e0726c7384ee84bf08550f2d16a1ff2d5c543</Sha>
+      <Sha>385129cbc980a515ddee2fa56f6b16f3183ed9bc</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="8.0.0-beta.23302.3">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="8.0.0-beta.23419.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>234e0726c7384ee84bf08550f2d16a1ff2d5c543</Sha>
+      <Sha>385129cbc980a515ddee2fa56f6b16f3183ed9bc</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22316.2" Pinned="true">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>ccfe6da198c5f05534863bbb1bff66e830e0c6ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="8.0.100-preview.6.23305.2">
+    <Dependency Name="Microsoft.Dotnet.Sdk.Internal" Version="8.0.100-rc.2.23420.6">
       <Uri>https://github.com/dotnet/installer</Uri>
-      <Sha>18dc2cf11a2daaaa1633afd0c4225e188ce6c239</Sha>
+      <Sha>ec2c1ec1b16874f748cfc5d1f7da769be90e10c8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="8.0.0-preview.6.23302.1">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="8.0.0-rc.2.23422.15">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>c2488eead6ead7208f543d0a57104b5d167b93f9</Sha>
+      <Sha>5d4e6d3812805e81a2f4ed9f2c06784204a98013</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="8.0.0-preview.6.23302.1">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="8.0.0-rc.2.23422.15">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>c2488eead6ead7208f543d0a57104b5d167b93f9</Sha>
+      <Sha>5d4e6d3812805e81a2f4ed9f2c06784204a98013</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-preview.6.23304.2">
+    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0-rc.1.23410.15">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>2bf8f1aa83e192a307d5846424880cd61bec1a4f</Sha>
+      <Sha>786b9872ad306d5b0febdc2e6c820b69e0e232dc</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-preview.6.23304.2">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-rc.1.23410.15">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>2bf8f1aa83e192a307d5846424880cd61bec1a4f</Sha>
+      <Sha>786b9872ad306d5b0febdc2e6c820b69e0e232dc</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23302.3">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="8.0.0-alpha.1.23421.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>4a3b4b6b37bdafe501477bf2e564380e1962ce61</Sha>
+      <Sha>f4903e46459e0348e3793055dd8b68b8b0264034</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
-    </Dependency>
-    <Dependency Name="Microsoft.SourceLink.GitHub" Version="8.0.0-beta.23252.2" CoherentParentDependency="Microsoft.DotNet.Arcade.Sdk">
-      <Uri>https://github.com/dotnet/sourcelink</Uri>
-      <Sha>54eb3b811c57f5e94617d31a102fc9cb664ccdd5</Sha>
-      <SourceBuild RepoName="sourcelink" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.6.0-1.23073.4">
       <Uri>https://github.com/dotnet/roslyn</Uri>

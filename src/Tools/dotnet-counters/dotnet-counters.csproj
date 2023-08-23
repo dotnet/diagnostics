@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
   </ItemGroup>
 
   <ItemGroup>

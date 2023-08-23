@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         private readonly CounterFilter _filter;
         private readonly SystemDiagnosticsMetricsTriggerImpl _impl;
         private readonly string _meterName;
+        private readonly string _clientId;
         private readonly string _sessionId;
 
         public SystemDiagnosticsMetricsTrigger(SystemDiagnosticsMetricsTriggerSettings settings)
@@ -45,6 +46,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
 
             _meterName = settings.MeterName;
 
+            _clientId = settings.ClientId;
+
             _sessionId = settings.SessionId;
         }
 
@@ -56,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_filter, _sessionId, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(_filter, _sessionId, _clientId, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }
@@ -71,7 +74,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
                 settings.CounterIntervalSeconds,
                 MetricSourceConfiguration.CreateProviders(new string[] { settings.MeterName }, MetricType.Meter),
                 settings.MaxHistograms,
-                settings.MaxTimeSeries);
+                settings.MaxTimeSeries,
+                useSharedSession: settings.UseSharedSession);
+            settings.ClientId = config.ClientId;
             settings.SessionId = config.SessionId;
 
             return config;
