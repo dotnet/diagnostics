@@ -9,3 +9,4 @@
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Style", "IDE0011:Add braces", Justification = "Strong disagreement from maintainer on changing.", Scope = "module")]
+[assembly: SuppressMessage("Reliability", "CA2021:Do not call Enumerable.Cast<T> or Enumerable.OfType<T> with incompatible types", Justification = "Bad analyzer", Scope = "module")]
