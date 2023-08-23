@@ -57,7 +57,7 @@ namespace DotnetCounters.UnitTests
                 trace.events.Select(e => e.counterType).Distinct(),
                 trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.tags).Where(t => !string.IsNullOrEmpty(t)).ToHashSet(),
                 trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.tags).Where(t => !string.IsNullOrEmpty(t)).ToHashSet(),
-                trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.value).ToHashSet(),
+                trace.events.Where(e => e.name.Equals(Constants.TestHistogramName)).Select(e => e.value).ToList(),
                 trace.events.Where(e => e.name.Equals(Constants.TestCounterName)).Select(e => e.value).ToList(),
                 CountersExportFormat.json
                 );
@@ -76,54 +76,15 @@ namespace DotnetCounters.UnitTests
             var providers = lines.Select(l => l.Split(",")[Constants.ProviderIndex]).ToHashSet();
 
             var countersList = lines.Select(l => l.Split(",")[Constants.CounterNameIndex]).ToList();
-
             var counterNames = countersList.Select(counter => counter.Split("[")[0]).ToHashSet();
 
             var counterTypes = lines.Select(l => l.Split(",")[Constants.CounterTypeIndex]).ToHashSet();
 
-            var counterTags = countersList.Where(counter => counter.Contains(Constants.TestCounterName)).Select(counter => {
-                var split = counter.Split("[");
-                if (split.Length > 1)
-                {
-                    return split[1].Remove(split[1].Length - 1); // Remove trailing ]
-                }
-                else
-                {
-                    return string.Empty;
-                }
-                }).ToHashSet();
-            counterTags.Remove(string.Empty);
+            var counterTags = GetCSVTags(countersList, Constants.TestCounterName);
+            var histogramTags = GetCSVTags(countersList, Constants.TestHistogramName);
 
-            var histogramTags = countersList.Where(counter => counter.Contains(Constants.TestHistogramName)).Select(counter => {
-                var split = counter.Split("[");
-                if (split.Length > 1)
-                {
-                    return split[1].Remove(split[1].Length - 1); // Remove trailing ]
-                }
-                else
-                {
-                    return string.Empty;
-                }
-            }).ToHashSet();
-            histogramTags.Remove(string.Empty);
-
-            var counterValues = lines.Where(l => l.Split(",")[2].Contains(Constants.TestCounterName)).Select(l => {
-                if (double.TryParse(l.Split(",")[Constants.ValueIndex], out double val))
-                {
-                    return val;
-                }
-                return -1;
-
-            }).ToList();
-
-            var histogramValues = lines.Where(l => l.Split(",")[2].Contains(Constants.TestHistogramName)).Select(l => {
-                if (double.TryParse(l.Split(",")[Constants.ValueIndex], out double val))
-                {
-                    return val;
-                }
-                return -1;
-
-                }).ToHashSet();
+            var counterValues = GetCSVValues(lines, Constants.TestCounterName);
+            var histogramValues = GetCSVValues(lines, Constants.TestHistogramName);
 
             ValidateCustomMetrics(
                 providers,
@@ -134,31 +95,6 @@ namespace DotnetCounters.UnitTests
                 histogramValues,
                 counterValues,
                 CountersExportFormat.csv);
-        }
-
-        private void ValidateCustomMetrics(ISet<string> actualProviders, ISet<string> actualCounterNames, IEnumerable<string> actualCounterTypes, ISet<string> actualHistogramTags, ISet<string> actualCounterTags, ISet<double> actualHistogramValues, List<double> actualCounterValues, CountersExportFormat format)
-        {
-            // Currently not validating timestamp due to https://github.com/dotnet/diagnostics/issues/3905
-
-            HashSet<string> expectedProviders = new() { Constants.TestMeterName };
-            Assert.Equal(expectedProviders, actualProviders);
-
-            HashSet<string> expectedCounterNames = new() { Constants.TestHistogramName, Constants.TestCounterName };
-            Assert.Equal(expectedCounterNames, actualCounterNames);
-
-            Assert.Equal(ExpectedCounterTypes, actualCounterTypes);
-
-            string tagSeparator = format == CountersExportFormat.csv ? ";" : ",";
-            string tag = Constants.TagKey + "=" + Constants.TagValue + tagSeparator + Constants.PercentileKey + "=";
-            HashSet<string> expectedTags = new() { $"{tag}50", $"{tag}95", $"{tag}99" };
-            Assert.Equal(expectedTags, actualHistogramTags);
-            Assert.Empty(actualCounterTags);
-
-            Assert.Equal(2, actualCounterValues.Distinct().Count());
-            Assert.Equal(1, actualCounterValues.First());
-            Assert.Equal(0, actualCounterValues.Last());
-            double histogramValue = Assert.Single(actualHistogramValues);
-            Assert.Equal(10, histogramValue);
         }
 
         [SkippableTheory, MemberData(nameof(Configurations))]
@@ -294,6 +230,49 @@ namespace DotnetCounters.UnitTests
                         maxTimeSeries: 10,
                         duration: TimeSpan.FromSeconds(10)));
             }, testRunner, source.Token);
+        }
+
+        private void ValidateCustomMetrics(ISet<string> actualProviders, ISet<string> actualCounterNames, IEnumerable<string> actualCounterTypes, ISet<string> actualHistogramTags, ISet<string> actualCounterTags, List<double> actualHistogramValues, List<double> actualCounterValues, CountersExportFormat format)
+        {
+            // Currently not validating timestamp due to https://github.com/dotnet/diagnostics/issues/3905
+
+            HashSet<string> expectedProviders = new() { Constants.TestMeterName };
+            Assert.Equal(expectedProviders, actualProviders);
+
+            HashSet<string> expectedCounterNames = new() { Constants.TestHistogramName, Constants.TestCounterName };
+            Assert.Equal(expectedCounterNames, actualCounterNames);
+
+            Assert.Equal(ExpectedCounterTypes, actualCounterTypes);
+
+            string tagSeparator = format == CountersExportFormat.csv ? ";" : ",";
+            string tag = Constants.TagKey + "=" + Constants.TagValue + tagSeparator + Constants.PercentileKey + "=";
+            HashSet<string> expectedTags = new() { $"{tag}50", $"{tag}95", $"{tag}99" };
+            Assert.Equal(expectedTags, actualHistogramTags);
+            Assert.Empty(actualCounterTags);
+
+            Assert.Equal(2, actualCounterValues.Distinct().Count());
+            Assert.Equal(1, actualCounterValues.First());
+            Assert.Equal(0, actualCounterValues.Last());
+            double histogramValue = Assert.Single(actualHistogramValues.Distinct());
+            Assert.Equal(10, histogramValue);
+        }
+
+        private ISet<string> GetCSVTags(List<string> countersList, string counterName)
+        {
+            var tags = countersList.Where(counter => counter.Contains(counterName)).Select(counter => {
+                var split = counter.Split("[");
+                return split.Length > 1 ? split[1].Remove(split[1].Length - 1) : string.Empty;
+            }).ToHashSet();
+            tags.Remove(string.Empty);
+
+            return tags;
+        }
+
+        private List<double> GetCSVValues(List<string> lines, string counterName)
+        {
+            return lines.Where(l => l.Split(",")[2].Contains(counterName)).Select(l => {
+                return double.TryParse(l.Split(",")[Constants.ValueIndex], out double val) ? val : -1;
+            }).ToList();
         }
 
         public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
