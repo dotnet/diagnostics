@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using System.IO.Pipes;
 using System.Linq;
 using System.Threading.Tasks;
@@ -60,8 +59,6 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: {DateTime.UtcNow} Awaiting start");
             Console.Out.Flush();
 
-            using CustomMetrics metrics = diagMetrics ? new CustomMetrics(): null;
-
             // Wait for server to send something
             int input = pipeStream.ReadByte();
 
@@ -70,12 +67,13 @@ namespace EventPipeTracee
 
             if (diagMetrics)
             {
+                using CustomMetrics metrics = new();
+
                 _ = Task.Run(async () => {
                     metrics.IncrementCounter();
                     metrics.RecordHistogram(10.0f);
                     await Task.Delay(10).ConfigureAwait(true);
                 }).ConfigureAwait(true);
-
             }
 
             TestBodyCore(customCategoryLogger, appCategoryLogger);
@@ -108,7 +106,6 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee {DateTime.UtcNow} Ending remote test process '{input}'");
             return 0;
         }
-
 
         // TODO At some point we may want parameters to choose different test bodies.
         private static void TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)

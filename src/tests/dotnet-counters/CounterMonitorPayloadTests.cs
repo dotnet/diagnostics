@@ -18,12 +18,11 @@ using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 using Constants = DotnetCounters.UnitTests.TestConstants;
-using System.Diagnostics;
 
 namespace DotnetCounters.UnitTests
 {
     /// <summary>
-    /// These test the various internal logic in CounterMonitor
+    /// Tests the behavior of CounterMonitor's Collect command.
     /// </summary>
     public class CounterMonitorPayloadTests
     {
@@ -32,6 +31,7 @@ namespace DotnetCounters.UnitTests
         private static readonly string SystemRuntimeName = "System.Runtime";
         private static readonly string Metric = "Metric";
         private static readonly string Rate = "Rate";
+        private static readonly string TagStart = "[";
 
         private string[] ExpectedCounterTypes = { Metric, Rate };
 
@@ -43,10 +43,7 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsJSON(TestConfiguration configuration)
         {
-            if (configuration.BuildProjectFramework != "net8.0")
-            {
-                throw new SkipTestException("Inapplicable framework");
-            }
+            CheckFramework(configuration.BuildProjectFramework);
 
             JSONCounterTrace trace = await GetCounterTraceJSON(configuration, new List<string> { Constants.TestMeterName });
             Assert.NotEmpty(trace.events);
@@ -66,25 +63,23 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsCSV(TestConfiguration configuration)
         {
-            if (configuration.BuildProjectFramework != "net8.0")
-            {
-                throw new SkipTestException("Inapplicable framework");
-            }
+            CheckFramework(configuration.BuildProjectFramework);
 
             List<string> lines = await GetCounterTraceCSV(configuration, new List<string> { Constants.TestMeterName });
+            IEnumerable<string[]> splitLines = lines.Select(l => l.Split(","));
 
-            var providers = lines.Select(l => l.Split(",")[Constants.ProviderIndex]).ToHashSet();
+            var providers = splitLines.Select(line => line[Constants.ProviderIndex]).ToHashSet();
 
-            var countersList = lines.Select(l => l.Split(",")[Constants.CounterNameIndex]).ToList();
-            var counterNames = countersList.Select(counter => counter.Split("[")[0]).ToHashSet();
+            var countersList = splitLines.Select(line => line[Constants.CounterNameIndex]).ToList();
+            var counterNames = countersList.Select(counter => counter.Split(TagStart)[0]).ToHashSet();
 
-            var counterTypes = lines.Select(l => l.Split(",")[Constants.CounterTypeIndex]).ToHashSet();
+            var counterTypes = splitLines.Select(line => line[Constants.CounterTypeIndex]).ToHashSet();
 
             var counterTags = GetCSVTags(countersList, Constants.TestCounterName);
             var histogramTags = GetCSVTags(countersList, Constants.TestHistogramName);
 
-            var counterValues = GetCSVValues(lines, Constants.TestCounterName);
-            var histogramValues = GetCSVValues(lines, Constants.TestHistogramName);
+            var counterValues = GetCSVValues(splitLines, Constants.TestCounterName);
+            var histogramValues = GetCSVValues(splitLines, Constants.TestHistogramName);
 
             ValidateCustomMetrics(
                 providers,
@@ -110,11 +105,12 @@ namespace DotnetCounters.UnitTests
         public async Task TestCounterMonitorSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
             List<string> lines = await GetCounterTraceCSV(configuration, new List<string> { SystemRuntimeName });
+            IEnumerable<string[]> splitLines = lines.Select(l => l.Split(","));
 
             ValidateSystemRuntimeMetrics(
-                lines.Select(l => l.Split(",")[1]).ToHashSet(),
-                lines.Select(l => l.Split(",")[2]).ToHashSet(),
-                lines.Select(l => l.Split(",")[3]).ToHashSet());
+                splitLines.Select(line => line[1]).ToHashSet(),
+                splitLines.Select(line => line[2]).ToHashSet(),
+                splitLines.Select(line => line[3]).ToHashSet());
         }
 
         private void ValidateSystemRuntimeMetrics(ISet<string> actualProviders, ISet<string> actualCounterNames, IEnumerable<string> actualCounterTypes)
@@ -186,8 +182,6 @@ namespace DotnetCounters.UnitTests
             try
             {
                 await GetCounterTrace(configuration, counterList, path, CountersExportFormat.csv);
-                Assert.True(File.Exists(path));
-
                 List<string> lines = File.ReadLines(path).ToList();
                 CSVExporterTests.ValidateHeaderTokens(lines[0]);
                 lines.RemoveAt(0); // Trim the header
@@ -227,7 +221,7 @@ namespace DotnetCounters.UnitTests
                         diagnosticPort: null,
                         resumeRuntime: false,
                         maxHistograms: 10,
-                        maxTimeSeries: 10,
+                        maxTimeSeries: 1000,
                         duration: TimeSpan.FromSeconds(10)));
             }, testRunner, source.Token);
         }
@@ -260,7 +254,7 @@ namespace DotnetCounters.UnitTests
         private ISet<string> GetCSVTags(List<string> countersList, string counterName)
         {
             var tags = countersList.Where(counter => counter.Contains(counterName)).Select(counter => {
-                var split = counter.Split("[");
+                var split = counter.Split(TagStart);
                 return split.Length > 1 ? split[1].Remove(split[1].Length - 1) : string.Empty;
             }).ToHashSet();
             tags.Remove(string.Empty);
@@ -268,11 +262,19 @@ namespace DotnetCounters.UnitTests
             return tags;
         }
 
-        private List<double> GetCSVValues(List<string> lines, string counterName)
+        private List<double> GetCSVValues(IEnumerable<string[]> splitLines, string counterName)
         {
-            return lines.Where(l => l.Split(",")[2].Contains(counterName)).Select(l => {
-                return double.TryParse(l.Split(",")[Constants.ValueIndex], out double val) ? val : -1;
+            return splitLines.Where(line => line[Constants.CounterNameIndex].Contains(counterName)).Select(line => {
+                return double.TryParse(line[Constants.ValueIndex], out double val) ? val : -1;
             }).ToList();
+        }
+
+        private void CheckFramework(string buildProjectFramework)
+        {
+            if (buildProjectFramework != "net8.0")
+            {
+                throw new SkipTestException("Inapplicable framework");
+            }
         }
 
         public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
