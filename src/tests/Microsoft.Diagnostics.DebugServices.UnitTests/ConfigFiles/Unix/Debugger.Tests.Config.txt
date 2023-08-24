@@ -5,21 +5,21 @@
   <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
 
   <Options>
-    <Option Condition="'$(OS)' == 'Linux'">
+    <Option Condition="'$(OS)' == 'linux'">
       <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
     </Option>
-    <Option Condition="'$(OS)' == 'OSX'">
+    <Option Condition="'$(OS)' == 'osx'">
       <SOSPath>$(InstallDir)/libsosplugin.dylib</SOSPath>
     </Option>
   </Options>
 
   <!-- Run tests on Linux -->
   <RunTestsLinux_x64>false</RunTestsLinux_x64>
-  <RunTestsLinux_x64 Condition="'$(OS)' == 'Linux'">$(RunTests)</RunTestsLinux_x64>
+  <RunTestsLinux_x64 Condition="'$(OS)' == 'linux'">$(RunTests)</RunTestsLinux_x64>
   <RunTestsLinux_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsLinux_x64>
   
   <RunTestsLinux_arm64>false</RunTestsLinux_arm64>
-  <RunTestsLinux_arm64 Condition="'$(OS)' == 'Linux'">$(RunTests)</RunTestsLinux_arm64>
+  <RunTestsLinux_arm64 Condition="'$(OS)' == 'linux'">$(RunTests)</RunTestsLinux_arm64>
   <RunTestsLinux_arm64 Condition="'$(TargetArchitecture)' != 'arm64'">false</RunTestsLinux_arm64>
   
   <!-- Linux x64 testing -->
@@ -80,7 +80,7 @@
   
   <!-- Run tests on OSX x64 -->
   <RunTestsOSX>false</RunTestsOSX>
-  <RunTestsOSX Condition="'$(OS)' == 'OSX'">true</RunTestsOSX>
+  <RunTestsOSX Condition="'$(OS)' == 'osx'">true</RunTestsOSX>
   <RunTestsOSX Condition="'$(TargetArchitecture)' == 'arm'">false</RunTestsOSX>
   <RunTestsOSX Condition="'$(TargetArchitecture)' == 'arm64'">false</RunTestsOSX>
   
