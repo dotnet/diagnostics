@@ -60,13 +60,13 @@
       <Uri>https://github.com/dotnet/roslyn</Uri>
       <Sha>6acaa7b7c0efea8ea292ca26888c0346fbf8b0c1</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="3.3.5-beta1.23124.1">
+    <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0-beta1.23420.2">
       <Uri>https://github.com/dotnet/roslyn-analyzers</Uri>
-      <Sha>c6352bf2e1bd214fce090829de1042000d021497</Sha>
+      <Sha>76d99c5f3e11f0600fae074270c0d89042c360f0</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0-preview1.23124.1">
+    <Dependency Name="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0-preview.23420.2">
       <Uri>https://github.com/dotnet/roslyn-analyzers</Uri>
-      <Sha>c6352bf2e1bd214fce090829de1042000d021497</Sha>
+      <Sha>76d99c5f3e11f0600fae074270c0d89042c360f0</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public Runtime(IServiceProvider services, int id, ClrInfo clrInfo)
         {
-            Target = services.GetService<ITarget>() ?? throw new ArgumentNullException(nameof(Target), "Uninitialized service");
+            Target = services.GetService<ITarget>() ?? throw new NullReferenceException($"Uninitialized service: {nameof(Target)}");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
             _symbolService = services.GetService<ISymbolService>();
