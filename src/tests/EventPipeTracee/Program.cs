@@ -59,6 +59,8 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: {DateTime.UtcNow} Awaiting start");
             Console.Out.Flush();
 
+            using CustomMetrics metrics = diagMetrics ? new CustomMetrics() : null;
+
             // Wait for server to send something
             int input = pipeStream.ReadByte();
 
@@ -67,8 +69,6 @@ namespace EventPipeTracee
 
             if (diagMetrics)
             {
-                using CustomMetrics metrics = new();
-
                 _ = Task.Run(async () => {
                     metrics.IncrementCounter();
                     metrics.RecordHistogram(10.0f);
