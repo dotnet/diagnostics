@@ -152,22 +152,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             _ownsPortReverse = ADBCommandExec.AdbAddPortReverse(_port, Logger);
 
             _portReverseTaskCancelToken = new CancellationTokenSource();
-            _portReverseTask = Task.Run(() => {
-                while (!_portReverseTaskCancelToken.Token.IsCancellationRequested)
+            _portReverseTask = Task.Run(async () => {
+                using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+                while (await timer.WaitForNextTickAsync(_portReverseTaskCancelToken.Token).ConfigureAwait(false) && !_portReverseTaskCancelToken.Token.IsCancellationRequested)
                 {
-                    try
+                    // Make sure reverse port configuration is still active.
+                    if (ADBCommandExec.AdbAddPortReverse(_port, Logger) && !_ownsPortReverse)
                     {
-                        Task.Delay(5000, _portReverseTaskCancelToken.Token).Wait();
-                    }
-                    catch { }
-
-                    if (!_portReverseTaskCancelToken.Token.IsCancellationRequested)
-                    {
-                        // Make sure reverse port configuration for port is still active.
-                        if (ADBCommandExec.AdbAddPortReverse(_port, Logger) && !_ownsPortReverse)
-                        {
-                            _ownsPortReverse = true;
-                        }
+                        _ownsPortReverse = true;
                     }
                 }
             }, _portReverseTaskCancelToken.Token);
@@ -216,22 +208,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             _ownsPortForward = ADBCommandExec.AdbAddPortForward(_port, _logger);
 
             _portForwardTaskCancelToken = new CancellationTokenSource();
-            _portForwardTask = Task.Run(() => {
-                while (!_portForwardTaskCancelToken.Token.IsCancellationRequested)
+            _portForwardTask = Task.Run(async () => {
+                using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+                while (await timer.WaitForNextTickAsync(_portForwardTaskCancelToken.Token).ConfigureAwait(false) && !_portForwardTaskCancelToken.Token.IsCancellationRequested)
                 {
-                    try
+                    // Make sure forward port configuration is still active.
+                    if (ADBCommandExec.AdbAddPortForward(_port, _logger) && !_ownsPortForward)
                     {
-                        Task.Delay(5000, _portForwardTaskCancelToken.Token).Wait();
-                    }
-                    catch { }
-
-                    if (!_portForwardTaskCancelToken.Token.IsCancellationRequested)
-                    {
-                        // Make sure forward port configuration for port is still active.
-                        if (ADBCommandExec.AdbAddPortForward(_port, _logger) && !_ownsPortForward)
-                        {
-                            _ownsPortForward = true;
-                        }
+                        _ownsPortForward = true;
                     }
                 }
             }, _portForwardTaskCancelToken.Token);
