@@ -613,7 +613,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 {
                     return (int)ReturnCode.ArgumentError;
                 }
-
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
                 DiagnosticsClientBuilder builder = new("dotnet-counters", 10);
