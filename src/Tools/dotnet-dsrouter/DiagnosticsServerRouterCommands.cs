@@ -347,6 +347,30 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
+        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("ios simulator", "127.0.0.1:9000", false, verbose);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("ios device", "127.0.0.1:9000", true, verbose);
+            return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("android emulator", "10.0.2.2:9000", false, verbose);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("android emulator", "127.0.0.1:9000", false, verbose);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
+        }
+
         private static string GetDefaultIpcServerPath(ILogger logger)
         {
             string path = string.Empty;
@@ -410,6 +434,23 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
             }
             return tcpServerRouterFactory;
+        }
+
+        private static void logDiagnosticPortsConfiguration(string deviceName, string deviceTcpIpAddress, bool deviceListenMode, string verbose)
+        {
+            StringBuilder message = new();
+
+            if (!string.IsNullOrEmpty(verbose))
+            {
+                deviceName = !string.IsNullOrEmpty(deviceName) ? $" on {deviceName} " : " ";
+                message.AppendLine($"Start an application{deviceName}with one of the following environment variables set:");
+            }
+
+            string listenMode = deviceListenMode ? ",listen" : ",connect";
+            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend{listenMode}");
+            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend{listenMode}");
+
+            Console.WriteLine(message.ToString());
         }
 
         private static void checkLoopbackOnly(string tcpServer)
