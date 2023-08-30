@@ -27,13 +27,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private delegate Task<int> DiagnosticsServerIpcClientWebSocketServerRouterDelegate(CancellationToken ct, string ipcClient, string webSocket, int runtimeTimeoutS, string verbose);
 
-        private delegate Task<int> DiagnosticsServerIpcServerIOSSimulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+        private delegate Task<int> DiagnosticsServerIpcServerIOSSimulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
 
-        private delegate Task<int> DiagnosticsServerIpcServerIOSRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+        private delegate Task<int> DiagnosticsServerIpcServerIOSRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
 
-        private delegate Task<int> DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+        private delegate Task<int> DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
 
-        private delegate Task<int> DiagnosticsServerIpcServerAndroidRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+        private delegate Task<int> DiagnosticsServerIpcServerAndroidRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
 
         private static Command IpcClientTcpServerRouterCommand() =>
             new(
@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 // Handler
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerIOSSimulatorRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerIOSSimulatorRouter).GetCommandHandler(),
                 // Options
-                RuntimeTimeoutOption(), VerboseOption()
+                RuntimeTimeoutOption(), VerboseOption(), InfoOption()
             };
 
         private static Command IOSRouterCommand() =>
@@ -135,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         // Handler
                         HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerIOSRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerIOSRouter).GetCommandHandler(),
                         // Options
-                        RuntimeTimeoutOption(), VerboseOption()
+                        RuntimeTimeoutOption(), VerboseOption(), InfoOption()
             };
 
         private static Command AndroidEmulatorRouterCommand() =>
@@ -148,7 +148,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         // Handler
                         HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerAndroidEmulatorRouter).GetCommandHandler(),
                         // Options
-                        RuntimeTimeoutOption(), VerboseOption()
+                        RuntimeTimeoutOption(), VerboseOption(), InfoOption()
             };
 
         private static Command AndroidRouterCommand() =>
@@ -161,7 +161,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         // Handler
                         HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerAndroidRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerAndroidRouter).GetCommandHandler(),
                         // Options
-                        RuntimeTimeoutOption(), VerboseOption()
+                        RuntimeTimeoutOption(), VerboseOption(), InfoOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -226,9 +226,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option VerboseOption() =>
             new(
                 aliases: new[] { "--verbose", "-v" },
-                description: "Enable verbose logging (debug|trace)")
+                description: "Enable verbose logging (none|info|debug|trace)")
             {
-                Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "")
+                Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "info")
             };
 
         private static Option ForwardPortOption() =>
@@ -239,13 +239,16 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 Argument = new Argument<string>(name: "forwardPort", getDefaultValue: () => "")
             };
 
+        private static Option InfoOption() =>
+            new(
+                aliases: new[] { "--info", "-i" },
+                description: "Print info on how to use current dotnet-dsrouter instance with application and diagnostic tooling.")
+            {
+                Argument = new Argument<bool>(name: "info", getDefaultValue: () => false)
+            };
+
         private static int Main(string[] args)
         {
-            ConsoleColor currentColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("WARNING: dotnet-dsrouter is a development tool not intended for production environments." + Environment.NewLine);
-            Console.ForegroundColor = currentColor;
-
             Parser parser = new CommandLineBuilder()
                 .AddCommand(IpcClientTcpServerRouterCommand())
                 .AddCommand(IpcServerTcpServerRouterCommand())
@@ -265,6 +268,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (parseResult.UnparsedTokens.Count > 0)
             {
                 ProcessLauncher.Launcher.PrepareChildProcess(args);
+            }
+
+            string verbose = parseResult.ValueForOption<string>("-v");
+            if (!string.Equals(verbose, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                ConsoleColor currentColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("WARNING: dotnet-dsrouter is a development tool not intended for production environments." + Environment.NewLine);
+                Console.ForegroundColor = currentColor;
             }
 
             return parser.InvokeAsync(args).Result;
