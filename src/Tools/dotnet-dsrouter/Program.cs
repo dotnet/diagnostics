@@ -226,7 +226,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static Option VerboseOption() =>
             new(
                 aliases: new[] { "--verbose", "-v" },
-                description: "Enable verbose logging (none|info|debug|trace)")
+                description: "Enable verbose logging (none|critical|error|warning|info|debug|trace)")
             {
                 Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "info")
             };

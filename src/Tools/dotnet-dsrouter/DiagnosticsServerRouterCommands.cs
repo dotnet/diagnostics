@@ -441,7 +441,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private static LogLevel ParseLogLevel(string verbose)
         {
-            LogLevel logLevel = LogLevel.Information;
+            LogLevel logLevel;
             if (string.Equals(verbose, "none", StringComparison.OrdinalIgnoreCase))
             {
                 logLevel = LogLevel.None;
@@ -469,6 +469,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
             {
                 logLevel = LogLevel.Trace;
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown verbose log level, {verbose}");
             }
 
             return logLevel;
