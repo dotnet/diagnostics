@@ -338,7 +338,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             if (info)
             {
-                logRouterUsageInfo("ios simulator", "127.0.0.1:9000", false);
+                logRouterUsageInfo("ios simulator", "127.0.0.1:9000", true);
             }
 
             return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
