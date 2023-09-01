@@ -866,7 +866,7 @@ There is no payload.
 Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
 Payload:
-* `uint32 version`: the version of the payload returned. Future versions will return additional data.
+* `uint32 version`: the version of the payload returned. Future versions can add new fields after the end of the current structure, but will never remove or change any field that has already been defined.
 * `uint64 processId`: the process id in the process's PID-space
 * `GUID runtimeCookie`: a 128-bit GUID that should be unique across PID-spaces
 * `string commandLine`: the command line that invoked the process
