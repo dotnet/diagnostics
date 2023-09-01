@@ -1,21 +1,20 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS
 {
-    internal unsafe class DebuggerServices : CallableCOMWrapper
+    internal sealed unsafe class DebuggerServices : CallableCOMWrapper
     {
         internal enum OperatingSystem
         {
@@ -25,7 +24,7 @@ namespace SOS
             OSX = 3,
         };
 
-        private static Guid IID_IDebuggerServices = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
+        private static Guid IID_IDebuggerServices = new("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
         private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 
@@ -46,11 +45,13 @@ namespace SOS
             {
                 object obj = Marshal.GetObjectForIUnknown(punk);
                 if (obj is IDebugClient5 client)
+                {
                     DebugClient = client;
+                }
             }
         }
 
-        public HResult GetOperatingSystem(out DebuggerServices.OperatingSystem operatingSystem)
+        public HResult GetOperatingSystem(out OperatingSystem operatingSystem)
         {
             return VTable.GetOperatingSystem(Self, out operatingSystem);
         }
@@ -67,7 +68,10 @@ namespace SOS
 
         public HResult AddCommand(string command, string help, IEnumerable<string> aliases)
         {
-            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(help) || aliases == null) throw new ArgumentNullException();
+            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(help) || aliases == null)
+            {
+                throw new ArgumentNullException();
+            }
 
             byte[] commandBytes = Encoding.ASCII.GetBytes(command + "\0");
             byte[] helpBytes = Encoding.ASCII.GetBytes(help + "\0");
@@ -92,7 +96,10 @@ namespace SOS
 
         public void OutputString(DEBUG_OUTPUT mask, string message)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
 
             byte[] messageBytes = Encoding.ASCII.GetBytes(message + "\0");
             fixed (byte* messagePtr = messageBytes)
@@ -126,8 +133,8 @@ namespace SOS
         {
             imageName = null;
 
-            // GetModuleNames under lldb doesn't support querying just the 
-            // path length (imageNameBufferPtr = null) so use a fix size 
+            // GetModuleNames under lldb doesn't support querying just the
+            // path length (imageNameBufferPtr = null) so use a fix size
             // image name buffer.
             byte[] imageNameBuffer = new byte[1024];
             fixed (byte* imageNameBufferPtr = imageNameBuffer)
@@ -212,8 +219,15 @@ namespace SOS
 
         public HResult GetThreadIdsByIndex(uint start, uint count, uint[] ids, uint[] sysIds)
         {
-            if (ids != null && (start >= ids.Length || start + count > ids.Length)) throw new ArgumentOutOfRangeException(nameof(ids));
-            if (sysIds != null && (start >= sysIds.Length || start + count > sysIds.Length)) throw new ArgumentOutOfRangeException(nameof(sysIds));
+            if (ids != null && (start >= ids.Length || start + count > ids.Length))
+            {
+                throw new ArgumentOutOfRangeException(nameof(ids));
+            }
+
+            if (sysIds != null && (start >= sysIds.Length || start + count > sysIds.Length))
+            {
+                throw new ArgumentOutOfRangeException(nameof(sysIds));
+            }
 
             fixed (uint* pids = ids)
             {
@@ -250,7 +264,6 @@ namespace SOS
         public HResult GetThreadTeb(uint threadId, out ulong teb)
         {
             // The native code may zero out this return pointer
-            teb = 0;
             return VTable.GetThreadTeb(Self, threadId, out teb);
         }
 
@@ -330,7 +343,10 @@ namespace SOS
 
         public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)
         {
-            if (symbol == null) throw new ArgumentNullException(nameof(symbol));
+            if (symbol == null)
+            {
+                throw new ArgumentNullException(nameof(symbol));
+            }
 
             byte[] symbolBytes = Encoding.ASCII.GetBytes(symbol + "\0");
             fixed (byte* symbolPtr = symbolBytes)
@@ -338,10 +354,13 @@ namespace SOS
                 return VTable.GetOffsetBySymbol(Self, moduleIndex, symbolPtr, out address);
             }
         }
-        
+
         public HResult GetTypeId(int moduleIndex, string typeName, out ulong typeId)
         {
-            if (string.IsNullOrEmpty(typeName)) throw new ArgumentException(nameof(typeName));
+            if (string.IsNullOrEmpty(typeName))
+            {
+                throw new ArgumentException(nameof(typeName));
+            }
 
             byte[] typeNameBytes = Encoding.ASCII.GetBytes(typeName + "\0");
             fixed (byte* typeNamePtr = typeNameBytes)
@@ -352,12 +371,15 @@ namespace SOS
 
         public HResult GetFieldOffset(int moduleIndex, ulong typeId, string typeName, string fieldName, out uint offset)
         {
-            if (string.IsNullOrEmpty(fieldName)) throw new ArgumentException(nameof(fieldName));
+            if (string.IsNullOrEmpty(fieldName))
+            {
+                throw new ArgumentException(nameof(fieldName));
+            }
 
             byte[] typeNameBytes = Encoding.ASCII.GetBytes(typeName + "\0");
             byte[] fieldNameBytes = Encoding.ASCII.GetBytes(fieldName + "\0");
             fixed (byte* typeNamePtr = typeNameBytes)
-            fixed (byte *fieldNamePtr = fieldNameBytes)
+            fixed (byte* fieldNamePtr = fieldNameBytes)
             {
                 return VTable.GetFieldOffset(Self, moduleIndex, typeNamePtr, typeId, fieldNamePtr, out offset);
             }
@@ -377,7 +399,10 @@ namespace SOS
 
         public void OutputDmlString(DEBUG_OUTPUT mask, string message)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
 
             byte[] messageBytes = Encoding.ASCII.GetBytes(message + "\0");
             fixed (byte* messagePtr = messageBytes)
@@ -388,7 +413,7 @@ namespace SOS
 
         public HResult AddModuleSymbol(string symbolFileName)
         {
-            if (symbolFileName == null) 
+            if (symbolFileName == null)
             {
                 throw new ArgumentNullException(nameof(symbolFileName));
             }
@@ -402,7 +427,7 @@ namespace SOS
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out DebuggerServices.OperatingSystem, int> GetOperatingSystem;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out OperatingSystem, int> GetOperatingSystem;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, int> GetDebuggeeType;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, int> GetExecutingProcessorType;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, int> AddCommand;

@@ -111,7 +111,7 @@ The threading model is single-threaded mainly because native debuggers like dbge
 
 The host is the debugger or program the command and the infrastructure runs on. The goal is to allow the same code for a command to run under different programs like the dotnet-dump REPL, lldb and Windows debuggers. Under Visual Studio the host will be a VS extension package.
 
-When the host starts, the service manager loads command and service extension assemblies from the DOTNET_DIAGNOSTIC_EXTENSIONS environment variable (assembly paths separated by ';') or from the $HOME/.dotnet/extensions directory on Linux or MacOS or %USERPROFILE%\.dotnet\extensions directory on Windows.
+When the host starts, the service manager loads command and service extension assemblies from the DOTNET_DIAGNOSTIC_EXTENSIONS environment variable (assembly paths separated by ';' on Windows or ":" on Linux/MacOS) or under the subdirectory "extensions" in the same directory as the infrastructure assemblies (Microsoft.Diagnostics.DebugServices.Implementation).
 
 #### IHost
 
@@ -149,11 +149,11 @@ Services can be registered to contain common code for commands like [ClrMDHelper
 
 The [ServiceExport](../../src/Microsoft.Diagnostics.DebugServices/ServiceExportAttribute.cs) attribute is used to mark classes, class constructors and factory methods to be registered as services. The ServiceScope defines where in the service hierarchy (global, context, target, runtime, thread, or module) this instance is available to commands and other services.
 
+The [ProviderExport](../../src/Microsoft.Diagnostics.DebugServices/ProviderExportAttribute.cs) attribute is used to mark classes, class constructors and factory methods to be registered as "provider" which are extensions to a service. The IRuntimeService implementation uses this feature to enumerate all the IRuntimeProvider instances registered in the system.
+
 The [ServiceImport](../../src/Microsoft.Diagnostics.DebugServices/ServiceImportAttribute.cs) attribute is used to mark public or interal fields, properties and methods in commands and other services to receive a service instance.
 
-The internal [ServiceManager](../../src/Microsoft.Diagnostics.DebugServices.Implementation/ServiceManager.cs) loads extension assemblies, provides the dependency injection using reflection (via the above attributes) and manages the various service factories. It creates the [IServiceContainer](../../src/Microsoft.Diagnostics.DebugServices/IServiceContainer.cs) instances for the extension points globally, in targets, modules, threads and runtimes (i.e. the IRuntime.ServiceProvider property). The public [IServiceManager](../../src/Microsoft.Diagnostics.DebugServices/IServiceManager.cs) interface exposes the public methods of the manager.
-
-The IServiceProvider/IServiceContainer implementation allows multiple instances of the same service type to be registered. They are queried by getting the IEnumerable of the service type (i.e. calling `IServiceProvider.GetService(typeof(IEnumerable<service type>)`). If the non-enumerable service type is queried and there are multiple instances, an exception is thrown. The IRuntimeService implementation uses this feature to enumerate all the IRuntimeProvider instances registered in the system.
+The internal [ServiceManager](../../src/Microsoft.Diagnostics.DebugServices.Implementation/ServiceManager.cs) loads extension assemblies, provides the dependency injection using reflection (via the above attributes) and manages the various service factories. It creates the [ServiceContainerFactory](../../src/Microsoft.Diagnostics.DebugServices/ServiceContainerFactory.cs) instances for the extension points globally, in targets, modules, threads and runtimes (i.e. the IRuntime.ServiceProvider property). From the ServiceContainerFactory [ServiceContainer](../../src/Microsoft.Diagnostics.DebugServices/ServiceContainer.cs) instances are built. The public [IServiceManager](../../src/Microsoft.Diagnostics.DebugServices/IServiceManager.cs) interface exposes the public methods of the manager.
 
 ### IDumpTargetFactory
 
@@ -239,7 +239,7 @@ This interface provides services to the native SOS/plugins code. It is a private
 
 This native interface is what the SOS.Extensions host uses to implement the above services. This is another private interface between SOS.Extensions and the native lldb plugin or Windows SOS native code.
 
-[debuggerservice.h](../../src/SOS/inc/debuggerservice.h) for details.
+[debuggerservice.h](../../src/SOS/inc/debuggerservices.h) for details.
 
 ## Projects and Assemblies
 

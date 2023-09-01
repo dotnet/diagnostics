@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -36,6 +35,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static Task<EventPipeSession> StartEventPipeSession(this DiagnosticsClientApiShim shim, EventPipeProvider provider)
         {
             return shim.StartEventPipeSession(provider, DefaultPositiveVerificationTimeout);
+        }
+
+        public static Task EnablePerfMap(this DiagnosticsClientApiShim shim, PerfMapType type)
+        {
+            return shim.EnablePerfMap(type, DefaultPositiveVerificationTimeout);
+        }
+
+        public static Task DisablePerfMap(this DiagnosticsClientApiShim shim)
+        {
+            return shim.DisablePerfMap(DefaultPositiveVerificationTimeout);
         }
     }
 }

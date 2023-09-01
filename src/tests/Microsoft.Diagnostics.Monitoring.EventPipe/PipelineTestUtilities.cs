@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.TestHelpers;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit.Abstractions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
@@ -27,7 +26,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TestRunner testRunner,
             TaskCompletionSource<object> waitTaskSource = null)
         {
-            using var cancellation = new CancellationTokenSource(DefaultPipelineRunTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPipelineRunTimeout);
 
             await ExecutePipelineWithTracee(
                 pipeline,
@@ -42,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> waitTaskSource = null)
             where T : EventSourcePipelineSettings
         {
-            using var cancellation = new CancellationTokenSource(DefaultPipelineRunTimeout);
+            using CancellationTokenSource cancellation = new(DefaultPipelineRunTimeout);
 
             await ExecutePipelineWithTracee(
                 pipeline,
@@ -87,8 +86,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 // Optionally wait on caller before allowing the pipeline to stop.
                 if (null != waitTaskSource)
                 {
-                    using var _ = token.Register(() =>
-                    {
+                    using CancellationTokenRegistration _ = token.Register(() => {
                         testRunner.WriteLine("Did not receive completion signal before cancellation.");
                         waitTaskSource.TrySetCanceled(token);
                     });

@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats.ELF;
 using System;
 using System.Runtime.InteropServices;
+using Microsoft.FileFormats.ELF;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -40,16 +39,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _symbolService = symbolService;
             _onChangeEvent = symbolService.OnChangeEvent.Register(() => {
                 _elfFile?.Dispose();
-                _elfFile = null; 
+                _elfFile = null;
             });
         }
 
         public ELFFile GetELFFile()
         {
-            if (_elfFile == null)
-            {
-                _elfFile = Utilities.OpenELFFile(_symbolService.DownloadModuleFile(_module));
-            }
+            _elfFile ??= Utilities.OpenELFFile(_symbolService.DownloadModuleFile(_module));
             return _elfFile;
         }
 

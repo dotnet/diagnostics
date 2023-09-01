@@ -1,16 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-
+using System.Collections.Generic;
 using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
 {
-    internal class CommandUtils
+    internal static class CommandUtils
     {
         // Returns processId that matches the given name.
         // It also checks whether the process has a diagnostics server port.
@@ -18,9 +16,9 @@ namespace Microsoft.Internal.Common.Utils
         // with the given name, then this returns -1
         public static int FindProcessIdWithName(string name)
         {
-            var publishedProcessesPids = new List<int>(DiagnosticsClient.GetPublishedProcesses());
-            var processesWithMatchingName = Process.GetProcessesByName(name);
-            var commonId = -1;
+            List<int> publishedProcessesPids = new(DiagnosticsClient.GetPublishedProcesses());
+            Process[] processesWithMatchingName = Process.GetProcessesByName(name);
+            int commonId = -1;
 
             for (int i = 0; i < processesWithMatchingName.Length; i++)
             {
@@ -62,7 +60,7 @@ namespace Microsoft.Internal.Common.Utils
 
         /// <summary>
         /// A helper method for validating --process-id, --name, --diagnostic-port options for collect commands.
-        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is 
+        /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
         /// such duplication, it prints the appropriate error message.
         /// </summary>
         /// <param name="processId">process ID</param>
@@ -73,7 +71,7 @@ namespace Microsoft.Internal.Common.Utils
         public static bool ValidateArgumentsForAttach(int processId, string name, string port, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
-            if (processId == 0 && name == null && string.IsNullOrEmpty(port))
+            if (processId == 0 && string.IsNullOrEmpty(name) && string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("Must specify either --process-id, --name, or --diagnostic-port.");
                 return false;
@@ -83,24 +81,24 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine($"{processId} is not a valid process ID");
                 return false;
             }
-            else if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
+            else if (processId != 0 && !string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("Only one of the --name, --process-id, or --diagnostic-port options may be specified.");
                 return false;
             }
-            else if (processId != 0 && name != null)
+            else if (processId != 0 && !string.IsNullOrEmpty(name))
             {
-                Console.WriteLine("Can only one of specify --name or --process-id.");
+                Console.WriteLine("Only one of the --name or --process-id options may be specified.");
                 return false;
             }
             else if (processId != 0 && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --process-id or --diagnostic-port.");
+                Console.WriteLine("Only one of the --process-id or --diagnostic-port options may be specified.");
                 return false;
             }
-            else if (name != null && !string.IsNullOrEmpty(port))
+            else if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --name or --diagnostic-port.");
+                Console.WriteLine("Only one of the --name or --diagnostic-port options may be specified.");
                 return false;
             }
             // If we got this far it means only one of --name/--diagnostic-port/--process-id was specified
@@ -109,7 +107,7 @@ namespace Microsoft.Internal.Common.Utils
                 return true;
             }
             // Resolve name option
-            else if (name != null)
+            else if (!string.IsNullOrEmpty(name))
             {
                 processId = CommandUtils.FindProcessIdWithName(name);
                 if (processId < 0)
@@ -127,18 +125,18 @@ namespace Microsoft.Internal.Common.Utils
         }
     }
 
-    internal class LineRewriter
+    internal sealed class LineRewriter
     {
-        public int LineToClear { get; set; } = 0;
+        public int LineToClear { get; set; }
 
-        public LineRewriter() {}
+        public LineRewriter() { }
 
         // ANSI escape codes:
         //  [2K => clear current line
         //  [{LineToClear};0H => move cursor to column 0 of row `LineToClear`
         public void RewriteConsoleLine()
         {
-            var useConsoleFallback = true;
+            bool useConsoleFallback = true;
             if (!Console.IsInputRedirected)
             {
                 // in case of console input redirection, the control ANSI codes would appear
@@ -160,14 +158,41 @@ namespace Microsoft.Internal.Common.Utils
         }
 
         private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
+
+        private static bool? _isSetCursorPositionSupported;
+        public bool IsRewriteConsoleLineSupported
+        {
+            get
+            {
+                bool isSupported = _isSetCursorPositionSupported ?? EnsureInitialized();
+                return isSupported;
+
+                bool EnsureInitialized()
+                {
+                    try
+                    {
+                        int left = Console.CursorLeft;
+                        int top = Console.CursorTop;
+                        Console.SetCursorPosition(0, LineToClear);
+                        Console.SetCursorPosition(left, top);
+                        _isSetCursorPositionSupported = true;
+                    }
+                    catch
+                    {
+                        _isSetCursorPositionSupported = false;
+                    }
+                    return (bool)_isSetCursorPositionSupported;
+                }
+            }
+        }
     }
 
-    internal class ReturnCode
+    internal enum ReturnCode
     {
-        public static int Ok = 0;
-        public static int SessionCreationError = 1;
-        public static int TracingError = 2;
-        public static int ArgumentError = 3;
-        public static int UnknownError = 4;
+        Ok,
+        SessionCreationError,
+        TracingError,
+        ArgumentError,
+        UnknownError
     }
 }

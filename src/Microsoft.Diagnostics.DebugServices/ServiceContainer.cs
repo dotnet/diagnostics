@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -10,13 +9,13 @@ namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
     /// This service provider and container implementation caches the service instance. Calls
-    /// the service factory for the type if not already instantiated and cached and if no 
+    /// the service factory for the type if not already instantiated and cached and if no
     /// factory, chains to the parent service container.
     ///
-    /// This implementations allows multiple instances of the same service type to be 
-    /// registered. They are queried by getting the IEnumerable of the service type. If 
-    /// the non-enumerable service type is queried and there are multiple instances, an 
-    /// exception is thrown. The IRuntimeService implementation uses this feature to 
+    /// This implementations allows multiple instances of the same service type to be
+    /// registered. They are queried by getting the IEnumerable of the service type. If
+    /// the non-enumerable service type is queried and there are multiple instances, an
+    /// exception is thrown. The IRuntimeService implementation uses this feature to
     /// enumerate all the IRuntimeProvider instances registered in the system.
     /// </summary>
     public class ServiceContainer : IServiceProvider
@@ -74,30 +73,18 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         /// <summary>
-        /// Get the cached/instantiated service instance if one exists. Don't call the factory or parent to create.
-        /// </summary>
-        /// <param name="type">service type</param>
-        /// <param name="service">service instance (can be null)</param>
-        /// <returns>if true, found service</returns>
-        public bool TryGetCachedService(Type type, out object service)
-        {
-            Debug.Assert(type != null);
-            if (type == typeof(IServiceProvider))
-            {
-                service = this;
-                return true;
-            }
-            return _instances.TryGetValue(type, out service);
-        }
-
-        /// <summary>
         /// Returns the instance of the service or returns null if service doesn't exist
         /// </summary>
         /// <param name="type">service type</param>
         /// <returns>service instance or null</returns>
         public object GetService(Type type)
         {
-            if (TryGetCachedService(type, out object service))
+            Debug.Assert(type != null);
+            if (type == typeof(IServiceProvider))
+            {
+                return this;
+            }
+            if (_instances.TryGetValue(type, out object service))
             {
                 return service;
             }

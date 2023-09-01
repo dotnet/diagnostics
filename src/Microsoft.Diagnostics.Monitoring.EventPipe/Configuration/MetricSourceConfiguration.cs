@@ -1,15 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing.Parsers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing.Parsers;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -32,7 +30,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     public sealed class MetricSourceConfiguration : MonitoringSourceConfiguration
     {
+        private const string SharedSessionId = "SHARED";
+
         private readonly IList<EventPipeProvider> _eventPipeProviders;
+        public string ClientId { get; private set; }
         public string SessionId { get; private set; }
 
         public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<string> eventCounterProviderNames)
@@ -40,7 +41,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
         }
 
-        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000)
+        public MetricSourceConfiguration(float metricIntervalSeconds, IEnumerable<MetricEventPipeProvider> providers, int maxHistograms = 20, int maxTimeSeries = 1000, bool useSharedSession = false)
         {
             if (providers == null)
             {
@@ -67,17 +68,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 const long TimeSeriesValuesEventKeyword = 0x2;
                 string metrics = string.Join(',', meterProviders.Select(p => p.Provider));
 
-                SessionId = Guid.NewGuid().ToString();
+                ClientId = Guid.NewGuid().ToString();
+
+                // Shared Session Id was added in 8.0 - older runtimes will not properly support it.
+                SessionId = useSharedSession ? SharedSessionId : Guid.NewGuid().ToString();
 
                 EventPipeProvider metricsEventSourceProvider =
-                    new EventPipeProvider(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
+                    new(MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName, EventLevel.Informational, TimeSeriesValuesEventKeyword,
                         new Dictionary<string, string>()
                         {
                             { "SessionId", SessionId },
                             { "Metrics", metrics },
                             { "RefreshInterval", metricIntervalSeconds.ToString(CultureInfo.InvariantCulture) },
                             { "MaxTimeSeries", maxTimeSeries.ToString(CultureInfo.InvariantCulture) },
-                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) }
+                            { "MaxHistograms", maxHistograms.ToString(CultureInfo.InvariantCulture) },
+                            { "ClientId", ClientId  }
                         }
                     );
 
@@ -85,10 +90,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static IEnumerable<MetricEventPipeProvider> CreateProviders(IEnumerable<string> providers) =>
+        internal static IEnumerable<MetricEventPipeProvider> CreateProviders(IEnumerable<string> providers, MetricType metricType = MetricType.EventCounter) =>
             providers.Select(provider => new MetricEventPipeProvider {
                 Provider = provider,
-                Type = MetricType.EventCounter
+                Type = metricType
             });
 
         public override IList<EventPipeProvider> GetProviders() => _eventPipeProviders;

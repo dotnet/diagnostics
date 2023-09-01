@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -56,10 +55,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 byte[] registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
-                context = new Span<byte>(registerContext);
+                registerContext.AsSpan().Slice(0, context.Length).CopyTo(context);
                 return true;
             }
-            catch (DiagnosticsException ex)
+            catch (Exception ex) when (ex is DiagnosticsException or ArgumentException)
             {
                 Trace.TraceError($"GetThreadContext: {threadId} exception {ex.Message}");
             }
@@ -84,7 +83,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         bool IMemoryReader.Read<T>(ulong address, out T value)
         {
-            Span<byte> buffer = stackalloc byte[Marshal.SizeOf<T>()];
+            Span<byte> buffer = stackalloc byte[Unsafe.SizeOf<T>()];
             if (((IMemoryReader)this).Read(address, buffer) == buffer.Length)
             {
                 value = Unsafe.As<byte, T>(ref MemoryMarshal.GetReference(buffer));
@@ -113,7 +112,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
-        private class DataReaderModule : ModuleInfo
+        private sealed class DataReaderModule : ModuleInfo
         {
             private readonly IModule _module;
 
@@ -133,7 +132,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override Version Version
             {
-                get 
+                get
                 {
                     try
                     {
@@ -163,7 +162,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            public override PdbInfo Pdb 
+            public override PdbInfo Pdb
             {
                 get
                 {
@@ -192,7 +191,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override ulong GetExportSymbolAddress(string symbol)
             {
-                var exportSymbols = _module.Services.GetService<IExportSymbols>();
+                IExportSymbols exportSymbols = _module.Services.GetService<IExportSymbols>();
                 if (exportSymbols is not null)
                 {
                     if (exportSymbols.TryGetSymbolAddress(symbol, out ulong offset))

@@ -1,7 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
@@ -9,12 +14,6 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace SOS.Extensions
 {
@@ -23,7 +22,7 @@ namespace SOS.Extensions
     /// </summary>
     public sealed unsafe class HostServices : COMCallableIUnknown, IHost
     {
-        private static readonly Guid IID_IHostServices = new Guid("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
+        private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
         /// <summary>
         /// This is the prototype of the native callback function.
@@ -52,7 +51,8 @@ namespace SOS.Extensions
         /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework")) {
+            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
+            {
                 AssemblyResolver.Enable();
             }
             DiagnosticLoggingService.Initialize();
@@ -71,7 +71,7 @@ namespace SOS.Extensions
         /// <summary>
         /// The retry count passed to the HTTP symbol store
         /// </summary>
-        public static int DefaultRetryCount { get; set; } = 0;
+        public static int DefaultRetryCount { get; set; }
 
         /// <summary>
         /// This is the main managed entry point that the native hosting code calls. It needs to be a single function
@@ -87,7 +87,7 @@ namespace SOS.Extensions
             {
                 extensionLibrary = DataTarget.PlatformFunctions.LoadLibrary(extensionPath);
             }
-            catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+            catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
             {
                 Trace.TraceError($"LoadLibrary({extensionPath}) FAILED {ex}");
             }
@@ -95,7 +95,7 @@ namespace SOS.Extensions
             {
                 return HResult.E_FAIL;
             }
-            var initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
+            InitializeCallbackDelegate initialializeCallback = SOSHost.GetDelegateFunction<InitializeCallbackDelegate>(extensionLibrary, "InitializeHostServices");
             if (initialializeCallback == null)
             {
                 return HResult.E_FAIL;
@@ -172,7 +172,8 @@ namespace SOS.Extensions
             IntPtr iunk)
         {
             Trace.TraceInformation("HostServices.RegisterDebuggerServices");
-            if (iunk == IntPtr.Zero || DebuggerServices != null) {
+            if (iunk == IntPtr.Zero || DebuggerServices != null)
+            {
                 return HResult.E_FAIL;
             }
             // Create the wrapper for the host debugger services
@@ -188,8 +189,8 @@ namespace SOS.Extensions
             HResult hr;
             try
             {
-                var consoleService = new ConsoleServiceFromDebuggerServices(DebuggerServices);
-                var fileLoggingConsoleService = new FileLoggingConsoleService(consoleService);
+                ConsoleServiceFromDebuggerServices consoleService = new(DebuggerServices);
+                FileLoggingConsoleService fileLoggingConsoleService = new(consoleService);
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
 
                 // Don't register everything in the SOSHost assembly; just the wrappers
@@ -207,6 +208,7 @@ namespace SOS.Extensions
 
                 // Display any extension assembly loads on console
                 _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
+                _serviceManager.NotifyExtensionLoadFailure.Register((Exception ex) => fileLoggingConsoleService.WriteLine(ex.Message));
 
                 // Load any extra extensions in the search path
                 _serviceManager.LoadExtensions();
@@ -227,7 +229,7 @@ namespace SOS.Extensions
                 _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
                 _serviceContainer.AddService<IContextService>(_contextService);
 
-                var threadUnwindService = new ThreadUnwindServiceFromDebuggerServices(DebuggerServices);
+                ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
                 _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
                 // Add each extension command to the native debugger
@@ -253,7 +255,7 @@ namespace SOS.Extensions
             }
             try
             {
-                var remoteMemoryService = new RemoteMemoryService(iunk);
+                RemoteMemoryService remoteMemoryService = new(iunk);
                 // This service needs another reference since it is implemented as part of IDebuggerServices and gets
                 // disposed in Uninitialize() below by the DisposeServices call.
                 remoteMemoryService.AddRef();
@@ -281,12 +283,13 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.CreateTarget");
-            if (_target != null || DebuggerServices == null) {
+            if (_target != null || DebuggerServices == null)
+            {
                 return HResult.E_FAIL;
             }
             try
             {
-                var target = new TargetFromDebuggerServices(DebuggerServices, this, _targetIdFactory++);
+                TargetFromDebuggerServices target = new(DebuggerServices, this, _targetIdFactory++);
                 _contextService.SetCurrentTarget(target);
                 _target = target;
             }
@@ -319,10 +322,7 @@ namespace SOS.Extensions
             IntPtr self)
         {
             Trace.TraceInformation("HostServices.FlushTarget");
-            if (_target != null)
-            {
-                _target.Flush();
-            }
+            _target?.Flush();
         }
 
         private void DestroyTarget(
@@ -435,7 +435,7 @@ namespace SOS.Extensions
         }
 
         #endregion
-        
+
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

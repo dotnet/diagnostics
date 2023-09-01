@@ -1,20 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Extensions
 {
     /// <summary>
     /// Provides thread and register info and values
     /// </summary>
-    internal class ThreadServiceFromDebuggerServices : ThreadService
+    internal sealed class ThreadServiceFromDebuggerServices : ThreadService
     {
         private readonly DebuggerServices _debuggerServices;
 

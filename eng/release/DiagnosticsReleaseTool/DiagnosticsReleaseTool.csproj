@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Condition="'$(DotNetBuildFromSource)' != 'true'" Project="$(RepositoryEngineeringDir)Analyzers.props" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,15 +14,23 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="[5.0.0]" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="[5.0.0]" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="[5.0.0]" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="[5.0.0]" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="[5.0.0]" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="[5.0.0]" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
 
     <PackageReference Include="Azure.Storage.Blobs" Version="[12.13.0]" />
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20467.2" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20468.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Remove="E:\NuGetCaches\.nuget\packages\microsoft.dotnet.codeanalysis\8.0.0-beta.23120.1\build\..\content\PinvokeAnalyzer_Win32Apis.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Remove="E:\NuGetCaches\.nuget\packages\microsoft.dotnet.codeanalysis\8.0.0-beta.23120.1\build\..\content\PinvokeAnalyzer_Win32Apis.txt" />
   </ItemGroup>
 
 </Project>

@@ -30,11 +30,11 @@
 
   <!-- Run OpenVirtualProcess tests on Linux -->
   <RunTestsLinux_x64>false</RunTestsLinux_x64>
-  <RunTestsLinux_x64 Condition="'$(OS)' == 'Linux'">true</RunTestsLinux_x64>
+  <RunTestsLinux_x64 Condition="'$(OS)' == 'linux'">true</RunTestsLinux_x64>
   <RunTestsLinux_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsLinux_x64>
   
   <RunTestsLinux_arm64>false</RunTestsLinux_arm64>
-  <RunTestsLinux_arm64 Condition="'$(OS)' == 'Linux'">true</RunTestsLinux_arm64>
+  <RunTestsLinux_arm64 Condition="'$(OS)' == 'linux'">true</RunTestsLinux_arm64>
   <RunTestsLinux_arm64 Condition="'$(TargetArchitecture)' != 'arm64'">false</RunTestsLinux_arm64>
 
   <Options>
@@ -116,13 +116,13 @@
   <RuntimeModuleDir>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeModuleDir>
 
   <Options>
-    <Option Condition="'$(OS)' == 'Linux'">
+    <Option Condition="'$(OS)' == 'linux'">
       <DbgShimPath>$(InstallDir)/libdbgshim.so</DbgShimPath>
       <RuntimeModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)/libcoreclr.so</RuntimeModulePath>
       <DbiModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)/libmscordbi.so</DbiModulePath>
       <DacModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)/libmscordaccore.so</DacModulePath>
     </Option>
-    <Option Condition="'$(OS)' == 'OSX'">
+    <Option Condition="'$(OS)' == 'osx'">
       <DbgShimPath>$(InstallDir)/libdbgshim.dylib</DbgShimPath>
       <RuntimeModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)/libcoreclr.dylib</RuntimeModulePath>
       <DbiModulePath Condition="'$(RuntimeModuleDir)' != ''">$(RuntimeModuleDir)/libmscordbi.dylib</DbiModulePath>

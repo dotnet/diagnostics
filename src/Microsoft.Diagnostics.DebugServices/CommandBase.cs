@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -100,7 +99,10 @@ namespace Microsoft.Diagnostics.DebugServices
 
             // skip 0x or leading 0000 if needed
             if (addressInHexa.StartsWith("0x"))
+            {
                 addressInHexa = addressInHexa.Substring(2);
+            }
+
             addressInHexa = addressInHexa.TrimStart('0');
 
             return ulong.TryParse(addressInHexa, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out address);

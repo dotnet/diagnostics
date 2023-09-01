@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Threading.Tasks;
@@ -14,7 +13,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// </summary>
     public static class DebuggeeCompiler
     {
-        async public static Task<DebuggeeConfiguration> Execute(TestConfiguration config, string debuggeeName, ITestOutputHelper output)
+        public static async Task<DebuggeeConfiguration> Execute(TestConfiguration config, string debuggeeName, ITestOutputHelper output)
         {
             IDebuggeeCompiler compiler;
             switch (config.DebuggeeBuildProcess)
@@ -34,7 +33,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 default:
                     throw new Exception("Invalid DebuggeeBuildProcess configuration value. Expected 'prebuilt', actual \'" + config.DebuggeeBuildProcess + "\'");
             }
-            return await compiler.Execute(output);
+            return await compiler.Execute(output).ConfigureAwait(false);
         }
     }
 

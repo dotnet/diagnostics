@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Diagnostics;
 using Xunit.Abstractions;
 
@@ -10,7 +13,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static void EnableListener(ITestOutputHelper output, string name)
         {
-            if (Trace.Listeners[name] == null) 
+            if (Trace.Listeners[name] == null)
             {
                 Trace.Listeners.Add(new LoggingListener(output, name));
                 Trace.AutoFlush = true;
@@ -19,7 +22,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static void EnableConsoleListener(string name)
         {
-            if (Trace.Listeners[name] == null) 
+            if (Trace.Listeners[name] == null)
             {
                 Trace.Listeners.Add(new LoggingListener(name));
                 Trace.AutoFlush = true;

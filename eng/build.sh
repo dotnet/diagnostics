@@ -5,7 +5,6 @@
 # Obtain the location of the bash script to figure out where the root of the repo is.
 __RepoRootDir="$(cd "$(dirname "$0")"/..; pwd -P)"
 
-__BuildArch=x64
 __BuildType=Debug
 __CMakeArgs=
 __CommonMSBuildArgs=
@@ -16,8 +15,6 @@ __CrossBuild=0
 __DotnetRuntimeDownloadVersion="default"
 __DotnetRuntimeVersion="default"
 __ExtraCmakeArgs=
-__HostArch=x64
-__HostOS=Linux
 __IsMSBuildOnNETCoreSupported=0
 __ManagedBuild=1
 __ManagedBuildArgs=
@@ -30,7 +27,6 @@ __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
 __SkipConfigure=0
 __SkipGenerateVersion=0
-__TargetOS=Linux
 __Test=0
 __UnprocessedBuildArgs=
 
@@ -41,14 +37,14 @@ usage_list+=("-test: run xunit tests")
 
 handle_arguments() {
 
-    lowerI="$(echo "$1" | tr "[:upper:]" "[:lower:]")"
+    lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
     case "$lowerI" in
         architecture|-architecture|-a)
-            __BuildArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+            __TargetArch="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
             __ShiftArgs=1
             ;;
 
-        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-restore|-sign|-sb)
+        -binarylog|-bl|-clean|-integrationtest|-pack|-performancetest|-pipelineslog|-pl|-preparemachine|-publish|-r|-rebuild|-build|-restore|-sign|-sb)
             __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
@@ -61,10 +57,6 @@ handle_arguments() {
             fi
 
             __ShiftArgs=1
-            ;;
-
-        -clean|-binarylog|-bl|-pipelineslog|-pl|-restore|-r|-rebuild|-pack|-integrationtest|-performancetest|-sign|-publish|-preparemachine|-sb)
-            __ManagedBuildArgs="$__ManagedBuildArgs $1"
             ;;
 
         -dotnetruntimeversion)
@@ -115,12 +107,9 @@ handle_arguments() {
 }
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
-source "$repoRootDir/eng/native/init-os-and-arch.sh"
-
-__BuildArch="$arch"
 
 __LogsDir="$__RootBinDir/log/$__BuildType"
-__ConfigTriplet="$__TargetOS.$__BuildArch.$__BuildType"
+__ConfigTriplet="$__TargetOS.$__TargetArch.$__BuildType"
 __BinDir="$__RootBinDir/bin/$__ConfigTriplet"
 __ArtifactsIntermediatesDir="$__RootBinDir/obj"
 __IntermediatesDir="$__ArtifactsIntermediatesDir/$__ConfigTriplet"
@@ -141,7 +130,7 @@ __ExtraCmakeArgs="$__CMakeArgs $__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__Roo
 export __CMakeBinDir="$__BinDir"
 
 
-if [[ "$__BuildArch" == "armel" ]]; then
+if [[ "$__TargetArch" == "armel" ]]; then
     # Armel cross build is Tizen specific and does not support Portable RID build
     __PortableBuild=0
 fi
@@ -151,26 +140,39 @@ fi
 #
 
 if [[ "$__ManagedBuild" == 1 ]]; then
+
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
-    "$__RepoRootDir/eng/common/build.sh" --build --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
+    "$__RepoRootDir/eng/common/build.sh" --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
+
     if [ "$?" != 0 ]; then
+        exit 1
+    fi
+
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
+
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/CreateVersionFile.proj \
+        /bl:$__GenerateVersionLog \
+        /t:GenerateVersionFiles \
+        /restore \
+        /p:GenerateVersionSourceFile=true \
+        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
+        /p:Configuration="$__BuildType" \
+        /p:Platform="$__TargetArch" \
+        $__UnprocessedBuildArgs
+
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
         exit 1
     fi
 fi
 
 #
-# Initialize the target distro name
-#
-
-initTargetDistroRid
-
-echo "RID: $__DistroRid"
-
-#
 # Setup LLDB paths for native build
 #
 
-if [ "$__HostOS" == "OSX" ]; then
+if [ "$__HostOS" == "osx" ]; then
     export LLDB_H="$__RepoRootDir"/src/SOS/lldbplugin/swift-4.0
     export LLDB_LIB=$(xcode-select -p)/../SharedFrameworks/LLDB.framework/LLDB
     export LLDB_PATH=$(xcode-select -p)/usr/bin/lldb
@@ -187,12 +189,12 @@ if [ "$__HostOS" == "OSX" ]; then
     which python
     python --version
 
-    if [[ "$__BuildArch" == x64 ]]; then
+    if [[ "$__TargetArch" == x64 ]]; then
         __ExtraCmakeArgs="-DCMAKE_OSX_ARCHITECTURES=\"x86_64\" $__ExtraCmakeArgs"
-    elif [[ "$__BuildArch" == arm64 ]]; then
+    elif [[ "$__TargetArch" == arm64 ]]; then
         __ExtraCmakeArgs="-DCMAKE_OSX_ARCHITECTURES=\"arm64\" $__ExtraCmakeArgs"
     else
-        echo "Error: Unknown OSX architecture $__BuildArch."
+        echo "Error: Unknown OSX architecture $__TargetArch."
         exit 1
     fi
 fi
@@ -201,26 +203,7 @@ fi
 # Build native components
 #
 if [[ "$__NativeBuild" == 1 ]]; then
-    echo "Generating Version Source File"
-    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
-
-    "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.proj \
-        /bl:$__GenerateVersionLog \
-        /t:GenerateVersionFiles \
-        /restore \
-        /p:GenerateVersionSourceFile=true \
-        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
-        /p:Configuration="$__BuildType" \
-        /p:Platform="$__BuildArch" \
-        $__UnprocessedBuildArgs
-
-    if [ $? != 0 ]; then
-        echo "Generating Version Source File FAILED"
-        exit 1
-    fi
-
-    build_native "$__TargetOS" "$__BuildArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
+    build_native "$__TargetOS" "$__TargetArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "$?" != 0 ]; then
         echo "Native build FAILED"
@@ -234,8 +217,8 @@ fi
 
 if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
     __targetRid=net6.0
-    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__DistroRid
-    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__DistroRid
+    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__OutputRid
+    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__OutputRid
 
     mkdir -p "$__dotnet_sos"
     mkdir -p "$__dotnet_dump"
@@ -254,19 +237,35 @@ fi
 if [[ "$__Test" == 1 ]]; then
    if [[ "$__CrossBuild" == 0 ]]; then
       if [[ -z "$LLDB_PATH" ]]; then
-          export LLDB_PATH="$(which lldb-3.9.1 2> /dev/null)"
-          if [[ -z "$LLDB_PATH" ]]; then
-              export LLDB_PATH="$(which lldb-3.9 2> /dev/null)"
-              if [[ -z "$LLDB_PATH" ]]; then
-                  export LLDB_PATH="$(which lldb-4.0 2> /dev/null)"
-                  if [[ -z "$LLDB_PATH" ]]; then
-                      export LLDB_PATH="$(which lldb-5.0 2> /dev/null)"
-                      if [[ -z "$LLDB_PATH" ]]; then
-                          export LLDB_PATH="$(which lldb 2> /dev/null)"
-                      fi
-                  fi
-              fi
+        check_version_exists() {
+          desired_version=-1
+
+          # Set up the environment to be used for building with the desired debugger.
+          if command -v "lldb-$1.$2" > /dev/null; then
+            desired_version="-$1.$2"
+          elif command -v "lldb$1$2" > /dev/null; then
+            desired_version="$1$2"
+          elif command -v "lldb-$1$2" > /dev/null; then
+            desired_version="-$1$2"
           fi
+
+          echo "$desired_version"
+        }
+
+        # note: clang versions higher than 6 do not have minor version in file name, if it is zero.
+        versions="16 15 14 13 12 11 10 9 8 7 6.0 5.0 4.0 3.9"
+        for version in $versions; do
+          _major="${version%%.*}"
+          [ -z "${version##*.*}" ] && _minor="${version#*.}"
+          desired_version="$(check_version_exists "$_major" "$_minor")"
+          if [ "$desired_version" != "-1" ]; then majorVersion="$_major"; break; fi
+        done
+
+        if [ -z "$majorVersion" ]; then
+          export LLDB_PATH="$(command -v "lldb")"
+        else
+          export LLDB_PATH="$(command -v "lldb$desired_version")"
+        fi
       fi
 
       if [[ -z "$GDB_PATH" ]]; then
@@ -279,7 +278,7 @@ if [[ "$__Test" == 1 ]]; then
         --test \
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
-        /p:BuildArch="$__BuildArch" \
+        /p:BuildArch="$__TargetArch" \
         /p:PrivateBuildPath="$__PrivateBuildPath" \
         /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \

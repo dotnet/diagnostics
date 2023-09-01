@@ -1,10 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Internal.Common.Commands;
-using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -15,14 +11,17 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common.Commands;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
     public enum CountersExportFormat { csv, json };
 
-    internal class Program
+    internal static class Program
     {
-        delegate Task<int> CollectDelegate(
+        private delegate Task<int> CollectDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -37,7 +36,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxHistograms,
             int maxTimeSeries,
             TimeSpan duration);
-        delegate Task<int> MonitorDelegate(
+
+        private delegate Task<int> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             TimeSpan duration);
 
         private static Command MonitorCommand() =>
-            new Command(
+            new(
                 name: "monitor",
                 description: "Start monitoring a .NET application")
             {
@@ -70,9 +70,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 MaxTimeSeriesOption(),
                 DurationOption()
             };
-        
+
         private static Command CollectCommand() =>
-            new Command(
+            new(
                 name: "collect",
                 description: "Monitor counters in a .NET application and export the result into a file")
             {
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process that will be monitored.")
             {
@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id that will be monitored.")
             {
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option RefreshIntervalOption() =>
-            new Option(
+            new(
                 alias: "--refresh-interval",
                 description: "The number of seconds to delay between updating the displayed counters.")
             {
@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ExportFormatOption() =>
-            new Option(
+            new(
                 alias: "--format",
                 description: "The format of exported counter data.")
             {
@@ -126,15 +126,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option ExportFileNameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-o", "--output" },
-                description: "The output file name.") 
+                description: "The output file name.")
             {
                 Argument = new Argument<string>(name: "output", getDefaultValue: () => "counter")
             };
 
         private static Option CounterOption() =>
-            new Option(
+            new(
                 alias: "--counters",
                 description: "A comma-separated list of counter providers. Counter providers can be specified as <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without qualifying counter_names then all counters will be shown. For example \"System.Runtime[cpu-usage,working-set],Microsoft.AspNetCore.Hosting\" includes the cpu-usage and working-set counters from the System.Runtime provider and all the counters from the Microsoft.AspNetCore.Hosting provider. To discover provider and counter names, use the list command.")
             {
@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Command ListCommand() =>
-            new Command(
+            new(
                 name: "list",
                 description: "Display a list of counter names and descriptions, grouped by provider.")
             {
@@ -158,23 +158,23 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option RuntimeVersionOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-r", "--runtime-version" },
-                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0") 
+                description: "Version of runtime. Supported runtime version: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0")
             {
                 Argument = new Argument<string>(name: "runtimeVersion", getDefaultValue: () => "6.0")
             };
 
         private static Option DiagnosticPortOption() =>
-            new Option(
-                alias: "--diagnostic-port",
+            new(
+                aliases: new[] { "--dport", "--diagnostic-port" },
                 description: "The path to diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")
             };
 
         private static Option ResumeRuntimeOption() =>
-            new Option(
+            new(
                 alias: "--resume-runtime",
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
@@ -182,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option MaxHistogramOption() =>
-            new Option(
+            new(
                 alias: "--maxHistograms",
                 description: "The maximum number of histograms that can be tracked. Each unique combination of provider name, histogram name, and dimension values" +
                 " counts as one histogram. Tracking more histograms uses more memory in the target process so this bound guards against unintentional high memory use.")
@@ -191,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option MaxTimeSeriesOption() =>
-            new Option(
+            new(
                 alias: "--maxTimeSeries",
                 description: "The maximum number of time series that can be tracked. Each unique combination of provider name, metric name, and dimension values" +
                 " counts as one time series. Tracking more time series uses more memory in the target process so this bound guards against unintentional high memory use.")
@@ -200,7 +200,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             };
 
         private static Option DurationOption() =>
-            new Option(
+            new(
                 alias: "--duration",
                 description: @"When specified, will run for the given timespan and then automatically stop. Provided in the form of dd:hh:mm:ss.")
             {
@@ -217,15 +217,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0");
                 return 0;
             }
-            var profiles = KnownData.GetAllProviders(runtimeVersion);
-            var maxNameLength = profiles.Max(p => p.Name.Length);
+            IReadOnlyList<CounterProvider> profiles = KnownData.GetAllProviders(runtimeVersion);
+            int maxNameLength = profiles.Max(p => p.Name.Length);
             Console.WriteLine($"Showing well-known counters for .NET (Core) version {runtimeVersion} only. Specific processes may support additional counters.");
-            foreach (var profile in profiles)
+            foreach (CounterProvider profile in profiles)
             {
-                var counters = profile.GetAllCounters();
-                var maxCounterNameLength = counters.Max(c => c.Name.Length);
+                IReadOnlyList<CounterProfile> counters = profile.GetAllCounters();
+                int maxCounterNameLength = counters.Max(c => c.Name.Length);
                 Console.WriteLine($"{profile.Name.PadRight(maxNameLength)}");
-                foreach (var counter in profile.Counters.Values)
+                foreach (CounterProfile counter in profile.Counters.Values)
                 {
                     Console.WriteLine($"    {counter.Name.PadRight(maxCounterNameLength)} \t\t {counter.Description}");
                 }
@@ -236,7 +236,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Task<int> Main(string[] args)
         {
-            var parser = new CommandLineBuilder()
+            Parser parser = new CommandLineBuilder()
                 .AddCommand(MonitorCommand())
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
@@ -246,7 +246,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             ParseResult parseResult = parser.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;
-            if (parsedCommandName == "monitor" || parsedCommandName == "collect")
+            if (parsedCommandName is "monitor" or "collect")
             {
                 IReadOnlyCollection<string> unparsedTokens = parseResult.UnparsedTokens;
                 // If we notice there are unparsed tokens, user might want to attach on startup.

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // ==++==
 //
@@ -1129,125 +1128,6 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
     return;
 }
 
-HRESULT GetNonSharedStaticFieldValueFromName(
-    UINT64* pValue,
-    DWORD_PTR moduleAddr,
-    const char *typeName,
-    __in_z LPCWSTR wszFieldName,
-    CorElementType fieldType)
-{
-    HRESULT hr = S_OK;
-
-    mdTypeDef mdType = 0;
-    GetInfoFromName(moduleAddr, typeName, &mdType);
-    if (mdType == 0)
-    {
-        return E_FAIL; // Failed to find type token
-    }
-
-    CLRDATA_ADDRESS cdaMethodTable = 0;
-    if (FAILED(hr = g_sos->GetMethodDescFromToken(moduleAddr, mdType, &cdaMethodTable)) ||
-        !IsValidToken(moduleAddr, mdType) ||
-        cdaMethodTable == 0)
-    {
-        return FAILED(hr) ? hr : E_FAIL; // Invalid type token or type is not loaded yet
-    }
-
-    DacpMethodTableData vMethodTable;
-    if ((hr = vMethodTable.Request(g_sos, cdaMethodTable)) != S_OK)
-    {
-        return FAILED(hr) ? hr : E_FAIL; // Failed to get method table data
-    }
-    if (vMethodTable.bIsShared)
-    {
-        ExtOut("    %s: %s\n", "Method table is shared (not implemented)", typeName);
-        return E_NOTIMPL;
-    }
-
-    DacpMethodTableFieldData vMethodTableFields;
-    if (FAILED(hr = vMethodTableFields.Request(g_sos, cdaMethodTable)))
-    {
-        return hr; // Failed to get field data
-    }
-
-    DacpModuleData vModule;
-    if ((hr = vModule.Request(g_sos, vMethodTable.Module)) != S_OK)
-    {
-        return FAILED(hr) ? hr : E_FAIL; // Failed to get module data
-    }
-
-    DacpDomainLocalModuleData vDomainLocalModule;
-    if ((hr = g_sos->GetDomainLocalModuleDataFromModule(vMethodTable.Module, &vDomainLocalModule)) != S_OK)
-    {
-        return FAILED(hr) ? hr : E_FAIL; // Failed to get domain local module data
-    }
-
-    ToRelease<IMetaDataImport> pImport = MDImportForModule(&vModule);
-    CLRDATA_ADDRESS cdaField = vMethodTableFields.FirstField;
-    DacpFieldDescData vFieldDesc;
-    bool found = false;
-    for (DWORD staticFieldIndex = 0; staticFieldIndex < vMethodTableFields.wNumStaticFields; )
-    {
-        if ((hr = vFieldDesc.Request(g_sos, cdaField)) != S_OK || vFieldDesc.Type >= ELEMENT_TYPE_MAX)
-        {
-            return FAILED(hr) ? hr : E_FAIL; // Failed to get member field desc
-        }
-        cdaField = vFieldDesc.NextField;
-
-        if (!vFieldDesc.bIsStatic)
-        {
-            continue;
-        }
-
-        ++staticFieldIndex;
-
-        if (vFieldDesc.Type != fieldType)
-        {
-            continue;
-        }
-
-        if (FAILED(hr = NameForToken_s(TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false)))
-        {
-            return hr; // Failed to get member field name
-        }
-
-        if (_wcscmp(g_mdName, wszFieldName) != 0)
-        {
-            continue;
-        }
-
-        if (vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal)
-        {
-            ExtOut("    %s: %s.%S\n", "Static field is thread-local or context-local (not implemented)", typeName, wszFieldName);
-            return E_NOTIMPL;
-        }
-
-        found = true;
-        break;
-    }
-
-    if (!found)
-    {
-        return E_FAIL; // Static field not found
-    }
-
-    DWORD_PTR pValueAddr = 0;
-    GetStaticFieldPTR(&pValueAddr, &vDomainLocalModule, &vMethodTable, &vFieldDesc);
-    if (pValueAddr == 0)
-    {
-        return E_FAIL; // Failed to get static field address
-    }
-
-    UINT64 value = 0;
-    if (FAILED(MOVEBLOCK(value, pValueAddr, gElementTypeInfo[fieldType])))
-    {
-        return E_FAIL; // Failed to read static field
-    }
-
-    *pValue = value;
-    return S_OK;
-}
-
 // Return value: -1 = error,
 //                0 = field not found,
 //              > 0 = offset to field from objAddr
@@ -1330,65 +1210,6 @@ int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, CLRDATA_ADDRESS cdaMT, __in_z LPCW
 #undef EXITPOINT
 }
 
-
-// Return value: -1 = error
-//               -2 = not found
-//             >= 0 = offset to field from cdaValue
-int GetValueFieldOffset(CLRDATA_ADDRESS cdaMT, __in_z LPCWSTR wszFieldName, DacpFieldDescData* pDacpFieldDescData)
-{
-#define EXITPOINT(EXPR) do { if(!(EXPR)) { return -1; } } while (0)
-
-    const int NOT_FOUND = -2;
-    DacpMethodTableData dmtd;
-    DacpMethodTableFieldData vMethodTableFields;
-    DacpFieldDescData vFieldDesc;
-    DacpModuleData module;
-    static DWORD numInstanceFields = 0; // Static due to recursion visiting parents
-    numInstanceFields = 0;
-
-    EXITPOINT(vMethodTableFields.Request(g_sos, cdaMT) == S_OK);
-
-    EXITPOINT(dmtd.Request(g_sos, cdaMT) == S_OK);
-    EXITPOINT(module.Request(g_sos, dmtd.Module) == S_OK);
-    if (dmtd.ParentMethodTable)
-    {
-        DWORD retVal = GetValueFieldOffset(dmtd.ParentMethodTable, wszFieldName, pDacpFieldDescData);
-        if (retVal != (DWORD)NOT_FOUND)
-        {
-            // Return in case of error or success. Fall through for field-not-found.
-            return retVal;
-        }
-    }
-
-    CLRDATA_ADDRESS dwAddr = vMethodTableFields.FirstField;
-    ToRelease<IMetaDataImport> pImport = MDImportForModule(&module);
-
-    while (numInstanceFields < vMethodTableFields.wNumInstanceFields)
-    {
-        EXITPOINT(vFieldDesc.Request(g_sos, dwAddr) == S_OK);
-
-        if (!vFieldDesc.bIsStatic)
-        {
-            NameForToken_s(TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
-            if (_wcscmp(wszFieldName, g_mdName) == 0)
-            {
-                if (pDacpFieldDescData != NULL)
-                {
-                    *pDacpFieldDescData = vFieldDesc;
-                }
-                return vFieldDesc.dwOffset;
-            }
-            numInstanceFields++;
-        }
-
-        dwAddr = vFieldDesc.NextField;
-    }
-
-    // Field name not found...
-    return NOT_FOUND;
-
-#undef EXITPOINT
-}
 
 // Returns an AppDomain address if AssemblyPtr is loaded into that domain only. Otherwise
 // returns NULL
@@ -2104,109 +1925,6 @@ BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADD
     }
 
     return FALSE;
-}
-
-void DumpStackObjectsOutput(const char *location, DWORD_PTR objAddr, BOOL verifyFields)
-{
-    // rule out pointers that are outside of the gc heap.
-    if (g_snapshot.GetHeap(objAddr) == NULL)
-        return;
-
-    DacpObjectData objectData;
-    if (objectData.Request(g_sos, TO_CDADDR(objAddr)) != S_OK)
-        return;
-
-    if (sos::IsObject(objAddr, verifyFields != FALSE)
-        && !sos::MethodTable::IsFreeMT(TO_TADDR(objectData.MethodTable)))
-    {
-        DMLOut("%-" POINTERSIZE "s %s ", location, DMLObject(objAddr));
-        if (g_sos->GetObjectClassName(TO_CDADDR(objAddr), mdNameLen, g_mdName, NULL)==S_OK)
-        {
-            ExtOut("%S", g_mdName);
-
-            if (IsStringObject(objAddr))
-            {
-                ExtOut("    ");
-                StringObjectContent(objAddr, FALSE, 40);
-            }
-            else if (IsObjectArray(objAddr) &&
-                     (g_sos->GetMethodTableName(objectData.ElementTypeHandle, mdNameLen, g_mdName, NULL) == S_OK))
-            {
-                ExtOut("    ");
-                ExtOut("(%S[])", g_mdName);
-            }
-        }
-        else
-        {
-            ExtOut("<unknown type>");
-        }
-        ExtOut("\n");
-    }
-}
-
-void DumpStackObjectsOutput(DWORD_PTR ptr, DWORD_PTR objAddr, BOOL verifyFields)
-{
-    char location[64];
-    sprintf_s(location, 64, "%p", (DWORD_PTR *)ptr);
-
-    DumpStackObjectsOutput(location, objAddr, verifyFields);
-}
-
-void DumpStackObjectsInternal(size_t StackTop, size_t StackBottom, BOOL verifyFields)
-{
-    for (DWORD_PTR ptr = StackTop; ptr <= StackBottom; ptr += sizeof(DWORD_PTR))
-    {
-        if (IsInterrupt())
-            return;
-
-        DWORD_PTR objAddr;
-        move_xp(objAddr, ptr);
-
-        DumpStackObjectsOutput(ptr, objAddr, verifyFields);
-    }
-}
-
-void DumpRegObjectHelper(const char *regName, BOOL verifyFields)
-{
-    DWORD_PTR reg;
-#ifdef FEATURE_PAL
-    if (FAILED(g_ExtRegisters->GetValueByName(regName, &reg)))
-        return;
-#else
-    DEBUG_VALUE value;
-    ULONG IREG;
-    if (FAILED(g_ExtRegisters->GetIndexByName(regName, &IREG)) ||
-        FAILED(g_ExtRegisters->GetValue(IREG, &value)))
-        return;
-
-#if defined(SOS_TARGET_X86) || defined(SOS_TARGET_ARM)
-    reg = (DWORD_PTR) value.I32;
-#elif defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
-    reg = (DWORD_PTR) value.I64;
-#else
-#error Unsupported target
-#endif
-#endif // FEATURE_PAL
-
-    DumpStackObjectsOutput(regName, reg, verifyFields);
-}
-
-void DumpStackObjectsHelper (
-                TADDR StackTop,
-                TADDR StackBottom,
-                BOOL verifyFields)
-{
-    ExtOut(g_targetMachine->GetDumpStackObjectsHeading());
-
-    LPCSTR* regs;
-    unsigned int cnt;
-    g_targetMachine->GetGCRegisters(&regs, &cnt);
-
-    for (size_t i = 0; i < cnt; ++i)
-        DumpRegObjectHelper(regs[i], verifyFields);
-
-    // Make certain StackTop is dword aligned:
-    DumpStackObjectsInternal(StackTop & ~ALIGNCONST, StackBottom, verifyFields);
 }
 
 void AddToModuleList(DWORD_PTR * &moduleList, int &numModule, int &maxList,
@@ -3083,6 +2801,12 @@ void DumpTieredNativeCodeAddressInfo(struct DacpTieredVersionData * pTieredVersi
             case DacpTieredVersionData::OptimizationTier_ReadyToRun:
                 descriptor = "ReadyToRun";
                 break;
+            case DacpTieredVersionData::OptimizationTier_QuickJittedInstrumented:
+                descriptor = "QuickJitted + Instrumented";
+                break;
+            case DacpTieredVersionData::OptimizationTier_OptimizedTier1Instrumented:
+                descriptor = "OptimizedTier1 + Instrumented";
+                break;
             }
             DMLOut("     CodeAddr:           %s  (%s)\n", DMLIP(pTieredVersionData[i].NativeCodeAddr), descriptor);
             ExtOut("     NativeCodeVersion:  %p\n", SOS_PTR(pTieredVersionData[i].NativeCodeVersionNodePtr));
@@ -3615,24 +3339,6 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
 }
 
 #endif // !FEATURE_PAL
-
-size_t ObjectSize(DWORD_PTR obj,BOOL fIsLargeObject)
-{
-    DWORD_PTR dwMT;
-    MOVE(dwMT, obj);
-    return ObjectSize(obj, dwMT, FALSE, fIsLargeObject);
-}
-
-size_t ObjectSize(DWORD_PTR obj, DWORD_PTR mt, BOOL fIsValueClass, BOOL fIsLargeObject)
-{
-    BOOL bContainsPointers;
-    size_t size = 0;
-    if (!GetSizeEfficient(obj, mt, fIsLargeObject, size, bContainsPointers))
-    {
-        return 0;
-    }
-    return size;
-}
 
 // This takes an array of values and sets every non-printable character
 // to be a period.
@@ -4257,83 +3963,6 @@ BOOL GetGcStructuresValid()
     }
 
     return heapData.bGcStructuresValid;
-}
-
-void GetAllocContextPtrs(AllocInfo *pallocInfo)
-{
-    // gets the allocation contexts for all threads. This provides information about how much of
-    // the current allocation quantum has been allocated and the heap to which the quantum belongs.
-    // The allocation quantum is a fixed size chunk of zeroed memory from which allocations will come
-    // until it's filled. Each managed thread has its own allocation context.
-
-    pallocInfo->num = 0;
-    pallocInfo->array = NULL;
-
-    // get the thread store (See code:ClrDataAccess::RequestThreadStoreData for details)
-    DacpThreadStoreData ThreadStore;
-    if ( ThreadStore.Request(g_sos) != S_OK)
-    {
-        return;
-    }
-
-    int numThread = ThreadStore.threadCount;
-    if (numThread)
-    {
-        pallocInfo->array = new needed_alloc_context[numThread + 1];
-        if (pallocInfo->array == NULL)
-        {
-            return;
-        }
-    }
-
-    // get details for each thread in the thread store
-    CLRDATA_ADDRESS CurThread = ThreadStore.firstThread;
-    while (CurThread != NULL)
-    {
-        if (IsInterrupt())
-            return;
-
-        DacpThreadData Thread;
-        // Get information about the thread (we're getting the values of several of the
-        // fields of the Thread instance from the target) See code:ClrDataAccess::RequestThreadData for
-        // details
-        if (Thread.Request(g_sos, CurThread) != S_OK)
-        {
-            return;
-        }
-
-        if (Thread.allocContextPtr != 0)
-        {
-            // get a list of all the allocation contexts
-            int j;
-            for (j = 0; j < pallocInfo->num; j ++)
-            {
-                if (pallocInfo->array[j].alloc_ptr == (BYTE *) Thread.allocContextPtr)
-                    break;
-            }
-            if (j == pallocInfo->num)
-            {
-                pallocInfo->num ++;
-                pallocInfo->array[j].alloc_ptr = (BYTE *) Thread.allocContextPtr;
-                pallocInfo->array[j].alloc_limit = (BYTE *) Thread.allocContextLimit;
-            }
-        }
-
-        CurThread = Thread.nextThread;
-    }
-
-    CLRDATA_ADDRESS allocPtr;
-    CLRDATA_ADDRESS allocLimit;
-
-    ReleaseHolder<ISOSDacInterface12> sos12;
-    if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface12), &sos12)) &&
-        SUCCEEDED(sos12->GetGlobalAllocationContext(&allocPtr, &allocLimit)) &&
-        allocPtr != 0)
-    {
-        int j = pallocInfo->num ++;
-        pallocInfo->array[j].alloc_ptr = (BYTE *) allocPtr;
-        pallocInfo->array[j].alloc_limit = (BYTE *) allocLimit;
-    }
 }
 
 HRESULT ReadVirtualCache::Read(TADDR address, PVOID buffer, ULONG bufferSize, PULONG lpcbBytesRead)
@@ -6003,88 +5632,3 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
 }
 
 #endif // FEATURE_PAL
-
-///////////////////////////////////////////////////////////////////////////////////////////
-//
-// Miscellaneous helper methods
-//
-
-void EnumerateThreadPoolGlobalWorkItemConcurrentQueue(
-    DWORD_PTR workItemsConcurrentQueuePtr,
-    const char *queueName,
-    HeapStat *stats)
-{
-    // Get its head segment.
-    sos::Object workItemsConcurrentQueue = TO_TADDR(workItemsConcurrentQueuePtr);
-    int offset = GetObjFieldOffset(workItemsConcurrentQueue.GetAddress(), workItemsConcurrentQueue.GetMT(), W("_head"));
-    if (offset <= 0)
-    {
-        return;
-    }
-
-    // Now, walk from segment to segment, each of which contains an array of work items.
-    DWORD_PTR segmentPtr;
-    MOVE(segmentPtr, workItemsConcurrentQueue.GetAddress() + offset);
-    while (sos::IsObject(segmentPtr, false))
-    {
-        sos::Object segment = TO_TADDR(segmentPtr);
-
-        // Get the work items array.  It's an array of Slot structs, which starts with the T.
-        offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_slots"));
-        if (offset <= 0)
-        {
-            break;
-        }
-
-        DWORD_PTR slotsPtr;
-        MOVE(slotsPtr, segment.GetAddress() + offset);
-        if (!sos::IsObject(slotsPtr, false))
-        {
-            break;
-        }
-
-        // Walk every element in the array, outputting details on non-null work items.
-        DacpObjectData slotsArray;
-        if (slotsArray.Request(g_sos, TO_CDADDR(slotsPtr)) == S_OK && slotsArray.ObjectType == OBJ_ARRAY)
-        {
-            for (int i = 0; i < slotsArray.dwNumComponents; i++)
-            {
-                DWORD_PTR workItemPtr;
-                MOVE(workItemPtr, slotsArray.ArrayDataPtr + (i * slotsArray.dwComponentSize)); // the item object reference is at the beginning of the Slot
-                if (workItemPtr != NULL && sos::IsObject(TO_CDADDR(workItemPtr), false))
-                {
-                    sos::Object workItem = TO_TADDR(workItemPtr);
-                    stats->Add((DWORD_PTR)workItem.GetMT(), (DWORD)workItem.GetSize());
-                    DMLOut("%" THREAD_POOL_WORK_ITEM_TABLE_QUEUE_WIDTH "s %s %S", queueName, DMLObject(workItem.GetAddress()), workItem.GetTypeName());
-                    if ((offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("_callback"))) > 0 ||
-                        (offset = GetObjFieldOffset(workItem.GetAddress(), workItem.GetMT(), W("m_action"))) > 0)
-                    {
-                        DWORD_PTR delegatePtr;
-                        MOVE(delegatePtr, workItem.GetAddress() + offset);
-                        CLRDATA_ADDRESS md;
-                        if (TryGetMethodDescriptorForDelegate(TO_CDADDR(delegatePtr), &md))
-                        {
-                            NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
-                            ExtOut(" => %S", g_mdName);
-                        }
-                    }
-                    ExtOut("\n");
-                }
-            }
-        }
-
-        // Move to the next segment.
-        DacpFieldDescData segmentField;
-        offset = GetObjFieldOffset(segment.GetAddress(), segment.GetMT(), W("_nextSegment"), TRUE, &segmentField);
-        if (offset <= 0)
-        {
-            break;
-        }
-
-        MOVE(segmentPtr, segment.GetAddress() + offset);
-        if (segmentPtr == NULL)
-        {
-            break;
-        }
-    }
-}

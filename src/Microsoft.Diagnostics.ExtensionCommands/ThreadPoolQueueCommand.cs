@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -14,22 +13,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         public override void ExtensionInvoke()
         {
-            var workItems = new Dictionary<string, WorkInfo>();
+            Dictionary<string, WorkInfo> workItems = new();
             int workItemCount = 0;
-            var tasks = new Dictionary<string, WorkInfo>();
-            int taskCount = 0; 
-            
+            Dictionary<string, WorkInfo> tasks = new();
+            int taskCount = 0;
+
             try
             {
                 WriteLine("global work item queue________________________________");
-                foreach (var item in Helper.EnumerateGlobalThreadPoolItems())
+                foreach (ThreadPoolItem item in Helper.EnumerateGlobalThreadPoolItems())
                 {
                     DisplayItem(item, tasks, ref taskCount, workItems, ref workItemCount);
                 }
                 WriteLine("");
 
                 WriteLine("local per thread work items_____________________________________");
-                foreach (var item in Helper.EnumerateLocalThreadPoolItems())
+                foreach (ThreadPoolItem item in Helper.EnumerateLocalThreadPoolItems())
                 {
                     DisplayItem(item, tasks, ref taskCount, workItems, ref workItemCount);
                 }
@@ -39,7 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // tasks first if any
                 if (tasks.Values.Count > 0)
                 {
-                    foreach (var item in tasks.Values.OrderBy(wi => wi.Count))
+                    foreach (WorkInfo item in tasks.Values.OrderBy(wi => wi.Count))
                     {
                         WriteLine($" {item.Count,4} Task  {item.Name}");
                     }
@@ -50,7 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // then QueueUserWorkItem next if any
                 if (workItems.Values.Count > 0)
                 {
-                    foreach (var item in workItems.Values.OrderBy(wi => wi.Count))
+                    foreach (WorkInfo item in workItems.Values.OrderBy(wi => wi.Count))
                     {
                         WriteLine($" {item.Count,4} Work  {item.Name}");
                     }
@@ -90,8 +89,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             count++;
 
-            WorkInfo wi;
-            if (!stats.ContainsKey(statName))
+            if (!stats.TryGetValue(statName, out WorkInfo wi))
             {
                 wi = new WorkInfo()
                 {
@@ -99,10 +97,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Count = 0
                 };
                 stats[statName] = wi;
-            }
-            else
-            {
-                wi = stats[statName];
             }
 
             wi.Count++;
@@ -113,7 +107,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return DetailedHelpText;
         }
 
-        readonly string DetailedHelpText =
+        private readonly string DetailedHelpText =
     "-------------------------------------------------------------------------------" + Environment.NewLine +
     "ThreadPoolQueue" + Environment.NewLine +
     Environment.NewLine +
@@ -145,7 +139,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     ""
     ;
 
-        private class WorkInfo
+        private sealed class WorkInfo
         {
             public string Name { get; set; }
             public int Count { get; set; }

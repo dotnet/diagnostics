@@ -1,13 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.ExtensionCommands;
-using Microsoft.Diagnostics.Repl;
-using Microsoft.Diagnostics.Runtime;
-using SOS.Hosting;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,6 +10,12 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
+using Microsoft.Diagnostics.Repl;
+using Microsoft.Diagnostics.Runtime;
+using SOS.Hosting;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -64,11 +63,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 _consoleService.AddCommandHistory(history);
             }
             catch (Exception ex) when
-                (ex is IOException ||
-                 ex is ArgumentNullException ||
-                 ex is UnauthorizedAccessException ||
-                 ex is NotSupportedException ||
-                 ex is SecurityException)
+                (ex is IOException or
+                 ArgumentNullException or
+                 UnauthorizedAccessException or
+                 NotSupportedException or
+                 SecurityException)
             {
             }
 
@@ -92,6 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             // Display any extension assembly loads on console
             _serviceManager.NotifyExtensionLoad.Register((Assembly assembly) => _fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
+            _serviceManager.NotifyExtensionLoadFailure.Register((Exception ex) => _fileLoggingConsoleService.WriteLine(ex.Message));
 
             // Load any extra extensions
             _serviceManager.LoadExtensions();
@@ -108,10 +108,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             _serviceContainer.AddService<ICommandService>(_commandService);
 
-            var symbolService = new SymbolService(this);
+            SymbolService symbolService = new(this);
             _serviceContainer.AddService<ISymbolService>(symbolService);
 
-            var contextService = new ContextService(this);
+            ContextService contextService = new(this);
             _serviceContainer.AddService<IContextService>(contextService);
 
             try
@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     targetPlatform = OSPlatform.OSX;
                 }
-                var target = new TargetFromDataReader(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
+                TargetFromDataReader target = new(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
                 contextService.SetCurrentTarget(target);
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
@@ -151,22 +151,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     _fileLoggingConsoleService.WriteLine("Ready to process analysis commands. Type 'help' to list available commands or 'help [command]' to get detailed help on a command.");
                     _fileLoggingConsoleService.WriteLine("Type 'quit' or 'exit' to exit the session.");
 
-                    _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) =>
-                    {
+                    _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) => {
                         _fileLoggingConsoleService.WriteLine("{0}{1}", prompt, commandLine);
                         _commandService.Execute(commandLine, contextService.Services);
                     });
                 }
             }
             catch (Exception ex) when
-                (ex is ClrDiagnosticsException ||
-                 ex is FileNotFoundException ||
-                 ex is DirectoryNotFoundException ||
-                 ex is UnauthorizedAccessException ||
-                 ex is PlatformNotSupportedException ||
-                 ex is InvalidDataException ||
-                 ex is InvalidOperationException ||
-                 ex is NotSupportedException)
+                (ex is ClrDiagnosticsException or
+                 FileNotFoundException or
+                 DirectoryNotFoundException or
+                 UnauthorizedAccessException or
+                 PlatformNotSupportedException or
+                 InvalidDataException or
+                 InvalidOperationException or
+                 NotSupportedException)
             {
                 _fileLoggingConsoleService.WriteError($"{ex.Message}");
                 return Task.FromResult(1);
@@ -187,10 +186,10 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         File.WriteAllLines(historyFileName, _consoleService.GetCommandHistory());
                     }
                     catch (Exception ex) when
-                        (ex is IOException ||
-                         ex is UnauthorizedAccessException ||
-                         ex is NotSupportedException ||
-                         ex is SecurityException)
+                        (ex is IOException or
+                         UnauthorizedAccessException or
+                         NotSupportedException or
+                         SecurityException)
                     {
                     }
                 }

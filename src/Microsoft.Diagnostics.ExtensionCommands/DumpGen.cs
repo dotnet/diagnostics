@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -22,13 +21,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IEnumerable<DumpGenStats> GetStats(string typeNameFilter)
         {
-            var types = new Dictionary<ClrType, DumpGenStats>();
+            Dictionary<ClrType, DumpGenStats> types = new();
 
-            foreach (var obj in _helper.EnumerateObjectsInGeneration(_generation)
+            foreach (ClrObject obj in _helper.EnumerateObjectsInGeneration(_generation)
                 .Where(obj => typeNameFilter == null || IsTypeNameMatching(obj.Type.Name, typeNameFilter)))
             {
-                var objectType = obj.Type;
-                if (types.TryGetValue(objectType, out var type))
+                ClrType objectType = obj.Type;
+                if (types.TryGetValue(objectType, out DumpGenStats type))
                 {
                     type.NumberOfOccurences++;
                     type.TotalSize += obj.Size;

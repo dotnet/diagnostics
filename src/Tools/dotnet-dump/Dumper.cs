@@ -1,15 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils;
 using System;
 using System.CommandLine;
 using System.CommandLine.IO;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -22,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             Full,       // The largest dump containing all memory including the module images.
 
-            Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all 
+            Heap,       // A large and relatively comprehensive dump containing module lists, thread lists, all
                         // stacks, exception information, handle information, and all memory except for mapped images.
 
             Mini,       // A small dump containing module lists, thread lists, exception information and all stacks.
@@ -51,7 +49,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
             }
 
-            if (processId == 0) {
+            if (processId == 0)
+            {
                 Console.Error.WriteLine("ProcessId is required.");
                 return -1;
             }
@@ -70,7 +69,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     string timestamp = $"{DateTime.Now:yyyyMMdd_HHmmss}";
                     output = Path.Combine(Directory.GetCurrentDirectory(), RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"dump_{timestamp}.dmp" : $"core_{timestamp}");
                 }
-                // Make sure the dump path is NOT relative. This path could be sent to the runtime 
+                // Make sure the dump path is NOT relative. This path could be sent to the runtime
                 // process on Linux which may have a different current directory.
                 output = Path.GetFullPath(output);
 
@@ -105,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else
                 {
-                    var client = new DiagnosticsClient(processId);
+                    DiagnosticsClient client = new(processId);
 
                     DumpType dumpType = DumpType.Normal;
                     switch (type)
@@ -137,17 +136,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     client.WriteDump(dumpType, output, flags);
                 }
             }
-            catch (Exception ex) when 
-                (ex is FileNotFoundException || 
-                 ex is ArgumentException || 
-                 ex is DirectoryNotFoundException || 
-                 ex is UnauthorizedAccessException || 
-                 ex is PlatformNotSupportedException || 
-                 ex is UnsupportedCommandException ||
-                 ex is InvalidDataException ||
-                 ex is InvalidOperationException ||
-                 ex is NotSupportedException ||
-                 ex is DiagnosticsClientException)
+            catch (Exception ex) when
+                (ex is FileNotFoundException or
+                 ArgumentException or
+                 DirectoryNotFoundException or
+                 UnauthorizedAccessException or
+                 PlatformNotSupportedException or
+                 UnsupportedCommandException or
+                 InvalidDataException or
+                 InvalidOperationException or
+                 NotSupportedException or
+                 DiagnosticsClientException)
             {
                 console.Error.WriteLine($"{ex.Message}");
                 return -1;

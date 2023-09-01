@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -25,7 +24,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private Parser _parser;
         private readonly CommandLineBuilder _rootBuilder;
-        private readonly Dictionary<string, CommandHandler> _commandHandlers = new Dictionary<string, CommandHandler>();
+        private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
 
         /// <summary>
         /// Create an instance of the command processor;
@@ -48,7 +47,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Parse the command line and invoke the command
             ParseResult parseResult = Parser.Parse(commandLine);
 
-            var context = new InvocationContext(parseResult, new LocalConsole(services));
+            InvocationContext context = new(parseResult, new LocalConsole(services));
             if (parseResult.Errors.Count > 0)
             {
                 context.InvocationResult = new ParseErrorResult();
@@ -61,7 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         ITarget target = services.GetService<ITarget>();
                         if (!handler.IsValidPlatform(target))
-                        { 
+                        {
                             if (target != null)
                             {
                                 context.Console.Error.WriteLine($"Command '{command.Name}' not supported on this target");
@@ -78,11 +77,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         catch (Exception ex)
                         {
-                            if (ex is NullReferenceException ||
-                                ex is ArgumentException ||
-                                ex is ArgumentNullException ||
-                                ex is ArgumentOutOfRangeException ||
-                                ex is NotImplementedException)
+                            if (ex is NullReferenceException or
+                                ArgumentException or
+                                ArgumentNullException or
+                                ArgumentOutOfRangeException or
+                                NotImplementedException)
                             {
                                 context.Console.Error.WriteLine(ex.ToString());
                             }
@@ -110,7 +109,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public bool DisplayHelp(string commandName, IServiceProvider services)
         {
             Command command = null;
-            if (!string.IsNullOrEmpty(commandName)) 
+            if (!string.IsNullOrEmpty(commandName))
             {
                 command = _rootBuilder.Command.Children.OfType<Command>().FirstOrDefault((cmd) => commandName == cmd.Name || cmd.Aliases.Any((alias) => commandName == alias));
                 if (command == null)
@@ -126,12 +125,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            else 
+            else
             {
                 ITarget target = services.GetService<ITarget>();
 
                 // Create temporary builder adding only the commands that are valid for the target
-                var builder = new CommandLineBuilder(new Command(_rootBuilder.Command.Name));
+                CommandLineBuilder builder = new(new Command(_rootBuilder.Command.Name));
                 foreach (Command cmd in _rootBuilder.Command.Children.OfType<Command>())
                 {
                     if (cmd.Handler is CommandHandler handler)
@@ -183,15 +182,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         break;
                     }
-                    var commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
+                    CommandAttribute[] commandAttributes = (CommandAttribute[])baseType.GetCustomAttributes(typeof(CommandAttribute), inherit: true);
                     foreach (CommandAttribute commandAttribute in commandAttributes)
                     {
                         if ((commandAttribute.Flags & CommandFlags.Manual) == 0 || factory != null)
                         {
-                            if (factory == null)
-                            {
-                                factory = (services) => Utilities.CreateInstance(type, services);
-                            }
+                            factory ??= (services) => Utilities.CreateInstance(type, services);
                             CreateCommand(baseType, commandAttribute, factory);
                         }
                     }
@@ -204,9 +200,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
         {
-            var command = new Command(commandAttribute.Name, commandAttribute.Help);
-            var properties = new List<(PropertyInfo, Option)>();
-            var arguments = new List<(PropertyInfo, Argument)>();
+            Command command = new(commandAttribute.Name, commandAttribute.Help);
+            List<(PropertyInfo, Option)> properties = new();
+            List<(PropertyInfo, Argument)> arguments = new();
 
             foreach (string alias in commandAttribute.Aliases)
             {
@@ -215,12 +211,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             foreach (PropertyInfo property in type.GetProperties().Where(p => p.CanWrite))
             {
-                var argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
+                ArgumentAttribute argumentAttribute = (ArgumentAttribute)property.GetCustomAttributes(typeof(ArgumentAttribute), inherit: false).SingleOrDefault();
                 if (argumentAttribute != null)
                 {
                     IArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                    var argument = new Argument {
+                    Argument argument = new()
+                    {
                         Name = argumentAttribute.Name ?? property.Name.ToLowerInvariant(),
                         Description = argumentAttribute.Help,
                         ArgumentType = property.PropertyType,
@@ -231,10 +228,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else
                 {
-                    var optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
+                    OptionAttribute optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
                     if (optionAttribute != null)
                     {
-                        var option = new Option(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help) {
+                        Option option = new(optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Help)
+                        {
                             Argument = new Argument { ArgumentType = property.PropertyType }
                         };
                         command.AddOption(option);
@@ -248,7 +246,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            var handler = new CommandHandler(commandAttribute, arguments, properties, type, factory);
+            CommandHandler handler = new(commandAttribute, arguments, properties, type, factory);
             _commandHandlers.Add(command.Name, handler);
             command.Handler = handler;
             _rootBuilder.AddCommand(command);
@@ -260,7 +258,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private static string BuildOptionAlias(string parameterName)
         {
-            if (string.IsNullOrWhiteSpace(parameterName)) {
+            if (string.IsNullOrWhiteSpace(parameterName))
+            {
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(parameterName));
             }
             return parameterName.Length > 1 ? $"--{parameterName.ToKebabCase()}" : $"-{parameterName.ToLowerInvariant()}";
@@ -269,7 +268,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The normal command handler.
         /// </summary>
-        class CommandHandler : ICommandHandler
+        private sealed class CommandHandler : ICommandHandler
         {
             private readonly CommandAttribute _commandAttribute;
             private readonly IEnumerable<(PropertyInfo Property, Argument Argument)> _arguments;
@@ -281,9 +280,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public CommandHandler(
                 CommandAttribute commandAttribute,
-                IEnumerable<(PropertyInfo, Argument)> arguments, 
-                IEnumerable<(PropertyInfo, Option)> properties, 
-                Type type, 
+                IEnumerable<(PropertyInfo, Argument)> arguments,
+                IEnumerable<(PropertyInfo, Option)> properties,
+                Type type,
                 Func<IServiceProvider, object> factory)
             {
                 _commandAttribute = commandAttribute;
@@ -359,10 +358,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <returns>true help called, false no help function</returns>
             internal bool InvokeHelp(Parser parser, IServiceProvider services)
             {
-                if (_methodInfoHelp == null) {
+                if (_methodInfoHelp == null)
+                {
                     return false;
                 }
-                // The InvocationContext is null so the options and arguments in the 
+                // The InvocationContext is null so the options and arguments in the
                 // command instance created are not set. The context for the command
                 // requesting help (either the help command or some other command using
                 // --help) won't work for the command instance that implements it's own
@@ -384,7 +384,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                 // Parse the default options if any
                 string defaultOptions = _commandAttribute.DefaultOptions;
-                if (defaultOptions != null) {
+                if (defaultOptions != null)
+                {
                     defaultParseResult = parser.Parse(Name + " " + defaultOptions);
                 }
 
@@ -398,14 +399,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (defaultParseResult != null)
                         {
                             OptionResult defaultOptionResult = defaultParseResult.FindResultFor(property.Option);
-                            if (defaultOptionResult != null) {
+                            if (defaultOptionResult != null)
+                            {
                                 value = defaultOptionResult.GetValueOrDefault();
                             }
                         }
                         if (context != null)
                         {
                             OptionResult optionResult = context.ParseResult.FindResultFor(property.Option);
-                            if (optionResult != null) {
+                            if (optionResult != null)
+                            {
                                 value = optionResult.GetValueOrDefault();
                             }
                         }
@@ -423,7 +426,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (argument.Property.PropertyType.IsArray && argument.Property.PropertyType.GetElementType() == typeof(string))
                     {
                         array = new List<string>();
-                        if (value is IEnumerable<string> entries) {
+                        if (value is IEnumerable<string> entries)
+                        {
                             array.AddRange(entries);
                         }
                     }
@@ -434,7 +438,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (defaultArgumentResult != null)
                         {
                             value = defaultArgumentResult.GetValueOrDefault();
-                            if (array != null && value is IEnumerable<string> entries) {
+                            if (array != null && value is IEnumerable<string> entries)
+                            {
                                 array.AddRange(entries);
                             }
                         }
@@ -442,10 +447,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (context != null)
                     {
                         ArgumentResult argumentResult = context.ParseResult.FindResultFor(argument.Argument);
-                        if (argumentResult != null) 
+                        if (argumentResult != null)
                         {
                             value = argumentResult.GetValueOrDefault();
-                            if (array != null && value is IEnumerable<string> entries) {
+                            if (array != null && value is IEnumerable<string> entries)
+                            {
                                 array.AddRange(entries);
                             }
                         }
@@ -457,10 +463,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Local help builder that allows commands to provide more detailed help 
+        /// Local help builder that allows commands to provide more detailed help
         /// text via the "InvokeHelp" function.
         /// </summary>
-        class LocalHelpBuilder : IHelpBuilder
+        private sealed class LocalHelpBuilder : IHelpBuilder
         {
             private readonly CommandService _commandService;
             private readonly LocalConsole _console;
@@ -478,25 +484,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 bool useHelpBuilder = _useHelpBuilder;
                 if (_commandService._commandHandlers.TryGetValue(command.Name, out CommandHandler handler))
                 {
-                    if (handler.InvokeHelp(_commandService.Parser, _console.Services)) {
+                    if (handler.InvokeHelp(_commandService.Parser, _console.Services))
+                    {
                         return;
                     }
                     useHelpBuilder = true;
                 }
                 if (useHelpBuilder)
                 {
-                    var helpBuilder = new HelpBuilder(_console, maxWidth: _console.ConsoleService.WindowWidth);
+                    HelpBuilder helpBuilder = new(_console, maxWidth: _console.ConsoleService.WindowWidth);
                     helpBuilder.Write(command);
                 }
             }
         }
 
         /// <summary>
-        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and 
-        /// pipes through the System.CommandLine parsing allowing per command invocation data (service 
+        /// This class does two things: wraps the IConsoleService and provides the IConsole interface and
+        /// pipes through the System.CommandLine parsing allowing per command invocation data (service
         /// provider and raw command line) to be passed through.
         /// </summary>
-        class LocalConsole : IConsole
+        private sealed class LocalConsole : IConsole
         {
             private IConsoleService _console;
 
@@ -513,10 +520,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 get
                 {
-                    if (_console is null)
-                    {
-                        _console = Services.GetService<IConsoleService>();
-                    }
+                    _console ??= Services.GetService<IConsoleService>();
                     return _console;
                 }
             }
@@ -533,9 +537,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             bool IStandardIn.IsInputRedirected { get { return false; } }
 
-            class StandardStreamWriter : IStandardStreamWriter
+            private sealed class StandardStreamWriter : IStandardStreamWriter
             {
-                readonly Action<string> _write;
+                private readonly Action<string> _write;
 
                 public StandardStreamWriter(Action<string> write) => _write = write;
 

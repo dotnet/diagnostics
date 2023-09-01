@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.Repl
 {
@@ -82,12 +81,14 @@ namespace Microsoft.Diagnostics.Repl
 
             // The special prompts for the test runner are built into this
             // console provider when the output has been redirected.
-            if (!m_interactiveConsole) {
+            if (!m_interactiveConsole)
+            {
                 WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
             }
 
             // Start keyboard processing
-            while (!m_shutdown) {
+            while (!m_shutdown)
+            {
                 if (m_interactiveConsole)
                 {
                     ConsoleKeyInfo keyInfo = Console.ReadKey(true);
@@ -97,16 +98,19 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     // The input has been redirected (i.e. testing or in script)
                     string line = Console.ReadLine();
-                    if (string.IsNullOrEmpty(line)) {
+                    if (string.IsNullOrEmpty(line))
+                    {
                         continue;
                     }
                     bool result = Dispatch(line, dispatchCommand);
                     if (!m_shutdown)
                     {
-                        if (result) {
+                        if (result)
+                        {
                             WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
                         }
-                        else {
+                        else
+                        {
                             WriteLine(OutputType.Normal, "<END_COMMAND_ERROR>");
                         }
                     }
@@ -125,7 +129,8 @@ namespace Microsoft.Diagnostics.Repl
             m_shutdown = true;
             // Delete the last command (usually q or exit) that caused Stop() to be
             // called so the history doesn't fill up with exit commands.
-            if (m_selectedHistory > 0) {
+            if (m_selectedHistory > 0)
+            {
                 m_history.RemoveAt(--m_selectedHistory);
             }
             Console.CancelKeyPress -= new ConsoleCancelEventHandler(OnCtrlBreakKeyPress);
@@ -210,12 +215,14 @@ namespace Microsoft.Diagnostics.Repl
             ClearLine();
 
             ConsoleColor? originalColor = null;
-            if (color.HasValue) {
+            if (color.HasValue)
+            {
                 originalColor = Console.ForegroundColor;
                 Console.ForegroundColor = color.Value;
             }
             Console.WriteLine(text);
-            if (originalColor.HasValue) {
+            if (originalColor.HasValue)
+            {
                 Console.ForegroundColor = originalColor.Value;
             }
 
@@ -227,17 +234,17 @@ namespace Microsoft.Diagnostics.Repl
         /// </summary>
         private void OnCtrlBreakKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            if (!m_shutdown && m_interactiveConsole) {
-                if (m_interruptExecutingCommand != null) {
-                    m_interruptExecutingCommand.Cancel();
-                }
+            if (!m_shutdown && m_interactiveConsole)
+            {
+                m_interruptExecutingCommand?.Cancel();
                 e.Cancel = true;
             }
         }
 
         private void CommandStarting()
         {
-            if (m_commandExecuting == 0) {
+            if (m_commandExecuting == 0)
+            {
                 ClearLine();
             }
             m_commandExecuting++;
@@ -245,51 +252,60 @@ namespace Microsoft.Diagnostics.Repl
 
         private void CommandFinished()
         {
-            if (--m_commandExecuting == 0) {
+            if (--m_commandExecuting == 0)
+            {
                 RefreshLine();
             }
         }
 
         private void ClearLine()
         {
-            if (!m_interactiveConsole) {
+            if (!m_interactiveConsole)
+            {
                 return;
             }
 
-            if (m_commandExecuting != 0) {
+            if (m_commandExecuting != 0)
+            {
                 return;
             }
 
             int width = Console.WindowWidth;
-            if (m_clearLine == null || width != m_clearLine.Length) {
+            if (m_clearLine == null || width != m_clearLine.Length)
+            {
                 m_clearLine = "\r" + (width > 0 ? new string(' ', width - 1) : "");
             }
 
             Console.Write(m_clearLine);
 
-            if (!m_outputRedirected && Console.CursorTop >= 0 ) {
+            if (!m_outputRedirected && Console.CursorTop >= 0)
+            {
                 Console.CursorLeft = 0;
             }
         }
 
         private void PrintActiveLine()
         {
-            if (!m_interactiveConsole) {
+            if (!m_interactiveConsole)
+            {
                 return;
             }
 
-            if (m_shutdown) {
+            if (m_shutdown)
+            {
                 return;
             }
 
-            if (m_commandExecuting != 0) {
+            if (m_commandExecuting != 0)
+            {
                 return;
             }
 
             string prompt = m_prompt;
 
             int lineWidth = 80;
-            if (Console.WindowWidth > prompt.Length) {
+            if (Console.WindowWidth > prompt.Length)
+            {
                 lineWidth = Console.WindowWidth - prompt.Length - 1;
             }
             int scrollIncrement = lineWidth / 3;
@@ -299,11 +315,13 @@ namespace Microsoft.Diagnostics.Repl
             m_scrollPosition = Math.Min(Math.Max(m_scrollPosition, 0), activeLineLen);
             m_cursorPosition = Math.Min(Math.Max(m_cursorPosition, 0), activeLineLen);
 
-            while (m_cursorPosition < m_scrollPosition) {
+            while (m_cursorPosition < m_scrollPosition)
+            {
                 m_scrollPosition = Math.Max(m_scrollPosition - scrollIncrement, 0);
             }
 
-            while (m_cursorPosition - m_scrollPosition > lineWidth - 5) {
+            while (m_cursorPosition - m_scrollPosition > lineWidth - 5)
+            {
                 m_scrollPosition += scrollIncrement;
             }
 
@@ -313,7 +331,8 @@ namespace Microsoft.Diagnostics.Repl
 
             Console.Write("{0}{1}", prompt, text);
 
-            if (!m_outputRedirected && Console.CursorTop >= 0) {
+            if (!m_outputRedirected && Console.CursorTop >= 0)
+            {
                 Console.CursorLeft = prompt.Length + (m_cursorPosition - m_scrollPosition);
             }
         }
@@ -321,7 +340,8 @@ namespace Microsoft.Diagnostics.Repl
         private void RefreshLine()
         {
             // Check for recursions.
-            if (m_refreshingLine) {
+            if (m_refreshingLine)
+            {
                 return;
             }
             m_refreshingLine = true;
@@ -334,9 +354,11 @@ namespace Microsoft.Diagnostics.Repl
         {
             int activeLineLen = m_activeLine.Length;
 
-            switch (keyInfo.Key) {
-                case ConsoleKey.Backspace: // The BACKSPACE key. 
-                    if (m_cursorPosition > 0) {
+            switch (keyInfo.Key)
+            {
+                case ConsoleKey.Backspace: // The BACKSPACE key.
+                    if (m_cursorPosition > 0)
+                    {
                         EnsureNewEntry();
                         m_activeLine.Remove(m_cursorPosition - 1, 1);
                         m_cursorPosition--;
@@ -344,23 +366,25 @@ namespace Microsoft.Diagnostics.Repl
                     }
                     break;
 
-                case ConsoleKey.Insert: // The INS (INSERT) key. 
+                case ConsoleKey.Insert: // The INS (INSERT) key.
                     m_insertMode = !m_insertMode;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.Delete: // The DEL (DELETE) key. 
-                    if (m_cursorPosition < activeLineLen) {
+                case ConsoleKey.Delete: // The DEL (DELETE) key.
+                    if (m_cursorPosition < activeLineLen)
+                    {
                         EnsureNewEntry();
                         m_activeLine.Remove(m_cursorPosition, 1);
                         RefreshLine();
                     }
                     break;
 
-                case ConsoleKey.Enter: // The ENTER key. 
+                case ConsoleKey.Enter: // The ENTER key.
                     string newCommand = m_activeLine.ToString();
 
-                    if (m_modified) {
+                    if (m_modified)
+                    {
                         m_history.Add(m_activeLine);
                     }
                     m_selectedHistory = m_history.Count;
@@ -370,66 +394,76 @@ namespace Microsoft.Diagnostics.Repl
                     SwitchToHistoryEntry();
                     break;
 
-                case ConsoleKey.Escape: // The ESC (ESCAPE) key. 
+                case ConsoleKey.Escape: // The ESC (ESCAPE) key.
                     EnsureNewEntry();
                     m_activeLine.Clear();
                     m_cursorPosition = 0;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.End: // The END key. 
+                case ConsoleKey.End: // The END key.
                     m_cursorPosition = activeLineLen;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.Home: // The HOME key. 
+                case ConsoleKey.Home: // The HOME key.
                     m_cursorPosition = 0;
                     RefreshLine();
                     break;
 
-                case ConsoleKey.LeftArrow: // The LEFT ARROW key. 
-                    if (keyInfo.Modifiers == ConsoleModifiers.Control) {
-                        while (m_cursorPosition > 0 && char.IsWhiteSpace(m_activeLine[m_cursorPosition - 1])) {
+                case ConsoleKey.LeftArrow: // The LEFT ARROW key.
+                    if (keyInfo.Modifiers == ConsoleModifiers.Control)
+                    {
+                        while (m_cursorPosition > 0 && char.IsWhiteSpace(m_activeLine[m_cursorPosition - 1]))
+                        {
                             m_cursorPosition--;
                         }
 
-                        while (m_cursorPosition > 0 && !char.IsWhiteSpace(m_activeLine[m_cursorPosition - 1])) {
+                        while (m_cursorPosition > 0 && !char.IsWhiteSpace(m_activeLine[m_cursorPosition - 1]))
+                        {
                             m_cursorPosition--;
                         }
                     }
-                    else {
+                    else
+                    {
                         m_cursorPosition--;
                     }
 
                     RefreshLine();
                     break;
 
-                case ConsoleKey.UpArrow: // The UP ARROW key. 
-                    if (m_selectedHistory > 0) {
+                case ConsoleKey.UpArrow: // The UP ARROW key.
+                    if (m_selectedHistory > 0)
+                    {
                         m_selectedHistory--;
                     }
                     SwitchToHistoryEntry();
                     break;
 
-                case ConsoleKey.RightArrow: // The RIGHT ARROW key. 
-                    if (keyInfo.Modifiers == ConsoleModifiers.Control) {
-                        while (m_cursorPosition < activeLineLen && !char.IsWhiteSpace(m_activeLine[m_cursorPosition])) {
+                case ConsoleKey.RightArrow: // The RIGHT ARROW key.
+                    if (keyInfo.Modifiers == ConsoleModifiers.Control)
+                    {
+                        while (m_cursorPosition < activeLineLen && !char.IsWhiteSpace(m_activeLine[m_cursorPosition]))
+                        {
                             m_cursorPosition++;
                         }
 
-                        while (m_cursorPosition < activeLineLen && char.IsWhiteSpace(m_activeLine[m_cursorPosition])) {
+                        while (m_cursorPosition < activeLineLen && char.IsWhiteSpace(m_activeLine[m_cursorPosition]))
+                        {
                             m_cursorPosition++;
                         }
                     }
-                    else {
+                    else
+                    {
                         m_cursorPosition++;
                     }
 
                     RefreshLine();
                     break;
 
-                case ConsoleKey.DownArrow: // The DOWN ARROW key. 
-                    if (m_selectedHistory < m_history.Count) {
+                case ConsoleKey.DownArrow: // The DOWN ARROW key.
+                    if (m_selectedHistory < m_history.Count)
+                    {
                         m_selectedHistory++;
                     }
                     SwitchToHistoryEntry();
@@ -438,8 +472,10 @@ namespace Microsoft.Diagnostics.Repl
                     break;
 
                 default:
-                    if (keyInfo.KeyChar != 0) {
-                        if ((keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt)) == 0) {
+                    if (keyInfo.KeyChar != 0)
+                    {
+                        if ((keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt)) == 0)
+                        {
                             AppendNewText(new string(keyInfo.KeyChar, 1));
                         }
                     }
@@ -456,7 +492,8 @@ namespace Microsoft.Diagnostics.Repl
             try
             {
                 newCommand = newCommand.Trim();
-                if (string.IsNullOrEmpty(newCommand) && m_lastCommandLine != null) {
+                if (string.IsNullOrEmpty(newCommand) && m_lastCommandLine != null)
+                {
                     newCommand = m_lastCommandLine;
                 }
                 try
@@ -490,19 +527,23 @@ namespace Microsoft.Diagnostics.Repl
         {
             EnsureNewEntry();
 
-            foreach (char c in text) {
+            foreach (char c in text)
+            {
                 // Filter unwanted characters.
-                switch (c) {
+                switch (c)
+                {
                     case '\t':
                     case '\r':
                     case '\n':
                         continue;
                 }
 
-                if (m_insertMode && m_cursorPosition < m_activeLine.Length) {
+                if (m_insertMode && m_cursorPosition < m_activeLine.Length)
+                {
                     m_activeLine[m_cursorPosition] = c;
                 }
-                else {
+                else
+                {
                     m_activeLine.Insert(m_cursorPosition, c);
                 }
                 m_modified = true;
@@ -514,10 +555,12 @@ namespace Microsoft.Diagnostics.Repl
 
         private void SwitchToHistoryEntry()
         {
-            if (m_selectedHistory < m_history.Count) {
+            if (m_selectedHistory < m_history.Count)
+            {
                 m_activeLine = m_history[m_selectedHistory];
             }
-            else {
+            else
+            {
                 m_activeLine = new StringBuilder();
             }
 
@@ -529,7 +572,8 @@ namespace Microsoft.Diagnostics.Repl
 
         private void EnsureNewEntry()
         {
-            if (!m_modified) {
+            if (!m_modified)
+            {
                 m_activeLine = new StringBuilder(m_activeLine.ToString());
                 m_modified = true;
             }
@@ -545,7 +589,9 @@ namespace Microsoft.Diagnostics.Repl
 
         bool IConsoleService.SupportsDml => false;
 
-        void IConsoleService.WriteDml(string text) => throw new NotSupportedException();
+        void IConsoleService.WriteDml(string text) => WriteOutput(OutputType.Normal, text);
+
+        void IConsoleService.WriteDmlExec(string text, string _) => WriteOutput(OutputType.Normal, text);
 
         CancellationToken IConsoleService.CancellationToken { get; set; }
 
@@ -557,7 +603,7 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     return Console.WindowWidth;
                 }
-                catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is IOException)
+                catch (Exception ex) when (ex is ArgumentOutOfRangeException or IOException)
                 {
                     return int.MaxValue;
                 }

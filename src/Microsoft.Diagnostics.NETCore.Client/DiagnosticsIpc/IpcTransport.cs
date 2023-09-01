@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
@@ -48,13 +47,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public abstract Task WaitForConnectionAsync(CancellationToken token);
     }
 
-    internal class IpcEndpointHelper
+    internal static class IpcEndpointHelper
     {
         public static Stream Connect(IpcEndpointConfig config, TimeSpan timeout)
         {
             if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
             {
-                var namedPipe = new NamedPipeClientStream(
+                NamedPipeClientStream namedPipe = new(
                     ".",
                     config.Address,
                     PipeDirection.InOut,
@@ -65,7 +64,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
             {
-                var socket = new IpcUnixDomainSocket();
+                IpcUnixDomainSocket socket = new();
                 socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
@@ -88,7 +87,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
             {
-                var namedPipe = new NamedPipeClientStream(
+                NamedPipeClientStream namedPipe = new(
                     ".",
                     config.Address,
                     PipeDirection.InOut,
@@ -100,12 +99,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // is waited using WaitNamedPipe with an infinite timeout, then the
                 // CancellationToken cannot be observed.
                 await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
-                
+
                 return namedPipe;
             }
             else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
             {
-                var socket = new IpcUnixDomainSocket();
+                IpcUnixDomainSocket socket = new();
                 await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
                 return new ExposedSocketNetworkStream(socket, ownsSocket: true);
             }
@@ -170,7 +169,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
     internal class DiagnosticPortIpcEndpoint : IpcEndpoint
     {
-        IpcEndpointConfig _config;
+        private IpcEndpointConfig _config;
 
         public DiagnosticPortIpcEndpoint(string diagnosticPort)
         {
@@ -194,12 +193,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void WaitForConnection(TimeSpan timeout)
         {
-            using var _ = Connect(timeout);
+            using Stream _ = Connect(timeout);
         }
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+            using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         public override bool Equals(object obj)
@@ -223,9 +222,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
 
-        int _pid;
-
-        IpcEndpointConfig _config;
+        private int _pid;
+        private IpcEndpointConfig _config;
 
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
@@ -254,35 +252,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override void WaitForConnection(TimeSpan timeout)
         {
-            using var _ = Connect(timeout);
+            using Stream _ = Connect(timeout);
         }
 
         public override async Task WaitForConnectionAsync(CancellationToken token)
         {
-            using var _ = await ConnectAsync(token).ConfigureAwait(false);
+            using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
         private string GetDefaultAddress()
         {
-            try
-            {
-                var process = Process.GetProcessById(_pid);
-            }
-            catch (ArgumentException)
-            {
-                throw new ServerNotAvailableException($"Process {_pid} is not running.");
-            }
-            catch (InvalidOperationException)
-            {
-                throw new ServerNotAvailableException($"Process {_pid} seems to be elevated.");
-            }
-
-            if (!TryGetDefaultAddress(_pid, out string transportName))
-            {
-                throw new ServerNotAvailableException($"Process {_pid} not running compatible .NET runtime.");
-            }
-
-            return transportName;
+            return GetDefaultAddress(_pid);
         }
 
         private static bool TryGetDefaultAddress(int pid, out string defaultAddress)
@@ -292,6 +272,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 defaultAddress = $"dotnet-diagnostic-{pid}";
+
+                try
+                {
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-dsrouter-{pid}").FirstOrDefault();
+                    if (!string.IsNullOrEmpty(dsrouterAddress))
+                    {
+                        defaultAddress = dsrouterAddress;
+                    }
+                }
+                catch { }
             }
             else
             {
@@ -300,13 +290,60 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
+
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-dsrouter-{pid}-*-socket") // Try best match.
+                        .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                        .FirstOrDefault();
+
+                    if (!string.IsNullOrEmpty(dsrouterAddress) && !string.IsNullOrEmpty(defaultAddress))
+                    {
+                        FileInfo defaultFile = new(defaultAddress);
+                        FileInfo dsrouterFile = new(dsrouterAddress);
+
+                        if (dsrouterFile.LastWriteTime >= defaultFile.LastWriteTime)
+                        {
+                            defaultAddress = dsrouterAddress;
+                        }
+                    }
                 }
-                catch (InvalidOperationException)
-                {
-                }
+                catch { }
             }
 
             return !string.IsNullOrEmpty(defaultAddress);
+        }
+
+        public static string GetDefaultAddress(int pid)
+        {
+            try
+            {
+                Process process = Process.GetProcessById(pid);
+            }
+            catch (ArgumentException)
+            {
+                throw new ServerNotAvailableException($"Process {pid} is not running.");
+            }
+            catch (InvalidOperationException)
+            {
+                throw new ServerNotAvailableException($"Process {pid} seems to be elevated.");
+            }
+
+            if (!TryGetDefaultAddress(pid, out string defaultAddress))
+            {
+                throw new ServerNotAvailableException($"Process {pid} not running compatible .NET runtime.");
+            }
+
+            return defaultAddress;
+        }
+
+        public static bool IsDefaultAddressDSRouter(int pid, string address)
+        {
+            if (address.StartsWith(IpcRootPath, StringComparison.OrdinalIgnoreCase))
+            {
+                address = address.Substring(IpcRootPath.Length);
+            }
+
+            string dsrouterAddress = $"dotnet-diagnostic-dsrouter-{pid}";
+            return address.StartsWith(dsrouterAddress, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)

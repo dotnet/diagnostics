@@ -252,10 +252,10 @@ namespace Orchestrator
                 eventWritingProc.StartInfo.Arguments = $"--threads {(threads == -1 ? cores.ToString() : threads.ToString())} --event-count {eventCount} --event-size {eventSize} --event-rate {eventRate} --burst-pattern {burstPattern} --duration {(int)durationTimeSpan.TotalSeconds}";
                 eventWritingProc.StartInfo.UseShellExecute = false;
                 eventWritingProc.StartInfo.RedirectStandardInput = true;
-                eventWritingProc.StartInfo.Environment["COMPlus_StressLog"] = "1";
-                eventWritingProc.StartInfo.Environment["COMPlus_LogFacility"] = "2000";
-                eventWritingProc.StartInfo.Environment["COMPlus_LogLevel"] = "8";
-                eventWritingProc.StartInfo.Environment["COMPlus_StressLogSize"] = "0x1000000";
+                eventWritingProc.StartInfo.Environment["DOTNET_StressLog"] = "1";
+                eventWritingProc.StartInfo.Environment["DOTNET_LogFacility"] = "2000";
+                eventWritingProc.StartInfo.Environment["DOTNET_LogLevel"] = "8";
+                eventWritingProc.StartInfo.Environment["DOTNET_StressLogSize"] = "0x1000000";
                 eventWritingProc.Start();
 
                 Console.WriteLine($"Executing: {eventWritingProc.StartInfo.FileName} {eventWritingProc.StartInfo.Arguments}");

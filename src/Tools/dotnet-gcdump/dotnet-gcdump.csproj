@@ -5,6 +5,7 @@
     <ToolCommandName>dotnet-gcdump</ToolCommandName>
     <Description>.NET Managed Heap Dump and Analysis Tool</Description>
     <PackageTags>Diagnostic</PackageTags>
+    <NoWarn>$(NoWarn);CA1050</NoWarn>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

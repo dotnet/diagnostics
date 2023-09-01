@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Tools.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -14,16 +12,17 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class SymbolicateHandler
     {
-        private static readonly Regex s_regex = new Regex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
-        private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new Dictionary<string, string>();
-        private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new Dictionary<string, MetadataReader>();
+        private static readonly Regex s_regex = new(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new();
+        private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new();
 
-        delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
+        private delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
 
         /// <summary>
         /// Get the line number from the Method Token and IL Offset in a stacktrace
@@ -33,15 +32,11 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="searchDir">Path of multiple directories with assembly and pdb where the exception occurred</param>
         /// <param name="output">Output directly to a file</param>
         /// <param name="stdout">Output directly to a console</param>
-        /// <returns></returns>
         private static void Symbolicate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout)
         {
             try
             {
-                if (output == null)
-                {
-                    output = new FileInfo(inputPath.FullName + ".symbolicated");
-                }
+                output ??= new FileInfo(inputPath.FullName + ".symbolicated");
 
                 SetAssemblyFilePathDictionary(console, searchDir);
 
@@ -57,11 +52,11 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                List<string> searchPaths = new List<string>
+                List<string> searchPaths = new()
                 {
                     Directory.GetCurrentDirectory()
                 };
-                foreach (var path in searchDir)
+                foreach (DirectoryInfo path in searchDir)
                 {
                     searchPaths.Add(path.FullName);
                 }
@@ -99,7 +94,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         pdbCnt++;
                         peCnt--;
                     }
-                    if (pdbCnt == pdbFiles.Count) break;
+                    if (pdbCnt == pdbFiles.Count)
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception e)
@@ -112,8 +110,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                List<string> files = new List<string>();
-                foreach (var assemDir in paths)
+                List<string> files = new();
+                foreach (string assemDir in paths)
                 {
                     if (Directory.Exists(assemDir))
                     {
@@ -132,13 +130,16 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             try
             {
-                using StreamWriter fileStreamWriter = new StreamWriter(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
-                using StreamReader fileStreamReader = new StreamReader(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
+                using StreamWriter fileStreamWriter = new(new FileStream(outputPath, FileMode.Create, FileAccess.Write));
+                using StreamReader fileStreamReader = new(new FileStream(inputPath, FileMode.Open, FileAccess.Read));
                 while (!fileStreamReader.EndOfStream)
                 {
                     string ret = TrySymbolicateLine(fileStreamReader.ReadLine());
                     fileStreamWriter?.WriteLine(ret);
-                    if (isStdout) console.Out.WriteLine(ret);
+                    if (isStdout)
+                    {
+                        console.Out.WriteLine(ret);
+                    }
                 }
                 console.Out.WriteLine($"\nOutput: {outputPath}\n");
             }
@@ -168,7 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 return line;
             }
 
-            StackTraceInfo stInfo = new StackTraceInfo()
+            StackTraceInfo stInfo = new()
             {
                 Type = match.Groups["type"].Value,
                 Method = match.Groups["method"].Value,
@@ -224,7 +225,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 {
                     if (filePath.Contains(".dll"))
                     {
-                        using PEReader peReader = new PEReader(stream);
+                        using PEReader peReader = new(stream);
                         if (!peReader.TryOpenAssociatedPortablePdb(filePath, streamProvider, out provider, out string pdbPath))
                         {
                             return reader;
@@ -265,10 +266,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
                             foreach (SequencePoint point in sequencePoints)
                             {
                                 if (point.Offset > Convert.ToInt64(stInfo.Offset, 16))
+                                {
                                     break;
+                                }
 
                                 if (point.StartLine != SequencePoint.HiddenLine)
+                                {
                                     bestPointSoFar = point;
+                                }
                             }
 
                             if (bestPointSoFar.HasValue)
@@ -291,7 +296,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         }
 
         public static Command SymbolicateCommand() =>
-            new Command(
+            new(
                 name: "symbolicate", description: "Get the line number from the Method Token and IL Offset in a stacktrace")
             {
                 // Handler
@@ -311,7 +316,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }.ExistingOnly();
 
         public static Option<DirectoryInfo[]> SearchDirectoryOption() =>
-            new Option<DirectoryInfo[]>(new[] { "-d", "--search-dir" }, "Path of multiple directories with assembly and pdb")
+            new(new[] { "-d", "--search-dir" }, "Path of multiple directories with assembly and pdb")
             {
                 Argument = new Argument<DirectoryInfo[]>(name: "directory1 directory2 ...", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()).GetDirectories())
                 {
@@ -320,7 +325,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option<FileInfo> OutputFileOption() =>
-            new Option<FileInfo>(new[] { "-o", "--output" }, "Output directly to a file (Default: <input-path>.symbolicated)")
+            new(new[] { "-o", "--output" }, "Output directly to a file (Default: <input-path>.symbolicated)")
             {
                 Argument = new Argument<FileInfo>(name: "output-path")
                 {
@@ -329,6 +334,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option<bool> StandardOutOption() =>
-            new Option<bool>(new[] { "-c", "--stdout" }, getDefaultValue: () => false, "Output directly to a console");
+            new(new[] { "-c", "--stdout" }, getDefaultValue: () => false, "Output directly to a console");
     }
 }

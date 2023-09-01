@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 
@@ -19,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices
         IDisposable Register(Action callback);
 
         /// <summary>
-        /// Register for the event callback. Puts the new callback at the end of the list. Automatically 
+        /// Register for the event callback. Puts the new callback at the end of the list. Automatically
         /// removed from the event list when fired.
         /// </summary>
         /// <param name="callback">callback delegate</param>
@@ -45,7 +44,7 @@ namespace Microsoft.Diagnostics.DebugServices
         IDisposable Register(Action<T> callback);
 
         /// <summary>
-        /// Register for the event callback. Puts the new callback at the end of the list. Automatically 
+        /// Register for the event callback. Puts the new callback at the end of the list. Automatically
         /// removed from the event list when fired.
         /// </summary>
         /// <param name="callback">callback delegate</param>

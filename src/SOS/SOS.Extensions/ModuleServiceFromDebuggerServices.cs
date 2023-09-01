@@ -1,24 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
     /// <summary>
     /// Module service implementation for the native debugger services
     /// </summary>
-    internal class ModuleServiceFromDebuggerServices : ModuleService
+    internal sealed class ModuleServiceFromDebuggerServices : ModuleService
     {
-        class FieldFromDebuggerServices : IField
+        private sealed class FieldFromDebuggerServices : IField
         {
             public FieldFromDebuggerServices(IType type, string fieldName, uint offset)
             {
@@ -33,7 +32,7 @@ namespace SOS.Extensions
             public uint Offset { get; }
         }
 
-        class TypeFromDebuggerServices : IType
+        private sealed class TypeFromDebuggerServices : IType
         {
             private ModuleServiceFromDebuggerServices _moduleService;
             private ulong _typeId;
@@ -65,7 +64,7 @@ namespace SOS.Extensions
             }
         }
 
-        class ModuleFromDebuggerServices : Module, IModuleSymbols
+        private sealed class ModuleFromDebuggerServices : Module, IModuleSymbols
         {
             // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0xFFFFFFFE;
@@ -87,7 +86,7 @@ namespace SOS.Extensions
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;
-                FileName = imageName;
+                FileName = imageName ?? string.Empty;
                 ImageBase = imageBase;
                 ImageSize = imageSize;
                 IndexFileSize = indexTimeStamp == InvalidTimeStamp ? null : indexFileSize;
@@ -97,7 +96,7 @@ namespace SOS.Extensions
             }
 
             public override void Dispose()
-            { 
+            {
                 _serviceContainer.RemoveService(typeof(IModuleSymbols));
                 base.Dispose();
             }
@@ -177,12 +176,16 @@ namespace SOS.Extensions
             SymbolStatus IModuleSymbols.GetSymbolStatus()
             {
                 if (_symbolStatus != SymbolStatus.Unknown)
+                {
                     return _symbolStatus;
-                
+                }
+
                 // GetSymbolStatus is not implemented for anything other than DbgEng for now.
                 IDebugClient client = _moduleService._debuggerServices.DebugClient;
                 if (client is null || client is not IDebugSymbols5 symbols)
-                    return SymbolStatus.Unknown; 
+                {
+                    return SymbolStatus.Unknown;
+                }
 
                 return _symbolStatus = GetSymbolStatusFromDbgEng(symbols);
             }
@@ -201,8 +204,10 @@ namespace SOS.Extensions
                 // from DbgEng won't force a symbol load, it will only tell us if it's already
                 // been loaded or not.
                 DEBUG_SYMTYPE symType = GetSymType(symbols, ImageBase);
-                if (symType != DEBUG_SYMTYPE.NONE && symType != DEBUG_SYMTYPE.DEFERRED)
+                if (symType is not DEBUG_SYMTYPE.NONE and not DEBUG_SYMTYPE.DEFERRED)
+                {
                     return DebugToSymbolStatus(symType);
+                }
 
                 // At this point, the symbol type is DEFERRED or NONE and we haven't tried reloading
                 // the symbol yet.  Try a reload, and then ask one last time what the symbol is.
@@ -245,7 +250,7 @@ namespace SOS.Extensions
                 DEBUG_MODULE_PARAMETERS[] moduleParams = new DEBUG_MODULE_PARAMETERS[1];
                 HResult hr = symbols.GetModuleParameters(1, new ulong[] { imageBase }, 0, moduleParams);
 
-                var symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
+                DEBUG_SYMTYPE symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
                 return symType;
             }
         }
@@ -264,14 +269,14 @@ namespace SOS.Extensions
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
 
-            HResult hr = _debuggerServices.GetNumberModules(out uint loadedModules, out uint unloadedModules);
+            HResult hr = _debuggerServices.GetNumberModules(out uint loadedModules, out uint _);
             if (hr.IsOK)
             {
                 for (int moduleIndex = 0; moduleIndex < loadedModules; moduleIndex++)
                 {
-                    hr = _debuggerServices.GetModuleInfo(moduleIndex, out ulong imageBase, out ulong imageSize, out uint timestamp, out uint checksum);
+                    hr = _debuggerServices.GetModuleInfo(moduleIndex, out ulong imageBase, out ulong imageSize, out uint timestamp, out uint _);
                     if (hr.IsOK)
                     {
                         hr = _debuggerServices.GetModuleName(moduleIndex, out string imageName);
@@ -279,7 +284,7 @@ namespace SOS.Extensions
                         {
                             Trace.TraceError("GetModuleName({0}) {1:X16} FAILED {2:X8}", moduleIndex, imageBase, hr);
                         }
-                        var module = new ModuleFromDebuggerServices(this, moduleIndex, imageName, imageBase, imageSize, unchecked((uint)imageSize), timestamp);
+                        ModuleFromDebuggerServices module = new(this, moduleIndex, imageName, imageBase, imageSize, unchecked((uint)imageSize), timestamp);
                         if (!modules.TryGetValue(imageBase, out IModule original))
                         {
                             modules.Add(imageBase, module);

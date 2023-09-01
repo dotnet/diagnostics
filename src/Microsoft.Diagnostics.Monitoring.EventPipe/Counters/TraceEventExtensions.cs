@@ -1,18 +1,19 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using System.Text;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static class TraceEventExtensions
     {
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
+
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterFilter filter, string sessionId, string clientId, out ICounterPayload payload)
         {
             payload = null;
 
@@ -73,7 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return true;
             }
 
-            if (sessionId != null && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
+            if (clientId != null && !inactiveSharedSessions.Contains(clientId) && MonitoringSourceConfiguration.SystemDiagnosticsMetricsProviderName.Equals(traceEvent.ProviderName))
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
@@ -91,6 +92,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 else if (traceEvent.EventName == "CounterRateValuePublished")
                 {
                     HandleCounterRate(traceEvent, filter, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "UpDownCounterRateValuePublished")
+                {
+                    HandleUpDownCounterValue(traceEvent, filter, sessionId, out payload);
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
@@ -111,6 +116,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 else if (traceEvent.EventName == "MultipleSessionsNotSupportedError")
                 {
                     HandleMultipleSessionsNotSupportedError(traceEvent, sessionId, out payload);
+                }
+                else if (traceEvent.EventName == "MultipleSessionsConfiguredIncorrectlyError")
+                {
+                    HandleMultipleSessionsConfiguredIncorrectlyError(traceEvent, clientId, out payload);
                 }
 
                 return payload != null;
@@ -151,7 +160,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the Gauge callback function throws an exception.
-                payload = new CounterEndedPayload(meterName, instrumentName, null, obj.TimeStamp);
+                payload = new CounterEndedPayload(meterName, instrumentName, obj.TimeStamp);
             }
         }
 
@@ -185,8 +194,48 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                // this happens when the ObservableCounter callback function throws an exception.
-                payload = new CounterEndedPayload(meterName, instrumentName, null, traceEvent.TimeStamp);
+                // this happens when the ObservableCounter callback function throws an exception
+                // or when the ObservableCounter doesn't include a measurement for a particular set of tag values.
+                payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
+            }
+        }
+
+        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterFilter filter, string sessionId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            string payloadSessionId = (string)traceEvent.PayloadValue(0);
+
+            if (payloadSessionId != sessionId || traceEvent.Version < 1) // Version 1 added the value field.
+            {
+                return;
+            }
+
+            string meterName = (string)traceEvent.PayloadValue(1);
+            //string meterVersion = (string)obj.PayloadValue(2);
+            string instrumentName = (string)traceEvent.PayloadValue(3);
+            string unit = (string)traceEvent.PayloadValue(4);
+            string tags = (string)traceEvent.PayloadValue(5);
+            //string rateText = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
+            string valueText = (string)traceEvent.PayloadValue(7);
+
+            if (!filter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
+            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
+                payload = new UpDownCounterPayload(meterName, instrumentName, null, unit, tags, value, traceEvent.TimeStamp);
+
+            }
+            else
+            {
+                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
+                // this happens when the ObservableUpDownCounter callback function throws an exception
+                // or when the ObservableUpDownCounter doesn't include a measurement for a particular set of tag values.
+                payload = new CounterEndedPayload(meterName, instrumentName, traceEvent.TimeStamp);
             }
         }
 
@@ -257,7 +306,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string payloadSessionId = (string)obj.PayloadValue(0);
             string error = (string)obj.PayloadValue(1);
-            if (sessionId != payloadSessionId)
+            if (payloadSessionId != sessionId)
             {
                 return;
             }
@@ -280,10 +329,63 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             else
             {
-                string errorMessage = "Error: Another metrics collection session is already in progress for the target process, perhaps from another tool? " + Environment.NewLine +
+                string errorMessage = "Error: Another metrics collection session is already in progress for the target process." + Environment.NewLine +
                 "Concurrent sessions are not supported.";
 
                 payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+            }
+        }
+
+        internal static bool TryCreateSharedSessionConfiguredIncorrectlyMessage(TraceEvent obj, string clientId, out string message)
+        {
+            message = string.Empty;
+
+            string payloadSessionId = (string)obj.PayloadValue(0);
+
+            if (payloadSessionId != clientId)
+            {
+                // If our session is not the one that is running then the error is not for us,
+                // it is for some other session that came later
+                return false;
+            }
+
+            string expectedMaxHistograms = (string)obj.PayloadValue(1);
+            string actualMaxHistograms = (string)obj.PayloadValue(2);
+            string expectedMaxTimeSeries = (string)obj.PayloadValue(3);
+            string actualMaxTimeSeries = (string)obj.PayloadValue(4);
+            string expectedRefreshInterval = (string)obj.PayloadValue(5);
+            string actualRefreshInterval = (string)obj.PayloadValue(6);
+
+            StringBuilder errorMessage = new("Error: Another shared metrics collection session is already in progress for the target process." + Environment.NewLine +
+            "To enable this metrics session alongside the existing session, update the following values:" + Environment.NewLine);
+
+            if (expectedMaxHistograms != actualMaxHistograms)
+            {
+                errorMessage.Append($"MaxHistograms: {expectedMaxHistograms}" + Environment.NewLine);
+            }
+            if (expectedMaxTimeSeries != actualMaxTimeSeries)
+            {
+                errorMessage.Append($"MaxTimeSeries: {expectedMaxTimeSeries}" + Environment.NewLine);
+            }
+            if (expectedRefreshInterval != actualRefreshInterval)
+            {
+                errorMessage.Append($"IntervalSeconds: {expectedRefreshInterval}" + Environment.NewLine);
+            }
+
+            message = errorMessage.ToString();
+
+            return true;
+        }
+
+        private static void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj, string clientId, out ICounterPayload payload)
+        {
+            payload = null;
+
+            if (TryCreateSharedSessionConfiguredIncorrectlyMessage(obj, clientId, out string message))
+            {
+                payload = new ErrorPayload(message.ToString(), obj.TimeStamp);
+
+                inactiveSharedSessions.Add(clientId);
             }
         }
 
@@ -308,7 +410,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private static IList<Quantile> ParseQuantiles(string quantileList)
         {
             string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            var quantiles = new List<Quantile>();
+            List<Quantile> quantiles = new();
             foreach (string quantile in quantileParts)
             {
                 string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
@@ -335,7 +437,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             int interval = 0;
             if (series.StartsWith(comparison, StringComparison.OrdinalIgnoreCase))
             {
-                int.TryParse(series.Substring(comparison.Length), out interval);
+                int.TryParse(series.AsSpan(comparison.Length), out interval);
             }
             return interval;
         }

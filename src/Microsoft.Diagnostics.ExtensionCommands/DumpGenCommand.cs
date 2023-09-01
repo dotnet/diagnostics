@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
-using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -27,19 +26,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void ExtensionInvoke()
         {
-            var generation = ParseGenerationArgument(Generation);
+            GCGeneration generation = ParseGenerationArgument(Generation);
             if (generation != GCGeneration.NotSet)
             {
-                var dumpGen = new DumpGen(Helper, generation);
+                DumpGen dumpGen = new(Helper, generation);
 
                 if (string.IsNullOrEmpty(MethodTableAddress))
                 {
-                    var dumpGenResult = dumpGen.GetStats(FilterByTypeName);
+                    IEnumerable<DumpGenStats> dumpGenResult = dumpGen.GetStats(FilterByTypeName);
                     WriteStatistics(dumpGenResult);
                 }
-                else if (TryParseAddress(MethodTableAddress, out var address))
+                else if (TryParseAddress(MethodTableAddress, out ulong address))
                 {
-                    var objects = dumpGen.GetInstances(address);
+                    IEnumerable<ClrObject> objects = dumpGen.GetInstances(address);
                     WriteInstances(objects);
                 }
                 else
@@ -52,9 +51,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void WriteInstances(IEnumerable<ClrObject> objects)
         {
-            var objectsCount = 0UL;
+            ulong objectsCount = 0UL;
             WriteLine(Helper.Is64Bits() ? methodTableHeader64bits : methodTableHeader32bits);
-            foreach (var obj in objects)
+            foreach (ClrObject obj in objects)
             {
                 objectsCount++;
                 if (Helper.Is64Bits())
@@ -71,10 +70,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void WriteStatistics(IEnumerable<DumpGenStats> dumpGenResult)
         {
-            var objectsCount = 0UL;
+            ulong objectsCount = 0UL;
             WriteLine("Statistics:");
             WriteLine(Helper.Is64Bits() ? statsHeader64bits : statsHeader32bits);
-            foreach (var typeStats in dumpGenResult)
+            foreach (DumpGenStats typeStats in dumpGenResult)
             {
                 objectsCount += typeStats.NumberOfOccurences;
                 if (Helper.Is64Bits())
@@ -96,23 +95,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteLine("Generation argument is missing");
                 return GCGeneration.NotSet;
             }
-            var lowerString = generation.ToLowerInvariant();
-            switch (lowerString)
+            string lowerString = generation.ToLowerInvariant();
+            GCGeneration result = lowerString switch
             {
-                case "gen0":
-                    return GCGeneration.Generation0;
-                case "gen1":
-                    return GCGeneration.Generation1;
-                case "gen2":
-                    return GCGeneration.Generation2;
-                case "loh":
-                    return GCGeneration.LargeObjectHeap;
-                case "poh":
-                    return GCGeneration.PinnedObjectHeap;
-                default:
-                    WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh)");
-                    return GCGeneration.NotSet;
+                "gen0" => GCGeneration.Generation0,
+                "gen1" => GCGeneration.Generation1,
+                "gen2" => GCGeneration.Generation2,
+                "loh" => GCGeneration.LargeObjectHeap,
+                "poh" => GCGeneration.PinnedObjectHeap,
+                "foh" => GCGeneration.FrozenObjectHeap,
+                _ => GCGeneration.NotSet,
+            };
+            if (result == GCGeneration.NotSet)
+            {
+                WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh, foh)");
             }
+            return result;
         }
 
 
@@ -134,6 +132,7 @@ Generation number can take the following values (case insensitive):
 - gen2
 - loh
 - poh
+- foh
 
 > dumpgen gen0
 Statistics:

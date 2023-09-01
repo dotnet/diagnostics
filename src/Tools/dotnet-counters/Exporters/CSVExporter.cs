@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Globalization;
@@ -9,12 +8,12 @@ using System.Text;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
-    class CSVExporter : ICounterRenderer
+    internal class CSVExporter : ICounterRenderer
     {
-        private object _lock = new object(); // protects the StringBuilder instance.
-        private string _output;
+        private readonly object _lock = new(); // protects the StringBuilder instance.
+        private readonly string _output;
         private StringBuilder builder;
-        private int flushLength = 10_000; // Arbitrary length to flush
+        private readonly int flushLength = 10_000; // Arbitrary length to flush
 
         public string Output { get; set; }
 
@@ -73,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     .Append(payload.Timestamp.ToString()).Append(',')
                     .Append(payload.ProviderName).Append(',')
                     .Append(payload.DisplayName);
-                if(!string.IsNullOrEmpty(payload.Tags))
+                if (!string.IsNullOrEmpty(payload.Tags))
                 {
                     builder.Append('[').Append(payload.Tags.Replace(',', ';')).Append(']');
                 }

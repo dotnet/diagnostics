@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -13,30 +13,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// <summary>
     /// Class used to run different flavours of Diagnostics Server routers.
     /// </summary>
-    internal class DiagnosticsServerRouterRunner
+    internal static class DiagnosticsServerRouterRunner
     {
-        internal interface Callbacks
+        internal interface ICallbacks
         {
             void OnRouterStarted(string tcpAddress);
             void OnRouterStopped();
         }
 
-        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, TcpServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, Callbacks callbacks)
+        public static async Task<int> runIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, ICallbacks callbacks)
         {
             return await runRouter(token, new IpcClientTcpServerRouterFactory(ipcClient, tcpServer, runtimeTimeoutMs, tcpServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, Callbacks callbacks)
+        public static async Task<int> runIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeoutMs, NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory, ILogger logger, ICallbacks callbacks)
         {
             return await runRouter(token, new IpcServerTcpServerRouterFactory(ipcServer, tcpServer, runtimeTimeoutMs, tcpServerRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory, ILogger logger, Callbacks callbacks)
+        public static async Task<int> runIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory, ILogger logger, ICallbacks callbacks)
         {
             return await runRouter(token, new IpcServerTcpClientRouterFactory(ipcServer, tcpClient, runtimeTimeoutMs, tcpClientRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
 
-        public static async Task<int> runIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory, ILogger logger, Callbacks callbacks)
+        public static async Task<int> runIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeoutMs, TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory, ILogger logger, ICallbacks callbacks)
         {
             return await runRouter(token, new IpcClientTcpClientRouterFactory(ipcClient, tcpClient, runtimeTimeoutMs, tcpClientRouterFactory, logger), callbacks).ConfigureAwait(false);
         }
@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                var value = new IpcTcpSocketEndPoint(address);
+                IpcTcpSocketEndPoint value = new(address);
                 isLooback = IPAddress.IsLoopback(value.EndPoint.Address);
             }
             catch { }
@@ -55,16 +55,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return isLooback;
         }
 
-        async static Task<int> runRouter(CancellationToken token, DiagnosticsServerRouterFactory routerFactory, Callbacks callbacks)
+        private static async Task<int> runRouter(CancellationToken token, DiagnosticsServerRouterFactory routerFactory, ICallbacks callbacks)
         {
-            List<Task> runningTasks = new List<Task>();
-            List<Router> runningRouters = new List<Router>();
+            List<Task> runningTasks = new();
+            List<Router> runningRouters = new();
 
             try
             {
-                await routerFactory.Start(token);
+                await routerFactory.Start(token).ConfigureAwait(false);
                 if (!token.IsCancellationRequested)
+                {
                     callbacks?.OnRouterStarted(routerFactory.TcpAddress);
+                }
 
                 while (!token.IsCancellationRequested)
                 {
@@ -81,8 +83,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             runningRouters.RemoveAll(IsRouterDead);
 
                             runningTasks.Clear();
-                            foreach (var runningRouter in runningRouters)
+                            foreach (Router runningRouter in runningRouters)
+                            {
                                 runningTasks.Add(runningRouter.RouterTaskCompleted.Task);
+                            }
+
                             runningTasks.Add(routerTask);
                         }
                         while (await Task.WhenAny(runningTasks.ToArray()).ConfigureAwait(false) != routerTask);
@@ -132,6 +137,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             routerFactory.Logger?.LogInformation("Starting automatic shutdown.");
                             throw;
                         }
+
+                        routerFactory.Logger?.LogTrace($"runRouter continues after exception: {ex.Message}");
                     }
                 }
             }
@@ -142,12 +149,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             finally
             {
                 if (token.IsCancellationRequested)
+                {
                     routerFactory.Logger?.LogInformation("Shutting down due to cancelation request.");
+                }
 
                 runningRouters.RemoveAll(IsRouterDead);
                 runningRouters.Clear();
 
-                await routerFactory?.Stop();
+                await (routerFactory?.Stop()).ConfigureAwait(false);
                 callbacks?.OnRouterStopped();
 
                 routerFactory.Logger?.LogInformation("Router stopped.");
@@ -155,11 +164,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return 0;
         }
 
-        static bool IsRouterDead(Router router)
+        private static bool IsRouterDead(Router router)
         {
             bool isRunning = router.IsRunning && !router.RouterTaskCompleted.Task.IsCompleted;
             if (!isRunning)
+            {
                 router.Dispose();
+            }
+
             return !isRunning;
         }
     }

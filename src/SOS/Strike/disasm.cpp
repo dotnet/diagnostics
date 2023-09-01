@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // ==++==
 // 
@@ -1040,7 +1039,6 @@ void DumpStackWorker (DumpStackFlag &DSFlag)
 /// X86Machine implementation
 ///
 LPCSTR X86Machine::s_DumpStackHeading = "ChildEBP RetAddr  Caller, Callee\n";
-LPCSTR X86Machine::s_DSOHeading       = "ESP/REG  Object   Name\n";
 LPCSTR X86Machine::s_GCRegs[7]        = {"eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"};
 LPCSTR X86Machine::s_SPName           = "ESP";
 
@@ -1082,7 +1080,6 @@ void X86Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printf
 /// ARMMachine implementation
 ///
 LPCSTR ARMMachine::s_DumpStackHeading = "ChildFP  RetAddr  Caller, Callee\n";
-LPCSTR ARMMachine::s_DSOHeading       = "SP/REG  Object   Name\n";
 LPCSTR ARMMachine::s_GCRegs[14]       = {"r0", "r1", "r2",  "r3",  "r4",  "r5",  "r6",
                                          "r7", "r8", "r9",  "r10", "r11", "r12", "lr"};
 LPCSTR ARMMachine::s_SPName           = "sp";
@@ -1094,7 +1091,6 @@ LPCSTR ARMMachine::s_SPName           = "sp";
 /// AMD64Machine implementation
 ///
 LPCSTR AMD64Machine::s_DumpStackHeading = "Child-SP         RetAddr          Caller, Callee\n";
-LPCSTR AMD64Machine::s_DSOHeading       = "RSP/REG          Object           Name\n";
 LPCSTR AMD64Machine::s_GCRegs[15]       = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp",
                                            "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
 LPCSTR AMD64Machine::s_SPName           = "RSP";
@@ -1122,7 +1118,6 @@ void AMD64Machine::DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, prin
 /// ARM64Machine implementation
 ///
 LPCSTR ARM64Machine::s_DumpStackHeading = "ChildFP          RetAddr          Caller, Callee\n";
-LPCSTR ARM64Machine::s_DSOHeading       = "SP/REG           Object           Name\n";
 // excluding x18, fp & lr as these will not contain object references
 LPCSTR ARM64Machine::s_GCRegs[28]       = {"x0", "x1", "x2",  "x3",  "x4",  "x5",  "x6",
                                            "x7", "x8", "x9",  "x10", "x11", "x12", "x13",

@@ -1,15 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using Microsoft.SymbolStore.SymbolStores;
-using SOS;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,6 +12,14 @@ using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
+using SOS;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -37,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
-        private Microsoft.SymbolStore.SymbolStores.SymbolStore _symbolStore = null;
+        private SymbolStore.SymbolStores.SymbolStore _symbolStore;
 
         public SymbolService(IHost host)
         {
@@ -61,7 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         /// <summary>
         /// The default symbol cache path:
-        /// 
+        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
@@ -102,7 +101,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
         /// </summary>
-        public int DefaultRetryCount { get; set; } = 0;
+        public int DefaultRetryCount { get; set; }
 
         /// <summary>
         /// Reset any HTTP symbol stores marked with a client failure
@@ -282,7 +281,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             else
             {
-                Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+                SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
                 if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
                     // Create http symbol server store
@@ -310,9 +309,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symbolCachePath">symbol cache directory path (optional)</param>
         public void AddCachePath(string symbolCachePath)
         {
-            if (symbolCachePath == null) throw new ArgumentNullException(nameof(symbolCachePath));
+            if (symbolCachePath == null)
+            {
+                throw new ArgumentNullException(nameof(symbolCachePath));
+            }
 
-            Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+            SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolCachePath = Path.GetFullPath(symbolCachePath);
 
             // Check only the first symbol store for duplication. The same cache directory can be
@@ -329,9 +331,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="symbolDirectoryPath">symbol directory path to search (optional)</param>
         public void AddDirectoryPath(string symbolDirectoryPath)
         {
-            if (symbolDirectoryPath == null) throw new ArgumentNullException(nameof(symbolDirectoryPath));
+            if (symbolDirectoryPath == null)
+            {
+                throw new ArgumentNullException(nameof(symbolDirectoryPath));
+            }
 
-            Microsoft.SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
+            SymbolStore.SymbolStores.SymbolStore store = _symbolStore;
             symbolDirectoryPath = Path.GetFullPath(symbolDirectoryPath);
 
             if (!IsDuplicateSymbolStore<DirectorySymbolStore>(store, (directorySymbolStore) => IsPathEqual(symbolDirectoryPath, directorySymbolStore.Directory)))
@@ -424,7 +429,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             Trace.WriteLine($"Downloaded symbol file {key.FullPathName}");
                         }
                     }
-                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is DirectoryNotFoundException)
+                    catch (Exception ex) when (ex is UnauthorizedAccessException or DirectoryNotFoundException)
                     {
                         Trace.TraceError("{0}: {1}", file.FileName, ex.Message);
                         downloadFilePath = null;
@@ -457,7 +462,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 if (peStream != null)
                 {
-                    using var peReader = new PEReader(peStream, PEStreamOptions.Default);
+                    using PEReader peReader = new(peStream, PEStreamOptions.Default);
                     if (peReader.HasMetadata)
                     {
                         PEMemoryBlock metadataInfo = peReader.GetMetadata();
@@ -466,10 +471,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
             catch (Exception ex) when
-                (ex is UnauthorizedAccessException ||
-                 ex is BadImageFormatException ||
-                 ex is InvalidVirtualAddressException ||
-                 ex is IOException)
+                (ex is UnauthorizedAccessException or
+                 BadImageFormatException or
+                 InvalidVirtualAddressException or
+                 IOException)
             {
                 Trace.TraceError($"GetMetaData: {ex.Message}");
             }
@@ -488,22 +493,36 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(string assemblyPath, bool isFileLayout, Stream peStream)
         {
-            if (assemblyPath == null && peStream == null) throw new ArgumentNullException(nameof(assemblyPath));
-            if (peStream is not null && !peStream.CanSeek) throw new ArgumentException(nameof(peStream));
+            if (assemblyPath is null)
+            {
+                throw new ArgumentNullException(nameof(assemblyPath));
+            }
+
+            if (peStream is null)
+            {
+                throw new ArgumentNullException(nameof(peStream));
+            }
+
+            if (!peStream.CanSeek)
+            {
+                throw new ArgumentException("Stream is not seakable", nameof(peStream));
+            }
 
             PEStreamOptions options = isFileLayout ? PEStreamOptions.Default : PEStreamOptions.IsLoadedImage;
             if (peStream == null)
             {
                 peStream = Utilities.TryOpenFile(assemblyPath);
                 if (peStream == null)
+                {
                     return null;
+                }
 
                 options = PEStreamOptions.Default;
             }
 
             try
             {
-                using (var peReader = new PEReader(peStream, options))
+                using (PEReader peReader = new(peStream, options))
                 {
                     ReadPortableDebugTableEntries(peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry);
 
@@ -511,7 +530,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // since embedded PDB needs decompression which is less efficient than memory-mapping the file).
                     if (codeViewEntry.DataSize != 0)
                     {
-                        var result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
+                        SymbolFile result = TryOpenReaderFromCodeView(peReader, codeViewEntry, assemblyPath);
                         if (result != null)
                         {
                             return result;
@@ -525,7 +544,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                 }
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 // nop
             }
@@ -543,8 +562,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(Stream pdbStream)
         {
-            if (pdbStream != null) throw new ArgumentNullException(nameof(pdbStream));
-            if (!pdbStream.CanSeek) throw new ArgumentException(nameof(pdbStream));
+            if (pdbStream is null)
+            {
+                throw new ArgumentNullException(nameof(pdbStream));
+            }
+
+            if (!pdbStream.CanSeek)
+            {
+                throw new ArgumentException("Stream is not seakable", nameof(pdbStream));
+            }
 
             byte[] buffer = new byte[sizeof(uint)];
             pdbStream.Position = 0;
@@ -570,7 +596,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 provider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
                 result = new SymbolFile(provider, provider.GetMetadataReader());
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 return null;
             }
@@ -596,7 +622,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string DownloadPE(IModule module, KeyTypeFlags flags)
         {
             SymbolStoreKey fileKey = null;
-            string fileName = null;
+            SymbolStoreKey tempFileKey = null;
+            string fileName;
             if ((flags & KeyTypeFlags.IdentityKey) != 0)
             {
                 if (!module.IndexTimeStamp.HasValue || !module.IndexFileSize.HasValue)
@@ -614,10 +641,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else if ((flags & KeyTypeFlags.SymbolKey) != 0)
             {
                 IEnumerable<PdbFileInfo> pdbInfos = module.GetPdbFileInfos();
-                if (!pdbInfos.Any())
-                {
-                    return null;
-                }
                 foreach (PdbFileInfo pdbInfo in pdbInfos)
                 {
                     if (pdbInfo.IsPortable)
@@ -625,27 +648,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         fileKey = PortablePDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid);
                         if (fileKey is not null)
                         {
-                            fileName = pdbInfo.Path;
                             break;
                         }
                     }
-                }
-                if (fileKey is null)
-                {
-                    foreach (PdbFileInfo pdbInfo in pdbInfos)
+                    else
                     {
-                        if (!pdbInfo.IsPortable)
-                        {
-                            fileKey = PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
-                            if (fileKey is not null)
-                            {
-                                fileName = pdbInfo.Path;
-                                break;
-                            }
-                        }
+                        tempFileKey ??= PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
                     }
                 }
-                if (fileKey is null)
+
+                fileKey ??= tempFileKey;
+                if (fileKey is not null)
+                {
+                    fileName = fileKey.FullPathName;
+                }
+                else
                 {
                     Trace.TraceWarning($"DownLoadPE: no key generated for module PDB {module.FileName} ");
                     return null;
@@ -662,14 +679,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using Stream stream = Utilities.TryOpenFile(fileName);
                 if (stream is not null)
                 {
-                    var peFile = new PEFile(new StreamAddressSpace(stream), false);
-                    var generator = new PEFileKeyGenerator(Tracer.Instance, peFile, fileName);
-                    foreach (SymbolStoreKey key in generator.GetKeys(flags))
+                    if ((flags & KeyTypeFlags.IdentityKey) != 0)
                     {
-                        if (fileKey.Equals(key))
+                        PEFile peFile = new(new StreamAddressSpace(stream), false);
+                        PEFileKeyGenerator generator = new(Tracer.Instance, peFile, fileName);
+                        foreach (SymbolStoreKey key in generator.GetKeys(flags).ToArray())
                         {
-                            Trace.TraceInformation($"DownloadPE: local file match {fileName}");
-                            return fileName;
+                            if (fileKey.Equals(key))
+                            {
+                                Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                                return fileName;
+                            }
+                        }
+                    }
+                    else if ((flags & KeyTypeFlags.SymbolKey) != 0)
+                    {
+                        KeyGenerator generator = new PortablePDBFileKeyGenerator(Tracer.Instance, new SymbolStoreFile(stream, fileName));
+                        foreach (SymbolStoreKey key in generator.GetKeys(KeyTypeFlags.IdentityKey))
+                        {
+                            if (fileKey.Equals(key))
+                            {
+                                Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                                return fileName;
+                            }
+                        }
+
+                        generator = new PDBFileKeyGenerator(Tracer.Instance, new SymbolStoreFile(stream, fileName));
+                        foreach (SymbolStoreKey key in generator.GetKeys(KeyTypeFlags.IdentityKey))
+                        {
+                            if (fileKey.Equals(key))
+                            {
+                                Trace.TraceInformation($"DownloadPE: local file match {fileName}");
+                                return fileName;
+                            }
                         }
                     }
                 }
@@ -720,7 +762,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using ELFFile elfFile = Utilities.OpenELFFile(fileName);
                 if (elfFile is not null)
                 {
-                    var generator = new ELFFileKeyGenerator(Tracer.Instance, elfFile, fileName);
+                    ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileName);
                     foreach (SymbolStoreKey key in generator.GetKeys(flags))
                     {
                         if (fileKey.Equals(key))
@@ -776,7 +818,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 using MachOFile machOFile = Utilities.OpenMachOFile(fileName);
                 if (machOFile is not null)
                 {
-                    var generator = new MachOFileKeyGenerator(Tracer.Instance, machOFile, fileName);
+                    MachOFileKeyGenerator generator = new(Tracer.Instance, machOFile, fileName);
                     IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);
                     foreach (SymbolStoreKey key in keys)
                     {
@@ -800,7 +842,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        private void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
+        private static void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
         {
             // See spec: https://github.com/dotnet/runtime/blob/main/docs/design/specs/PE-COFF.md
 
@@ -873,7 +915,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     result = new SymbolFile(provider, reader);
                 }
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 return null;
             }
@@ -888,19 +930,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return result;
         }
 
-        private SymbolFile TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
+        private static SymbolFile TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
         {
             SymbolFile result = null;
             MetadataReaderProvider provider = null;
 
             try
             {
-                // TODO: We might want to cache this provider globally (across stack traces), 
+                // TODO: We might want to cache this provider globally (across stack traces),
                 // since decompressing embedded PDB takes some time.
                 provider = peReader.ReadEmbeddedPortablePdbDebugDirectoryData(embeddedPdbEntry);
                 result = new SymbolFile(provider, provider.GetMetadataReader());
             }
-            catch (Exception e) when (e is BadImageFormatException || e is IOException)
+            catch (Exception e) when (e is BadImageFormatException or IOException)
             {
                 return null;
             }
@@ -920,19 +962,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
-            
+            StringBuilder sb = new();
+
             sb.AppendLine("Current symbol store settings:");
-            
-            ForEachSymbolStore<Microsoft.SymbolStore.SymbolStores.SymbolStore>((symbolStore) =>
-            {
+
+            ForEachSymbolStore<SymbolStore.SymbolStores.SymbolStore>((symbolStore) => {
                 if (symbolStore is HttpSymbolStore httpSymbolStore)
                 {
                     sb.AppendLine($"-> {httpSymbolStore} Timeout: {httpSymbolStore.Timeout.Minutes} RetryCount: {httpSymbolStore.RetryCount}");
                 }
                 else
                 {
-                    sb.AppendLine($"-> {symbolStore.ToString()}");
+                    sb.AppendLine($"-> {symbolStore}");
                 }
             });
             return sb.ToString();
@@ -950,7 +991,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 return _symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is BadImageFormatException || ex is IOException)
+            catch (Exception ex) when (ex is UnauthorizedAccessException or BadImageFormatException or IOException)
             {
                 Trace.TraceError("Exception: {0}", ex.ToString());
             }
@@ -961,7 +1002,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Sets a new store store head.
         /// </summary>
         /// <param name="store">symbol store (server, cache, directory, etc.)</param>
-        private void SetSymbolStore(Microsoft.SymbolStore.SymbolStores.SymbolStore store)
+        private void SetSymbolStore(SymbolStore.SymbolStores.SymbolStore store)
         {
             if (store != _symbolStore)
             {
@@ -970,8 +1011,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        private bool IsDuplicateSymbolStore<T>(Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
-            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+        private static bool IsDuplicateSymbolStore<T>(SymbolStore.SymbolStores.SymbolStore symbolStore, Func<T, bool> match)
+            where T : SymbolStore.SymbolStores.SymbolStore
         {
             while (symbolStore != null)
             {
@@ -994,9 +1035,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <typeparam name="T">type of symbol store or SymbolStore for all</typeparam>
         /// <param name="callback">called for each store found</param>
         public void ForEachSymbolStore<T>(Action<T> callback)
-            where T : Microsoft.SymbolStore.SymbolStores.SymbolStore
+            where T : SymbolStore.SymbolStores.SymbolStore
         {
-            Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
+            SymbolStore.SymbolStores.SymbolStore symbolStore = _symbolStore;
             while (symbolStore != null)
             {
                 if (symbolStore is T store)

@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -17,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static EventLevel defaultEventLevel = EventLevel.Verbose;
         // Keep this in sync with runtime repo's clretwall.man
-        private static Dictionary<string, long> CLREventKeywords = new Dictionary<string, long>(StringComparer.InvariantCultureIgnoreCase)
+        private static Dictionary<string, long> CLREventKeywords = new(StringComparer.InvariantCultureIgnoreCase)
         {
             { "gc", 0x1 },
             { "gchandle", 0x2 },
@@ -59,7 +58,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static List<EventPipeProvider> ToProviders(string providers)
         {
             if (providers == null)
+            {
                 throw new ArgumentNullException(nameof(providers));
+            }
+
             return string.IsNullOrWhiteSpace(providers) ?
                 new List<EventPipeProvider>() : providers.Split(',').Select(ToProvider).ToList();
         }
@@ -71,11 +73,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return null;
             }
 
-            var clrevents = clreventslist.Split("+");
+            string[] clrevents = clreventslist.Split("+");
             long clrEventsKeywordsMask = 0;
-            for (var i = 0; i < clrevents.Length; i++)
+            for (int i = 0; i < clrevents.Length; i++)
             {
-                if (CLREventKeywords.TryGetValue(clrevents[i], out var keyword))
+                if (CLREventKeywords.TryGetValue(clrevents[i], out long keyword))
                 {
                     clrEventsKeywordsMask |= keyword;
                 }
@@ -97,14 +99,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static EventLevel GetEventLevel(string token)
         {
-            if (Int32.TryParse(token, out int level) && level >= 0)
+            if (int.TryParse(token, out int level) && level >= 0)
             {
                 return level > (int)EventLevel.Verbose ? EventLevel.Verbose : (EventLevel)level;
             }
 
             else
             {
-                switch (token.ToLower())
+                switch (token.ToLowerInvariant())
                 {
                     case "critical":
                         return EventLevel.Critical;
@@ -127,9 +129,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static EventPipeProvider ToProvider(string provider)
         {
             if (string.IsNullOrWhiteSpace(provider))
+            {
                 throw new ArgumentNullException(nameof(provider));
+            }
 
-            var tokens = provider.Split(new[] { ':' }, 4, StringSplitOptions.None); // Keep empty tokens;
+            string[] tokens = provider.Split(new[] { ':' }, 4, StringSplitOptions.None); // Keep empty tokens;
 
             // Provider name
             string providerName = tokens.Length > 0 ? tokens[0] : null;
@@ -141,7 +145,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             if (string.IsNullOrWhiteSpace(providerName))
+            {
                 throw new ArgumentException("Provider name was not specified.");
+            }
 
             // Keywords
             long keywords = tokens.Length > 1 && !string.IsNullOrWhiteSpace(tokens[1]) ?
@@ -153,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Event counters
             string filterData = tokens.Length > 3 ? tokens[3] : null;
-            var argument = string.IsNullOrWhiteSpace(filterData) ? null : ParseArgumentString(filterData);
+            Dictionary<string, string> argument = string.IsNullOrWhiteSpace(filterData) ? null : ParseArgumentString(filterData);
             return new EventPipeProvider(providerName, eventLevel, keywords, argument);
         }
 
@@ -163,7 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 return null;
             }
-            var argumentDict = new Dictionary<string, string>();
+            Dictionary<string, string> argumentDict = new();
 
             int keyStart = 0;
             int keyEnd = 0;
@@ -172,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int curIdx = 0;
             bool inQuote = false;
             argument = Regex.Unescape(argument);
-            foreach (var c in argument)
+            foreach (char c in argument)
             {
                 if (inQuote)
                 {

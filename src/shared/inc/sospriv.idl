@@ -42,11 +42,13 @@ typedef int mdToken;
 typedef unsigned int size_t;
 typedef int ModuleMapType;
 typedef int VCSHeapType;
+typedef int LoaderHeapKind;
 cpp_quote("#endif")
 
 
 cpp_quote("typedef enum { TYPEDEFTOMETHODTABLE, TYPEREFTOMETHODTABLE } ModuleMapType;")
-cpp_quote("typedef enum {IndcellHeap, LookupHeap, ResolveHeap, DispatchHeap, CacheEntryHeap} VCSHeapType;")
+cpp_quote("typedef enum {IndcellHeap, LookupHeap, ResolveHeap, DispatchHeap, CacheEntryHeap, VtableHeap} VCSHeapType;")
+cpp_quote("typedef enum {LoaderHeapKindNormal = 0, LoaderHeapKindExplicitControl = 1} LoaderHeapKind;")
 
 typedef void (*MODULEMAPTRAVERSE)(UINT index, CLRDATA_ADDRESS methodTable,LPVOID token);
 typedef void (*VISITHEAP)(CLRDATA_ADDRESS blockData,size_t blockSize,BOOL blockIsCurrentBlock);
@@ -104,7 +106,7 @@ cpp_quote("#define _SOS_StackReference_")
 
 typedef enum SOSStackSourceType
 {
-    SOS_StackSourceIP,     // Instuction pointer in managed code
+    SOS_StackSourceIP,     // Instruction pointer in managed code
     SOS_StackSourceFrame,  // clr!Frame
 } SOSStackSourceType;
 
@@ -413,7 +415,7 @@ interface ISOSDacInterface8 : IUnknown
 // Increment anytime there is a change in the data structures that SOS depends on like
 // stress log structs (StressMsg, StressLogChunck, ThreadStressLog, etc), exception
 // stack traces (StackTraceElement), the PredefinedTlsSlots enums, etc.
-cpp_quote("#define SOS_BREAKING_CHANGE_VERSION 3")
+cpp_quote("#define SOS_BREAKING_CHANGE_VERSION 4")
 
 [
     object,
@@ -448,4 +450,27 @@ interface ISOSDacInterface11 : IUnknown
 {
     HRESULT IsTrackedType(CLRDATA_ADDRESS objAddr, BOOL* isTrackedType, BOOL* hasTaggedMemory);
     HRESULT GetTaggedMemory(CLRDATA_ADDRESS objAddr, CLRDATA_ADDRESS* taggedMemory, size_t* taggedMemorySizeInBytes);
+}
+
+[
+    object,
+    local,
+    uuid(1b93bacc-8ca4-432d-943a-3e6e7ec0b0a3)
+]
+interface ISOSDacInterface12 : IUnknown
+{
+    HRESULT GetGlobalAllocationContext(CLRDATA_ADDRESS* allocPtr, CLRDATA_ADDRESS* allocLimit);
+}
+
+[
+    object,
+    local,
+    uuid(3176a8ed-597b-4f54-a71f-83695c6a8c5d)
+]
+interface ISOSDacInterface13 : IUnknown
+{
+    HRESULT TraverseLoaderHeap(CLRDATA_ADDRESS loaderHeapAddr, LoaderHeapKind kind, VISITHEAP pCallback);
+    HRESULT GetDomainLoaderAllocator(CLRDATA_ADDRESS domainAddress, CLRDATA_ADDRESS *pLoaderAllocator);
+    HRESULT GetLoaderAllocatorHeapNames(int count, const char **ppNames, int *pNeeded);
+    HRESULT GetLoaderAllocatorHeaps(CLRDATA_ADDRESS loaderAllocator, int count, CLRDATA_ADDRESS *pLoaderHeaps, LoaderHeapKind *pKinds, int *pNeeded);
 }

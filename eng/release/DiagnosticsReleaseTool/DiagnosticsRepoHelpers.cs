@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -7,14 +10,14 @@ namespace DiagnosticsReleaseTool.Util
 {
     public static class DiagnosticsRepoHelpers
     {
-        public static readonly string[] ProductNames = new []{ "diagnostics", "dotnet-diagnostics" };
-        public static readonly string[] RepositoryUrls = new [] { "https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics" };
+        public static readonly string[] ProductNames = new[] { "diagnostics", "dotnet-diagnostics" };
+        public static readonly string[] RepositoryUrls = new[] { "https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics" };
         public static string BundleToolsPathInDrop => System.IO.Path.Combine("diagnostics", "bundledtools");
         public const string BundledToolsPrefix = "diagnostic-tools-";
         public const string BundledToolsCategory = "ToolBundleAssets";
         public const string PdbCategory = "PdbAssets";
 
-        private static readonly Regex s_ridBundledToolsMatcher = new Regex(
+        private static readonly Regex s_ridBundledToolsMatcher = new(
                 $@"{BundledToolsPrefix}(?<rid>(\w+-)+\w+)\.zip",
                 RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
@@ -76,7 +79,7 @@ namespace DiagnosticsReleaseTool.Util
         public static string GetSha512(string filePath)
         {
             using FileStream stream = System.IO.File.OpenRead(filePath);
-            using var sha = System.Security.Cryptography.SHA512.Create();
+            using System.Security.Cryptography.SHA512 sha = System.Security.Cryptography.SHA512.Create();
             byte[] checksum = sha.ComputeHash(stream);
             return Convert.ToHexString(checksum);
         }

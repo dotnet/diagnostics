@@ -1,13 +1,17 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    internal class ADBCommandExec
+    internal static class ADBCommandExec
     {
         public static bool AdbAddPortForward(int port, ILogger logger)
         {
@@ -16,7 +20,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 ownsPortForward = RunAdbCommandInternal($"forward tcp:{port} tcp:{port}", "", 0, logger);
                 if (!ownsPortForward)
+                {
                     logger?.LogError($"Failed setting up port forward for tcp:{port}.");
+                }
             }
             return ownsPortForward;
         }
@@ -28,7 +34,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 ownsPortForward = RunAdbCommandInternal($"reverse tcp:{port} tcp:{port}", "", 0, logger);
                 if (!ownsPortForward)
+                {
                     logger?.LogError($"Failed setting up port forward for tcp:{port}.");
+                }
             }
             return ownsPortForward;
         }
@@ -38,7 +46,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (ownsPortForward)
             {
                 if (!RunAdbCommandInternal($"forward --remove tcp:{port}", "", 0, logger))
+                {
                     logger?.LogError($"Failed removing port forward for tcp:{port}.");
+                }
             }
         }
 
@@ -47,21 +57,25 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             if (ownsPortForward)
             {
                 if (!RunAdbCommandInternal($"reverse --remove tcp:{port}", "", 0, logger))
+                {
                     logger?.LogError($"Failed removing port forward for tcp:{port}.");
+                }
             }
         }
 
         public static bool RunAdbCommandInternal(string command, string expectedOutput, int expectedExitCode, ILogger logger)
         {
-            var sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
-            var adbTool = "adb";
+            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
+            string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
+            {
                 adbTool = sdkRoot + Path.DirectorySeparatorChar + "platform-tools" + Path.DirectorySeparatorChar + adbTool;
+            }
 
             logger?.LogDebug($"Executing {adbTool} {command}.");
 
-            var process = new Process();
+            Process process = new();
             process.StartInfo.FileName = adbTool;
             process.StartInfo.Arguments = command;
 
@@ -78,23 +92,30 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 processStartedResult = process.Start();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.LogError($"Failed executing {adbTool} {command}. Error: {ex.Message}.");
             }
 
             if (processStartedResult)
             {
-                var stdout = process.StandardOutput.ReadToEnd();
-                var stderr = process.StandardError.ReadToEnd();
+                string stdout = process.StandardOutput.ReadToEnd();
+                string stderr = process.StandardError.ReadToEnd();
 
                 if (!string.IsNullOrEmpty(expectedOutput))
+                {
                     expectedOutputResult = !string.IsNullOrEmpty(stdout) ? stdout.Contains(expectedOutput) : false;
+                }
 
                 if (!string.IsNullOrEmpty(stdout))
-                    logger.LogTrace($"stdout: {stdout}");
+                {
+                    logger.LogTrace($"stdout: {stdout.TrimEnd()}");
+                }
 
                 if (!string.IsNullOrEmpty(stderr))
-                    logger.LogError($"stderr: {stderr}");
+                {
+                    logger.LogError($"stderr: {stderr.TrimEnd()}");
+                }
             }
 
             if (processStartedResult)
@@ -107,10 +128,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         }
     }
 
-    internal class ADBTcpServerRouterFactory : TcpServerRouterFactory
+    internal sealed class ADBTcpServerRouterFactory : TcpServerRouterFactory
     {
-        readonly int _port;
-        bool _ownsPortReverse;
+        private readonly int _port;
+        private bool _ownsPortReverse;
+        private Task _portReverseTask;
+        private CancellationTokenSource _portReverseTaskCancelToken;
 
         public static TcpServerRouterFactory CreateADBInstance(string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
@@ -128,6 +151,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             // Enable port reverse.
             _ownsPortReverse = ADBCommandExec.AdbAddPortReverse(_port, Logger);
 
+            _portReverseTaskCancelToken = new CancellationTokenSource();
+            _portReverseTask = Task.Run(async () => {
+                using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+                while (await timer.WaitForNextTickAsync(_portReverseTaskCancelToken.Token).ConfigureAwait(false) && !_portReverseTaskCancelToken.Token.IsCancellationRequested)
+                {
+                    // Make sure reverse port configuration is still active.
+                    if (ADBCommandExec.AdbAddPortReverse(_port, Logger) && !_ownsPortReverse)
+                    {
+                        _ownsPortReverse = true;
+                    }
+                }
+            }, _portReverseTaskCancelToken.Token);
+
             base.Start();
         }
 
@@ -135,16 +171,25 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             await base.Stop().ConfigureAwait(false);
 
+            try
+            {
+                _portReverseTaskCancelToken.Cancel();
+                await _portReverseTask.ConfigureAwait(false);
+            }
+            catch { }
+
             // Disable port reverse.
             ADBCommandExec.AdbRemovePortReverse(_port, _ownsPortReverse, Logger);
             _ownsPortReverse = false;
         }
     }
 
-    internal class ADBTcpClientRouterFactory : TcpClientRouterFactory
+    internal sealed class ADBTcpClientRouterFactory : TcpClientRouterFactory
     {
-        readonly int _port;
-        bool _ownsPortForward;
+        private readonly int _port;
+        private bool _ownsPortForward;
+        private Task _portForwardTask;
+        private CancellationTokenSource _portForwardTaskCancelToken;
 
         public static TcpClientRouterFactory CreateADBInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {
@@ -161,10 +206,30 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             // Enable port forwarding.
             _ownsPortForward = ADBCommandExec.AdbAddPortForward(_port, _logger);
+
+            _portForwardTaskCancelToken = new CancellationTokenSource();
+            _portForwardTask = Task.Run(async () => {
+                using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+                while (await timer.WaitForNextTickAsync(_portForwardTaskCancelToken.Token).ConfigureAwait(false) && !_portForwardTaskCancelToken.Token.IsCancellationRequested)
+                {
+                    // Make sure forward port configuration is still active.
+                    if (ADBCommandExec.AdbAddPortForward(_port, _logger) && !_ownsPortForward)
+                    {
+                        _ownsPortForward = true;
+                    }
+                }
+            }, _portForwardTaskCancelToken.Token);
         }
 
         public override void Stop()
         {
+            try
+            {
+                _portForwardTaskCancelToken.Cancel();
+                _portForwardTask.Wait();
+            }
+            catch { }
+
             // Disable port forwarding.
             ADBCommandExec.AdbRemovePortForward(_port, _ownsPortForward, _logger);
             _ownsPortForward = false;

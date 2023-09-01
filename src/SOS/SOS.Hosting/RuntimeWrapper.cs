@@ -1,16 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
-using SOS.Hosting.DbgEng.Interop;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting
 {
@@ -20,7 +19,7 @@ namespace SOS.Hosting
         /// <summary>
         /// The runtime OS and type. Must match IRuntime::RuntimeConfiguration in runtime.h.
         /// </summary>
-        enum RuntimeConfiguration
+        private enum RuntimeConfiguration
         {
             WindowsDesktop = 0,
             WindowsCore = 1,
@@ -29,9 +28,9 @@ namespace SOS.Hosting
             Unknown = 4
         }
 
-        public static Guid IID_IXCLRDataProcess = new Guid("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
-        public static Guid IID_ICorDebugProcess = new Guid("3d6f5f64-7538-11d3-8d5b-00104b35e7ef");
-        private static readonly Guid IID_IRuntime = new Guid("A5F152B9-BA78-4512-9228-5091A4CB7E35");
+        public static Guid IID_IXCLRDataProcess = new("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
+        public static Guid IID_ICorDebugProcess = new("3d6f5f64-7538-11d3-8d5b-00104b35e7ef");
+        private static readonly Guid IID_IRuntime = new("A5F152B9-BA78-4512-9228-5091A4CB7E35");
 
         #region DAC and DBI function delegates
 
@@ -195,7 +194,7 @@ namespace SOS.Hosting
         private void SetRuntimeDirectory(
             IntPtr self,
             string runtimeModuleDirectory)
-        { 
+        {
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
@@ -213,10 +212,11 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppClrDataProcess)
         {
-            if (ppClrDataProcess == null) {
+            if (ppClrDataProcess == null)
+            {
                 return HResult.E_INVALIDARG;
             }
-            if (_clrDataProcess == IntPtr.Zero) 
+            if (_clrDataProcess == IntPtr.Zero)
             {
                 try
                 {
@@ -228,7 +228,8 @@ namespace SOS.Hosting
                 }
             }
             *ppClrDataProcess = _clrDataProcess;
-            if (*ppClrDataProcess == IntPtr.Zero) {
+            if (*ppClrDataProcess == IntPtr.Zero)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
@@ -238,14 +239,17 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppCorDebugProcess)
         {
-            if (ppCorDebugProcess == null) {
+            if (ppCorDebugProcess == null)
+            {
                 return HResult.E_INVALIDARG;
             }
-            if (_corDebugProcess == IntPtr.Zero) {
+            if (_corDebugProcess == IntPtr.Zero)
+            {
                 _corDebugProcess = CreateCorDebugProcess();
             }
             *ppCorDebugProcess = _corDebugProcess;
-            if (*ppCorDebugProcess == IntPtr.Zero) {
+            if (*ppCorDebugProcess == IntPtr.Zero)
+            {
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
@@ -257,50 +261,44 @@ namespace SOS.Hosting
             byte* fileVersionBuffer,
             int fileVersionBufferSizeInBytes)
         {
-            IModuleService moduleService = _services.GetService<IModuleService>();
-            IModule module;
-            try
+            if (pFileInfo == null)
             {
-                module = moduleService.GetModuleFromBaseAddress(_runtime.RuntimeModule.ImageBase);
-            }
-            catch (DiagnosticsException)
-            {
-                return HResult.E_FAIL;
-            }
-            Version version = module.GetVersionData();
-            if (version is null)
-            {
-                return HResult.E_FAIL;
+                return HResult.E_INVALIDARG;
             }
             pFileInfo->dwSignature = 0;
             pFileInfo->dwStrucVersion = 0;
             pFileInfo->dwFileFlagsMask = 0;
             pFileInfo->dwFileFlags = 0;
-            pFileInfo->dwFileVersionMS = (uint)version.Minor & 0xffff | (uint)version.Major << 16;
-            pFileInfo->dwFileVersionLS = (uint)version.Revision & 0xffff | (uint)version.Build << 16;
+            pFileInfo->dwFileVersionMS = 0;
+            pFileInfo->dwFileVersionLS = 0;
+
+            Version version = _runtime.RuntimeVersion;
+            if (version is not null)
+            {
+                pFileInfo->dwFileVersionMS = (uint)version.Minor & 0xffff | (uint)version.Major << 16;
+                pFileInfo->dwFileVersionLS = (uint)version.Revision & 0xffff | (uint)version.Build << 16;
+            }
 
             // Attempt to get the FileVersion string that contains version and the "built by" and commit id info
             if (fileVersionBuffer != null)
             {
-                if (fileVersionBufferSizeInBytes > 0) {
+                if (fileVersionBufferSizeInBytes > 0)
+                {
                     *fileVersionBuffer = 0;
                 }
-                string versionString = module.GetVersionString();
+                string versionString = _runtime.RuntimeModule.GetVersionString();
                 if (versionString != null)
                 {
                     try
                     {
                         byte[] source = Encoding.ASCII.GetBytes(versionString + '\0');
-                        Marshal.Copy(source, 0, new IntPtr(fileVersionBuffer), Math.Min(source.Length, (int)fileVersionBufferSizeInBytes));
-                        return HResult.S_OK;
+                        Marshal.Copy(source, 0, new IntPtr(fileVersionBuffer), Math.Min(source.Length, fileVersionBufferSizeInBytes));
                     }
                     catch (ArgumentOutOfRangeException)
                     {
-                        return HResult.E_INVALIDARG;
                     }
                 }
             }
-
             return HResult.S_OK;
         }
 
@@ -313,13 +311,13 @@ namespace SOS.Hosting
             {
                 return IntPtr.Zero;
             }
-            var createInstance = SOSHost.GetDelegateFunction<CLRDataCreateInstanceDelegate>(dacHandle, "CLRDataCreateInstance");
+            CLRDataCreateInstanceDelegate createInstance = SOSHost.GetDelegateFunction<CLRDataCreateInstanceDelegate>(dacHandle, "CLRDataCreateInstance");
             if (createInstance == null)
             {
                 Trace.TraceError("Failed to obtain DAC CLRDataCreateInstance");
                 return IntPtr.Zero;
             }
-            var dataTarget = new DataTargetWrapper(_services, _runtime);
+            DataTargetWrapper dataTarget = new(_services, _runtime);
             try
             {
                 int hr = createInstance(IID_IXCLRDataProcess, dataTarget.IDataTarget, out IntPtr unk);
@@ -351,26 +349,27 @@ namespace SOS.Hosting
                 {
                     _dbiHandle = DataTarget.PlatformFunctions.LoadLibrary(dbiFilePath);
                 }
-                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
                     Trace.TraceError($"LoadLibrary({dbiFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
                 Debug.Assert(_dbiHandle != IntPtr.Zero);
             }
-            ClrDebuggingVersion maxDebuggerSupportedVersion = new ClrDebuggingVersion {
+            ClrDebuggingVersion maxDebuggerSupportedVersion = new()
+            {
                 StructVersion = 0,
                 Major = 4,
                 Minor = 0,
                 Build = 0,
                 Revision = 0,
             };
-            var dataTarget = new CorDebugDataTargetWrapper(_services, _runtime);
+            CorDebugDataTargetWrapper dataTarget = new(_services, _runtime);
             ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
             int hresult = 0;
             try
             {
-                var openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
+                OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
                 {
                     hresult = openVirtualProcessImpl2(
@@ -398,11 +397,11 @@ namespace SOS.Hosting
                 }
 
                 // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
-                // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share 
+                // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share
                 // the same PAL where dbgshim has it's own.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    var loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
+                    LoadLibraryWDelegate loadLibraryFunction = SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
                     if (loadLibraryFunction == null)
                     {
                         Trace.TraceError($"Can not find the DAC LoadLibraryW export");
@@ -416,7 +415,7 @@ namespace SOS.Hosting
                     }
                 }
 
-                var openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
+                OpenVirtualProcessImplDelegate openVirtualProcessImpl = SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
                 if (openVirtualProcessImpl != null)
                 {
                     hresult = openVirtualProcessImpl(
@@ -437,7 +436,7 @@ namespace SOS.Hosting
                     return corDebugProcess;
                 }
 
-                var openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
+                OpenVirtualProcessDelegate openVirtualProcess = SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
                 if (openVirtualProcess != null)
                 {
                     hresult = openVirtualProcess(
@@ -479,7 +478,7 @@ namespace SOS.Hosting
                 {
                     _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
                 }
-                catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException)
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
                     Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
@@ -487,7 +486,7 @@ namespace SOS.Hosting
                 Debug.Assert(_dacHandle != IntPtr.Zero);
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
+                    DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
                     dllmain?.Invoke(_dacHandle, 1, IntPtr.Zero);
                 }
             }
@@ -521,12 +520,12 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetClrDataProcessDelegate(
             [In] IntPtr self,
-            [Out] IntPtr *ppClrDataProcess);
+            [Out] IntPtr* ppClrDataProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetCorDebugInterfaceDelegate(
             [In] IntPtr self,
-            [Out] IntPtr *ppCorDebugProcess);
+            [Out] IntPtr* ppCorDebugProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetEEVersionDelegate(

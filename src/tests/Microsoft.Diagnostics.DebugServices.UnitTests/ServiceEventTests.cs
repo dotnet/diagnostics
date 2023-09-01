@@ -1,9 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices.Implementation;
 using System;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -16,7 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void TestAddAndFire()
         {
-            var event1 = new ServiceEvent();
+            ServiceEvent event1 = new();
 
             int callback1Fired = 0;
             int callback2Fired = 0;
@@ -70,7 +69,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void TestRemoveInCallback()
         {
-            var event1 = new ServiceEvent();
+            ServiceEvent event1 = new();
 
             int callback1Fired = 0;
             int callback2Fired = 0;

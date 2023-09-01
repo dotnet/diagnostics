@@ -1,15 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-
-using Xunit;
 using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
+using Xunit;
 
 namespace DotnetCounters.UnitTests
 {
@@ -22,7 +20,7 @@ namespace DotnetCounters.UnitTests
         public void IncrementingCounterTest()
         {
             string fileName = "IncrementingCounterTest.csv";
-        	CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -64,7 +62,7 @@ namespace DotnetCounters.UnitTests
         public void CounterTest()
         {
             string fileName = "CounterTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
@@ -107,7 +105,7 @@ namespace DotnetCounters.UnitTests
         public void DifferentDisplayRateTest()
         {
             string fileName = "displayRateTest.csv";
-        	CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -136,7 +134,7 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal("myProvider", tokens[1]);
                     Assert.Equal($"Incrementing Counter One (Count / 60 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
-                    Assert.Equal((i-1).ToString(), tokens[4]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
             }
             finally
@@ -149,7 +147,7 @@ namespace DotnetCounters.UnitTests
         public void DisplayUnitsTest()
         {
             string fileName = "displayUnitsTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -178,7 +176,7 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal("myProvider", tokens[1]);
                     Assert.Equal($"Allocation Rate Gen (MB / 60 sec)", tokens[2]);
                     Assert.Equal("Rate", tokens[3]);
-                    Assert.Equal((i-1).ToString(), tokens[4]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
             }
             finally
@@ -191,7 +189,7 @@ namespace DotnetCounters.UnitTests
         public void TagsTest()
         {
             string fileName = "tagsTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
@@ -233,7 +231,7 @@ namespace DotnetCounters.UnitTests
         public void PercentilesTest()
         {
             string fileName = "percentilesTest.csv";
-            CSVExporter exporter = new CSVExporter(fileName);
+            CSVExporter exporter = new(fileName);
             exporter.Initialize();
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)

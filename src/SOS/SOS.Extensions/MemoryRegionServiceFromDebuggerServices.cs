@@ -1,14 +1,16 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using SOS.Hosting.DbgEng.Interop;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
-    internal class MemoryRegionServiceFromDebuggerServices : IMemoryRegionService
+    internal sealed class MemoryRegionServiceFromDebuggerServices : IMemoryRegionService
     {
         private readonly IDebugClient5 _client;
         private readonly IDebugControl5 _control;
@@ -26,19 +28,25 @@ namespace SOS.Extensions
 
             (int hr, string text) = RunCommandWithOutput("!address");
             if (hr < 0)
+            {
                 throw new InvalidOperationException($"!address failed with hresult={hr:x}");
+            }
 
             foreach (string line in text.Split('\n'))
             {
                 if (line.Length == 0)
+                {
                     continue;
+                }
 
                 if (!foundHeader)
                 {
                     // find the !address header
                     string[] split = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     if (split.Length > 0)
-                        foundHeader = split[0] == "BaseAddress" && split.Last() == "Usage";
+                    {
+                        foundHeader = (split[0] == "BaseAddress" || split[0] == "BaseAddr") && split.Last() == "Usage";
+                    }
                 }
                 else if (!skipped)
                 {
@@ -48,21 +56,39 @@ namespace SOS.Extensions
                 else
                 {
                     string[] parts = ((line[0] == '+') ? line.Substring(1) : line).Split(new char[] { ' ' }, 6, StringSplitOptions.RemoveEmptyEntries);
-                    ulong start = ulong.Parse(parts[0].Replace("`", ""), System.Globalization.NumberStyles.HexNumber);
-                    ulong end = ulong.Parse(parts[1].Replace("`", ""), System.Globalization.NumberStyles.HexNumber);
+                    if (parts.Length < 2)
+                    {
+                        continue;
+                    }
+
+                    if (!ulong.TryParse(parts[0].Replace("`", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong start))
+                    {
+                        continue;
+                    }
+
+                    if (!ulong.TryParse(parts[1].Replace("`", ""), System.Globalization.NumberStyles.HexNumber, null, out ulong end))
+                    {
+                        continue;
+                    }
 
                     int index = 3;
-                    if (Enum.TryParse(parts[index], ignoreCase: true, out MemoryRegionType type))
+                    if (GetEnumValue(parts, index, out MemoryRegionType type))
+                    {
                         index++;
+                    }
 
-                    if (Enum.TryParse(parts[index], ignoreCase: true, out MemoryRegionState state))
+                    if (GetEnumValue(parts, index, out MemoryRegionState state))
+                    {
                         index++;
+                    }
 
                     StringBuilder sbRemainder = new();
                     for (int i = index; i < parts.Length; i++)
                     {
                         if (i != index)
+                        {
                             sbRemainder.Append(' ');
+                        }
 
                         sbRemainder.Append(parts[i]);
                     }
@@ -77,7 +103,9 @@ namespace SOS.Extensions
                         {
                             protect |= result;
                             if (parts[index + 1] == "|")
+                            {
                                 index++;
+                            }
                         }
                         else
                         {
@@ -87,11 +115,13 @@ namespace SOS.Extensions
                         index++;
                     }
 
-                    string description = parts[index++].Trim();
+                    string description = index < parts.Length ? parts[index++].Trim() : "";
 
                     // On Linux, !address is reporting this as MEM_PRIVATE or MEM_UNKNOWN
                     if (description == "Image")
+                    {
                         type = MemoryRegionType.MEM_IMAGE;
+                    }
 
                     // On Linux, !address is reporting this as nothing
                     if (type == MemoryRegionType.MEM_UNKNOWN && state == MemoryRegionState.MEM_UNKNOWN && protect == MemoryRegionProtection.PAGE_UNKNOWN)
@@ -101,14 +131,16 @@ namespace SOS.Extensions
                     }
 
                     string image = null;
-                    if (type == MemoryRegionType.MEM_IMAGE)
+                    if (type == MemoryRegionType.MEM_IMAGE && index < parts.Length)
                     {
                         image = parts[index].Substring(1, parts[index].Length - 2);
                         index++;
                     }
 
                     if (description.Equals("<unknown>", StringComparison.OrdinalIgnoreCase))
+                    {
                         description = "";
+                    }
 
                     MemoryRegionUsage usage = description switch
                     {
@@ -116,7 +148,7 @@ namespace SOS.Extensions
 
                         "Free" => MemoryRegionUsage.Free,
                         "Image" => MemoryRegionUsage.Image,
-                        
+
                         "PEB" => MemoryRegionUsage.Peb,
                         "PEB32" => MemoryRegionUsage.Peb,
                         "PEB64" => MemoryRegionUsage.Peb,
@@ -162,8 +194,21 @@ namespace SOS.Extensions
             }
 
             if (!foundHeader)
+            {
                 throw new InvalidOperationException($"!address did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run !address and make sure the output looks correct.");
+            }
+        }
 
+        private static bool GetEnumValue<T>(string[] parts, int index, out T type)
+            where T : struct
+        {
+            if (index < parts.Length)
+            {
+                return Enum.TryParse(parts[index], ignoreCase: true, out type);
+            }
+
+            type = default;
+            return false;
         }
 
         private (int hresult, string output) RunCommandWithOutput(string command)
@@ -177,7 +222,7 @@ namespace SOS.Extensions
             return (hr, sb.ToString());
         }
 
-        private class AddressMemoryRange : IMemoryRegion
+        private sealed class AddressMemoryRange : IMemoryRegion
         {
             public ulong Start { get; internal set; }
 

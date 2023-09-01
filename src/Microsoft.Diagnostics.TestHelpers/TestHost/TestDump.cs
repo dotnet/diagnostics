@@ -1,10 +1,13 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -31,7 +34,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
 
-            var contextService = new ContextService(this);
+            ContextService contextService = new(this);
             _serviceContainer.AddService<IContextService>(contextService);
 
             _symbolService = new SymbolService(this);
@@ -47,7 +50,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             _dataTarget = DataTarget.LoadDump(DumpFile);
 
             OSPlatform targetPlatform = _dataTarget.DataReader.TargetPlatform;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
                 targetPlatform = OSPlatform.OSX;
             }
             _symbolService.AddDirectoryPath(Path.GetDirectoryName(DumpFile));
@@ -64,7 +68,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public IServiceProvider Services => _serviceContainer;
 
-        public IEnumerable <ITarget> EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
+        public IEnumerable<ITarget> EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
 
         #endregion
     }

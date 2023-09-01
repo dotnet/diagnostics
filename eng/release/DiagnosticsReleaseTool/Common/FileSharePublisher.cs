@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Buffers;
 using System.IO;
@@ -24,7 +27,7 @@ namespace ReleaseTool.Core
         {
             // TODO: Be resilient to "can't cancel case".
             string destinationUri = Path.Combine(_sharePath, fileMap.RelativeOutputPath);
-            FileInfo fi = null;
+            FileInfo fi;
 
             try
             {
@@ -62,8 +65,8 @@ namespace ReleaseTool.Core
 
                 try
                 {
-                    using var srcStream = new FileStream(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
-                    using var destStream = new FileStream(destinationUri, FileMode.Create, FileAccess.ReadWrite);
+                    using FileStream srcStream = new(fileMap.LocalSourcePath, FileMode.Open, FileAccess.Read);
+                    using FileStream destStream = new(destinationUri, FileMode.Create, FileAccess.ReadWrite);
                     await srcStream.CopyToAsync(destStream, ct);
 
                     destStream.Position = 0;
@@ -87,7 +90,7 @@ namespace ReleaseTool.Core
             return destinationUri;
         }
 
-        private async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, FileStream destStream, CancellationToken ct)
+        private static async Task<bool> VerifyFileStreamsMatchAsync(FileStream srcStream, FileStream destStream, CancellationToken ct)
         {
             if (srcStream.Length != destStream.Length)
             {

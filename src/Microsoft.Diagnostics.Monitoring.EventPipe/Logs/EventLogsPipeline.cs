@@ -1,15 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -17,7 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly ILoggerFactory _factory;
         private static readonly Func<object, Exception, string> _messageFormatter = MessageFormatter;
-        public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory) 
+        public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory)
             : base(client, settings)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
@@ -43,17 +42,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             string lastFormattedMessage = string.Empty;
 
-            var logActivities = new Dictionary<Guid, LogActivityItem>();
-            var stack = new Stack<Guid>();
+            Dictionary<Guid, LogActivityItem> logActivities = new();
+            Stack<Guid> stack = new();
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) =>
-            {
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
-                var argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) => {
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
 
                 // TODO: Store this information by logger factory id
-                var item = new LogActivityItem
+                LogActivityItem item = new()
                 {
                     ActivityID = traceEvent.ActivityID,
                     ScopedObject = new LogObject(JsonDocument.Parse(argsJson).RootElement),
@@ -62,7 +60,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 if (stack.Count > 0)
                 {
                     Guid parentId = stack.Peek();
-                    if (logActivities.TryGetValue(parentId, out var parentItem))
+                    if (logActivities.TryGetValue(parentId, out LogActivityItem parentItem))
                     {
                         item.Parent = parentItem;
                     }
@@ -72,10 +70,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 logActivities[traceEvent.ActivityID] = item;
             });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) =>
-            {
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
 
                 //If we begin collection in the middle of a request, we can receive a stop without having a start.
                 if (stack.Count > 0)
@@ -85,16 +82,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) =>
-            {
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, ExceptionJson, ArgumentsJson
-                var logLevel = (LogLevel)traceEvent.PayloadByName("Level");
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
-                var eventId = (int)traceEvent.PayloadByName("EventId");
-                var eventName = (string)traceEvent.PayloadByName("EventName");
-                var exceptionJson = (string)traceEvent.PayloadByName("ExceptionJson");
-                var argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
+                LogLevel logLevel = (LogLevel)traceEvent.PayloadByName("Level");
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                int eventId = (int)traceEvent.PayloadByName("EventId");
+                string eventName = (string)traceEvent.PayloadByName("EventName");
+                string exceptionJson = (string)traceEvent.PayloadByName("ExceptionJson");
+                string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
 
                 // There's a bug that causes some of the columns to get mixed up
                 if (eventName.StartsWith("{"))
@@ -112,9 +108,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 Exception exception = null;
 
                 ILogger logger = _factory.CreateLogger(categoryName);
-                var scopes = new List<IDisposable>();
+                List<IDisposable> scopes = new();
 
-                if (logActivities.TryGetValue(traceEvent.ActivityID, out var logActivityItem))
+                if (logActivities.TryGetValue(traceEvent.ActivityID, out LogActivityItem logActivityItem))
                 {
                     // REVIEW: Does order matter here? We're combining everything anyways.
                     while (logActivityItem != null)
@@ -129,15 +125,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                     if (exceptionJson != "{}")
                     {
-                        var exceptionMessage = JsonSerializer.Deserialize<JsonElement>(exceptionJson);
+                        JsonElement exceptionMessage = JsonSerializer.Deserialize<JsonElement>(exceptionJson);
                         exception = new LoggerException(exceptionMessage);
                     }
 
-                    var message = JsonSerializer.Deserialize<JsonElement>(argsJson);
-                    if (message.TryGetProperty("{OriginalFormat}", out var formatElement))
+                    JsonElement message = JsonSerializer.Deserialize<JsonElement>(argsJson);
+                    if (message.TryGetProperty("{OriginalFormat}", out JsonElement formatElement))
                     {
-                        var formatString = formatElement.GetString();
-                        var formatter = new LogValuesFormatter(formatString);
+                        string formatString = formatElement.GetString();
+                        LogValuesFormatter formatter = new(formatString);
                         object[] args = new object[formatter.ValueNames.Count];
                         for (int i = 0; i < args.Length; i++)
                         {
@@ -147,12 +143,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         //We want to propagate the timestamp to the underlying logger, but that's not part of the ILogger interface.
                         //We replicate LoggerExtensions.Log, but add an interface capability to the object
                         //CONSIDER FormattedLogValues maintains a cache of formatters. We are effectively duplicating this cache.
-                        var logValues = new FormattedLogValues(traceEvent.TimeStamp, formatString, args);
+                        FormattedLogValues logValues = new(traceEvent.TimeStamp, formatString, args);
                         logger.Log(logLevel, new EventId(eventId, eventName), logValues, exception, _messageFormatter);
                     }
                     else
                     {
-                        var obj = new LogObject(message, lastFormattedMessage) { Timestamp = traceEvent.TimeStamp };
+                        LogObject obj = new(message, lastFormattedMessage) { Timestamp = traceEvent.TimeStamp };
                         logger.Log(logLevel, new EventId(eventId, eventName), obj, exception, LogObject.Callback);
                     }
                 }
@@ -165,15 +161,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "FormattedMessage", (traceEvent) =>
-            {
+            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "FormattedMessage", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, FormattedMessage
-                var logLevel = (LogLevel)traceEvent.PayloadByName("Level");
-                var factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                var categoryName = (string)traceEvent.PayloadByName("LoggerName");
-                var eventId = (int)traceEvent.PayloadByName("EventId");
-                var eventName = (string)traceEvent.PayloadByName("EventName");
-                var formattedMessage = (string)traceEvent.PayloadByName("FormattedMessage");
+                LogLevel logLevel = (LogLevel)traceEvent.PayloadByName("Level");
+                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
+                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                int eventId = (int)traceEvent.PayloadByName("EventId");
+                string eventName = (string)traceEvent.PayloadByName("EventName");
+                string formattedMessage = (string)traceEvent.PayloadByName("FormattedMessage");
 
                 if (string.IsNullOrEmpty(formattedMessage))
                 {

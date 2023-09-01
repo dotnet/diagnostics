@@ -1,12 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 {
@@ -38,15 +34,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet
 
     public static class StatusCodeRangeValidator
     {
-        private static readonly string[] _validationMembers = new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes)};
+        private static readonly string[] _validationMembers = new[] { nameof(AspNetRequestStatusTriggerSettings.StatusCodes) };
 
         public static ValidationResult ValidateStatusCodes(object statusCodes)
         {
             StatusCodeRange[] statusCodeRanges = (StatusCodeRange[])statusCodes;
 
-            Func<int, bool> validateStatusCode = (int statusCode) => statusCode >= 100 && statusCode < 600;
+            Func<int, bool> validateStatusCode = (int statusCode) => statusCode is >= 100 and < 600;
 
-            foreach(StatusCodeRange statusCodeRange in statusCodeRanges)
+            foreach (StatusCodeRange statusCodeRange in statusCodeRanges)
             {
                 if (statusCodeRange.Min > statusCodeRange.Max)
                 {

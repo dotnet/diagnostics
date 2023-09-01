@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int remaining = length;
             while (remaining > 0)
             {
-                int read = await stream.ReadAsync(buffer, totalRead, remaining, cancellationToken);
+                int read = await stream.ReadAsync(buffer, totalRead, remaining, cancellationToken).ConfigureAwait(false);
                 if (0 == read)
                 {
                     throw new EndOfStreamException();

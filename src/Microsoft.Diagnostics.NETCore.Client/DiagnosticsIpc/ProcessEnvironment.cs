@@ -14,10 +14,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         private const int CopyBufferSize = (16 << 10) /* 16KiB */;
 
-        private ProcessEnvironmentHelper() {}
+        private ProcessEnvironmentHelper() { }
         public static ProcessEnvironmentHelper Parse(byte[] payload)
         {
-            ProcessEnvironmentHelper helper = new ProcessEnvironmentHelper();
+            ProcessEnvironmentHelper helper = new();
 
             helper.ExpectedSizeInBytes = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(payload, 0, 4));
             helper.Future = BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(payload, 4, 2));
@@ -27,15 +27,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public Dictionary<string, string> ReadEnvironment(Stream continuation)
         {
-            using var memoryStream = new MemoryStream();
+            using MemoryStream memoryStream = new();
             continuation.CopyTo(memoryStream, CopyBufferSize);
             return ReadEnvironmentCore(memoryStream);
         }
 
-        public async Task<Dictionary<string,string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, string>> ReadEnvironmentAsync(Stream continuation, CancellationToken token = default(CancellationToken))
         {
-            using var memoryStream = new MemoryStream();
-            await continuation.CopyToAsync(memoryStream, CopyBufferSize, token);
+            using MemoryStream memoryStream = new();
+            await continuation.CopyToAsync(memoryStream, CopyBufferSize, token).ConfigureAwait(false);
             return ReadEnvironmentCore(memoryStream);
         }
 
@@ -45,12 +45,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             byte[] envBlock = stream.ToArray();
 
             if (envBlock.Length != (long)ExpectedSizeInBytes)
+            {
                 throw new ApplicationException($"ProcessEnvironment continuation length did not match expected length. Expected: {ExpectedSizeInBytes} bytes, Received: {envBlock.Length} bytes");
+            }
 
-            var env = new Dictionary<string, string>();
+            Dictionary<string, string> env = new();
             int cursor = 0;
-            UInt32 nElements = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(envBlock, cursor, 4));
-            cursor += sizeof(UInt32);
+            cursor += sizeof(uint);
             while (cursor < envBlock.Length)
             {
                 string pair = IpcHelpers.ReadString(envBlock, ref cursor);
@@ -62,7 +63,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
 
-        private UInt32 ExpectedSizeInBytes { get; set; }
-        private UInt16 Future { get; set; }
+        private uint ExpectedSizeInBytes { get; set; }
+        private ushort Future { get; set; }
     }
 }

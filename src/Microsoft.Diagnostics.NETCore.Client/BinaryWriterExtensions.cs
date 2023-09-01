@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -12,12 +11,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static void WriteString(this BinaryWriter @this, string value)
         {
-            if (@this == null)
+            if (@this is null)
+            {
                 throw new ArgumentNullException(nameof(@this));
+            };
 
             @this.Write(value != null ? (value.Length + 1) : 0);
             if (value != null)
+            {
                 @this.Write(Encoding.Unicode.GetBytes(value + '\0'));
+            }
         }
 
     }

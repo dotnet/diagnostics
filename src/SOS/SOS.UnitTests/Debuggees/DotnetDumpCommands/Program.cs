@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,7 +10,7 @@ using System.IO.Pipes;
 namespace DotnetDumpCommands
 {
     // This prorgam can be used as a project for testing several dotnet-dump commands (e.g. action parameter in command line arguments)
-    class Program
+    internal class Program
     {
         // Every object allocated in this program that should be available in the dump file should be added on this list
         // It ensures those objects are not garbage-collected before taking the dump
@@ -23,7 +26,7 @@ namespace DotnetDumpCommands
         /// - Second argument is the action to run when invoking this program, so that the program creates the right data set for the test.
         /// This value should be configured in your xUnit test case
         /// </param>
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             if (args.Length <2)
             {

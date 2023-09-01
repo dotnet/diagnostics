@@ -1,4 +1,9 @@
-﻿namespace Microsoft.Diagnostics.DebugServices
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+
+namespace Microsoft.Diagnostics.DebugServices
 {
     public enum MemoryRegionType
     {
@@ -16,6 +21,7 @@
         MEM_RESERVE = 0x2000
     }
 
+    [Flags]
     public enum MemoryRegionProtection
     {
         PAGE_UNKNOWN = 0,

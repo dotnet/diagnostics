@@ -1,10 +1,12 @@
-﻿using Microsoft.Diagnostics.TestHelpers;
-using Microsoft.Win32;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.TestHelpers;
+using Microsoft.Win32;
 using Xunit;
 
 public class DumpGenerationFixture : IDisposable
@@ -16,7 +18,7 @@ public class DumpGenerationFixture : IDisposable
 
     private HashSet<string> _paths;
 
-    public DumpGenerationFixture() 
+    public DumpGenerationFixture()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -54,7 +56,7 @@ public class DumpGenerationFixture : IDisposable
             {
             }
         }
-    }  
+    }
 
     public void Dispose()
     {
@@ -76,7 +78,7 @@ public class DumpGenerationFixture : IDisposable
                     auxiliaryKey.DeleteValue(runtimePath);
                 }
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is IOException || ex is UnauthorizedAccessException)
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
             {
             }
         }

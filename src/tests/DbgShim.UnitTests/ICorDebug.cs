@@ -1,18 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace Microsoft.Diagnostics
-{    
+{
     public unsafe class ICorDebug : CallableCOMWrapper
     {
-        private static readonly Guid IID_ICorDebug = new Guid("3d6f5f61-7538-11d3-8d5b-00104b35e7ef");
+        private static readonly Guid IID_ICorDebug = new("3d6f5f61-7538-11d3-8d5b-00104b35e7ef");
 
         private ref readonly ICorDebugVTable VTable => ref Unsafe.AsRef<ICorDebugVTable>(_vtable);
 

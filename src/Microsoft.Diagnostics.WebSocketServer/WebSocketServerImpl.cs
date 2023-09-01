@@ -3,13 +3,12 @@
 
 using System;
 using System.IO;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client.WebSocketServer;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
-
-using System.Net.WebSockets;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Microsoft.Diagnostics.WebSocketServer;
 
@@ -18,13 +17,13 @@ namespace Microsoft.Diagnostics.WebSocketServer;
 // is used by dotnet-dsrouter to pass the diagnostic server connections to the diagnostic clients.
 public class WebSocketServerImpl : IWebSocketServer
 {
-    private EmbeddedWebSocketServer _server = null;
-    private volatile int _started = 0;
+    private EmbeddedWebSocketServer _server;
+    private volatile int _started;
 
     // Used to coordinate between the webserver accepting incoming websocket connections and the diagnostic server waiting for a stream to be available.
     // This could be a deeper queue if we wanted to somehow allow multiple browser tabs to connect to the same dsrouter, but it's unclear what to do with them
     // since on the other end we have a single IpcStream with a single diagnostic client.
-    private readonly Queue<Conn> _acceptQueue = new Queue<Conn>();
+    private readonly Queue<Conn> _acceptQueue = new();
     private readonly LogLevel _logLevel;
 
     public WebSocketServerImpl(LogLevel logLevel)
@@ -51,7 +50,7 @@ public class WebSocketServerImpl : IWebSocketServer
         };
         _server = EmbeddedWebSocketServer.CreateWebServer(options, HandleWebSocket);
 
-        await _server.StartWebServer(cancellationToken);
+        await _server.StartWebServer(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task StopServer(CancellationToken cancellationToken)
@@ -61,8 +60,10 @@ public class WebSocketServerImpl : IWebSocketServer
             throw new InvalidOperationException("Server not started");
         }
         if (_server == null)
+        {
             return;
-        await _server.StopWebServer(cancellationToken);
+        }
+        await _server.StopWebServer(cancellationToken).ConfigureAwait(false);
         _server = null;
     }
 
@@ -70,16 +71,16 @@ public class WebSocketServerImpl : IWebSocketServer
     {
         // Called by the web server when a new websocket connection is established.  We put the connection into our queue of accepted connections
         // and wait until someone uses it and disposes of the connection.
-        await QueueWebSocketUntilClose(context, webSocket, cancellationToken);
+        await QueueWebSocketUntilClose(context, webSocket, cancellationToken).ConfigureAwait(false);
     }
 
     internal async Task QueueWebSocketUntilClose(HttpContext context, WebSocket webSocket, CancellationToken cancellationToken)
     {
         // we have to "keep the middleware alive" until we're done with the websocket.
         // make a TCS that will be signaled when the stream is disposed.
-        var streamDisposedTCS = new TaskCompletionSource(cancellationToken);
-        await _acceptQueue.Enqueue(new Conn(context, webSocket, streamDisposedTCS), cancellationToken);
-        await streamDisposedTCS.Task;
+        TaskCompletionSource streamDisposedTCS = new(cancellationToken);
+        await _acceptQueue.Enqueue(new Conn(context, webSocket, streamDisposedTCS), cancellationToken).ConfigureAwait(false);
+        await streamDisposedTCS.Task.ConfigureAwait(false);
     }
 
     internal Task<Conn> GetOrRequestConnection(CancellationToken cancellationToken)
@@ -91,13 +92,13 @@ public class WebSocketServerImpl : IWebSocketServer
 
     public async Task<Stream> AcceptConnection(CancellationToken cancellationToken)
     {
-        Conn conn = await GetOrRequestConnection(cancellationToken);
+        Conn conn = await GetOrRequestConnection(cancellationToken).ConfigureAwait(false);
         return conn.GetStream();
     }
 
     // Single-element queue where both queueing and dequeueing are async operations that wait until
     // the queue has capacity (or an item, respectively).
-    internal class Queue<T>
+    internal sealed class Queue<T>
     {
         private T _obj;
         private readonly SemaphoreSlim _empty;
@@ -118,8 +119,8 @@ public class WebSocketServerImpl : IWebSocketServer
             bool locked = false;
             try
             {
-                await _empty.WaitAsync(cancellationToken);
-                await _objLock.WaitAsync(cancellationToken);
+                await _empty.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await _objLock.WaitAsync(cancellationToken).ConfigureAwait(false);
                 locked = true;
                 _obj = t;
             }
@@ -138,8 +139,8 @@ public class WebSocketServerImpl : IWebSocketServer
             bool locked = false;
             try
             {
-                await _full.WaitAsync(cancellationToken);
-                await _objLock.WaitAsync(cancellationToken);
+                await _full.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await _objLock.WaitAsync(cancellationToken).ConfigureAwait(false);
                 locked = true;
                 T t = _obj;
                 _obj = default;
@@ -161,7 +162,7 @@ public class WebSocketServerImpl : IWebSocketServer
         string uriToParse;
         // Host can contain wildcard (*) that is a reserved charachter in URI's.
         // Replace with dummy localhost representation just for parsing purpose.
-        if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+        if (endPoint.Contains("//*"))
         {
             // FIXME: This is a workaround for the fact that Uri.Host is not set for wildcard host.
             throw new ArgumentException("Wildcard host is not supported for WebSocket endpoints");
@@ -178,7 +179,7 @@ public class WebSocketServerImpl : IWebSocketServer
             bool supported = false;
             foreach (string scheme in supportedSchemes)
             {
-                if (string.Compare(uri.Scheme, scheme, StringComparison.InvariantCultureIgnoreCase) == 0)
+                if (string.Equals(uri.Scheme, scheme, StringComparison.InvariantCultureIgnoreCase))
                 {
                     supported = true;
                     break;
@@ -199,7 +200,7 @@ public class WebSocketServerImpl : IWebSocketServer
 
 
     // An abstraction encapsulating an open websocket connection.
-    internal class Conn
+    internal sealed class Conn
     {
         private readonly WebSocket _webSocket;
         private readonly HttpContext _context;

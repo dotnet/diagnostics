@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -11,6 +10,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         Generation1 = 2,
         Generation2 = 3,
         LargeObjectHeap = 4,
-        PinnedObjectHeap = 5
+        PinnedObjectHeap = 5,
+        FrozenObjectHeap = 6
     }
 }

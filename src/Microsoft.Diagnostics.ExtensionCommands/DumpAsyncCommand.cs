@@ -1,15 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 #nullable enable
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Interfaces;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -52,13 +52,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport(Optional = true)]
         public ClrRuntime? Runtime { get; set; }
 
+
         /// <summary>Gets whether to only show stacks that include the object with the specified address.</summary>
         [Option(Name = "--address", Aliases = new string[] { "-addr" }, Help = "Only show stacks that include the object with the specified address.")]
-        public ulong? ObjectAddress { get; set; }
+        public string? ObjectAddress
+        {
+            get => _objectAddress?.ToString();
+            set => _objectAddress = ParseAddress(value);
+        }
+        private ulong? _objectAddress;
 
         /// <summary>Gets whether to only show stacks that include objects with the specified method table.</summary>
         [Option(Name = "--methodtable", Aliases = new string[] { "-mt" }, Help = "Only show stacks that include objects with the specified method table.")]
-        public ulong? MethodTableAddress { get; set; }
+        public string? MethodTableAddress
+        {
+            get => _methodTableAddress?.ToString();
+            set => _methodTableAddress = ParseAddress(value);
+        }
+        private ulong? _methodTableAddress;
 
         /// <summary>Gets whether to only show stacks that include objects whose type includes the specified name in its name.</summary>
         [Option(Name = "--type", Help = "Only show stacks that include objects whose type includes the specified name in its name.")]
@@ -141,7 +152,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // Enumerate all of the "frames", and create a mapping from a rendering of that
                 // frame to its associated type and how many times that frame occurs.
-                var typeCounts = new Dictionary<string, (ClrType Type, int Count)>();
+                Dictionary<string, (ClrType Type, int Count)> typeCounts = new();
                 foreach (KeyValuePair<ClrObject, AsyncObject> pair in objects)
                 {
                     ClrObject obj = pair.Key;
@@ -156,7 +167,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         value = (obj.Type, 0);
                     }
-                    
+
                     value.Count++;
                     typeCounts[description] = value;
                 }
@@ -174,7 +185,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             void RenderCoalescedStacks()
             {
                 // Find all stacks to include.
-                var startingList = new List<ClrObject>();
+                List<ClrObject> startingList = new();
                 foreach (KeyValuePair<ClrObject, AsyncObject> entry in objects)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
@@ -196,13 +207,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 void RenderLevel(List<ClrObject> frames, int depth)
                 {
                     Console.CancellationToken.ThrowIfCancellationRequested();
-                    List<ClrObject> nextLevel = new List<ClrObject>();
+                    List<ClrObject> nextLevel = new();
 
                     // Grouping function.  We want to treat all objects that render the same as the same entity.
                     // For async state machines, we include the await state, both because we want it to render
                     // and because we want to see state machines at different positions as part of different groups.
-                    Func<ClrObject, string> groupBy = o =>
-                    {
+                    Func<ClrObject, string> groupBy = o => {
                         string description = Describe(o);
                         if (objects.TryGetValue(o, out AsyncObject asyncObject) && asyncObject.IsStateMachine)
                         {
@@ -259,7 +269,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Render each stack of frames.</summary>
             void RenderStacks()
             {
-                var stack = new Stack<(AsyncObject AsyncObject, int Depth)>();
+                Stack<(AsyncObject AsyncObject, int Depth)> stack = new();
 
                 // Find every top-level object (ones that nothing else has as a continuation) and output
                 // a stack starting from each.
@@ -280,7 +290,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // If the top-level frame is an async method that's paused at an await, it must be waiting on
                     // something.  Try to synthesize a frame to represent that thing, just to provide a little more information.
                     if (top.IsStateMachine && top.AwaitState >= 0 && !IsCompleted(top.TaskStateFlags) &&
-                        top.StateMachine is IAddressableTypedEntity stateMachine &&
+                        top.StateMachine is IClrValue stateMachine &&
                         stateMachine.Type is not null)
                     {
                         // Short of parsing the method's IL, we don't have a perfect way to know which awaiter field
@@ -294,8 +304,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         // field with any non-zero bytes, it must be the one in use.  This can have false negatives,
                         // as it's perfectly valid for an awaiter to be all zero bytes, but it's better than nothing.
 
-                        if ((top.AwaitState == 0) ||
-                            stateMachine.Type.Fields.Count(f => f.Name is null || f.Name.StartsWith("<>u__", StringComparison.Ordinal) == true) == 1) // if the name is null, we have to assume it's an awaiter
+                        // if the name is null, we have to assume it's an awaiter
+
+                        Func<IClrInstanceField, bool> hasOneAwaiterField = static f => {
+                            return f.Name is null
+                                || f.Name.StartsWith("<>u__", StringComparison.Ordinal);
+                        };
+
+                        if ((top.AwaitState == 0)
+                            || stateMachine.Type.Fields.Count(hasOneAwaiterField) == 1)
                         {
                             if (stateMachine.Type.GetFieldByName("<>u__1") is ClrInstanceField field &&
                                 TrySynthesizeAwaiterFrame(field))
@@ -346,7 +363,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             {
                                 if (field.IsObjectReference)
                                 {
-                                    ClrObject awaiter = stateMachine.ReadObjectField(name);
+                                    IClrValue awaiter = stateMachine.ReadObjectField(name);
                                     if (awaiter.Type is not null)
                                     {
                                         Write("<< Awaiting: ");
@@ -360,7 +377,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 }
                                 else if (field.IsValueType)
                                 {
-                                    ClrValueType awaiter = stateMachine.ReadValueTypeField(name);
+                                    IClrValue awaiter = stateMachine.ReadValueTypeField(name);
                                     if (awaiter.Type is not null)
                                     {
                                         Write("<< Awaiting: ");
@@ -432,7 +449,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 bool sawShouldInclude = false;
                 bool sawStateMachine = IncludeTasks;
 
-                var stack = new Stack<AsyncObject>();
+                Stack<AsyncObject> stack = new();
                 stack.Push(obj);
                 while (stack.Count > 0)
                 {
@@ -458,11 +475,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // <summary>Outputs a line of information for each instance field on the object.</summary>
-            void RenderFields(IAddressableTypedEntity? obj, int depth)
+            void RenderFields(IClrValue? obj, int depth)
             {
                 if (obj?.Type is not null)
                 {
-                    string depthTab = new string(' ', depth * TabWidth);
+                    string depthTab = new(' ', depth * TabWidth);
 
                     WriteHeaderLine($"{depthTab}{"Address",16} {"MT",16} {"Type",-32} {"Value",16} Name");
                     foreach (ClrInstanceField field in obj.Type.Fields)
@@ -526,14 +543,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Determines whether the specified object is of interest to the user based on their criteria provided as command arguments.</summary>
             bool IncludeInOutput(ClrObject obj)
             {
-                if (ObjectAddress is ulong addr && obj.Address != addr)
+                if (_objectAddress is ulong addr && obj.Address != addr)
                 {
                     return false;
                 }
 
                 if (obj.Type is not null)
                 {
-                    if (MethodTableAddress is ulong mt && obj.Type.MethodTable != mt)
+                    if (_methodTableAddress is ulong mt && obj.Type.MethodTable != mt)
                     {
                         return false;
                     }
@@ -550,7 +567,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Finds all of the relevant async-related objects on the heap.</summary>
             Dictionary<ClrObject, AsyncObject> CollectObjects()
             {
-                var found = new Dictionary<ClrObject, AsyncObject>();
+                Dictionary<ClrObject, AsyncObject> found = new();
 
                 // Enumerate the heap, looking for all relevant objects.
                 foreach (ClrObject obj in heap.EnumerateObjects())
@@ -913,7 +930,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Tries to get the compiler-generated state machine instance from a state machine box.</summary>
-        private static bool TryGetStateMachine(ClrObject obj, out IAddressableTypedEntity? stateMachine)
+        private static bool TryGetStateMachine(ClrObject obj, out IClrValue? stateMachine)
         {
             // AsyncStateMachineBox<T> has a StateMachine field storing the compiler-generated instance.
             if (obj.Type?.GetFieldByName("StateMachine") is ClrInstanceField field)
@@ -938,7 +955,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Extract from the specified field of the specified object something that can be ToString'd.</summary>
-        private static object GetDisplay(IAddressableTypedEntity obj, ClrInstanceField field)
+        private static object GetDisplay(IClrValue obj, ClrInstanceField field)
         {
             if (field.Name is string fieldName)
             {
@@ -991,10 +1008,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         return obj.ReadField<ulong>(fieldName).ToString(IntPtr.Size == 8 ? "x16" : "x8");
 
                     case ClrElementType.SZArray:
-                        ClrObject arrayObj = obj.ReadObjectField(fieldName);
+                        IClrValue arrayObj = obj.ReadObjectField(fieldName);
                         if (!arrayObj.IsNull)
                         {
-                            ClrArray arrayObjAsArray = arrayObj.AsArray();
+                            IClrArray arrayObjAsArray = arrayObj.AsArray();
                             return $"{arrayObj.Type?.ComponentType?.ToString() ?? "unknown"}[{arrayObjAsArray.Length}]";
                         }
                         return "null";
@@ -1005,7 +1022,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     case ClrElementType.Array:
                     case ClrElementType.Object:
                     case ClrElementType.Class:
-                        ClrObject classObj = obj.ReadObjectField(fieldName);
+                        IClrValue classObj = obj.ReadObjectField(fieldName);
                         return classObj.IsNull ? "null" : classObj.Address.ToString(IntPtr.Size == 8 ? "x16" : "x8");
 
                     case ClrElementType.Var:
@@ -1056,7 +1073,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         /// <summary>Creates an indenting string.</summary>
         /// <param name="count">The number of tabs.</param>
-        private static string Tabs(int count) => new string(' ', count * TabWidth);
+        private static string Tabs(int count) => new(' ', count * TabWidth);
 
         /// <summary>Shortens a string to a maximum length by eliding part of the string with ...</summary>
         private static string? Truncate(string? value, int maxLength)
@@ -1083,7 +1100,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Tries to read the specified value from the field of an entity.</summary>
-        private static bool TryRead<T>(IAddressableTypedEntity entity, string fieldName, out T result) where T : unmanaged
+        private static bool TryRead<T>(IClrValue entity, string fieldName, out T result) where T : unmanaged
         {
             if (entity.Type?.GetFieldByName(fieldName) is not null)
             {
@@ -1145,20 +1162,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 void Append(string s)
                 {
                     sb ??= new StringBuilder();
-                    if (sb.Length != 0) sb.Append("|");
+                    if (sb.Length != 0)
+                    {
+                        sb.Append('|');
+                    }
+
                     sb.Append(s);
                 }
 
-                if ((stateFlags & 0x10000) != 0) Append("Started");
-                if ((stateFlags & 0x20000) != 0) Append("DelegateInvoked");
-                if ((stateFlags & 0x40000) != 0) Append("Disposed");
-                if ((stateFlags & 0x80000) != 0) Append("ExceptionObservedByParent");
-                if ((stateFlags & 0x100000) != 0) Append("CancellationAcknowledged");
-                if ((stateFlags & 0x200000) != 0) Append("Faulted");
-                if ((stateFlags & 0x400000) != 0) Append("Canceled");
-                if ((stateFlags & 0x800000) != 0) Append("WaitingOnChildren");
-                if ((stateFlags & 0x1000000) != 0) Append("RanToCompletion");
-                if ((stateFlags & 0x4000000) != 0) Append("CompletionReserved");
+                if ((stateFlags & 0x10000) != 0) { Append("Started"); }
+                if ((stateFlags & 0x20000) != 0) { Append("DelegateInvoked"); }
+                if ((stateFlags & 0x40000) != 0) { Append("Disposed"); }
+                if ((stateFlags & 0x80000) != 0) { Append("ExceptionObservedByParent"); }
+                if ((stateFlags & 0x100000) != 0) { Append("CancellationAcknowledged"); }
+                if ((stateFlags & 0x200000) != 0) { Append("Faulted"); }
+                if ((stateFlags & 0x400000) != 0) { Append("Canceled"); }
+                if ((stateFlags & 0x800000) != 0) { Append("WaitingOnChildren"); }
+                if ((stateFlags & 0x1000000) != 0) { Append("RanToCompletion"); }
+                if ((stateFlags & 0x4000000) != 0) { Append("CompletionReserved"); }
 
                 if (sb is not null)
                 {
@@ -1180,7 +1201,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             /// <summary>true if <see cref="Object"/> is an AsyncStateMachineBox.</summary>
             public bool IsStateMachine;
             /// <summary>A compiler-generated state machine extracted from the object, if one exists.</summary>
-            public IAddressableTypedEntity? StateMachine;
+            public IClrValue? StateMachine;
             /// <summary>The state of the state machine, if the object contains a state machine.</summary>
             public int AwaitState;
             /// <summary>The <see cref="Object"/>'s Task state flags, if it's a task.</summary>

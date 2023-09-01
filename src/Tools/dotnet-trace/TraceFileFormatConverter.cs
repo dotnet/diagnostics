@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -17,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
     internal static class TraceFileFormatConverter
     {
-        private static IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
+        private static readonly IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
             { TraceFileFormat.NetTrace,     "nettrace" },
             { TraceFileFormat.Speedscope,   "speedscope.json" },
             { TraceFileFormat.Chromium,     "chromium.json" }
@@ -26,7 +25,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static void ConvertToFormat(TraceFileFormat format, string fileToConvert, string outputFilename = "")
         {
             if (string.IsNullOrWhiteSpace(outputFilename))
+            {
                 outputFilename = fileToConvert;
+            }
 
             outputFilename = Path.ChangeExtension(outputFilename, TraceFileFormatExtensions[format]);
             Console.Out.WriteLine($"Writing:\t{outputFilename}");
@@ -63,18 +64,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.Out.WriteLine("Conversion complete");
         }
 
-        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError=false)
+        private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError = false)
         {
-            var etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError } );
-            using (var symbolReader = new SymbolReader(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-            using (var eventLog = new TraceLog(etlxFilePath))
+            string etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError });
+            using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+            using (TraceLog eventLog = new(etlxFilePath))
             {
-                var stackSource = new MutableTraceEventStackSource(eventLog)
+                MutableTraceEventStackSource stackSource = new(eventLog)
                 {
                     OnlyManagedCodeStacks = true // EventPipe currently only has managed code stacks.
                 };
 
-                var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader)
+                SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader)
                 {
                     IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
                 };

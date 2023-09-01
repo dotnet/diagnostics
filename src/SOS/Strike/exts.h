@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // ==++==
 // 
@@ -193,6 +192,7 @@ public:
 };
 
 extern HRESULT GetRuntime(IRuntime** ppRuntime);
+extern void FlushCheck();
 
 #ifndef MINIDUMP
  
@@ -323,7 +323,8 @@ inline void DACMessage(HRESULT Status)
     ControlC = FALSE;                                           \
     g_bDacBroken = TRUE;                                        \
     g_clrData = NULL;                                           \
-    g_sos = NULL;                                        
+    g_sos = NULL;                                               \
+    FlushCheck();
 
 // Also initializes the target machine
 #define INIT_API_NOEE()                                         \
@@ -465,7 +466,6 @@ public:
 
     // Retrieve some target specific output strings
     virtual LPCSTR GetDumpStackHeading() const = 0;
-    virtual LPCSTR GetDumpStackObjectsHeading() const = 0;
     virtual LPCSTR GetSPName() const = 0;
     // Retrieves the non-volatile registers reported to the GC
     virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const = 0;
@@ -593,4 +593,3 @@ extern ReadVirtualCache *rvCache;
 #endif
 
 #endif // __exts_h__
-

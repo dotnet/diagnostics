@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,7 +24,7 @@ namespace ReleaseTool.Core
         private readonly List<FileReleaseData> _filesToRelease;
         private ILogger _logger;
 
-        public Release(DirectoryInfo productBuildPath, 
+        public Release(DirectoryInfo productBuildPath,
             List<ILayoutWorker> layoutWorkers, List<IReleaseVerifier> verifiers,
             IPublisher publisher, IManifestGenerator manifestGenerator, string manifestSavePath)
         {
@@ -65,7 +68,7 @@ namespace ReleaseTool.Core
         {
             EnsureLoggerAvailable();
 
-            int unusedFiles = 0;
+            int unusedFiles;
             try
             {
                 unusedFiles = await LayoutFilesAsync(ct);
@@ -73,7 +76,7 @@ namespace ReleaseTool.Core
                 // TODO: Implement switch to ignore files that are not used as option.
                 if (unusedFiles != 0)
                 {
-                    _logger.LogError("{unusedFiles} files were not handled for release.", unusedFiles);
+                    _logger.LogError("{UnusedFiles} files were not handled for release.", unusedFiles);
                     return unusedFiles;
                 }
 
@@ -82,7 +85,7 @@ namespace ReleaseTool.Core
                 unusedFiles = await PublishFiles(ct);
                 if (unusedFiles != 0)
                 {
-                    _logger.LogError("{unusedFiles} files were not published.", unusedFiles);
+                    _logger.LogError("{UnusedFiles} files were not published.", unusedFiles);
                     return unusedFiles;
                 }
 
@@ -90,21 +93,23 @@ namespace ReleaseTool.Core
             }
             catch (TaskCanceledException)
             {
-               _logger.LogError("Cancellation issued.");
+                _logger.LogError("Cancellation issued.");
                 return -1;
             }
             catch (AggregateException agEx)
             {
-               _logger.LogError("Aggregate Exception");
+                _logger.LogError("Aggregate Exception");
 
-                foreach (var ex in agEx.InnerExceptions)
-                   _logger.LogError(ex, "Inner Exception");
+                foreach (Exception ex in agEx.InnerExceptions)
+                {
+                    _logger.LogError(ex, "Inner Exception");
+                }
 
                 return -1;
             }
             catch (Exception ex)
             {
-               _logger.LogError(ex, "Exception");
+                _logger.LogError(ex, "Exception");
                 return -1;
             }
         }
@@ -116,7 +121,7 @@ namespace ReleaseTool.Core
             // Manifest
             using IDisposable scope = _logger.BeginScope("Manifest Generation");
             Stream manifestStream = _manifestGenerator.GenerateManifest(_filesToRelease);
-            var fi = new FileInfo(_manifestSavePath);
+            FileInfo fi = new(_manifestSavePath);
             fi.Directory.Create();
 
             using (FileStream fs = fi.Open(FileMode.Create, FileAccess.Write))
@@ -138,7 +143,7 @@ namespace ReleaseTool.Core
                 return -1;
             }
 
-            _logger.LogInformation("Published manifest to {manifestPublishPath}", manifestPublishPath);
+            _logger.LogInformation("Published manifest to {ManifestPublishPath}", manifestPublishPath);
 
             return 0;
         }
@@ -148,7 +153,7 @@ namespace ReleaseTool.Core
             int unpublishedFiles = 0;
 
             using IDisposable scope = _logger.BeginScope("Publishing files");
-            _logger.LogInformation("Publishing {fileCount} files", _filesToRelease.Count);
+            _logger.LogInformation("Publishing {FileCount} files", _filesToRelease.Count);
 
             foreach (FileReleaseData releaseData in _filesToRelease)
             {
@@ -163,12 +168,12 @@ namespace ReleaseTool.Core
                 string publishUri = await _publisher.PublishFileAsync(releaseData.FileMap, ct);
                 if (publishUri is null)
                 {
-                    _logger.LogWarning("Failed to publish {sourcePath}", sourcePath);
+                    _logger.LogWarning("Failed to publish {SourcePath}", sourcePath);
                     unpublishedFiles++;
                 }
                 else
                 {
-                    _logger.LogTrace("Published {sourcePath} to relative path {relOutputPath} at {publishUri}", sourcePath, relOutputPath, publishUri);
+                    _logger.LogTrace("Published {SourcePath} to relative path {RelOutputPath} at {PublishUri}", sourcePath, relOutputPath, publishUri);
                     releaseData.PublishUri = publishUri;
                 }
             }
@@ -179,16 +184,16 @@ namespace ReleaseTool.Core
         private async Task<int> LayoutFilesAsync(CancellationToken ct)
         {
             int unhandledFiles = 0;
-            var relativePublishPathsUsed = new HashSet<string>();
+            HashSet<string> relativePublishPathsUsed = new();
 
-            using var scope = _logger.BeginScope("Laying out files");
+            using IDisposable scope = _logger.BeginScope("Laying out files");
 
             _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath.Name);
 
             // TODO: Make this parallel using Task.Run + semaphore to batch process files. Need to make collections concurrent or have single
             //       queue to aggregate results.
             // TODO: The file enumeration should have the possibility to inject a custom enumerator. Useful in case there's only subsets of files.
-            //       For example, shipping only files. 
+            //       For example, shipping only files.
             foreach (FileInfo file in _productBuildPath.EnumerateFiles("*", SearchOption.AllDirectories))
             {
                 bool isProcessed = false;
@@ -215,7 +220,7 @@ namespace ReleaseTool.Core
                         {
                             // TODO: Might be worth to relax this limitation. It just needs to turn the
                             //      source -> fileData relationship to something like source -> List<FileData>).
-                            _logger.LogError("File {file} is getting handled by several workers.", file);
+                            _logger.LogError("File {File} is getting handled by several workers.", file);
                             return -1;
                         }
 
@@ -227,11 +232,11 @@ namespace ReleaseTool.Core
                             string dstPath = fileMap.RelativeOutputPath;
                             if (relativePublishPathsUsed.Contains(dstPath))
                             {
-                                _logger.LogError("File {srcPath} is getting published to relative path {dstPath} which is already in use.", srcPath, dstPath);
+                                _logger.LogError("File {SrcPath} is getting published to relative path {DstPath} which is already in use.", srcPath, dstPath);
                                 return -1;
                             }
                             relativePublishPathsUsed.Add(dstPath);
-                            _logger.LogTrace("{srcPath} -> {dstPath} [{fileMetadata}]", srcPath, dstPath, fileMetadata);
+                            _logger.LogTrace("{SrcPath} -> {DstPath} [{FileMetadata}]", srcPath, dstPath, fileMetadata);
                             _filesToRelease.Add(new FileReleaseData(fileMap, fileMetadata));
                         }
                     }
@@ -239,7 +244,7 @@ namespace ReleaseTool.Core
 
                 if (!isProcessed)
                 {
-                    _logger.LogWarning("File not handled {file}", file);
+                    _logger.LogWarning("File not handled {File}", file);
                     unhandledFiles++;
                 }
             }
@@ -249,11 +254,15 @@ namespace ReleaseTool.Core
 
         public void Dispose()
         {
-            foreach(ILayoutWorker lw in _layoutWorkers)
+            foreach (ILayoutWorker lw in _layoutWorkers)
+            {
                 lw.Dispose();
+            }
 
-            foreach(IReleaseVerifier rv in _verifiers)
+            foreach (IReleaseVerifier rv in _verifiers)
+            {
                 rv.Dispose();
+            }
 
             _publisher.Dispose();
             _manifestGenerator.Dispose();

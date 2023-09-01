@@ -30,7 +30,7 @@ VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*
 !IFDEF:DESKTOP
 !IFDEF:TRIAGE_DUMP
-VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (16|23)\]
+VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (19|26)\]
 ENDIF:TRIAGE_DUMP
 ENDIF:DESKTOP
 
@@ -44,12 +44,12 @@ VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.InnerException(\(\))?\+0x<HEXVAL>\s*
 !IFDEF:DESKTOP
 !IFDEF:TRIAGE_DUMP
-VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (34|35)\]
+VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (37|38)\]
 ENDIF:TRIAGE_DUMP
 ENDIF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*
 !IFDEF:DESKTOP
 !IFDEF:TRIAGE_DUMP
-VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ 19\]
+VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ 22\]
 ENDIF:TRIAGE_DUMP
 ENDIF:DESKTOP

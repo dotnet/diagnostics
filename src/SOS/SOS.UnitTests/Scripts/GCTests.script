@@ -24,7 +24,7 @@ ENDIF:CDB
 LOADSOS
 
 SOSCOMMAND:DumpStackObjects
-VERIFY:<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
 
 SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.IO.StringWriter!\$0_)*System.IO.StringWriter\s+<POUT>
 IFDEF:MAJOR_RUNTIME_VERSION_2
@@ -36,19 +36,19 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+st
 ENDIF:MAJOR_RUNTIME_VERSION_GE_3
 
 SOSCOMMAND:DumpStackObjects
-VERIFY:<HEXVAL>\s<HEXVAL>\s([Gg][Cc]where!\$0_)*GCWhere\s+
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+([Gg][Cc]where!\$0_)*GCWhere\s+
 
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 0
-VERIFY:<HEXVAL>\s+0\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+0.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+39\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
-SOSCOMMAND:GCRoot -all <PREVPOUT>
+SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+39\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -71,8 +71,8 @@ VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 VERIFY:\s+GC Refs:\s+
-VERIFY:\s+offset\s+object\s+
-VERIFY:\s+<DECVAL>\s+<HEXVAL>\s+
+VERIFY:\s+Field\s+Offset\s+Object\s+Type\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*
 
 SOSCOMMAND:DumpHeap
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+
@@ -81,6 +81,16 @@ SOSCOMMAND:DumpHeap -stat
 VERIFY:\s*Statistics:\s+
 VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
 VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+GCWhere\s+
+
+SOSCOMMAND:DumpHeap -stat -gen gen0
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
+VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+GCWhere\s+
+
+IFDEF:WINDOWS
+SOSCOMMAND:DumpHeap -stat -gen xxx
+VERIFY:\s*System\.ArgumentException: Unknown generation: xxx\. Only gen0, gen1, gen2, loh \(large\), poh \(pinned\) and foh \(frozen\) are supported\s+
+ENDIF:WINDOWS
 
 IFDEF:WINDOWS
 SOSCOMMAND:DumpHeap -strings
@@ -93,12 +103,12 @@ VERIFY:\s+System Domain:\s+<HEXVAL>\s+
 VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
 VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
-VERIFY:\s+Jit code heap:\s+
-VERIFY:\s+LoaderCodeHeap:\s+<HEXVAL>.*bytes\.\s+
-VERIFY:\s+Total LoaderHeap size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
+VERIFY:\s+JIT Manager:\s+<HEXVAL>
+VERIFY:\s+(LoaderCodeHeap|HostCodeHeap):\s+<HEXVAL>.*bytes.*
+VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
 VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
 VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\(<DECVAL>\)\s+0x<HEXVAL>\(<DECVAL>\)\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+
 VERIFY:\s+Large object heap.*
 
 # Continue to the next DebugBreak
@@ -110,15 +120,15 @@ ENDIF:CDB
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 1
-VERIFY:<HEXVAL>\s+1\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+1.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+42\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
-SOSCOMMAND:GCRoot -all <PREVPOUT>
+SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[Gg][Cc][Ww]here\.cs\s+@\s+42\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
@@ -141,8 +151,8 @@ VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
 VERIFY:\s+GC Refs:\s+
-VERIFY:\s+offset\s+object\s+
-VERIFY:\s+<DECVAL>\s+<HEXVAL>\s+
+VERIFY:\s+Field\s+Offset\s+Object\s+Type\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*
 
 # Continue to the next DebugBreak
 CONTINUE
@@ -159,11 +169,11 @@ SOSCOMMAND:EEHeap -gc
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
 # we care that the Gen is 2
-VERIFY:<HEXVAL>\s+2\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+2.*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+45\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 ENDIF:OSX
 
@@ -181,12 +191,12 @@ SOSCOMMAND:EEHeap -gc
 
 SOSCOMMAND:DumpStackObjects
 SOSCOMMAND:GCWhere <POUT>\w+\s+(<HEXVAL>)\s+([Gg][Cc]where!\$0_)*GCWhere\s+<POUT>
-# we care that the Gen is still 2 or 0 on Windows 3.x 
-VERIFY:<HEXVAL>\s+[02]\s+\d\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(\d+\)
+# we care that the Gen is still 2 or 0 on Windows 3.x
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+[02].*
 
 SOSCOMMAND:GCRoot <PREVPOUT>
 VERIFY:.*Thread <HEXVAL>:
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+\[.*[/|\\][Gg][Cc][Ww]here\.cs\s+@\s+49\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 
 ENDIF:OSX
 

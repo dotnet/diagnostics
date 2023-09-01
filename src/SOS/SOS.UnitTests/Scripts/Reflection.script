@@ -38,7 +38,7 @@ VERIFY:Message:\s+(<Invalid Object>|Exception has been thrown by the target of a
 VERIFY:InnerException:\s+System\.Exception, Use !?printexception <HEXVAL> to see more\.\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Rr]eflection[Tt]est.*!(\$0_)?RefLoader\.Loader\.Main(\(\))?\+0x<HEXVAL>\s*
-VERIFY:[.*[\\|/]Debuggees[\\|/].*[Rr]eflection[Tt]est[\\|/][Rr]eflection[Tt]est\.cs @ 32\s*\]
+VERIFY:[.*[\\|/]Debuggees[\\|/].*[Rr]eflection[Tt]est[\\|/][Rr]eflection[Tt]est\.cs @ 35\s*\]
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131604
 
@@ -63,4 +63,4 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for ReflectionTest.exe\s*)?RefLoader\.Loader\.Main(\(\))?\s*
-VERIFY:[.*[\\|/]Debuggees[\\|/].*[Rr]eflection[Tt]est[\\|/][Rr]eflection[Tt]est\.cs @ 32\s*\]
+VERIFY:[.*[\\|/]Debuggees[\\|/].*[Rr]eflection[Tt]est[\\|/][Rr]eflection[Tt]est\.cs @ 35\s*\]

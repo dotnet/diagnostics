@@ -1,12 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime.Utilities;
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
@@ -14,15 +13,15 @@ namespace SOS.Hosting
     public sealed unsafe class TargetWrapper : COMCallableIUnknown, IDisposable
     {
         // Must be the same as ITarget::OperatingSystem
-        enum OperatingSystem
+        private enum OperatingSystem
         {
-            Unknown         = 0,
-            Windows         = 1,
-            Linux           = 2,
-            OSX             = 3,
+            Unknown = 0,
+            Windows = 1,
+            Linux = 2,
+            OSX = 3,
         }
 
-        public static readonly Guid IID_ITarget = new Guid("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
+        public static readonly Guid IID_ITarget = new("B4640016-6CA0-468E-BA2C-1FFF28DE7B72");
 
         public ServiceWrapper ServiceWrapper { get; } = new ServiceWrapper();
 
@@ -70,13 +69,16 @@ namespace SOS.Hosting
         private OperatingSystem GetOperatingSystem(
             IntPtr self)
         {
-            if (_target.OperatingSystem == OSPlatform.Windows) {
+            if (_target.OperatingSystem == OSPlatform.Windows)
+            {
                 return OperatingSystem.Windows;
-            } 
-            else if (_target.OperatingSystem == OSPlatform.Linux) {
+            }
+            else if (_target.OperatingSystem == OSPlatform.Linux)
+            {
                 return OperatingSystem.Linux;
             }
-            else if (_target.OperatingSystem == OSPlatform.OSX) {
+            else if (_target.OperatingSystem == OSPlatform.OSX)
+            {
                 return OperatingSystem.OSX;
             }
             return OperatingSystem.Unknown;
@@ -92,15 +94,18 @@ namespace SOS.Hosting
             IntPtr self,
             IntPtr* ppRuntime)
         {
-            if (ppRuntime == null) {
+            if (ppRuntime == null)
+            {
                 return HResult.E_INVALIDARG;
             }
             IRuntime runtime = _contextService.GetCurrentRuntime();
-            if (runtime is null) {
+            if (runtime is null)
+            {
                 return HResult.E_NOINTERFACE;
             }
             RuntimeWrapper wrapper = runtime.Services.GetService<RuntimeWrapper>();
-            if (wrapper is null) {
+            if (wrapper is null)
+            {
                 return HResult.E_NOINTERFACE;
             }
             *ppRuntime = wrapper.IRuntime;

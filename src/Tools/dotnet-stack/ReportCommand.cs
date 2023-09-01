@@ -1,30 +1,28 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.IO;
 using System.CommandLine.Binding;
-using System.CommandLine.Rendering;
+using System.CommandLine.IO;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
+using Microsoft.Internal.Common.Utils;
+using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class ReportCommandHandler
     {
-        delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
+        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
 
         /// <summary>
         /// Reports a stack trace
@@ -69,8 +67,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 }
 
 
-                var client = new DiagnosticsClient(processId);
-                var providers = new List<EventPipeProvider>()
+                DiagnosticsClient client = new(processId);
+                List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
@@ -84,47 +82,52 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
                 {
                     Task copyTask = session.EventStream.CopyToAsync(fs);
-                    await Task.Delay(duration);
+                    await Task.Delay(duration).ConfigureAwait(false);
                     session.Stop();
 
                     // check if rundown is taking more than 5 seconds and add comment to report
                     Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask);
+                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
                     if (completedTask == timeoutTask)
                     {
                         console.Out.WriteLine($"# Sufficiently large applications can cause this command to take non-trivial amounts of time");
                     }
-                    await copyTask;
+                    await copyTask.ConfigureAwait(false);
                 }
 
                 // using the generated trace file, symbolicate and compute stacks.
                 tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
-                using (var symbolReader = new SymbolReader(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (var eventLog = new TraceLog(tempEtlxFilename))
+                using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                using (TraceLog eventLog = new(tempEtlxFilename))
                 {
-                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    MutableTraceEventStackSource stackSource = new(eventLog)
                     {
                         OnlyManagedCodeStacks = true
                     };
 
-                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
                     computer.GenerateThreadTimeStacks(stackSource);
 
-                    var samplesForThread = new Dictionary<int, List<StackSourceSample>>();
+                    Dictionary<int, List<StackSourceSample>> samplesForThread = new();
 
-                    stackSource.ForEach((sample) =>
-                    {
-                        var stackIndex = sample.StackIndex;
+                    stackSource.ForEach((sample) => {
+                        StackSourceCallStackIndex stackIndex = sample.StackIndex;
                         while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                        {
                             stackIndex = stackSource.GetCallerIndex(stackIndex);
+                        }
 
                         // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
                         // Thread id is in the frame name as "Thread (<ID>)"
                         string template = "Thread (";
                         string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
-                        int threadId = int.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
 
-                        if (samplesForThread.TryGetValue(threadId, out var samples))
+                        // we are looking for the first index of ) because
+                        // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
+                        int firstIndex = threadFrame.IndexOf(')');
+                        int threadId = int.Parse(threadFrame.AsSpan(template.Length, firstIndex - template.Length));
+
+                        if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
                         {
                             samples.Add(sample);
                         }
@@ -135,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     });
 
                     // For every thread recorded in our trace, print the first stack
-                    foreach (var (threadId, samples) in samplesForThread)
+                    foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
                     {
 #if DEBUG
                         console.Out.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
@@ -146,15 +149,20 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
+                Console.Error.WriteLine($"[ERROR] {ex}");
                 return -1;
             }
             finally
             {
                 if (File.Exists(tempNetTraceFilename))
+                {
                     File.Delete(tempNetTraceFilename);
+                }
+
                 if (File.Exists(tempEtlxFilename))
+                {
                     File.Delete(tempEtlxFilename);
+                }
             }
 
             return 0;
@@ -163,7 +171,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
         {
             console.Out.WriteLine($"Thread (0x{threadId:X}):");
-            var stackIndex = stackSourceSample.StackIndex;
+            StackSourceCallStackIndex stackIndex = stackSourceSample.StackIndex;
             while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
             {
                 console.Out.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
@@ -174,9 +182,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
         }
 
         public static Command ReportCommand() =>
-            new Command(
+            new(
                 name: "report",
-                description: "reports the managed stacks from a running .NET process") 
+                description: "reports the managed stacks from a running .NET process")
             {
                 // Handler
                 HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
@@ -187,7 +195,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         private static Option DurationOption() =>
-            new Option(
+            new(
                 alias: "--duration",
                 description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
             {
@@ -196,7 +204,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option ProcessIdOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-p", "--process-id" },
                 description: "The process id to report the stack.")
             {
@@ -204,7 +212,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
         public static Option NameOption() =>
-            new Option(
+            new(
                 aliases: new[] { "-n", "--name" },
                 description: "The name of the process to report the stack.")
             {

@@ -1,6 +1,5 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // ==++==
 // 
@@ -409,4 +408,15 @@ HRESULT GetRuntime(IRuntime** ppRuntime)
     extensions->FlushCheck();
 #endif
     return target->GetRuntime(ppRuntime);
+}
+
+void FlushCheck()
+{
+#ifndef FEATURE_PAL
+    SOSExtensions* extensions = (SOSExtensions*)Extensions::GetInstance();
+    if (extensions != nullptr)
+    {
+        extensions->FlushCheck();
+    }
+#endif // !FEATURE_PAL
 }

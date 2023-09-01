@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Tracing;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
 {
@@ -23,8 +22,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         // This allows caching of the event map between multiple instances of the trigger that
         // use the same event provider as the source of counter events.
         private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>> _eventMapCache =
-            new ConcurrentDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<string>>>(StringComparer.OrdinalIgnoreCase);
-        
+            new(StringComparer.OrdinalIgnoreCase);
+
         // Only care for the EventCounters events from any of the specified providers, thus
         // create a static readonly instance that is shared among all event maps.
         private static readonly IReadOnlyCollection<string> _eventProviderEvents =
@@ -45,7 +44,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
 
             _filter = new CounterFilter(settings.CounterIntervalSeconds);
             _filter.AddFilter(settings.ProviderName, new string[] { settings.CounterName });
-            
+
             _impl = new EventCounterTriggerImpl(settings);
 
             _providerName = settings.ProviderName;
@@ -59,7 +58,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_filter, null, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(_filter, null, null, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }

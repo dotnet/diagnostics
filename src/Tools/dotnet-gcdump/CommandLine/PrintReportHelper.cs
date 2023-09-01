@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,11 +30,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             Console.Out.Write("  Type");
             Console.WriteLine();
 
-            var filteredTypes = GetReportItem(memoryGraph)
+            IOrderedEnumerable<ReportItem> filteredTypes = GetReportItem(memoryGraph)
                 .OrderByDescending(t => t.SizeBytes)
                 .ThenByDescending(t => t.Count);
-            
-            foreach (var filteredType in filteredTypes)
+
+            foreach (ReportItem filteredType in filteredTypes)
             {
                 WriteFixedWidth(filteredType.SizeBytes);
                 Console.Out.Write("  ");
@@ -44,9 +47,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                 {
                     Console.Out.Write($"{"",8}  ");
                 }
-                    
+
                 Console.Out.Write(filteredType.TypeName ?? "<UNKNOWN>");
-                var dllName = GetDllName(filteredType.ModuleName ?? "");
+                ReadOnlySpan<char> dllName = GetDllName(filteredType.ModuleName ?? "");
                 if (!dllName.IsEmpty)
                 {
                     Console.Out.Write("  ");
@@ -71,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
                 Console.Out.WriteLine();
             }
         }
-        
+
         private struct ReportItem
         {
             public int? Count { get; set; }
@@ -79,19 +82,23 @@ namespace Microsoft.Diagnostics.Tools.GCDump.CommandLine
             public string TypeName { get; set; }
             public string ModuleName { get; set; }
         }
-        
+
         private static IEnumerable<ReportItem> GetReportItem(MemoryGraph memoryGraph)
         {
-            var histogramByType = memoryGraph.GetHistogramByType();
-            for (var index = 0; index < memoryGraph.m_types.Count; index++)
+            Graph.SizeAndCount[] histogramByType = memoryGraph.GetHistogramByType();
+            for (int index = 0; index < memoryGraph.m_types.Count; index++)
             {
-                var type = memoryGraph.m_types[index];
+                Graph.TypeInfo type = memoryGraph.m_types[index];
                 if (string.IsNullOrEmpty(type.Name) || type.Size == 0)
+                {
                     continue;
+                }
 
-                var sizeAndCount = histogramByType.FirstOrDefault(c => (int) c.TypeIdx == index);
+                Graph.SizeAndCount sizeAndCount = histogramByType.FirstOrDefault(c => (int)c.TypeIdx == index);
                 if (sizeAndCount == null || sizeAndCount.Count == 0)
+                {
                     continue;
+                }
 
                 yield return new ReportItem
                 {

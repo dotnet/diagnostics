@@ -1,14 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using Microsoft.Diagnostics.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -17,7 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class ModuleServiceFromDataReader : ModuleService
     {
-        class ModuleFromDataReader : Module
+        private sealed class ModuleFromDataReader : Module
         {
             // This is what clrmd returns for non-PE modules that don't have a timestamp
             private const uint InvalidTimeStamp = 0;
@@ -117,7 +115,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         protected override Dictionary<ulong, IModule> GetModulesInner()
         {
-            var modules = new Dictionary<ulong, IModule>();
+            Dictionary<ulong, IModule> modules = new();
             int moduleIndex = 0;
 
             ModuleInfo[] moduleInfos = _dataReader.EnumerateModules().OrderBy((info) => info.ImageBase).ToArray();
@@ -147,7 +145,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             imageSize = startNext - start;
                         }
                     }
-                    var module = new ModuleFromDataReader(this, moduleIndex, moduleInfo, imageSize);
+                    ModuleFromDataReader module = new(this, moduleIndex, moduleInfo, imageSize);
                     try
                     {
                         modules.Add(moduleInfo.ImageBase, module);

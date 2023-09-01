@@ -3,9 +3,15 @@
   <Import Project="$(RepoRoot)/eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
 
   <PropertyGroup>
+    <EnableAnalyzers>false</EnableAnalyzers>
     <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>
     <BuildTargetFrameworks>net6.0;net7.0;net8.0</BuildTargetFrameworks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EditorConfigFiles Remove="@(EditorConfigFiles)" />
+    <EditorConfigFiles Include="$(RepositoryEngineeringDir)CodeAnalysis.test.globalconfig" />
+  </ItemGroup>
 </Project>

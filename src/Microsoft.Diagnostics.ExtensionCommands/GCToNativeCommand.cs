@@ -1,18 +1,23 @@
-﻿using Microsoft.Diagnostics.DebugServices;
-using Microsoft.Diagnostics.Runtime;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
+using Microsoft.Diagnostics.Runtime;
 using static Microsoft.Diagnostics.ExtensionCommands.NativeAddressHelper;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
     public sealed class GCToNativeCommand : CommandBase
     {
-        [Argument(Help ="The types of memory to search the GC heap for.")]
+        [Argument(Help = "The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
 
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Show the complete list of objects and not just a summary.")]
@@ -30,9 +35,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 int width = Console.WindowWidth;
                 if (width == 0)
+                {
                     width = 120;
+                }
+
                 if (width > 256)
+                {
                     width = 256;
+                }
 
                 return width;
             }
@@ -41,7 +51,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             if (MemoryTypes is null || MemoryTypes.Length == 0)
+            {
                 throw new DiagnosticsException("Must specify at least one memory region type to search for.");
+            }
 
             PrintGCPointersToMemory(ShowAll, MemoryTypes);
         }
@@ -62,9 +74,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             //   5. Display all of this to the user.
 
             if (memoryTypes.Length == 0)
+            {
                 return;
+            }
 
-            IEnumerable<DescribedRegion> rangeEnum = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false);
+            IEnumerable<DescribedRegion> rangeEnum = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false, includeHandleTableIfSlow: false);
             rangeEnum = rangeEnum.Where(r => memoryTypes.Any(memType => r.Name.Equals(memType, StringComparison.OrdinalIgnoreCase)));
             rangeEnum = rangeEnum.OrderBy(r => r.Start);
 
@@ -80,15 +94,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine("Walking GC heap to find pointers...");
             Dictionary<ClrSegment, List<GCObjectToRange>> segmentLists = new();
 
-            var items = Runtime.Heap.Segments
+            IEnumerable<(ClrSegment Segment, ulong Address, ulong Pointer, DescribedRegion MemoryRange)> items = Runtime.Heap.Segments
                             .SelectMany(Segment => AddressHelper
                                                     .EnumerateRegionPointers(Segment.ObjectRange.Start, Segment.ObjectRange.End, ranges)
                                                     .Select(regionPointer => (Segment, regionPointer.Address, regionPointer.Pointer, regionPointer.MemoryRange)));
 
-            foreach (var item in items)
+            foreach ((ClrSegment Segment, ulong Address, ulong Pointer, DescribedRegion MemoryRange) item in items)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (!segmentLists.TryGetValue(item.Segment, out List<GCObjectToRange> list))
+                {
                     list = segmentLists[item.Segment] = new();
+                }
 
                 list.Add(new GCObjectToRange(item.Address, item.Pointer, item.MemoryRange));
             }
@@ -96,6 +114,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine("Resolving object names...");
             foreach (string type in memoryTypes)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 WriteHeader($" {type} Regions ");
 
                 List<ulong> addressesNotInObjects = new();
@@ -105,6 +125,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (KeyValuePair<ClrSegment, List<GCObjectToRange>> segEntry in segmentLists)
                 {
+                    Console.CancellationToken.ThrowIfCancellationRequested();
+
                     ClrSegment seg = segEntry.Key;
                     List<GCObjectToRange> pointers = segEntry.Value;
                     pointers.Sort((x, y) => x.GCPointer.CompareTo(y.GCPointer));
@@ -113,10 +135,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     foreach (ClrObject obj in seg.EnumerateObjects())
                     {
                         if (index >= pointers.Count)
+                        {
                             break;
+                        }
 
                         while (index < pointers.Count && pointers[index].GCPointer < obj.Address)
                         {
+                            Console.CancellationToken.ThrowIfCancellationRequested();
+
                             // If we "missed" the pointer then it's outside of an object range.
                             addressesNotInObjects.Add(pointers[index].GCPointer);
 
@@ -126,10 +152,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         }
 
                         if (index == pointers.Count)
+                        {
                             break;
+                        }
 
                         while (index < pointers.Count && obj.Address <= pointers[index].GCPointer && pointers[index].GCPointer < obj.Address + obj.Size)
                         {
+                            Console.CancellationToken.ThrowIfCancellationRequested();
+
                             string typeName = obj.Type?.Name ?? $"<unknown_type>";
 
                             if (obj.IsFree)
@@ -147,12 +177,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             else if (KnownClrMemoryPointer.ContainsKnownClrMemoryPointers(obj))
                             {
                                 foreach (KnownClrMemoryPointer knownMem in KnownClrMemoryPointer.EnumerateKnownClrMemoryPointers(obj, sizeHints))
+                                {
                                     knownMemory.Add(obj, knownMem);
+                                }
                             }
                             else
                             {
                                 if (typeName.Contains('>'))
+                                {
                                     typeName = CollapseGenerics(typeName);
+                                }
 
                                 unknownObjPointers.Add((pointers[index].TargetSegmentPointer, obj));
                             }
@@ -173,20 +207,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         Console.WriteLine($"All memory pointers:");
 
-                        IEnumerable<(ulong Pointer, ulong Size, ulong Object, string Type)> allPointers = unknownObjPointers.Select(unknown => (unknown.Pointer, 0ul, unknown.Object.Address, unknown.Object.Type?.Name ?? "<unknown_type>"));
-                        allPointers = allPointers.Concat(knownMemory.Values.Select(k => (k.Pointer, GetSize(sizeHints, k), k.Object.Address, k.Name)));
+                        IEnumerable<(ulong Pointer, ulong Size, ClrObject Object, ClrType Type)> allPointers = unknownObjPointers.Select(unknown => (unknown.Pointer, 0ul, unknown.Object, unknown.Object.Type));
+                        allPointers = allPointers.Concat(knownMemory.Values.Select(k => (k.Pointer, GetSize(sizeHints, k), k.Object, k.Object.Type)));
 
-                        TableOutput allOut = new(Console, (16, "x"), (16, "x"), (16, "x"))
+                        using BorderedTable allOut = new(Console, Pointer, ByteCount, DumpObj, TypeName);
+
+                        allOut.WriteHeader("Pointer", "Size", "Object", "Type");
+
+                        foreach ((ulong Pointer, ulong Size, ClrObject Object, ClrType Type) entry in allPointers)
                         {
-                            Divider = " | "
-                        };
+                            Console.CancellationToken.ThrowIfCancellationRequested();
 
-                        allOut.WriteRowWithSpacing('-', "Pointer", "Size", "Object", "Type");
-                        foreach (var entry in allPointers)
                             if (entry.Size == 0)
-                                allOut.WriteRow(entry.Pointer, "", entry.Object, entry.Type);
+                            {
+                                allOut.WriteRow(entry.Pointer, null, entry.Object, entry.Type);
+                            }
                             else
+                            {
                                 allOut.WriteRow(entry.Pointer, entry.Size, entry.Object, entry.Type);
+                            }
+                        }
 
                         Console.WriteLine("");
                     }
@@ -197,37 +237,35 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                         // totals
                         var knownMemorySummary = from known in knownMemory.Values
-                                                 group known by known.Name into g
-                                                 let Name = g.Key
+                                                 group known by known.Object.Type into g
+                                                 let Type = g.Key
                                                  let Count = g.Count()
                                                  let TotalSize = g.Sum(k => (long)GetSize(sizeHints, k))
-                                                 orderby TotalSize descending, Name ascending
-                                                 select new
-                                                 {
-                                                     Name,
+                                                 orderby TotalSize descending, Type.Name ascending
+                                                 select new {
+                                                     Type,
                                                      Count,
                                                      TotalSize,
                                                      Pointer = g.Select(p => p.Pointer).FindMostCommonPointer()
                                                  };
 
-                        int maxNameLen = Math.Min(80, knownMemory.Values.Max(r => r.Name.Length));
-
-                        TableOutput summary = new(Console, (-maxNameLen, ""), (8, "n0"), (12, "n0"), (12, "n0"), (12, "x"))
+                        Column typeNameColumn = TypeName.GetAppropriateWidth(knownMemory.Values.Select(r => r.Object.Type), 16);
+                        using (BorderedTable summary = new(Console, typeNameColumn, Integer, HumanReadableSize, ByteCount, Pointer))
                         {
-                            Divider = " | "
-                        };
+                            summary.WriteHeader("Type", "Count", "Size", "Size (bytes)", "RndPointer");
 
-                        summary.WriteRowWithSpacing('-', "Type", "Count", "Size", "Size (bytes)", "RndPointer");
+                            foreach (var item in knownMemorySummary)
+                            {
+                                Console.CancellationToken.ThrowIfCancellationRequested();
 
-                        foreach (var item in knownMemorySummary)
-                            summary.WriteRow(item.Name, item.Count, item.TotalSize.ConvertToHumanReadable(), item.TotalSize, item.Pointer);
+                                summary.WriteRow(item.Type, item.Count, item.TotalSize, item.TotalSize, item.Pointer);
+                            }
 
-                        (int totalRegions, ulong totalBytes) = GetSizes(knownMemory, sizeHints);
+                            (int totalRegions, ulong totalBytes) = GetSizes(knownMemory, sizeHints);
+                            summary.WriteFooter("[TOTAL]", totalRegions, totalBytes, totalBytes);
+                        }
 
-                        summary.WriteSpacer('-');
-                        summary.WriteRow("[TOTAL]", totalRegions, totalBytes.ConvertToHumanReadable(), totalBytes);
-
-                        Console.WriteLine("");
+                        Console.WriteLine();
                     }
 
 
@@ -241,25 +279,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                               let Name = g.Key
                                               let Count = g.Count()
                                               orderby Count descending
-                                              select new
-                                              {
+                                              select new {
                                                   Name,
                                                   Count,
                                                   Pointer = g.Select(p => p.Pointer).FindMostCommonPointer()
                                               };
 
                         var unknownMem = unknownMemQuery.ToArray();
-                        int maxNameLen = Math.Min(80, unknownMem.Max(r => r.Name.Length));
 
-                        TableOutput summary = new(Console, (-maxNameLen, ""), (8, "n0"), (12, "x"))
-                        {
-                            Divider = " | "
-                        };
-
-                        summary.WriteRowWithSpacing('-', "Type", "Count", "RndPointer");
+                        Column typeNameColumn = TypeName.GetAppropriateWidth(unknownMem.Select(r => r.Name));
+                        using BorderedTable summary = new(Console, typeNameColumn, Integer, Pointer);
+                        summary.WriteHeader("Type", "Count", "RndPointer");
 
                         foreach (var item in unknownMem)
+                        {
+                            Console.CancellationToken.ThrowIfCancellationRequested();
+
                             summary.WriteRow(item.Name, item.Count, item.Pointer);
+                        }
                     }
                 }
             }
@@ -267,15 +304,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private static (int Regions, ulong Bytes) GetSizes(Dictionary<ulong, KnownClrMemoryPointer> knownMemory, Dictionary<ulong, int> sizeHints)
         {
-            var ordered = from item in knownMemory.Values
-                          orderby item.Pointer ascending, item.Size descending
-                          select item;
+            IOrderedEnumerable<KnownClrMemoryPointer> ordered = from item in knownMemory.Values
+                                                                orderby item.Pointer ascending, item.Size descending
+                                                                select item;
 
             int totalRegions = 0;
             ulong totalBytes = 0;
             ulong prevEnd = 0;
 
-            foreach (var item in ordered)
+            foreach (KnownClrMemoryPointer item in ordered)
             {
                 ulong size = GetSize(sizeHints, item);
 
@@ -283,11 +320,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (item.Pointer < prevEnd)
                 {
                     if (item.Pointer + size <= prevEnd)
+                    {
                         continue;
+                    }
 
                     ulong diff = prevEnd - item.Pointer;
                     if (diff >= size)
+                    {
                         continue;
+                    }
 
                     size -= diff;
                     prevEnd += size;
@@ -308,24 +349,33 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             int lpad = (Width - header.Length) / 2;
             if (lpad > 0)
+            {
                 header = header.PadLeft(Width - lpad, '=');
+            }
+
             Console.WriteLine(header.PadRight(Width, '='));
         }
 
-        private static string CollapseGenerics(string typeName)
+        private string CollapseGenerics(string typeName)
         {
             StringBuilder result = new(typeName.Length + 16);
             int nest = 0;
             for (int i = 0; i < typeName.Length; i++)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 if (typeName[i] == '<')
                 {
                     if (nest++ == 0)
                     {
                         if (i < typeName.Length - 1 && typeName[i + 1] == '>')
+                        {
                             result.Append("<>");
+                        }
                         else
+                        {
                             result.Append("<...>");
+                        }
                     }
                 }
                 else if (typeName[i] == '>')
@@ -344,13 +394,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static ulong GetSize(Dictionary<ulong, int> sizeHints, KnownClrMemoryPointer k)
         {
             if (sizeHints.TryGetValue(k.Pointer, out int hint))
+            {
                 if ((ulong)hint > k.Size)
+                {
                     return (ulong)hint;
+                }
+            }
 
             return k.Size;
         }
 
-        private class GCObjectToRange
+        private sealed class GCObjectToRange
         {
             public ulong GCPointer { get; }
             public ulong TargetSegmentPointer { get; }
@@ -365,7 +419,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private class KnownClrMemoryPointer
+        private sealed class KnownClrMemoryPointer
         {
             private const string NativeHeapMemoryBlock = "System.Reflection.Internal.NativeHeapMemoryBlock";
             private const string MetadataReader = "System.Reflection.Metadata.MetadataReader";
@@ -374,7 +428,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             private const string ExternalMemoryBlock = "System.Reflection.Internal.ExternalMemoryBlock";
             private const string RuntimeParameterInfo = "System.Reflection.RuntimeParameterInfo";
 
-            public string Name => Object.Type?.Name ?? "<unknown_type>";
             public ClrObject Object { get; }
             public ulong Pointer { get; }
             public ulong Size { get; }
@@ -389,12 +442,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             public static bool ContainsKnownClrMemoryPointers(ClrObject obj)
             {
                 string typeName = obj.Type?.Name;
-                return typeName == NativeHeapMemoryBlock
-                    || typeName == MetadataReader
-                    || typeName == NativeHeapMemoryBlockDisposableData
-                    || typeName == ExternalMemoryBlockProvider
-                    || typeName == ExternalMemoryBlock
-                    || typeName == RuntimeParameterInfo
+                return typeName is NativeHeapMemoryBlock
+                    or MetadataReader
+                    or NativeHeapMemoryBlockDisposableData
+                    or ExternalMemoryBlockProvider
+                    or ExternalMemoryBlock
+                    or RuntimeParameterInfo
                     ;
             }
 
@@ -417,7 +470,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             int size = obj.ReadField<int>("_size");
 
                             if (pointer != 0 && size > 0)
+                            {
                                 AddSizeHint(sizeHints, pointer, size);
+                            }
 
                             yield return new KnownClrMemoryPointer(obj, pointer, size);
                         }
@@ -429,7 +484,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             int size = obj.ReadField<int>("_size");
 
                             if (pointer != 0 && size > 0)
+                            {
                                 AddSizeHint(sizeHints, pointer, size);
+                            }
 
                             yield return new KnownClrMemoryPointer(obj, pointer, size);
                         }
@@ -452,7 +509,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             int size = obj.ReadField<int>("_size");
 
                             if (pointer != 0 && size > 0)
+                            {
                                 AddSizeHint(sizeHints, pointer, size);
+                            }
                         }
 
                         break;
@@ -461,7 +520,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         {
                             MemoryBlockImpl block = obj.ReadField<MemoryBlockImpl>("Block");
                             if (block.Pointer != 0 && block.Size > 0)
+                            {
                                 yield return new KnownClrMemoryPointer(obj, block.Pointer, block.Size);
+                            }
                         }
                         break;
                 }
@@ -476,7 +537,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (sizeHints.TryGetValue(ptr, out int hint))
                     {
                         if (hint < size)
+                        {
                             sizeHints[ptr] = size;
+                        }
                     }
                     else
                     {

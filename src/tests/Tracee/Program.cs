@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -8,13 +7,13 @@ using System.IO.Pipes;
 
 namespace Tracee
 {
-    class Program
+    internal static class Program
     {
         public static int Main(string[] args)
         {
             int pid = Process.GetCurrentProcess().Id;
             string pipeServerName = args.Length > 0 ? args[0] : null;
-            if (pipeServerName == null) 
+            if (pipeServerName == null)
             {
                 Console.Error.WriteLine($"{pid} Tracee: no pipe name");
                 Console.Error.Flush();
@@ -24,7 +23,7 @@ namespace Tracee
             Console.Out.Flush();
             try
             {
-                using var pipeStream = new NamedPipeClientStream(pipeServerName);
+                using NamedPipeClientStream pipeStream = new(pipeServerName);
 
                 Console.WriteLine("{0} Tracee: connecting to pipe", pid);
                 Console.Out.Flush();
