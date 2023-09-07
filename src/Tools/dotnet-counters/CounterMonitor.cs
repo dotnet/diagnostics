@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Rendering;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -23,14 +24,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private const int BufferDelaySecs = 1;
         private int _processId;
         private CounterSet _counterList;
-        private CancellationToken _ct;
+        private CancellationToken _ct; // We aren't using this, but we do pass "ct" to Start -> should we scrap this, or just reference _ct in Start?
         private IConsole _console;
         private ICounterRenderer _renderer;
         private string _output;
         private bool _pauseCmdSet;
         private readonly TaskCompletionSource<ReturnCode> _shouldExit;
         private DiagnosticsClient _diagnosticsClient;
-        private string _metricsEventSourceSessionId;
         private MetricsPipelineSettings _settings;
 
         private class ProviderEventState
@@ -44,11 +44,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public CounterMonitor()
         {
             _pauseCmdSet = false;
-            _metricsEventSourceSessionId = Guid.NewGuid().ToString();
             _shouldExit = new TaskCompletionSource<ReturnCode>();
         }
 
-        private void DynamicAllMonitor(ICounterPayload obj)
+        private void DynamicAllMonitor(ICounterPayload payload)
         {
             if (_shouldExit.Task.IsCompleted)
             {
@@ -60,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // If we are paused, ignore the event.
                 // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
                 _renderer.ToggleStatus(_pauseCmdSet);
-                if (obj is ErrorPayload errorPayload)
+                if (payload is ErrorPayload errorPayload)
                 {
                     _renderer.SetErrorText(errorPayload.ErrorMessage);
                     switch (errorPayload.ErrorType)
@@ -71,23 +70,29 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         case ErrorType.TracingError:
                             _shouldExit.TrySetResult(ReturnCode.TracingError);
                             break;
+                        case ErrorType.NonFatal:
+                            break;
+                        default:
+                            // Is this the behavior we want, or should we throw?
+                            _shouldExit.TrySetResult(ReturnCode.UnknownError);
+                            break;
                     }
                 }
-                else if (obj is CounterEndedPayload counterEnded)
+                else if (payload is CounterEndedPayload counterEnded)
                 {
                     _renderer.CounterStopped(counterEnded);
                 }
-                else if (obj.IsMeter)
+                else if (payload.IsMeter)
                 {
-                    MeterInstrumentEventObserved(obj.Provider, obj.Timestamp);
-                    if (obj is not InstrumentationStartedPayload)
+                    MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
+                    if (payload is not InstrumentationStartedPayload)
                     {
-                        CounterPayloadReceivedMiddleman((CounterPayload)obj);
+                        CounterPayloadReceived((CounterPayload)payload);
                     }
                 }
                 else
                 {
-                    HandleDiagnosticCounter(obj);
+                    HandleDiagnosticCounter(payload);
                 }
             }
         }
@@ -142,12 +147,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             else
             {
-                CounterPayloadReceivedMiddleman((CounterPayload)payload);
+                CounterPayloadReceived((CounterPayload)payload);
             }
         }
 
-        // needs a real name
-        private void CounterPayloadReceivedMiddleman(CounterPayload payload)
+        private void CounterPayloadReceived(CounterPayload payload)
         {
             if (payload is AggregatePercentilePayload aggregatePayload)
             {
@@ -186,7 +190,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else if (providerEventState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) < now)
                     {
                         _bufferedEvents.Dequeue();
-                        CounterPayloadReceivedMiddleman((CounterPayload)payload);
+                        CounterPayloadReceived((CounterPayload)payload);
                     }
                     else
                     {
@@ -261,10 +265,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         }
                         _settings.UseSharedSession = useSharedSession;
 
-#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
-                        await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
-#pragma warning restore CA2007 // Consider calling ConfigureAwait on the awaited task
-                        ReturnCode ret = await Start(eventCounterPipeline, ct).ConfigureAwait(false);
+                        ReturnCode ret;
+                        MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+                        await using (eventCounterPipeline.ConfigureAwait(false))
+                        {
+                            ret = await Start(eventCounterPipeline, ct).ConfigureAwait(false);
+                        }
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
                     }

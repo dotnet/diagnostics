@@ -217,6 +217,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
 
+            if (!counterConfiguration.CounterFilter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
                 payload = new RatePayload(meterName, instrumentName, null, unit, tags, value, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
@@ -295,18 +300,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //Note quantiles can be empty.
             IList<Quantile> quantiles = ParseQuantiles(quantilesText);
 
-            //List<PercentilePayload> payloads = new();
-
-            /*
-            foreach (Quantile quantile in quantiles)
-            {
-                (double key, double val) = quantile;
-                payloads.Add(new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, quantile, obj.TimeStamp));
-            }*/
-
             payload = new AggregatePercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
-
-            //payload = new AggregatePercentilePayload(meterName, instrumentName, null, unit, tags, payloads, obj.TimeStamp);
         }
 
         private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
