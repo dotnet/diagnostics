@@ -13,6 +13,9 @@ namespace DotnetCounters.UnitTests
         public const string TagKey = "TestTag";
         public const string TagValue = "5";
         public const string TestMeterName = "TestMeter";
+        public const string Quantile50 = "50";
+        public const string Quantile95 = "95";
+        public const string Quantile99 = "99";
 
         public const int ProviderIndex = 1;
         public const int CounterNameIndex = 2;
