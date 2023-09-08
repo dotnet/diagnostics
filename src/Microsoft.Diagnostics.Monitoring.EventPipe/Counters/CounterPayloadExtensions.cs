@@ -13,6 +13,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             DotnetCounters
         }
 
+        // It appears that every instance where this is called is using DisplayRenderingMode.DotnetCounters - do we want to simplify this method to make that assumption?
         public static string GetDisplay(this ICounterPayload counterPayload, DisplayRenderingMode displayRenderingMode = DisplayRenderingMode.Default)
         {
             if (!counterPayload.IsMeter)

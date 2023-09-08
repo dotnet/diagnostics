@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 foreach (Quantile quantile in aggregatePayload.Quantiles)
                 {
                     (double key, double val) = quantile;
-                    PercentilePayload percentilePayload = new(payload.Provider, payload.Name, payload.DisplayName, payload.Unit, AppendQuantile(payload.Metadata, $"Percentile={key * 100}"), val, quantile, payload.Timestamp);
+                    PercentilePayload percentilePayload = new(payload.Provider, payload.Name, payload.DisplayName, payload.Unit, AppendQuantile(payload.Metadata, $"Percentile={key * 100}"), val, payload.Timestamp);
                     _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
                 }
 
@@ -373,11 +373,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                             _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                             return ReturnCode.ArgumentError;
                         }
-#pragma warning disable CA2007 // Consider calling ConfigureAwait on the awaited task
-                        await using MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
-#pragma warning restore CA2007 // Consider calling ConfigureAwait on the awaited task
 
-                        ReturnCode ret = await Start(pipeline: eventCounterPipeline, ct).ConfigureAwait(false);
+                        ReturnCode ret;
+                        MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+                        await using (eventCounterPipeline.ConfigureAwait(false))
+                        {
+                            ret = await Start(pipeline: eventCounterPipeline, ct).ConfigureAwait(false);
+                        }
+
                         return ret;
                     }
                     catch (OperationCanceledException)
