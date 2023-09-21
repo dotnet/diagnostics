@@ -25,7 +25,15 @@ namespace CommonTestRunner
             CancellationToken token)
         {
             Task collectionTask = executeCollection(token);
+            await ExecuteCollection(collectionTask, testRunner, token).ConfigureAwait(false);
+        }
 
+        public static async Task ExecuteCollection(
+            Task collectionTask,
+            TestRunner testRunner,
+            CancellationToken token,
+            Func<CancellationToken, Task> waitForPipeline = null)
+        {
             // Begin event production
             testRunner.WakeupTracee();
 
@@ -34,6 +42,11 @@ namespace CommonTestRunner
 
             try
             {
+                if (waitForPipeline != null)
+                {
+                    await waitForPipeline(token).ConfigureAwait(false);
+                }
+
                 await collectionTask.ConfigureAwait(true);
             }
             finally
