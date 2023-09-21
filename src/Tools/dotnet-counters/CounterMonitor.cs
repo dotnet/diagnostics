@@ -24,7 +24,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private const int BufferDelaySecs = 1;
         private int _processId;
         private CounterSet _counterList;
-        private CancellationToken _ct; // We aren't using this, but we do pass "ct" to Start -> should we scrap this, or just reference _ct in Start?
         private IConsole _console;
         private ICounterRenderer _renderer;
         private string _output;
@@ -247,7 +246,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _ct = ct;
                         _renderer = new ConsoleWriter(useAnsi);
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
@@ -334,7 +332,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _ct = ct;
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
                         _settings.MaxHistograms = maxHistograms;

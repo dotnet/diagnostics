@@ -7,12 +7,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
     internal interface ICounterRenderer
     {
-        void Initialize(); //Maps to started?
-        void EventPipeSourceConnected(); // PipelineStarted
-        void ToggleStatus(bool paused); //Occurs every event
+        void Initialize();
+        void EventPipeSourceConnected();
+        void ToggleStatus(bool paused);
         void CounterPayloadReceived(CounterPayload payload, bool paused);
         void CounterStopped(CounterPayload payload);
         void SetErrorText(string errorText);
-        void Stop(); //Maps to pipeline stopped
+        void Stop();
     }
 }

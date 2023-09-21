@@ -59,9 +59,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public int Series { get; }
     }
 
-    internal sealed class StandardCounterPayload : CounterPayload
+    internal sealed class EventCounterPayload : CounterPayload
     {
-        public StandardCounterPayload(DateTime timestamp,
+        public EventCounterPayload(DateTime timestamp,
             string provider,
             string name,
             string displayName,
