@@ -162,6 +162,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public AggregatePercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
             base(timestamp, providerName, name, displayName, displayUnits, 0.0, CounterType.Metric, metadata, EventType.Histogram)
         {
+            string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
+            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
             Quantiles = quantiles.ToArray();
         }
 
