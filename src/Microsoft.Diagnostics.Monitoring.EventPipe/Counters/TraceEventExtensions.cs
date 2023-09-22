@@ -182,12 +182,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleBeginInstrumentReporting(TraceEvent traceEvent, CounterConfiguration configuration, out ICounterPayload payload)
+        private static void HandleBeginInstrumentReporting(TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
 
             string payloadSessionId = (string)traceEvent.PayloadValue(0);
-            if (payloadSessionId != configuration.SessionId)
+            if (payloadSessionId != counterConfiguration.SessionId)
             {
                 return;
             }
@@ -195,6 +195,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string meterName = (string)traceEvent.PayloadValue(1);
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)traceEvent.PayloadValue(3);
+
+            if (!counterConfiguration.CounterFilter.IsIncluded(meterName, instrumentName))
+            {
+                return;
+            }
+
 
             payload = new InstrumentationStartedPayload(meterName, instrumentName, traceEvent.TimeStamp);
         }
