@@ -108,7 +108,10 @@ CreateDebuggingInterfaceFromVersion3(
 
 EXTERN_C HRESULT
 RegisterForRuntimeStartupRemotePort(
-    _In_ DWORD dwRemotePortId,
-    _In_ LPCWSTR mscordbiPath,
-    _In_ LPCWSTR assemblyBasePath,
+    _In_ LPCWSTR szIp,
+    _In_ DWORD dwPort,
+    _In_ LPCWSTR szPlatform,
+    _In_ BOOL bIsServer,
+    _In_ LPCWSTR szMscordbiPath,
+    _In_ LPCWSTR szAssemblyBasePath,
     _Out_ IUnknown ** ppCordb);
