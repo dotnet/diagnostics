@@ -2,9 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-
+using System.Collections.Generic;
 using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Internal.Common.Utils
@@ -72,7 +71,7 @@ namespace Microsoft.Internal.Common.Utils
         public static bool ValidateArgumentsForAttach(int processId, string name, string port, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
-            if (processId == 0 && name == null && string.IsNullOrEmpty(port))
+            if (processId == 0 && string.IsNullOrEmpty(name) && string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("Must specify either --process-id, --name, or --diagnostic-port.");
                 return false;
@@ -82,24 +81,24 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine($"{processId} is not a valid process ID");
                 return false;
             }
-            else if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
+            else if (processId != 0 && !string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("Only one of the --name, --process-id, or --diagnostic-port options may be specified.");
                 return false;
             }
-            else if (processId != 0 && name != null)
+            else if (processId != 0 && !string.IsNullOrEmpty(name))
             {
-                Console.WriteLine("Can only one of specify --name or --process-id.");
+                Console.WriteLine("Only one of the --name or --process-id options may be specified.");
                 return false;
             }
             else if (processId != 0 && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --process-id or --diagnostic-port.");
+                Console.WriteLine("Only one of the --process-id or --diagnostic-port options may be specified.");
                 return false;
             }
-            else if (name != null && !string.IsNullOrEmpty(port))
+            else if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("Can only one of specify --name or --diagnostic-port.");
+                Console.WriteLine("Only one of the --name or --diagnostic-port options may be specified.");
                 return false;
             }
             // If we got this far it means only one of --name/--diagnostic-port/--process-id was specified
@@ -108,7 +107,7 @@ namespace Microsoft.Internal.Common.Utils
                 return true;
             }
             // Resolve name option
-            else if (name != null)
+            else if (!string.IsNullOrEmpty(name))
             {
                 processId = CommandUtils.FindProcessIdWithName(name);
                 if (processId < 0)

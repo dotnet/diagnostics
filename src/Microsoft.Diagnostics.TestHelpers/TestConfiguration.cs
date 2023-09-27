@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["Timestamp"] = GetTimeStampText(),
                 ["TempPath"] = Path.GetTempPath(),
                 ["WorkingDir"] = GetInitialWorkingDir(),
-                ["OS"] = OS.Kind.ToString(),
+                ["OS"] = OS.Kind.ToString().ToLowerInvariant(),
                 ["IsAlpine"] = OS.IsAlpine.ToString().ToLowerInvariant(),
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),

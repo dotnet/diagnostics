@@ -16,6 +16,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 .AddCommand(CollectCommandHandler.CollectCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that gcdumps can be collected from."))
                 .AddCommand(ReportCommandHandler.ReportCommand())
+                .AddCommand(ConvertCommandHandler.ConvertCommand())
                 .UseDefaults()
                 .Build();
 

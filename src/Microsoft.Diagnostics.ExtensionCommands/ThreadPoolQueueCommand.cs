@@ -89,8 +89,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             count++;
 
-            WorkInfo wi;
-            if (!stats.ContainsKey(statName))
+            if (!stats.TryGetValue(statName, out WorkInfo wi))
             {
                 wi = new WorkInfo()
                 {
@@ -98,10 +97,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Count = 0
                 };
                 stats[statName] = wi;
-            }
-            else
-            {
-                wi = stats[statName];
             }
 
             wi.Count++;

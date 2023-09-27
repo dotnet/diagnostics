@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 // Host can contain wildcard (*) that is a reserved charachter in URI's.
                 // Replace with dummy localhost representation just for parsing purpose.
-                if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+                if (endPoint.Contains("//*"))
                 {
                     usesWildcardHost = true;
                     uriToParse = endPoint.Replace("//*", "//localhost");
