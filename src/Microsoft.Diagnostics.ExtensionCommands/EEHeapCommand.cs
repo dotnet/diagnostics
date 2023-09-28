@@ -525,11 +525,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteSegment(gcOutput, segment);
                 }
 
-                // print frozen object heap
+                // print NonGC heap
                 segments = HeapWithFilters.EnumerateFilteredSegments(gc_heap).Where(seg => seg.Kind == GCSegmentKind.Frozen).OrderBy(seg => seg.Start);
                 if (segments.Any())
                 {
-                    Console.WriteLine("Frozen object heap");
+                    Console.WriteLine("NonGC heap");
                     WriteSegmentHeader(gcOutput);
 
                     foreach (ClrSegment segment in segments)
