@@ -105,6 +105,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 ILogger logger = loggerFactory.CreateLogger("dotnet-dsrouter");
 
+                logger.LogInformation($"Starting dotnet-dsrouter using pid={Process.GetCurrentProcess().Id}");
+
                 Task<int> routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
 
                 while (!linkedCancelToken.IsCancellationRequested)
@@ -127,7 +129,19 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         }
                     }
                 }
-                return routerTask.Result;
+
+                if (!routerTask.IsCompleted)
+                {
+                    cancelRouterTask.Cancel();
+                }
+
+                await Task.WhenAny(routerTask, Task.Delay(1000, CancellationToken.None)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
+                {
+                    return routerTask.Result;
+                }
+
+                return 0;
             }
         }
 
@@ -333,21 +347,38 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
+        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("ios simulator", "127.0.0.1:9000", false, verbose);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("ios device", "127.0.0.1:9000", true, verbose);
+            return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("android emulator", "10.0.2.2:9000", false, verbose);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose)
+        {
+            logDiagnosticPortsConfiguration("android emulator", "127.0.0.1:9000", false, verbose);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
+        }
+
         private static string GetDefaultIpcServerPath(ILogger logger)
         {
+            string path = string.Empty;
             int processId = Process.GetCurrentProcess().Id;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
-                if (File.Exists(path))
-                {
-                    logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
-
-                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}");
-                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
-                }
-
-                return path.Substring(PidIpcEndpoint.IpcRootPath.Length);
+                path = $"dotnet-diagnostic-dsrouter-{processId}";
             }
             else
             {
@@ -358,19 +389,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 #endif
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
-
-                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
-                if (Directory.GetFiles(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket").Length != 0)
-                {
-                    logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
-
-                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
-                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
-                }
-
-                return path;
+                path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
             }
 
+            logger?.LogDebug($"Using default IPC server path, {path}.");
+            logger?.LogDebug($"Attach to default dotnet-dsrouter IPC server using --process-id {processId} diagnostic tooling argument.");
+
+            return path;
         }
 
         private static TcpClientRouterFactory.CreateInstanceDelegate ChooseTcpClientRouterFactory(string forwardPort, ILogger logger)
@@ -409,6 +434,23 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
             }
             return tcpServerRouterFactory;
+        }
+
+        private static void logDiagnosticPortsConfiguration(string deviceName, string deviceTcpIpAddress, bool deviceListenMode, string verbose)
+        {
+            StringBuilder message = new();
+
+            if (!string.IsNullOrEmpty(verbose))
+            {
+                deviceName = !string.IsNullOrEmpty(deviceName) ? $" on {deviceName} " : " ";
+                message.AppendLine($"Start an application{deviceName}with one of the following environment variables set:");
+            }
+
+            string listenMode = deviceListenMode ? ",listen" : ",connect";
+            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend{listenMode}");
+            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend{listenMode}");
+
+            Console.WriteLine(message.ToString());
         }
 
         private static void checkLoopbackOnly(string tcpServer)

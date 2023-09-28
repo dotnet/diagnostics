@@ -27,6 +27,14 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private delegate Task<int> DiagnosticsServerIpcClientWebSocketServerRouterDelegate(CancellationToken ct, string ipcClient, string webSocket, int runtimeTimeoutS, string verbose);
 
+        private delegate Task<int> DiagnosticsServerIpcServerIOSSimulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+
+        private delegate Task<int> DiagnosticsServerIpcServerIOSRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+
+        private delegate Task<int> DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+
+        private delegate Task<int> DiagnosticsServerIpcServerAndroidRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose);
+
         private static Command IpcClientTcpServerRouterCommand() =>
             new(
                 name: "client-server",
@@ -102,6 +110,58 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpClientRouter).GetCommandHandler(),
                 // Options
                 IpcClientAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+            };
+
+        private static Command IOSSimulatorRouterCommand() =>
+            new(
+                name: "ios-sim",
+                description: "Start a .NET application Diagnostics Server routing local IPC server <--> iOS Simulator. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                "and a TCP/IP server (accepting runtime TCP client).")
+            {
+                // Handler
+                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerIOSSimulatorRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerIOSSimulatorRouter).GetCommandHandler(),
+                // Options
+                RuntimeTimeoutOption(), VerboseOption()
+            };
+
+        private static Command IOSRouterCommand() =>
+            new(
+                name: "ios",
+                description: "Start a .NET application Diagnostics Server routing local IPC server <--> iOS Device over usbmux. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                "and a TCP/IP client (connecting runtime TCP server over usbmux).")
+            {
+                        // Handler
+                        HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerIOSRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerIOSRouter).GetCommandHandler(),
+                        // Options
+                        RuntimeTimeoutOption(), VerboseOption()
+            };
+
+        private static Command AndroidEmulatorRouterCommand() =>
+            new(
+                name: "android-emu",
+                description: "Start a .NET application Diagnostics Server routing local IPC server <--> Android Emulator. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                "and a TCP/IP server (accepting runtime TCP client).")
+            {
+                        // Handler
+                        HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerAndroidEmulatorRouter).GetCommandHandler(),
+                        // Options
+                        RuntimeTimeoutOption(), VerboseOption()
+            };
+
+        private static Command AndroidRouterCommand() =>
+            new(
+                name: "android",
+                description: "Start a .NET application Diagnostics Server routing local IPC server <--> Android Device. " +
+                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                "and a TCP/IP server (accepting runtime TCP client).")
+            {
+                        // Handler
+                        HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerAndroidRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerAndroidRouter).GetCommandHandler(),
+                        // Options
+                        RuntimeTimeoutOption(), VerboseOption()
             };
 
         private static Option IpcClientAddressOption() =>
@@ -193,6 +253,10 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 .AddCommand(IpcClientTcpClientRouterCommand())
                 .AddCommand(IpcServerWebSocketServerRouterCommand())
                 .AddCommand(IpcClientWebSocketServerRouterCommand())
+                .AddCommand(IOSSimulatorRouterCommand())
+                .AddCommand(IOSRouterCommand())
+                .AddCommand(AndroidEmulatorRouterCommand())
+                .AddCommand(AndroidRouterCommand())
                 .UseDefaults()
                 .Build();
 

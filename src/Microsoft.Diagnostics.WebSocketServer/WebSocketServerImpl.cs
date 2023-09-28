@@ -162,7 +162,7 @@ public class WebSocketServerImpl : IWebSocketServer
         string uriToParse;
         // Host can contain wildcard (*) that is a reserved charachter in URI's.
         // Replace with dummy localhost representation just for parsing purpose.
-        if (endPoint.IndexOf("//*", StringComparison.Ordinal) != -1)
+        if (endPoint.Contains("//*"))
         {
             // FIXME: This is a workaround for the fact that Uri.Host is not set for wildcard host.
             throw new ArgumentException("Wildcard host is not supported for WebSocket endpoints");

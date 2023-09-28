@@ -172,10 +172,10 @@
   <HostArgs Condition="'$(SetFxVersion)' == 'true'">--fx-version $(FrameworkVersion)</HostArgs>
 
   <Options>
-    <Option Condition="$(OS) == Linux">
+    <Option Condition="'$(OS)' == 'linux'">
       <SOSPath>$(InstallDir)/libsosplugin.so</SOSPath>
     </Option>
-    <Option Condition="$(OS) == OSX">
+    <Option Condition="'$(OS)' == 'osx'">
       <SOSPath>$(InstallDir)/libsosplugin.dylib</SOSPath>
     </Option>
   </Options>

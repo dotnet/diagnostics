@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
@@ -91,8 +92,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 processStartedResult = process.Start();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                logger.LogError($"Failed executing {adbTool} {command}. Error: {ex.Message}.");
             }
 
             if (processStartedResult)
@@ -107,12 +109,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 if (!string.IsNullOrEmpty(stdout))
                 {
-                    logger.LogTrace($"stdout: {stdout}");
+                    logger.LogTrace($"stdout: {stdout.TrimEnd()}");
                 }
 
                 if (!string.IsNullOrEmpty(stderr))
                 {
-                    logger.LogError($"stderr: {stderr}");
+                    logger.LogError($"stderr: {stderr.TrimEnd()}");
                 }
             }
 
@@ -130,6 +132,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
     {
         private readonly int _port;
         private bool _ownsPortReverse;
+        private Task _portReverseTask;
+        private CancellationTokenSource _portReverseTaskCancelToken;
 
         public static TcpServerRouterFactory CreateADBInstance(string tcpServer, int runtimeTimeoutMs, ILogger logger)
         {
@@ -147,12 +151,32 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             // Enable port reverse.
             _ownsPortReverse = ADBCommandExec.AdbAddPortReverse(_port, Logger);
 
+            _portReverseTaskCancelToken = new CancellationTokenSource();
+            _portReverseTask = Task.Run(async () => {
+                using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+                while (await timer.WaitForNextTickAsync(_portReverseTaskCancelToken.Token).ConfigureAwait(false) && !_portReverseTaskCancelToken.Token.IsCancellationRequested)
+                {
+                    // Make sure reverse port configuration is still active.
+                    if (ADBCommandExec.AdbAddPortReverse(_port, Logger) && !_ownsPortReverse)
+                    {
+                        _ownsPortReverse = true;
+                    }
+                }
+            }, _portReverseTaskCancelToken.Token);
+
             base.Start();
         }
 
         public override async Task Stop()
         {
             await base.Stop().ConfigureAwait(false);
+
+            try
+            {
+                _portReverseTaskCancelToken.Cancel();
+                await _portReverseTask.ConfigureAwait(false);
+            }
+            catch { }
 
             // Disable port reverse.
             ADBCommandExec.AdbRemovePortReverse(_port, _ownsPortReverse, Logger);
@@ -164,6 +188,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
     {
         private readonly int _port;
         private bool _ownsPortForward;
+        private Task _portForwardTask;
+        private CancellationTokenSource _portForwardTaskCancelToken;
 
         public static TcpClientRouterFactory CreateADBInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
         {
@@ -180,10 +206,30 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             // Enable port forwarding.
             _ownsPortForward = ADBCommandExec.AdbAddPortForward(_port, _logger);
+
+            _portForwardTaskCancelToken = new CancellationTokenSource();
+            _portForwardTask = Task.Run(async () => {
+                using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+                while (await timer.WaitForNextTickAsync(_portForwardTaskCancelToken.Token).ConfigureAwait(false) && !_portForwardTaskCancelToken.Token.IsCancellationRequested)
+                {
+                    // Make sure forward port configuration is still active.
+                    if (ADBCommandExec.AdbAddPortForward(_port, _logger) && !_ownsPortForward)
+                    {
+                        _ownsPortForward = true;
+                    }
+                }
+            }, _portForwardTaskCancelToken.Token);
         }
 
         public override void Stop()
         {
+            try
+            {
+                _portForwardTaskCancelToken.Cancel();
+                _portForwardTask.Wait();
+            }
+            catch { }
+
             // Disable port forwarding.
             ADBCommandExec.AdbRemovePortForward(_port, _ownsPortForward, _logger);
             _ownsPortForward = false;

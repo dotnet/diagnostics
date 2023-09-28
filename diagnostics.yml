@@ -134,12 +134,12 @@ extends:
                 Build_Release:
                   _BuildConfig: Release
                   _BuildArch: x64
-                  _PublishArtifacts: bin/Linux.x64.Release
+                  _PublishArtifacts: bin/linux.x64.Release
                 ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
                   Build_Debug:
                     _BuildConfig: Debug
                     _BuildArch: x64
-                    _PublishArtifacts: bin/Linux.x64.Debug
+                    _PublishArtifacts: bin/linux.x64.Debug
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -153,14 +153,14 @@ extends:
                 Build_Release:
                   _BuildConfig: Release
                   _BuildArch: x64
-                  _PublishArtifacts: bin/Linux.x64.Release
-                  _ArtifactsTargetPath: bin/Linux-musl.x64.Release
+                  _PublishArtifacts: bin/linux.x64.Release
+                  _ArtifactsTargetPath: bin/linux-musl.x64.Release
                 ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
                   Build_Debug:
                     _BuildConfig: Debug
                     _BuildArch: x64
-                    _PublishArtifacts: bin/Linux.x64.Debug
-                    _ArtifactsTargetPath: bin/Linux-musl.x64.Debug
+                    _PublishArtifacts: bin/linux.x64.Debug
+                    _ArtifactsTargetPath: bin/linux-musl.x64.Debug
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -171,7 +171,7 @@ extends:
                 Build_Release:
                   _BuildConfig: Release
                   _BuildArch: x64
-                  _PublishArtifacts: bin/OSX.x64.Release
+                  _PublishArtifacts: bin/osx.x64.Release
                 ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
                   Build_Debug:
                     _BuildConfig: Debug
@@ -188,7 +188,7 @@ extends:
                 Build_Release:
                   _BuildConfig: Release
                   _BuildArch: arm64
-                  _PublishArtifacts: bin/OSX.arm64.Release
+                  _PublishArtifacts: bin/osx.arm64.Release
                 ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
                   Build_Debug:
                     _BuildConfig: Debug
@@ -207,7 +207,7 @@ extends:
                   Build_Release:
                     _BuildConfig: Release
                     _BuildArch: arm
-                    _PublishArtifacts: bin/Linux.arm.Release
+                    _PublishArtifacts: bin/linux.arm.Release
 
           - template: /eng/pipelines/build.yml
             parameters:
@@ -221,7 +221,7 @@ extends:
                   Build_Release:
                     _BuildConfig: Release
                     _BuildArch: arm64
-                    _PublishArtifacts: bin/Linux.arm64.Release
+                    _PublishArtifacts: bin/linux.arm64.Release
 
           - template: /eng/pipelines/build.yml
             parameters:
@@ -236,8 +236,8 @@ extends:
                   Build_Release:
                     _BuildConfig: Release
                     _BuildArch: arm
-                    _PublishArtifacts: bin/Linux.arm.Release
-                    _ArtifactsTargetPath: bin/Linux-musl.arm.Release
+                    _PublishArtifacts: bin/linux.arm.Release
+                    _ArtifactsTargetPath: bin/linux-musl.arm.Release
 
           - template: /eng/pipelines/build.yml
             parameters:
@@ -252,8 +252,8 @@ extends:
                   Build_Release:
                     _BuildConfig: Release
                     _BuildArch: arm64
-                    _PublishArtifacts: bin/Linux.arm64.Release
-                    _ArtifactsTargetPath: bin/Linux-musl.arm64.Release
+                    _PublishArtifacts: bin/linux.arm64.Release
+                    _ArtifactsTargetPath: bin/linux-musl.arm64.Release
 
         ############################
         #                          #

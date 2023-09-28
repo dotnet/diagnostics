@@ -158,8 +158,11 @@ typedef HRESULT (STDAPICALLTYPE *FPCoreCLRCreateCordbObject3)(
     IUnknown **ppCordb);
 
 typedef HRESULT (STDAPICALLTYPE *FPCreateRemoteCordbObject)(
-    DWORD port,
-    LPCWSTR assemblyBasePath,
+    LPCWSTR szIp,
+    DWORD dwPort,
+    LPCWSTR szPlatform,
+    BOOL bIsServer,
+    LPCWSTR szAssemblyBasePath,
     IUnknown **ppCordb);
 
 HRESULT CreateCoreDbg(
@@ -2157,7 +2160,7 @@ CLRCreateInstance(
     return pDebuggingImpl->QueryInterface(riid, ppInterface);
 }
 
-HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCWSTR assemblyBasePath, IUnknown **ppCordb)
+HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, LPCWSTR szIp, DWORD dwPort, LPCWSTR szPlatform, BOOL bIsServer, LPCWSTR assemblyBasePath, IUnknown **ppCordb)
 {
     PUBLIC_CONTRACT;
     HRESULT hr = S_OK;
@@ -2169,7 +2172,7 @@ HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCWSTR assemb
         return CORDBG_E_INCOMPATIBLE_PROTOCOL;
     }
 
-    return fpCreate(portId, assemblyBasePath, ppCordb);
+    return fpCreate(szIp, dwPort, szPlatform, bIsServer, assemblyBasePath, ppCordb);
 
     return hr;
 }
@@ -2177,22 +2180,25 @@ HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, DWORD portId, LPCWSTR assemb
 DLLEXPORT
 HRESULT
 RegisterForRuntimeStartupRemotePort(
-    _In_ DWORD dwRemotePortId,
-    _In_ LPCWSTR mscordbiPath,
-    _In_ LPCWSTR assemblyBasePath,
+    _In_ LPCWSTR szIp,
+    _In_ DWORD dwPort,
+    _In_ LPCWSTR szPlatform,
+    _In_ BOOL bIsServer,
+    _In_ LPCWSTR szMscordbiPath,
+    _In_ LPCWSTR szAssemblyBasePath,
     _Out_ IUnknown ** ppCordb)
 {
     PUBLIC_CONTRACT;
     HRESULT hr = S_OK;
     HMODULE hMod = NULL;
 
-    hMod = LoadLibraryW(mscordbiPath);
+    hMod = LoadLibraryW(szMscordbiPath);
     if (hMod == NULL)
     {
         hr = CORDBG_E_DEBUG_COMPONENT_MISSING;
         return hr;
     }
 
-    hr = CreateCoreDbgRemotePort(hMod, dwRemotePortId, assemblyBasePath, ppCordb);
+    hr = CreateCoreDbgRemotePort(hMod, szIp, dwPort, szPlatform, bIsServer, szAssemblyBasePath, ppCordb);
     return S_OK;
 }
