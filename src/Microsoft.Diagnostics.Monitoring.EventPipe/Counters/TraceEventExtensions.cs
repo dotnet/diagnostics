@@ -202,7 +202,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
 
-            payload = new InstrumentationStartedPayload(meterName, instrumentName, traceEvent.TimeStamp);
+            payload = new BeginInstrumentReportingPayload(meterName, instrumentName, traceEvent.TimeStamp);
         }
 
         private static void HandleCounterRate(TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
@@ -308,8 +308,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             payload = new AggregatePercentilePayload(meterName, instrumentName, null, unit, tags, quantiles, obj.TimeStamp);
         }
-
-        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
 
         private static void HandleHistogramLimitReached(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
         {

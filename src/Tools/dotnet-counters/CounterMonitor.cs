@@ -46,56 +46,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _shouldExit = new TaskCompletionSource<ReturnCode>();
         }
 
-        private void DynamicAllMonitor(ICounterPayload payload)
-        {
-            if (_shouldExit.Task.IsCompleted)
-            {
-                return;
-            }
-
-            lock (this)
-            {
-                // If we are paused, ignore the event.
-                // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-                _renderer.ToggleStatus(_pauseCmdSet);
-                if (payload is ErrorPayload errorPayload)
-                {
-                    _renderer.SetErrorText(errorPayload.ErrorMessage);
-                    switch (errorPayload.ErrorType)
-                    {
-                        case ErrorType.SessionStartupError:
-                            _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
-                            break;
-                        case ErrorType.TracingError:
-                            _shouldExit.TrySetResult(ReturnCode.TracingError);
-                            break;
-                        case ErrorType.NonFatal:
-                            break;
-                        default:
-                            // Is this the behavior we want, or should we throw?
-                            _shouldExit.TrySetResult(ReturnCode.UnknownError);
-                            break;
-                    }
-                }
-                else if (payload is CounterEndedPayload counterEnded)
-                {
-                    _renderer.CounterStopped(counterEnded);
-                }
-                else if (payload.IsMeter)
-                {
-                    MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
-                    if (payload is not InstrumentationStartedPayload)
-                    {
-                        CounterPayloadReceived((CounterPayload)payload);
-                    }
-                }
-                else
-                {
-                    HandleDiagnosticCounter(payload);
-                }
-            }
-        }
-
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
         {
             if (!_providerEventStates.TryGetValue(meterName, out ProviderEventState providerEventState))
@@ -553,7 +503,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             Task monitorTask = new(async () => {
                 try
                 {
-                    await (await pipeline.StartAsync(token).ConfigureAwait(false)).ConfigureAwait(false);
+                    Task runAsyncTask = await pipeline.StartAsync(token).ConfigureAwait(false);
+                    await runAsyncTask.ConfigureAwait(false);
                 }
                 catch (DiagnosticsClientException ex)
                 {
@@ -606,9 +557,54 @@ namespace Microsoft.Diagnostics.Tools.Counters
             return await _shouldExit.Task.ConfigureAwait(false);
         }
 
-        public void Log(ICounterPayload counter)
+        void ICountersLogger.Log(ICounterPayload payload)
         {
-            DynamicAllMonitor(counter);
+            if (_shouldExit.Task.IsCompleted)
+            {
+                return;
+            }
+
+            lock (this)
+            {
+                // If we are paused, ignore the event.
+                // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
+                _renderer.ToggleStatus(_pauseCmdSet);
+                if (payload is ErrorPayload errorPayload)
+                {
+                    _renderer.SetErrorText(errorPayload.ErrorMessage);
+                    switch (errorPayload.ErrorType)
+                    {
+                        case ErrorType.SessionStartupError:
+                            _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
+                            break;
+                        case ErrorType.TracingError:
+                            _shouldExit.TrySetResult(ReturnCode.TracingError);
+                            break;
+                        case ErrorType.NonFatal:
+                            break;
+                        default:
+                            // Is this the behavior we want, or should we throw?
+                            _shouldExit.TrySetResult(ReturnCode.UnknownError);
+                            break;
+                    }
+                }
+                else if (payload is CounterEndedPayload counterEnded)
+                {
+                    _renderer.CounterStopped(counterEnded);
+                }
+                else if (payload.IsMeter)
+                {
+                    MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
+                    if (payload.IsValuePublishedEvent)
+                    {
+                        CounterPayloadReceived((CounterPayload)payload);
+                    }
+                }
+                else
+                {
+                    HandleDiagnosticCounter(payload);
+                }
+            }
         }
 
         public Task PipelineStarted(CancellationToken token)

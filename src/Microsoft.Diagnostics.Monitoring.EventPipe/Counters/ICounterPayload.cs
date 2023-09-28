@@ -46,5 +46,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         bool IsMeter { get; }
 
         int Series { get; }
+
+        bool IsValuePublishedEvent { get => EventType != EventType.BeginInstrumentReporting; }
     }
 }

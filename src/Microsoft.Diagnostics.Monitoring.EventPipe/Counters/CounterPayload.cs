@@ -115,10 +115,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
-    internal sealed class InstrumentationStartedPayload : MeterPayload
+    internal sealed class BeginInstrumentReportingPayload : MeterPayload
     {
-        public InstrumentationStartedPayload(string providerName, string name, DateTime timestamp)
-            : base(timestamp, providerName, name, string.Empty, string.Empty, 0.0, CounterType.Metric, null, EventType.InstrumentationStarted)
+        public BeginInstrumentReportingPayload(string providerName, string name, DateTime timestamp)
+            : base(timestamp, providerName, name, string.Empty, string.Empty, 0.0, CounterType.Metric, null, EventType.BeginInstrumentReporting)
         {
         }
     }
@@ -191,7 +191,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         Histogram,
         UpDownCounter,
         Error,
-        InstrumentationStarted,
+        BeginInstrumentReporting,
         CounterEnded
     }
 

@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 builder
                     .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
                     .Append(" \"provider\": \"").Append(JsonEscape(payload.Provider)).Append("\", ")
-                    .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay(CounterPayloadExtensions.DisplayRenderingMode.DotnetCounters))).Append("\", ")
+                    .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
                     .Append(" \"tags\": \"").Append(JsonEscape(payload.Metadata)).Append("\", ")
                     .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
