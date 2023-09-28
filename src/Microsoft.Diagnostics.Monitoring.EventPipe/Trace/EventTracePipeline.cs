@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 //It is important that the underlying stream be completely read, or disposed.
                 //If rundown is enabled, the underlying stream must be drained or disposed, or the app hangs.
-                using Stream eventStream = await _provider.Value.ProcessEvents(Client, Settings.Duration, Settings.ResumeRuntime, token).ConfigureAwait(false); ;
+                using Stream eventStream = await _provider.Value.ProcessEvents(Client, Settings.Duration, Settings.ResumeRuntime, token).ConfigureAwait(false);
 
                 await _onStreamAvailable(eventStream, token).ConfigureAwait(false);
             }

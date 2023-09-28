@@ -11,13 +11,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (!counterPayload.IsMeter)
             {
+                string unit = counterPayload.Unit == "count" ? "Count" : counterPayload.Unit;
                 if (counterPayload.CounterType == CounterType.Rate)
                 {
-                    return $"{counterPayload.DisplayName} ({counterPayload.Unit} / {counterPayload.Series} sec)";
+                    return $"{counterPayload.DisplayName} ({unit} / {counterPayload.Series} sec)";
                 }
                 if (!string.IsNullOrEmpty(counterPayload.Unit))
                 {
-                    return $"{counterPayload.DisplayName} ({counterPayload.Unit})";
+                    return $"{counterPayload.DisplayName} ({unit})";
                 }
             }
 

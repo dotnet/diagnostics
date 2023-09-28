@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         {
             EventType eventType = payload.EventType;
 
-            if (eventType == EventType.Error || eventType == EventType.CounterEnded)
+            if (eventType.IsError() || eventType == EventType.CounterEnded)
             {
                 // not currently logging the error messages
 

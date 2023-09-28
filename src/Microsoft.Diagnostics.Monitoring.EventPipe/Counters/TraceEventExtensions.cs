@@ -320,10 +320,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
-            string errorMessage = $"Warning: Histogram tracking limit ({configuration.MaxHistograms}) reached. Not all data is being shown." + Environment.NewLine +
-                            "The limit can be changed but will use more memory in the target process.";
+            string errorMessage = $"Warning: Histogram tracking limit ({configuration.MaxHistograms}) reached. Not all data is being shown. The limit can be changed but will use more memory in the target process.";
 
-            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp, EventType.HistogramLimitError);
         }
 
         private static void HandleTimeSeriesLimitReached(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
@@ -339,7 +338,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = $"Warning: Time series tracking limit ({configuration.MaxTimeseries}) reached. Not all data is being shown. The limit can be changed but will use more memory in the target process.";
 
-            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp, EventType.TimeSeriesLimitError);
         }
 
         private static void HandleError(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
@@ -355,7 +354,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             string errorMessage = "Error reported from target process:" + Environment.NewLine + error;
 
-            payload = new ErrorPayload(errorMessage, obj.TimeStamp, ErrorType.TracingError);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp, EventType.ErrorTargetProcess);
         }
 
         private static void HandleMultipleSessionsNotSupportedError(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
@@ -374,7 +373,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string errorMessage = "Error: Another metrics collection session is already in progress for the target process." + Environment.NewLine +
                 "Concurrent sessions are not supported.";
 
-                payload = new ErrorPayload(errorMessage, obj.TimeStamp, ErrorType.SessionStartupError);
+                payload = new ErrorPayload(errorMessage, obj.TimeStamp, EventType.MultipleSessionsNotSupportedError);
             }
         }
 
@@ -425,7 +424,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (TryCreateSharedSessionConfiguredIncorrectlyMessage(obj, clientId, out string message))
             {
-                payload = new ErrorPayload(message.ToString(), obj.TimeStamp);
+                payload = new ErrorPayload(message.ToString(), obj.TimeStamp, EventType.MultipleSessionsConfiguredIncorrectlyError);
 
                 inactiveSharedSessions.Add(clientId);
             }
@@ -446,7 +445,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string errorMessage = "Exception thrown from an observable instrument callback in the target process:" + Environment.NewLine +
                 error;
 
-            payload = new ErrorPayload(errorMessage, obj.TimeStamp);
+            payload = new ErrorPayload(errorMessage, obj.TimeStamp, EventType.ObservableInstrumentCallbackError);
         }
 
         private static List<Quantile> ParseQuantiles(string quantileList)

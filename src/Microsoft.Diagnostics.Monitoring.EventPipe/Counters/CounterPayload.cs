@@ -172,16 +172,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal sealed class ErrorPayload : MeterPayload
     {
-        public ErrorPayload(string errorMessage, DateTime timestamp, ErrorType errorType = ErrorType.NonFatal)
-            : base(timestamp, string.Empty, string.Empty, string.Empty, string.Empty, 0.0, CounterType.Metric, null, EventType.Error)
+        public ErrorPayload(string errorMessage, DateTime timestamp, EventType eventType)
+            : base(timestamp, string.Empty, string.Empty, string.Empty, string.Empty, 0.0, CounterType.Metric, null, eventType)
         {
             ErrorMessage = errorMessage;
-            ErrorType = errorType;
         }
 
         public string ErrorMessage { get; }
-
-        public ErrorType ErrorType { get; }
     }
 
     internal enum EventType : int
@@ -190,15 +187,44 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         Gauge,
         Histogram,
         UpDownCounter,
-        Error,
         BeginInstrumentReporting,
-        CounterEnded
+        CounterEnded,
+        HistogramLimitError,
+        TimeSeriesLimitError,
+        ErrorTargetProcess,
+        MultipleSessionsNotSupportedError,
+        MultipleSessionsConfiguredIncorrectlyError,
+        ObservableInstrumentCallbackError
     }
 
-    internal enum ErrorType : int
+    internal static class EventTypeExtensions
     {
-        NonFatal,
-        TracingError,
-        SessionStartupError
+        public static bool IsError(this EventType eventType)
+        {
+            return eventType is EventType.HistogramLimitError
+                || eventType is EventType.TimeSeriesLimitError
+                || eventType is EventType.ErrorTargetProcess
+                || eventType is EventType.MultipleSessionsNotSupportedError
+                || eventType is EventType.MultipleSessionsConfiguredIncorrectlyError
+                || eventType is EventType.ObservableInstrumentCallbackError;
+        }
+
+        public static bool IsNonFatalError(this EventType eventType)
+        {
+            return IsError(eventType)
+                && !IsTracingError(eventType)
+                && !IsSessionStartupError(eventType);
+        }
+
+        public static bool IsTracingError(this EventType eventType)
+        {
+            return eventType is EventType.ErrorTargetProcess;
+        }
+
+        public static bool IsSessionStartupError(this EventType eventType)
+        {
+            return eventType is EventType.MultipleSessionsNotSupportedError
+                || eventType is EventType.MultipleSessionsConfiguredIncorrectlyError;
+        }
     }
 }

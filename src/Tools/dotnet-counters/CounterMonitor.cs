@@ -571,21 +571,46 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _renderer.ToggleStatus(_pauseCmdSet);
                 if (payload is ErrorPayload errorPayload)
                 {
-                    _renderer.SetErrorText(errorPayload.ErrorMessage);
-                    switch (errorPayload.ErrorType)
+                    // Several of the error messages used by Dotnet are specific to the tool;
+                    // the error messages found in errorPayload.ErrorMessage are not tool-specific.
+                    // This replaces the generic error messages with specific ones as-needed.
+                    string errorMessage = string.Empty;
+                    switch (errorPayload.EventType)
                     {
-                        case ErrorType.SessionStartupError:
-                            _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
+                        case EventType.HistogramLimitError:
+                            errorMessage = $"Warning: Histogram tracking limit ({_settings.MaxHistograms}) reached. Not all data is being shown." + Environment.NewLine +
+                "The limit can be changed with --maxHistograms but will use more memory in the target process.";
                             break;
-                        case ErrorType.TracingError:
-                            _shouldExit.TrySetResult(ReturnCode.TracingError);
+                        case EventType.TimeSeriesLimitError:
+                            errorMessage = $"Warning: Time series tracking limit ({_settings.MaxTimeSeries}) reached. Not all data is being shown." + Environment.NewLine +
+                "The limit can be changed with --maxTimeSeries but will use more memory in the target process.";
                             break;
-                        case ErrorType.NonFatal:
-                            break;
+                        case EventType.ErrorTargetProcess:
+                        case EventType.MultipleSessionsNotSupportedError:
+                        case EventType.MultipleSessionsConfiguredIncorrectlyError:
+                        case EventType.ObservableInstrumentCallbackError:
                         default:
-                            // Is this the behavior we want, or should we throw?
-                            _shouldExit.TrySetResult(ReturnCode.UnknownError);
+                            errorMessage = errorPayload.ErrorMessage;
                             break;
+                    }
+
+                    _renderer.SetErrorText(errorMessage);
+
+                    if (errorPayload.EventType.IsSessionStartupError())
+                    {
+                        _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
+                    }
+                    else if (errorPayload.EventType.IsTracingError())
+                    {
+                        _shouldExit.TrySetResult(ReturnCode.TracingError);
+                    }
+                    else if (errorPayload.EventType.IsNonFatalError())
+                    {
+                        // Don't need to exit for NonFatalError
+                    }
+                    else
+                    {
+                        _shouldExit.TrySetResult(ReturnCode.UnknownError);
                     }
                 }
                 else if (payload is CounterEndedPayload counterEnded)
