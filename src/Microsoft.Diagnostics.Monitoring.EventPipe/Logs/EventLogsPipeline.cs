@@ -137,7 +137,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         object[] args = new object[formatter.ValueNames.Count];
                         for (int i = 0; i < args.Length; i++)
                         {
-                            args[i] = message.GetProperty(formatter.ValueNames[i]).GetString();
+                            if (message.TryGetProperty(formatter.ValueNames[i], out JsonElement value))
+                            {
+                                args[i] = value.GetString();
+                            }
                         }
 
                         //We want to propagate the timestamp to the underlying logger, but that's not part of the ILogger interface.
