@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Table output = new(Console, Text.WithWidth(17), Text);
                 if (threadPool.UsingWindowsThreadPool)
                 {
-                    output.WriteRow("Thread count:", threadPool.ThreadCount);
+                    output.WriteRow("Thread count:", threadPool.WindowsThreadPoolThreadCount);
                 }
                 else
                 {
@@ -78,10 +78,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
 
-                // We will assume that if UsePortableThreadPoolForIO field is deleted from ThreadPool then we are always
-                // using C# version.
-                bool usingPortableCompletionPorts = threadPool.UsingPortableThreadPool && usePortableIOField is not null && usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain);
-                if (!usingPortableCompletionPorts)
+                /*
+                The IO completion thread pool exists in .NET 7 and earlier
+                It is the only option in .NET 6 and below. The UsePortableThreadPoolForIO field doesn't exist.
+                In .NET 7, the UsePortableThreadPoolForIO field exists and is true by default, in which case the IO completion thread pool is not used, but that can be changed through config
+                In .NET 8, the UsePortableThreadPoolForIO field doesn't exist and the IO completion thread pool doesn't exist. However, in .NET 8, GetThreadpoolData returns E_NOTIMPL.
+                */
+                bool usingIOCompletionThreadPool = threadPool.HasLegacyData && (usePortableIOField is null || !usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
+                if (usingIOCompletionThreadPool)
                 {
                     output.Columns[0] = output.Columns[0].WithWidth(19);
                     output.WriteRow("Completion Total:", threadPool.TotalCompletionPorts);
