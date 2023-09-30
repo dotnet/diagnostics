@@ -33,15 +33,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                Table output = new(Console, Text.WithWidth(17), Text);
-                output.WriteRow("CPU utilization:", $"{threadPool.CpuUtilization}%");
-                output.WriteRow("Workers Total:", threadPool.ActiveWorkerThreads + threadPool.IdleWorkerThreads + threadPool.RetiredWorkerThreads);
-                output.WriteRow("Workers Running:", threadPool.ActiveWorkerThreads);
-                output.WriteRow("Workers Idle:", threadPool.IdleWorkerThreads);
-                output.WriteRow("Worker Min Limit:", threadPool.MinThreads);
-                output.WriteRow("Worker Max Limit:", threadPool.MaxThreads);
+                string threadpoolType = threadPool.UsingWindowsThreadPool ? "Windows" : "Portable";
+                Console.WriteLine($"Using the {threadpoolType} thread pool.");
                 Console.WriteLine();
 
+                Table output = new(Console, Text.WithWidth(17), Text);
+                if (threadPool.UsingWindowsThreadPool)
+                {
+                    output.WriteRow("Thread count:", threadPool.WindowsThreadPoolThreadCount);
+                }
+                else
+                {
+                    output.WriteRow("CPU utilization:", $"{threadPool.CpuUtilization}%");
+                    output.WriteRow("Workers Total:", threadPool.ActiveWorkerThreads + threadPool.IdleWorkerThreads + threadPool.RetiredWorkerThreads);
+                    output.WriteRow("Workers Running:", threadPool.ActiveWorkerThreads);
+                    output.WriteRow("Workers Idle:", threadPool.IdleWorkerThreads);
+                    output.WriteRow("Worker Min Limit:", threadPool.MinThreads);
+                    output.WriteRow("Worker Max Limit:", threadPool.MaxThreads);
+                }
+                Console.WriteLine();
                 ClrType threadPoolType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPool");
                 ClrStaticField usePortableIOField = threadPoolType?.GetStaticFieldByName("UsePortableThreadPoolForIO");
 
@@ -68,10 +78,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
 
-                // We will assume that if UsePortableThreadPoolForIO field is deleted from ThreadPool then we are always
-                // using C# version.
-                bool usingPortableCompletionPorts = threadPool.Portable && (usePortableIOField is null || usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
-                if (!usingPortableCompletionPorts)
+                /*
+                The IO completion thread pool exists in .NET 7 and earlier
+                It is the only option in .NET 6 and below. The UsePortableThreadPoolForIO field doesn't exist.
+                In .NET 7, the UsePortableThreadPoolForIO field exists and is true by default, in which case the IO completion thread pool is not used, but that can be changed through config
+                In .NET 8, the UsePortableThreadPoolForIO field doesn't exist and the IO completion thread pool doesn't exist. However, in .NET 8, GetThreadpoolData returns E_NOTIMPL.
+                */
+                bool usingIOCompletionThreadPool = threadPool.HasLegacyData && (usePortableIOField is null || !usePortableIOField.Read<bool>(usePortableIOField.Type.Module.AppDomain));
+                if (usingIOCompletionThreadPool)
                 {
                     output.Columns[0] = output.Columns[0].WithWidth(19);
                     output.WriteRow("Completion Total:", threadPool.TotalCompletionPorts);
@@ -87,28 +101,36 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (PrintHillClimbingLog)
                 {
-                    HillClimbingLogEntry[] hcl = threadPool.EnumerateHillClimbingLog().ToArray();
-                    if (hcl.Length > 0)
+                    if (threadPool.UsingWindowsThreadPool)
                     {
-                        output = new(Console, Text.WithWidth(10).WithAlignment(Align.Right), Column.ForEnum<HillClimbingTransition>(), Integer, Integer, Text.WithAlignment(Align.Right));
-
-                        Console.WriteLine("Hill Climbing Log:");
-                        output.WriteHeader("Time", "Transition", "#New Threads", "#Samples", "Throughput");
-
-                        int end = hcl.Last().TickCount;
-                        foreach (HillClimbingLogEntry entry in hcl)
-                        {
-                            Console.CancellationToken.ThrowIfCancellationRequested();
-                            output.WriteRow($"{(entry.TickCount - end)/1000.0:0.00}", entry.StateOrTransition, entry.NewThreadCount, entry.SampleCount, $"{entry.Throughput:0.00}");
-                        }
-
+                        Console.WriteLine("Hill Climbing Log is not supported by the Windows thread pool.");
                         Console.WriteLine();
+                    }
+                    else
+                    {
+                        HillClimbingLogEntry[] hcl = threadPool.EnumerateHillClimbingLog().ToArray();
+                        if (hcl.Length > 0)
+                        {
+                            output = new(Console, Text.WithWidth(10).WithAlignment(Align.Right), Column.ForEnum<HillClimbingTransition>(), Integer, Integer, Text.WithAlignment(Align.Right));
+
+                            Console.WriteLine("Hill Climbing Log:");
+                            output.WriteHeader("Time", "Transition", "#New Threads", "#Samples", "Throughput");
+
+                            int end = hcl.Last().TickCount;
+                            foreach (HillClimbingLogEntry entry in hcl)
+                            {
+                                Console.CancellationToken.ThrowIfCancellationRequested();
+                                output.WriteRow($"{(entry.TickCount - end) / 1000.0:0.00}", entry.StateOrTransition, entry.NewThreadCount, entry.SampleCount, $"{entry.Throughput:0.00}");
+                            }
+
+                            Console.WriteLine();
+                        }
                     }
                 }
             }
 
             // We can print managed work items even if we failed to request the ThreadPool.
-            if (PrintWorkItems && (threadPool is null || threadPool.Portable))
+            if (PrintWorkItems && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
                 DumpWorkItems();
             }
