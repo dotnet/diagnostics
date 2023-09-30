@@ -11,6 +11,7 @@
     <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="3.0.447901">
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>547545a301475a7cfd23ce8c2f6e24eddf55d83e</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.23463.1">
