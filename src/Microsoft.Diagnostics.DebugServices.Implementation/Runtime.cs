@@ -252,7 +252,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (key is not null)
                 {
                     // Now download the DAC module from the symbol server
-                    filePath = _symbolService.DownloadFile(key);
+                    filePath = _symbolService.DownloadFile(key.Index, key.FullPathName);
                 }
             }
             else

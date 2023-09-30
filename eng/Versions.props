@@ -43,6 +43,7 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>5.0.0</SystemReflectionMetadataVersion>
+    <SystemCollectionsImmutableVersion>6.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiagnosticsRuntimeVersion>3.0.447901</MicrosoftDiagnosticsRuntimeVersion>
