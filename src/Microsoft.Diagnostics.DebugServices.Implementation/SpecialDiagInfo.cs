@@ -99,7 +99,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 ulong triageBufferAddress = exceptionRecord.ExceptionInformation[2];
                 int triageBufferSize = (int)exceptionRecord.ExceptionInformation[3];
 
-                Span<byte> buffer = stackalloc byte[triageBufferSize];
+                Span<byte> buffer = new byte[triageBufferSize];
                 if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead == triageBufferSize)
                 {
                     return CrashInfoService.Create(hresult, buffer);

@@ -24,20 +24,27 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public sealed class CrashInfoJson
         {
-            public string version { get; set; }
+            [JsonPropertyName("version")]
+            public string Version { get; set; }
 
-            public int reason { get; set; }
+            [JsonPropertyName("reason")]
+            public int Reason { get; set; }
 
-            public string runtime { get; set; }
+            [JsonPropertyName("runtime")]
+            public string Runtime { get; set; }
 
-            public int runtime_type { get; set; }
+            [JsonPropertyName("runtime_type")]
+            public int RuntimeType { get; set; }
 
+            [JsonPropertyName("thread")]
             [JsonConverter(typeof(HexUInt32Converter))]
-            public uint thread { get; set; }
+            public uint Thread { get; set; }
 
-            public string message { get; set; }
+            [JsonPropertyName("message")]
+            public string Message { get; set; }
 
-            public CrashInfoException exception { get; set; }
+            [JsonPropertyName("exception")]
+            public CrashInfoException Exception { get; set; }
         }
 
         public sealed class CrashInfoException : IManagedException
@@ -56,13 +63,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             [JsonPropertyName("type")]
             public string Type { get; set; }
 
-            public CrashInfoStackFrame[] stack { get; set; }
+            [JsonPropertyName("stack")]
+            public CrashInfoStackFrame[] Stack { get; set; }
 
-            public IEnumerable<IStackFrame> Stack => stack;
+            IEnumerable<IStackFrame> IManagedException.Stack => Stack;
 
-            public CrashInfoException[] inner { get; set; }
+            [JsonPropertyName("inner")]
+            public CrashInfoException[] InnerExceptions { get; set; }
 
-            public IEnumerable<IManagedException> InnerExceptions => inner;
+            IEnumerable<IManagedException> IManagedException.InnerExceptions => InnerExceptions;
         }
 
         public sealed class CrashInfoStackFrame : IStackFrame
@@ -91,7 +100,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             public override ulong Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                ulong.TryParse(reader.GetString().Substring(2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out ulong value);
+                string valueString = reader.GetString();
+                if (valueString == null ||
+                    !valueString.StartsWith("0x") ||
+                    !ulong.TryParse(valueString.Substring(2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out ulong value))
+                {
+                    throw new JsonException("Invalid hex value");
+                }
                 return value;
             }
 
@@ -102,7 +117,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             public override uint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                uint.TryParse(reader.GetString().Substring(2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out uint value);
+                string valueString = reader.GetString();
+                if (valueString == null ||
+                    !valueString.StartsWith("0x") ||
+                    !uint.TryParse(valueString.Substring(2), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out uint value))
+                {
+                    throw new JsonException("Invalid hex value");
+                }
                 return value;
             }
 
@@ -118,13 +139,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 CrashInfoJson crashInfo = JsonSerializer.Deserialize<CrashInfoJson>(triageBuffer, options);
                 if (crashInfo != null)
                 {
-                    if (Version.TryParse(crashInfo.version, out Version protocolVersion) && protocolVersion.Major >= 1)
+                    if (Version.TryParse(crashInfo.Version, out Version protocolVersion) && protocolVersion.Major >= 1)
                     {
-                        crashInfoService = new(crashInfo.thread, hresult, crashInfo);
+                        crashInfoService = new(crashInfo.Thread, hresult, crashInfo);
                     }
                     else
                     {
-                        Trace.TraceError($"CrashInfoService: invalid or not supported protocol version {crashInfo.version}");
+                        Trace.TraceError($"CrashInfoService: invalid or not supported protocol version {crashInfo.Version}");
                     }
                 }
                 else
@@ -143,11 +164,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             ThreadId = threadId;
             HResult = hresult;
-            CrashReason = (CrashReason)crashInfo.reason;
-            RuntimeVersion = crashInfo.runtime;
-            RuntimeType = (RuntimeType)crashInfo.runtime_type;
-            Message = crashInfo.message;
-            Exception = crashInfo.exception;
+            CrashReason = (CrashReason)crashInfo.Reason;
+            RuntimeVersion = crashInfo.Runtime;
+            RuntimeType = (RuntimeType)crashInfo.RuntimeType;
+            Message = crashInfo.Message;
+            Exception = crashInfo.Exception;
         }
 
         #region ICrashInfoService
