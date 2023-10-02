@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         using JsonElement.ObjectEnumerator argsEnumerator = message.EnumerateObject();
                         if (argsEnumerator.MoveNext())
                         {
-                            JsonProperty currentElement = argsEnumerator.Current;
+                            JsonProperty currentProperty = argsEnumerator.Current;
                             parsedState = true;
 
                             // NOTE: In general there'll be N+1 properties in the arguments payload, where the last entry is the original format string.
@@ -152,18 +152,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             // It's possible that a log message with placeholders will supply a null array for the arguments.
                             // In which case there will only be the original format string in the arguments payload
                             // and we can skip filling the args array as all values should be null.
-                            if (!string.Equals(OriginalFormatProperty, currentElement.Name, StringComparison.Ordinal))
+                            if (!string.Equals(OriginalFormatProperty, currentProperty.Name, StringComparison.Ordinal))
                             {
                                 for (int i = 0; i < formatter.ValueNames.Count; i++)
                                 {
-                                    args[i] = currentElement.Value.GetString();
+                                    args[i] = currentProperty.Value.GetString();
 
                                     if (!argsEnumerator.MoveNext())
                                     {
                                         parsedState = false;
                                         break;
                                     }
-                                    currentElement = argsEnumerator.Current;
+                                    currentProperty = argsEnumerator.Current;
                                 }
                             }
 
