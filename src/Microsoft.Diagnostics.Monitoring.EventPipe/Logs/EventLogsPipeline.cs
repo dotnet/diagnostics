@@ -144,7 +144,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         using JsonElement.ObjectEnumerator argsEnumerator = message.EnumerateObject();
                         if (argsEnumerator.MoveNext())
                         {
-                            JsonProperty currentElement = enuargsEnumeratormerator.Current;
+                            JsonProperty currentElement = argsEnumerator.Current;
                             parsedState = true;
 
                             // NOTE: In general there'll be N+1 properties in the arguments payload, where the last entry is the original format string.
