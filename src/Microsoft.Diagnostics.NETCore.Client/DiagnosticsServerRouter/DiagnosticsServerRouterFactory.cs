@@ -406,6 +406,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected int TcpClientRetryTimeoutMs { get; set; } = 500;
 
+        protected ILogger Logger => _logger;
+
         public delegate TcpClientRouterFactory CreateInstanceDelegate(string tcpClient, int runtimeTimeoutMs, ILogger logger);
 
         public static TcpClientRouterFactory CreateDefaultInstance(string tcpClient, int runtimeTimeoutMs, ILogger logger)
