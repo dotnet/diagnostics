@@ -160,6 +160,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                                     if (!argsEnumerator.MoveNext())
                                     {
+                                        // Unexpected, fallback to logging the original message without the extra formatting.
                                         parsedState = false;
                                         break;
                                     }
