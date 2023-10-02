@@ -45,7 +45,7 @@
     <SystemReflectionMetadataVersion>5.0.0</SystemReflectionMetadataVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>3.0.448001</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>3.0.450101</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativeVersion>16.11.27-beta1.23180.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
