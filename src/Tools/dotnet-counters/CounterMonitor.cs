@@ -620,7 +620,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 else if (payload.IsMeter)
                 {
                     MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
-                    if (payload.IsValuePublishedEvent)
+                    if (payload.EventType.IsValuePublishedEvent())
                     {
                         CounterPayloadReceived((CounterPayload)payload);
                     }

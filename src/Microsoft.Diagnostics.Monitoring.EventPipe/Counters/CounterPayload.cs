@@ -157,6 +157,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
+    // Dotnet-monitor and dotnet-counters previously had incompatible PercentilePayload implementations before being unified -
+    // Dotnet-monitor created a single payload that contained all of the quantiles to keep them together, whereas
+    // dotnet-counters created a separate payload for each quantile (multiple payloads per TraceEvent).
+    // AggregatePercentilePayload allows dotnet-monitor to construct a PercentilePayload for individual quantiles
+    // like dotnet-counters, while still keeping the quantiles together as a unit.
     internal sealed class AggregatePercentilePayload : MeterPayload
     {
         public AggregatePercentilePayload(string providerName, string name, string displayName, string displayUnits, string metadata, IEnumerable<Quantile> quantiles, DateTime timestamp) :
@@ -199,6 +204,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal static class EventTypeExtensions
     {
+        public static bool IsValuePublishedEvent(this EventType eventType)
+        {
+            return eventType is EventType.Gauge
+                || eventType is EventType.Rate
+                || eventType is EventType.Histogram
+                || eventType is EventType.UpDownCounter;
+        }
+
         public static bool IsError(this EventType eventType)
         {
             return eventType is EventType.HistogramLimitError
