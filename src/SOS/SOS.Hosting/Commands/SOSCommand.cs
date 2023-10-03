@@ -50,8 +50,7 @@ namespace SOS.Hosting
         public static bool FilterInvoke(
             [ServiceImport(Optional = true)] ManagedOnlyCommandFilter managedOnly,
             [ServiceImport(Optional = true)] IRuntime runtime) =>
-                managedOnly == null &&
-                runtime != null && (runtime.RuntimeType == RuntimeType.NetCore || runtime.RuntimeType == RuntimeType.Desktop || runtime.RuntimeType == RuntimeType.SingleFile);
+                SOSCommandBase.Filter(managedOnly, runtime);
     }
 
     [Command(Name = "comstate",          DefaultOptions = "COMState",            Help = "Lists the COM apartment model for each thread.")]
@@ -62,14 +61,15 @@ namespace SOS.Hosting
     [Command(Name = "watsonbuckets",     DefaultOptions = "WatsonBuckets",       Help = "Displays the Watson buckets.")]
     public class WindowsSOSCommand : SOSCommandBase
     {
+        /// <summary>
+        /// These commands are Windows only.
+        /// </summary>
         [FilterInvoke]
         public static bool FilterInvoke(
             [ServiceImport(Optional = true)] ITarget target,
             [ServiceImport(Optional = true)] ManagedOnlyCommandFilter managedOnly,
             [ServiceImport(Optional = true)] IRuntime runtime) =>
-                target != null &&
-                target.OperatingSystem == OSPlatform.Windows &&
-                SOSCommand.FilterInvoke(managedOnly, runtime);
+                target != null && target.OperatingSystem == OSPlatform.Windows && SOSCommandBase.Filter(managedOnly, runtime);
     }
 
     public class SOSCommandBase : CommandBase
@@ -99,5 +99,20 @@ namespace SOS.Hosting
         {
             return SOSHost.GetHelpText(Arguments[0]);
         }
+
+        /// <summary>
+        /// Common native SOS command filter function.
+        /// </summary>
+        /// <param name="managedOnly">not null means to filter out the native C++ SOS commands</param>
+        /// <param name="runtime">runtime instance or null</param>
+        /// <returns></returns>
+        public static bool Filter(ManagedOnlyCommandFilter managedOnly, IRuntime runtime) =>
+            // This filters out these native C++ commands if requested by host (in this case SOS.Extensions) to prevent recursion.
+            managedOnly == null &&
+            // This commands require a .NET Core, Desktop Framework or .NET Core single file runtime (not a Native AOT runtime)
+            runtime != null &&
+            (runtime.RuntimeType == RuntimeType.NetCore ||
+             runtime.RuntimeType == RuntimeType.Desktop ||
+             runtime.RuntimeType == RuntimeType.SingleFile);
     }
 }
