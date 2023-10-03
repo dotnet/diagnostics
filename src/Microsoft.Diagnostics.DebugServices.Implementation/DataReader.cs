@@ -13,7 +13,7 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// ClrMD runtime service implementation
+    /// ClrMD runtime service implementation. This MUST never be disposable.
     /// </summary>
     [ServiceExport(Type = typeof(IDataReader), Scope = ServiceScope.Target)]
     public class DataReader : IDataReader

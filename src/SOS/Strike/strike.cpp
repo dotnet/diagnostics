@@ -5857,10 +5857,9 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
         return FALSE;
     }
 
-    // The new DAC based interface doesn't exists so ask the debugger for the last exception
-    // information. NOTE: this function doesn't work on xplat version when the coreclr symbols
-    // have been stripped.
+    // The new DAC based interface doesn't exists so ask the debugger for the last exception information. 
 
+#ifdef HOST_WINDOWS
     ULONG Type, ProcessId, ThreadId;
     ULONG ExtraInformationUsed;
     Status = g_ExtControl->GetLastEventInformation(
@@ -5883,8 +5882,10 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
     {
         return FALSE;
     }
-
     return TRUE;
+#else
+    return FALSE;
+#endif
 }
 
 HRESULT HandleCLRNotificationEvent()
@@ -13797,6 +13798,15 @@ DECLARE_API(clrmodules)
 {
     INIT_API_EXT();
     return ExecuteCommand("clrmodules", args);
+}
+
+//
+// Dumps the Native AOT crash info
+//
+DECLARE_API(crashinfo)
+{
+    INIT_API_EXT();
+    return ExecuteCommand("crashinfo", args);
 }
 
 //
