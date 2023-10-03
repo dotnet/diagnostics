@@ -25,6 +25,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         StopTracing = 0x01,
         CollectTracing = 0x02,
         CollectTracing2 = 0x03,
+        CollectTracing3 = 0x04,
     }
 
     internal enum DumpCommandId : byte

@@ -68,7 +68,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown = true, int circularBufferMB = 256)
         {
-            return EventPipeSession.Start(_endpoint, providers, requestRundown, circularBufferMB);
+            EventPipeSessionConfiguration config = new(providers, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            return EventPipeSession.Start(_endpoint, config);
         }
 
         /// <summary>
@@ -82,7 +83,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown = true, int circularBufferMB = 256)
         {
-            return EventPipeSession.Start(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
+            EventPipeSessionConfiguration config = new(new[] {provider}, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            return EventPipeSession.Start(_endpoint, config);
         }
 
         /// <summary>
@@ -97,7 +99,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         internal Task<EventPipeSession> StartEventPipeSessionAsync(IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, CancellationToken token)
         {
-            return EventPipeSession.StartAsync(_endpoint, providers, requestRundown, circularBufferMB, token);
+            EventPipeSessionConfiguration config = new(providers, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            return EventPipeSession.StartAsync(_endpoint, config, token);
         }
 
         /// <summary>
@@ -112,7 +115,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         internal Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeProvider provider, bool requestRundown, int circularBufferMB, CancellationToken token)
         {
-            return EventPipeSession.StartAsync(_endpoint, new[] { provider }, requestRundown, circularBufferMB, token);
+            EventPipeSessionConfiguration config = new(new[] {provider}, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            return EventPipeSession.StartAsync(_endpoint, config, token);
+        }
+
+        /// <summary>
+        /// Start tracing the application and return an EventPipeSession object
+        /// </summary>
+        /// <param name="configuration">Configuration of this EventPipeSession</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// An EventPipeSession object representing the EventPipe session that just started.
+        /// </returns>
+        public Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeSessionConfiguration configuration, CancellationToken token)
+        {
+            return EventPipeSession.StartAsync(_endpoint, configuration, token);
         }
 
         /// <summary>
