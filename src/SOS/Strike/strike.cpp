@@ -71,8 +71,14 @@
 #endif // !FEATURE_PAL
 #include <wchar.h>
 #include "platformspecific.h"
-#include <dbghelp.h>
 
+#define NOEXTAPI
+#define KDEXT_64BIT
+#include <wdbgexts.h>
+#undef DECLARE_API
+#undef StackTrace
+
+#include <dbghelp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

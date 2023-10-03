@@ -20,6 +20,12 @@
 #include <winver.h>
 #include <wchar.h>
 
+#define NOEXTAPI
+#define KDEXT_64BIT
+#include <wdbgexts.h>
+#undef DECLARE_API
+#undef StackTrace
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
