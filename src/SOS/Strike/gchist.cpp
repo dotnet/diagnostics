@@ -257,7 +257,7 @@ void GcHistAddLog(LPCSTR msg, StressMsg* stressMsg)
 
 DECLARE_API(HistStats)
 {
-    INIT_API(nullptr);
+    INIT_API();
     
     ExtOut ("%8s %8s %8s\n",
         "GCCount", "Promotes", "Relocs");
@@ -337,7 +337,7 @@ DECLARE_API(HistStats)
 
 DECLARE_API(HistRoot)
 {
-    INIT_API(nullptr);
+    INIT_API();
     size_t nArg;
 
     StringHolder rootstr;
@@ -453,7 +453,7 @@ DECLARE_API(HistRoot)
 
 DECLARE_API(HistObjFind)
 {
-    INIT_API(nullptr);
+    INIT_API();
     size_t nArg;
 
     StringHolder objstr;
@@ -533,7 +533,7 @@ DECLARE_API(HistObjFind)
 
 DECLARE_API(HistObj)
 {
-    INIT_API(nullptr);
+    INIT_API();
     size_t nArg;
 
     StringHolder objstr;
@@ -602,7 +602,7 @@ DECLARE_API(HistObj)
 
 DECLARE_API(HistInit)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     GcHistClear();
 
@@ -628,7 +628,7 @@ DECLARE_API(HistInit)
 
 DECLARE_API(HistClear)
 {
-    INIT_API(nullptr);
+    INIT_API();
     GcHistClear();
     ExtOut("Completed successfully.\n");
     return Status;

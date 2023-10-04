@@ -220,7 +220,7 @@ extern const char* g_sosPrefix;
 
 DECLARE_API (MinidumpMode)
 {
-    INIT_API(nullptr);
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     DWORD_PTR Value=0;
 
@@ -267,7 +267,7 @@ DECLARE_API (MinidumpMode)
 \**********************************************************************/
 DECLARE_API(IP2MD)
 {
-    INIT_API("ip2md");
+    INIT_API_PROBE_MANAGED("ip2md");
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL dml = FALSE;
@@ -436,7 +436,7 @@ void DumpStackInternal(DumpStackFlag *pDSFlag)
 
 DECLARE_API(DumpStack)
 {
-    INIT_API_NO_RET_ON_FAILURE(nullptr);
+    INIT_API_NO_RET_ON_FAILURE("dumpstack");
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -497,7 +497,7 @@ DECLARE_API(DumpStack)
 \**********************************************************************/
 DECLARE_API (EEStack)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -607,7 +607,7 @@ DECLARE_API (EEStack)
 \**********************************************************************/
 DECLARE_API(DumpMD)
 {
-    INIT_API("dumpmd");
+    INIT_API_PROBE_MANAGED("dumpmd");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -723,7 +723,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData);
 \**********************************************************************/
 DECLARE_API(DumpIL)
 {
-    INIT_API("dumpil");
+    INIT_API_PROBE_MANAGED("dumpil");
     MINIDUMP_NOT_SUPPORTED();
     DWORD_PTR dwStartAddr = NULL;
     DWORD_PTR dwDynamicMethodObj = NULL;
@@ -921,7 +921,7 @@ void DumpSigWorker (
 \**********************************************************************/
 DECLARE_API(DumpSig)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -968,7 +968,7 @@ DECLARE_API(DumpSig)
 \**********************************************************************/
 DECLARE_API(DumpSigElem)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -1017,7 +1017,7 @@ DECLARE_API(DumpSigElem)
 \**********************************************************************/
 DECLARE_API(DumpClass)
 {
-    INIT_API("dumpclass");
+    INIT_API_PROBE_MANAGED("dumpclass");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = 0;
@@ -1136,7 +1136,7 @@ DECLARE_API(DumpMT)
     DWORD_PTR dwStartAddr=0;
     DWORD_PTR dwOriginalAddr;
 
-    INIT_API("dumpmt");
+    INIT_API_PROBE_MANAGED("dumpmt");
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -1800,7 +1800,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
 \**********************************************************************/
 DECLARE_API(DumpArray)
 {
-    INIT_API("dumparray");
+    INIT_API_PROBE_MANAGED("dumparray");
 
     DumpArrayFlags flags;
 
@@ -2018,7 +2018,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
 \**********************************************************************/
 DECLARE_API(DumpObj)
 {
-    INIT_API("dumpobj");
+    INIT_API_PROBE_MANAGED("dumpobj");
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -2078,7 +2078,7 @@ DECLARE_API(DumpObj)
 \**********************************************************************/
 DECLARE_API(DumpALC)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     MINIDUMP_NOT_SUPPORTED();
 
@@ -2129,7 +2129,7 @@ DECLARE_API(DumpALC)
 
 DECLARE_API(DumpDelegate)
 {
-    INIT_API("dumpdelegate");
+    INIT_API_PROBE_MANAGED("dumpdelegate");
     MINIDUMP_NOT_SUPPORTED();
 
     try
@@ -2845,7 +2845,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
 DECLARE_API(PrintException)
 {
-    INIT_API("printexception");
+    INIT_API_PROBE_MANAGED("printexception");
 
     BOOL dml = FALSE;
     BOOL bShowNested = FALSE;
@@ -3014,7 +3014,7 @@ DECLARE_API(PrintException)
 \**********************************************************************/
 DECLARE_API(DumpVC)
 {
-    INIT_API("dumpvc");
+    INIT_API_PROBE_MANAGED("dumpvc");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_MT = NULL;
@@ -3058,7 +3058,7 @@ DECLARE_API(DumpVC)
 
 DECLARE_API(DumpRCW)
 {
-    INIT_API(nullptr);
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
@@ -3186,7 +3186,7 @@ DECLARE_API(DumpRCW)
 
 DECLARE_API(DumpCCW)
 {
-    INIT_API(nullptr);
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL dml = FALSE;
@@ -3446,7 +3446,7 @@ DECLARE_API(DumpCCW)
 */
 DECLARE_API(DumpPermissionSet)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -3540,7 +3540,7 @@ namespace sos
 \**********************************************************************/
 DECLARE_API(SyncBlk)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL bDumpAll = FALSE;
@@ -3772,7 +3772,7 @@ void VisitRcw(CLRDATA_ADDRESS RCW,CLRDATA_ADDRESS Context,CLRDATA_ADDRESS Thread
 
 DECLARE_API(RCWCleanupList)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -3867,7 +3867,7 @@ void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
 \**********************************************************************/
 DECLARE_API(DumpModule)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
 
@@ -4043,7 +4043,7 @@ DECLARE_API(DumpModule)
 \**********************************************************************/
 DECLARE_API(DumpDomain)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_DomainAddr = 0;
@@ -4164,7 +4164,7 @@ DECLARE_API(DumpDomain)
 \**********************************************************************/
 DECLARE_API(DumpAssembly)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_AssemblyAddr = 0;
@@ -4702,7 +4702,7 @@ static const struct ThreadStateTable ThreadStates[] =
 
 DECLARE_API(ThreadState)
 {
-    INIT_API_NODAC(nullptr);
+    INIT_API_NODAC();
 
     size_t state = GetExpression(args);
     int count = 0;
@@ -4728,7 +4728,7 @@ DECLARE_API(ThreadState)
 
 DECLARE_API(Threads)
 {
-    INIT_API("clrthreads");
+    INIT_API_PROBE_MANAGED("clrthreads");
 
     BOOL bPrintSpecialThreads = FALSE;
     BOOL bPrintLiveThreadsOnly = FALSE;
@@ -4806,7 +4806,7 @@ DECLARE_API(Threads)
 \**********************************************************************/
 DECLARE_API(WatsonBuckets)
 {
-    INIT_API(nullptr);
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     // We don't need to support minidumps for this command.
@@ -5833,7 +5833,7 @@ void EnableModuleLoadUnloadCallbacks()
 
 DECLARE_API(SOSHandleCLRN)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     return HandleCLRNotificationEvent();
 }
@@ -5864,7 +5864,7 @@ HRESULT HandleRuntimeLoadedNotification(ILLDBServices *client)
 
 DECLARE_API(bpmd)
 {
-    INIT_API_NOEE(nullptr);
+    INIT_API_NOEE();
     MINIDUMP_NOT_SUPPORTED();
     char buffer[1024];
 
@@ -6240,7 +6240,7 @@ DECLARE_API(bpmd)
 
 DECLARE_API(FindAppDomain)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR p_Object = NULL;
@@ -6333,7 +6333,7 @@ DECLARE_API(FindAppDomain)
 #ifdef FEATURE_COMINTEROP
 DECLARE_API(COMState)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -6508,7 +6508,7 @@ BOOL traverseEh(UINT clauseIndex,UINT totalClauses,DACEHInfo *pEHInfo,LPVOID tok
 
 DECLARE_API(EHInfo)
 {
-    INIT_API("ehinfo");
+    INIT_API_PROBE_MANAGED("ehinfo");
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -6589,7 +6589,7 @@ DECLARE_API(EHInfo)
 \**********************************************************************/
 DECLARE_API(GCInfo)
 {
-    INIT_API("gcinfo");
+    INIT_API_PROBE_MANAGED("gcinfo");
     MINIDUMP_NOT_SUPPORTED();
 
     TADDR taStartAddr = NULL;
@@ -6885,7 +6885,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 \**********************************************************************/
 DECLARE_API(u)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     DWORD_PTR dwStartAddr = NULL;
@@ -7511,7 +7511,7 @@ DECLARE_API(DumpLog)
 
 DECLARE_API (DumpGCLog)
 {
-    INIT_API_NODAC(nullptr);
+    INIT_API_NODAC();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -7611,7 +7611,7 @@ exit:
 #ifndef FEATURE_PAL
 DECLARE_API (DumpGCConfigLog)
 {
-    INIT_API(nullptr);
+    INIT_API();
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
@@ -7827,7 +7827,7 @@ void PrintInterestingGCInfo(DacpGCInterestingInfoData* dataPerHeap)
 
 DECLARE_API(DumpGCData)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
 #ifdef GC_CONFIG_DRIVEN
     MINIDUMP_NOT_SUPPORTED();
@@ -8002,7 +8002,7 @@ DECLARE_API(EEVersion)
 \**********************************************************************/
 DECLARE_API(SOSStatus)
 {
-    INIT_API_NOEE("sosstatus");
+    INIT_API_NOEE_PROBE_MANAGED("sosstatus");
 
     BOOL bReset = FALSE;
     CMDOption option[] =
@@ -8039,7 +8039,7 @@ DECLARE_API(SOSStatus)
 \**********************************************************************/
 DECLARE_API (ProcInfo)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -8319,7 +8319,7 @@ DECLARE_API (ProcInfo)
 \**********************************************************************/
 DECLARE_API(Token2EE)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     StringHolder DllName;
@@ -8412,7 +8412,7 @@ DECLARE_API(Token2EE)
 \**********************************************************************/
 DECLARE_API(Name2EE)
 {
-    INIT_API("name2ee");
+    INIT_API_PROBE_MANAGED("name2ee");
     MINIDUMP_NOT_SUPPORTED();
 
     StringHolder DllName, TypeName;
@@ -8532,7 +8532,7 @@ DECLARE_API(Name2EE)
 
 DECLARE_API(FindRoots)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     if (IsDumpFile())
@@ -9018,7 +9018,7 @@ private:
 \**********************************************************************/
 DECLARE_API(GCHandles)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     try
@@ -9041,7 +9041,7 @@ DECLARE_API(GCHandles)
 #ifndef FEATURE_PAL
 DECLARE_API(TraceToCode)
 {
-    INIT_API_NODAC(nullptr);
+    INIT_API_NODAC();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
 
@@ -9133,7 +9133,7 @@ DECLARE_API(TraceToCode)
 #ifndef FEATURE_PAL
 DECLARE_API(GetCodeTypeFlags)
 {
-    INIT_API(nullptr);
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
     _ASSERTE(g_pRuntime != nullptr);
 
@@ -9230,7 +9230,7 @@ DECLARE_API(GetCodeTypeFlags)
 
 DECLARE_API(StopOnException)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
 
@@ -9368,7 +9368,7 @@ DECLARE_API(StopOnException)
 // For FEATURE_PAL, MEMORY_BASIC_INFORMATION64 doesn't exist yet. TODO?
 DECLARE_API(GCHandleLeaks)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -11357,7 +11357,7 @@ WatchCmd g_watchCmd;
 // The grand new !Watch command, private to Apollo for now
 DECLARE_API(Watch)
 {
-    INIT_API_NOEE(nullptr);
+    INIT_API_NOEE();
     StringHolder addExpression;
     StringHolder aExpression;
     StringHolder saveName;
@@ -11480,7 +11480,7 @@ DECLARE_API(Watch)
 
 DECLARE_API(ClrStack)
 {
-    INIT_API("clrstack");
+    INIT_API_PROBE_MANAGED("clrstack");
 
     BOOL bAll = FALSE;
     BOOL bParams = FALSE;
@@ -11596,7 +11596,7 @@ BOOL IsMemoryInfoAvailable()
 
 DECLARE_API(VMMap)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     if (IsMiniDumpFile() || !IsMemoryInfoAvailable())
     {
@@ -11614,7 +11614,7 @@ DECLARE_API(VMMap)
 
 DECLARE_API(SOSFlush)
 {
-    INIT_API_NOEE("sosflush");
+    INIT_API_NOEE_PROBE_MANAGED("sosflush");
 
     ITarget* target = GetTarget();
     if (target != nullptr)
@@ -11629,7 +11629,7 @@ DECLARE_API(SOSFlush)
 
 DECLARE_API( VMStat )
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     if (IsMiniDumpFile() || !IsMemoryInfoAvailable())
     {
@@ -11651,7 +11651,7 @@ DECLARE_API( VMStat )
 \**********************************************************************/
 DECLARE_API(SaveModule)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -12619,7 +12619,7 @@ HRESULT ImplementEFNGetManagedExcepStack(
 // hard-to-get-to SOS APIs.
 DECLARE_API(VerifyStackTrace)
 {
-    INIT_API(nullptr);
+    INIT_API();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
     BOOL bVerifyManagedExcepStack = FALSE;
@@ -12824,7 +12824,7 @@ DECLARE_API(VerifyStackTrace)
 // This is an internal-only Apollo extension to save breakpoint/watch state
 DECLARE_API(SaveState)
 {
-    INIT_API_NOEE(nullptr);
+    INIT_API_NOEE();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -12864,7 +12864,7 @@ DECLARE_API(SaveState)
 
 DECLARE_API(SuppressJitOptimization)
 {
-    INIT_API_NOEE(nullptr);
+    INIT_API_NOEE();
     MINIDUMP_NOT_SUPPORTED();
     ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
@@ -13044,7 +13044,7 @@ HRESULT LoadModuleEvent(IDebugClient* client, PCSTR moduleName)
 
 DECLARE_API(StopOnCatch)
 {
-    INIT_API(nullptr);
+    INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
     g_stopOnNextCatch = TRUE;
@@ -13159,7 +13159,7 @@ public:
 
 DECLARE_API(enummem)
 {
-    INIT_API(nullptr);
+    INIT_API();
 
     ToRelease<ICLRDataEnumMemoryRegions> enumMemoryRegions;
     Status = g_clrData->QueryInterface(__uuidof(ICLRDataEnumMemoryRegions), (void**)&enumMemoryRegions);
@@ -13330,7 +13330,7 @@ DECLARE_API(VerifyGMT)
 {
     ULONG osThreadId;
     {
-        INIT_API(nullptr);
+        INIT_API();
 
         CMDValue arg[] =
         {   // vptr, type
@@ -13346,7 +13346,7 @@ DECLARE_API(VerifyGMT)
     ULONG64 managedThread;
     HRESULT hr = _EFN_GetManagedThread(client, osThreadId, &managedThread);
     {
-        INIT_API(nullptr);
+        INIT_API();
         ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
         if (SUCCEEDED(hr)) {
@@ -13489,7 +13489,7 @@ exit:
 //
 DECLARE_API(SetClrPath)
 {
-    INIT_API_NODAC("setclrpath");
+    INIT_API_NODAC_PROBE_MANAGED("setclrpath");
 
     StringHolder runtimeModulePath;
     CMDValue arg[] =
@@ -13523,7 +13523,7 @@ DECLARE_API(SetClrPath)
 //
 DECLARE_API(runtimes)
 {
-    INIT_API_NOEE("runtimes");
+    INIT_API_NOEE_PROBE_MANAGED("runtimes");
 
     BOOL bNetFx = FALSE;
     BOOL bNetCore = FALSE;
@@ -13667,7 +13667,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
 \**********************************************************************/
 DECLARE_API(Help)
 {
-    INIT_API_NOEE("help");
+    INIT_API_NOEE_PROBE_MANAGED("help");
 
     StringHolder commandName;
     CMDValue arg[] =

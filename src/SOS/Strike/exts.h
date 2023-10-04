@@ -286,7 +286,11 @@ public:
     FlushCheck();
 
 // Also initializes the target machine
-#define INIT_API_NOEE(name)                                     \
+#define INIT_API_NOEE()                                         \
+    INIT_API_EXT()                                              \
+    if ((Status = ArchQuery()) != S_OK) return Status;
+
+#define INIT_API_NOEE_PROBE_MANAGED(name)                       \
     INIT_API_EXT()                                              \
     if ((Status = ExecuteCommand(name, args)) != E_NOTIMPL) return Status; \
     if ((Status = ArchQuery()) != S_OK) return Status;
@@ -298,8 +302,12 @@ public:
         return Status;                                          \
     }                                                           
 
-#define INIT_API_NODAC(name)                                    \
-    INIT_API_NOEE(name)                                         \
+#define INIT_API_NODAC()                                        \
+    INIT_API_NOEE()                                             \
+    INIT_API_EE()
+
+#define INIT_API_NODAC_PROBE_MANAGED(name)                      \
+    INIT_API_NOEE_PROBE_MANAGED(name)                           \
     INIT_API_EE()
 
 #define INIT_API_DAC()                                          \
@@ -315,13 +323,16 @@ public:
     ToRelease<ISOSDacInterface> spISD(g_sos);                   \
     ResetGlobals();
 
-#define INIT_API(name)                                          \
-    INIT_API_NODAC(name)                                        \
+#define INIT_API_PROBE_MANAGED(name)                            \
+    INIT_API_NODAC_PROBE_MANAGED(name)                          \
+    INIT_API_DAC()
+
+#define INIT_API()                                              \
+    INIT_API_NODAC()                                            \
     INIT_API_DAC()
 
 #define INIT_API_EFN()                                          \
-    PCSTR args = nullptr;                                       \
-    INIT_API_NODAC(nullptr)                                     \
+    INIT_API_NODAC()                                            \
     INIT_API_DAC()
 
 // Attempt to initialize DAC and SOS globals, but do not "return" on failure.
@@ -331,7 +342,7 @@ public:
 // and functions they call should test g_bDacBroken before calling any DAC enabled
 // feature.
 #define INIT_API_NO_RET_ON_FAILURE(name)                        \
-    INIT_API_NODAC(name)                                        \
+    INIT_API_NODAC_PROBE_MANAGED(name)                          \
     if ((Status = LoadClrDebugDll()) != S_OK)                   \
     {                                                           \
         ExtOut("Failed to load data access module (%s), 0x%08x\n", GetDacDllName(), Status); \
