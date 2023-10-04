@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool CoalesceStacks { get; set; }
 
         /// <summary>Invokes the command.</summary>
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             ClrRuntime runtime = Runtime;
             ClrHeap heap = runtime.Heap;

@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             HeapWithFilters filteredHeap = new(Runtime.Heap);
             if (GCHeap >= 0)

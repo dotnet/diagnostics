@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private HeapWithFilters FilteredHeap { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             ParseArguments();
 

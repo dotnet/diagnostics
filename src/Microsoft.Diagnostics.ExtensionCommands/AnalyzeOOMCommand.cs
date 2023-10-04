@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "analyzeoom", Aliases = new[] { "AnalyzeOOM" }, Help = "Displays the info of the last OOM that occurred on an allocation request to the GC heap.")]
     public class AnalyzeOOMCommand : ClrRuntimeCommandBase
     {
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             bool foundOne = false;
             foreach (ClrOutOfMemoryInfo oom in Runtime.Heap.SubHeaps.Select(h => h.OomInfo).Where(oom => oom != null))

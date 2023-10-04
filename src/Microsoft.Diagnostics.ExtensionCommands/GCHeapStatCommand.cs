@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-unreachable", Aliases = new string[] { "-inclUnrooted", "-iu" })]
         public bool IncludeUnreachable { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             HeapInfo[] heaps = Runtime.Heap.SubHeaps.Select(h => GetHeapInfo(h)).ToArray();
             bool printFrozen = heaps.Any(h => h.Frozen.Committed != 0);

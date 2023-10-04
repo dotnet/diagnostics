@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "target")]
         public string TargetAddress { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (TryParseAddress(SourceAddress, out ulong source))
             {

@@ -9,13 +9,13 @@ IFDEF:NETCORE_OR_DOTNETDUMP
 # Load SOS even though it doesn't actually load the sos module on dotnet-dump but it runs some initial settings/commands.
 LOADSOS
 
-!EXTCOMMAND: dcd
+EXTCOMMAND_FAIL: dcd
 VERIFY: Missing ConcurrentDictionary address
 
-!EXTCOMMAND: dcd abcdefgh
+EXTCOMMAND_FAIL: dcd abcdefgh
 VERIFY: Hexadecimal address expected
 
-!EXTCOMMAND: dcd 0000000000000001
+EXTCOMMAND_FAIL: dcd 0000000000000001
 VERIFY: is not referencing an object
 
 # Checks on ConcurrentDictionary<int, string[]>

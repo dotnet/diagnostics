@@ -67,7 +67,7 @@ namespace SOS.Hosting
         public string SOSPath { get; set; }
 
         [ServiceExport(Scope = ServiceScope.Global)]
-        public static SOSLibrary Create(IHost host, [ServiceImport(Optional = true)] ISOSModule sosModule)
+        public static SOSLibrary TryCreate(IHost host, [ServiceImport(Optional = true)] ISOSModule sosModule)
         {
             SOSLibrary sosLibrary = null;
             try

@@ -810,9 +810,9 @@ public class SOSRunner : IDisposable
                             throw new Exception($"SOS command FAILED: {input}");
                         }
                     }
-                    else if (line.StartsWith("!SOSCOMMAND:"))
+                    else if (line.StartsWith("SOSCOMMAND_FAIL:"))
                     {
-                        string input = line.Substring("!SOSCOMMAND:".Length).TrimStart();
+                        string input = line.Substring("SOSCOMMAND_FAIL:".Length).TrimStart();
                         if (await RunSosCommand(input))
                         {
                             // The cdb runcommand extension doesn't get the execute command failures (limitation in dbgeng).
@@ -831,9 +831,9 @@ public class SOSRunner : IDisposable
                             throw new Exception($"Extension command FAILED: {input}");
                         }
                     }
-                    else if (line.StartsWith("!EXTCOMMAND:"))
+                    else if (line.StartsWith("EXTCOMMAND_FAIL:"))
                     {
-                        string input = line.Substring("!EXTCOMMAND:".Length).TrimStart();
+                        string input = line.Substring("EXTCOMMAND_FAIL:".Length).TrimStart();
                         if (await RunSosCommand(input, extensionCommand: true))
                         {
                             // The cdb runcommand extension doesn't get the execute command failures (limitation in dbgeng).
@@ -852,9 +852,9 @@ public class SOSRunner : IDisposable
                             throw new Exception($"Debugger command FAILED: {input}");
                         }
                     }
-                    else if (line.StartsWith("!COMMAND:"))
+                    else if (line.StartsWith("COMMAND_FAIL:"))
                     {
-                        string input = line.Substring("!COMMAND:".Length).TrimStart();
+                        string input = line.Substring("COMMAND_FAIL:".Length).TrimStart();
                         if (await RunCommand(input))
                         {
                             // The cdb runcommand extension doesn't get the execute command failures (limitation in dbgeng).

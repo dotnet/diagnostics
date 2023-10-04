@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "threadpoolqueue", Aliases = new string[] { "tpq" }, Help = "Displays queued ThreadPool work items.")]
     public class ThreadPoolQueueCommand : ClrMDHelperCommandBase
     {
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             Dictionary<string, WorkInfo> workItems = new();
             int workItemCount = 0;

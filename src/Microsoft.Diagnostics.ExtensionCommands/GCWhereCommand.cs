@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Help = "The address on the GC heap to list near objects")]
         public string Address { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (!TryParseAddress(Address, out ulong address))
             {

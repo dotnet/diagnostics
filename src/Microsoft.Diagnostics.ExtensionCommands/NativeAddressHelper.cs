@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
 
         [ServiceExport(Scope = ServiceScope.Target)]
-        public static NativeAddressHelper Create(ITarget target, [ServiceImport(Optional = true)] IMemoryRegionService memoryRegionService)
+        public static NativeAddressHelper TryCreate(ITarget target, [ServiceImport(Optional = true)] IMemoryRegionService memoryRegionService)
         {
             return memoryRegionService != null ? new NativeAddressHelper(target, memoryRegionService) : null;
         }

@@ -13,17 +13,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport(Optional = true)]
         public ClrMDHelper Helper { get; set; }
 
-        public override void Invoke()
-        {
-            if (Helper == null)
-            {
-                throw new CommandNotFoundException(ClrRuntimeCommandBase.RuntimeNotFoundMessage);
-            }
-            ExtensionInvoke();
-        }
-
-        public abstract void ExtensionInvoke();
-
         [FilterInvoke(Message = ClrRuntimeCommandBase.RuntimeNotFoundMessage)]
         public static bool FilterInvoke([ServiceImport(Optional = true)] ClrMDHelper helper) => helper != null;
     }

@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-wi", Help = "Print all work items that are queued.")]
         public bool PrintWorkItems { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             // Runtime.ThreadPool shouldn't be null unless there was a problem with the dump.
             ClrThreadPool threadPool = Runtime.ThreadPool;

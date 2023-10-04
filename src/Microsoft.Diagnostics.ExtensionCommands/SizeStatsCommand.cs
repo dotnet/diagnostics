@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "sizestats", Help = "Size statistics for the GC heap.")]
     public sealed class SizeStatsCommand : ClrRuntimeCommandBase
     {
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             SizeStats(Generation.Generation0, isFree: false);
             SizeStats(Generation.Generation1, isFree: false);

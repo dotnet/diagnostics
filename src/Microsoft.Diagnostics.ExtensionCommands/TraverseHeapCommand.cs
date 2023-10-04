@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "filename")]
         public string Filename { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (string.IsNullOrWhiteSpace(Filename))
             {

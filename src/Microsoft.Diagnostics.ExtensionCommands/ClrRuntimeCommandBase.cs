@@ -13,17 +13,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport(Optional = true)]
         public ClrRuntime Runtime { get; set; }
 
-        public override void Invoke()
-        {
-            if (Runtime == null)
-            {
-                throw new CommandNotFoundException(RuntimeNotFoundMessage);
-            }
-            ExtensionInvoke();
-        }
-
-        public abstract void ExtensionInvoke();
-
         [FilterInvoke(Message = RuntimeNotFoundMessage)]
         public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime) => runtime != null;
     }

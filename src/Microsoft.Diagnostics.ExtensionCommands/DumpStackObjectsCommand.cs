@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "stackbounds", Help = "The top and bottom of the stack (in hex).")]
         public string[] Bounds { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (Runtime.Heap.Segments.Length == 0)
             {

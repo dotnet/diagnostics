@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the assemblies.")]
         public bool Verbose { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             Regex regex = AssemblyName is not null ? new Regex(AssemblyName, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) : null;
             foreach (ClrModule module in Runtime.EnumerateModules())

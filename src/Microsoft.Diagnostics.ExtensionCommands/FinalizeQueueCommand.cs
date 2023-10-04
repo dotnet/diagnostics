@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public DumpHeapService DumpHeap { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             ulong mt = 0;
             if (!string.IsNullOrWhiteSpace(MethodTable))

@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private readonly ClrHeap _heap;
 
         [ServiceExport(Scope = ServiceScope.Runtime)]
-        public static ClrMDHelper Create([ServiceImport(Optional = true)] ClrRuntime clrRuntime)
+        public static ClrMDHelper TryCreate([ServiceImport(Optional = true)] ClrRuntime clrRuntime)
         {
             return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
         }

@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--allthreads", Aliases = new string[] { "-a" }, Help = "Displays all threads per group instead of at most 4 by default.")]
         public bool AllThreads { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             ParallelStack ps = ParallelStack.Build(Runtime);
             if (ps == null)

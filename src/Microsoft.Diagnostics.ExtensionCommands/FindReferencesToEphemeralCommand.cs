@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private readonly HashSet<ulong> _referenced = new();
         private ulong _referencedSize;
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             Table output = new(Console, DumpObj, DumpHeap, ByteCount, Column.ForEnum<Generation>(), Column.ForEnum<Generation>(), ByteCount, Integer, TypeName);
 

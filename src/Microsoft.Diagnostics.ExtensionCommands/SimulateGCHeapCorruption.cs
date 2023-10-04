@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument]
         public string Command { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             switch (Command?.ToLowerInvariant())
             {

@@ -11,5 +11,5 @@ VERIFY:Test command #2 invoked\s+
 SOSCOMMAND:assemblies
 VERIFY:Test command #4 invoked\s+
 
-!SOSCOMMAND:ip2md 0
+SOSCOMMAND_FAIL:ip2md 0
 !VERIFY:Test command #5 invoked\s+

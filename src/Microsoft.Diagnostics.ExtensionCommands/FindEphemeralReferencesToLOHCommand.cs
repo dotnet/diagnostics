@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         // IComparer for binary search
         private readonly IComparer<(ClrObject, ClrObject)> _firstObjectComparer = Comparer<(ClrObject, ClrObject)>.Create((x, y) => x.Item1.Address.CompareTo(y.Item1.Address));
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             int segments = Runtime.Heap.Segments.Count(seg => seg.Kind is not GCSegmentKind.Frozen or GCSegmentKind.Pinned);
             if (segments > 50)

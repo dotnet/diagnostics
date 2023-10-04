@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "object")]
         public string ObjectAddress { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (!TryParseAddress(ObjectAddress, out ulong objAddress))
             {

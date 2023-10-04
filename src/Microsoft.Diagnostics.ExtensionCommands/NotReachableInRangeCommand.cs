@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "end")]
         public string EndAddress { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (!TryParseAddress(StartAddress, out ulong start))
             {

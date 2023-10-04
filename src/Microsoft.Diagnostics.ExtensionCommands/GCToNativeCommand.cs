@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             if (AddressHelper == null)
             {

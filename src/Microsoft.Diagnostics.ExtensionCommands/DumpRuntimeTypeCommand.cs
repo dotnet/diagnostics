@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpruntimetypes", Aliases = new[] { "DumpRuntimeTypes" }, Help = "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.")]
     public sealed class DumpRuntimeTypeCommand : ClrRuntimeCommandBase
     {
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             Table output = null;
 

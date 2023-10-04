@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-type")]
         public string? Type { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             HeapWithFilters filteredHeap = ParseArguments();
 
