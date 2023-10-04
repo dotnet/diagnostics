@@ -233,12 +233,12 @@ namespace SOS.Extensions
                 _contextService = new ContextServiceFromDebuggerServices(this, DebuggerServices);
                 _serviceContainer.AddService<IContextService>(_contextService);
 
+                ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
+                _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
+
                 // Used to invoke only managed commands
                 _servicesWithManagedOnlyFilter = new(_contextService.Services);
                 _servicesWithManagedOnlyFilter.AddService(new SOSCommandBase.ManagedOnlyCommandFilter());
-
-                ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
-                _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandService.Commands)

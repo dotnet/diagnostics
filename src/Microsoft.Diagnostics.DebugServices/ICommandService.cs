@@ -23,11 +23,11 @@ namespace Microsoft.Diagnostics.DebugServices
         void AddCommands(Type type);
 
         /// <summary>
-        /// Gets the all the command help
+        /// Gets help for all of the commands
         /// </summary>
         /// <param name="services">service provider</param>
         /// <returns>command invocation and help enumeration</returns>
-        public IEnumerable<(string Invocation, string Help)> GetHelp(IServiceProvider services);
+        public IEnumerable<(string Invocation, string Help)> GetAllCommandHelp(IServiceProvider services);
 
         /// <summary>
         /// Displays the detailed help for a command

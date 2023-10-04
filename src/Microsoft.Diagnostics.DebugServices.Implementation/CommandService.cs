@@ -130,7 +130,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="services">service provider</param>
         /// <returns>command invocation and help enumeration</returns>
-        public IEnumerable<(string Invocation, string Help)> GetHelp(IServiceProvider services)
+        public IEnumerable<(string Invocation, string Help)> GetAllCommandHelp(IServiceProvider services)
         {
             List<(string Invocation, string Help)> help = new();
             foreach (CommandGroup group in _commandGroups)

@@ -15,7 +15,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
-    public sealed class GCToNativeCommand : ClrRuntimeCommandBase
+    public sealed class GCToNativeCommand : CommandBase
     {
         [Argument(Help = "The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
@@ -23,8 +23,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Show the complete list of objects and not just a summary.")]
         public bool ShowAll { get; set; }
 
-        [ServiceImport(Optional = true)]
+        [ServiceImport]
         public NativeAddressHelper AddressHelper { get; set; }
+
+        [ServiceImport]
+        public ClrRuntime Runtime { get; set; }
 
         private int Width
         {
@@ -47,11 +50,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (AddressHelper == null)
-            {
-                throw new DiagnosticsException("The memory region service does not exists. This command is only supported under windbg/cdb debuggers.");
-            }
-
             if (MemoryTypes is null || MemoryTypes.Length == 0)
             {
                 throw new DiagnosticsException("Must specify at least one memory region type to search for.");
@@ -59,6 +57,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             PrintGCPointersToMemory(ShowAll, MemoryTypes);
         }
+
+        [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime, [ServiceImport(Optional = true)] NativeAddressHelper helper) => runtime != null && helper != null;
 
         public void PrintGCPointersToMemory(bool showAll, params string[] memoryTypes)
         {

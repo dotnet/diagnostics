@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             if (string.IsNullOrWhiteSpace(Command))
             {
-                IEnumerable<(string Invocation, string Help)> commands = CommandService.GetHelp(Services);
+                IEnumerable<(string Invocation, string Help)> commands = CommandService.GetAllCommandHelp(Services);
                 int invocationWidth = commands.Max((item) => item.Invocation.Length) + 4;
 
                 Write(string.Concat(commands.
