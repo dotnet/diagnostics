@@ -6,7 +6,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.Repl
 {
-    [Command(Name = "exit", Aliases = new string[] { "quit", "q" }, Help = "Exits interactive mode.", Flags = CommandFlags.Global | CommandFlags.Manual)]
+    [Command(Name = "exit", Aliases = new string[] { "quit", "q" }, Help = "Exits interactive mode.")]
     public class ExitCommand : CommandBase
     {
         private readonly Action _exit;

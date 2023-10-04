@@ -13,8 +13,8 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = CommandName, Help = "Displays information about native memory that CLR has allocated.")]
-    public class EEHeapCommand : CommandBase
+    [Command(Name = CommandName, Aliases = new[] { "EEHeap" }, Help = "Displays information about native memory that CLR has allocated.")]
+    public class EEHeapCommand : ClrRuntimeCommandBase
     {
         private const string CommandName = "eeheap";
 
@@ -22,9 +22,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         // Don't use the word "Total" if we have filtered out entries
         private string TotalString => HeapWithFilters.HasFilters ? "Partial" : "Total";
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }

@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.DebugServices
     {
         /// <summary>
         /// The interface or type to register the provider. If null, the provider type registered will be
-        /// he class itself or the return type of the method.
+        /// the class itself or the return type of the method.
         /// </summary>
         public Type Type { get; set; }
 

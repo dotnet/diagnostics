@@ -223,6 +223,7 @@ IsInitializedByDbgEng();
 
 extern ILLDBServices*        g_ExtServices;    
 extern ILLDBServices2*       g_ExtServices2;    
+extern BOOL InitializePAL();
 
 #define IsInitializedByDbgEng() false
 
@@ -236,6 +237,15 @@ ArchQuery(void);
 
 void
 ExtRelease(void);
+
+HRESULT 
+ExecuteCommand(PCSTR commandName, PCSTR args);
+
+void 
+EENotLoadedMessage(HRESULT Status);
+
+void 
+DACMessage(HRESULT Status);
 
 extern BOOL ControlC;
 
@@ -264,57 +274,6 @@ public:
     ~__ExtensionCleanUp(){ExtRelease();}
 };
 
-inline void EENotLoadedMessage(HRESULT Status)
-{
-#ifdef FEATURE_PAL
-    ExtOut("Failed to find runtime module (%s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), Status);
-#else
-    ExtOut("Failed to find runtime module (%s or %s or %s), 0x%08x\n", GetRuntimeDllName(IRuntime::Core), GetRuntimeDllName(IRuntime::WindowsDesktop), GetRuntimeDllName(IRuntime::UnixCore), Status);
-#endif
-    ExtOut("Extension commands need it in order to have something to do.\n");
-    ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
-}
-
-inline void DACMessage(HRESULT Status)
-{
-    ExtOut("Failed to load data access module, 0x%08x\n", Status);
-    if (GetHost()->GetHostType() == IHost::HostType::DbgEng)
-    {
-        ExtOut("Verify that 1) you have a recent build of the debugger (10.0.18317.1001 or newer)\n");
-        ExtOut("            2) the file %s that matches your version of %s is\n", GetDacDllName(), GetRuntimeDllName());
-        ExtOut("                in the version directory or on the symbol path\n");
-        ExtOut("            3) or, if you are debugging a dump file, verify that the file\n");
-        ExtOut("                %s_<arch>_<arch>_<version>.dll is on your symbol path.\n", GetDacModuleName());
-        ExtOut("            4) you are debugging on a platform and architecture that supports this\n");
-        ExtOut("                the dump file. For example, an ARM dump file must be debugged\n");
-        ExtOut("                on an X86 or an ARM machine; an AMD64 dump file must be\n");
-        ExtOut("                debugged on an AMD64 machine.\n");
-        ExtOut("\n");
-        ExtOut("You can run the command '!setclrpath <directory>' to control the load path of %s.\n", GetDacDllName());
-        ExtOut("\n");
-        ExtOut("Or you can also run the debugger command .cordll to control the debugger's\n");
-        ExtOut("load of %s. .cordll -ve -u -l will do a verbose reload.\n", GetDacDllName());
-        ExtOut("If that succeeds, the SOS command should work on retry.\n");
-        ExtOut("\n");
-        ExtOut("If you are debugging a minidump, you need to make sure that your executable\n");
-        ExtOut("path is pointing to %s as well.\n", GetRuntimeDllName());
-    }
-    else
-    {
-        if (Status == CORDBG_E_MISSING_DEBUGGER_EXPORTS)
-        {
-            ExtOut("You can run the debugger command 'setclrpath <directory>' to control the load of %s.\n", GetDacDllName());
-            ExtOut("If that succeeds, the SOS command should work on retry.\n");
-        }
-        else
-        {
-            ExtOut("Can not load or initialize %s. The target runtime may not be initialized.\n", GetDacDllName());
-        }
-    }
-    ExtOut("\n");
-    ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
-}
-
 // The minimum initialization for a command
 #define INIT_API_EXT()                                          \
     HRESULT Status;                                             \
@@ -331,6 +290,11 @@ inline void DACMessage(HRESULT Status)
     INIT_API_EXT()                                              \
     if ((Status = ArchQuery()) != S_OK) return Status;
 
+#define INIT_API_NOEE_PROBE_MANAGED(name)                       \
+    INIT_API_EXT()                                              \
+    if ((Status = ExecuteCommand(name, args)) != E_NOTIMPL) return Status; \
+    if ((Status = ArchQuery()) != S_OK) return Status;
+
 #define INIT_API_EE()                                           \
     if ((Status = GetRuntime(&g_pRuntime)) != S_OK)             \
     {                                                           \
@@ -340,6 +304,10 @@ inline void DACMessage(HRESULT Status)
 
 #define INIT_API_NODAC()                                        \
     INIT_API_NOEE()                                             \
+    INIT_API_EE()
+
+#define INIT_API_NODAC_PROBE_MANAGED(name)                      \
+    INIT_API_NOEE_PROBE_MANAGED(name)                           \
     INIT_API_EE()
 
 #define INIT_API_DAC()                                          \
@@ -355,7 +323,15 @@ inline void DACMessage(HRESULT Status)
     ToRelease<ISOSDacInterface> spISD(g_sos);                   \
     ResetGlobals();
 
+#define INIT_API_PROBE_MANAGED(name)                            \
+    INIT_API_NODAC_PROBE_MANAGED(name)                          \
+    INIT_API_DAC()
+
 #define INIT_API()                                              \
+    INIT_API_NODAC()                                            \
+    INIT_API_DAC()
+
+#define INIT_API_EFN()                                          \
     INIT_API_NODAC()                                            \
     INIT_API_DAC()
 
@@ -365,9 +341,9 @@ inline void DACMessage(HRESULT Status)
 // runtime is loaded in the debuggee, e.g. DumpLog, DumpStack. These extensions
 // and functions they call should test g_bDacBroken before calling any DAC enabled
 // feature.
-#define INIT_API_NO_RET_ON_FAILURE()                            \
-    INIT_API_NODAC()                                             \
-    if ((Status = LoadClrDebugDll()) != S_OK)              \
+#define INIT_API_NO_RET_ON_FAILURE(name)                        \
+    INIT_API_NODAC_PROBE_MANAGED(name)                          \
+    if ((Status = LoadClrDebugDll()) != S_OK)                   \
     {                                                           \
         ExtOut("Failed to load data access module (%s), 0x%08x\n", GetDacDllName(), Status); \
         ExtOut("Some functionality may be impaired\n");         \
@@ -382,6 +358,30 @@ inline void DACMessage(HRESULT Status)
     ToRelease<ISOSDacInterface> spISD(g_sos);                   \
     ToRelease<IXCLRDataProcess> spIDP(g_clrData);
     
+#ifdef FEATURE_PAL
+
+#define MINIDUMP_NOT_SUPPORTED()
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()
+
+#else // !FEATURE_PAL
+
+#define MINIDUMP_NOT_SUPPORTED()   \
+    if (IsMiniDumpFile())      \
+    {                          \
+        ExtOut("This command is not supported in a minidump without full memory\n"); \
+        ExtOut("To try the command anyway, run !MinidumpMode 0\n"); \
+        return Status;         \
+    }
+
+#define ONLY_SUPPORTED_ON_WINDOWS_TARGET()                                    \
+    if (!IsWindowsTarget())                                                   \
+    {                                                                         \
+        ExtOut("This command is only supported for Windows targets\n");       \
+        return Status;                                                        \
+    }
+
+#endif // FEATURE_PAL
+
 extern BOOL g_bDacBroken;
 
 //-----------------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ COMMAND: contents.
 SOS is a debugger extension DLL designed to aid in the debugging of managed
 programs. Functions are listed by category, then roughly in order of
 importance. Shortcut names for popular functions are listed in parenthesis.
-Type "!help <functionname>" for detailed info on that function. 
+Type "!soshelp <functionname>" for detailed info on that function. 
 
 Object Inspection                  Examining code and stacks
 -----------------------------      -----------------------------
@@ -2638,26 +2638,6 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 .NET Core runtime.
 \\
 
-COMMAND: setsymbolserver.
-!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
-
--ms - Use the public Microsoft symbol server.
--mi - Use the internal symweb symbol server.
--disable - Disable symbol download support.
--directory - Directory to search for symbols. Can be more than one.
--timeout - Specify the symbol server timeout in minutes
--pat - Access token to the authenticated server.
--cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
-<symbol-server-URL> - Symbol server URL.
-
-This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this
-symbol server support is automatically enabled.
-
-To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
-
-    0:000> !setsymbolserver -disable
-\\
-
 COMMAND: sosstatus.
 !SOSStatus [-reset]
 
@@ -2699,8 +2679,3 @@ runtimes [-netfx] [-netcore]
 List and select the .NET runtimes in the target process.
 \\
 
-COMMAND: logging.
-logging [enable] [disable]
-
-Enables or disables the internal trace logging.
-\\

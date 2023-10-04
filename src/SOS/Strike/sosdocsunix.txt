@@ -2268,57 +2268,6 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 .NET Core runtime.
 \\
 
-COMMAND: setsymbolserver.
-COMMAND: loadsymbols.
-SetSymbolServer [-ms] [-disable] [-log]  [-loadsymbols] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
-
--ms - Use the public Microsoft symbol server.
--disable - Disable symbol download support.
--directory - Directory to search for symbols. Can be more than one.
--timeout - Specify the symbol server timeout in minutes
--pat - Access token to the authenticated server.
--cache - Specific a symbol cache directory. The default is $HOME/.dotnet/symbolcache if not specified.
--loadsymbols - Attempts to download the native .NET Core symbols for the runtime
-<symbol-server-URL> - Symbol server URL.
-
-This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
-and .NET Core native symbol files are downloaded.
-
-To enable downloading symbols from the Microsoft symbol server:
-
-    (lldb) setsymbolserver -ms
-
-This command may take some time without any output while it attempts to download the symbol files. 
-
-To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
-
-    (lldb) setsymbolserver -disable
-
-To add a directory to search for symbols:
-
-    (lldb) setsymbolserver -directory /home/mikem/symbols
-
-This command can be used so the module/symbol file structure does not have to match the machine 
-file structure that the core dump was generated.
-
-To clear the default cache run "rm -r $HOME/.dotnet/symbolcache" in a command shell.
-
-If you receive an error like the one below on a core dump, you need to set the .NET Core
-runtime with the "sethostruntime" command. Type "soshelp sethostruntime" for more details.
-
-    (lldb) setsymbolserver -ms
-    Error: Fail to initialize CoreCLR 80004005
-    SetSymbolServer -ms  failed
-
-The "-loadsymbols" option and the "loadsymbol" command alias attempts to download the native .NET
-Core symbol files. It is only useful for live sessions and not core dumps. This command needs to 
-be run before the lldb "bt" (stack trace) or the "clrstack -f" (dumps both managed and native
-stack frames).
-
-    (lldb) loadsymbols
-    (lldb) bt
-\\
-
 COMMAND: sosstatus.
 SOSStatus [-reset]
 
@@ -2348,8 +2297,3 @@ runtimes
 List the .NET runtimes in the target process.
 \\
 
-COMMAND: logging.
-logging [enable] [disable]
-
-Enables or disables the internal trace logging.
-\\

@@ -508,8 +508,14 @@ namespace Microsoft.Diagnostics.Repl
                 }
                 catch (Exception ex)
                 {
-                    // Most exceptions should not excape the command dispatch, but just in case
-                    WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
+                    if (!string.IsNullOrEmpty(ex.Message))
+                    {
+                        WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
+                    }
+                    if (ex is CommandParsingException parsingException)
+                    {
+                        WriteLine(OutputType.Normal, parsingException.DetailedHelp);
+                    }
                     Trace.TraceError(ex.ToString());
                     m_lastCommandLine = null;
                     result = false;

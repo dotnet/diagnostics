@@ -101,12 +101,7 @@ VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:.*\s+Stack walk complete.\s+
 
 # Verify that Threads (clrthreads) works
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads
-ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
@@ -138,7 +133,7 @@ VERIFY:\s*STACK <DECVAL>\s*
 VERIFY?:\s*<< Awaiting: <HEXVAL>\s+<HEXVAL>\s+.* >>\s+
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
 
-SOSCOMMAND:DumpMT --stats <PREVPOUT>
+SOSCOMMAND:DumpMT <PREVPOUT>
 !VERIFY:\s*<HEXVAL> is not a MethodTable
 
 SOSCOMMAND:DumpAsync --coalesce

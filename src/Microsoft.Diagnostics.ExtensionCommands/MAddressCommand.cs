@@ -196,15 +196,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] NativeAddressHelper helper) => helper != null;
+
         [HelpInvoke]
-        public void HelpInvoke()
-        {
-            WriteLine(
+        public static string GetDetailedHelp() =>
 $@"-------------------------------------------------------------------------------
-maddress is a managed version of !address, which attempts to annotate all memory
+!maddress is a managed version of !address, which attempts to annotate all memory
 with information about CLR's heaps.
 
-usage: !sos maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{ReserveFlag} [{ReserveHeuristicFlag}]]
+usage: !maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{ReserveFlag} [{ReserveHeuristicFlag}]]
 
 Flags:
     {SummaryFlag}
@@ -238,7 +239,6 @@ Flags:
     {BySizeFlag}
         Order the list of memory blocks by size (descending) when printing the list
         of all memory blocks instead of by address.
-");
-        }
+";
     }
 }

@@ -11,12 +11,9 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "threadpool", Help = "Displays info about the runtime thread pool.")]
-    public sealed class ThreadPoolCommand : CommandBase
+    [Command(Name = "threadpool", Aliases = new[] { "ThreadPool" }, Help = "Displays info about the runtime thread pool.")]
+    public sealed class ThreadPoolCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [Option(Name = "-ti", Help = "Print the hill climbing log.", Aliases = new string[] { "-hc" })]
         public bool PrintHillClimbingLog { get; set; }
 
