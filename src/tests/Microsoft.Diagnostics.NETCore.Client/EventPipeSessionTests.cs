@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tracing;
@@ -92,7 +93,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     EventPipeEventSource source = new(session.EventStream);
                     source.Dynamic.All += (TraceEvent obj) => {
                         runner.WriteLine("Got an event");
-                        evntCnt += 1;
+                        Interlocked.Increment(ref evntCnt);
                     };
                     try
                     {
@@ -111,6 +112,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 runner.WriteLine("Waiting for stream Task");
                 streamTask.Wait(10000);
                 runner.WriteLine("Done waiting for stream Task");
+
                 Assert.True(evntCnt > 0);
             }
         }
