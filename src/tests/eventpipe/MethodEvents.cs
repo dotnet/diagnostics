@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Threading;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
@@ -69,11 +70,11 @@ namespace EventPipe.UnitTests.MethodEventsValidation
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int MethodLoadVerboseEvents = 0;
                     int MethodUnloadVerboseEvents = 0;
-                    source.Clr.MethodLoadVerbose += (eventData) => MethodLoadVerboseEvents += 1;
-                    source.Clr.MethodUnloadVerbose += (eventData) => MethodUnloadVerboseEvents += 1;
+                    source.Clr.MethodLoadVerbose += (eventData) => Interlocked.Increment(ref MethodUnloadVerboseEvents);
+                    source.Clr.MethodUnloadVerbose += (eventData) => Interlocked.Increment(ref MethodUnloadVerboseEvents);
 
                     int MethodJittingStartedEvents = 0;
-                    source.Clr.MethodJittingStarted += (eventData) => MethodJittingStartedEvents += 1;
+                    source.Clr.MethodJittingStarted += (eventData) => Interlocked.Increment(ref MethodJittingStartedEvents);
 
                     return () => {
                         Logger.logger.Log("Event counts validation");

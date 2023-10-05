@@ -7,6 +7,7 @@ using System.Diagnostics.Tracing;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Threading;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
@@ -79,13 +80,13 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int LoaderAssemblyLoadEvents = 0;
                     int LoaderAssemblyUnloadEvents = 0;
-                    source.Clr.LoaderAssemblyLoad += (eventData) => LoaderAssemblyLoadEvents += 1;
-                    source.Clr.LoaderAssemblyUnload += (eventData) => LoaderAssemblyUnloadEvents += 1;
+                    source.Clr.LoaderAssemblyLoad += (eventData) => Interlocked.Increment(ref LoaderAssemblyLoadEvents);
+                    source.Clr.LoaderAssemblyUnload += (eventData) => Interlocked.Increment(ref LoaderAssemblyUnloadEvents);
 
                     int LoaderModuleLoadEvents = 0;
                     int LoaderModuleUnloadEvents = 0;
-                    source.Clr.LoaderModuleLoad += (eventData) => LoaderModuleLoadEvents += 1;
-                    source.Clr.LoaderModuleUnload += (eventData) => LoaderModuleUnloadEvents += 1;
+                    source.Clr.LoaderModuleLoad += (eventData) => Interlocked.Increment(ref LoaderModuleLoadEvents);
+                    source.Clr.LoaderModuleUnload += (eventData) => Interlocked.Increment(ref LoaderModuleUnloadEvents);
 
                     return () => {
                         Logger.logger.Log("Event counts validation");
