@@ -846,6 +846,8 @@ Elf64_Ehdr::Elf64_Ehdr()
     e_machine = EM_AARCH64;
 #elif defined(TARGET_LOONGARCH64)
     e_machine = EM_LOONGARCH;
+#elif defined(TARGET_RISCV64)
+    e_machine = EM_RISCV;
 #endif
     e_flags = 0;
     e_version = 1;

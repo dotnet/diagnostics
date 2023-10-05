@@ -48,6 +48,8 @@
 #define DTCONTEXT_IS_ARM
 #elif defined (TARGET_ARM64)
 #define DTCONTEXT_IS_ARM64
+#elif defined (TARGET_RISCV64)
+#define DTCONTEXT_IS_RISCV64
 #endif
 
 #if defined(DTCONTEXT_IS_X86)
@@ -446,6 +448,74 @@ typedef DECLSPEC_ALIGN(16) struct {
     /* +0x390 */
 
 } DT_CONTEXT;
+
+#elif defined(DTCONTEXT_IS_RISCV64)
+
+#define DT_CONTEXT_RISCV64 0x01000000L
+
+#define DT_CONTEXT_CONTROL         (DT_CONTEXT_RISCV64 | 0x1L)
+#define DT_CONTEXT_INTEGER         (DT_CONTEXT_RISCV64 | 0x2L)
+#define DT_CONTEXT_FLOATING_POINT  (DT_CONTEXT_RISCV64 | 0x4L)
+#define DT_CONTEXT_DEBUG_REGISTERS (DT_CONTEXT_RISCV64 | 0x8L)
+
+#define DT_CONTEXT_FULL (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_FLOATING_POINT)
+#define DT_CONTEXT_ALL (DT_CONTEXT_CONTROL | DT_CONTEXT_INTEGER | DT_CONTEXT_FLOATING_POINT | DT_CONTEXT_DEBUG_REGISTERS)
+
+#define DT_RISCV64_MAX_BREAKPOINTS     8
+#define DT_RISCV64_MAX_WATCHPOINTS     2
+
+typedef struct DECLSPEC_ALIGN(16) {
+    //
+    // Control flags.
+    //
+
+    /* +0x000 */ DWORD ContextFlags;
+
+    //
+    // Integer registers
+    //
+    DWORD64 R0;
+    DWORD64 Ra;
+    DWORD64 Sp;
+    DWORD64 Gp;
+    DWORD64 Tp;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 Fp;
+    DWORD64 S1;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 S8;
+    DWORD64 S9;
+    DWORD64 S10;
+    DWORD64 S11;
+    DWORD64 T3;
+    DWORD64 T4;
+    DWORD64 T5;
+    DWORD64 T6;
+    DWORD64 Pc;
+
+    //
+    // Floating Point Registers
+    //
+    ULONGLONG F[32];
+    DWORD Fcsr;
+} DT_CONTEXT;
+
+static_assert(sizeof(DT_CONTEXT) == sizeof(T_CONTEXT), "DT_CONTEXT size must equal the T_CONTEXT size");
 
 #else
 #error Unsupported platform
