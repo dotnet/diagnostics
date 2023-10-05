@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         int IDataReader.ProcessId => unchecked((int)_target.ProcessId.GetValueOrDefault());
 
-        IEnumerable<ModuleInfo> IDataReader.EnumerateModules() => _modules ??= ModuleService.EnumerateModules().Select((module) => new DataReaderModule(module)).ToList();
+        IEnumerable<ModuleInfo> IDataReader.EnumerateModules() => _modules ??= ModuleService.EnumerateModules().Select((module) => new DataReaderModule(this, module)).ToList();
 
         bool IDataReader.GetThreadContext(uint threadId, uint contextFlags, Span<byte> context)
         {
@@ -114,11 +114,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private sealed class DataReaderModule : ModuleInfo
         {
+            private readonly IDataReader _reader;
             private readonly IModule _module;
+            private IResourceNode _resourceRoot;
 
-            public DataReaderModule(IModule module)
+            public DataReaderModule(IDataReader reader, IModule module)
                 : base(module.ImageBase, module.FileName)
             {
+                _reader = reader;
                 _module = module;
             }
 
@@ -202,7 +205,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return 0;
             }
 
-            public override IResourceNode ResourceRoot => base.ResourceRoot;
+            public override IResourceNode ResourceRoot => _resourceRoot ??= ModuleInfo.TryCreateResourceRoot(_reader, _module.ImageBase, _module.ImageSize, _module.IsFileLayout.GetValueOrDefault(false));
         }
     }
 }
