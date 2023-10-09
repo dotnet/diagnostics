@@ -50,7 +50,9 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
 
                         taskArray[i] = Task.Run(() => TestTask());
                     }
+#pragma warning disable xUnit1031 // Do not use blocking task operations in test method
                     Task.WaitAll(taskArray);
+#pragma warning restore xUnit1031 // Do not use blocking task operations in test method
                 };
 
                 void TestTask()
