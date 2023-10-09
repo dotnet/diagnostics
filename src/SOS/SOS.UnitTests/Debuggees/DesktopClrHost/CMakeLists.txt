@@ -6,7 +6,6 @@ include_directories(inc)
 include_directories("$ENV{VSInstallDir}/DIA SDK/include")
 
 add_definitions(-DUSE_STL)
-add_definitions(-MT) 
 
 set(DESKTOPCLRHOST_SOURCES
     DesktopClrHost.cpp
