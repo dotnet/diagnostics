@@ -288,9 +288,9 @@ namespace DotnetCounters.UnitTests
 
         private void CheckRuntimeOS()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new SkipTestException("Test instability on OSX");
+                throw new SkipTestException("Test instability on non-Windows platforms");
             }
         }
 
