@@ -53,15 +53,6 @@
 
 #include "util.h"
 
-#ifndef _ASSERTE
-#ifdef _DEBUG
-#define _ASSERTE(expr) \
-        do { if (!(expr) ) { ExtOut(#expr); DebugBreak(); } } while (0)
-#else // _DEBUG
-#define _ASSERTE(expr)
-#endif // _DEBUG else
-#endif // !_ASSERTE
-
 #ifdef _MSC_VER
 #pragma warning(disable:4244)   // conversion from 'unsigned int' to 'unsigned short', possible loss of data
 #pragma warning(disable:4189)   // local variable is initialized but not referenced

@@ -262,7 +262,7 @@ TCHAR * __cdecl _ultox (
 #ifdef _SECURE_ITOA
 static errno_t __fastcall x64tox_s
         (/* stdcall is faster and smaller... Might as well use it for the helper. */
-        unsigned __int64 val,
+        uint64_t val,
         TCHAR *buf,
         size_t sizeInTChars,
         unsigned radix,
@@ -271,7 +271,7 @@ static errno_t __fastcall x64tox_s
 #else  /* _SECURE_ITOA */
 static void __fastcall x64tox
         (/* stdcall is faster and smaller... Might as well use it for the helper. */
-        unsigned __int64 val,
+        uint64_t val,
         TCHAR *buf,
         unsigned radix,
         int is_neg
@@ -301,7 +301,7 @@ static void __fastcall x64tox
 #ifdef _SECURE_ITOA
             length++;
 #endif  /* _SECURE_ITOA */
-            val = (unsigned __int64)(-(__int64)val);
+            val = (uint64_t)(-(int64_t)val);
         }
 
         firstdig = p;           /* save pointer to first digit */
@@ -359,7 +359,7 @@ DLLEXPORT errno_t __cdecl _i64tox_s (
         int radix
         )
 {
-        return x64tox_s((unsigned __int64)val, buf, sizeInTChars, radix, (radix == 10 && val < 0));
+        return x64tox_s((uint64_t)val, buf, sizeInTChars, radix, (radix == 10 && val < 0));
 }
 
 errno_t __cdecl _ui64tox_s (
@@ -400,7 +400,7 @@ errno_t __cdecl _ui64tox_s (
    and return pointer to buffer. */
 
 TCHAR * __cdecl _ui64tox (
-        unsigned __int64 val,
+        uint64_t val,
         TCHAR *buf,
         int radix
         )

@@ -13,9 +13,8 @@
 #include "strike.h"
 #include "util.h"
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { HRESULT Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 HRESULT SigParser::SkipExactlyOne()
 {
@@ -122,8 +121,18 @@ HRESULT SigParser::SkipExactlyOne()
 //
 HRESULT
 SigParser::SkipMethodHeaderSignature(
-    uint32_t * pcArgs)
+    uint32_t * pcArgs, bool skipReturnType /*= true*/)
 {
+    CONTRACTL
+    {
+        INSTANCE_CHECK;
+        NOTHROW;
+        GC_NOTRIGGER;
+        FORBID_FAULT;
+        SUPPORTS_DAC;
+    }
+    CONTRACTL_END
+
     HRESULT hr = S_OK;
 
     // Skip calling convention
@@ -143,8 +152,11 @@ SigParser::SkipMethodHeaderSignature(
     // Get arg count;
     IfFailRet(GetData(pcArgs));
 
-    // Skip return type;
-    IfFailRet(SkipExactlyOne());
+    if (skipReturnType)
+    {
+        // Skip return type;
+        IfFailRet(SkipExactlyOne());
+    }
 
     return hr;
 } // SigParser::SkipMethodHeaderSignature

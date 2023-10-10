@@ -37,6 +37,7 @@ SET_DEFAULT_DEBUG_CHANNEL(DEBUG); // some headers have code with asserts, so do 
 
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -112,7 +113,7 @@ OutputDebugStringW(
     }
 
     /* strLen includes the null terminator */
-    if ((lpOutputStringA = (LPSTR) InternalMalloc((strLen * sizeof(CHAR)))) == NULL)
+    if ((lpOutputStringA = (LPSTR) malloc((strLen * sizeof(CHAR)))) == NULL)
     {
         ERROR("Insufficient memory available !\n");
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);

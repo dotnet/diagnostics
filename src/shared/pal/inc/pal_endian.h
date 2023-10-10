@@ -16,7 +16,7 @@
 extern "C++" {
 inline UINT16 SWAP16(UINT16 x)
 {
-    return (x >> 8) | (x << 8);
+    return (UINT16)((x >> 8) | (x << 8));
 }
 
 inline UINT32 SWAP32(UINT32 x)
@@ -99,6 +99,11 @@ inline void SwapGuid(GUID *pGuid)
 
 #ifdef HOST_ARM
 #define LOG2_PTRSIZE	2
+#define ALIGN_ACCESS    ((1<<LOG2_PTRSIZE)-1)
+#endif
+
+#ifdef HOST_RISCV64
+#define LOG2_PTRSIZE	3
 #define ALIGN_ACCESS    ((1<<LOG2_PTRSIZE)-1)
 #endif
 

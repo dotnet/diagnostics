@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "hostservices.h"
-#include "dbgengservices.h"
 #include "exts.h"
 
 extern IMachine* GetTargetMachine(ULONG processorType);

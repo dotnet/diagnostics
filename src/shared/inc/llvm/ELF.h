@@ -343,6 +343,7 @@ enum {
   EM_NORC          = 218, // Nanoradio Optimized RISC
   EM_CSR_KALIMBA   = 219, // CSR Kalimba architecture family
   EM_AMDGPU        = 224, // AMD GPU architecture
+  EM_RISCV         = 243,
   EM_LOONGARCH     = 258, // LoongArch processor
 
   // A request has been made to the maintainer of the official registry for
@@ -546,6 +547,14 @@ enum {
   ODK_GP_GROUP   = 9,   // GP group to use for text/data sections
   ODK_IDENT      = 10,  // ID information
   ODK_PAGESIZE   = 11   // Page size information
+};
+
+// LoongArch Specific e_flags
+enum : unsigned {
+  EF_LARCH_ABI = 0x0003,
+  EF_LARCH_ABI_LP32 = 0x0001,
+  EF_LARCH_ABI_XLP32 = 0x0002,
+  EF_LARCH_ABI_LP64 = 0x0003,
 };
 
 // Hexagon-specific e_flags
@@ -821,7 +830,7 @@ struct Elf32_Sym {
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = (unsigned char)((b << 4) + (t & 0x0f));
   }
 };
 
@@ -841,7 +850,7 @@ struct Elf64_Sym {
   void setBinding(unsigned char b) { setBindingAndType(b, getType()); }
   void setType(unsigned char t) { setBindingAndType(getBinding(), t); }
   void setBindingAndType(unsigned char b, unsigned char t) {
-    st_info = (b << 4) + (t & 0x0f);
+    st_info = (unsigned char)((b << 4) + (t & 0x0f));
   }
 };
 

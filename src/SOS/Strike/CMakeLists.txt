@@ -128,6 +128,7 @@ if (CLR_CMAKE_HOST_WIN32)
     extensions
     corguids
     dbgutil
+    coreclrminipal
     ${STATIC_MT_CRT_LIB}
     ${STATIC_MT_CPP_LIB}
     ${STATIC_MT_VCRT_LIB}
@@ -151,8 +152,6 @@ if (CLR_CMAKE_HOST_WIN32)
   endif(NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)
 
 else(CLR_CMAKE_HOST_WIN32)
-  add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
-  add_definitions(-DPAL_STDCPP_COMPAT=1)
   add_compile_options(-Wno-null-arithmetic)
   add_compile_options(-Wno-format)
 
@@ -198,6 +197,7 @@ else(CLR_CMAKE_HOST_WIN32)
     dbgutil
     palrt
     coreclrpal
+    coreclrminipal
   )
 
 endif(CLR_CMAKE_HOST_WIN32)

@@ -15,6 +15,7 @@
 #include "sstring.h"
 #include <wchar.h>
 #include <metahost.h>
+#include <dn-u16.h>
 #include "runtimeinfo.h"
 
 #if defined (HOST_WINDOWS) && defined(HOST_X86)

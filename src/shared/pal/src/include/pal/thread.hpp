@@ -87,15 +87,6 @@ namespace CorUnix
         HANDLE *phThread
         );
 
-    /* In the windows CRT there is a constant defined for the max width
-    of a _ecvt conversion. That constant is 348. 348 for the value, plus
-    the exponent value, decimal, and sign if required. */
-#define ECVT_MAX_COUNT_SIZE 348
-#define ECVT_MAX_BUFFER_SIZE 357
-
-    /*STR_TIME_SIZE is defined as 26 the size of the
-      return val by ctime_r*/
-#define STR_TIME_SIZE 26
 
     class CThreadCRTInfo : public CThreadInfoInitializer
     {
@@ -165,7 +156,7 @@ namespace CorUnix
         //
         // The only other spot the refcount is touched is from within
         // CPalObjectBase::ReleaseReference -- incremented before the
-        // destructors for an ojbect are called, and decremented afterwords.
+        // destructors for an object are called, and decremented afterwords.
         // This permits the freeing of the thread structure to happen after
         // the freeing of the enclosing thread object has completed.
         //

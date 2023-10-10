@@ -79,7 +79,6 @@ CRITICAL_SECTION module_critsec;
 MODSTRUCT exe_module;
 MODSTRUCT *pal_module = nullptr;
 
-char * g_szCoreCLRPath = nullptr;
 bool g_running_in_exe = false;
 
 int MaxWCharToAcpLength = 3;
@@ -150,10 +149,9 @@ LoadLibraryExA(
         return nullptr;
     }
 
-    LPSTR lpstr = nullptr;
     HMODULE hModule = nullptr;
 
-    PERF_ENTRY(LoadLibraryA);
+    PERF_ENTRY(LoadLibraryExA);
     ENTRY("LoadLibraryExA (lpLibFileName=%p (%s)) \n",
           (lpLibFileName) ? lpLibFileName : "NULL",
           (lpLibFileName) ? lpLibFileName : "NULL");
@@ -164,23 +162,10 @@ LoadLibraryExA(
     }
 
     /* do the Dos/Unix conversion on our own copy of the name */
-    lpstr = strdup(lpLibFileName);
-    if (!lpstr)
-    {
-        ERROR("strdup failure!\n");
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-        goto Done;
-    }
-    FILEDosToUnixPathA(lpstr);
-
-    hModule = LOADLoadLibrary(lpstr, TRUE);
+    hModule = LOADLoadLibrary(lpLibFileName, TRUE);
 
     /* let LOADLoadLibrary call SetLastError */
  Done:
-    if (lpstr != nullptr)
-    {
-        free(lpstr);
-    }
 
     LOGEXIT("LoadLibraryExA returns HMODULE %p\n", hModule);
     PERF_EXIT(LoadLibraryExA);
@@ -233,8 +218,6 @@ LoadLibraryExW(
         goto done;
     }
 
-    /* do the Dos/Unix conversion on our own copy of the name */
-    FILEDosToUnixPathA(lpstr);
     pathstr.CloseBuffer(name_length);
 
     /* let LOADLoadLibrary call SetLastError in case of failure */
@@ -297,40 +280,7 @@ GetProcAddress(
     }
 
     // Get the symbol's address.
-
-    // If we're looking for a symbol inside the PAL, we try the PAL_ variant
-    // first because otherwise we run the risk of having the non-PAL_
-    // variant preferred over the PAL's implementation.
-    if (pal_module && module->dl_handle == pal_module->dl_handle)
-    {
-        int iLen = 4 + strlen(lpProcName) + 1;
-        LPSTR lpPALProcName = (LPSTR) alloca(iLen);
-
-        if (strcpy_s(lpPALProcName, iLen, "PAL_") != SAFECRT_SUCCESS)
-        {
-            ERROR("strcpy_s failed!\n");
-            SetLastError(ERROR_INSUFFICIENT_BUFFER);
-            goto done;
-        }
-
-        if (strcat_s(lpPALProcName, iLen, lpProcName) != SAFECRT_SUCCESS)
-        {
-            ERROR("strcat_s failed!\n");
-            SetLastError(ERROR_INSUFFICIENT_BUFFER);
-            goto done;
-        }
-
-        ProcAddress = (FARPROC) dlsym(module->dl_handle, lpPALProcName);
-        symbolName = lpPALProcName;
-    }
-
-    // If we aren't looking inside the PAL or we didn't find a PAL_ variant
-    // inside the PAL, fall back to a normal search.
-    if (ProcAddress == nullptr)
-    {
-        ProcAddress = (FARPROC) dlsym(module->dl_handle, lpProcName);
-    }
-
+    ProcAddress = (FARPROC) dlsym(module->dl_handle, lpProcName);
     if (ProcAddress)
     {
         TRACE("Symbol %s found at address %p in module %p (named %S)\n",
@@ -602,8 +552,6 @@ PAL_LoadLibraryDirect(
         goto done;
     }
 
-    /* do the Dos/Unix conversion on our own copy of the name */
-    FILEDosToUnixPathA(lpstr);
     pathstr.CloseBuffer(name_length);
     lpcstr = FixLibCName(lpstr);
 
@@ -1285,7 +1233,7 @@ Parameters :
                         goes in MODSTRUCT::lib_name
 
 Return value:
-    a pointer to a new, initialized MODSTRUCT strucutre, or NULL on failure.
+    a pointer to a new, initialized MODSTRUCT structure, or NULL on failure.
 
 Notes :
     'name' is used to initialize MODSTRUCT::lib_name. The other member is set to NULL
@@ -1297,7 +1245,7 @@ static MODSTRUCT *LOADAllocModule(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR name)
     LPWSTR wide_name;
 
     /* no match found : try to create a new module structure */
-    module = (MODSTRUCT *)InternalMalloc(sizeof(MODSTRUCT));
+    module = (MODSTRUCT *)malloc(sizeof(MODSTRUCT));
     if (nullptr == module)
     {
         ERROR("malloc() failed! errno is %d (%s)\n", errno, strerror(errno));
@@ -1496,68 +1444,6 @@ static HMODULE LOADLoadLibrary(LPCSTR shortAsciiName, BOOL fDynamic)
     UnlockModuleList();
 
     return module;
-}
-
-/*++
-Function :
-    LOADGetPalLibrary
-
-    Load and initialize the PAL module.
-
-Parameters :
-    None
-
-Return value :
-    pointer to module struct
-
---*/
-MODSTRUCT *LOADGetPalLibrary()
-{
-    if (pal_module == nullptr)
-    {
-        // Initialize the pal module (the module containing LOADGetPalLibrary). Assumes that
-        // the PAL is linked into the coreclr module because we use the module name containing
-        // this function for the coreclr path.
-        TRACE("Loading module for PAL library\n");
-
-        Dl_info info;
-        if (dladdr((PVOID)&LOADGetPalLibrary, &info) == 0)
-        {
-            ERROR("LOADGetPalLibrary: dladdr() failed.\n");
-            goto exit;
-        }
-        // Stash a copy of the CoreCLR installation path in a global variable.
-        // Make sure it's terminated with a slash.
-        if (g_szCoreCLRPath == nullptr)
-        {
-            size_t  cbszCoreCLRPath = strlen(info.dli_fname) + 1;
-            g_szCoreCLRPath = (char*) InternalMalloc(cbszCoreCLRPath);
-
-            if (g_szCoreCLRPath == nullptr)
-            {
-                ERROR("LOADGetPalLibrary: InternalMalloc failed!");
-                goto exit;
-            }
-
-            if (strcpy_s(g_szCoreCLRPath, cbszCoreCLRPath, info.dli_fname) != SAFECRT_SUCCESS)
-            {
-                ERROR("LOADGetPalLibrary: strcpy_s failed!");
-                goto exit;
-            }
-        }
-
-        if (g_running_in_exe)
-        {
-            pal_module = (MODSTRUCT*)LOADLoadLibrary(nullptr, FALSE);
-        }
-        else
-        {
-            pal_module = (MODSTRUCT*)LOADLoadLibrary(info.dli_fname, FALSE);
-        }
-    }
-
-exit:
-    return pal_module;
 }
 
 /*++

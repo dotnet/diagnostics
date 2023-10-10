@@ -3,9 +3,8 @@
 
 #include "WatchCmd.h"
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 _PersistList::~_PersistList()
 {

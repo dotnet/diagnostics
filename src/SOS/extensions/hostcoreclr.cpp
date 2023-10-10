@@ -24,12 +24,11 @@
 #include "coreclrhost.h"
 #include "extensions.h"
 
-#include <minipal/getexepath.h>
 #include <minipal/utils.h>
+#include <minipal/getexepath.h>
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 #ifdef FEATURE_PAL
 #define TPALIST_SEPARATOR_STR_A ":"

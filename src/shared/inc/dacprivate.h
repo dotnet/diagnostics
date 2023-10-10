@@ -230,7 +230,7 @@ struct MSLAYOUT DacpThreadLocalModuleData
 struct MSLAYOUT DacpModuleData
 {
     CLRDATA_ADDRESS Address = 0;
-    CLRDATA_ADDRESS PEAssembly = 0; // A PEAssembly addr
+    CLRDATA_ADDRESS PEAssembly = 0; // Actually the module address in .NET 9+
     CLRDATA_ADDRESS ilBase = 0;
     CLRDATA_ADDRESS metadataStart = 0;
     ULONG64 metadataSize = 0;
@@ -250,8 +250,8 @@ struct MSLAYOUT DacpModuleData
     CLRDATA_ADDRESS FileReferencesMap = 0;
     CLRDATA_ADDRESS ManifestModuleReferencesMap = 0;
 
-    CLRDATA_ADDRESS pLookupTableHeap = 0;
-    CLRDATA_ADDRESS pThunkHeap = 0;
+    CLRDATA_ADDRESS LoaderAllocator = 0;
+    CLRDATA_ADDRESS ThunkHeap = 0;
 
     ULONG64 dwModuleIndex = 0;
 
@@ -274,11 +274,14 @@ struct MSLAYOUT DacpMethodTableData
 {
     BOOL bIsFree = FALSE; // everything else is NULL if this is true.
     CLRDATA_ADDRESS Module = 0;
+    // Note: DacpMethodTableData::Class is really a pointer to the canonical method table
     CLRDATA_ADDRESS Class = 0;
     CLRDATA_ADDRESS ParentMethodTable = 0;
     WORD wNumInterfaces = 0;
     WORD wNumMethods = 0;
+    // Note: Always 0, since .NET 9
     WORD wNumVtableSlots = 0;
+    // Note: Always 0, since .NET 9
     WORD wNumVirtuals = 0;
     DWORD BaseSize = 0;
     DWORD ComponentSize = 0;
@@ -611,27 +614,11 @@ struct MSLAYOUT DacpTieredVersionData
         OptimizationTier_ReadyToRun,
         OptimizationTier_OptimizedTier1OSR,
         OptimizationTier_QuickJittedInstrumented,
-        OptimizationTier_OptimizedTier1Instrumented
+        OptimizationTier_OptimizedTier1Instrumented,
     };
 
     CLRDATA_ADDRESS NativeCodeAddr;
     OptimizationTier OptimizationTier;
-    CLRDATA_ADDRESS NativeCodeVersionNodePtr;
-};
-
-// 2.x version
-struct MSLAYOUT DacpTieredVersionData_2x
-{
-    enum TieredState 
-    {
-        NON_TIERED,
-        TIERED_0,
-        TIERED_1,
-        TIERED_UNKNOWN
-    };
-    
-    CLRDATA_ADDRESS NativeCodeAddr;
-    TieredState     TieredInfo;
     CLRDATA_ADDRESS NativeCodeVersionNodePtr;
 };
 
@@ -743,7 +730,7 @@ struct MSLAYOUT DacpGenerationAllocData
 
 struct MSLAYOUT DacpGcHeapDetails
 {
-    CLRDATA_ADDRESS heapAddr = 0; // Only filled in in server mode, otherwise NULL
+    CLRDATA_ADDRESS heapAddr = 0; // Only filled in server mode, otherwise NULL
     CLRDATA_ADDRESS alloc_allocated = 0;
 
     CLRDATA_ADDRESS mark_array = 0;
@@ -798,7 +785,7 @@ struct MSLAYOUT DacpHeapSegmentData
     CLRDATA_ADDRESS mem = 0;
     // pass this to request if non-null to get the next segments.
     CLRDATA_ADDRESS next = 0;
-    CLRDATA_ADDRESS gc_heap = 0; // only filled in in server mode, otherwise NULL
+    CLRDATA_ADDRESS gc_heap = 0; // only filled in server mode, otherwise NULL
     // computed field: if this is the ephemeral segment highMark includes the ephemeral generation
     CLRDATA_ADDRESS highAllocMark = 0;
 
@@ -901,7 +888,7 @@ struct MSLAYOUT DacpGCInterestingInfoData
 
 struct MSLAYOUT DacpGcHeapAnalyzeData
 {
-    CLRDATA_ADDRESS heapAddr = 0; // Only filled in in server mode, otherwise NULL
+    CLRDATA_ADDRESS heapAddr = 0; // Only filled in server mode, otherwise NULL
 
     CLRDATA_ADDRESS internal_root_array = 0;
     ULONG64         internal_root_array_index = 0;
@@ -1002,7 +989,7 @@ struct MSLAYOUT DacpGetModuleData
     BOOL IsDynamic = FALSE;
     BOOL IsInMemory = FALSE;
     BOOL IsFileLayout = FALSE;
-    CLRDATA_ADDRESS PEAssembly = 0;
+    CLRDATA_ADDRESS PEAssembly = 0; // Actually the module address in .NET 9+
     CLRDATA_ADDRESS LoadedPEAddress = 0;
     ULONG64 LoadedPESize = 0;
     CLRDATA_ADDRESS InMemoryPdbAddress = 0;

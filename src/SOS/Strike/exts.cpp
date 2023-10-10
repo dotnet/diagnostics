@@ -195,6 +195,7 @@ ArchQuery(void)
                 break;
             case IMAGE_FILE_MACHINE_RISCV64:
                 architecture = "riscv64";
+                break;
             case IMAGE_FILE_MACHINE_LOONGARCH64:
                 architecture = "loongarch64";
                 break;

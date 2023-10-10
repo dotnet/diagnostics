@@ -94,10 +94,17 @@ Function:
   Aborts the process after calling the shutdown cleanup handler. This function
   should be called instead of calling abort() directly.
 
+Parameters:
+  signal - POSIX signal number
+  siginfo - POSIX signal info
+
   Does not return
 --*/
+#if !defined(HOST_ARM)  // PAL_NORETURN produces broken unwinding information for this method
+                        // making crash dumps impossible to analyze
 PAL_NORETURN
-VOID PROCAbort();
+#endif
+VOID PROCAbort(int signal = SIGABRT, siginfo_t* siginfo = nullptr);
 
 #ifdef __cplusplus
 }

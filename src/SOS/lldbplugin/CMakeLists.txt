@@ -13,8 +13,6 @@ if (CORECLR_SET_RPATH)
   endif(CLR_CMAKE_HOST_OSX)
 endif (CORECLR_SET_RPATH)
 
-add_definitions(-DPAL_STDCPP_COMPAT)
-
 set(ENABLE_LLDBPLUGIN ${CLR_CMAKE_HOST_UNIX} CACHE BOOL "Enable building the SOS plugin for LLDB.")
 set(REQUIRE_LLDBPLUGIN ${CLR_CMAKE_HOST_LINUX} CACHE BOOL "Require building the SOS plugin for LLDB.")
 

@@ -82,7 +82,6 @@ private:
         REPRESENTATION_UNICODE  = 0x04, // 100
         REPRESENTATION_ASCII    = 0x01, // 001
         REPRESENTATION_UTF8     = 0x03, // 011
-        REPRESENTATION_ANSI     = 0x07, // 111
 
         REPRESENTATION_VARIABLE_MASK    = 0x02,
         REPRESENTATION_SINGLE_MASK      = 0x01,
@@ -105,15 +104,10 @@ private:
 
   protected:
     class Index;
-    class UIndex;
 
     friend class Index;
-    friend class UIndex;
 
   public:
-
-    // UIterator is character-level assignable.
-    class UIterator;
 
     // CIterators/Iterator'string must be modified by SString APIs.
     class CIterator;
@@ -123,8 +117,7 @@ private:
     enum tagUTF8Literal { Utf8Literal };
     enum tagLiteral { Literal };
     enum tagUTF8 { Utf8 };
-    enum tagANSI { Ansi };
-    enum tagASCII {Ascii };
+    enum tagASCII { Ascii };
 
     static void Startup();
     static CHECK CheckStartup();
@@ -134,21 +127,20 @@ private:
     SString();
 
     explicit SString(const SString &s);
+    SString(SString&& string) = default;
 
     SString(const SString &s1, const SString &s2);
     SString(const SString &s1, const SString &s2, const SString &s3);
     SString(const SString &s1, const SString &s2, const SString &s3, const SString &s4);
     SString(const SString &s, const CIterator &i, COUNT_T length);
     SString(const SString &s, const CIterator &start, const CIterator &end);
-    SString(const WCHAR *string);
+    explicit SString(const WCHAR *string);
     SString(const WCHAR *string, COUNT_T count);
     SString(enum tagASCII dummyTag, const ASCII *string);
     SString(enum tagASCII dummyTag, const ASCII *string, COUNT_T count);
     SString(enum tagUTF8 dummytag, const UTF8 *string);
     SString(enum tagUTF8 dummytag, const UTF8 *string, COUNT_T count);
-    SString(enum tagANSI dummytag, const ANSI *string);
-    SString(enum tagANSI dummytag, const ANSI *string, COUNT_T count);
-    SString(WCHAR character);
+    explicit SString(WCHAR character);
 
     // NOTE: Literals MUST be read-only never-freed strings.
     SString(enum tagLiteral dummytag, const CHAR *literal);
@@ -172,19 +164,18 @@ private:
     void Set(const WCHAR *string);
     void SetASCII(const ASCII *string);
     void SetUTF8(const UTF8 *string);
-    void SetANSI(const ANSI *string);
+    void SetAndConvertToUTF8(const WCHAR* string);
 
     // Set this string to a copy of the first count chars of the given string
     void Set(const WCHAR *string, COUNT_T count);
 
     // Set this string to a prellocated copy of a given string.
-    // The caller is the owner of the bufffer and has to coordinate its lifetime.
+    // The caller is the owner of the buffer and has to coordinate its lifetime.
     void SetPreallocated(const WCHAR *string, COUNT_T count);
 
     void SetASCII(const ASCII *string, COUNT_T count);
 
     void SetUTF8(const UTF8 *string, COUNT_T count);
-    void SetANSI(const ANSI *string, COUNT_T count);
 
     // Set this string to the unicode character
     void Set(WCHAR character);
@@ -192,7 +183,7 @@ private:
     // Set this string to the UTF8 character
     void SetUTF8(CHAR character);
 
-    // This this string to the given literal. We share the mem and don't make a copy.
+    // Set this string to the given literal. We share the mem and don't make a copy.
     void SetLiteral(const CHAR *literal);
     void SetLiteral(const WCHAR *literal);
 
@@ -202,7 +193,7 @@ private:
 
     // Normalizes the string representation to unicode.  This can be used to
     // make basic read-only operations non-failing.
-    void Normalize() const;
+    void Normalize();
 
     // Return the number of characters in the string (excluding the terminating NULL).
     COUNT_T GetCount() const;
@@ -311,10 +302,10 @@ private:
     void Replace(const Iterator &i, COUNT_T length, const SString &s);
 
     // Make sure that string buffer has room to grow
-    void Preallocate(COUNT_T characters) const;
+    void Preallocate(COUNT_T characters);
 
     // Shrink buffer size as much as possible (reallocate if necessary.)
-    void Trim() const;
+    void Trim();
 
     // ------------------------------------------------------------------
     // Iterators:
@@ -325,56 +316,9 @@ private:
     // CIterator and Iterator are cheap to create, but allow only read-only
     // access to the string.
     //
-    // UIterator forces a unicode conversion, but allows
-    // assignment to individual string characters.  They are also a bit more
-    // efficient once created.
-
-    // ------------------------------------------------------------------
-    // UIterator:
-    // ------------------------------------------------------------------
-
- protected:
-
-    class EMPTY_BASES_DECL UIndex : public SBuffer::Index
-    {
-        friend class SString;
-        friend class Indexer<WCHAR, UIterator>;
-
-      protected:
-
-        UIndex();
-        UIndex(SString *string, SCOUNT_T index);
-        WCHAR &GetAt(SCOUNT_T delta) const;
-        void Skip(SCOUNT_T delta);
-        SCOUNT_T Subtract(const UIndex &i) const;
-        CHECK DoCheck(SCOUNT_T delta) const;
-
-        WCHAR *GetUnicode() const;
-    };
-
- public:
-
-    class EMPTY_BASES_DECL UIterator : public UIndex, public Indexer<WCHAR, UIterator>
-    {
-        friend class SString;
-
-    public:
-        UIterator()
-        {
-        }
-
-        UIterator(SString *string, int index)
-          : UIndex(string, index)
-        {
-        }
-    };
-
-    UIterator BeginUnicode();
-    UIterator EndUnicode();
-
     // For CIterator & Iterator, we try our best to iterate the string without
     // modifying it. (Currently, we do require an ASCII or Unicode string
-    // for simple WCHAR retrival, but you could imagine being more flexible
+    // for simple WCHAR retrieval, but you could imagine being more flexible
     // going forward - perhaps even supporting iterating multibyte encodings
     // directly.)
     //
@@ -412,8 +356,8 @@ private:
         const CHAR *GetASCII() const;
 
       public:
-        // Note these should supercede the Indexer versions
-        // since this class comes first in the inheritence list
+        // Note these should supersede the Indexer versions
+        // since this class comes first in the inheritance list
         WCHAR operator*() const;
         void operator->() const;
         WCHAR operator[](int index) const;
@@ -527,38 +471,12 @@ private:
     // Helper function to convert string in-place to lower-case (no allocation overhead for SString instance)
     static void LowerCase(__inout_z LPWSTR wszString);
 
-    // These routines will use the given scratch string if necessary
-    // to perform a conversion to the desired representation
-
-    // Use a local declaration of InlineScratchBuffer or StackScratchBuffer for parameters of
-    // AbstractScratchBuffer.
-    class AbstractScratchBuffer;
-
-    // These routines will use the given scratch buffer if necessary
-    // to perform a conversion to the desired representation.  Note that
-    // the lifetime of the pointer return is limited by BOTH the
-    // scratch string and the source (this) string.
-    //
-    // Typical usage:
-    //
-    // SString *s = ...;
-    // {
-    //   StackScratchBuffer buffer;
-    //   const UTF8 *utf8 = s->GetUTF8(buffer);
-    //   CallFoo(utf8);
-    // }
-    // // No more pointers to returned buffer allowed.
-
-    const UTF8 *GetUTF8(AbstractScratchBuffer &scratch) const;
-    const UTF8 *GetUTF8(AbstractScratchBuffer &scratch, COUNT_T *pcbUtf8) const;
-    const ANSI *GetANSI(AbstractScratchBuffer &scratch) const;
-
-    // Used when the representation is known, throws if the representation doesn't match
-    const UTF8 *GetUTF8NoConvert() const;
+    // You can always get a UTF8 string.  This will force a conversion
+    // if necessary.
+    const UTF8 *GetUTF8() const;
 
     // Converts/copies into the given output string
     void ConvertToUnicode(SString &dest) const;
-    void ConvertToANSI(SString &dest) const;
     COUNT_T ConvertToUTF8(SString &dest) const;
 
     //-------------------------------------------------------------------
@@ -575,7 +493,7 @@ private:
 
     // example usage:
     // void GetName(SString & str) {
-    //      char * p = str.OpenANSIBuffer(3);
+    //      char * p = str.OpenUTF8Buffer(3);
     //      strcpy(p, "Cat");
     //      str.CloseBuffer();
     // }
@@ -597,10 +515,12 @@ private:
     // Open the raw buffer for writing countChars characters (not including the null).
     WCHAR *OpenUnicodeBuffer(COUNT_T maxCharCount);
     UTF8 *OpenUTF8Buffer(COUNT_T maxSingleCharCount);
-    ANSI *OpenANSIBuffer(COUNT_T maxSingleCharCount);
 
-    //Returns the unicode string, the caller is reponsible for lifetime of the string
+    //Returns the unicode string, the caller is responsible for lifetime of the string
     WCHAR *GetCopyOfUnicodeString();
+
+    //Returns the UTF8 string, the caller is responsible for the lifetime of the string
+    UTF8 *GetCopyOfUTF8String();
 
     // Get the max size that can be passed to OpenUnicodeBuffer without causing allocations.
     COUNT_T GetUnicodeAllocation();
@@ -646,27 +566,14 @@ private:
     // Utilities
     //---------------------------------------------------------------------
 
-    // WARNING: The MBCS version of printf function are factory for globalization
-    // issues when used to format Unicode strings (%S). The Unicode versions are
-    // preferred in this case.
     void Printf(const CHAR *format, ...);
     void VPrintf(const CHAR *format, va_list args);
-
-    void Printf(const WCHAR *format, ...);
-    void PPrintf(const WCHAR *format, ...);
-    void VPrintf(const WCHAR *format, va_list args);
-
-    void PVPrintf(const WCHAR *format, va_list args);
-
     void AppendPrintf(const CHAR *format, ...);
     void AppendVPrintf(const CHAR *format, va_list args);
 
-    void AppendPrintf(const WCHAR *format, ...);
-    void AppendVPrintf(const WCHAR *format, va_list args);
-
+public:
     BOOL LoadResource(CCompRC::ResourceCategory eCategory, int resourceID);
     HRESULT LoadResourceAndReturnHR(CCompRC::ResourceCategory eCategory, int resourceID);
-    HRESULT LoadResourceAndReturnHR(CCompRC* pResourceDLL, CCompRC::ResourceCategory eCategory, int resourceID);
     BOOL FormatMessage(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId,
                        const SString &arg1 = Empty(), const SString &arg2 = Empty(),
                        const SString &arg3 = Empty(), const SString &arg4 = Empty(),
@@ -685,11 +592,9 @@ private:
 
     operator const WCHAR * () const { WRAPPER_NO_CONTRACT; return GetUnicode(); }
 
-    WCHAR operator[](int index) { WRAPPER_NO_CONTRACT; return Begin()[index]; }
     WCHAR operator[](int index) const { WRAPPER_NO_CONTRACT; return Begin()[index]; }
 
     SString &operator= (const SString &s) { WRAPPER_NO_CONTRACT; Set(s); return *this; }
-    SString &operator+= (const SString &s) { WRAPPER_NO_CONTRACT; Append(s); return *this; }
 
     // -------------------------------------------------------------------
     // Check functions
@@ -712,11 +617,11 @@ private:
 #endif  // CHECK_INVARIANTS
 
     // Helpers for CRT function equivalance.
-    static int __cdecl _stricmp(const CHAR *buffer1, const CHAR *buffer2);
-    static int __cdecl _strnicmp(const CHAR *buffer1, const CHAR *buffer2, COUNT_T count);
+    static int _stricmp(const CHAR *buffer1, const CHAR *buffer2);
+    static int _strnicmp(const CHAR *buffer1, const CHAR *buffer2, COUNT_T count);
 
-    static int __cdecl _wcsicmp(const WCHAR *buffer1, const WCHAR *buffer2);
-    static int __cdecl _wcsnicmp(const WCHAR *buffer1, const WCHAR *buffer2, COUNT_T count);
+    static int _wcsicmp(const WCHAR *buffer1, const WCHAR *buffer2);
+    static int _wcsnicmp(const WCHAR *buffer1, const WCHAR *buffer2, COUNT_T count);
 
     // C++ convenience overloads
     static int _tstricmp(const CHAR *buffer1, const CHAR *buffer2);
@@ -776,7 +681,9 @@ private:
     BOOL IsASCIIScanned() const;
     void SetASCIIScanned() const;
     void SetNormalized() const;
+public:
     BOOL IsNormalized() const;
+private:
     void ClearNormalized() const;
 
     void EnsureWritable() const;
@@ -786,6 +693,7 @@ private:
     void ConvertASCIIToUnicode(SString &dest) const;
     void ConvertToUnicode() const;
     void ConvertToUnicode(const CIterator &i) const;
+    void ConvertToUTF8() const;
 
     const SString &GetCompatibleString(const SString &s, SString &scratch) const;
     const SString &GetCompatibleString(const SString &s, SString &scratch, const CIterator &i) const;
@@ -874,6 +782,13 @@ public:
         Set(string, count);
     }
 
+    FORCEINLINE InlineSString(enum tagLiteral, const WCHAR *string)
+      : SString(m_inline, SBUFFER_PADDED_SIZE(MEMSIZE))
+    {
+        WRAPPER_NO_CONTRACT;
+        Set(string);
+    }
+
     FORCEINLINE InlineSString(enum tagASCII, const CHAR *string)
       : SString(m_inline, SBUFFER_PADDED_SIZE(MEMSIZE))
     {
@@ -900,20 +815,6 @@ public:
     {
         WRAPPER_NO_CONTRACT;
         SetUTF8(string, count);
-    }
-
-    FORCEINLINE InlineSString(enum tagANSI dummytag, const ANSI *string)
-      : SString(m_inline, SBUFFER_PADDED_SIZE(MEMSIZE))
-    {
-        WRAPPER_NO_CONTRACT;
-        SetANSI(string);
-    }
-
-    FORCEINLINE InlineSString(enum tagANSI dummytag, const ANSI *string, COUNT_T count)
-      : SString(m_inline, SBUFFER_PADDED_SIZE(MEMSIZE))
-    {
-        WRAPPER_NO_CONTRACT;
-        SetANSI(string, count);
     }
 
     FORCEINLINE InlineSString(WCHAR character)
@@ -973,36 +874,7 @@ typedef InlineSString<2 * 260> LongPathString;
 //        s = SL("My literal String");
 // ================================================================================
 
-#define SL(_literal) SString(SString::Literal, _literal)
-
-// ================================================================================
-// ScratchBuffer classes are used by the GetXXX() routines to allocate scratch space in.
-// ================================================================================
-
-class EMPTY_BASES_DECL SString::AbstractScratchBuffer : private SString
-{
-  protected:
-    // Do not use this class directly - use
-    // ScratchBuffer or StackScratchBuffer.
-    AbstractScratchBuffer(void *buffer, COUNT_T size);
-};
-
-template <COUNT_T MEMSIZE>
-class EMPTY_BASES_DECL ScratchBuffer : public SString::AbstractScratchBuffer
-{
-  private:
-    DAC_ALIGNAS(::SString::AbstractScratchBuffer)
-    BYTE m_inline[MEMSIZE];
-
-  public:
-    ScratchBuffer()
-    : AbstractScratchBuffer((void *)m_inline, MEMSIZE)
-    {
-        WRAPPER_NO_CONTRACT;
-    }
-};
-
-typedef ScratchBuffer<256> StackScratchBuffer;
+#define SL(_literal) SString{ SString::Literal, _literal }
 
 // ================================================================================
 // Special contract definition - THROWS_UNLESS_NORMALIZED

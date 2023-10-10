@@ -10,6 +10,10 @@
 #include "debuggerservices.h"
 #include "symbolservice.h"
 
+#ifndef HOST_WINDOWS
+#define _strdup       strdup
+#endif
+
 interface IRuntime;
 
 enum HostRuntimeFlavor

@@ -134,21 +134,6 @@ Return
 --*/
 void UnlockModuleList();
 
-/*++
-Function :
-    LOADGetPalLibrary
-
-    Load and initialize the PAL module.
-
-Parameters :
-    None
-
-Return value :
-    handle to loaded module
-
---*/
-MODSTRUCT *LOADGetPalLibrary();
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus

@@ -135,18 +135,6 @@ typedef enum tagEFaultRepRetVal
 
 #include "pal.h"
 
-#ifndef PAL_STDCPP_COMPAT
-#ifdef __cplusplus
-#ifndef __PLACEMENT_NEW_INLINE
-#define __PLACEMENT_NEW_INLINE
-inline void *__cdecl operator new(size_t, void *_P)
-{
-    return (_P);
-}
-#endif // __PLACEMENT_NEW_INLINE
-#endif // __cplusplus
-#endif // !PAL_STDCPP_COMPAT
-
 #include <pal_assert.h>
 
 #define NTAPI       __cdecl
@@ -156,25 +144,12 @@ inline void *__cdecl operator new(size_t, void *_P)
 
 #define _WINNT_
 
-// C++ standard, 18.1.5 - offsetof requires a POD (plain old data) struct or
-// union. Since offsetof is a macro, gcc doesn't actually check for improper
-// use of offsetof, it keys off of the -> from NULL (which is also invalid for
-// non-POD types by 18.1.5)
-//
-// As we have numerous examples of this behavior in our codebase,
-// making an offsetof which doesn't use 0.
-
-// PAL_safe_offsetof is a version of offsetof that protects against an
-// overridden operator&
-
-#define FIELD_OFFSET(type, field) __builtin_offsetof(type, field)
 #ifndef offsetof
 #define offsetof(type, field) __builtin_offsetof(type, field)
 #endif
-#define PAL_safe_offsetof(type, field) __builtin_offsetof(type, field)
 
 #define CONTAINING_RECORD(address, type, field) \
-    ((type *)((LONG_PTR)(address) - FIELD_OFFSET(type, field)))
+    ((type *)((LONG_PTR)(address) - offsetof(type, field)))
 
 #define ARGUMENT_PRESENT(ArgumentPointer)    (\
     (CHAR *)(ArgumentPointer) != (CHAR *)(NULL) )
@@ -293,9 +268,7 @@ typedef union _ULARGE_INTEGER {
         DWORD HighPart;
 #endif
     }
-#ifndef PAL_STDCPP_COMPAT
     u
-#endif // PAL_STDCPP_COMPAT
      ;
     ULONGLONG QuadPart;
 } ULARGE_INTEGER, *PULARGE_INTEGER;
@@ -611,9 +584,6 @@ STDAPI CreateStreamOnHGlobal(PVOID hGlobal, BOOL fDeleteOnRelease, interface ISt
 
 #define STGM_NOSNAPSHOT         0x00200000L
 
-STDAPI IIDFromString(LPOLESTR lpsz, IID* lpiid);
-STDAPI_(int) StringFromGUID2(REFGUID rguid, LPOLESTR lpsz, int cchMax);
-
 /******************* CRYPT **************************************/
 
 #define PUBLICKEYBLOB           0x6
@@ -653,49 +623,6 @@ typedef unsigned int ALG_ID;
 // 1 null termination
 #define LOCALE_NAME_MAX_LENGTH   85
 
-#define CSTR_LESS_THAN            1
-#define CSTR_EQUAL                2
-#define CSTR_GREATER_THAN         3
-
-/******************* shlwapi ************************************/
-
-// note: diff in NULL handing and calling convetion
-#define StrCpyW                 PAL_wcscpy
-#define StrCatW                 PAL_wcscat
-#define StrChrW                 (WCHAR*)PAL_wcschr
-#define StrCmpW                 PAL_wcscmp
-#define StrCmpIW                _wcsicmp
-#define StrCmpNW                PAL_wcsncmp
-#define StrCmpNIW               _wcsnicmp
-
-STDAPI_(LPWSTR) StrNCatW(LPWSTR lpFront, LPCWSTR lpBack, int cchMax);
-STDAPI_(int) StrToIntW(LPCWSTR lpSrc);
-STDAPI_(LPWSTR) StrStrIW(LPCWSTR lpFirst, LPCWSTR lpSrch);
-STDAPI_(LPWSTR) StrRChrW(LPCWSTR lpStart, LPCWSTR lpEnd, WCHAR wMatch);
-STDAPI_(LPWSTR) StrCatBuffW(LPWSTR pszDest, LPCWSTR pszSrc, int cchDestBuffSize);
-
-#define lstrcmpW                PAL_wcscmp
-#define lstrcmpiW               _wcsicmp
-
-#ifdef UNICODE
-#define StrCpy                  StrCpyW
-#define StrCat                  StrCatW
-#define StrNCat                 StrNCatW
-#define StrChr                  StrChrW
-#define StrCmp                  StrCmpW
-#define StrCmpN                 StrCmpNW
-#define StrCmpI                 StrCmpIW
-#define StrCmpNI                StrCmpNIW
-
-#define StrToInt                StrToIntW
-#define StrStrI                 StrStrIW
-#define StrRChr                 StrRChrW
-#define StrCatBuff              StrCatBuffW
-
-#define lstrcmp                 lstrcmpW
-#define lstrcmpi                lstrcmpiW
-#endif
-
 
 #ifdef __cplusplus
 /*
@@ -712,10 +639,8 @@ STDAPI_(LPWSTR) StrCatBuffW(LPWSTR pszDest, LPCWSTR pszSrc, int cchDestBuffSize)
 
 /*
 The wrappers below are simple implementations that may not be as robust as complete functions in the Secure CRT library.
-Remember to fix the errcode defintion in safecrt.h.
+Remember to fix the errcode definition in safecrt.h.
 */
-
-#define swscanf_s swscanf
 
 #define _wfopen_s _wfopen_unsafe
 #define fopen_s _fopen_unsafe
@@ -749,9 +674,9 @@ inline int __cdecl _vscprintf_unsafe(const char *_Format, va_list _ArgList)
     }
 }
 
-inline errno_t __cdecl _wfopen_unsafe(PAL_FILE * *ff, const WCHAR *fileName, const WCHAR *mode)
+inline errno_t __cdecl _wfopen_unsafe(FILE * *ff, const WCHAR *fileName, const WCHAR *mode)
 {
-    PAL_FILE *result = _wfopen(fileName, mode);
+    FILE *result = _wfopen(fileName, mode);
     if(result == 0) {
         return 1;
     } else {
@@ -760,9 +685,9 @@ inline errno_t __cdecl _wfopen_unsafe(PAL_FILE * *ff, const WCHAR *fileName, con
     }
 }
 
-inline errno_t __cdecl _fopen_unsafe(PAL_FILE * *ff, const char *fileName, const char *mode)
+inline errno_t __cdecl _fopen_unsafe(FILE * *ff, const char *fileName, const char *mode)
 {
-  PAL_FILE *result = PAL_fopen(fileName, mode);
+  FILE *result = fopen(fileName, mode);
   if(result == 0) {
     return 1;
   } else {
@@ -773,44 +698,6 @@ inline errno_t __cdecl _fopen_unsafe(PAL_FILE * *ff, const char *fileName, const
 
 }
 #endif /* __cplusplus */
-
-STDAPI_(BOOL) PathAppendW(LPWSTR pszPath, LPCWSTR pszMore);
-STDAPI_(int) PathCommonPrefixW(LPCWSTR pszFile1, LPCWSTR pszFile2, LPWSTR  pszPath);
-PALIMPORT LPWSTR PALAPI PathFindFileNameW(LPCWSTR pPath);
-STDAPI_(int) PathGetDriveNumberW(LPCWSTR lpsz);
-STDAPI_(BOOL) PathIsRelativeW(LPCWSTR lpszPath);
-STDAPI_(BOOL) PathIsUNCW(LPCWSTR pszPath);
-STDAPI_(LPWSTR) PathAddBackslashW(LPWSTR lpszPath);
-STDAPI_(LPWSTR) PathRemoveBackslashW(LPWSTR lpszPath);
-STDAPI_(void) PathRemoveExtensionW(LPWSTR pszPath);
-STDAPI_(LPWSTR) PathCombineW(LPWSTR lpszDest, LPCWSTR lpszDir, LPCWSTR lpszFile);
-STDAPI_(BOOL) PathCanonicalizeW(LPWSTR lpszDst, LPCWSTR lpszSrc);
-STDAPI_(BOOL) PathRelativePathToW(LPWSTR pszPath, LPCWSTR pszFrom, DWORD dwAttrFrom, LPCWSTR pszTo, DWORD dwAttrTo);
-STDAPI_(BOOL) PathRenameExtensionW(LPWSTR pszPath, LPCWSTR pszExt);
-STDAPI_(BOOL) PathRemoveFileSpecW(LPWSTR pFile);
-STDAPI_(void) PathStripPathW (LPWSTR pszPath);
-
-#ifdef UNICODE
-#define PathAppend          PathAppendW
-#define PathCommonPrefix    PathCommonPrefixW
-#define PathFindFileName    PathFindFileNameW
-#define PathIsRelative      PathIsRelativeW
-#define PathGetDriveNumber  PathGetDriveNumberW
-#define PathIsUNC           PathIsUNCW
-#define PathAddBackslash    PathAddBackslashW
-#define PathRemoveBackslash PathRemoveBackslashW
-#define PathRemoveExtension PathRemoveExtensionW
-#define PathCombine         PathCombineW
-#define PathSkipRoot        PathSkipRootW
-#define PathFindExtension   PathFindExtensionW
-#define PathCanonicalize    PathCanonicalizeW
-#define PathRelativePathTo  PathRelativePathToW
-#define PathRemoveFileSpec  PathRemoveFileSpecW
-#define PathRenameExtension PathRenameExtensionW
-#define PathStripPath       PathStripPathW
-
-
-#endif // UNICODE
 
 /******************* misc ***************************************/
 
@@ -838,21 +725,12 @@ typename std::remove_reference<T>::type&& move( T&& t );
 
 typedef DWORD OLE_COLOR;
 
-#define PF_COMPARE_EXCHANGE_DOUBLE          2
-
-typedef VOID (NTAPI * WAITORTIMERCALLBACKFUNC) (PVOID, BOOLEAN );
-
 typedef HANDLE HWND;
-
-#define IS_TEXT_UNICODE_SIGNATURE             0x0008
-#define IS_TEXT_UNICODE_UNICODE_MASK          0x000F
 
 typedef struct _LIST_ENTRY {
    struct _LIST_ENTRY *Flink;
    struct _LIST_ENTRY *Blink;
 } LIST_ENTRY, *PLIST_ENTRY;
-
-typedef VOID (NTAPI *WAITORTIMERCALLBACK)(PVOID, BOOLEAN);
 
 // PORTABILITY_ASSERT and PORTABILITY_WARNING macros are meant to be used to
 // mark places in the code that needs attention for portability. The usual
@@ -936,23 +814,6 @@ typedef VOID (NTAPI *WAITORTIMERCALLBACK)(PVOID, BOOLEAN);
 #define IMAGE_COR20_HEADER_FIELD(obj, f)    ((obj).f)
 #endif
 
-// copied from winnt.h
-#define PROCESSOR_ARCHITECTURE_INTEL            0
-#define PROCESSOR_ARCHITECTURE_MIPS             1
-#define PROCESSOR_ARCHITECTURE_ALPHA            2
-#define PROCESSOR_ARCHITECTURE_PPC              3
-#define PROCESSOR_ARCHITECTURE_SHX              4
-#define PROCESSOR_ARCHITECTURE_ARM              5
-#define PROCESSOR_ARCHITECTURE_IA64             6
-#define PROCESSOR_ARCHITECTURE_ALPHA64          7
-#define PROCESSOR_ARCHITECTURE_MSIL             8
-#define PROCESSOR_ARCHITECTURE_AMD64            9
-#define PROCESSOR_ARCHITECTURE_IA32_ON_WIN64    10
-#define PROCESSOR_ARCHITECTURE_NEUTRAL          11
-#define PROCESSOR_ARCHITECTURE_ARM64            12
-
-#define PROCESSOR_ARCHITECTURE_UNKNOWN 0xFFFF
-
 //
 // JIT Debugging Info. This structure is defined to have constant size in
 // both the emulated and native environment.
@@ -960,7 +821,6 @@ typedef VOID (NTAPI *WAITORTIMERCALLBACK)(PVOID, BOOLEAN);
 
 typedef struct _JIT_DEBUG_INFO {
     DWORD dwSize;
-    DWORD dwProcessorArchitecture;
     DWORD dwThreadID;
     DWORD dwReserved0;
     ULONG64 lpExceptionAddress;
@@ -978,44 +838,6 @@ typedef JIT_DEBUG_INFO JIT_DEBUG_INFO64, *LPJIT_DEBUG_INFO64;
 #define RT_RCDATA           MAKEINTRESOURCE(10)
 #define RT_VERSION          MAKEINTRESOURCE(16)
 
-/******************* SAFEARRAY ************************/
-
-#define	FADF_VARIANT	( 0x800 )
-
-typedef struct tagSAFEARRAYBOUND
-    {
-    ULONG cElements;
-    LONG lLbound;
-    } 	SAFEARRAYBOUND;
-
-typedef struct tagSAFEARRAYBOUND *LPSAFEARRAYBOUND;
-
-typedef struct tagSAFEARRAY
-    {
-    USHORT cDims;
-    USHORT fFeatures;
-    ULONG cbElements;
-    ULONG cLocks;
-    PVOID pvData;
-    SAFEARRAYBOUND rgsabound[ 1 ];
-    } 	SAFEARRAY;
-
-typedef SAFEARRAY *LPSAFEARRAY;
-
-
-STDAPI_(SAFEARRAY *) SafeArrayCreateVector(VARTYPE vt, LONG lLbound, ULONG cElements);
-STDAPI_(UINT) SafeArrayGetDim(SAFEARRAY * psa);
-STDAPI SafeArrayGetElement(SAFEARRAY * psa, LONG * rgIndices, void * pv);
-STDAPI SafeArrayGetLBound(SAFEARRAY * psa, UINT nDim, LONG * plLbound);
-STDAPI SafeArrayGetUBound(SAFEARRAY * psa, UINT nDim, LONG * plUbound);
-STDAPI SafeArrayGetVartype(SAFEARRAY * psa, VARTYPE * pvt);
-STDAPI SafeArrayPutElement(SAFEARRAY * psa, LONG * rgIndices, void * pv);
-STDAPI SafeArrayDestroy(SAFEARRAY * psa);
-
-EXTERN_C void * _stdcall _lfind(const void *, const void *, unsigned int *, unsigned int,
-        int (__cdecl *)(const void *, const void *));
-
-
 /*<TODO>****************** clean this up ***********************</TODO>*/
 
 
@@ -1023,11 +845,6 @@ interface IDispatch;
 interface ITypeInfo;
 interface ITypeLib;
 interface IMoniker;
-
-typedef VOID (WINAPI *LPOVERLAPPED_COMPLETION_ROUTINE)(
-    DWORD dwErrorCode,
-    DWORD dwNumberOfBytesTransfered,
-    LPOVERLAPPED lpOverlapped);
 
 //
 // Debug APIs
@@ -1223,13 +1040,19 @@ typedef struct _DISPATCHER_CONTEXT {
     DWORD Reserved;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
 
+#elif defined(HOST_POWERPC64)
+
+typedef struct _DISPATCHER_CONTEXT {
+    // PPC64LE does not build the VM or JIT at this point,
+    // so we only provide a dummy definition.
+    DWORD Reserved;
+} DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
+
 #else
 
 #error Unknown architecture for defining DISPATCHER_CONTEXT.
 
 #endif
-
-// #endif // !defined(TARGET_OSX)
 
 typedef DISPATCHER_CONTEXT *PDISPATCHER_CONTEXT;
 
@@ -1259,26 +1082,6 @@ typedef LONG (WINAPI *PTOP_LEVEL_EXCEPTION_FILTER)(
     IN struct _EXCEPTION_POINTERS *ExceptionInfo
     );
 typedef PTOP_LEVEL_EXCEPTION_FILTER LPTOP_LEVEL_EXCEPTION_FILTER;
-
-/******************* ntdef ************************************/
-
-#ifndef ANYSIZE_ARRAY
-#define ANYSIZE_ARRAY 1       // winnt
-#endif
-
-/******************* winnt ************************************/
-
-typedef struct LIST_ENTRY32 {
-    ULONG Flink;
-    ULONG Blink;
-} LIST_ENTRY32;
-typedef LIST_ENTRY32 *PLIST_ENTRY32;
-
-typedef struct LIST_ENTRY64 {
-    ULONGLONG Flink;
-    ULONGLONG Blink;
-} LIST_ENTRY64;
-typedef LIST_ENTRY64 *PLIST_ENTRY64;
 
 /******************** PAL RT APIs *******************************/
 

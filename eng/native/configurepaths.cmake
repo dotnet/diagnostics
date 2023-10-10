@@ -1,6 +1,6 @@
 get_filename_component(CLR_REPO_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
 set(CLR_ENG_NATIVE_DIR ${CMAKE_CURRENT_LIST_DIR})
-get_filename_component(CLR_SRC_NATIVE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../src/native ABSOLUTE)
+get_filename_component(CLR_SRC_NATIVE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../src/shared/native ABSOLUTE)
 set (CLR_ARTIFACTS_OBJ_DIR "${CLR_REPO_ROOT_DIR}/artifacts/obj")
 set (CLR_SOURCELINK_FILE_PATH "${CLR_ARTIFACTS_OBJ_DIR}/native.sourcelink.json")
 set(VERSION_HEADER_PATH "${CLR_ARTIFACTS_OBJ_DIR}/_version.h")

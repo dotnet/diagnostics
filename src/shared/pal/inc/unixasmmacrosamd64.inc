@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+#define C_VAR(Name) rip + C_FUNC(Name)
+
 .macro NESTED_ENTRY Name, Section, Handler
         LEAF_ENTRY \Name, \Section
         .ifnc \Handler, NoHandler
@@ -27,7 +29,7 @@
 
 .macro PATCH_LABEL Name
         .global C_FUNC(\Name)
-C_FUNC(\Name):
+        C_FUNC(\Name) = .
 .endm
 
 .macro LEAF_ENTRY Name, Section
@@ -52,6 +54,8 @@ C_FUNC(\Name):
 C_FUNC(\Name\()_End):
         .global C_FUNC(\Name\()_End)
         LEAF_END \Name, \Section
+        // make sure this symbol gets its own address
+        nop
 .endm
 
 .macro NOP_6_BYTE

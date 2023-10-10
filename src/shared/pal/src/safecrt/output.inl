@@ -22,15 +22,9 @@
 *
 *******************************************************************************/
 
-
-//typedef __int64_t __int64;
-
-
 #define FORMAT_VALIDATIONS
 
 typedef double  _CRT_DOUBLE;
-
-//typedef int* intptr_t;
 
 /*
 Buffer size required to be passed to _gcvt, fcvt and other fp conversion routines
@@ -440,7 +434,7 @@ LOCAL(void) write_string(const _TCHAR *string, int len, miniFILE *f, int *numwri
 #define get_int_arg(list)           va_arg(*list, int)
 #define get_long_arg(list)          va_arg(*list, long)
 #define get_long_long_arg(list)     va_arg(*list, long long)
-#define get_int64_arg(list)         va_arg(*list, __int64)
+#define get_int64_arg(list)         va_arg(*list, int64_t)
 #define get_crtdouble_arg(list)     va_arg(*list, _CRT_DOUBLE)
 #define get_ptr_arg(list)           va_arg(*list, void *)
 
@@ -1150,7 +1144,7 @@ int __cdecl _output (
 #if _INTEGRAL_MAX_BITS >= 64
                 uint64_t number;    /* number to convert */
                 int digit;              /* ascii value of digit */
-                __int64 l;              /* temp long value */
+                int64_t l;              /* temp long value */
 #else  /* _INTEGRAL_MAX_BITS >= 64        */
                 unsigned long number;   /* number to convert */
                 int digit;              /* ascii value of digit */

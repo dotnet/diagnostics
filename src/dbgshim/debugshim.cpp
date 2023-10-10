@@ -813,12 +813,12 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
     // have to be a tight estimate, just make sure its >= the biggest possible DAC name
     // and it can be calculated statically
     DWORD minCchBuffer =
-        (DWORD) wcslen(CLR_DAC_MODULE_NAME_W) + (DWORD) wcslen(CORECLR_DAC_MODULE_NAME_W) + // max name
+        (DWORD) u16_strlen(CLR_DAC_MODULE_NAME_W) + (DWORD) u16_strlen(CORECLR_DAC_MODULE_NAME_W) + // max name
         10 + // max host arch
         10 + // max target arch
         40 + // max version
         10 + // max build flavor
-        (DWORD) wcslen(W("name_host_target_version.flavor.dll")) + // max intermediate formatting chars
+        (DWORD) u16_strlen(W("name_host_target_version.flavor.dll")) + // max intermediate formatting chars
         1; // null terminator
 
     // validate the output buffer is larger than our estimate above

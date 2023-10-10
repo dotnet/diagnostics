@@ -571,7 +571,7 @@ CHECK PEDecoder::CheckOffset(COUNT_T fileOffset, IsNullOK ok) const
     }
     CONTRACT_CHECK_END;
 
-    if (fileOffset == NULL)
+    if (fileOffset == 0)
         CHECK_MSG(ok == NULL_OK, "Null pointer illegal");
     else
     {
@@ -840,7 +840,7 @@ TADDR PEDecoder::GetRvaData(RVA rva, IsNullOK ok /*= NULL_NOT_OK*/) const
     CONTRACT_END;
 
     if ((rva == 0)&&(ok == NULL_NOT_OK))
-        RETURN NULL;
+        RETURN (TADDR)NULL;
 
     RVA offset;
     if (IsMapped())
@@ -867,7 +867,7 @@ RVA PEDecoder::GetDataRva(const TADDR data) const
     }
     CONTRACT_END;
 
-    if (data == NULL)
+    if (data == (TADDR)NULL)
         RETURN 0;
 
     COUNT_T offset = (COUNT_T) (data - m_base);
@@ -915,7 +915,7 @@ TADDR PEDecoder::GetOffsetData(COUNT_T fileOffset, IsNullOK ok /*= NULL_NOT_OK*/
     CONTRACT_END;
 
     if ((fileOffset == 0)&&(ok == NULL_NOT_OK))
-        RETURN NULL;
+        RETURN (TADDR)NULL;
 
     RETURN GetRvaData(OffsetToRva(fileOffset));
 }
@@ -1083,7 +1083,7 @@ CHECK PEDecoder::CheckCorHeader() const
     COUNT_T ctMD = (COUNT_T)VAL32(pDirMD->Size);
     TADDR   pcMD = (TADDR)GetDirectoryData(pDirMD);
 
-    if(pcMD != NULL)
+    if(pcMD != (TADDR)NULL)
     {
         // Storage signature checks
         CHECK(ctMD >= sizeof(STORAGESIGNATURE));
@@ -1122,9 +1122,6 @@ CHECK PEDecoder::CheckCorHeader() const
 
             for(namelen=0; (namelen<32)&&(pSS->rcName[namelen]!=0); namelen++);
             CHECK((0 < namelen)&&(namelen < 32));
-
-            // Forbid HOT_MODEL_STREAM
-            CHECK(strcmp(pSS->rcName, HOT_MODEL_STREAM_A) != 0);
 
             pcMD = dac_cast<TADDR>(NextStorageStream(pSS));
             ctMD -= (COUNT_T)(pcMD - dac_cast<TADDR>(pSS));
@@ -1539,7 +1536,7 @@ CHECK PEDecoder::CheckILOnlyImportByNameTable(RVA rva) const
 
     IMAGE_IMPORT_BY_NAME *import = (IMAGE_IMPORT_BY_NAME*) GetRvaData(importRVA);
 
-    CHECK(SString::_stricmp((char *) import->Name, DLL_NAME) == 0 || _stricmp((char *) import->Name, EXE_NAME) == 0);
+    CHECK(SString::_stricmp((char *) import->Name, DLL_NAME) == 0 || SString::_stricmp((char *) import->Name, EXE_NAME) == 0);
 
     CHECK_OK;
 }
@@ -1759,7 +1756,7 @@ DWORD ReadResourceDirectory(const PEDecoder *pDecoder, DWORD rvaOfResourceSectio
                 return 0;
 
             size_t entryNameLen = *(WORD*)pDecoder->GetRvaData(entryNameRva);
-            if (wcslen(name) != entryNameLen)
+            if (u16_strlen(name) != entryNameLen)
                 continue;
 
             if (!pDecoder->CheckRva(entryNameRva, (COUNT_T)(sizeof(WORD) * (1 + entryNameLen))))
@@ -1927,7 +1924,7 @@ bool DoesResourceNameMatch(LPCWSTR nameA, LPCWSTR nameB)
         if (IS_INTRESOURCE(nameB))
             return false;
         else
-            foundEntry = !wcscmp(nameB, nameA);
+            foundEntry = !u16_strcmp(nameB, nameA);
     }
 
     return foundEntry;
@@ -2161,7 +2158,7 @@ CHECK PEDecoder::CheckILMethod(RVA rva)
     CONTRACT_CHECK_END;
 
     //
-    // Incrementaly validate that the entire IL method body is within the bounds of the image
+    // Incrementally validate that the entire IL method body is within the bounds of the image
     //
 
     // We need to have at least the tiny header
@@ -2208,7 +2205,7 @@ CHECK PEDecoder::CheckILMethod(RVA rva)
     // Optional sections following the code
     //
 
-    for (;;)
+    while (true)
     {
         CHECK(CheckRva(rva, UINT32(pSect - pIL) + sizeof(IMAGE_COR_ILMETHOD_SECT_SMALL)));
 
@@ -2295,7 +2292,7 @@ SIZE_T PEDecoder::ComputeILMethodSize(TADDR pIL)
     // DACized copy of code:COR_ILMETHOD_FAT::GetSect
     TADDR pSect = AlignUp(pIL + codeEnd, 4);
 
-    for (;;)
+    while (true)
     {
         PTR_COR_ILMETHOD_SECT_SMALL pSectSmall = PTR_COR_ILMETHOD_SECT_SMALL(pSect);
 
@@ -2434,20 +2431,6 @@ PTR_CVOID PEDecoder::GetNativeManifestMetadata(COUNT_T *pSize) const
         *pSize = VAL32(pDir->Size);
 
     RETURN dac_cast<PTR_VOID>(GetDirectoryData(pDir));
-}
-
-// Get the SizeOfStackReserve and SizeOfStackCommit from the PE file that was used to create
-// the calling process (.exe file).
-void PEDecoder::GetEXEStackSizes(SIZE_T *PE_SizeOfStackReserve, SIZE_T *PE_SizeOfStackCommit) const
-{
-    CONTRACTL {
-        PRECONDITION(!IsDll()); // This routine should only be called for EXE files.
-        NOTHROW;
-        GC_NOTRIGGER;
-    } CONTRACTL_END;
-
-    * PE_SizeOfStackReserve = GetSizeOfStackReserve();
-    * PE_SizeOfStackCommit  = GetSizeOfStackCommit();
 }
 
 BOOL PEDecoder::HasNativeEntryPoint() const

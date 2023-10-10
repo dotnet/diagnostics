@@ -76,7 +76,7 @@ typedef void (__stdcall *RuntimeLoadedCallbackFnPtr)(
 
 typedef enum 
 {
-    Unknown = 0,
+    UnknownIndex = 0,
     Identity = 1,
     Runtime = 2,
 } LIBRARY_PROVIDER_INDEX_TYPE;

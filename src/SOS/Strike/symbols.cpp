@@ -13,7 +13,6 @@
 #include "safemath.h"
 
 #include <psapi.h>
-#include <tchar.h>
 #include <limits.h>
 
 #ifdef FEATURE_PAL
@@ -29,9 +28,8 @@
 #include <mach-o/dyld.h>
 #endif
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 #ifndef FEATURE_PAL
 HMODULE g_hmoduleSymBinder = nullptr;
