@@ -27,7 +27,7 @@ namespace EventPipeTracee
             _counter.Add(v);
         }
 
-        public void RecordHistogram(float v = 1.0f)
+        public void RecordHistogram(float v = 10.0f)
         {
             KeyValuePair<string, object> tags = new(Constants.TagKey, Constants.TagValue);
             _histogram.Record(v, tags);
