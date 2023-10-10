@@ -47,7 +47,6 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsJSON(TestConfiguration configuration)
         {
-            CheckRuntimeOS();
             CheckFramework(configuration);
 
             List<MetricComponents> metricComponents = await GetCounterTraceJSON(configuration, new List<string> { Constants.TestMeterName });
@@ -58,7 +57,6 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsCSV(TestConfiguration configuration)
         {
-            CheckRuntimeOS();
             CheckFramework(configuration);
 
             List<MetricComponents> metricComponents = await GetCounterTraceCSV(configuration, new List<string> { Constants.TestMeterName });
@@ -66,21 +64,17 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.csv);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsJSON(TestConfiguration configuration)
         {
-            CheckRuntimeOS();
-
             List<MetricComponents> metricComponents = await GetCounterTraceJSON(configuration, new List<string> { SystemRuntimeName });
 
             ValidateSystemRuntimeMetrics(metricComponents);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
-            CheckRuntimeOS();
-
             List<MetricComponents> metricComponents = await GetCounterTraceCSV(configuration, new List<string> { SystemRuntimeName });
 
             ValidateSystemRuntimeMetrics(metricComponents);
@@ -250,13 +244,12 @@ namespace DotnetCounters.UnitTests
             string tagSeparator = format == CountersExportFormat.csv ? ";" : ",";
             string tag = Constants.TagKey + "=" + Constants.TagValue + tagSeparator + Constants.PercentileKey + "=";
             HashSet<string> expectedTags = new() { $"{tag}{Constants.Quantile50}", $"{tag}{Constants.Quantile95}", $"{tag}{Constants.Quantile99}" };
-            Assert.Equal(expectedTags, metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Tags));
+            Assert.Equal(expectedTags, metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Tags).Distinct());
             Assert.Empty(metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Where(c => c.Tags != string.Empty));
 
             var actualCounterValues = metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Select(c => c.Value);
-            Assert.Equal(2, actualCounterValues.Distinct().Count());
+            Assert.Single(actualCounterValues.Distinct());
             Assert.Equal(1, actualCounterValues.First());
-            Assert.Equal(0, actualCounterValues.Last());
             double histogramValue = Assert.Single(metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Value).Distinct());
             Assert.Equal(10, histogramValue);
         }
@@ -283,14 +276,6 @@ namespace DotnetCounters.UnitTests
             if (configuration.RuntimeFrameworkVersionMajor < 8)
             {
                 throw new SkipTestException("Not supported on < .NET 8.0");
-            }
-        }
-
-        private void CheckRuntimeOS()
-        {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("Test instability on non-Windows platforms");
             }
         }
 

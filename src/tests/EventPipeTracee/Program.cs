@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -66,10 +68,21 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} {DateTime.UtcNow} Starting test body '{input}'");
             Console.Out.Flush();
 
+            CancellationTokenSource recordMetricsCancellationTokenSource = new();
+
             if (diagMetrics)
             {
-                metrics.IncrementCounter();
-                metrics.RecordHistogram(10.0f);
+                _ = Task.Run(async () => {
+                    while (!recordMetricsCancellationTokenSource.Token.IsCancellationRequested)
+                    {
+                        recordMetricsCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                        metrics.IncrementCounter();
+                        metrics.RecordHistogram(10.0f);
+                        await Task.Delay(1000).ConfigureAwait(true);
+                    }
+
+                }).ConfigureAwait(true);
             }
 
             TestBodyCore(customCategoryLogger, appCategoryLogger);
@@ -98,6 +111,8 @@ namespace EventPipeTracee
 
             // Wait for server to send something
             input = pipeStream.ReadByte();
+
+            recordMetricsCancellationTokenSource.Cancel();
 
             Console.WriteLine($"{pid} EventPipeTracee {DateTime.UtcNow} Ending remote test process '{input}'");
             return 0;
