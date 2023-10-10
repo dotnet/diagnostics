@@ -73,6 +73,10 @@ namespace EventPipeTracee
             if (diagMetrics)
             {
                 _ = Task.Run(async () => {
+
+                    // Recording a single value appeared to cause test flakiness due to a race
+                    // condition with the timing of when dotnet-counters starts collecting and
+                    // when these values are published. Publishing values repeatedly bypasses this problem.
                     while (!recordMetricsCancellationTokenSource.Token.IsCancellationRequested)
                     {
                         recordMetricsCancellationTokenSource.Token.ThrowIfCancellationRequested();

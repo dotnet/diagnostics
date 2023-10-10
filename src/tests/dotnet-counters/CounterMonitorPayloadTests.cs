@@ -255,9 +255,7 @@ namespace DotnetCounters.UnitTests
 
             var actualCounterValues = metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Select(c => c.Value);
 
-            // We only expect 1, but due to timing variance some intervals may not have gotten a value (and others may have gotten two).
-            HashSet<double> expectedCounterValues = new() { 0, 1, 2 };
-            Assert.Subset(expectedCounterValues, actualCounterValues.Distinct().ToHashSet());
+            Assert.NotEmpty(actualCounterValues);
             double histogramValue = Assert.Single(metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Value).Distinct());
             Assert.Equal(10, histogramValue);
         }
