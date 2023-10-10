@@ -47,6 +47,7 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsJSON(TestConfiguration configuration)
         {
+            CheckRuntimeOS();
             CheckFramework(configuration);
 
             List<MetricComponents> metricComponents = await GetCounterTraceJSON(configuration, new List<string> { Constants.TestMeterName });
@@ -57,6 +58,7 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsCSV(TestConfiguration configuration)
         {
+            CheckRuntimeOS();
             CheckFramework(configuration);
 
             List<MetricComponents> metricComponents = await GetCounterTraceCSV(configuration, new List<string> { Constants.TestMeterName });
@@ -64,17 +66,21 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.csv);
         }
 
-        [Theory, MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsJSON(TestConfiguration configuration)
         {
+            CheckRuntimeOS();
+
             List<MetricComponents> metricComponents = await GetCounterTraceJSON(configuration, new List<string> { SystemRuntimeName });
 
             ValidateSystemRuntimeMetrics(metricComponents);
         }
 
-        [Theory, MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
+            CheckRuntimeOS();
+
             List<MetricComponents> metricComponents = await GetCounterTraceCSV(configuration, new List<string> { SystemRuntimeName });
 
             ValidateSystemRuntimeMetrics(metricComponents);
@@ -278,6 +284,14 @@ namespace DotnetCounters.UnitTests
             if (configuration.RuntimeFrameworkVersionMajor < 8)
             {
                 throw new SkipTestException("Not supported on < .NET 8.0");
+            }
+        }
+
+        private void CheckRuntimeOS()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                throw new SkipTestException("Test instability on OSX");
             }
         }
 
